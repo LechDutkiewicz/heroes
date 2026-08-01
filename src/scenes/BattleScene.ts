@@ -1,13 +1,14 @@
 import Phaser from 'phaser';
 import {
   ENEMY_TEAM,
-  MELEE_PENALTY,
+  HALF_DAMAGE,
   PLAYER_TEAM,
   SPECIAL_COOLDOWN,
   TYPE_INFO,
   typeMultiplier,
   type UnitDef,
 } from '../data/units';
+import { createSpriteTextures } from '../data/sprites';
 
 type Side = 'player' | 'enemy';
 
@@ -20,9 +21,10 @@ interface Unit {
   row: number;
   specialCooldown: number;
   container: Phaser.GameObjects.Container;
+  sprite: Phaser.GameObjects.Image;
   hpBar: Phaser.GameObjects.Rectangle;
   hpLabel: Phaser.GameObjects.Text;
-  ring: Phaser.GameObjects.Arc;
+  platform: Phaser.GameObjects.Ellipse;
 }
 
 interface Cell {
@@ -38,11 +40,23 @@ const BOARD_Y = 92;
 const BOARD_W = COLS * CELL;
 const BOARD_H = ROWS * CELL;
 const PANEL_Y = BOARD_Y + BOARD_H + 14;
+const PANEL_H = 126;
+/** Szerokość lewej kolumny panelu — reszta należy do przycisku umiejętności. */
+const TEXT_COL_W = BOARD_W - 290;
 
-const HP_BAR_W = 52;
-const HP_BAR_H = 12;
+const HP_BAR_W = 50;
+const HP_BAR_H = 9;
 
 const cellKey = (col: number, row: number) => `${col},${row}`;
+
+/** Poprawna polska odmiana: 1 obrażenie, 2 obrażenia, 5 obrażeń. */
+function damageWord(n: number) {
+  if (n === 1) return 'obrażenie';
+  const last = n % 10;
+  const lastTwo = n % 100;
+  if (last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14)) return 'obrażenia';
+  return 'obrażeń';
+}
 
 export class BattleScene extends Phaser.Scene {
   private units: Unit[] = [];
@@ -71,6 +85,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create() {
+    createSpriteTextures(this);
     this.drawBackground();
     this.drawBoard();
     this.drawHud();
@@ -139,21 +154,24 @@ export class BattleScene extends Phaser.Scene {
 
     const panel = this.add.graphics();
     panel.fillStyle(0x141a30, 0.9);
-    panel.fillRoundedRect(BOARD_X - 6, PANEL_Y, BOARD_W + 12, 96, 10);
+    panel.fillRoundedRect(BOARD_X - 6, PANEL_Y, BOARD_W + 12, PANEL_H, 10);
     panel.lineStyle(1, 0x3a4770, 1);
-    panel.strokeRoundedRect(BOARD_X - 6, PANEL_Y, BOARD_W + 12, 96, 10);
+    panel.strokeRoundedRect(BOARD_X - 6, PANEL_Y, BOARD_W + 12, PANEL_H, 10);
 
+    // Teksty trzymają się lewej kolumny, przycisk umiejętności prawej.
     this.statsText = this.add.text(BOARD_X + 10, PANEL_Y + 10, '', {
       fontFamily: 'Trebuchet MS, sans-serif',
       fontSize: '15px',
       color: '#e8ecff',
       lineSpacing: 4,
+      wordWrap: { width: TEXT_COL_W },
     });
 
-    this.forecastText = this.add.text(BOARD_X + 10, PANEL_Y + 62, '', {
+    this.forecastText = this.add.text(BOARD_X + 10, PANEL_Y + 86, '', {
       fontFamily: 'Trebuchet MS, sans-serif',
       fontSize: '14px',
       color: '#ffd166',
+      wordWrap: { width: TEXT_COL_W },
     });
 
     this.specialBg = this.add
@@ -168,7 +186,7 @@ export class BattleScene extends Phaser.Scene {
         align: 'center',
       })
       .setOrigin(0.5);
-    this.specialButton = this.add.container(BOARD_X + BOARD_W - 140, PANEL_Y + 48, [
+    this.specialButton = this.add.container(BOARD_X + BOARD_W - 140, PANEL_Y + 60, [
       this.specialBg,
       this.specialLabel,
     ]);
@@ -185,40 +203,43 @@ export class BattleScene extends Phaser.Scene {
     const { x, y } = this.cellToXY(col, row);
     const accent = side === 'player' ? 0x4fc3f7 : 0xef5350;
 
-    const shadow = this.add.ellipse(0, 24, 46, 12, 0x000000, 0.35);
-    const ring = this.add.circle(0, 0, 27, accent, 0).setStrokeStyle(3, accent, 0.9);
-    const body = this.add.circle(0, 0, 23, def.color).setStrokeStyle(2, 0x11162b, 1);
-    const face = this.add.text(0, -1, def.emoji, { fontSize: '26px' }).setOrigin(0.5);
+    // Podest pod pokemonem zdradza, do kogo należy i podświetla aktywną jednostkę.
+    const platform = this.add.ellipse(0, 18, 42, 13, accent, 0.22).setStrokeStyle(2, accent, 0.6);
+
+    const sprite = this.add.image(0, -7, def.sprite).setScale(0.78);
+    // Wrogowie patrzą w lewo, w stronę twojej drużyny.
+    if (side === 'enemy') sprite.setFlipX(true);
 
     const name = this.add
-      .text(0, -32, def.name, {
+      .text(0, -33, def.name, {
         fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '12px',
+        fontSize: '10px',
         color: '#ffffff',
         fontStyle: 'bold',
+        stroke: '#0d1023',
+        strokeThickness: 3,
       })
       .setOrigin(0.5);
 
-    const typeBadge = this.add
-      .text(-22, -22, TYPE_INFO[def.type].emoji, { fontSize: '13px' })
-      .setOrigin(0.5);
+    // Odznaki na dole, żeby nie zasłaniały rysunku pokemona.
+    const typeBadge = this.add.text(-24, 16, TYPE_INFO[def.type].emoji, { fontSize: '12px' }).setOrigin(0.5);
 
     const atkBadge = this.add
-      .text(20, -20, `${def.range > 1 ? '\u{1F3F9}' : '⚔️'}${def.atk}`, {
+      .text(22, 16, `${def.shooter ? '\u{1F3F9}' : '⚔️'}${def.atk}`, {
         fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '12px',
+        fontSize: '11px',
         color: '#ffffff',
-        backgroundColor: '#00000099',
+        backgroundColor: '#000000aa',
         padding: { x: 3, y: 1 },
       })
       .setOrigin(0.5);
 
-    const hpBarBg = this.add.rectangle(0, 26, HP_BAR_W, HP_BAR_H, 0x11162b, 0.85).setStrokeStyle(1, 0x000000, 0.6);
-    const hpBar = this.add.rectangle(-HP_BAR_W / 2, 26, HP_BAR_W, HP_BAR_H, 0x4caf50).setOrigin(0, 0.5);
+    const hpBarBg = this.add.rectangle(0, 28, HP_BAR_W, HP_BAR_H, 0x11162b, 0.9).setStrokeStyle(1, 0x000000, 0.6);
+    const hpBar = this.add.rectangle(-HP_BAR_W / 2, 28, HP_BAR_W, HP_BAR_H, 0x4caf50).setOrigin(0, 0.5);
     const hpLabel = this.add
-      .text(0, 26, `${def.hp}/${def.hp}`, {
+      .text(0, 28, `${def.hp}/${def.hp}`, {
         fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '10px',
+        fontSize: '9px',
         color: '#ffffff',
         fontStyle: 'bold',
       })
@@ -227,10 +248,8 @@ export class BattleScene extends Phaser.Scene {
     const hit = this.add.rectangle(0, 0, CELL - 8, CELL - 8, 0xffffff, 0).setInteractive({ useHandCursor: true });
 
     const container = this.add.container(x, y, [
-      shadow,
-      ring,
-      body,
-      face,
+      platform,
+      sprite,
       typeBadge,
       atkBadge,
       name,
@@ -250,9 +269,10 @@ export class BattleScene extends Phaser.Scene {
       row,
       specialCooldown: 0,
       container,
+      sprite,
       hpBar,
       hpLabel,
-      ring,
+      platform,
     };
 
     hit.on('pointerdown', () => this.onUnitClicked(unit));
@@ -294,8 +314,13 @@ export class BattleScene extends Phaser.Scene {
       const unit = this.units.find((u) => u.id === this.turnOrder[(this.turnIndex + i) % this.turnOrder.length]);
       if (!unit) continue;
       const accent = unit.side === 'player' ? 0x4fc3f7 : 0xef5350;
-      const bg = this.add.circle(0, 0, 13, unit.def.color, i === 0 ? 1 : 0.5).setStrokeStyle(2, accent, i === 0 ? 1 : 0.45);
-      const face = this.add.text(0, 0, unit.def.emoji, { fontSize: '13px' }).setOrigin(0.5).setAlpha(i === 0 ? 1 : 0.55);
+      const bg = this.add
+        .circle(0, 0, 13, accent, i === 0 ? 0.45 : 0.2)
+        .setStrokeStyle(2, accent, i === 0 ? 1 : 0.45);
+      const face = this.add
+        .image(0, 0, unit.def.sprite)
+        .setScale(0.4)
+        .setAlpha(i === 0 ? 1 : 0.6);
       this.queueIcons.push(this.add.container(startX + i * spacing, 26, [bg, face]));
     }
   }
@@ -320,9 +345,21 @@ export class BattleScene extends Phaser.Scene {
 
     if (unit.specialCooldown > 0) unit.specialCooldown--;
 
-    this.units.forEach((u) => u.ring.setStrokeStyle(3, u.side === 'player' ? 0x4fc3f7 : 0xef5350, 0.9));
-    unit.ring.setStrokeStyle(4, 0xffd166, 1);
-    this.tweens.add({ targets: unit.ring, scale: { from: 1, to: 1.15 }, duration: 500, yoyo: true, repeat: -1 });
+    this.units.forEach((u) => {
+      const accent = u.side === 'player' ? 0x4fc3f7 : 0xef5350;
+      u.platform.setStrokeStyle(2, accent, 0.75);
+      u.platform.setFillStyle(accent, 0.28);
+    });
+    unit.platform.setStrokeStyle(3, 0xffd166, 1);
+    unit.platform.setFillStyle(0xffd166, 0.35);
+    this.tweens.add({
+      targets: unit.platform,
+      scaleX: { from: 1, to: 1.14 },
+      scaleY: { from: 1, to: 1.14 },
+      duration: 520,
+      yoyo: true,
+      repeat: -1,
+    });
 
     this.turnText.setText(
       unit.side === 'player'
@@ -344,8 +381,8 @@ export class BattleScene extends Phaser.Scene {
 
   private advanceTurn() {
     if (this.gameOver) return;
-    this.tweens.killTweensOf(this.units.map((u) => u.ring));
-    this.units.forEach((u) => u.ring.setScale(1));
+    this.tweens.killTweensOf(this.units.map((u) => u.platform));
+    this.units.forEach((u) => u.platform.setScale(1));
     this.turnOrder = this.turnOrder.filter((id) => this.units.some((u) => u.id === id));
     if (this.turnOrder.length === 0) return;
     this.turnIndex = (this.turnIndex + 1) % this.turnOrder.length;
@@ -354,14 +391,17 @@ export class BattleScene extends Phaser.Scene {
 
   private showStats(unit: Unit) {
     const t = TYPE_INFO[unit.def.type];
-    const reach = unit.def.range > 1 ? `strzelec, zasięg ${unit.def.range}` : 'walka wręcz';
+    const reach = unit.def.shooter
+      ? `\u{1F3F9} strzelec — strzela wszędzie, pełna siła do ${unit.def.shootRange} pól`
+      : '⚔️ walka wręcz';
     const special =
       unit.specialCooldown === 0
         ? `${unit.def.specialName} — gotowy`
         : `${unit.def.specialName} — za ${unit.specialCooldown} tur`;
     this.statsText.setText(
-      `${unit.def.emoji}  ${unit.def.name}   ${t.emoji} ${t.label}\n` +
-        `❤️ HP ${unit.hp}/${unit.def.hp}    ⚔️ Atak ${unit.def.atk}    \u{1F462} Ruch ${unit.def.move}    \u{1F3AF} ${reach}\n` +
+      `${unit.def.name}   ${t.emoji} ${t.label}\n` +
+        `❤️ HP ${unit.hp}/${unit.def.hp}    ⚔️ Atak ${unit.def.atk}    \u{1F462} Ruch ${unit.def.move}\n` +
+        `${reach}\n` +
         `⚡ ${special}`
     );
   }
@@ -428,9 +468,8 @@ export class BattleScene extends Phaser.Scene {
    * walcząca wręcz stoi obok lub może dojść na sąsiednie wolne pole.
    */
   private attackPlan(unit: Unit, target: Unit, reach: Map<string, number>): { from: Cell } | null {
-    if (unit.def.range > 1) {
-      return this.chebyshev(unit, target) <= unit.def.range ? { from: { col: unit.col, row: unit.row } } : null;
-    }
+    // Strzelec, jak łucznik w Heroes 3, dosięga każdego celu na planszy.
+    if (unit.def.shooter) return { from: { col: unit.col, row: unit.row } };
     if (this.isAdjacent(unit, target)) return { from: { col: unit.col, row: unit.row } };
 
     let best: { from: Cell; cost: number } | null = null;
@@ -445,12 +484,20 @@ export class BattleScene extends Phaser.Scene {
   private damageOf(attacker: Unit, target: Unit, special: boolean) {
     const typeMult = typeMultiplier(attacker.def.type, target.def.type);
     const specialMult = special ? (attacker.def.specialKind === 'power' ? 2 : 1.5) : 1;
-    const penalty = attacker.def.range > 1 && this.hasAdjacentEnemy(attacker) ? MELEE_PENALTY : 1;
+
+    // Strzelec traci połowę siły w zwarciu albo gdy cel stoi za daleko.
+    const pinned = attacker.def.shooter && this.hasAdjacentEnemy(attacker);
+    const tooFar =
+      attacker.def.shooter && !pinned && this.chebyshev(attacker, target) > attacker.def.shootRange;
+    const penalty = pinned || tooFar ? HALF_DAMAGE : 1;
+
     return {
       value: Math.max(1, Math.round(attacker.def.atk * typeMult * specialMult * penalty)),
       typeMult,
       specialMult,
       penalty,
+      pinned,
+      tooFar,
     };
   }
 
@@ -468,15 +515,17 @@ export class BattleScene extends Phaser.Scene {
       }
     }
 
-    const attackColor = this.specialArmed ? 0xffd166 : 0xef5350;
     for (const target of this.units.filter((u) => u.side !== unit.side)) {
       const plan = this.attackPlan(unit, target, reach);
       if (!plan) continue;
+      // Pomarańczowy obrys znaczy cel, do którego strzał doleci osłabiony.
+      const { tooFar } = this.damageOf(unit, target, this.specialArmed);
+      const attackColor = this.specialArmed ? 0xffd166 : tooFar ? 0xff9800 : 0xef5350;
       this.addHighlight(
         target.col,
         target.row,
         attackColor,
-        0.35,
+        tooFar ? 0.22 : 0.35,
         () => this.performAttack(unit, target, plan.from, this.specialArmed),
         () => this.showForecast(unit, target, this.specialArmed)
       );
@@ -510,12 +559,14 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private showForecast(attacker: Unit, target: Unit, special: boolean) {
-    const { value, typeMult, specialMult, penalty } = this.damageOf(attacker, target, special);
+    const { value, typeMult, specialMult, penalty, pinned, tooFar } = this.damageOf(attacker, target, special);
     const parts = [`Atak ${attacker.def.atk}`];
     if (typeMult !== 1) parts.push(`× ${typeMult} (${typeMult > 1 ? 'przewaga typu' : 'słaby typ'})`);
     if (specialMult !== 1) parts.push(`× ${specialMult} (${attacker.def.specialName})`);
-    if (penalty !== 1) parts.push(`× ${penalty} (strzelec w zwarciu)`);
-    this.forecastText.setText(`${parts.join(' ')} = ${value} obrażeń dla ${target.def.name}`);
+    if (pinned) parts.push('× 0.5 (strzelec w zwarciu)');
+    else if (tooFar) parts.push('× 0.5 (za daleko — złamana strzała)');
+    void penalty;
+    this.forecastText.setText(`${parts.join(' ')} = ${value} ${damageWord(value)} dla ${target.def.name}`);
   }
 
   private onUnitHover(unit: Unit) {
@@ -586,10 +637,12 @@ export class BattleScene extends Phaser.Scene {
     this.clearHighlights();
 
     const strike = () => {
-      if (attacker.def.range > 1) {
-        this.fireProjectile(attacker, target, () => this.resolveAttack(attacker, target, special));
+      const done = () => this.resolveAttack(attacker, target, special);
+      if (attacker.def.shooter) {
+        const { tooFar } = this.damageOf(attacker, target, special);
+        this.fireProjectile(attacker, target, tooFar, done);
       } else {
-        this.meleeLunge(attacker, target, () => this.resolveAttack(attacker, target, special));
+        this.meleeLunge(attacker, target, done);
       }
     };
 
@@ -614,17 +667,30 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  private fireProjectile(attacker: Unit, target: Unit, onDone: () => void) {
+  private fireProjectile(attacker: Unit, target: Unit, broken: boolean, onDone: () => void) {
     const from = this.cellToXY(attacker.col, attacker.row);
     const to = this.cellToXY(target.col, target.row);
-    const shot = this.add.circle(from.x, from.y, 7, TYPE_INFO[attacker.def.type].color);
+    const color = TYPE_INFO[attacker.def.type].color;
+    const angle = Phaser.Math.Angle.Between(from.x, from.y, to.x, to.y);
+
+    const shot = this.add.container(from.x, from.y);
+    if (broken) {
+      // Złamana strzała: dwa kawałki lecące osobno, jak w Heroes 3.
+      shot.add(this.add.rectangle(-7, -2, 9, 3, color).setAngle(-12));
+      shot.add(this.add.rectangle(5, 3, 9, 3, color).setAngle(14));
+    } else {
+      shot.add(this.add.rectangle(-4, 0, 14, 3, color));
+      shot.add(this.add.triangle(7, 0, 0, -5, 0, 5, 9, 0, color));
+    }
+    shot.setRotation(angle);
     this.effectLayer.add(shot);
+
     this.tweens.add({
       targets: shot,
       x: to.x,
       y: to.y,
-      duration: 260,
-      ease: 'Quad.easeIn',
+      duration: broken ? 380 : 280,
+      ease: broken ? 'Quad.easeOut' : 'Quad.easeIn',
       onComplete: () => {
         shot.destroy();
         onDone();
@@ -633,8 +699,11 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private resolveAttack(attacker: Unit, target: Unit, special: boolean) {
-    const { value, typeMult } = this.damageOf(attacker, target, special);
+    const { value, typeMult, pinned, tooFar } = this.damageOf(attacker, target, special);
     target.hp -= value;
+
+    if (tooFar) this.floatText(target, 'Złamana strzała — pół siły', '#ff9800', -66);
+    else if (pinned) this.floatText(attacker, 'Strzelec w zwarciu!', '#ff9800', -60);
 
     if (special) {
       attacker.specialCooldown = SPECIAL_COOLDOWN;
@@ -713,7 +782,7 @@ export class BattleScene extends Phaser.Scene {
       if (!plan) continue;
       const dmg = this.damageOf(unit, target, useSpecial).value;
       // Premiuj dobicie celu i mocne trafienia w słabo opancerzonych.
-      const score = dmg >= target.hp ? dmg + 100 : dmg + (target.def.range > 1 ? 10 : 0);
+      const score = dmg >= target.hp ? dmg + 100 : dmg + (target.def.shooter ? 10 : 0);
       if (!best || score > best.score) best = { target, from: plan.from, score };
     }
 
