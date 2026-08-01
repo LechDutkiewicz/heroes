@@ -1,6 +1,16 @@
 import Phaser from 'phaser';
 
 type Side = 'player' | 'enemy';
+type ElementType = 'fire' | 'water' | 'grass';
+type SpecialKind = 'power' | 'drain';
+
+const TYPE_EMOJI: Record<ElementType, string> = {
+  fire: '\u{1F525}',
+  water: '\u{1F4A7}',
+  grass: '\u{1F33F}',
+};
+
+const SPECIAL_COOLDOWN = 3;
 
 interface UnitDef {
   name: string;
@@ -8,6 +18,9 @@ interface UnitDef {
   atk: number;
   move: number;
   color: number;
+  type: ElementType;
+  specialName: string;
+  specialKind: SpecialKind;
 }
 
 interface Unit {
@@ -17,6 +30,7 @@ interface Unit {
   hp: number;
   col: number;
   row: number;
+  specialCooldown: number;
   container: Phaser.GameObjects.Container;
   hpText: Phaser.GameObjects.Text;
   bg: Phaser.GameObjects.Rectangle;
@@ -26,19 +40,32 @@ const COLS = 10;
 const ROWS = 6;
 const CELL = 80;
 const BOARD_X = 40;
-const BOARD_Y = 90;
+const BOARD_Y = 120;
 
 const PLAYER_TEAM: UnitDef[] = [
-  { name: 'Ognisz', hp: 30, atk: 8, move: 3, color: 0xe74c3c },
-  { name: 'Wodnik', hp: 26, atk: 7, move: 4, color: 0x3498db },
-  { name: 'Lisliść', hp: 22, atk: 9, move: 3, color: 0x2ecc71 },
+  { name: 'Ognisz', hp: 30, atk: 8, move: 3, color: 0xe74c3c, type: 'fire', specialName: 'Ognista fala', specialKind: 'power' },
+  { name: 'Wodnik', hp: 26, atk: 7, move: 4, color: 0x3498db, type: 'water', specialName: 'Wodna trąba', specialKind: 'drain' },
+  { name: 'Lisliść', hp: 22, atk: 9, move: 3, color: 0x2ecc71, type: 'grass', specialName: 'Chłost liśćmi', specialKind: 'power' },
 ];
 
 const ENEMY_TEAM: UnitDef[] = [
-  { name: 'Skalun', hp: 34, atk: 6, move: 2, color: 0x95a5a6 },
-  { name: 'Iskrzyk', hp: 20, atk: 10, move: 4, color: 0xf1c40f },
-  { name: 'Mroczek', hp: 24, atk: 8, move: 3, color: 0x8e44ad },
+  { name: 'Skalun', hp: 34, atk: 6, move: 2, color: 0x95a5a6, type: 'water', specialName: 'Kamienny cios', specialKind: 'power' },
+  { name: 'Iskrzyk', hp: 20, atk: 10, move: 4, color: 0xf1c40f, type: 'grass', specialName: 'Wyładowanie', specialKind: 'power' },
+  { name: 'Mroczek', hp: 24, atk: 8, move: 3, color: 0x8e44ad, type: 'fire', specialName: 'Mroczny impet', specialKind: 'drain' },
 ];
+
+// fire > grass > water > fire
+function typeMultiplier(attacker: ElementType, defender: ElementType): number {
+  if (attacker === defender) return 1;
+  if (
+    (attacker === 'fire' && defender === 'grass') ||
+    (attacker === 'grass' && defender === 'water') ||
+    (attacker === 'water' && defender === 'fire')
+  ) {
+    return 1.5;
+  }
+  return 1 / 1.5;
+}
 
 export class BattleScene extends Phaser.Scene {
   private units: Unit[] = [];
@@ -47,6 +74,8 @@ export class BattleScene extends Phaser.Scene {
   private nextId = 1;
   private highlights: Phaser.GameObjects.Rectangle[] = [];
   private statusText!: Phaser.GameObjects.Text;
+  private specialButton!: Phaser.GameObjects.Text;
+  private specialArmed = false;
   private gameOver = false;
 
   constructor() {
@@ -61,6 +90,17 @@ export class BattleScene extends Phaser.Scene {
       fontSize: '22px',
       color: '#ffffff',
     });
+
+    this.specialButton = this.add
+      .text(BOARD_X, 56, '', {
+        fontFamily: 'sans-serif',
+        fontSize: '16px',
+        color: '#ffffff',
+        backgroundColor: '#2c2c44',
+        padding: { x: 8, y: 4 },
+      })
+      .setInteractive({ useHandCursor: true });
+    this.specialButton.on('pointerdown', () => this.onSpecialButtonClicked());
 
     PLAYER_TEAM.forEach((def, i) => this.spawnUnit(def, 'player', 0, i * 2));
     ENEMY_TEAM.forEach((def, i) => this.spawnUnit(def, 'enemy', COLS - 1, i * 2));
@@ -93,7 +133,11 @@ export class BattleScene extends Phaser.Scene {
     const { x, y } = this.cellToXY(col, row);
     const bg = this.add.rectangle(0, 0, CELL - 10, CELL - 10, def.color).setStrokeStyle(2, 0x000000);
     const label = this.add
-      .text(0, -8, def.name, { fontFamily: 'sans-serif', fontSize: '12px', color: '#ffffff' })
+      .text(0, -18, `${TYPE_EMOJI[def.type]} ${def.name}`, {
+        fontFamily: 'sans-serif',
+        fontSize: '12px',
+        color: '#ffffff',
+      })
       .setOrigin(0.5);
     const hpText = this.add
       .text(0, 14, `${def.hp}/${def.hp}`, { fontFamily: 'sans-serif', fontSize: '12px', color: '#ffffff' })
@@ -110,6 +154,7 @@ export class BattleScene extends Phaser.Scene {
       hp: def.hp,
       col,
       row,
+      specialCooldown: 0,
       container,
       hpText,
       bg,
@@ -128,6 +173,7 @@ export class BattleScene extends Phaser.Scene {
   private beginTurn() {
     if (this.gameOver) return;
     this.clearHighlights();
+    this.specialArmed = false;
 
     const unit = this.activeUnit();
     if (!unit) {
@@ -135,15 +181,40 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
+    if (unit.specialCooldown > 0) unit.specialCooldown--;
+
     this.statusText.setText(
       `Tura: ${unit.def.name} (${unit.side === 'player' ? 'Ty' : 'Przeciwnik'})`
     );
 
     if (unit.side === 'enemy') {
+      this.specialButton.setVisible(false);
       this.time.delayedCall(500, () => this.enemyAct(unit));
     } else {
+      this.updateSpecialButton(unit);
       this.showRange(unit);
     }
+  }
+
+  private updateSpecialButton(unit: Unit) {
+    this.specialButton.setVisible(true);
+    const ready = unit.specialCooldown === 0;
+    this.specialButton.setText(
+      ready
+        ? `⚡ ${unit.def.specialName} (gotowy)`
+        : `⚡ ${unit.def.specialName} (za ${unit.specialCooldown} tur)`
+    );
+    this.specialButton.setColor(this.specialArmed ? '#f1c40f' : '#ffffff');
+    this.specialButton.setAlpha(ready ? 1 : 0.5);
+  }
+
+  private onSpecialButtonClicked() {
+    if (this.gameOver) return;
+    const unit = this.activeUnit();
+    if (!unit || unit.side !== 'player' || unit.specialCooldown > 0) return;
+    this.specialArmed = !this.specialArmed;
+    this.updateSpecialButton(unit);
+    this.showRange(unit);
   }
 
   private advanceTurn() {
@@ -165,23 +236,28 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private showRange(unit: Unit) {
-    this.clearHighlights();
+    this.clearHighlightsOnly();
     const occupied = this.occupiedCells(unit.id);
 
-    for (let col = 0; col < COLS; col++) {
-      for (let row = 0; row < ROWS; row++) {
-        const dist = this.distance(unit, { col, row });
-        const blocked = occupied.some((o) => o.col === col && o.row === row);
-        if (dist > 0 && dist <= unit.def.move && !blocked) {
-          this.addHighlight(col, row, 0x3498db, () => this.moveUnit(unit, col, row));
+    if (!this.specialArmed) {
+      for (let col = 0; col < COLS; col++) {
+        for (let row = 0; row < ROWS; row++) {
+          const dist = this.distance(unit, { col, row });
+          const blocked = occupied.some((o) => o.col === col && o.row === row);
+          if (dist > 0 && dist <= unit.def.move && !blocked) {
+            this.addHighlight(col, row, 0x3498db, () => this.moveUnit(unit, col, row));
+          }
         }
       }
     }
 
+    const attackColor = this.specialArmed ? 0xf1c40f : 0xe74c3c;
     const enemies = this.units.filter((u) => u.hp > 0 && u.side !== unit.side);
     for (const enemy of enemies) {
       if (this.distance(unit, enemy) === 1) {
-        this.addHighlight(enemy.col, enemy.row, 0xe74c3c, () => this.attackUnit(unit, enemy));
+        this.addHighlight(enemy.col, enemy.row, attackColor, () =>
+          this.attackUnit(unit, enemy, this.specialArmed)
+        );
       }
     }
   }
@@ -194,15 +270,22 @@ export class BattleScene extends Phaser.Scene {
     this.highlights.push(rect);
   }
 
-  private clearHighlights() {
+  private clearHighlightsOnly() {
     this.highlights.forEach((h) => h.destroy());
     this.highlights = [];
+  }
+
+  private clearHighlights() {
+    this.clearHighlightsOnly();
+    this.specialArmed = false;
   }
 
   private onUnitClicked(unit: Unit) {
     if (this.gameOver) return;
     const active = this.activeUnit();
     if (!active || active.side !== 'player' || active.id !== unit.id) return;
+    this.specialArmed = false;
+    this.updateSpecialButton(unit);
     this.showRange(unit);
   }
 
@@ -215,8 +298,44 @@ export class BattleScene extends Phaser.Scene {
     this.time.delayedCall(220, () => this.advanceTurn());
   }
 
-  private attackUnit(attacker: Unit, target: Unit) {
-    target.hp -= attacker.def.atk;
+  private showFloatingText(col: number, row: number, text: string, color: string) {
+    const { x, y } = this.cellToXY(col, row);
+    const t = this.add
+      .text(x, y - 40, text, { fontFamily: 'sans-serif', fontSize: '14px', color, fontStyle: 'bold' })
+      .setOrigin(0.5);
+    this.tweens.add({
+      targets: t,
+      y: y - 65,
+      alpha: 0,
+      duration: 700,
+      onComplete: () => t.destroy(),
+    });
+  }
+
+  private attackUnit(attacker: Unit, target: Unit, special: boolean) {
+    const mult = typeMultiplier(attacker.def.type, target.def.type);
+    const specialMult = special ? (attacker.def.specialKind === 'power' ? 2 : 1.5) : 1;
+    const dmg = Math.round(attacker.def.atk * mult * specialMult);
+
+    target.hp -= dmg;
+
+    if (special) {
+      attacker.specialCooldown = SPECIAL_COOLDOWN;
+      this.showFloatingText(attacker.col, attacker.row, attacker.def.specialName, '#f1c40f');
+      if (attacker.def.specialKind === 'drain') {
+        const heal = Math.floor(dmg / 2);
+        attacker.hp = Math.min(attacker.def.hp, attacker.hp + heal);
+        attacker.hpText.setText(`${attacker.hp}/${attacker.def.hp}`);
+        this.showFloatingText(attacker.col, attacker.row, `+${heal} HP`, '#2ecc71');
+      }
+    }
+
+    if (mult > 1) {
+      this.showFloatingText(target.col, target.row, 'Super skuteczne!', '#2ecc71');
+    } else if (mult < 1) {
+      this.showFloatingText(target.col, target.row, 'Słabo skuteczne...', '#95a5a6');
+    }
+
     if (target.hp <= 0) {
       target.hp = 0;
       target.hpText.setText('0/0');
@@ -225,10 +344,11 @@ export class BattleScene extends Phaser.Scene {
     } else {
       target.hpText.setText(`${target.hp}/${target.def.hp}`);
     }
+
     this.clearHighlights();
     this.checkGameOver();
     if (!this.gameOver) {
-      this.time.delayedCall(200, () => this.advanceTurn());
+      this.time.delayedCall(400, () => this.advanceTurn());
     }
   }
 
@@ -251,7 +371,18 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (bestDist === 1) {
-      this.attackUnit(unit, nearest);
+      const adjacent = targets.filter((t) => this.distance(unit, t) === 1);
+      let bestTarget = adjacent[0];
+      let bestMult = typeMultiplier(unit.def.type, bestTarget.def.type);
+      for (const t of adjacent) {
+        const m = typeMultiplier(unit.def.type, t.def.type);
+        if (m > bestMult) {
+          bestMult = m;
+          bestTarget = t;
+        }
+      }
+      const useSpecial = unit.specialCooldown === 0;
+      this.attackUnit(unit, bestTarget, useSpecial);
       return;
     }
 
@@ -281,6 +412,7 @@ export class BattleScene extends Phaser.Scene {
     if (!playersLeft || !enemiesLeft) {
       this.gameOver = true;
       this.clearHighlights();
+      this.specialButton.setVisible(false);
       this.statusText.setText(playersLeft ? 'Wygrana!' : 'Przegrana...');
     }
   }
