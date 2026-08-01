@@ -14,13 +14,21 @@ na planszy (72 piksele). Dobrze wyglądają obrazki wysokości 64-128 pikseli.
 
 ## Skąd pochodzą
 
-Jeśli pliki pochodzą z konkretnego źródła, dopisz je tutaj razem z licencją,
-żeby nie zgubić informacji, na co nam wolno:
+- źródło: Pixmon Index, https://www.novelgens.com/pixmons
+- licencja: domena publiczna — wolno używać i modyfikować w dowolnym
+  projekcie, płatnym lub darmowym, bez pytania o zgodę i bez podawania autora
+- czym są: autorskie stworki wygenerowane modelem AI w stylu pokemonów,
+  a nie grafiki z oryginalnych gier
 
-- źródło:
-- licencja:
+## Jak trafiają do gry
 
-## Co dalej
+Pliki tutaj to oryginały (256x256, białe tło). Gra ich bezpośrednio nie
+wczytuje — najpierw przechodzą przez `tools/process_sprites.py`, który
+wycina tło, przycina do stworka i zapisuje gotowe obrazki do
+`public/sprites/`.
 
-Po wrzuceniu plików wystarczy dać znać — kod bitwy podmieni rysowane figury
-na te obrazki.
+Po dorzuceniu nowych plików uruchom:
+
+```
+python3 tools/process_sprites.py
+```

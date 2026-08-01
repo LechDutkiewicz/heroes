@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import {
+  ALL_SPRITES,
   ENEMY_TEAM,
   HALF_DAMAGE,
   PLAYER_TEAM,
@@ -8,7 +9,6 @@ import {
   typeMultiplier,
   type UnitDef,
 } from '../data/units';
-import { createSpriteTextures } from '../data/sprites';
 
 type Side = 'player' | 'enemy';
 
@@ -84,8 +84,13 @@ export class BattleScene extends Phaser.Scene {
     super('battle');
   }
 
+  preload() {
+    for (const key of ALL_SPRITES) {
+      this.load.image(key, `${import.meta.env.BASE_URL}sprites/${key}.png`);
+    }
+  }
+
   create() {
-    createSpriteTextures(this);
     this.drawBackground();
     this.drawBoard();
     this.drawHud();
@@ -206,9 +211,8 @@ export class BattleScene extends Phaser.Scene {
     // Podest pod pokemonem zdradza, do kogo należy i podświetla aktywną jednostkę.
     const platform = this.add.ellipse(0, 18, 42, 13, accent, 0.22).setStrokeStyle(2, accent, 0.6);
 
-    const sprite = this.add.image(0, -7, def.sprite).setScale(0.78);
-    // Wrogowie patrzą w lewo, w stronę twojej drużyny.
-    if (side === 'enemy') sprite.setFlipX(true);
+    // Sprite'y są kwadratowe 128x128 — skalujemy do wielkości pola.
+    const sprite = this.add.image(0, -7, def.sprite).setDisplaySize(64, 64);
 
     const name = this.add
       .text(0, -33, def.name, {
@@ -319,7 +323,7 @@ export class BattleScene extends Phaser.Scene {
         .setStrokeStyle(2, accent, i === 0 ? 1 : 0.45);
       const face = this.add
         .image(0, 0, unit.def.sprite)
-        .setScale(0.4)
+        .setDisplaySize(24, 24)
         .setAlpha(i === 0 ? 1 : 0.6);
       this.queueIcons.push(this.add.container(startX + i * spacing, 26, [bg, face]));
     }
@@ -656,14 +660,25 @@ export class BattleScene extends Phaser.Scene {
   private meleeLunge(attacker: Unit, target: Unit, onDone: () => void) {
     const start = { x: attacker.container.x, y: attacker.container.y };
     const to = this.cellToXY(target.col, target.row);
+
+    // Dwa osobne ruchy zamiast yoyo: yoyo zgłasza się raz na animowaną
+    // właściwość, więc trafienie liczyłoby się podwójnie (x i y).
     this.tweens.add({
       targets: attacker.container,
       x: start.x + (to.x - start.x) * 0.4,
       y: start.y + (to.y - start.y) * 0.4,
       duration: 120,
-      yoyo: true,
       ease: 'Quad.easeOut',
-      onYoyo: onDone,
+      onComplete: () => {
+        onDone();
+        this.tweens.add({
+          targets: attacker.container,
+          x: start.x,
+          y: start.y,
+          duration: 150,
+          ease: 'Quad.easeIn',
+        });
+      },
     });
   }
 
@@ -742,9 +757,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private floatText(unit: Unit, text: string, color: string, offsetY: number) {
-    const { x, y } = this.cellToXY(unit.col, unit.row);
+    const cell = this.cellToXY(unit.col, unit.row);
     const t = this.add
-      .text(x, y + offsetY, text, {
+      .text(cell.x, cell.y + offsetY, text, {
         fontFamily: 'Trebuchet MS, sans-serif',
         fontSize: '14px',
         color,
@@ -753,10 +768,15 @@ export class BattleScene extends Phaser.Scene {
         strokeThickness: 3,
       })
       .setOrigin(0.5);
+
+    // Trzymaj napis w granicach planszy — inaczej ucieka poza ekran przy krawędzi.
+    t.x = Phaser.Math.Clamp(t.x, BOARD_X + t.width / 2, BOARD_X + BOARD_W - t.width / 2);
+    t.y = Phaser.Math.Clamp(t.y, BOARD_Y + 32, BOARD_Y + BOARD_H - 8);
+
     this.effectLayer.add(t);
     this.tweens.add({
       targets: t,
-      y: y + offsetY - 26,
+      y: t.y - 26,
       alpha: 0,
       duration: 850,
       onComplete: () => t.destroy(),
