@@ -1,27 +1,15 @@
 import Phaser from 'phaser';
+import {
+  ENEMY_TEAM,
+  MELEE_PENALTY,
+  PLAYER_TEAM,
+  SPECIAL_COOLDOWN,
+  TYPE_INFO,
+  typeMultiplier,
+  type UnitDef,
+} from '../data/units';
 
 type Side = 'player' | 'enemy';
-type ElementType = 'fire' | 'water' | 'grass';
-type SpecialKind = 'power' | 'drain';
-
-const TYPE_EMOJI: Record<ElementType, string> = {
-  fire: '\u{1F525}',
-  water: '\u{1F4A7}',
-  grass: '\u{1F33F}',
-};
-
-const SPECIAL_COOLDOWN = 3;
-
-interface UnitDef {
-  name: string;
-  hp: number;
-  atk: number;
-  move: number;
-  color: number;
-  type: ElementType;
-  specialName: string;
-  specialKind: SpecialKind;
-}
 
 interface Unit {
   id: number;
@@ -32,50 +20,50 @@ interface Unit {
   row: number;
   specialCooldown: number;
   container: Phaser.GameObjects.Container;
-  hpText: Phaser.GameObjects.Text;
-  bg: Phaser.GameObjects.Rectangle;
+  hpBar: Phaser.GameObjects.Rectangle;
+  hpLabel: Phaser.GameObjects.Text;
+  ring: Phaser.GameObjects.Arc;
+}
+
+interface Cell {
+  col: number;
+  row: number;
 }
 
 const COLS = 10;
-const ROWS = 6;
-const CELL = 80;
+const ROWS = 7;
+const CELL = 72;
 const BOARD_X = 40;
-const BOARD_Y = 120;
+const BOARD_Y = 92;
+const BOARD_W = COLS * CELL;
+const BOARD_H = ROWS * CELL;
+const PANEL_Y = BOARD_Y + BOARD_H + 14;
 
-const PLAYER_TEAM: UnitDef[] = [
-  { name: 'Ognisz', hp: 30, atk: 8, move: 3, color: 0xe74c3c, type: 'fire', specialName: 'Ognista fala', specialKind: 'power' },
-  { name: 'Wodnik', hp: 26, atk: 7, move: 4, color: 0x3498db, type: 'water', specialName: 'Wodna trąba', specialKind: 'drain' },
-  { name: 'Lisliść', hp: 22, atk: 9, move: 3, color: 0x2ecc71, type: 'grass', specialName: 'Chłost liśćmi', specialKind: 'power' },
-];
+const HP_BAR_W = 52;
+const HP_BAR_H = 12;
 
-const ENEMY_TEAM: UnitDef[] = [
-  { name: 'Skalun', hp: 34, atk: 6, move: 2, color: 0x95a5a6, type: 'water', specialName: 'Kamienny cios', specialKind: 'power' },
-  { name: 'Iskrzyk', hp: 20, atk: 10, move: 4, color: 0xf1c40f, type: 'grass', specialName: 'Wyładowanie', specialKind: 'power' },
-  { name: 'Mroczek', hp: 24, atk: 8, move: 3, color: 0x8e44ad, type: 'fire', specialName: 'Mroczny impet', specialKind: 'drain' },
-];
-
-// fire > grass > water > fire
-function typeMultiplier(attacker: ElementType, defender: ElementType): number {
-  if (attacker === defender) return 1;
-  if (
-    (attacker === 'fire' && defender === 'grass') ||
-    (attacker === 'grass' && defender === 'water') ||
-    (attacker === 'water' && defender === 'fire')
-  ) {
-    return 1.5;
-  }
-  return 1 / 1.5;
-}
+const cellKey = (col: number, row: number) => `${col},${row}`;
 
 export class BattleScene extends Phaser.Scene {
   private units: Unit[] = [];
   private turnOrder: number[] = [];
   private turnIndex = 0;
   private nextId = 1;
-  private highlights: Phaser.GameObjects.Rectangle[] = [];
-  private statusText!: Phaser.GameObjects.Text;
-  private specialButton!: Phaser.GameObjects.Text;
+
+  private highlightLayer!: Phaser.GameObjects.Container;
+  private effectLayer!: Phaser.GameObjects.Container;
+  private queueIcons: Phaser.GameObjects.Container[] = [];
+  private queueLabel?: Phaser.GameObjects.Text;
+
+  private turnText!: Phaser.GameObjects.Text;
+  private statsText!: Phaser.GameObjects.Text;
+  private forecastText!: Phaser.GameObjects.Text;
+  private specialButton!: Phaser.GameObjects.Container;
+  private specialLabel!: Phaser.GameObjects.Text;
+  private specialBg!: Phaser.GameObjects.Rectangle;
+
   private specialArmed = false;
+  private busy = false;
   private gameOver = false;
 
   constructor() {
@@ -83,69 +71,175 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create() {
-    this.drawGrid();
+    this.drawBackground();
+    this.drawBoard();
+    this.drawHud();
 
-    this.statusText = this.add.text(BOARD_X, 20, '', {
-      fontFamily: 'sans-serif',
-      fontSize: '22px',
-      color: '#ffffff',
-    });
+    this.highlightLayer = this.add.container(0, 0).setDepth(5);
+    this.effectLayer = this.add.container(0, 0).setDepth(100);
 
-    this.specialButton = this.add
-      .text(BOARD_X, 56, '', {
-        fontFamily: 'sans-serif',
-        fontSize: '16px',
-        color: '#ffffff',
-        backgroundColor: '#2c2c44',
-        padding: { x: 8, y: 4 },
-      })
-      .setInteractive({ useHandCursor: true });
-    this.specialButton.on('pointerdown', () => this.onSpecialButtonClicked());
+    PLAYER_TEAM.forEach((def, i) => this.spawnUnit(def, 'player', i < 3 ? 0 : 1, i % 3 === 0 ? 0 : i % 3 === 1 ? 3 : 6));
+    ENEMY_TEAM.forEach((def, i) => this.spawnUnit(def, 'enemy', i < 3 ? COLS - 1 : COLS - 2, i % 3 === 0 ? 0 : i % 3 === 1 ? 3 : 6));
 
-    PLAYER_TEAM.forEach((def, i) => this.spawnUnit(def, 'player', 0, i * 2));
-    ENEMY_TEAM.forEach((def, i) => this.spawnUnit(def, 'enemy', COLS - 1, i * 2));
+    // Szybsze pokemony ruszają się pierwsze.
+    this.turnOrder = [...this.units]
+      .sort((a, b) => b.def.move - a.def.move || Math.random() - 0.5)
+      .map((u) => u.id);
 
-    this.turnOrder = this.units.map((u) => u.id).sort(() => Math.random() - 0.5);
-    this.turnIndex = 0;
-
+    this.buildQueueIcons();
     this.beginTurn();
   }
 
-  private drawGrid() {
+  // ---------- rysowanie planszy ----------
+
+  private drawBackground() {
     const g = this.add.graphics();
-    g.lineStyle(1, 0x2c2c44, 1);
-    for (let c = 0; c <= COLS; c++) {
-      g.lineBetween(BOARD_X + c * CELL, BOARD_Y, BOARD_X + c * CELL, BOARD_Y + ROWS * CELL);
-    }
-    for (let r = 0; r <= ROWS; r++) {
-      g.lineBetween(BOARD_X, BOARD_Y + r * CELL, BOARD_X + COLS * CELL, BOARD_Y + r * CELL);
-    }
+    g.fillGradientStyle(0x1b2340, 0x1b2340, 0x0d1023, 0x0d1023, 1);
+    g.fillRect(0, 0, this.scale.width, this.scale.height);
   }
 
+  private drawBoard() {
+    const g = this.add.graphics();
+
+    g.fillStyle(0x000000, 0.35);
+    g.fillRoundedRect(BOARD_X - 10, BOARD_Y - 10, BOARD_W + 20, BOARD_H + 20, 14);
+    g.fillStyle(0x24304f, 1);
+    g.fillRoundedRect(BOARD_X - 6, BOARD_Y - 6, BOARD_W + 12, BOARD_H + 12, 12);
+
+    for (let col = 0; col < COLS; col++) {
+      for (let row = 0; row < ROWS; row++) {
+        const shade = (col + row) % 2 === 0 ? 0x2f3c60 : 0x2a3556;
+        g.fillStyle(shade, 1);
+        g.fillRoundedRect(BOARD_X + col * CELL + 2, BOARD_Y + row * CELL + 2, CELL - 4, CELL - 4, 8);
+      }
+    }
+
+    // Strefy startowe obu drużyn.
+    g.fillStyle(0x4fc3f7, 0.1);
+    g.fillRoundedRect(BOARD_X + 2, BOARD_Y + 2, CELL * 2 - 4, BOARD_H - 4, 8);
+    g.fillStyle(0xef5350, 0.1);
+    g.fillRoundedRect(BOARD_X + (COLS - 2) * CELL + 2, BOARD_Y + 2, CELL * 2 - 4, BOARD_H - 4, 8);
+  }
+
+  private drawHud() {
+    this.add
+      .text(BOARD_X, 10, 'POKEMON HEROES', {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '19px',
+        color: '#ffd166',
+        fontStyle: 'bold',
+      })
+      .setAlpha(0.9);
+
+    this.turnText = this.add.text(BOARD_X, 58, '', {
+      fontFamily: 'Trebuchet MS, sans-serif',
+      fontSize: '14px',
+      color: '#ffffff',
+    });
+
+    const panel = this.add.graphics();
+    panel.fillStyle(0x141a30, 0.9);
+    panel.fillRoundedRect(BOARD_X - 6, PANEL_Y, BOARD_W + 12, 96, 10);
+    panel.lineStyle(1, 0x3a4770, 1);
+    panel.strokeRoundedRect(BOARD_X - 6, PANEL_Y, BOARD_W + 12, 96, 10);
+
+    this.statsText = this.add.text(BOARD_X + 10, PANEL_Y + 10, '', {
+      fontFamily: 'Trebuchet MS, sans-serif',
+      fontSize: '15px',
+      color: '#e8ecff',
+      lineSpacing: 4,
+    });
+
+    this.forecastText = this.add.text(BOARD_X + 10, PANEL_Y + 62, '', {
+      fontFamily: 'Trebuchet MS, sans-serif',
+      fontSize: '14px',
+      color: '#ffd166',
+    });
+
+    this.specialBg = this.add
+      .rectangle(0, 0, 250, 40, 0x2c3a63)
+      .setStrokeStyle(2, 0xffd166)
+      .setInteractive({ useHandCursor: true });
+    this.specialLabel = this.add
+      .text(0, 0, '', {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '14px',
+        color: '#ffffff',
+        align: 'center',
+      })
+      .setOrigin(0.5);
+    this.specialButton = this.add.container(BOARD_X + BOARD_W - 140, PANEL_Y + 48, [
+      this.specialBg,
+      this.specialLabel,
+    ]);
+    this.specialBg.on('pointerdown', () => this.toggleSpecial());
+  }
+
+  // ---------- jednostki ----------
+
   private cellToXY(col: number, row: number) {
-    return {
-      x: BOARD_X + col * CELL + CELL / 2,
-      y: BOARD_Y + row * CELL + CELL / 2,
-    };
+    return { x: BOARD_X + col * CELL + CELL / 2, y: BOARD_Y + row * CELL + CELL / 2 };
   }
 
   private spawnUnit(def: UnitDef, side: Side, col: number, row: number) {
     const { x, y } = this.cellToXY(col, row);
-    const bg = this.add.rectangle(0, 0, CELL - 10, CELL - 10, def.color).setStrokeStyle(2, 0x000000);
-    const label = this.add
-      .text(0, -18, `${TYPE_EMOJI[def.type]} ${def.name}`, {
-        fontFamily: 'sans-serif',
+    const accent = side === 'player' ? 0x4fc3f7 : 0xef5350;
+
+    const shadow = this.add.ellipse(0, 24, 46, 12, 0x000000, 0.35);
+    const ring = this.add.circle(0, 0, 27, accent, 0).setStrokeStyle(3, accent, 0.9);
+    const body = this.add.circle(0, 0, 23, def.color).setStrokeStyle(2, 0x11162b, 1);
+    const face = this.add.text(0, -1, def.emoji, { fontSize: '26px' }).setOrigin(0.5);
+
+    const name = this.add
+      .text(0, -32, def.name, {
+        fontFamily: 'Trebuchet MS, sans-serif',
         fontSize: '12px',
         color: '#ffffff',
+        fontStyle: 'bold',
       })
       .setOrigin(0.5);
-    const hpText = this.add
-      .text(0, 14, `${def.hp}/${def.hp}`, { fontFamily: 'sans-serif', fontSize: '12px', color: '#ffffff' })
+
+    const typeBadge = this.add
+      .text(-22, -22, TYPE_INFO[def.type].emoji, { fontSize: '13px' })
       .setOrigin(0.5);
 
-    const container = this.add.container(x, y, [bg, label, hpText]);
-    container.setSize(CELL - 10, CELL - 10);
-    bg.setInteractive({ useHandCursor: true });
+    const atkBadge = this.add
+      .text(20, -20, `${def.range > 1 ? '\u{1F3F9}' : '⚔️'}${def.atk}`, {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '12px',
+        color: '#ffffff',
+        backgroundColor: '#00000099',
+        padding: { x: 3, y: 1 },
+      })
+      .setOrigin(0.5);
+
+    const hpBarBg = this.add.rectangle(0, 26, HP_BAR_W, HP_BAR_H, 0x11162b, 0.85).setStrokeStyle(1, 0x000000, 0.6);
+    const hpBar = this.add.rectangle(-HP_BAR_W / 2, 26, HP_BAR_W, HP_BAR_H, 0x4caf50).setOrigin(0, 0.5);
+    const hpLabel = this.add
+      .text(0, 26, `${def.hp}/${def.hp}`, {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '10px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+
+    const hit = this.add.rectangle(0, 0, CELL - 8, CELL - 8, 0xffffff, 0).setInteractive({ useHandCursor: true });
+
+    const container = this.add.container(x, y, [
+      shadow,
+      ring,
+      body,
+      face,
+      typeBadge,
+      atkBadge,
+      name,
+      hpBarBg,
+      hpBar,
+      hpLabel,
+      hit,
+    ]);
+    container.setDepth(10);
 
     const unit: Unit = {
       id: this.nextId++,
@@ -156,24 +250,67 @@ export class BattleScene extends Phaser.Scene {
       row,
       specialCooldown: 0,
       container,
-      hpText,
-      bg,
+      hpBar,
+      hpLabel,
+      ring,
     };
 
-    bg.on('pointerdown', () => this.onUnitClicked(unit));
+    hit.on('pointerdown', () => this.onUnitClicked(unit));
+    hit.on('pointerover', () => this.onUnitHover(unit));
+    hit.on('pointerout', () => this.forecastText.setText(''));
+
     this.units.push(unit);
     return unit;
   }
 
+  private refreshHp(unit: Unit) {
+    const ratio = Phaser.Math.Clamp(unit.hp / unit.def.hp, 0, 1);
+    unit.hpBar.width = HP_BAR_W * ratio;
+    unit.hpBar.fillColor = ratio > 0.5 ? 0x4caf50 : ratio > 0.25 ? 0xffb300 : 0xe53935;
+    unit.hpLabel.setText(`${unit.hp}/${unit.def.hp}`);
+  }
+
+  // ---------- kolejka tur ----------
+
+  private buildQueueIcons() {
+    this.queueIcons.forEach((c) => c.destroy());
+    this.queueIcons = [];
+
+    const count = Math.min(this.turnOrder.length, 12);
+    const spacing = 31;
+    const startX = BOARD_X + BOARD_W - (count - 1) * spacing - 14;
+
+    if (!this.queueLabel) {
+      this.queueLabel = this.add
+        .text(startX - 74, 26, 'Kolejka:', {
+          fontFamily: 'Trebuchet MS, sans-serif',
+          fontSize: '13px',
+          color: '#8ea0d0',
+        })
+        .setOrigin(0, 0.5);
+    }
+
+    for (let i = 0; i < count; i++) {
+      const unit = this.units.find((u) => u.id === this.turnOrder[(this.turnIndex + i) % this.turnOrder.length]);
+      if (!unit) continue;
+      const accent = unit.side === 'player' ? 0x4fc3f7 : 0xef5350;
+      const bg = this.add.circle(0, 0, 13, unit.def.color, i === 0 ? 1 : 0.5).setStrokeStyle(2, accent, i === 0 ? 1 : 0.45);
+      const face = this.add.text(0, 0, unit.def.emoji, { fontSize: '13px' }).setOrigin(0.5).setAlpha(i === 0 ? 1 : 0.55);
+      this.queueIcons.push(this.add.container(startX + i * spacing, 26, [bg, face]));
+    }
+  }
+
+  // ---------- przebieg tury ----------
+
   private activeUnit(): Unit | undefined {
-    const id = this.turnOrder[this.turnIndex];
-    return this.units.find((u) => u.id === id);
+    return this.units.find((u) => u.id === this.turnOrder[this.turnIndex]);
   }
 
   private beginTurn() {
     if (this.gameOver) return;
     this.clearHighlights();
     this.specialArmed = false;
+    this.busy = false;
 
     const unit = this.activeUnit();
     if (!unit) {
@@ -183,237 +320,460 @@ export class BattleScene extends Phaser.Scene {
 
     if (unit.specialCooldown > 0) unit.specialCooldown--;
 
-    this.statusText.setText(
-      `Tura: ${unit.def.name} (${unit.side === 'player' ? 'Ty' : 'Przeciwnik'})`
+    this.units.forEach((u) => u.ring.setStrokeStyle(3, u.side === 'player' ? 0x4fc3f7 : 0xef5350, 0.9));
+    unit.ring.setStrokeStyle(4, 0xffd166, 1);
+    this.tweens.add({ targets: unit.ring, scale: { from: 1, to: 1.15 }, duration: 500, yoyo: true, repeat: -1 });
+
+    this.turnText.setText(
+      unit.side === 'player'
+        ? `Twoja tura: ${unit.def.name} — kliknij pole, by podejść, albo wroga, by zaatakować`
+        : `Tura przeciwnika: ${unit.def.name}`
     );
+
+    this.buildQueueIcons();
+    this.showStats(unit);
 
     if (unit.side === 'enemy') {
       this.specialButton.setVisible(false);
-      this.time.delayedCall(500, () => this.enemyAct(unit));
+      this.time.delayedCall(600, () => this.enemyAct(unit));
     } else {
       this.updateSpecialButton(unit);
-      this.showRange(unit);
+      this.showOptions(unit);
     }
-  }
-
-  private updateSpecialButton(unit: Unit) {
-    this.specialButton.setVisible(true);
-    const ready = unit.specialCooldown === 0;
-    this.specialButton.setText(
-      ready
-        ? `⚡ ${unit.def.specialName} (gotowy)`
-        : `⚡ ${unit.def.specialName} (za ${unit.specialCooldown} tur)`
-    );
-    this.specialButton.setColor(this.specialArmed ? '#f1c40f' : '#ffffff');
-    this.specialButton.setAlpha(ready ? 1 : 0.5);
-  }
-
-  private onSpecialButtonClicked() {
-    if (this.gameOver) return;
-    const unit = this.activeUnit();
-    if (!unit || unit.side !== 'player' || unit.specialCooldown > 0) return;
-    this.specialArmed = !this.specialArmed;
-    this.updateSpecialButton(unit);
-    this.showRange(unit);
   }
 
   private advanceTurn() {
     if (this.gameOver) return;
-    this.turnOrder = this.turnOrder.filter((id) => this.units.some((u) => u.id === id && u.hp > 0));
+    this.tweens.killTweensOf(this.units.map((u) => u.ring));
+    this.units.forEach((u) => u.ring.setScale(1));
+    this.turnOrder = this.turnOrder.filter((id) => this.units.some((u) => u.id === id));
     if (this.turnOrder.length === 0) return;
     this.turnIndex = (this.turnIndex + 1) % this.turnOrder.length;
     this.beginTurn();
   }
 
-  private distance(a: { col: number; row: number }, b: { col: number; row: number }) {
-    return Math.abs(a.col - b.col) + Math.abs(a.row - b.row);
+  private showStats(unit: Unit) {
+    const t = TYPE_INFO[unit.def.type];
+    const reach = unit.def.range > 1 ? `strzelec, zasięg ${unit.def.range}` : 'walka wręcz';
+    const special =
+      unit.specialCooldown === 0
+        ? `${unit.def.specialName} — gotowy`
+        : `${unit.def.specialName} — za ${unit.specialCooldown} tur`;
+    this.statsText.setText(
+      `${unit.def.emoji}  ${unit.def.name}   ${t.emoji} ${t.label}\n` +
+        `❤️ HP ${unit.hp}/${unit.def.hp}    ⚔️ Atak ${unit.def.atk}    \u{1F462} Ruch ${unit.def.move}    \u{1F3AF} ${reach}\n` +
+        `⚡ ${special}`
+    );
   }
 
-  private occupiedCells(excludeId?: number) {
-    return this.units
-      .filter((u) => u.hp > 0 && u.id !== excludeId)
-      .map((u) => ({ col: u.col, row: u.row }));
+  // ---------- zasięg ruchu i cele ----------
+
+  private blockedCells(excludeId: number) {
+    const set = new Set<string>();
+    this.units.filter((u) => u.id !== excludeId).forEach((u) => set.add(cellKey(u.col, u.row)));
+    return set;
   }
 
-  private showRange(unit: Unit) {
-    this.clearHighlightsOnly();
-    const occupied = this.occupiedCells(unit.id);
+  /** BFS po planszy — zwraca koszt dojścia do każdego osiągalnego pola. */
+  private reachable(unit: Unit): Map<string, number> {
+    const blocked = this.blockedCells(unit.id);
+    const dist = new Map<string, number>([[cellKey(unit.col, unit.row), 0]]);
+    const queue: Cell[] = [{ col: unit.col, row: unit.row }];
+
+    while (queue.length > 0) {
+      const cur = queue.shift()!;
+      const cost = dist.get(cellKey(cur.col, cur.row))!;
+      if (cost >= unit.def.move) continue;
+
+      const neighbours: Cell[] = [
+        { col: cur.col + 1, row: cur.row },
+        { col: cur.col - 1, row: cur.row },
+        { col: cur.col, row: cur.row + 1 },
+        { col: cur.col, row: cur.row - 1 },
+      ];
+      for (const n of neighbours) {
+        if (n.col < 0 || n.col >= COLS || n.row < 0 || n.row >= ROWS) continue;
+        const key = cellKey(n.col, n.row);
+        if (blocked.has(key) || dist.has(key)) continue;
+        dist.set(key, cost + 1);
+        queue.push(n);
+      }
+    }
+    return dist;
+  }
+
+  private chebyshev(a: Cell, b: Cell) {
+    return Math.max(Math.abs(a.col - b.col), Math.abs(a.row - b.row));
+  }
+
+  private adjacentCells(cell: Cell): Cell[] {
+    return [
+      { col: cell.col + 1, row: cell.row },
+      { col: cell.col - 1, row: cell.row },
+      { col: cell.col, row: cell.row + 1 },
+      { col: cell.col, row: cell.row - 1 },
+    ].filter((c) => c.col >= 0 && c.col < COLS && c.row >= 0 && c.row < ROWS);
+  }
+
+  private isAdjacent(a: Cell, b: Cell) {
+    return Math.abs(a.col - b.col) + Math.abs(a.row - b.row) === 1;
+  }
+
+  private hasAdjacentEnemy(unit: Unit) {
+    return this.units.some((u) => u.side !== unit.side && this.isAdjacent(unit, u));
+  }
+
+  /**
+   * Cel jest atakowalny, gdy strzelec ma go w zasięgu, albo gdy jednostka
+   * walcząca wręcz stoi obok lub może dojść na sąsiednie wolne pole.
+   */
+  private attackPlan(unit: Unit, target: Unit, reach: Map<string, number>): { from: Cell } | null {
+    if (unit.def.range > 1) {
+      return this.chebyshev(unit, target) <= unit.def.range ? { from: { col: unit.col, row: unit.row } } : null;
+    }
+    if (this.isAdjacent(unit, target)) return { from: { col: unit.col, row: unit.row } };
+
+    let best: { from: Cell; cost: number } | null = null;
+    for (const cell of this.adjacentCells(target)) {
+      const cost = reach.get(cellKey(cell.col, cell.row));
+      if (cost === undefined) continue;
+      if (!best || cost < best.cost) best = { from: cell, cost };
+    }
+    return best ? { from: best.from } : null;
+  }
+
+  private damageOf(attacker: Unit, target: Unit, special: boolean) {
+    const typeMult = typeMultiplier(attacker.def.type, target.def.type);
+    const specialMult = special ? (attacker.def.specialKind === 'power' ? 2 : 1.5) : 1;
+    const penalty = attacker.def.range > 1 && this.hasAdjacentEnemy(attacker) ? MELEE_PENALTY : 1;
+    return {
+      value: Math.max(1, Math.round(attacker.def.atk * typeMult * specialMult * penalty)),
+      typeMult,
+      specialMult,
+      penalty,
+    };
+  }
+
+  // ---------- interakcja gracza ----------
+
+  private showOptions(unit: Unit) {
+    this.clearHighlights();
+    const reach = this.reachable(unit);
 
     if (!this.specialArmed) {
-      for (let col = 0; col < COLS; col++) {
-        for (let row = 0; row < ROWS; row++) {
-          const dist = this.distance(unit, { col, row });
-          const blocked = occupied.some((o) => o.col === col && o.row === row);
-          if (dist > 0 && dist <= unit.def.move && !blocked) {
-            this.addHighlight(col, row, 0x3498db, () => this.moveUnit(unit, col, row));
-          }
-        }
+      for (const [key, cost] of reach) {
+        if (cost === 0) continue;
+        const [col, row] = key.split(',').map(Number);
+        this.addHighlight(col, row, 0x4fc3f7, 0.22, () => this.performMove(unit, { col, row }));
       }
     }
 
-    const attackColor = this.specialArmed ? 0xf1c40f : 0xe74c3c;
-    const enemies = this.units.filter((u) => u.hp > 0 && u.side !== unit.side);
-    for (const enemy of enemies) {
-      if (this.distance(unit, enemy) === 1) {
-        this.addHighlight(enemy.col, enemy.row, attackColor, () =>
-          this.attackUnit(unit, enemy, this.specialArmed)
-        );
-      }
+    const attackColor = this.specialArmed ? 0xffd166 : 0xef5350;
+    for (const target of this.units.filter((u) => u.side !== unit.side)) {
+      const plan = this.attackPlan(unit, target, reach);
+      if (!plan) continue;
+      this.addHighlight(
+        target.col,
+        target.row,
+        attackColor,
+        0.35,
+        () => this.performAttack(unit, target, plan.from, this.specialArmed),
+        () => this.showForecast(unit, target, this.specialArmed)
+      );
     }
   }
 
-  private addHighlight(col: number, row: number, color: number, onClick: () => void) {
+  private addHighlight(
+    col: number,
+    row: number,
+    color: number,
+    alpha: number,
+    onClick: () => void,
+    onHover?: () => void
+  ) {
     const { x, y } = this.cellToXY(col, row);
-    const rect = this.add.rectangle(x, y, CELL - 6, CELL - 6, color, 0.35).setStrokeStyle(2, color);
-    rect.setInteractive({ useHandCursor: true });
+    const rect = this.add
+      .rectangle(x, y, CELL - 6, CELL - 6, color, alpha)
+      .setStrokeStyle(2, color, 0.9)
+      .setInteractive({ useHandCursor: true });
     rect.on('pointerdown', onClick);
-    this.highlights.push(rect);
-  }
-
-  private clearHighlightsOnly() {
-    this.highlights.forEach((h) => h.destroy());
-    this.highlights = [];
+    if (onHover) {
+      rect.on('pointerover', onHover);
+      rect.on('pointerout', () => this.forecastText.setText(''));
+    }
+    this.highlightLayer.add(rect);
   }
 
   private clearHighlights() {
-    this.clearHighlightsOnly();
-    this.specialArmed = false;
+    this.highlightLayer?.removeAll(true);
+    this.forecastText?.setText('');
+  }
+
+  private showForecast(attacker: Unit, target: Unit, special: boolean) {
+    const { value, typeMult, specialMult, penalty } = this.damageOf(attacker, target, special);
+    const parts = [`Atak ${attacker.def.atk}`];
+    if (typeMult !== 1) parts.push(`× ${typeMult} (${typeMult > 1 ? 'przewaga typu' : 'słaby typ'})`);
+    if (specialMult !== 1) parts.push(`× ${specialMult} (${attacker.def.specialName})`);
+    if (penalty !== 1) parts.push(`× ${penalty} (strzelec w zwarciu)`);
+    this.forecastText.setText(`${parts.join(' ')} = ${value} obrażeń dla ${target.def.name}`);
+  }
+
+  private onUnitHover(unit: Unit) {
+    const active = this.activeUnit();
+    if (!active || this.busy) return;
+    if (unit.side !== active.side) {
+      const plan = this.attackPlan(active, unit, this.reachable(active));
+      if (plan) this.showForecast(active, unit, this.specialArmed);
+    }
   }
 
   private onUnitClicked(unit: Unit) {
-    if (this.gameOver) return;
+    if (this.gameOver || this.busy) return;
     const active = this.activeUnit();
-    if (!active || active.side !== 'player' || active.id !== unit.id) return;
-    this.specialArmed = false;
+    if (!active || active.side !== 'player') return;
+
+    if (unit.side === 'enemy') {
+      const plan = this.attackPlan(active, unit, this.reachable(active));
+      if (plan) this.performAttack(active, unit, plan.from, this.specialArmed);
+      return;
+    }
+    this.showStats(unit);
+  }
+
+  private toggleSpecial() {
+    if (this.gameOver || this.busy) return;
+    const unit = this.activeUnit();
+    if (!unit || unit.side !== 'player' || unit.specialCooldown > 0) return;
+    this.specialArmed = !this.specialArmed;
     this.updateSpecialButton(unit);
-    this.showRange(unit);
+    this.showOptions(unit);
   }
 
-  private moveUnit(unit: Unit, col: number, row: number) {
-    unit.col = col;
-    unit.row = row;
-    const { x, y } = this.cellToXY(col, row);
-    this.tweens.add({ targets: unit.container, x, y, duration: 200 });
+  private updateSpecialButton(unit: Unit) {
+    this.specialButton.setVisible(true);
+    const ready = unit.specialCooldown === 0;
+    this.specialLabel.setText(
+      ready
+        ? this.specialArmed
+          ? `⚡ ${unit.def.specialName}\nwybierz cel`
+          : `⚡ ${unit.def.specialName}\nkliknij, by użyć`
+        : `⚡ ${unit.def.specialName}\nodnowi się za ${unit.specialCooldown} tur`
+    );
+    this.specialBg.setFillStyle(this.specialArmed ? 0x8d6e00 : 0x2c3a63);
+    this.specialButton.setAlpha(ready ? 1 : 0.45);
+  }
+
+  // ---------- akcje ----------
+
+  private performMove(unit: Unit, cell: Cell, onDone?: () => void) {
+    this.busy = true;
     this.clearHighlights();
-    this.time.delayedCall(220, () => this.advanceTurn());
+    unit.col = cell.col;
+    unit.row = cell.row;
+    const { x, y } = this.cellToXY(cell.col, cell.row);
+    this.tweens.add({
+      targets: unit.container,
+      x,
+      y,
+      duration: 260,
+      ease: 'Sine.easeInOut',
+      onComplete: () => (onDone ? onDone() : this.advanceTurn()),
+    });
   }
 
-  private showFloatingText(col: number, row: number, text: string, color: string) {
-    const { x, y } = this.cellToXY(col, row);
+  private performAttack(attacker: Unit, target: Unit, from: Cell, special: boolean) {
+    this.busy = true;
+    this.clearHighlights();
+
+    const strike = () => {
+      if (attacker.def.range > 1) {
+        this.fireProjectile(attacker, target, () => this.resolveAttack(attacker, target, special));
+      } else {
+        this.meleeLunge(attacker, target, () => this.resolveAttack(attacker, target, special));
+      }
+    };
+
+    if (from.col !== attacker.col || from.row !== attacker.row) {
+      this.performMove(attacker, from, strike);
+    } else {
+      strike();
+    }
+  }
+
+  private meleeLunge(attacker: Unit, target: Unit, onDone: () => void) {
+    const start = { x: attacker.container.x, y: attacker.container.y };
+    const to = this.cellToXY(target.col, target.row);
+    this.tweens.add({
+      targets: attacker.container,
+      x: start.x + (to.x - start.x) * 0.4,
+      y: start.y + (to.y - start.y) * 0.4,
+      duration: 120,
+      yoyo: true,
+      ease: 'Quad.easeOut',
+      onYoyo: onDone,
+    });
+  }
+
+  private fireProjectile(attacker: Unit, target: Unit, onDone: () => void) {
+    const from = this.cellToXY(attacker.col, attacker.row);
+    const to = this.cellToXY(target.col, target.row);
+    const shot = this.add.circle(from.x, from.y, 7, TYPE_INFO[attacker.def.type].color);
+    this.effectLayer.add(shot);
+    this.tweens.add({
+      targets: shot,
+      x: to.x,
+      y: to.y,
+      duration: 260,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        shot.destroy();
+        onDone();
+      },
+    });
+  }
+
+  private resolveAttack(attacker: Unit, target: Unit, special: boolean) {
+    const { value, typeMult } = this.damageOf(attacker, target, special);
+    target.hp -= value;
+
+    if (special) {
+      attacker.specialCooldown = SPECIAL_COOLDOWN;
+      this.floatText(attacker, attacker.def.specialName, '#ffd166', -46);
+      if (attacker.def.specialKind === 'drain') {
+        const heal = Math.floor(value / 2);
+        attacker.hp = Math.min(attacker.def.hp, attacker.hp + heal);
+        this.refreshHp(attacker);
+        this.floatText(attacker, `+${heal} HP`, '#66bb6a', -30);
+      }
+    }
+
+    this.floatText(target, `-${value}`, '#ff8a80', -34);
+    if (typeMult > 1) this.floatText(target, 'Super skuteczne!', '#66bb6a', -52);
+    else if (typeMult < 1) this.floatText(target, 'Słabo skuteczne...', '#b0bec5', -52);
+
+    this.cameras.main.shake(120, special ? 0.006 : 0.003);
+
+    if (target.hp <= 0) {
+      target.hp = 0;
+      this.refreshHp(target);
+      this.tweens.add({
+        targets: target.container,
+        alpha: 0,
+        scale: 0.5,
+        duration: 320,
+        onComplete: () => target.container.destroy(),
+      });
+      this.units = this.units.filter((u) => u.id !== target.id);
+    } else {
+      this.refreshHp(target);
+    }
+
+    this.checkGameOver();
+    if (!this.gameOver) this.time.delayedCall(650, () => this.advanceTurn());
+  }
+
+  private floatText(unit: Unit, text: string, color: string, offsetY: number) {
+    const { x, y } = this.cellToXY(unit.col, unit.row);
     const t = this.add
-      .text(x, y - 40, text, { fontFamily: 'sans-serif', fontSize: '14px', color, fontStyle: 'bold' })
+      .text(x, y + offsetY, text, {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '14px',
+        color,
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 3,
+      })
       .setOrigin(0.5);
+    this.effectLayer.add(t);
     this.tweens.add({
       targets: t,
-      y: y - 65,
+      y: y + offsetY - 26,
       alpha: 0,
-      duration: 700,
+      duration: 850,
       onComplete: () => t.destroy(),
     });
   }
 
-  private attackUnit(attacker: Unit, target: Unit, special: boolean) {
-    const mult = typeMultiplier(attacker.def.type, target.def.type);
-    const specialMult = special ? (attacker.def.specialKind === 'power' ? 2 : 1.5) : 1;
-    const dmg = Math.round(attacker.def.atk * mult * specialMult);
-
-    target.hp -= dmg;
-
-    if (special) {
-      attacker.specialCooldown = SPECIAL_COOLDOWN;
-      this.showFloatingText(attacker.col, attacker.row, attacker.def.specialName, '#f1c40f');
-      if (attacker.def.specialKind === 'drain') {
-        const heal = Math.floor(dmg / 2);
-        attacker.hp = Math.min(attacker.def.hp, attacker.hp + heal);
-        attacker.hpText.setText(`${attacker.hp}/${attacker.def.hp}`);
-        this.showFloatingText(attacker.col, attacker.row, `+${heal} HP`, '#2ecc71');
-      }
-    }
-
-    if (mult > 1) {
-      this.showFloatingText(target.col, target.row, 'Super skuteczne!', '#2ecc71');
-    } else if (mult < 1) {
-      this.showFloatingText(target.col, target.row, 'Słabo skuteczne...', '#95a5a6');
-    }
-
-    if (target.hp <= 0) {
-      target.hp = 0;
-      target.hpText.setText('0/0');
-      target.container.destroy();
-      this.units = this.units.filter((u) => u.id !== target.id);
-    } else {
-      target.hpText.setText(`${target.hp}/${target.def.hp}`);
-    }
-
-    this.clearHighlights();
-    this.checkGameOver();
-    if (!this.gameOver) {
-      this.time.delayedCall(400, () => this.advanceTurn());
-    }
-  }
+  // ---------- AI przeciwnika ----------
 
   private enemyAct(unit: Unit) {
     if (this.gameOver) return;
-    const targets = this.units.filter((u) => u.hp > 0 && u.side === 'player');
+    const targets = this.units.filter((u) => u.side === 'player');
     if (targets.length === 0) {
       this.checkGameOver();
       return;
     }
 
-    let nearest = targets[0];
-    let bestDist = this.distance(unit, nearest);
-    for (const t of targets) {
-      const d = this.distance(unit, t);
-      if (d < bestDist) {
-        bestDist = d;
-        nearest = t;
-      }
+    const reach = this.reachable(unit);
+    const useSpecial = unit.specialCooldown === 0;
+
+    let best: { target: Unit; from: Cell; score: number } | null = null;
+    for (const target of targets) {
+      const plan = this.attackPlan(unit, target, reach);
+      if (!plan) continue;
+      const dmg = this.damageOf(unit, target, useSpecial).value;
+      // Premiuj dobicie celu i mocne trafienia w słabo opancerzonych.
+      const score = dmg >= target.hp ? dmg + 100 : dmg + (target.def.range > 1 ? 10 : 0);
+      if (!best || score > best.score) best = { target, from: plan.from, score };
     }
 
-    if (bestDist === 1) {
-      const adjacent = targets.filter((t) => this.distance(unit, t) === 1);
-      let bestTarget = adjacent[0];
-      let bestMult = typeMultiplier(unit.def.type, bestTarget.def.type);
-      for (const t of adjacent) {
-        const m = typeMultiplier(unit.def.type, t.def.type);
-        if (m > bestMult) {
-          bestMult = m;
-          bestTarget = t;
-        }
-      }
-      const useSpecial = unit.specialCooldown === 0;
-      this.attackUnit(unit, bestTarget, useSpecial);
+    if (best) {
+      this.performAttack(unit, best.target, best.from, useSpecial);
       return;
     }
 
-    const occupied = this.occupiedCells(unit.id);
-    let bestCell = { col: unit.col, row: unit.row };
-    let bestScore = bestDist;
-    for (let col = 0; col < COLS; col++) {
-      for (let row = 0; row < ROWS; row++) {
-        const d = this.distance({ col, row }, unit);
-        const blocked = occupied.some((o) => o.col === col && o.row === row);
-        if (d > 0 && d <= unit.def.move && !blocked) {
-          const distToTarget = this.distance({ col, row }, nearest);
-          if (distToTarget < bestScore) {
-            bestScore = distToTarget;
-            bestCell = { col, row };
-          }
-        }
+    // Nikt w zasięgu — podejdź w stronę najbliższego celu.
+    let nearest = targets[0];
+    for (const t of targets) {
+      if (this.chebyshev(unit, t) < this.chebyshev(unit, nearest)) nearest = t;
+    }
+
+    let bestCell: Cell = { col: unit.col, row: unit.row };
+    let bestDist = this.chebyshev(unit, nearest);
+    for (const key of reach.keys()) {
+      const [col, row] = key.split(',').map(Number);
+      const d = this.chebyshev({ col, row }, nearest);
+      if (d < bestDist) {
+        bestDist = d;
+        bestCell = { col, row };
       }
     }
 
-    this.moveUnit(unit, bestCell.col, bestCell.row);
+    if (bestCell.col === unit.col && bestCell.row === unit.row) this.advanceTurn();
+    else this.performMove(unit, bestCell);
   }
 
+  // ---------- koniec bitwy ----------
+
   private checkGameOver() {
-    const playersLeft = this.units.some((u) => u.side === 'player' && u.hp > 0);
-    const enemiesLeft = this.units.some((u) => u.side === 'enemy' && u.hp > 0);
-    if (!playersLeft || !enemiesLeft) {
-      this.gameOver = true;
-      this.clearHighlights();
-      this.specialButton.setVisible(false);
-      this.statusText.setText(playersLeft ? 'Wygrana!' : 'Przegrana...');
-    }
+    const playersLeft = this.units.some((u) => u.side === 'player');
+    const enemiesLeft = this.units.some((u) => u.side === 'enemy');
+    if (playersLeft && enemiesLeft) return;
+
+    this.gameOver = true;
+    this.clearHighlights();
+    this.specialButton.setVisible(false);
+    this.turnText.setText('');
+
+    const won = playersLeft;
+    const overlay = this.add.rectangle(
+      this.scale.width / 2,
+      this.scale.height / 2,
+      this.scale.width,
+      this.scale.height,
+      0x000000,
+      0.6
+    );
+    const label = this.add
+      .text(this.scale.width / 2, this.scale.height / 2, won ? 'ZWYCIĘSTWO!' : 'PORAŻKA', {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '48px',
+        color: won ? '#ffd166' : '#ef5350',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5);
+    this.effectLayer.add([overlay, label]);
   }
 }
