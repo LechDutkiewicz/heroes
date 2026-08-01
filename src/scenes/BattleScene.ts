@@ -47,6 +47,9 @@ const TEXT_COL_W = BOARD_W - 290;
 const HP_BAR_W = 50;
 const HP_BAR_H = 9;
 
+/** Sześć jednostek w kolumnie z przerwą pośrodku — reszta rzędów zostaje wolna. */
+const START_ROWS = [0, 1, 2, 4, 5, 6];
+
 const cellKey = (col: number, row: number) => `${col},${row}`;
 
 /** Poprawna polska odmiana: 1 obrażenie, 2 obrażenia, 5 obrażeń. */
@@ -98,8 +101,9 @@ export class BattleScene extends Phaser.Scene {
     this.highlightLayer = this.add.container(0, 0).setDepth(5);
     this.effectLayer = this.add.container(0, 0).setDepth(100);
 
-    PLAYER_TEAM.forEach((def, i) => this.spawnUnit(def, 'player', i < 3 ? 0 : 1, i % 3 === 0 ? 0 : i % 3 === 1 ? 3 : 6));
-    ENEMY_TEAM.forEach((def, i) => this.spawnUnit(def, 'enemy', i < 3 ? COLS - 1 : COLS - 2, i % 3 === 0 ? 0 : i % 3 === 1 ? 3 : 6));
+    // Obie drużyny stoją w jednej kolumnie przy swojej krawędzi, jak w Heroes 3.
+    PLAYER_TEAM.forEach((def, i) => this.spawnUnit(def, 'player', 0, START_ROWS[i]));
+    ENEMY_TEAM.forEach((def, i) => this.spawnUnit(def, 'enemy', COLS - 1, START_ROWS[i]));
 
     // Szybsze pokemony ruszają się pierwsze.
     this.turnOrder = [...this.units]
@@ -136,9 +140,9 @@ export class BattleScene extends Phaser.Scene {
 
     // Strefy startowe obu drużyn.
     g.fillStyle(0x4fc3f7, 0.1);
-    g.fillRoundedRect(BOARD_X + 2, BOARD_Y + 2, CELL * 2 - 4, BOARD_H - 4, 8);
+    g.fillRoundedRect(BOARD_X + 2, BOARD_Y + 2, CELL - 4, BOARD_H - 4, 8);
     g.fillStyle(0xef5350, 0.1);
-    g.fillRoundedRect(BOARD_X + (COLS - 2) * CELL + 2, BOARD_Y + 2, CELL * 2 - 4, BOARD_H - 4, 8);
+    g.fillRoundedRect(BOARD_X + (COLS - 1) * CELL + 2, BOARD_Y + 2, CELL - 4, BOARD_H - 4, 8);
   }
 
   private drawHud() {

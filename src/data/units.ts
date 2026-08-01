@@ -26,21 +26,23 @@ export const SPECIAL_COOLDOWN = 3;
 /** Kara za zwarcie i za zbyt daleki strzał (złamana strzała). */
 export const HALF_DAMAGE = 0.5;
 
+// Kolejność w tablicy wyznacza miejsce w kolumnie startowej — walczący wręcz
+// i strzelcy stoją na przemian, żeby żaden nie zasłaniał drugiego.
 export const PLAYER_TEAM: UnitDef[] = [
   { sprite: '00026', name: 'Żarwilk', hp: 32, atk: 9, move: 3, shooter: false, shootRange: 0, type: 'fire', specialName: 'Ognisty pazur', specialKind: 'power' },
-  { sprite: '00030', name: 'Skorupiec', hp: 40, atk: 6, move: 2, shooter: false, shootRange: 0, type: 'water', specialName: 'Tarcza fal', specialKind: 'drain' },
-  { sprite: '00055', name: 'Modliś', hp: 30, atk: 8, move: 3, shooter: false, shootRange: 0, type: 'grass', specialName: 'Bicz pnączy', specialKind: 'drain' },
   { sprite: '00041', name: 'Żarokur', hp: 22, atk: 8, move: 3, shooter: true, shootRange: 4, type: 'fire', specialName: 'Deszcz iskier', specialKind: 'power' },
+  { sprite: '00030', name: 'Skorupiec', hp: 40, atk: 6, move: 2, shooter: false, shootRange: 0, type: 'water', specialName: 'Tarcza fal', specialKind: 'drain' },
   { sprite: '00040', name: 'Kropelek', hp: 20, atk: 7, move: 3, shooter: true, shootRange: 5, type: 'water', specialName: 'Armatka wodna', specialKind: 'power' },
+  { sprite: '00055', name: 'Modliś', hp: 30, atk: 8, move: 3, shooter: false, shootRange: 0, type: 'grass', specialName: 'Bicz pnączy', specialKind: 'drain' },
   { sprite: '00025', name: 'Kiełek', hp: 24, atk: 8, move: 2, shooter: true, shootRange: 4, type: 'grass', specialName: 'Ostry liść', specialKind: 'power' },
 ];
 
 export const ENEMY_TEAM: UnitDef[] = [
   { sprite: '00052', name: 'Twardziel', hp: 44, atk: 7, move: 2, shooter: false, shootRange: 0, type: 'water', specialName: 'Wir', specialKind: 'power' },
-  { sprite: '00067', name: 'Mrocznik', hp: 30, atk: 9, move: 4, shooter: false, shootRange: 0, type: 'fire', specialName: 'Rozżarzenie', specialKind: 'drain' },
-  { sprite: '00027', name: 'Choinek', hp: 32, atk: 8, move: 3, shooter: false, shootRange: 0, type: 'grass', specialName: 'Wysysanie', specialKind: 'drain' },
   { sprite: '00066', name: 'Iskrzyk', hp: 24, atk: 9, move: 3, shooter: true, shootRange: 4, type: 'fire', specialName: 'Wybuch ognia', specialKind: 'power' },
+  { sprite: '00067', name: 'Mrocznik', hp: 30, atk: 9, move: 4, shooter: false, shootRange: 0, type: 'fire', specialName: 'Rozżarzenie', specialKind: 'drain' },
   { sprite: '00048', name: 'Płetwiak', hp: 20, atk: 7, move: 3, shooter: true, shootRange: 5, type: 'water', specialName: 'Lodowy strzał', specialKind: 'power' },
+  { sprite: '00027', name: 'Choinek', hp: 32, atk: 8, move: 3, shooter: false, shootRange: 0, type: 'grass', specialName: 'Wysysanie', specialKind: 'drain' },
   { sprite: '00024', name: 'Skrzydliść', hp: 22, atk: 8, move: 2, shooter: true, shootRange: 4, type: 'grass', specialName: 'Tańczące liście', specialKind: 'power' },
 ];
 
