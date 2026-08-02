@@ -37,10 +37,11 @@ export const PLAYER_TEAM: UnitDef[] = [
   { sprite: '00025', name: 'Kiełek', hp: 24, atk: 8, move: 2, shooter: true, shootRange: 4, type: 'grass', specialName: 'Ostry liść', specialKind: 'power' },
 ];
 
+// Sumy HP, ataku i ruchu obu drużyn są równe — o wyniku decyduje gra, nie skład.
 export const ENEMY_TEAM: UnitDef[] = [
-  { sprite: '00052', name: 'Twardziel', hp: 44, atk: 7, move: 2, shooter: false, shootRange: 0, type: 'water', specialName: 'Wir', specialKind: 'power' },
-  { sprite: '00066', name: 'Iskrzyk', hp: 24, atk: 9, move: 3, shooter: true, shootRange: 4, type: 'fire', specialName: 'Wybuch ognia', specialKind: 'power' },
-  { sprite: '00067', name: 'Mrocznik', hp: 30, atk: 9, move: 4, shooter: false, shootRange: 0, type: 'fire', specialName: 'Rozżarzenie', specialKind: 'drain' },
+  { sprite: '00052', name: 'Twardziel', hp: 40, atk: 7, move: 2, shooter: false, shootRange: 0, type: 'water', specialName: 'Wir', specialKind: 'power' },
+  { sprite: '00066', name: 'Iskrzyk', hp: 24, atk: 8, move: 3, shooter: true, shootRange: 4, type: 'fire', specialName: 'Wybuch ognia', specialKind: 'power' },
+  { sprite: '00067', name: 'Mrocznik', hp: 30, atk: 8, move: 3, shooter: false, shootRange: 0, type: 'fire', specialName: 'Rozżarzenie', specialKind: 'drain' },
   { sprite: '00048', name: 'Płetwiak', hp: 20, atk: 7, move: 3, shooter: true, shootRange: 5, type: 'water', specialName: 'Lodowy strzał', specialKind: 'power' },
   { sprite: '00027', name: 'Choinek', hp: 32, atk: 8, move: 3, shooter: false, shootRange: 0, type: 'grass', specialName: 'Wysysanie', specialKind: 'drain' },
   { sprite: '00024', name: 'Skrzydliść', hp: 22, atk: 8, move: 2, shooter: true, shootRange: 4, type: 'grass', specialName: 'Tańczące liście', specialKind: 'power' },

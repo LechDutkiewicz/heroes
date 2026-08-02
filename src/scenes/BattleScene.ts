@@ -68,7 +68,10 @@ export class BattleScene extends Phaser.Scene {
   private nextId = 1;
 
   private highlightLayer!: Phaser.GameObjects.Container;
+  private approachLayer!: Phaser.GameObjects.Container;
   private effectLayer!: Phaser.GameObjects.Container;
+  /** Pole, z którego gracz chce uderzyć — wybierane położeniem kursora. */
+  private preferredApproach: { targetId: number; cell: Cell } | null = null;
   private queueIcons: Phaser.GameObjects.Container[] = [];
   private queueLabel?: Phaser.GameObjects.Text;
 
@@ -99,6 +102,7 @@ export class BattleScene extends Phaser.Scene {
     this.drawHud();
 
     this.highlightLayer = this.add.container(0, 0).setDepth(5);
+    this.approachLayer = this.add.container(0, 0).setDepth(6);
     this.effectLayer = this.add.container(0, 0).setDepth(100);
 
     // Obie drużyny stoją w jednej kolumnie przy swojej krawędzi, jak w Heroes 3.
@@ -253,7 +257,8 @@ export class BattleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const hit = this.add.rectangle(0, 0, CELL - 8, CELL - 8, 0xffffff, 0).setInteractive({ useHandCursor: true });
+    // Pole trafienia obejmuje całą kratkę, żeby dało się celować w jej krawędzie.
+    const hit = this.add.rectangle(0, 0, CELL, CELL, 0xffffff, 0).setInteractive();
 
     const container = this.add.container(x, y, [
       platform,
@@ -285,7 +290,11 @@ export class BattleScene extends Phaser.Scene {
 
     hit.on('pointerdown', () => this.onUnitClicked(unit));
     hit.on('pointerover', () => this.onUnitHover(unit));
-    hit.on('pointerout', () => this.forecastText.setText(''));
+    hit.on('pointermove', (p: Phaser.Input.Pointer) => this.onEnemyPointerMove(unit, p));
+    hit.on('pointerout', () => {
+      this.forecastText.setText('');
+      this.clearApproach();
+    });
 
     this.units.push(unit);
     return unit;
@@ -534,7 +543,7 @@ export class BattleScene extends Phaser.Scene {
         target.row,
         attackColor,
         tooFar ? 0.22 : 0.35,
-        () => this.performAttack(unit, target, plan.from, this.specialArmed),
+        () => this.attackTarget(unit, target),
         () => this.showForecast(unit, target, this.specialArmed)
       );
     }
@@ -563,7 +572,10 @@ export class BattleScene extends Phaser.Scene {
 
   private clearHighlights() {
     this.highlightLayer?.removeAll(true);
+    this.approachLayer?.removeAll(true);
+    this.preferredApproach = null;
     this.forecastText?.setText('');
+    this.setCursor(null);
   }
 
   private showForecast(attacker: Unit, target: Unit, special: boolean) {
@@ -592,11 +604,102 @@ export class BattleScene extends Phaser.Scene {
     if (!active || active.side !== 'player') return;
 
     if (unit.side === 'enemy') {
-      const plan = this.attackPlan(active, unit, this.reachable(active));
-      if (plan) this.performAttack(active, unit, plan.from, this.specialArmed);
+      this.attackTarget(active, unit);
       return;
     }
     this.showStats(unit);
+  }
+
+  /** Atakuje z pola wskazanego kursorem, a gdy go nie ma — z pola wyliczonego. */
+  private attackTarget(attacker: Unit, target: Unit) {
+    const plan = this.attackPlan(attacker, target, this.reachable(attacker));
+    if (!plan) return;
+    const chosen =
+      this.preferredApproach && this.preferredApproach.targetId === target.id
+        ? this.preferredApproach.cell
+        : plan.from;
+    this.setCursor(null);
+    this.performAttack(attacker, target, chosen, this.specialArmed);
+  }
+
+  private cursorFor(name: string) {
+    return `url('${import.meta.env.BASE_URL}cursors/${name}.png') 16 16, pointer`;
+  }
+
+  private setCursor(name: string | null) {
+    this.input.setDefaultCursor(name ? this.cursorFor(name) : 'default');
+  }
+
+  /** Które pola sąsiadujące z celem da się wykorzystać do ataku wręcz. */
+  private approachOptions(attacker: Unit, target: Unit): Cell[] {
+    const reach = this.reachable(attacker);
+    return this.adjacentCells(target).filter(
+      (c) =>
+        (c.col === attacker.col && c.row === attacker.row) || reach.has(cellKey(c.col, c.row))
+    );
+  }
+
+  private clawFor(from: Cell, target: Unit) {
+    if (from.col < target.col) return 'claw_right';
+    if (from.col > target.col) return 'claw_left';
+    if (from.row < target.row) return 'claw_down';
+    return 'claw_up';
+  }
+
+  private onEnemyPointerMove(target: Unit, pointer: Phaser.Input.Pointer) {
+    const active = this.activeUnit();
+    if (this.gameOver || this.busy || !active || active.side !== 'player') return;
+    if (target.side === active.side) return;
+
+    if (!this.attackPlan(active, target, this.reachable(active))) {
+      this.setCursor(null);
+      this.clearApproach();
+      return;
+    }
+
+    if (active.def.shooter) {
+      const { tooFar } = this.damageOf(active, target, this.specialArmed);
+      this.setCursor(tooFar ? 'bolt_broken' : 'bolt');
+      this.clearApproach();
+      return;
+    }
+
+    // Wybierz stronę ataku po tym, w którą stronę celu odchylony jest kursor —
+    // tak jak w Heroes 3, gdzie miecz obracał się zależnie od miejsca najechania.
+    const options = this.approachOptions(active, target);
+    if (options.length === 0) return;
+
+    const center = this.cellToXY(target.col, target.row);
+    const dx = pointer.x - center.x;
+    const dy = pointer.y - center.y;
+    const ranked = [
+      { cell: { col: target.col - 1, row: target.row }, score: -dx },
+      { cell: { col: target.col + 1, row: target.row }, score: dx },
+      { cell: { col: target.col, row: target.row - 1 }, score: -dy },
+      { cell: { col: target.col, row: target.row + 1 }, score: dy },
+    ].sort((a, b) => b.score - a.score);
+
+    const best =
+      ranked.find((r) => options.some((o) => o.col === r.cell.col && o.row === r.cell.row))?.cell ??
+      options[0];
+
+    this.preferredApproach = { targetId: target.id, cell: best };
+    this.setCursor(this.clawFor(best, target));
+    this.showApproachMarker(best);
+  }
+
+  private showApproachMarker(cell: Cell) {
+    this.approachLayer.removeAll(true);
+    const { x, y } = this.cellToXY(cell.col, cell.row);
+    this.approachLayer.add(
+      this.add.rectangle(x, y, CELL - 10, CELL - 10, 0xffd166, 0.28).setStrokeStyle(3, 0xffd166, 1)
+    );
+  }
+
+  private clearApproach() {
+    this.preferredApproach = null;
+    this.approachLayer?.removeAll(true);
+    this.setCursor(null);
   }
 
   private toggleSpecial() {
