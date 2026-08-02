@@ -6,6 +6,11 @@ import {
   PLAYER_TEAM,
   SPECIAL_COOLDOWN,
   TYPE_INFO,
+  applyDamage,
+  applyHeal,
+  fullHp,
+  stackAtk,
+  totalHp,
   typeMultiplier,
   type UnitDef,
 } from '../data/units';
@@ -16,7 +21,10 @@ interface Unit {
   id: number;
   side: Side;
   def: UnitDef;
-  hp: number;
+  /** ilu stworków zostało w oddziale */
+  count: number;
+  /** HP stworka stojącego z przodu — reszta ma pełne */
+  topHp: number;
   col: number;
   row: number;
   specialCooldown: number;
@@ -24,6 +32,8 @@ interface Unit {
   sprite: Phaser.GameObjects.Image;
   hpBar: Phaser.GameObjects.Rectangle;
   hpLabel: Phaser.GameObjects.Text;
+  countLabel: Phaser.GameObjects.Text;
+  atkBadge: Phaser.GameObjects.Text;
   platform: Phaser.GameObjects.Ellipse;
 }
 
@@ -40,7 +50,7 @@ const BOARD_Y = 92;
 const BOARD_W = COLS * CELL;
 const BOARD_H = ROWS * CELL;
 const PANEL_Y = BOARD_Y + BOARD_H + 14;
-const PANEL_H = 126;
+const PANEL_H = 160;
 /** Szerokość lewej kolumny panelu — reszta należy do przycisku umiejętności. */
 const TEXT_COL_W = BOARD_W - 290;
 
@@ -59,6 +69,15 @@ function damageWord(n: number) {
   const lastTwo = n % 100;
   if (last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14)) return 'obrażenia';
   return 'obrażeń';
+}
+
+/** Poprawna polska odmiana: padł 1, padły 2, padło 5. */
+function fellPhrase(n: number) {
+  if (n === 1) return 'padnie 1';
+  const last = n % 10;
+  const lastTwo = n % 100;
+  if (last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14)) return `padną ${n}`;
+  return `padnie ${n}`;
 }
 
 export class BattleScene extends Phaser.Scene {
@@ -172,19 +191,20 @@ export class BattleScene extends Phaser.Scene {
     panel.strokeRoundedRect(BOARD_X - 6, PANEL_Y, BOARD_W + 12, PANEL_H, 10);
 
     // Teksty trzymają się lewej kolumny, przycisk umiejętności prawej.
-    this.statsText = this.add.text(BOARD_X + 10, PANEL_Y + 10, '', {
+    this.statsText = this.add.text(BOARD_X + 10, PANEL_Y + 8, '', {
       fontFamily: 'Trebuchet MS, sans-serif',
-      fontSize: '15px',
+      fontSize: '14px',
       color: '#e8ecff',
-      lineSpacing: 4,
+      lineSpacing: 3,
       wordWrap: { width: TEXT_COL_W },
     });
 
-    this.forecastText = this.add.text(BOARD_X + 10, PANEL_Y + 86, '', {
+    // Prognoza stoi pod przyciskiem umiejętności, więc ma całą szerokość panelu.
+    this.forecastText = this.add.text(BOARD_X + 10, PANEL_Y + 116, '', {
       fontFamily: 'Trebuchet MS, sans-serif',
       fontSize: '14px',
       color: '#ffd166',
-      wordWrap: { width: TEXT_COL_W },
+      wordWrap: { width: BOARD_W - 20 },
     });
 
     this.specialBg = this.add
@@ -234,10 +254,11 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     // Odznaki na dole, żeby nie zasłaniały rysunku pokemona.
-    const typeBadge = this.add.text(-24, 16, TYPE_INFO[def.type].emoji, { fontSize: '12px' }).setOrigin(0.5);
+    const typeBadge = this.add.text(-25, -22, TYPE_INFO[def.type].emoji, { fontSize: '12px' }).setOrigin(0.5);
 
+    // Odznaka pokazuje siłę całego oddziału, bo to ona decyduje o trafieniu.
     const atkBadge = this.add
-      .text(22, 16, `${def.shooter ? '\u{1F3F9}' : '⚔️'}${def.atk}`, {
+      .text(-19, 16, `${def.shooter ? '\u{1F3F9}' : '⚔️'}${def.count * def.atk}`, {
         fontFamily: 'Trebuchet MS, sans-serif',
         fontSize: '11px',
         color: '#ffffff',
@@ -246,10 +267,23 @@ export class BattleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    // Liczebność oddziału w rogu, jak w Heroes 3 — najważniejsza liczba na polu.
+    const countBg = this.add
+      .rectangle(23, 16, 26, 16, 0x11162b, 0.92)
+      .setStrokeStyle(2, side === 'player' ? 0x4fc3f7 : 0xef5350, 1);
+    const countLabel = this.add
+      .text(23, 16, `${def.count}`, {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '13px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+
     const hpBarBg = this.add.rectangle(0, 28, HP_BAR_W, HP_BAR_H, 0x11162b, 0.9).setStrokeStyle(1, 0x000000, 0.6);
     const hpBar = this.add.rectangle(-HP_BAR_W / 2, 28, HP_BAR_W, HP_BAR_H, 0x4caf50).setOrigin(0, 0.5);
     const hpLabel = this.add
-      .text(0, 28, `${def.hp}/${def.hp}`, {
+      .text(0, 28, `${fullHp(def)}/${fullHp(def)}`, {
         fontFamily: 'Trebuchet MS, sans-serif',
         fontSize: '9px',
         color: '#ffffff',
@@ -269,6 +303,8 @@ export class BattleScene extends Phaser.Scene {
       hpBarBg,
       hpBar,
       hpLabel,
+      countBg,
+      countLabel,
       hit,
     ]);
     container.setDepth(10);
@@ -277,7 +313,8 @@ export class BattleScene extends Phaser.Scene {
       id: this.nextId++,
       side,
       def,
-      hp: def.hp,
+      count: def.count,
+      topHp: def.hp,
       col,
       row,
       specialCooldown: 0,
@@ -285,6 +322,8 @@ export class BattleScene extends Phaser.Scene {
       sprite,
       hpBar,
       hpLabel,
+      countLabel,
+      atkBadge,
       platform,
     };
 
@@ -300,11 +339,20 @@ export class BattleScene extends Phaser.Scene {
     return unit;
   }
 
-  private refreshHp(unit: Unit) {
-    const ratio = Phaser.Math.Clamp(unit.hp / unit.def.hp, 0, 1);
+  /** Ile HP ma cały oddział razem. */
+  private total(unit: Unit) {
+    return totalHp(unit.def, unit);
+  }
+
+  /** Pasek, licznik i odznaka ataku po każdej zmianie stanu oddziału. */
+  private refreshStack(unit: Unit) {
+    const max = fullHp(unit.def);
+    const ratio = Phaser.Math.Clamp(this.total(unit) / max, 0, 1);
     unit.hpBar.width = HP_BAR_W * ratio;
     unit.hpBar.fillColor = ratio > 0.5 ? 0x4caf50 : ratio > 0.25 ? 0xffb300 : 0xe53935;
-    unit.hpLabel.setText(`${unit.hp}/${unit.def.hp}`);
+    unit.hpLabel.setText(`${this.total(unit)}/${max}`);
+    unit.countLabel.setText(`${unit.count}`);
+    unit.atkBadge.setText(`${unit.def.shooter ? '\u{1F3F9}' : '⚔️'}${stackAtk(unit.def, unit)}`);
   }
 
   // ---------- kolejka tur ----------
@@ -415,9 +463,12 @@ export class BattleScene extends Phaser.Scene {
       unit.specialCooldown === 0
         ? `${unit.def.specialName} — gotowy`
         : `${unit.def.specialName} — za ${unit.specialCooldown} tur`;
+    // Rozpisujemy mnożenie, żeby było widać, skąd bierze się siła oddziału.
     this.statsText.setText(
-      `${unit.def.name}   ${t.emoji} ${t.label}\n` +
-        `❤️ HP ${unit.hp}/${unit.def.hp}    ⚔️ Atak ${unit.def.atk}    \u{1F462} Ruch ${unit.def.move}\n` +
+      `${unit.def.name} ×${unit.count}   ${t.emoji} ${t.label}\n` +
+        `❤️ HP ${this.total(unit)}/${fullHp(unit.def)} (po ${unit.def.hp} na stworka)    ` +
+        `\u{1F462} Ruch ${unit.def.move}\n` +
+        `⚔️ Atak ${unit.count} × ${unit.def.atk} = ${stackAtk(unit.def, unit)}\n` +
         `${reach}\n` +
         `⚡ ${special}`
     );
@@ -508,13 +559,20 @@ export class BattleScene extends Phaser.Scene {
       attacker.def.shooter && !pinned && this.chebyshev(attacker, target) > attacker.def.shootRange;
     const penalty = pinned || tooFar ? HALF_DAMAGE : 1;
 
+    // Bije cały oddział naraz, więc podstawą jest liczebność razy atak stworka.
+    const base = stackAtk(attacker.def, attacker);
+    const value = Math.max(1, Math.round(base * typeMult * specialMult * penalty));
+
     return {
-      value: Math.max(1, Math.round(attacker.def.atk * typeMult * specialMult * penalty)),
+      value,
+      base,
       typeMult,
       specialMult,
       penalty,
       pinned,
       tooFar,
+      /** ilu stworków celu padnie od tego trafienia */
+      kills: applyDamage(target.def, target, value).killed,
     };
   }
 
@@ -579,14 +637,26 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private showForecast(attacker: Unit, target: Unit, special: boolean) {
-    const { value, typeMult, specialMult, penalty, pinned, tooFar } = this.damageOf(attacker, target, special);
-    const parts = [`Atak ${attacker.def.atk}`];
+    const { value, base, typeMult, specialMult, penalty, pinned, tooFar, kills } = this.damageOf(
+      attacker,
+      target,
+      special
+    );
+    // Zaczynamy od liczebności razy atak — stąd bierze się siła oddziału.
+    const parts = [`Atak ${attacker.count} × ${attacker.def.atk} = ${base}`];
     if (typeMult !== 1) parts.push(`× ${typeMult} (${typeMult > 1 ? 'przewaga typu' : 'słaby typ'})`);
     if (specialMult !== 1) parts.push(`× ${specialMult} (${attacker.def.specialName})`);
     if (pinned) parts.push('× 0.5 (strzelec w zwarciu)');
     else if (tooFar) parts.push('× 0.5 (za daleko — złamana strzała)');
     void penalty;
-    this.forecastText.setText(`${parts.join(' ')} = ${value} ${damageWord(value)} dla ${target.def.name}`);
+
+    const outcome =
+      kills >= target.count
+        ? `— cały oddział ${target.def.name} padnie`
+        : kills > 0
+          ? `dla ${target.def.name} — ${fellPhrase(kills)} z ${target.count}`
+          : `dla ${target.def.name} — żaden nie padnie`;
+    this.forecastText.setText(`${parts.join(' ')} = ${value} ${damageWord(value)} ${outcome}`);
   }
 
   private onUnitHover(unit: Unit) {
@@ -822,7 +892,9 @@ export class BattleScene extends Phaser.Scene {
 
   private resolveAttack(attacker: Unit, target: Unit, special: boolean) {
     const { value, typeMult, pinned, tooFar } = this.damageOf(attacker, target, special);
-    target.hp -= value;
+    const { state, killed } = applyDamage(target.def, target, value);
+    target.count = state.count;
+    target.topHp = state.topHp;
 
     if (tooFar) this.floatText(target, 'Złamana strzała — pół siły', '#ff9800', -66);
     else if (pinned) this.floatText(attacker, 'Strzelec w zwarciu!', '#ff9800', -60);
@@ -831,22 +903,26 @@ export class BattleScene extends Phaser.Scene {
       attacker.specialCooldown = SPECIAL_COOLDOWN;
       this.floatText(attacker, attacker.def.specialName, '#ffd166', -46);
       if (attacker.def.specialKind === 'drain') {
-        const heal = Math.floor(value / 2);
-        attacker.hp = Math.min(attacker.def.hp, attacker.hp + heal);
-        this.refreshHp(attacker);
-        this.floatText(attacker, `+${heal} HP`, '#66bb6a', -30);
+        const before = this.total(attacker);
+        const healed = applyHeal(attacker.def, attacker, Math.floor(value / 2));
+        attacker.topHp = healed.topHp;
+        this.refreshStack(attacker);
+        this.floatText(attacker, `+${this.total(attacker) - before} HP`, '#66bb6a', -30);
       }
     }
 
     this.floatText(target, `-${value}`, '#ff8a80', -34);
-    if (typeMult > 1) this.floatText(target, 'Super skuteczne!', '#66bb6a', -52);
-    else if (typeMult < 1) this.floatText(target, 'Słabo skuteczne...', '#b0bec5', -52);
+    // Liczba poległych to dla gracza ważniejsza informacja niż same obrażenia.
+    if (killed > 0 && target.count > 0) {
+      this.floatText(target, `\u{1F480} ${killed}`, '#ff5252', -50);
+    }
+    if (typeMult > 1) this.floatText(target, 'Super skuteczne!', '#66bb6a', -68);
+    else if (typeMult < 1) this.floatText(target, 'Słabo skuteczne...', '#b0bec5', -68);
 
     this.cameras.main.shake(120, special ? 0.006 : 0.003);
 
-    if (target.hp <= 0) {
-      target.hp = 0;
-      this.refreshHp(target);
+    if (target.count <= 0) {
+      this.refreshStack(target);
       this.tweens.add({
         targets: target.container,
         alpha: 0,
@@ -856,7 +932,7 @@ export class BattleScene extends Phaser.Scene {
       });
       this.units = this.units.filter((u) => u.id !== target.id);
     } else {
-      this.refreshHp(target);
+      this.refreshStack(target);
     }
 
     this.checkGameOver();
@@ -907,9 +983,11 @@ export class BattleScene extends Phaser.Scene {
     for (const target of targets) {
       const plan = this.attackPlan(unit, target, reach);
       if (!plan) continue;
-      const dmg = this.damageOf(unit, target, useSpecial).value;
-      // Premiuj dobicie celu i mocne trafienia w słabo opancerzonych.
-      const score = dmg >= target.hp ? dmg + 100 : dmg + (target.def.shooter ? 10 : 0);
+      const { value: dmg, kills } = this.damageOf(unit, target, useSpecial);
+      // Wybij cały oddział, jeśli się da; poza tym licz się z liczbą poległych,
+      // bo każdy padły stworek to trwale słabszy przeciwnik.
+      const score =
+        (dmg >= this.total(target) ? 100 : 0) + kills * 10 + dmg + (target.def.shooter ? 5 : 0);
       if (!best || score > best.score) best = { target, from: plan.from, score };
     }
 

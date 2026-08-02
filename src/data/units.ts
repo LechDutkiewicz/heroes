@@ -5,7 +5,11 @@ export interface UnitDef {
   /** nazwa pliku w public/sprites bez rozszerzenia */
   sprite: string;
   name: string;
+  /** ile stworków liczy oddział na starcie — jak stos w Heroes 3 */
+  count: number;
+  /** HP pojedynczego stworka, nie całego oddziału */
   hp: number;
+  /** atak pojedynczego stworka — oddział bije za count × atk */
   atk: number;
   move: number;
   /** strzelec trafia na dowolny dystans, ale dalej niż shootRange za pół siły */
@@ -28,23 +32,25 @@ export const HALF_DAMAGE = 0.5;
 
 // Kolejność w tablicy wyznacza miejsce w kolumnie startowej — walczący wręcz
 // i strzelcy stoją na przemian, żeby żaden nie zasłaniał drugiego.
+// Duże oddziały to słabe pojedyncze stworki, małe to grubasy — jak w Heroes 3,
+// gdzie chłopów są dziesiątki, a smoków kilka.
 export const PLAYER_TEAM: UnitDef[] = [
-  { sprite: '00026', name: 'Żarwilk', hp: 32, atk: 9, move: 3, shooter: false, shootRange: 0, type: 'fire', specialName: 'Ognisty pazur', specialKind: 'power' },
-  { sprite: '00041', name: 'Żarokur', hp: 22, atk: 8, move: 3, shooter: true, shootRange: 4, type: 'fire', specialName: 'Deszcz iskier', specialKind: 'power' },
-  { sprite: '00030', name: 'Skorupiec', hp: 40, atk: 6, move: 2, shooter: false, shootRange: 0, type: 'water', specialName: 'Tarcza fal', specialKind: 'drain' },
-  { sprite: '00040', name: 'Kropelek', hp: 20, atk: 7, move: 3, shooter: true, shootRange: 5, type: 'water', specialName: 'Armatka wodna', specialKind: 'power' },
-  { sprite: '00055', name: 'Modliś', hp: 30, atk: 8, move: 3, shooter: false, shootRange: 0, type: 'grass', specialName: 'Bicz pnączy', specialKind: 'drain' },
-  { sprite: '00025', name: 'Kiełek', hp: 24, atk: 8, move: 2, shooter: true, shootRange: 4, type: 'grass', specialName: 'Ostry liść', specialKind: 'power' },
+  { sprite: '00026', name: 'Żarwilk', count: 4, hp: 8, atk: 3, move: 3, shooter: false, shootRange: 0, type: 'fire', specialName: 'Ognisty pazur', specialKind: 'power' },
+  { sprite: '00041', name: 'Żarokur', count: 5, hp: 4, atk: 2, move: 3, shooter: true, shootRange: 4, type: 'fire', specialName: 'Deszcz iskier', specialKind: 'power' },
+  { sprite: '00030', name: 'Skorupiec', count: 4, hp: 9, atk: 2, move: 2, shooter: false, shootRange: 0, type: 'water', specialName: 'Tarcza fal', specialKind: 'drain' },
+  { sprite: '00040', name: 'Kropelek', count: 6, hp: 3, atk: 2, move: 3, shooter: true, shootRange: 5, type: 'water', specialName: 'Armatka wodna', specialKind: 'power' },
+  { sprite: '00055', name: 'Modliś', count: 5, hp: 6, atk: 2, move: 3, shooter: false, shootRange: 0, type: 'grass', specialName: 'Bicz pnączy', specialKind: 'drain' },
+  { sprite: '00025', name: 'Kiełek', count: 15, hp: 2, atk: 1, move: 2, shooter: true, shootRange: 4, type: 'grass', specialName: 'Ostry liść', specialKind: 'power' },
 ];
 
-// Sumy HP, ataku i ruchu obu drużyn są równe — o wyniku decyduje gra, nie skład.
+// Sumy HP, obrażeń i ruchu obu drużyn są równe — o wyniku decyduje gra, nie skład.
 export const ENEMY_TEAM: UnitDef[] = [
-  { sprite: '00052', name: 'Twardziel', hp: 40, atk: 7, move: 2, shooter: false, shootRange: 0, type: 'water', specialName: 'Wir', specialKind: 'power' },
-  { sprite: '00066', name: 'Iskrzyk', hp: 24, atk: 8, move: 3, shooter: true, shootRange: 4, type: 'fire', specialName: 'Wybuch ognia', specialKind: 'power' },
-  { sprite: '00067', name: 'Mrocznik', hp: 30, atk: 8, move: 3, shooter: false, shootRange: 0, type: 'fire', specialName: 'Rozżarzenie', specialKind: 'drain' },
-  { sprite: '00048', name: 'Płetwiak', hp: 20, atk: 7, move: 3, shooter: true, shootRange: 5, type: 'water', specialName: 'Lodowy strzał', specialKind: 'power' },
-  { sprite: '00027', name: 'Choinek', hp: 32, atk: 8, move: 3, shooter: false, shootRange: 0, type: 'grass', specialName: 'Wysysanie', specialKind: 'drain' },
-  { sprite: '00024', name: 'Skrzydliść', hp: 22, atk: 8, move: 2, shooter: true, shootRange: 4, type: 'grass', specialName: 'Tańczące liście', specialKind: 'power' },
+  { sprite: '00052', name: 'Twardziel', count: 4, hp: 9, atk: 2, move: 2, shooter: false, shootRange: 0, type: 'water', specialName: 'Wir', specialKind: 'power' },
+  { sprite: '00066', name: 'Iskrzyk', count: 5, hp: 4, atk: 2, move: 3, shooter: true, shootRange: 4, type: 'fire', specialName: 'Wybuch ognia', specialKind: 'power' },
+  { sprite: '00067', name: 'Mrocznik', count: 5, hp: 6, atk: 2, move: 3, shooter: false, shootRange: 0, type: 'fire', specialName: 'Rozżarzenie', specialKind: 'drain' },
+  { sprite: '00048', name: 'Płetwiak', count: 6, hp: 3, atk: 2, move: 3, shooter: true, shootRange: 5, type: 'water', specialName: 'Lodowy strzał', specialKind: 'power' },
+  { sprite: '00027', name: 'Choinek', count: 4, hp: 8, atk: 3, move: 3, shooter: false, shootRange: 0, type: 'grass', specialName: 'Wysysanie', specialKind: 'drain' },
+  { sprite: '00024', name: 'Skrzydliść', count: 15, hp: 2, atk: 1, move: 2, shooter: true, shootRange: 4, type: 'grass', specialName: 'Tańczące liście', specialKind: 'power' },
 ];
 
 /** Ogień bije trawę, trawa bije wodę, woda bije ogień. */
@@ -55,6 +61,39 @@ export function typeMultiplier(attacker: ElementType, defender: ElementType): nu
     (attacker === 'grass' && defender === 'water') ||
     (attacker === 'water' && defender === 'fire');
   return strong ? 1.5 : 0.67;
+}
+
+/**
+ * Stan oddziału: ilu stworków zostało i ile HP ma ten, który akurat obrywa.
+ * Reszta stoi z pełnym życiem, więc całość liczymy jako (count-1) × hp + topHp.
+ */
+export interface StackState {
+  count: number;
+  topHp: number;
+}
+
+export const totalHp = (def: UnitDef, s: StackState) => (s.count - 1) * def.hp + s.topHp;
+
+export const fullHp = (def: UnitDef) => def.count * def.hp;
+
+/** Obrażenia całego oddziału — im więcej stworków, tym mocniej bije. */
+export const stackAtk = (def: UnitDef, s: StackState) => s.count * def.atk;
+
+/**
+ * Rozdziela obrażenia na oddział: najpierw dobija stworka z przodu, potem
+ * kolejnych. Zwraca nowy stan i ilu padło; count 0 znaczy, że oddział zginął.
+ */
+export function applyDamage(def: UnitDef, s: StackState, damage: number): { state: StackState; killed: number } {
+  const left = totalHp(def, s) - damage;
+  if (left <= 0) return { state: { count: 0, topHp: 0 }, killed: s.count };
+  const count = Math.ceil(left / def.hp);
+  return { state: { count, topHp: left - (count - 1) * def.hp }, killed: s.count - count };
+}
+
+/** Leczenie podnosi HP żywych, ale nie wskrzesza poległych. */
+export function applyHeal(def: UnitDef, s: StackState, amount: number): StackState {
+  const healed = Math.min(s.count * def.hp, totalHp(def, s) + amount);
+  return { count: s.count, topHp: healed - (s.count - 1) * def.hp };
 }
 
 /** Wszystkie sprite'y, które gra musi wczytać przed bitwą. */
