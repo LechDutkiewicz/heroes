@@ -20,11 +20,12 @@ assets/kit/
 Jeśli zestaw ma swoją nazwę, może być też o jeden poziom głębiej —
 `assets/kit/nazwa-zestawu/tileset/` itd. Poradzę sobie z jednym i z drugim.
 
-## Wrzućcie też plik .txt
+## Skąd to jest i na jakich zasadach
 
-`Commissions are welcome!.txt` wygląda na plik od autora i najpewniej jest
-w nim licencja oraz kto to narysował. To najważniejszy plik w całej paczce —
-bez niego nie wiadomo, czy wolno tych grafik używać. Wrzućcie go koniecznie.
+Autor, źródło i stan licencji: **`CREDITS.md`** obok tego pliku.
+
+Uwaga: `Commissions are welcome!.txt` z paczki to cennik zamówień autora,
+a nie licencja — warunków użycia trzeba szukać na stronie pobierania.
 
 ## Do czego posłuży który katalog
 
