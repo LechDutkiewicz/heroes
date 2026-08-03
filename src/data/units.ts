@@ -20,10 +20,15 @@ export interface UnitDef {
   specialKind: SpecialKind;
 }
 
-export const TYPE_INFO: Record<ElementType, { emoji: string; label: string; color: number }> = {
-  fire: { emoji: '\u{1F525}', label: 'Ogień', color: 0xff7043 },
-  water: { emoji: '\u{1F4A7}', label: 'Woda', color: 0x42a5f5 },
-  grass: { emoji: '\u{1F33F}', label: 'Trawa', color: 0x66bb6a },
+// Odmiana przez przypadki, bo teksty w panelu wymagają różnych form:
+// „mocny przeciw Ogniowi", ale „słaby wobec Ognia".
+export const TYPE_INFO: Record<
+  ElementType,
+  { emoji: string; label: string; dative: string; genitive: string; color: number }
+> = {
+  fire: { emoji: '\u{1F525}', label: 'Ogień', dative: 'Ogniowi', genitive: 'Ognia', color: 0xff7043 },
+  water: { emoji: '\u{1F4A7}', label: 'Woda', dative: 'Wodzie', genitive: 'Wody', color: 0x42a5f5 },
+  grass: { emoji: '\u{1F33F}', label: 'Trawa', dative: 'Trawie', genitive: 'Trawy', color: 0x66bb6a },
 };
 
 export const SPECIAL_COOLDOWN = 3;
@@ -52,6 +57,17 @@ export const ENEMY_TEAM: UnitDef[] = [
   { sprite: '00027', name: 'Choinek', count: 4, hp: 8, atk: 3, move: 3, shooter: false, shootRange: 0, type: 'grass', specialName: 'Wysysanie', specialKind: 'drain' },
   { sprite: '00024', name: 'Skrzydliść', count: 15, hp: 2, atk: 1, move: 2, shooter: true, shootRange: 4, type: 'grass', specialName: 'Tańczące liście', specialKind: 'power' },
 ];
+
+/**
+ * Kto komu zagraża. Krąg jest zamknięty, więc typ, którego dany oddział nie
+ * lubi, to ten jeden jedyny, a typ, który sam bije mocniej, jest zarazem tym,
+ * którego ciosy najlepiej wytrzymuje.
+ */
+export function typeMatchup(type: ElementType): { strong: ElementType; weak: ElementType } {
+  const strong: Record<ElementType, ElementType> = { fire: 'grass', grass: 'water', water: 'fire' };
+  const weak: Record<ElementType, ElementType> = { fire: 'water', grass: 'fire', water: 'grass' };
+  return { strong: strong[type], weak: weak[type] };
+}
 
 /** Ogień bije trawę, trawa bije wodę, woda bije ogień. */
 export function typeMultiplier(attacker: ElementType, defender: ElementType): number {

@@ -11,6 +11,7 @@ import {
   fullHp,
   stackAtk,
   totalHp,
+  typeMatchup,
   typeMultiplier,
   type UnitDef,
 } from '../data/units';
@@ -63,7 +64,7 @@ const BOARD_Y = 92;
 const BOARD_W = HEX_W * (COLS + 0.5);
 const BOARD_H = ROW_STEP * (ROWS - 1) + HEX_H;
 const PANEL_Y = BOARD_Y + BOARD_H + 14;
-const PANEL_H = 168;
+const PANEL_H = 196;
 /** Szerokość lewej kolumny panelu — reszta należy do przycisków. */
 const TEXT_COL_W = BOARD_W - 300;
 
@@ -77,6 +78,13 @@ const GUARD_REDUCTION = 0.7;
 const START_ROWS = [0, 1, 2, 4, 5, 6];
 
 const cellKey = (col: number, row: number) => `${col},${row}`;
+
+/** Tła pola bitwy — jedno losowane na bitwę, jak zmienne krajobrazy w Heroes 3. */
+const TERRAINS = [
+  { key: 'laka', label: 'Łąka' },
+  { key: 'plaza', label: 'Plaża' },
+  { key: 'snieg', label: 'Śnieżna polana' },
+];
 
 /** Sześć wierzchołków hexa wokół podanego środka. */
 function hexPoints(cx: number, cy: number) {
@@ -119,6 +127,8 @@ export class BattleScene extends Phaser.Scene {
   private nextId = 1;
 
   private highlightLayer!: Phaser.GameObjects.Container;
+  /** Podgląd zasięgu oddziału, na który patrzy kursor — pod warstwą ruchu. */
+  private previewLayer!: Phaser.GameObjects.Container;
   private approachLayer!: Phaser.GameObjects.Container;
   private effectLayer!: Phaser.GameObjects.Container;
   /** Pole, z którego gracz chce uderzyć — wybierane położeniem kursora. */
@@ -137,6 +147,9 @@ export class BattleScene extends Phaser.Scene {
   private busy = false;
   private gameOver = false;
 
+  /** Krajobraz tej bitwy — losowany raz, przy tworzeniu sceny. */
+  private terrain = TERRAINS[0];
+
   constructor() {
     super('battle');
   }
@@ -145,13 +158,18 @@ export class BattleScene extends Phaser.Scene {
     for (const key of ALL_SPRITES) {
       this.load.image(key, `${import.meta.env.BASE_URL}sprites/${key}.png`);
     }
+    for (const t of TERRAINS) {
+      this.load.image(t.key, `${import.meta.env.BASE_URL}terrain/${t.key}.png`);
+    }
   }
 
   create() {
+    this.terrain = Phaser.Utils.Array.GetRandom(TERRAINS);
     this.drawBackground();
     this.drawBoard();
     this.drawHud();
 
+    this.previewLayer = this.add.container(0, 0).setDepth(4);
     this.highlightLayer = this.add.container(0, 0).setDepth(5);
     this.approachLayer = this.add.container(0, 0).setDepth(6);
     this.effectLayer = this.add.container(0, 0).setDepth(100);
@@ -176,22 +194,35 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private drawBoard() {
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.35);
+    shadow.fillRoundedRect(BOARD_X - 10, BOARD_Y - 10, BOARD_W + 20, BOARD_H + 20, 14);
+
+    // Krajobraz rozciągnięty dokładnie na planszę. Maska geometryczna byłaby
+    // ładniejsza (zaokrąglone rogi), ale nie nakłada się tu na obrazek, a samo
+    // dopasowanie rozmiaru daje pewny wynik — 640x360 rozciągnięte do planszy
+    // to kilka procent różnicy w proporcjach, na łące czy śniegu niewidoczne.
+    this.add
+      .image(BOARD_X + BOARD_W / 2, BOARD_Y + BOARD_H / 2, this.terrain.key)
+      .setDisplaySize(BOARD_W + 12, BOARD_H + 12);
+
     const g = this.add.graphics();
 
-    g.fillStyle(0x000000, 0.35);
-    g.fillRoundedRect(BOARD_X - 10, BOARD_Y - 10, BOARD_W + 20, BOARD_H + 20, 14);
-    g.fillStyle(0x24304f, 1);
+    // Lekkie przyciemnienie, żeby napisy i paski HP nie ginęły na jasnej trawie.
+    g.fillStyle(0x0d1023, 0.22);
     g.fillRoundedRect(BOARD_X - 6, BOARD_Y - 6, BOARD_W + 12, BOARD_H + 12, 12);
 
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
         const { x, y } = this.cellToXY(col, row);
-        // Strefy startowe obu drużyn dostają własny odcień.
-        const fill = col === 0 ? 0x2c4a66 : col === COLS - 1 ? 0x4a2f3f : (col + row) % 2 === 0 ? 0x2f3c60 : 0x2a3556;
-        g.fillStyle(fill, 1);
-        g.fillPoints(hexPoints(x, y), true);
-        g.lineStyle(1, 0x3a4770, 0.8);
-        g.strokePoints(hexPoints(x, y), true);
+        const pts = hexPoints(x, y);
+        // Siatka tylko obrysem — teren ma być widoczny przez pola.
+        if (col === 0 || col === COLS - 1) {
+          g.fillStyle(col === 0 ? 0x4fc3f7 : 0xef5350, 0.16);
+          g.fillPoints(pts, true);
+        }
+        g.lineStyle(1, 0xffffff, 0.22);
+        g.strokePoints(pts, true);
       }
     }
   }
@@ -223,6 +254,14 @@ export class BattleScene extends Phaser.Scene {
       })
       .setAlpha(0.9);
 
+    this.add
+      .text(BOARD_X + 218, 22, `\u{1F5FA}\u{FE0F} ${this.terrain.label}`, {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '13px',
+        color: '#8ea0d0',
+      })
+      .setOrigin(0, 0.5);
+
     this.turnText = this.add.text(BOARD_X, 58, '', {
       fontFamily: 'Trebuchet MS, sans-serif',
       fontSize: '14px',
@@ -245,7 +284,7 @@ export class BattleScene extends Phaser.Scene {
     });
 
     // Prognoza stoi pod przyciskami, więc ma całą szerokość panelu.
-    this.forecastText = this.add.text(BOARD_X + 10, PANEL_Y + 128, '', {
+    this.forecastText = this.add.text(BOARD_X + 10, PANEL_Y + 164, '', {
       fontFamily: 'Trebuchet MS, sans-serif',
       fontSize: '14px',
       color: '#ffd166',
@@ -380,6 +419,8 @@ export class BattleScene extends Phaser.Scene {
     hit.on('pointerout', () => {
       this.forecastText.setText('');
       this.clearApproach();
+      this.setCursor(null);
+      this.clearMovePreview();
       // Wracamy do statystyk tego, kto ma turę.
       const active = this.activeUnit();
       if (active) this.showStats(active);
@@ -554,6 +595,9 @@ export class BattleScene extends Phaser.Scene {
 
   private showStats(unit: Unit) {
     const t = TYPE_INFO[unit.def.type];
+    const { strong, weak } = typeMatchup(unit.def.type);
+    const strongInfo = TYPE_INFO[strong];
+    const weakInfo = TYPE_INFO[weak];
     const reach = unit.def.shooter
       ? `\u{1F3F9} strzelec — strzela wszędzie, pełna siła do ${unit.def.shootRange} pól`
       : '⚔️ walka wręcz';
@@ -569,6 +613,8 @@ export class BattleScene extends Phaser.Scene {
         `❤️ HP ${this.total(unit)}/${fullHp(unit.def)} (po ${unit.def.hp} na stworka)    ` +
         `\u{1F462} Ruch ${unit.def.move}\n` +
         `⚔️ Atak ${unit.count} × ${unit.def.atk} = ${stackAtk(unit.def, unit)}\n` +
+        `\u{1F4AA} Mocny przeciw ${strongInfo.emoji} ${strongInfo.dative}: bije ×1.5, obrywa ×0.67\n` +
+        `\u{1F494} Słaby wobec ${weakInfo.emoji} ${weakInfo.genitive}: obrywa ×1.5\n` +
         `${reach}\n` +
         `⚡ ${special}`
     );
@@ -729,6 +775,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private clearHighlights() {
+    this.clearMovePreview();
     this.highlightLayer?.removeAll(true);
     this.approachLayer?.removeAll(true);
     this.preferredApproach = null;
@@ -757,10 +804,38 @@ export class BattleScene extends Phaser.Scene {
     this.forecastText.setText(`${parts.join(' ')} = ${value} ${damageWord(value)} ${outcome}`);
   }
 
+  /**
+   * Dokąd ten oddział dojdzie w swojej kolejce. Rysujemy sam obrys, żeby nie
+   * mylił się z pełnym podświetleniem pól jednostki, która ma turę teraz.
+   */
+  private showMovePreview(unit: Unit) {
+    this.clearMovePreview();
+    const g = this.add.graphics();
+    const color = unit.side === 'player' ? 0x4fc3f7 : 0xef5350;
+    for (const [key, cost] of this.reachable(unit)) {
+      if (cost === 0) continue;
+      const [col, row] = key.split(',').map(Number);
+      const { x, y } = this.cellToXY(col, row);
+      const pts = hexPoints(x, y);
+      g.fillStyle(color, 0.1);
+      g.fillPoints(pts, true);
+      g.lineStyle(2, color, 0.55);
+      g.strokePoints(pts, true);
+    }
+    this.previewLayer.add(g);
+  }
+
+  private clearMovePreview() {
+    this.previewLayer?.removeAll(true);
+  }
+
   private onUnitHover(unit: Unit) {
     if (this.gameOver) return;
     // Najechanie na kogokolwiek pokazuje jego statystyki — także wroga.
     this.showStats(unit);
+    // ...i zasięg jego ruchu, poza tym, kto właśnie ma turę: ten ma już
+    // narysowane pełne podświetlenie i drugi obrys tylko by je zaśmiecił.
+    if (unit.id !== this.activeUnit()?.id) this.showMovePreview(unit);
 
     const active = this.activeUnit();
     if (!active || this.busy) return;
@@ -878,10 +953,13 @@ export class BattleScene extends Phaser.Scene {
     this.approachLayer.add(g);
   }
 
+  /**
+   * Zdejmuje znacznik pola podejścia. Kursora celowo nie rusza: dla strzelca
+   * ustawiamy kulę tuż przed tym wywołaniem i skasowałoby ją z powrotem.
+   */
   private clearApproach() {
     this.preferredApproach = null;
     this.approachLayer?.removeAll(true);
-    this.setCursor(null);
   }
 
   private toggleSpecial() {

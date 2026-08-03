@@ -11,20 +11,28 @@ Zawartość zgadza się z opisem paczki: 16 stworków z animacjami bezczynności
 i ataku (96x96), 10 postaci z animacją chodzenia (32x32), tilesety 16x16,
 7 efektów ataku (96x96), 3 tła bitwy (640x360) oraz przyciski UI.
 
-### Stan licencji: NIEPOTWIERDZONY
+### Stan licencji: POTWIERDZONY — wolno używać, także komercyjnie
 
-Plik `Commissions are welcome!.txt` dołączony do paczki to **cennik zamówień
-autora, a nie licencja** — nie ma w nim żadnych warunków użycia.
+Dosłowny zapis ze strony pobierania (https://scarloxy.itch.io/mpwsp01):
 
-Wyszukiwarka podaje, że paczka jest w pełni autorska i wolno jej używać
-komercyjnie, ale nie udało się odczytać oryginalnego tekstu licencji ze
-strony (dostęp do itch.io, DeviantArt, ArtStation i GameDevMarket blokuje
-polityka sieciowa środowiska, w którym pracuje asystent).
+> Within the **MyPixelWorld Special Packs**, I will include a variety of pixel
+> art assets that you may need for your game. Some packs may contain
+> copyrighted material and some may be fully original. In this case, this pack
+> is **fully original** and **can be used commercially**. Enjoy!
 
-**Do zrobienia:** wkleić tutaj dosłowny akapit o licencji ze strony pobierania,
-zwłaszcza w części o tym, czy podanie autora jest wymagane. Do tego czasu
-podajemy autora zawsze — jeśli atrybucja jest wymagana, jesteśmy kryci,
-a jeśli nie, nic nas to nie kosztuje.
+Strona oznacza paczkę jako „Game assets › Free", z opcją „Name your own price".
+
+Co z tego wynika:
+
+- grafiki są w pełni autorskie, bez cudzych praw w środku,
+- wolno ich używać, również komercyjnie,
+- **autor nie stawia warunku podania go w grze** — atrybucja jest dobrowolna.
+
+Podajemy go mimo to. Autor prosi o obserwowanie i wsparcie, a to najtańszy
+sposób, żeby się odwdzięczyć za darmową paczkę.
+
+Uwaga: `Commissions are welcome!.txt` dołączony do paczki to cennik zamówień
+autora, a nie licencja — warunki są wyłącznie na stronie, przepisane wyżej.
 
 ### Gdzie podać autora w gotowej grze
 

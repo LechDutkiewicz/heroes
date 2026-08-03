@@ -5,7 +5,7 @@ new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'app',
   width: 960,
-  height: 800,
+  height: 830,
   backgroundColor: '#0d1023',
   scene: [BattleScene],
 });
