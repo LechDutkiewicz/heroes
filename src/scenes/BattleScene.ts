@@ -41,6 +41,8 @@ interface Unit {
   countLabel: Phaser.GameObjects.Text;
   atkBadge: Phaser.GameObjects.Text;
   shieldIcon: Phaser.GameObjects.Text;
+  /** lśniący sześciokąt pod oddziałem, który ma teraz turę */
+  activeRing: Phaser.GameObjects.Graphics;
   platform: Phaser.GameObjects.Ellipse;
 }
 
@@ -315,6 +317,16 @@ export class BattleScene extends Phaser.Scene {
     const { x, y } = this.cellToXY(col, row);
     const accent = side === 'player' ? 0x4fc3f7 : 0xef5350;
 
+    // Lśniący sześciokąt pokazuje, czyją decyzję gracz właśnie podejmuje.
+    // Dwa obrysy: szeroki i przygaszony robi poświatę, cienki daje ostry brzeg.
+    const activeRing = this.add.graphics();
+    const ringPts = hexPoints(0, 0);
+    activeRing.lineStyle(9, 0xffd166, 0.3);
+    activeRing.strokePoints(ringPts, true);
+    activeRing.lineStyle(3, 0xfff3c4, 0.95);
+    activeRing.strokePoints(ringPts, true);
+    activeRing.setVisible(false);
+
     // Podest pod pokemonem zdradza, do kogo należy i podświetla aktywny oddział.
     const platform = this.add.ellipse(0, 18, 42, 13, accent, 0.22).setStrokeStyle(2, accent, 0.6);
 
@@ -377,6 +389,7 @@ export class BattleScene extends Phaser.Scene {
       .setInteractive(this.hexHitArea(), Phaser.Geom.Polygon.Contains);
 
     const container = this.add.container(x, y, [
+      activeRing,
       platform,
       sprite,
       typeBadge,
@@ -410,6 +423,7 @@ export class BattleScene extends Phaser.Scene {
       countLabel,
       atkBadge,
       shieldIcon,
+      activeRing,
       platform,
     };
 
@@ -525,14 +539,21 @@ export class BattleScene extends Phaser.Scene {
       const accent = u.side === 'player' ? 0x4fc3f7 : 0xef5350;
       u.platform.setStrokeStyle(2, accent, 0.75);
       u.platform.setFillStyle(accent, 0.28);
+      this.tweens.killTweensOf(u.activeRing);
+      u.activeRing.setVisible(false).setScale(1).setAlpha(1);
     });
     unit.platform.setStrokeStyle(3, 0xffd166, 1);
     unit.platform.setFillStyle(0xffd166, 0.35);
+
+    // Pierścień pulsuje: lekko rośnie i przygasa, więc wzrok sam go łapie.
+    unit.activeRing.setVisible(true);
     this.tweens.add({
-      targets: unit.platform,
-      scaleX: { from: 1, to: 1.14 },
-      scaleY: { from: 1, to: 1.14 },
-      duration: 520,
+      targets: unit.activeRing,
+      scaleX: { from: 0.94, to: 1.04 },
+      scaleY: { from: 0.94, to: 1.04 },
+      alpha: { from: 1, to: 0.45 },
+      duration: 620,
+      ease: 'Sine.easeInOut',
       yoyo: true,
       repeat: -1,
     });
@@ -598,9 +619,11 @@ export class BattleScene extends Phaser.Scene {
     const { strong, weak } = typeMatchup(unit.def.type);
     const strongInfo = TYPE_INFO[strong];
     const weakInfo = TYPE_INFO[weak];
-    const reach = unit.def.shooter
-      ? `\u{1F3F9} strzelec — strzela wszędzie, pełna siła do ${unit.def.shootRange} pól`
-      : '⚔️ walka wręcz';
+    const reach = !unit.def.shooter
+      ? '⚔️ walka wręcz'
+      : this.canShoot(unit)
+        ? `\u{1F3F9} strzelec — strzela wszędzie, pełna siła do ${unit.def.shootRange} pól`
+        : '\u{1F6AB} strzelec ZABLOKOWANY — wróg obok, bije wręcz za pół siły';
     const special =
       unit.specialCooldown === 0
         ? `${unit.def.specialName} — gotowy`
@@ -662,13 +685,25 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
+   * Czy strzelec może w ogóle strzelać. Wróg tuż obok blokuje go tak jak
+   * w Heroes 3: łucznik nie ma jak naciągnąć cięciwy i musi bić wręcz.
+   */
+  private canShoot(unit: Unit) {
+    return unit.def.shooter && !this.hasAdjacentEnemy(unit);
+  }
+
+  /**
    * Cel jest atakowalny, gdy strzelec ma go w zasięgu, albo gdy jednostka
    * walcząca wręcz stoi obok lub może dojść na sąsiednie wolne pole.
    */
   private attackPlan(unit: Unit, target: Unit, reach: Map<string, number>): { from: Cell } | null {
-    // Strzelec, jak łucznik w Heroes 3, dosięga każdego celu na planszy.
-    if (unit.def.shooter) return { from: { col: unit.col, row: unit.row } };
+    // Wolny strzelec, jak łucznik w Heroes 3, dosięga każdego celu na planszy.
+    if (this.canShoot(unit)) return { from: { col: unit.col, row: unit.row } };
     if (this.isAdjacent(unit, target)) return { from: { col: unit.col, row: unit.row } };
+
+    // Zablokowany strzelec nie odbiega, żeby uderzyć kogoś dalej — albo bije
+    // tego, kto go trzyma, albo ucieka, ale to już zwykły ruch, nie atak.
+    if (unit.def.shooter) return null;
 
     let best: { from: Cell; cost: number } | null = null;
     for (const cell of this.neighbours(target)) {
@@ -790,7 +825,7 @@ export class BattleScene extends Phaser.Scene {
     const parts = [`Atak ${attacker.count} × ${attacker.def.atk} = ${base}`];
     if (typeMult !== 1) parts.push(`× ${typeMult} (${typeMult > 1 ? 'przewaga typu' : 'słaby typ'})`);
     if (specialMult !== 1) parts.push(`× ${specialMult} (${attacker.def.specialName})`);
-    if (pinned) parts.push('× 0.5 (strzelec w zwarciu)');
+    if (pinned) parts.push('× 0.5 (zablokowany strzelec bije wręcz)');
     else if (tooFar) parts.push('× 0.5 (za daleko — złamana strzała)');
     if (guarded) parts.push(`× ${GUARD_REDUCTION} (cel w obronie)`);
     void penalty;
@@ -833,16 +868,21 @@ export class BattleScene extends Phaser.Scene {
     if (this.gameOver) return;
     // Najechanie na kogokolwiek pokazuje jego statystyki — także wroga.
     this.showStats(unit);
-    // ...i zasięg jego ruchu, poza tym, kto właśnie ma turę: ten ma już
-    // narysowane pełne podświetlenie i drugi obrys tylko by je zaśmiecił.
-    if (unit.id !== this.activeUnit()?.id) this.showMovePreview(unit);
-
     const active = this.activeUnit();
-    if (!active || this.busy) return;
-    if (unit.side !== active.side) {
-      const plan = this.attackPlan(active, unit, this.reachable(active));
-      if (plan) this.showForecast(active, unit, this.specialArmed);
-    }
+    const canAttack =
+      !!active &&
+      !this.busy &&
+      active.side === 'player' &&
+      unit.side !== active.side &&
+      !!this.attackPlan(active, unit, this.reachable(active));
+
+    // Zasięg ruchu pokazujemy tylko wtedy, gdy nie celujemy. Przy wrogu na
+    // wyciągnięcie ręki liczy się kursor ataku i prognoza, a nie to, dokąd on
+    // dojdzie — dwa podświetlenia naraz tylko przeszkadzały. Pomijamy też
+    // oddział, który ma turę: ten ma już narysowane pełne pola ruchu.
+    if (unit.id !== active?.id && !canAttack) this.showMovePreview(unit);
+
+    if (canAttack) this.showForecast(active!, unit, this.specialArmed);
   }
 
   private onUnitClicked(unit: Unit) {
@@ -906,7 +946,7 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
-    if (active.def.shooter) {
+    if (this.canShoot(active)) {
       const { tooFar } = this.damageOf(active, target, this.specialArmed);
       this.setCursor(tooFar ? 'bolt_broken' : 'bolt');
       this.clearApproach();
@@ -1019,7 +1059,7 @@ export class BattleScene extends Phaser.Scene {
 
     const strike = () => {
       const done = () => this.resolveAttack(attacker, target, special);
-      if (attacker.def.shooter) {
+      if (this.canShoot(attacker)) {
         const { tooFar } = this.damageOf(attacker, target, special);
         this.fireProjectile(attacker, target, tooFar, done);
       } else {
@@ -1097,7 +1137,7 @@ export class BattleScene extends Phaser.Scene {
     target.topHp = state.topHp;
 
     if (tooFar) this.floatText(target, 'Złamana strzała — pół siły', '#ff9800', -66);
-    else if (pinned) this.floatText(attacker, 'Strzelec w zwarciu!', '#ff9800', -60);
+    else if (pinned) this.floatText(attacker, 'Zablokowany — bije wręcz!', '#ff9800', -60);
     if (guarded && target.count > 0) this.floatText(target, 'Obrona zamortyzowała', '#4fc3f7', -82);
 
     if (special) {
