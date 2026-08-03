@@ -14,6 +14,7 @@ import {
   typeMultiplier,
   type UnitDef,
 } from '../data/units';
+import { hexDistance, hexNeighbours, type Cell } from '../data/hex';
 
 type Side = 'player' | 'enemy';
 
@@ -28,39 +29,64 @@ interface Unit {
   col: number;
   row: number;
   specialCooldown: number;
+  /** przeczekał już w tej rundzie — drugi raz nie wolno */
+  waited: boolean;
+  /** stoi w obronie do swojej następnej kolejki */
+  defending: boolean;
   container: Phaser.GameObjects.Container;
   sprite: Phaser.GameObjects.Image;
   hpBar: Phaser.GameObjects.Rectangle;
   hpLabel: Phaser.GameObjects.Text;
   countLabel: Phaser.GameObjects.Text;
   atkBadge: Phaser.GameObjects.Text;
+  shieldIcon: Phaser.GameObjects.Text;
   platform: Phaser.GameObjects.Ellipse;
 }
 
-interface Cell {
-  col: number;
-  row: number;
-}
+// ---------- geometria planszy z hexów ----------
+// Układ „odd-r": hexy stoją wierzchołkiem do góry, a nieparzyste rzędy są
+// przesunięte o pół hexa w prawo. Każdy hex ma sześciu sąsiadów w równej
+// odległości — nie ma już skosów tańszych albo droższych niż proste.
 
 const COLS = 10;
 const ROWS = 7;
-const CELL = 72;
-const BOARD_X = 40;
+/** promień hexa: od środka do wierzchołka */
+const HEX_R = 46;
+const HEX_W = Math.sqrt(3) * HEX_R;
+const HEX_H = 2 * HEX_R;
+/** pionowy odstęp między rzędami — hexy zazębiają się, stąd 3/4 wysokości */
+const ROW_STEP = HEX_R * 1.5;
+
+// Plansza wyśrodkowana: szerokość hexów wyznacza margines, nie odwrotnie.
+const BOARD_X = 62;
 const BOARD_Y = 92;
-const BOARD_W = COLS * CELL;
-const BOARD_H = ROWS * CELL;
+const BOARD_W = HEX_W * (COLS + 0.5);
+const BOARD_H = ROW_STEP * (ROWS - 1) + HEX_H;
 const PANEL_Y = BOARD_Y + BOARD_H + 14;
-const PANEL_H = 160;
-/** Szerokość lewej kolumny panelu — reszta należy do przycisku umiejętności. */
-const TEXT_COL_W = BOARD_W - 290;
+const PANEL_H = 168;
+/** Szerokość lewej kolumny panelu — reszta należy do przycisków. */
+const TEXT_COL_W = BOARD_W - 300;
 
 const HP_BAR_W = 50;
 const HP_BAR_H = 9;
 
-/** Sześć jednostek w kolumnie z przerwą pośrodku — reszta rzędów zostaje wolna. */
+/** O tyle słabsze jest trafienie w oddział, który stoi w obronie. */
+const GUARD_REDUCTION = 0.7;
+
+/** Sześć oddziałów w kolumnie z przerwą pośrodku — reszta rzędów zostaje wolna. */
 const START_ROWS = [0, 1, 2, 4, 5, 6];
 
 const cellKey = (col: number, row: number) => `${col},${row}`;
+
+/** Sześć wierzchołków hexa wokół podanego środka. */
+function hexPoints(cx: number, cy: number) {
+  const pts: Phaser.Math.Vector2[] = [];
+  for (let i = 0; i < 6; i++) {
+    const a = Phaser.Math.DegToRad(60 * i - 90);
+    pts.push(new Phaser.Math.Vector2(cx + HEX_R * Math.cos(a), cy + HEX_R * Math.sin(a)));
+  }
+  return pts;
+}
 
 /** Poprawna polska odmiana: 1 obrażenie, 2 obrażenia, 5 obrażeń. */
 function damageWord(n: number) {
@@ -71,19 +97,25 @@ function damageWord(n: number) {
   return 'obrażeń';
 }
 
-/** Poprawna polska odmiana: padł 1, padły 2, padło 5. */
+/** Poprawna polska odmiana: padnie 1, padną 2, padnie 5. */
 function fellPhrase(n: number) {
-  if (n === 1) return 'padnie 1';
   const last = n % 10;
   const lastTwo = n % 100;
   if (last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14)) return `padną ${n}`;
   return `padnie ${n}`;
 }
 
+interface Button {
+  container: Phaser.GameObjects.Container;
+  bg: Phaser.GameObjects.Rectangle;
+  label: Phaser.GameObjects.Text;
+}
+
 export class BattleScene extends Phaser.Scene {
   private units: Unit[] = [];
-  private turnOrder: number[] = [];
-  private turnIndex = 0;
+  /** Kolejka na bieżącą rundę — pierwszy z brzegu ma teraz turę. */
+  private roundQueue: number[] = [];
+  private round = 1;
   private nextId = 1;
 
   private highlightLayer!: Phaser.GameObjects.Container;
@@ -97,9 +129,9 @@ export class BattleScene extends Phaser.Scene {
   private turnText!: Phaser.GameObjects.Text;
   private statsText!: Phaser.GameObjects.Text;
   private forecastText!: Phaser.GameObjects.Text;
-  private specialButton!: Phaser.GameObjects.Container;
-  private specialLabel!: Phaser.GameObjects.Text;
-  private specialBg!: Phaser.GameObjects.Rectangle;
+  private specialButton!: Button;
+  private waitButton!: Button;
+  private guardButton!: Button;
 
   private specialArmed = false;
   private busy = false;
@@ -128,12 +160,10 @@ export class BattleScene extends Phaser.Scene {
     PLAYER_TEAM.forEach((def, i) => this.spawnUnit(def, 'player', 0, START_ROWS[i]));
     ENEMY_TEAM.forEach((def, i) => this.spawnUnit(def, 'enemy', COLS - 1, START_ROWS[i]));
 
-    // Szybsze pokemony ruszają się pierwsze.
-    this.turnOrder = [...this.units]
-      .sort((a, b) => b.def.move - a.def.move || Math.random() - 0.5)
-      .map((u) => u.id);
+    this.input.keyboard?.on('keydown-C', () => this.waitTurn());
+    this.input.keyboard?.on('keydown-O', () => this.guardTurn());
 
-    this.buildQueueIcons();
+    this.startRound();
     this.beginTurn();
   }
 
@@ -153,19 +183,34 @@ export class BattleScene extends Phaser.Scene {
     g.fillStyle(0x24304f, 1);
     g.fillRoundedRect(BOARD_X - 6, BOARD_Y - 6, BOARD_W + 12, BOARD_H + 12, 12);
 
-    for (let col = 0; col < COLS; col++) {
-      for (let row = 0; row < ROWS; row++) {
-        const shade = (col + row) % 2 === 0 ? 0x2f3c60 : 0x2a3556;
-        g.fillStyle(shade, 1);
-        g.fillRoundedRect(BOARD_X + col * CELL + 2, BOARD_Y + row * CELL + 2, CELL - 4, CELL - 4, 8);
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        const { x, y } = this.cellToXY(col, row);
+        // Strefy startowe obu drużyn dostają własny odcień.
+        const fill = col === 0 ? 0x2c4a66 : col === COLS - 1 ? 0x4a2f3f : (col + row) % 2 === 0 ? 0x2f3c60 : 0x2a3556;
+        g.fillStyle(fill, 1);
+        g.fillPoints(hexPoints(x, y), true);
+        g.lineStyle(1, 0x3a4770, 0.8);
+        g.strokePoints(hexPoints(x, y), true);
       }
     }
+  }
 
-    // Strefy startowe obu drużyn.
-    g.fillStyle(0x4fc3f7, 0.1);
-    g.fillRoundedRect(BOARD_X + 2, BOARD_Y + 2, CELL - 4, BOARD_H - 4, 8);
-    g.fillStyle(0xef5350, 0.1);
-    g.fillRoundedRect(BOARD_X + (COLS - 1) * CELL + 2, BOARD_Y + 2, CELL - 4, BOARD_H - 4, 8);
+  private makeButton(x: number, y: number, w: number, h: number, onClick: () => void): Button {
+    const bg = this.add
+      .rectangle(0, 0, w, h, 0x2c3a63)
+      .setStrokeStyle(2, 0xffd166)
+      .setInteractive({ useHandCursor: true });
+    const label = this.add
+      .text(0, 0, '', {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '14px',
+        color: '#ffffff',
+        align: 'center',
+      })
+      .setOrigin(0.5);
+    bg.on('pointerdown', onClick);
+    return { container: this.add.container(x, y, [bg, label]), bg, label };
   }
 
   private drawHud() {
@@ -190,7 +235,7 @@ export class BattleScene extends Phaser.Scene {
     panel.lineStyle(1, 0x3a4770, 1);
     panel.strokeRoundedRect(BOARD_X - 6, PANEL_Y, BOARD_W + 12, PANEL_H, 10);
 
-    // Teksty trzymają się lewej kolumny, przycisk umiejętności prawej.
+    // Teksty trzymają się lewej kolumny, przyciski prawej.
     this.statsText = this.add.text(BOARD_X + 10, PANEL_Y + 8, '', {
       fontFamily: 'Trebuchet MS, sans-serif',
       fontSize: '14px',
@@ -199,51 +244,45 @@ export class BattleScene extends Phaser.Scene {
       wordWrap: { width: TEXT_COL_W },
     });
 
-    // Prognoza stoi pod przyciskiem umiejętności, więc ma całą szerokość panelu.
-    this.forecastText = this.add.text(BOARD_X + 10, PANEL_Y + 116, '', {
+    // Prognoza stoi pod przyciskami, więc ma całą szerokość panelu.
+    this.forecastText = this.add.text(BOARD_X + 10, PANEL_Y + 128, '', {
       fontFamily: 'Trebuchet MS, sans-serif',
       fontSize: '14px',
       color: '#ffd166',
       wordWrap: { width: BOARD_W - 20 },
     });
 
-    this.specialBg = this.add
-      .rectangle(0, 0, 250, 40, 0x2c3a63)
-      .setStrokeStyle(2, 0xffd166)
-      .setInteractive({ useHandCursor: true });
-    this.specialLabel = this.add
-      .text(0, 0, '', {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '14px',
-        color: '#ffffff',
-        align: 'center',
-      })
-      .setOrigin(0.5);
-    this.specialButton = this.add.container(BOARD_X + BOARD_W - 140, PANEL_Y + 60, [
-      this.specialBg,
-      this.specialLabel,
-    ]);
-    this.specialBg.on('pointerdown', () => this.toggleSpecial());
+    const right = BOARD_X + BOARD_W - 140;
+    this.specialButton = this.makeButton(right, PANEL_Y + 32, 250, 40, () => this.toggleSpecial());
+    this.waitButton = this.makeButton(right - 65, PANEL_Y + 84, 120, 36, () => this.waitTurn());
+    this.guardButton = this.makeButton(right + 65, PANEL_Y + 84, 120, 36, () => this.guardTurn());
   }
 
   // ---------- jednostki ----------
 
   private cellToXY(col: number, row: number) {
-    return { x: BOARD_X + col * CELL + CELL / 2, y: BOARD_Y + row * CELL + CELL / 2 };
+    return {
+      x: BOARD_X + HEX_W / 2 + col * HEX_W + (row & 1 ? HEX_W / 2 : 0),
+      y: BOARD_Y + HEX_R + row * ROW_STEP,
+    };
+  }
+
+  /** Obszar kliknięcia w kształcie hexa — prostokąt zachodziłby na sąsiadów. */
+  private hexHitArea() {
+    return new Phaser.Geom.Polygon(hexPoints(HEX_W / 2, HEX_H / 2));
   }
 
   private spawnUnit(def: UnitDef, side: Side, col: number, row: number) {
     const { x, y } = this.cellToXY(col, row);
     const accent = side === 'player' ? 0x4fc3f7 : 0xef5350;
 
-    // Podest pod pokemonem zdradza, do kogo należy i podświetla aktywną jednostkę.
+    // Podest pod pokemonem zdradza, do kogo należy i podświetla aktywny oddział.
     const platform = this.add.ellipse(0, 18, 42, 13, accent, 0.22).setStrokeStyle(2, accent, 0.6);
 
-    // Sprite'y są kwadratowe 128x128 — skalujemy do wielkości pola.
-    const sprite = this.add.image(0, -7, def.sprite).setDisplaySize(64, 64);
+    const sprite = this.add.image(0, -6, def.sprite).setDisplaySize(58, 58);
 
     const name = this.add
-      .text(0, -33, def.name, {
+      .text(0, -31, def.name, {
         fontFamily: 'Trebuchet MS, sans-serif',
         fontSize: '10px',
         color: '#ffffff',
@@ -253,8 +292,13 @@ export class BattleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // Odznaki na dole, żeby nie zasłaniały rysunku pokemona.
-    const typeBadge = this.add.text(-25, -22, TYPE_INFO[def.type].emoji, { fontSize: '12px' }).setOrigin(0.5);
+    const typeBadge = this.add.text(-25, -20, TYPE_INFO[def.type].emoji, { fontSize: '12px' }).setOrigin(0.5);
+
+    // Tarcza zapala się tylko wtedy, gdy oddział stoi w obronie.
+    const shieldIcon = this.add
+      .text(24, -20, '\u{1F6E1}\u{FE0F}', { fontSize: '13px' })
+      .setOrigin(0.5)
+      .setVisible(false);
 
     // Odznaka pokazuje siłę całego oddziału, bo to ona decyduje o trafieniu.
     const atkBadge = this.add
@@ -268,9 +312,7 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     // Liczebność oddziału w rogu, jak w Heroes 3 — najważniejsza liczba na polu.
-    const countBg = this.add
-      .rectangle(23, 16, 26, 16, 0x11162b, 0.92)
-      .setStrokeStyle(2, side === 'player' ? 0x4fc3f7 : 0xef5350, 1);
+    const countBg = this.add.rectangle(23, 16, 26, 16, 0x11162b, 0.92).setStrokeStyle(2, accent, 1);
     const countLabel = this.add
       .text(23, 16, `${def.count}`, {
         fontFamily: 'Trebuchet MS, sans-serif',
@@ -291,13 +333,15 @@ export class BattleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // Pole trafienia obejmuje całą kratkę, żeby dało się celować w jej krawędzie.
-    const hit = this.add.rectangle(0, 0, CELL, CELL, 0xffffff, 0).setInteractive();
+    const hit = this.add
+      .zone(0, 0, HEX_W, HEX_H)
+      .setInteractive(this.hexHitArea(), Phaser.Geom.Polygon.Contains);
 
     const container = this.add.container(x, y, [
       platform,
       sprite,
       typeBadge,
+      shieldIcon,
       atkBadge,
       name,
       hpBarBg,
@@ -318,12 +362,15 @@ export class BattleScene extends Phaser.Scene {
       col,
       row,
       specialCooldown: 0,
+      waited: false,
+      defending: false,
       container,
       sprite,
       hpBar,
       hpLabel,
       countLabel,
       atkBadge,
+      shieldIcon,
       platform,
     };
 
@@ -333,6 +380,9 @@ export class BattleScene extends Phaser.Scene {
     hit.on('pointerout', () => {
       this.forecastText.setText('');
       this.clearApproach();
+      // Wracamy do statystyk tego, kto ma turę.
+      const active = this.activeUnit();
+      if (active) this.showStats(active);
     });
 
     this.units.push(unit);
@@ -344,7 +394,7 @@ export class BattleScene extends Phaser.Scene {
     return totalHp(unit.def, unit);
   }
 
-  /** Pasek, licznik i odznaka ataku po każdej zmianie stanu oddziału. */
+  /** Pasek, licznik, tarcza i odznaka ataku po każdej zmianie stanu oddziału. */
   private refreshStack(unit: Unit) {
     const max = fullHp(unit.def);
     const ratio = Phaser.Math.Clamp(this.total(unit) / max, 0, 1);
@@ -353,30 +403,41 @@ export class BattleScene extends Phaser.Scene {
     unit.hpLabel.setText(`${this.total(unit)}/${max}`);
     unit.countLabel.setText(`${unit.count}`);
     unit.atkBadge.setText(`${unit.def.shooter ? '\u{1F3F9}' : '⚔️'}${stackAtk(unit.def, unit)}`);
+    unit.shieldIcon.setVisible(unit.defending);
   }
 
   // ---------- kolejka tur ----------
+
+  /** Nowa runda: wszyscy żywi ustawiają się od najszybszego. */
+  private startRound() {
+    this.units.forEach((u) => (u.waited = false));
+    this.roundQueue = [...this.units]
+      .sort((a, b) => b.def.move - a.def.move || a.id - b.id)
+      .map((u) => u.id);
+  }
 
   private buildQueueIcons() {
     this.queueIcons.forEach((c) => c.destroy());
     this.queueIcons = [];
 
-    const count = Math.min(this.turnOrder.length, 12);
+    const count = Math.min(this.roundQueue.length, 12);
     const spacing = 31;
     const startX = BOARD_X + BOARD_W - (count - 1) * spacing - 14;
 
     if (!this.queueLabel) {
       this.queueLabel = this.add
-        .text(startX - 74, 26, 'Kolejka:', {
+        .text(startX - 132, 26, '', {
           fontFamily: 'Trebuchet MS, sans-serif',
           fontSize: '13px',
           color: '#8ea0d0',
         })
         .setOrigin(0, 0.5);
     }
+    this.queueLabel.setText(`Runda ${this.round} — kolejka:`);
+    this.queueLabel.setX(startX - 132);
 
     for (let i = 0; i < count; i++) {
-      const unit = this.units.find((u) => u.id === this.turnOrder[(this.turnIndex + i) % this.turnOrder.length]);
+      const unit = this.units.find((u) => u.id === this.roundQueue[i]);
       if (!unit) continue;
       const accent = unit.side === 'player' ? 0x4fc3f7 : 0xef5350;
       const bg = this.add
@@ -393,7 +454,7 @@ export class BattleScene extends Phaser.Scene {
   // ---------- przebieg tury ----------
 
   private activeUnit(): Unit | undefined {
-    return this.units.find((u) => u.id === this.turnOrder[this.turnIndex]);
+    return this.units.find((u) => u.id === this.roundQueue[0]);
   }
 
   private beginTurn() {
@@ -402,13 +463,22 @@ export class BattleScene extends Phaser.Scene {
     this.specialArmed = false;
     this.busy = false;
 
-    const unit = this.activeUnit();
-    if (!unit) {
-      this.advanceTurn();
-      return;
+    // Wyrzuć z kolejki poległych, a po wyczerpaniu rundy zacznij następną.
+    while (this.roundQueue.length > 0 && !this.units.some((u) => u.id === this.roundQueue[0])) {
+      this.roundQueue.shift();
+    }
+    if (this.roundQueue.length === 0) {
+      this.round++;
+      this.startRound();
     }
 
+    const unit = this.activeUnit();
+    if (!unit) return;
+
     if (unit.specialCooldown > 0) unit.specialCooldown--;
+    // Obrona trzyma tylko do własnej następnej kolejki.
+    unit.defending = false;
+    this.refreshStack(unit);
 
     this.units.forEach((u) => {
       const accent = u.side === 'player' ? 0x4fc3f7 : 0xef5350;
@@ -436,10 +506,11 @@ export class BattleScene extends Phaser.Scene {
     this.showStats(unit);
 
     if (unit.side === 'enemy') {
-      this.specialButton.setVisible(false);
+      this.setButtonsVisible(false);
       this.time.delayedCall(600, () => this.enemyAct(unit));
     } else {
-      this.updateSpecialButton(unit);
+      this.setButtonsVisible(true);
+      this.updateButtons(unit);
       this.showOptions(unit);
     }
   }
@@ -448,10 +519,37 @@ export class BattleScene extends Phaser.Scene {
     if (this.gameOver) return;
     this.tweens.killTweensOf(this.units.map((u) => u.platform));
     this.units.forEach((u) => u.platform.setScale(1));
-    this.turnOrder = this.turnOrder.filter((id) => this.units.some((u) => u.id === id));
-    if (this.turnOrder.length === 0) return;
-    this.turnIndex = (this.turnIndex + 1) % this.turnOrder.length;
+    this.roundQueue.shift();
     this.beginTurn();
+  }
+
+  /** Przeczekanie: oddział wraca na koniec kolejki tej samej rundy. */
+  private waitTurn() {
+    if (this.gameOver || this.busy) return;
+    const unit = this.activeUnit();
+    if (!unit || unit.side !== 'player' || unit.waited) return;
+
+    unit.waited = true;
+    this.roundQueue.shift();
+    this.roundQueue.push(unit.id);
+    this.floatText(unit, '\u{23F3} Czekam', '#8ea0d0', -46);
+    this.tweens.killTweensOf(this.units.map((u) => u.platform));
+    this.units.forEach((u) => u.platform.setScale(1));
+    this.beginTurn();
+  }
+
+  /** Obrona: rezygnujemy z ruchu, ale do następnej kolejki obrywamy słabiej. */
+  private guardTurn() {
+    if (this.gameOver || this.busy) return;
+    const unit = this.activeUnit();
+    if (!unit || unit.side !== 'player') return;
+
+    this.busy = true;
+    this.clearHighlights();
+    unit.defending = true;
+    this.refreshStack(unit);
+    this.floatText(unit, '\u{1F6E1}\u{FE0F} Obrona', '#4fc3f7', -46);
+    this.time.delayedCall(500, () => this.advanceTurn());
   }
 
   private showStats(unit: Unit) {
@@ -463,9 +561,11 @@ export class BattleScene extends Phaser.Scene {
       unit.specialCooldown === 0
         ? `${unit.def.specialName} — gotowy`
         : `${unit.def.specialName} — za ${unit.specialCooldown} tur`;
-    // Rozpisujemy mnożenie, żeby było widać, skąd bierze się siła oddziału.
+    const whose = unit.side === 'player' ? 'twój oddział' : 'oddział przeciwnika';
+    const guard = unit.defending ? '   \u{1F6E1}\u{FE0F} w obronie' : '';
+
     this.statsText.setText(
-      `${unit.def.name} ×${unit.count}   ${t.emoji} ${t.label}\n` +
+      `${unit.def.name} ×${unit.count}   ${t.emoji} ${t.label}   (${whose})${guard}\n` +
         `❤️ HP ${this.total(unit)}/${fullHp(unit.def)} (po ${unit.def.hp} na stworka)    ` +
         `\u{1F462} Ruch ${unit.def.move}\n` +
         `⚔️ Atak ${unit.count} × ${unit.def.atk} = ${stackAtk(unit.def, unit)}\n` +
@@ -482,6 +582,10 @@ export class BattleScene extends Phaser.Scene {
     return set;
   }
 
+  private neighbours(cell: Cell): Cell[] {
+    return hexNeighbours(cell, COLS, ROWS);
+  }
+
   /** BFS po planszy — zwraca koszt dojścia do każdego osiągalnego pola. */
   private reachable(unit: Unit): Map<string, number> {
     const blocked = this.blockedCells(unit.id);
@@ -493,14 +597,7 @@ export class BattleScene extends Phaser.Scene {
       const cost = dist.get(cellKey(cur.col, cur.row))!;
       if (cost >= unit.def.move) continue;
 
-      const neighbours: Cell[] = [
-        { col: cur.col + 1, row: cur.row },
-        { col: cur.col - 1, row: cur.row },
-        { col: cur.col, row: cur.row + 1 },
-        { col: cur.col, row: cur.row - 1 },
-      ];
-      for (const n of neighbours) {
-        if (n.col < 0 || n.col >= COLS || n.row < 0 || n.row >= ROWS) continue;
+      for (const n of this.neighbours(cur)) {
         const key = cellKey(n.col, n.row);
         if (blocked.has(key) || dist.has(key)) continue;
         dist.set(key, cost + 1);
@@ -510,21 +607,8 @@ export class BattleScene extends Phaser.Scene {
     return dist;
   }
 
-  private chebyshev(a: Cell, b: Cell) {
-    return Math.max(Math.abs(a.col - b.col), Math.abs(a.row - b.row));
-  }
-
-  private adjacentCells(cell: Cell): Cell[] {
-    return [
-      { col: cell.col + 1, row: cell.row },
-      { col: cell.col - 1, row: cell.row },
-      { col: cell.col, row: cell.row + 1 },
-      { col: cell.col, row: cell.row - 1 },
-    ].filter((c) => c.col >= 0 && c.col < COLS && c.row >= 0 && c.row < ROWS);
-  }
-
   private isAdjacent(a: Cell, b: Cell) {
-    return Math.abs(a.col - b.col) + Math.abs(a.row - b.row) === 1;
+    return hexDistance(a, b) === 1;
   }
 
   private hasAdjacentEnemy(unit: Unit) {
@@ -541,7 +625,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.isAdjacent(unit, target)) return { from: { col: unit.col, row: unit.row } };
 
     let best: { from: Cell; cost: number } | null = null;
-    for (const cell of this.adjacentCells(target)) {
+    for (const cell of this.neighbours(target)) {
       const cost = reach.get(cellKey(cell.col, cell.row));
       if (cost === undefined) continue;
       if (!best || cost < best.cost) best = { from: cell, cost };
@@ -556,12 +640,13 @@ export class BattleScene extends Phaser.Scene {
     // Strzelec traci połowę siły w zwarciu albo gdy cel stoi za daleko.
     const pinned = attacker.def.shooter && this.hasAdjacentEnemy(attacker);
     const tooFar =
-      attacker.def.shooter && !pinned && this.chebyshev(attacker, target) > attacker.def.shootRange;
+      attacker.def.shooter && !pinned && hexDistance(attacker, target) > attacker.def.shootRange;
     const penalty = pinned || tooFar ? HALF_DAMAGE : 1;
+    const guard = target.defending ? GUARD_REDUCTION : 1;
 
     // Bije cały oddział naraz, więc podstawą jest liczebność razy atak stworka.
     const base = stackAtk(attacker.def, attacker);
-    const value = Math.max(1, Math.round(base * typeMult * specialMult * penalty));
+    const value = Math.max(1, Math.round(base * typeMult * specialMult * penalty * guard));
 
     return {
       value,
@@ -571,6 +656,7 @@ export class BattleScene extends Phaser.Scene {
       penalty,
       pinned,
       tooFar,
+      guarded: target.defending,
       /** ilu stworków celu padnie od tego trafienia */
       kills: applyDamage(target.def, target, value).killed,
     };
@@ -582,11 +668,16 @@ export class BattleScene extends Phaser.Scene {
     this.clearHighlights();
     const reach = this.reachable(unit);
 
+    // Jedna warstwa Graphics na wszystkie podświetlenia: rysuje we
+    // współrzędnych planszy, więc hexy siadają dokładnie na siatce.
+    const g = this.add.graphics();
+    this.highlightLayer.add(g);
+
     if (!this.specialArmed) {
       for (const [key, cost] of reach) {
         if (cost === 0) continue;
         const [col, row] = key.split(',').map(Number);
-        this.addHighlight(col, row, 0x4fc3f7, 0.22, () => this.performMove(unit, { col, row }));
+        this.addHighlight(g, col, row, 0x4fc3f7, 0.22, () => this.performMove(unit, { col, row }));
       }
     }
 
@@ -597,6 +688,7 @@ export class BattleScene extends Phaser.Scene {
       const { tooFar } = this.damageOf(unit, target, this.specialArmed);
       const attackColor = this.specialArmed ? 0xffd166 : tooFar ? 0xff9800 : 0xef5350;
       this.addHighlight(
+        g,
         target.col,
         target.row,
         attackColor,
@@ -608,6 +700,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private addHighlight(
+    g: Phaser.GameObjects.Graphics,
     col: number,
     row: number,
     color: number,
@@ -616,16 +709,23 @@ export class BattleScene extends Phaser.Scene {
     onHover?: () => void
   ) {
     const { x, y } = this.cellToXY(col, row);
-    const rect = this.add
-      .rectangle(x, y, CELL - 6, CELL - 6, color, alpha)
-      .setStrokeStyle(2, color, 0.9)
-      .setInteractive({ useHandCursor: true });
-    rect.on('pointerdown', onClick);
+    const pts = hexPoints(x, y);
+    g.fillStyle(color, alpha);
+    g.fillPoints(pts, true);
+    g.lineStyle(2, color, 0.9);
+    g.strokePoints(pts, true);
+
+    const zone = this.add
+      .zone(x, y, HEX_W, HEX_H)
+      .setInteractive(this.hexHitArea(), Phaser.Geom.Polygon.Contains);
+    zone.input!.cursor = 'pointer';
+
+    zone.on('pointerdown', onClick);
     if (onHover) {
-      rect.on('pointerover', onHover);
-      rect.on('pointerout', () => this.forecastText.setText(''));
+      zone.on('pointerover', onHover);
+      zone.on('pointerout', () => this.forecastText.setText(''));
     }
-    this.highlightLayer.add(rect);
+    this.highlightLayer.add(zone);
   }
 
   private clearHighlights() {
@@ -637,17 +737,15 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private showForecast(attacker: Unit, target: Unit, special: boolean) {
-    const { value, base, typeMult, specialMult, penalty, pinned, tooFar, kills } = this.damageOf(
-      attacker,
-      target,
-      special
-    );
+    const { value, base, typeMult, specialMult, penalty, pinned, tooFar, guarded, kills } =
+      this.damageOf(attacker, target, special);
     // Zaczynamy od liczebności razy atak — stąd bierze się siła oddziału.
     const parts = [`Atak ${attacker.count} × ${attacker.def.atk} = ${base}`];
     if (typeMult !== 1) parts.push(`× ${typeMult} (${typeMult > 1 ? 'przewaga typu' : 'słaby typ'})`);
     if (specialMult !== 1) parts.push(`× ${specialMult} (${attacker.def.specialName})`);
     if (pinned) parts.push('× 0.5 (strzelec w zwarciu)');
     else if (tooFar) parts.push('× 0.5 (za daleko — złamana strzała)');
+    if (guarded) parts.push(`× ${GUARD_REDUCTION} (cel w obronie)`);
     void penalty;
 
     const outcome =
@@ -660,6 +758,10 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private onUnitHover(unit: Unit) {
+    if (this.gameOver) return;
+    // Najechanie na kogokolwiek pokazuje jego statystyki — także wroga.
+    this.showStats(unit);
+
     const active = this.activeUnit();
     if (!active || this.busy) return;
     if (unit.side !== active.side) {
@@ -703,17 +805,19 @@ export class BattleScene extends Phaser.Scene {
   /** Które pola sąsiadujące z celem da się wykorzystać do ataku wręcz. */
   private approachOptions(attacker: Unit, target: Unit): Cell[] {
     const reach = this.reachable(attacker);
-    return this.adjacentCells(target).filter(
-      (c) =>
-        (c.col === attacker.col && c.row === attacker.row) || reach.has(cellKey(c.col, c.row))
+    return this.neighbours(target).filter(
+      (c) => (c.col === attacker.col && c.row === attacker.row) || reach.has(cellKey(c.col, c.row))
     );
   }
 
+  /** Nazwa pazura zależy od tego, z której strony spada cios — sześć wariantów. */
   private clawFor(from: Cell, target: Unit) {
-    if (from.col < target.col) return 'claw_right';
-    if (from.col > target.col) return 'claw_left';
-    if (from.row < target.row) return 'claw_down';
-    return 'claw_up';
+    const a = this.cellToXY(from.col, from.row);
+    const b = this.cellToXY(target.col, target.row);
+    const deg = Phaser.Math.RadToDeg(Math.atan2(b.y - a.y, b.x - a.x));
+    const names = ['claw_e', 'claw_se', 'claw_sw', 'claw_w', 'claw_nw', 'claw_ne'];
+    const index = Math.round(((deg + 360) % 360) / 60) % 6;
+    return names[index];
   }
 
   private onEnemyPointerMove(target: Unit, pointer: Phaser.Input.Pointer) {
@@ -742,16 +846,20 @@ export class BattleScene extends Phaser.Scene {
     const center = this.cellToXY(target.col, target.row);
     const dx = pointer.x - center.x;
     const dy = pointer.y - center.y;
-    const ranked = [
-      { cell: { col: target.col - 1, row: target.row }, score: -dx },
-      { cell: { col: target.col + 1, row: target.row }, score: dx },
-      { cell: { col: target.col, row: target.row - 1 }, score: -dy },
-      { cell: { col: target.col, row: target.row + 1 }, score: dy },
-    ].sort((a, b) => b.score - a.score);
 
-    const best =
-      ranked.find((r) => options.some((o) => o.col === r.cell.col && o.row === r.cell.row))?.cell ??
-      options[0];
+    let best = options[0];
+    let bestScore = -Infinity;
+    for (const option of options) {
+      const p = this.cellToXY(option.col, option.row);
+      const vx = p.x - center.x;
+      const vy = p.y - center.y;
+      const len = Math.hypot(vx, vy) || 1;
+      const score = (dx * vx + dy * vy) / len;
+      if (score > bestScore) {
+        bestScore = score;
+        best = option;
+      }
+    }
 
     this.preferredApproach = { targetId: target.id, cell: best };
     this.setCursor(this.clawFor(best, target));
@@ -761,9 +869,13 @@ export class BattleScene extends Phaser.Scene {
   private showApproachMarker(cell: Cell) {
     this.approachLayer.removeAll(true);
     const { x, y } = this.cellToXY(cell.col, cell.row);
-    this.approachLayer.add(
-      this.add.rectangle(x, y, CELL - 10, CELL - 10, 0xffd166, 0.28).setStrokeStyle(3, 0xffd166, 1)
-    );
+    const pts = hexPoints(x, y);
+    const g = this.add.graphics();
+    g.fillStyle(0xffd166, 0.28);
+    g.fillPoints(pts, true);
+    g.lineStyle(3, 0xffd166, 1);
+    g.strokePoints(pts, true);
+    this.approachLayer.add(g);
   }
 
   private clearApproach() {
@@ -777,22 +889,32 @@ export class BattleScene extends Phaser.Scene {
     const unit = this.activeUnit();
     if (!unit || unit.side !== 'player' || unit.specialCooldown > 0) return;
     this.specialArmed = !this.specialArmed;
-    this.updateSpecialButton(unit);
+    this.updateButtons(unit);
     this.showOptions(unit);
   }
 
-  private updateSpecialButton(unit: Unit) {
-    this.specialButton.setVisible(true);
+  private setButtonsVisible(visible: boolean) {
+    this.specialButton.container.setVisible(visible);
+    this.waitButton.container.setVisible(visible);
+    this.guardButton.container.setVisible(visible);
+  }
+
+  private updateButtons(unit: Unit) {
     const ready = unit.specialCooldown === 0;
-    this.specialLabel.setText(
+    this.specialButton.label.setText(
       ready
         ? this.specialArmed
           ? `⚡ ${unit.def.specialName}\nwybierz cel`
           : `⚡ ${unit.def.specialName}\nkliknij, by użyć`
         : `⚡ ${unit.def.specialName}\nodnowi się za ${unit.specialCooldown} tur`
     );
-    this.specialBg.setFillStyle(this.specialArmed ? 0x8d6e00 : 0x2c3a63);
-    this.specialButton.setAlpha(ready ? 1 : 0.45);
+    this.specialButton.bg.setFillStyle(this.specialArmed ? 0x8d6e00 : 0x2c3a63);
+    this.specialButton.container.setAlpha(ready ? 1 : 0.45);
+
+    this.waitButton.label.setText(unit.waited ? '\u{23F3} Już czekałeś' : '\u{23F3} Czekaj  (C)');
+    this.waitButton.container.setAlpha(unit.waited ? 0.4 : 1);
+
+    this.guardButton.label.setText('\u{1F6E1}\u{FE0F} Broń się  (O)');
   }
 
   // ---------- akcje ----------
@@ -891,13 +1013,14 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private resolveAttack(attacker: Unit, target: Unit, special: boolean) {
-    const { value, typeMult, pinned, tooFar } = this.damageOf(attacker, target, special);
+    const { value, typeMult, pinned, tooFar, guarded } = this.damageOf(attacker, target, special);
     const { state, killed } = applyDamage(target.def, target, value);
     target.count = state.count;
     target.topHp = state.topHp;
 
     if (tooFar) this.floatText(target, 'Złamana strzała — pół siły', '#ff9800', -66);
     else if (pinned) this.floatText(attacker, 'Strzelec w zwarciu!', '#ff9800', -60);
+    if (guarded && target.count > 0) this.floatText(target, 'Obrona zamortyzowała', '#4fc3f7', -82);
 
     if (special) {
       attacker.specialCooldown = SPECIAL_COOLDOWN;
@@ -931,6 +1054,7 @@ export class BattleScene extends Phaser.Scene {
         onComplete: () => target.container.destroy(),
       });
       this.units = this.units.filter((u) => u.id !== target.id);
+      this.roundQueue = this.roundQueue.filter((id) => id !== target.id);
     } else {
       this.refreshStack(target);
     }
@@ -954,7 +1078,7 @@ export class BattleScene extends Phaser.Scene {
 
     // Trzymaj napis w granicach planszy — inaczej ucieka poza ekran przy krawędzi.
     t.x = Phaser.Math.Clamp(t.x, BOARD_X + t.width / 2, BOARD_X + BOARD_W - t.width / 2);
-    t.y = Phaser.Math.Clamp(t.y, BOARD_Y + 32, BOARD_Y + BOARD_H - 8);
+    t.y = Phaser.Math.Clamp(t.y, BOARD_Y + 24, BOARD_Y + BOARD_H - 8);
 
     this.effectLayer.add(t);
     this.tweens.add({
@@ -999,22 +1123,29 @@ export class BattleScene extends Phaser.Scene {
     // Nikt w zasięgu — podejdź w stronę najbliższego celu.
     let nearest = targets[0];
     for (const t of targets) {
-      if (this.chebyshev(unit, t) < this.chebyshev(unit, nearest)) nearest = t;
+      if (hexDistance(unit, t) < hexDistance(unit, nearest)) nearest = t;
     }
 
     let bestCell: Cell = { col: unit.col, row: unit.row };
-    let bestDist = this.chebyshev(unit, nearest);
+    let bestDist = hexDistance(unit, nearest);
     for (const key of reach.keys()) {
       const [col, row] = key.split(',').map(Number);
-      const d = this.chebyshev({ col, row }, nearest);
+      const d = hexDistance({ col, row }, nearest);
       if (d < bestDist) {
         bestDist = d;
         bestCell = { col, row };
       }
     }
 
-    if (bestCell.col === unit.col && bestCell.row === unit.row) this.advanceTurn();
-    else this.performMove(unit, bestCell);
+    if (bestCell.col === unit.col && bestCell.row === unit.row) {
+      // Nie ma kogo bić ani dokąd iść — lepiej stanąć w obronie niż stać bezczynnie.
+      unit.defending = true;
+      this.refreshStack(unit);
+      this.floatText(unit, '\u{1F6E1}\u{FE0F} Obrona', '#ef9a9a', -46);
+      this.time.delayedCall(500, () => this.advanceTurn());
+    } else {
+      this.performMove(unit, bestCell);
+    }
   }
 
   // ---------- koniec bitwy ----------
@@ -1026,7 +1157,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.gameOver = true;
     this.clearHighlights();
-    this.specialButton.setVisible(false);
+    this.setButtonsVisible(false);
     this.turnText.setText('');
 
     const won = playersLeft;

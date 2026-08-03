@@ -119,8 +119,18 @@ def bolt(broken: bool) -> Image.Image:
 
 
 def main() -> int:
+    # Na planszy z hexów sąsiadów jest sześciu, więc i pazur ma sześć obrotów.
+    # Nazwy jak strony świata na ekranie: e w prawo, ne w prawo-górę itd.
+    # PIL obraca w lewo, a pazur bazowy celuje w prawo — stąd te kąty.
     base = claw()
-    for name, angle in (("claw_right", 0), ("claw_up", 90), ("claw_left", 180), ("claw_down", 270)):
+    for name, angle in (
+        ("claw_e", 0),
+        ("claw_ne", 60),
+        ("claw_nw", 120),
+        ("claw_w", 180),
+        ("claw_sw", 240),
+        ("claw_se", 300),
+    ):
         save(base.rotate(angle, resample=Image.BICUBIC), name)
 
     save(bolt(False), "bolt")
