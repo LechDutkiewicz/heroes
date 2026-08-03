@@ -1,5 +1,31 @@
 export type ElementType = 'fire' | 'water' | 'grass';
-export type SpecialKind = 'power' | 'drain';
+
+/**
+ * Umiejętności wzorowane na Heroes 3. Ma je tylko część oddziałów — reszta
+ * bije zwyczajnie, a strzelcy mają za swoją zdolność sam strzał.
+ */
+export type Ability = 'double' | 'guardian' | 'strikeAndReturn';
+
+export const ABILITIES: Record<Ability, { emoji: string; name: string; desc: string }> = {
+  // Wilczy Jeździec z Heroes 3 — uderza dwa razy w jednym ataku.
+  double: {
+    emoji: '\u{2694}\u{FE0F}',
+    name: 'Podwójny cios',
+    desc: 'uderza dwa razy',
+  },
+  // Gryf — oddaje każdemu napastnikowi, ile razy trzeba w rundzie.
+  guardian: {
+    emoji: '\u{1F6E1}\u{FE0F}',
+    name: 'Nieograniczony odwet',
+    desc: 'oddaje każdemu, bez limitu',
+  },
+  // Harpia — po ciosie wraca na swoje pole, więc odwet jej nie dosięga.
+  strikeAndReturn: {
+    emoji: '\u{1F4A8}',
+    name: 'Uderz i wróć',
+    desc: 'wraca na swoje pole, odwet go nie dosięga',
+  },
+};
 
 export interface UnitDef {
   /** nazwa pliku w public/sprites bez rozszerzenia */
@@ -16,8 +42,9 @@ export interface UnitDef {
   shooter: boolean;
   shootRange: number;
   type: ElementType;
-  specialName: string;
-  specialKind: SpecialKind;
+  /** lata nad przeszkodami i nad innymi oddziałami */
+  flying?: boolean;
+  ability?: Ability;
 }
 
 // Odmiana przez przypadki, bo teksty w panelu wymagają różnych form:
@@ -31,7 +58,6 @@ export const TYPE_INFO: Record<
   grass: { emoji: '\u{1F33F}', label: 'Trawa', dative: 'Trawie', genitive: 'Trawy', color: 0x66bb6a },
 };
 
-export const SPECIAL_COOLDOWN = 3;
 /** Kara za zwarcie i za zbyt daleki strzał (złamana strzała). */
 export const HALF_DAMAGE = 0.5;
 
@@ -39,23 +65,27 @@ export const HALF_DAMAGE = 0.5;
 // i strzelcy stoją na przemian, żeby żaden nie zasłaniał drugiego.
 // Duże oddziały to słabe pojedyncze stworki, małe to grubasy — jak w Heroes 3,
 // gdzie chłopów są dziesiątki, a smoków kilka.
+//
+// Umiejętności są przypisane parami: oddział gracza i oddział przeciwnika
+// o tych samych statystykach dostają tę samą zdolność. Dzięki temu drużyny
+// zostają równe, a o wyniku nadal decyduje gra.
 export const PLAYER_TEAM: UnitDef[] = [
-  { sprite: '00026', name: 'Żarwilk', count: 4, hp: 8, atk: 3, move: 3, shooter: false, shootRange: 0, type: 'fire', specialName: 'Ognisty pazur', specialKind: 'power' },
-  { sprite: '00041', name: 'Żarokur', count: 5, hp: 4, atk: 2, move: 3, shooter: true, shootRange: 4, type: 'fire', specialName: 'Deszcz iskier', specialKind: 'power' },
-  { sprite: '00030', name: 'Skorupiec', count: 4, hp: 9, atk: 2, move: 2, shooter: false, shootRange: 0, type: 'water', specialName: 'Tarcza fal', specialKind: 'drain' },
-  { sprite: '00040', name: 'Kropelek', count: 6, hp: 3, atk: 2, move: 3, shooter: true, shootRange: 5, type: 'water', specialName: 'Armatka wodna', specialKind: 'power' },
-  { sprite: '00055', name: 'Modliś', count: 5, hp: 6, atk: 2, move: 3, shooter: false, shootRange: 0, type: 'grass', specialName: 'Bicz pnączy', specialKind: 'drain' },
-  { sprite: '00025', name: 'Kiełek', count: 15, hp: 2, atk: 1, move: 2, shooter: true, shootRange: 4, type: 'grass', specialName: 'Ostry liść', specialKind: 'power' },
+  { sprite: '00020', name: 'Żarptak', count: 4, hp: 8, atk: 3, move: 6, shooter: false, shootRange: 0, type: 'fire', flying: true, ability: 'strikeAndReturn' },
+  { sprite: '00041', name: 'Żarokur', count: 5, hp: 4, atk: 2, move: 3, shooter: true, shootRange: 4, type: 'fire' },
+  { sprite: '00030', name: 'Skorupiec', count: 4, hp: 9, atk: 2, move: 2, shooter: false, shootRange: 0, type: 'water', ability: 'guardian' },
+  { sprite: '00040', name: 'Kropelek', count: 6, hp: 3, atk: 2, move: 3, shooter: true, shootRange: 5, type: 'water' },
+  { sprite: '00055', name: 'Modliś', count: 5, hp: 6, atk: 2, move: 3, shooter: false, shootRange: 0, type: 'grass', ability: 'double' },
+  { sprite: '00025', name: 'Kiełek', count: 15, hp: 2, atk: 1, move: 2, shooter: true, shootRange: 4, type: 'grass' },
 ];
 
 // Sumy HP, obrażeń i ruchu obu drużyn są równe — o wyniku decyduje gra, nie skład.
 export const ENEMY_TEAM: UnitDef[] = [
-  { sprite: '00052', name: 'Twardziel', count: 4, hp: 9, atk: 2, move: 2, shooter: false, shootRange: 0, type: 'water', specialName: 'Wir', specialKind: 'power' },
-  { sprite: '00066', name: 'Iskrzyk', count: 5, hp: 4, atk: 2, move: 3, shooter: true, shootRange: 4, type: 'fire', specialName: 'Wybuch ognia', specialKind: 'power' },
-  { sprite: '00067', name: 'Mrocznik', count: 5, hp: 6, atk: 2, move: 3, shooter: false, shootRange: 0, type: 'fire', specialName: 'Rozżarzenie', specialKind: 'drain' },
-  { sprite: '00048', name: 'Płetwiak', count: 6, hp: 3, atk: 2, move: 3, shooter: true, shootRange: 5, type: 'water', specialName: 'Lodowy strzał', specialKind: 'power' },
-  { sprite: '00027', name: 'Choinek', count: 4, hp: 8, atk: 3, move: 3, shooter: false, shootRange: 0, type: 'grass', specialName: 'Wysysanie', specialKind: 'drain' },
-  { sprite: '00024', name: 'Skrzydliść', count: 15, hp: 2, atk: 1, move: 2, shooter: true, shootRange: 4, type: 'grass', specialName: 'Tańczące liście', specialKind: 'power' },
+  { sprite: '00052', name: 'Twardziel', count: 4, hp: 9, atk: 2, move: 2, shooter: false, shootRange: 0, type: 'water', ability: 'guardian' },
+  { sprite: '00066', name: 'Iskrzyk', count: 5, hp: 4, atk: 2, move: 3, shooter: true, shootRange: 4, type: 'fire' },
+  { sprite: '00067', name: 'Mrocznik', count: 5, hp: 6, atk: 2, move: 3, shooter: false, shootRange: 0, type: 'fire', ability: 'double' },
+  { sprite: '00048', name: 'Płetwiak', count: 6, hp: 3, atk: 2, move: 3, shooter: true, shootRange: 5, type: 'water' },
+  { sprite: '00050', name: 'Wichrolist', count: 4, hp: 8, atk: 3, move: 6, shooter: false, shootRange: 0, type: 'grass', flying: true, ability: 'strikeAndReturn' },
+  { sprite: '00024', name: 'Skrzydliść', count: 15, hp: 2, atk: 1, move: 2, shooter: true, shootRange: 4, type: 'grass' },
 ];
 
 /**
@@ -104,12 +134,6 @@ export function applyDamage(def: UnitDef, s: StackState, damage: number): { stat
   if (left <= 0) return { state: { count: 0, topHp: 0 }, killed: s.count };
   const count = Math.ceil(left / def.hp);
   return { state: { count, topHp: left - (count - 1) * def.hp }, killed: s.count - count };
-}
-
-/** Leczenie podnosi HP żywych, ale nie wskrzesza poległych. */
-export function applyHeal(def: UnitDef, s: StackState, amount: number): StackState {
-  const healed = Math.min(s.count * def.hp, totalHp(def, s) + amount);
-  return { count: s.count, topHp: healed - (s.count - 1) * def.hp };
 }
 
 /** Wszystkie sprite'y, które gra musi wczytać przed bitwą. */

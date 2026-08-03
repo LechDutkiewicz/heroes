@@ -41,6 +41,18 @@ BACKGROUNDS = {
     "background3.png": "snieg.png",
 }
 
+# Przeszkody wycinamy z arkusza kafelków. Każde drzewo zajmuje 2x3 kafelki
+# po 16 pikseli i ma już pod sobą łatkę gruntu, więc siada na planszy naturalnie.
+TILESET = Path("assets/kit/tileset/tileset.png")
+OBSTACLES_DST = DST / "obstacles"
+OBSTACLES = {
+    "sosna": (0, 304, 32, 352),
+    "sosna_snieg": (64, 304, 96, 352),
+    "palma": (96, 304, 128, 352),
+    "drzewo": (16, 352, 48, 400),
+    "drzewo_zimowe": (64, 352, 96, 400),
+}
+
 
 def ground_start(img: Image.Image) -> int:
     """Pierwszy wiersz od góry, w którym nie ma już nieba."""
@@ -88,6 +100,21 @@ def main() -> int:
             horizon = ground_start(img)
             build(img).save(DST / target)
         print(f"{source}: horyzont w {horizon}/{img.height} -> {DST / target}")
+
+    if not TILESET.exists():
+        print(f"Brakuje {TILESET}", file=sys.stderr)
+        return 1
+
+    OBSTACLES_DST.mkdir(parents=True, exist_ok=True)
+    with Image.open(TILESET) as sheet:
+        sheet = sheet.convert("RGBA")
+        for name, box in OBSTACLES.items():
+            tile = sheet.crop(box)
+            # Powiększamy trzykrotnie bez wygładzania, żeby piksele zostały
+            # pikselami — drzewo ma stanąć na hexie o boku 46.
+            tile = tile.resize((tile.width * 3, tile.height * 3), Image.NEAREST)
+            tile.save(OBSTACLES_DST / f"{name}.png")
+            print(f"przeszkoda {name} -> {OBSTACLES_DST / name}.png {tile.size}")
 
     return 0
 

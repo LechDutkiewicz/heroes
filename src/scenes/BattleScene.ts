@@ -4,10 +4,9 @@ import {
   ENEMY_TEAM,
   HALF_DAMAGE,
   PLAYER_TEAM,
-  SPECIAL_COOLDOWN,
   TYPE_INFO,
+  ABILITIES,
   applyDamage,
-  applyHeal,
   fullHp,
   stackAtk,
   totalHp,
@@ -29,7 +28,8 @@ interface Unit {
   topHp: number;
   col: number;
   row: number;
-  specialCooldown: number;
+  /** ile razy jeszcze odda w tej rundzie (Nieograniczony odwet ignoruje limit) */
+  retaliations: number;
   /** przeczekał już w tej rundzie — drugi raz nie wolno */
   waited: boolean;
   /** stoi w obronie do swojej następnej kolejki */
@@ -66,7 +66,7 @@ const BOARD_Y = 92;
 const BOARD_W = HEX_W * (COLS + 0.5);
 const BOARD_H = ROW_STEP * (ROWS - 1) + HEX_H;
 const PANEL_Y = BOARD_Y + BOARD_H + 14;
-const PANEL_H = 196;
+const PANEL_H = 208;
 /** Szerokość lewej kolumny panelu — reszta należy do przycisków. */
 const TEXT_COL_W = BOARD_W - 300;
 
@@ -83,10 +83,16 @@ const cellKey = (col: number, row: number) => `${col},${row}`;
 
 /** Tła pola bitwy — jedno losowane na bitwę, jak zmienne krajobrazy w Heroes 3. */
 const TERRAINS = [
-  { key: 'laka', label: 'Łąka' },
-  { key: 'plaza', label: 'Plaża' },
-  { key: 'snieg', label: 'Śnieżna polana' },
+  { key: 'laka', label: 'Łąka', obstacles: ['drzewo', 'sosna'] },
+  { key: 'plaza', label: 'Plaża', obstacles: ['palma'] },
+  { key: 'snieg', label: 'Śnieżna polana', obstacles: ['sosna_snieg', 'drzewo_zimowe'] },
 ];
+
+const ALL_OBSTACLES = [...new Set(TERRAINS.flatMap((t) => t.obstacles))];
+
+/** Ile przeszkód stawiamy na planszy — losowo, jak w Heroes 3. */
+const OBSTACLES_MIN = 5;
+const OBSTACLES_MAX = 9;
 
 /** Sześć wierzchołków hexa wokół podanego środka. */
 function hexPoints(cx: number, cy: number) {
@@ -141,11 +147,12 @@ export class BattleScene extends Phaser.Scene {
   private turnText!: Phaser.GameObjects.Text;
   private statsText!: Phaser.GameObjects.Text;
   private forecastText!: Phaser.GameObjects.Text;
-  private specialButton!: Button;
   private waitButton!: Button;
   private guardButton!: Button;
 
-  private specialArmed = false;
+  /** Pola zajęte przez przeszkody — piechota je omija, latacze przelatują. */
+  private obstacles = new Set<string>();
+
   private busy = false;
   private gameOver = false;
 
@@ -163,6 +170,9 @@ export class BattleScene extends Phaser.Scene {
     for (const t of TERRAINS) {
       this.load.image(t.key, `${import.meta.env.BASE_URL}terrain/${t.key}.png`);
     }
+    for (const key of ALL_OBSTACLES) {
+      this.load.image(key, `${import.meta.env.BASE_URL}terrain/obstacles/${key}.png`);
+    }
   }
 
   create() {
@@ -175,6 +185,8 @@ export class BattleScene extends Phaser.Scene {
     this.highlightLayer = this.add.container(0, 0).setDepth(5);
     this.approachLayer = this.add.container(0, 0).setDepth(6);
     this.effectLayer = this.add.container(0, 0).setDepth(100);
+
+    this.scatterObstacles();
 
     // Obie drużyny stoją w jednej kolumnie przy swojej krawędzi, jak w Heroes 3.
     PLAYER_TEAM.forEach((def, i) => this.spawnUnit(def, 'player', 0, START_ROWS[i]));
@@ -227,6 +239,63 @@ export class BattleScene extends Phaser.Scene {
         g.strokePoints(pts, true);
       }
     }
+  }
+
+  /**
+   * Rozrzuca przeszkody po środkowej części planszy. Skrajne kolumny zostają
+   * wolne, żeby oddziały miały gdzie stanąć, a po każdej dostawionej przeszkodzie
+   * sprawdzamy, czy piechota nadal przejdzie z jednej strony na drugą — inaczej
+   * bitwa zamieniłaby się w oblężenie muru.
+   */
+  private scatterObstacles() {
+    const candidates: Cell[] = [];
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 2; col <= COLS - 3; col++) candidates.push({ col, row });
+    }
+    Phaser.Utils.Array.Shuffle(candidates);
+
+    const wanted = Phaser.Math.Between(OBSTACLES_MIN, OBSTACLES_MAX);
+    const placed: Cell[] = [];
+    for (const cell of candidates) {
+      if (placed.length >= wanted) break;
+      const key = cellKey(cell.col, cell.row);
+      this.obstacles.add(key);
+      if (this.sidesConnected()) placed.push(cell);
+      else this.obstacles.delete(key);
+    }
+
+    for (const cell of placed) {
+      const { x, y } = this.cellToXY(cell.col, cell.row);
+      const kind = Phaser.Utils.Array.GetRandom(this.terrain.obstacles);
+      this.add
+        .image(x, y, kind)
+        // Pień ma stanąć na środku hexa, a korona wystawać ponad niego.
+        .setOrigin(0.5, 0.78)
+        .setDisplaySize(HEX_W * 0.86, HEX_W * 0.86 * 1.5)
+        .setDepth(10 + cell.row - 0.5);
+    }
+  }
+
+  /** Czy piechota przejdzie od lewej krawędzi planszy do prawej. */
+  private sidesConnected() {
+    const seen = new Set<string>();
+    const queue: Cell[] = [];
+    for (let row = 0; row < ROWS; row++) {
+      const key = cellKey(0, row);
+      seen.add(key);
+      queue.push({ col: 0, row });
+    }
+    while (queue.length > 0) {
+      const cur = queue.shift()!;
+      if (cur.col === COLS - 1) return true;
+      for (const n of this.neighbours(cur)) {
+        const key = cellKey(n.col, n.row);
+        if (seen.has(key) || this.obstacles.has(key)) continue;
+        seen.add(key);
+        queue.push(n);
+      }
+    }
+    return false;
   }
 
   private makeButton(x: number, y: number, w: number, h: number, onClick: () => void): Button {
@@ -286,7 +355,7 @@ export class BattleScene extends Phaser.Scene {
     });
 
     // Prognoza stoi pod przyciskami, więc ma całą szerokość panelu.
-    this.forecastText = this.add.text(BOARD_X + 10, PANEL_Y + 164, '', {
+    this.forecastText = this.add.text(BOARD_X + 10, PANEL_Y + 166, '', {
       fontFamily: 'Trebuchet MS, sans-serif',
       fontSize: '14px',
       color: '#ffd166',
@@ -294,9 +363,8 @@ export class BattleScene extends Phaser.Scene {
     });
 
     const right = BOARD_X + BOARD_W - 140;
-    this.specialButton = this.makeButton(right, PANEL_Y + 32, 250, 40, () => this.toggleSpecial());
-    this.waitButton = this.makeButton(right - 65, PANEL_Y + 84, 120, 36, () => this.waitTurn());
-    this.guardButton = this.makeButton(right + 65, PANEL_Y + 84, 120, 36, () => this.guardTurn());
+    this.waitButton = this.makeButton(right - 70, PANEL_Y + 44, 130, 42, () => this.waitTurn());
+    this.guardButton = this.makeButton(right + 70, PANEL_Y + 44, 130, 42, () => this.guardTurn());
   }
 
   // ---------- jednostki ----------
@@ -403,7 +471,7 @@ export class BattleScene extends Phaser.Scene {
       countLabel,
       hit,
     ]);
-    container.setDepth(10);
+    container.setDepth(10 + row);
 
     const unit: Unit = {
       id: this.nextId++,
@@ -413,7 +481,7 @@ export class BattleScene extends Phaser.Scene {
       topHp: def.hp,
       col,
       row,
-      specialCooldown: 0,
+      retaliations: 1,
       waited: false,
       defending: false,
       container,
@@ -465,7 +533,11 @@ export class BattleScene extends Phaser.Scene {
 
   /** Nowa runda: wszyscy żywi ustawiają się od najszybszego. */
   private startRound() {
-    this.units.forEach((u) => (u.waited = false));
+    // Odwet odnawia się co rundę — jak w Heroes 3, gdzie oddział oddaje raz.
+    this.units.forEach((u) => {
+      u.waited = false;
+      u.retaliations = 1;
+    });
     this.roundQueue = [...this.units]
       .sort((a, b) => b.def.move - a.def.move || a.id - b.id)
       .map((u) => u.id);
@@ -515,7 +587,6 @@ export class BattleScene extends Phaser.Scene {
   private beginTurn() {
     if (this.gameOver) return;
     this.clearHighlights();
-    this.specialArmed = false;
     this.busy = false;
 
     // Wyrzuć z kolejki poległych, a po wyczerpaniu rundy zacznij następną.
@@ -530,7 +601,6 @@ export class BattleScene extends Phaser.Scene {
     const unit = this.activeUnit();
     if (!unit) return;
 
-    if (unit.specialCooldown > 0) unit.specialCooldown--;
     // Obrona trzyma tylko do własnej następnej kolejki.
     unit.defending = false;
     this.refreshStack(unit);
@@ -624,22 +694,27 @@ export class BattleScene extends Phaser.Scene {
       : this.canShoot(unit)
         ? `\u{1F3F9} strzelec — strzela wszędzie, pełna siła do ${unit.def.shootRange} pól`
         : '\u{1F6AB} strzelec ZABLOKOWANY — wróg obok, bije wręcz za pół siły';
-    const special =
-      unit.specialCooldown === 0
-        ? `${unit.def.specialName} — gotowy`
-        : `${unit.def.specialName} — za ${unit.specialCooldown} tur`;
+    const ability = unit.def.ability
+      ? `${ABILITIES[unit.def.ability].emoji} ${ABILITIES[unit.def.ability].name} — ${ABILITIES[unit.def.ability].desc}`
+      : '\u{2B50} brak specjalnej umiejętności';
+    const retaliation =
+      unit.def.ability === 'guardian'
+        ? '\u{21A9}\u{FE0F} Odwet: bez limitu'
+        : unit.retaliations > 0
+          ? '\u{21A9}\u{FE0F} Odwet: gotowy'
+          : '\u{21A9}\u{FE0F} Odwet: już oddał w tej rundzie';
     const whose = unit.side === 'player' ? 'twój oddział' : 'oddział przeciwnika';
     const guard = unit.defending ? '   \u{1F6E1}\u{FE0F} w obronie' : '';
 
     this.statsText.setText(
       `${unit.def.name} ×${unit.count}   ${t.emoji} ${t.label}   (${whose})${guard}\n` +
         `❤️ HP ${this.total(unit)}/${fullHp(unit.def)} (po ${unit.def.hp} na stworka)    ` +
-        `\u{1F462} Ruch ${unit.def.move}\n` +
+        `\u{1F462} Ruch ${unit.def.move}${unit.def.flying ? '   \u{1F54A}\u{FE0F} lata nad wszystkim' : ''}\n` +
         `⚔️ Atak ${unit.count} × ${unit.def.atk} = ${stackAtk(unit.def, unit)}\n` +
         `\u{1F4AA} Mocny przeciw ${strongInfo.emoji} ${strongInfo.dative}: bije ×1.5, obrywa ×0.67\n` +
         `\u{1F494} Słaby wobec ${weakInfo.emoji} ${weakInfo.genitive}: obrywa ×1.5\n` +
-        `${reach}\n` +
-        `⚡ ${special}`
+        `${reach}    ${retaliation}\n` +
+        `${ability}`
     );
   }
 
@@ -658,6 +733,24 @@ export class BattleScene extends Phaser.Scene {
   /** BFS po planszy — zwraca koszt dojścia do każdego osiągalnego pola. */
   private reachable(unit: Unit): Map<string, number> {
     const blocked = this.blockedCells(unit.id);
+
+    // Lataczowi nic nie zagradza drogi — liczy się sama odległość w linii
+    // prostej. Musi tylko mieć gdzie wylądować: na drzewie ani na cudzej
+    // głowie nie usiądzie.
+    if (unit.def.flying) {
+      const dist = new Map<string, number>();
+      for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+          const cost = hexDistance(unit, { col, row });
+          if (cost > unit.def.move) continue;
+          const key = cellKey(col, row);
+          if (cost > 0 && (blocked.has(key) || this.obstacles.has(key))) continue;
+          dist.set(key, cost);
+        }
+      }
+      return dist;
+    }
+
     const dist = new Map<string, number>([[cellKey(unit.col, unit.row), 0]]);
     const queue: Cell[] = [{ col: unit.col, row: unit.row }];
 
@@ -668,7 +761,7 @@ export class BattleScene extends Phaser.Scene {
 
       for (const n of this.neighbours(cur)) {
         const key = cellKey(n.col, n.row);
-        if (blocked.has(key) || dist.has(key)) continue;
+        if (blocked.has(key) || this.obstacles.has(key) || dist.has(key)) continue;
         dist.set(key, cost + 1);
         queue.push(n);
       }
@@ -714,9 +807,8 @@ export class BattleScene extends Phaser.Scene {
     return best ? { from: best.from } : null;
   }
 
-  private damageOf(attacker: Unit, target: Unit, special: boolean) {
+  private damageOf(attacker: Unit, target: Unit) {
     const typeMult = typeMultiplier(attacker.def.type, target.def.type);
-    const specialMult = special ? (attacker.def.specialKind === 'power' ? 2 : 1.5) : 1;
 
     // Strzelec traci połowę siły w zwarciu albo gdy cel stoi za daleko.
     const pinned = attacker.def.shooter && this.hasAdjacentEnemy(attacker);
@@ -727,13 +819,12 @@ export class BattleScene extends Phaser.Scene {
 
     // Bije cały oddział naraz, więc podstawą jest liczebność razy atak stworka.
     const base = stackAtk(attacker.def, attacker);
-    const value = Math.max(1, Math.round(base * typeMult * specialMult * penalty * guard));
+    const value = Math.max(1, Math.round(base * typeMult * penalty * guard));
 
     return {
       value,
       base,
       typeMult,
-      specialMult,
       penalty,
       pinned,
       tooFar,
@@ -754,20 +845,18 @@ export class BattleScene extends Phaser.Scene {
     const g = this.add.graphics();
     this.highlightLayer.add(g);
 
-    if (!this.specialArmed) {
-      for (const [key, cost] of reach) {
-        if (cost === 0) continue;
-        const [col, row] = key.split(',').map(Number);
-        this.addHighlight(g, col, row, 0x4fc3f7, 0.22, () => this.performMove(unit, { col, row }));
-      }
+    for (const [key, cost] of reach) {
+      if (cost === 0) continue;
+      const [col, row] = key.split(',').map(Number);
+      this.addHighlight(g, col, row, 0x4fc3f7, 0.22, () => this.performMove(unit, { col, row }));
     }
 
     for (const target of this.units.filter((u) => u.side !== unit.side)) {
       const plan = this.attackPlan(unit, target, reach);
       if (!plan) continue;
       // Pomarańczowy obrys znaczy cel, do którego strzał doleci osłabiony.
-      const { tooFar } = this.damageOf(unit, target, this.specialArmed);
-      const attackColor = this.specialArmed ? 0xffd166 : tooFar ? 0xff9800 : 0xef5350;
+      const { tooFar } = this.damageOf(unit, target);
+      const attackColor = tooFar ? 0xff9800 : 0xef5350;
       this.addHighlight(
         g,
         target.col,
@@ -775,7 +864,7 @@ export class BattleScene extends Phaser.Scene {
         attackColor,
         tooFar ? 0.22 : 0.35,
         () => this.attackTarget(unit, target),
-        () => this.showForecast(unit, target, this.specialArmed)
+        () => this.showForecast(unit, target)
       );
     }
   }
@@ -818,13 +907,12 @@ export class BattleScene extends Phaser.Scene {
     this.setCursor(null);
   }
 
-  private showForecast(attacker: Unit, target: Unit, special: boolean) {
-    const { value, base, typeMult, specialMult, penalty, pinned, tooFar, guarded, kills } =
-      this.damageOf(attacker, target, special);
+  private showForecast(attacker: Unit, target: Unit) {
+    const { value, base, typeMult, penalty, pinned, tooFar, guarded, kills } =
+      this.damageOf(attacker, target);
     // Zaczynamy od liczebności razy atak — stąd bierze się siła oddziału.
     const parts = [`Atak ${attacker.count} × ${attacker.def.atk} = ${base}`];
     if (typeMult !== 1) parts.push(`× ${typeMult} (${typeMult > 1 ? 'przewaga typu' : 'słaby typ'})`);
-    if (specialMult !== 1) parts.push(`× ${specialMult} (${attacker.def.specialName})`);
     if (pinned) parts.push('× 0.5 (zablokowany strzelec bije wręcz)');
     else if (tooFar) parts.push('× 0.5 (za daleko — złamana strzała)');
     if (guarded) parts.push(`× ${GUARD_REDUCTION} (cel w obronie)`);
@@ -882,7 +970,7 @@ export class BattleScene extends Phaser.Scene {
     // oddział, który ma turę: ten ma już narysowane pełne pola ruchu.
     if (unit.id !== active?.id && !canAttack) this.showMovePreview(unit);
 
-    if (canAttack) this.showForecast(active!, unit, this.specialArmed);
+    if (canAttack) this.showForecast(active!, unit);
   }
 
   private onUnitClicked(unit: Unit) {
@@ -906,7 +994,7 @@ export class BattleScene extends Phaser.Scene {
         ? this.preferredApproach.cell
         : plan.from;
     this.setCursor(null);
-    this.performAttack(attacker, target, chosen, this.specialArmed);
+    this.performAttack(attacker, target, chosen);
   }
 
   private cursorFor(name: string) {
@@ -947,7 +1035,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (this.canShoot(active)) {
-      const { tooFar } = this.damageOf(active, target, this.specialArmed);
+      const { tooFar } = this.damageOf(active, target);
       this.setCursor(tooFar ? 'bolt_broken' : 'bolt');
       this.clearApproach();
       return;
@@ -1002,33 +1090,12 @@ export class BattleScene extends Phaser.Scene {
     this.approachLayer?.removeAll(true);
   }
 
-  private toggleSpecial() {
-    if (this.gameOver || this.busy) return;
-    const unit = this.activeUnit();
-    if (!unit || unit.side !== 'player' || unit.specialCooldown > 0) return;
-    this.specialArmed = !this.specialArmed;
-    this.updateButtons(unit);
-    this.showOptions(unit);
-  }
-
   private setButtonsVisible(visible: boolean) {
-    this.specialButton.container.setVisible(visible);
     this.waitButton.container.setVisible(visible);
     this.guardButton.container.setVisible(visible);
   }
 
   private updateButtons(unit: Unit) {
-    const ready = unit.specialCooldown === 0;
-    this.specialButton.label.setText(
-      ready
-        ? this.specialArmed
-          ? `⚡ ${unit.def.specialName}\nwybierz cel`
-          : `⚡ ${unit.def.specialName}\nkliknij, by użyć`
-        : `⚡ ${unit.def.specialName}\nodnowi się za ${unit.specialCooldown} tur`
-    );
-    this.specialButton.bg.setFillStyle(this.specialArmed ? 0x8d6e00 : 0x2c3a63);
-    this.specialButton.container.setAlpha(ready ? 1 : 0.45);
-
     this.waitButton.label.setText(unit.waited ? '\u{23F3} Już czekałeś' : '\u{23F3} Czekaj  (C)');
     this.waitButton.container.setAlpha(unit.waited ? 0.4 : 1);
 
@@ -1042,6 +1109,9 @@ export class BattleScene extends Phaser.Scene {
     this.clearHighlights();
     unit.col = cell.col;
     unit.row = cell.row;
+    // Niższe rzędy zasłaniają wyższe, żeby oddziały i drzewa układały się
+    // w naturalnej kolejności.
+    unit.container.setDepth(10 + cell.row);
     const { x, y } = this.cellToXY(cell.col, cell.row);
     this.tweens.add({
       targets: unit.container,
@@ -1053,17 +1123,79 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  private performAttack(attacker: Unit, target: Unit, from: Cell, special: boolean) {
+  private isAlive(unit: Unit) {
+    return this.units.includes(unit);
+  }
+
+  /**
+   * Cały przebieg ataku: dojście, cios (u niektórych podwójny), odwet obrońcy
+   * i powrót na swoje pole u tych, co uderzają i odlatują. Kolejne kroki
+   * odpalają się z opóźnieniem, żeby dało się je nadążyć obejrzeć.
+   */
+  private performAttack(attacker: Unit, target: Unit, from: Cell) {
     this.busy = true;
     this.clearHighlights();
 
+    const origin = { col: attacker.col, row: attacker.row };
+    // O strzale decydujemy przed ruchem: po podejściu strzelec byłby już
+    // w zwarciu i wychodziłoby, że wali wręcz mimo wystrzelonego pocisku.
+    const shooting = this.canShoot(attacker);
+
+    const finish = () => {
+      this.checkGameOver();
+      if (!this.gameOver) this.time.delayedCall(450, () => this.advanceTurn());
+    };
+
+    // Uderz i wróć: harpia z Heroes 3 odskakuje na pole, z którego ruszyła.
+    const returnHome = () => {
+      const moved = attacker.col !== origin.col || attacker.row !== origin.row;
+      if (attacker.def.ability !== 'strikeAndReturn' || !this.isAlive(attacker) || !moved) {
+        finish();
+        return;
+      }
+      this.floatText(attacker, `${ABILITIES.strikeAndReturn.emoji} Odlatuje`, '#b3e5fc', -46);
+      this.performMove(attacker, origin, finish);
+    };
+
+    const retaliate = () => {
+      // Strzał nie prowokuje odwetu, tak jak łucznik w Heroes 3 nie obrywa
+      // od kogoś z drugiego końca planszy.
+      if (shooting || !this.isAlive(attacker) || !this.isAlive(target)) return returnHome();
+      // Kto uderza i odlatuje, temu odwet nie sięga.
+      if (attacker.def.ability === 'strikeAndReturn') return returnHome();
+      if (target.retaliations <= 0) return returnHome();
+
+      if (target.def.ability !== 'guardian') target.retaliations--;
+      this.floatText(target, '\u{21A9}\u{FE0F} Odwet!', '#ffd166', -60);
+      this.meleeLunge(target, attacker, () => {
+        this.resolveHit(target, attacker);
+        this.time.delayedCall(500, returnHome);
+      });
+    };
+
+    const secondStrike = () => {
+      if (attacker.def.ability !== 'double' || !this.isAlive(attacker) || !this.isAlive(target)) {
+        return retaliate();
+      }
+      this.floatText(attacker, `${ABILITIES.double.emoji} Drugi cios!`, '#ffd166', -46);
+      this.meleeLunge(attacker, target, () => {
+        this.resolveHit(attacker, target);
+        this.time.delayedCall(450, retaliate);
+      });
+    };
+
     const strike = () => {
-      const done = () => this.resolveAttack(attacker, target, special);
-      if (this.canShoot(attacker)) {
-        const { tooFar } = this.damageOf(attacker, target, special);
-        this.fireProjectile(attacker, target, tooFar, done);
+      if (shooting) {
+        const { tooFar } = this.damageOf(attacker, target);
+        this.fireProjectile(attacker, target, tooFar, () => {
+          this.resolveHit(attacker, target);
+          this.time.delayedCall(450, retaliate);
+        });
       } else {
-        this.meleeLunge(attacker, target, done);
+        this.meleeLunge(attacker, target, () => {
+          this.resolveHit(attacker, target);
+          this.time.delayedCall(450, secondStrike);
+        });
       }
     };
 
@@ -1130,8 +1262,12 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  private resolveAttack(attacker: Unit, target: Unit, special: boolean) {
-    const { value, typeMult, pinned, tooFar, guarded } = this.damageOf(attacker, target, special);
+  /**
+   * Nalicza jedno trafienie: obrażenia, poległych i napisy. Turą się nie
+   * zajmuje — ciosem, odwetem i powrotem steruje performAttack.
+   */
+  private resolveHit(attacker: Unit, target: Unit) {
+    const { value, typeMult, pinned, tooFar, guarded } = this.damageOf(attacker, target);
     const { state, killed } = applyDamage(target.def, target, value);
     target.count = state.count;
     target.topHp = state.topHp;
@@ -1139,18 +1275,6 @@ export class BattleScene extends Phaser.Scene {
     if (tooFar) this.floatText(target, 'Złamana strzała — pół siły', '#ff9800', -66);
     else if (pinned) this.floatText(attacker, 'Zablokowany — bije wręcz!', '#ff9800', -60);
     if (guarded && target.count > 0) this.floatText(target, 'Obrona zamortyzowała', '#4fc3f7', -82);
-
-    if (special) {
-      attacker.specialCooldown = SPECIAL_COOLDOWN;
-      this.floatText(attacker, attacker.def.specialName, '#ffd166', -46);
-      if (attacker.def.specialKind === 'drain') {
-        const before = this.total(attacker);
-        const healed = applyHeal(attacker.def, attacker, Math.floor(value / 2));
-        attacker.topHp = healed.topHp;
-        this.refreshStack(attacker);
-        this.floatText(attacker, `+${this.total(attacker) - before} HP`, '#66bb6a', -30);
-      }
-    }
 
     this.floatText(target, `-${value}`, '#ff8a80', -34);
     // Liczba poległych to dla gracza ważniejsza informacja niż same obrażenia.
@@ -1160,7 +1284,7 @@ export class BattleScene extends Phaser.Scene {
     if (typeMult > 1) this.floatText(target, 'Super skuteczne!', '#66bb6a', -68);
     else if (typeMult < 1) this.floatText(target, 'Słabo skuteczne...', '#b0bec5', -68);
 
-    this.cameras.main.shake(120, special ? 0.006 : 0.003);
+    this.cameras.main.shake(120, 0.003);
 
     if (target.count <= 0) {
       this.refreshStack(target);
@@ -1176,9 +1300,6 @@ export class BattleScene extends Phaser.Scene {
     } else {
       this.refreshStack(target);
     }
-
-    this.checkGameOver();
-    if (!this.gameOver) this.time.delayedCall(650, () => this.advanceTurn());
   }
 
   private floatText(unit: Unit, text: string, color: string, offsetY: number) {
@@ -1219,13 +1340,12 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const reach = this.reachable(unit);
-    const useSpecial = unit.specialCooldown === 0;
 
     let best: { target: Unit; from: Cell; score: number } | null = null;
     for (const target of targets) {
       const plan = this.attackPlan(unit, target, reach);
       if (!plan) continue;
-      const { value: dmg, kills } = this.damageOf(unit, target, useSpecial);
+      const { value: dmg, kills } = this.damageOf(unit, target);
       // Wybij cały oddział, jeśli się da; poza tym licz się z liczbą poległych,
       // bo każdy padły stworek to trwale słabszy przeciwnik.
       const score =
@@ -1234,7 +1354,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (best) {
-      this.performAttack(unit, best.target, best.from, useSpecial);
+      this.performAttack(unit, best.target, best.from);
       return;
     }
 
