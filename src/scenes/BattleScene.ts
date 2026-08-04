@@ -83,16 +83,21 @@ const cellKey = (col: number, row: number) => `${col},${row}`;
 
 /** Tła pola bitwy — jedno losowane na bitwę, jak zmienne krajobrazy w Heroes 3. */
 const TERRAINS = [
-  { key: 'laka', label: 'Łąka', obstacles: ['drzewo', 'sosna'] },
-  { key: 'plaza', label: 'Plaża', obstacles: ['palma'] },
-  { key: 'snieg', label: 'Śnieżna polana', obstacles: ['sosna_snieg', 'drzewo_zimowe'] },
+  { key: 'laka', label: 'Łąka', obstacles: ['drzewo', 'sosna', 'krzak', 'glaz'] },
+  { key: 'plaza', label: 'Plaża', obstacles: ['palma', 'trawa', 'glaz_piaskowy'] },
+  { key: 'snieg', label: 'Śnieżna polana', obstacles: ['sosna_snieg', 'drzewo_zimowe', 'glaz_sniezny'] },
+  { key: 'noc', label: 'Nocna łąka', obstacles: ['drzewo_noc', 'sosna_noc', 'glaz_noc'] },
+  { key: 'jesien', label: 'Jesienny las', obstacles: ['drzewo_jesien', 'sosna_jesien', 'krzak_jesien'] },
 ];
 
 const ALL_OBSTACLES = [...new Set(TERRAINS.flatMap((t) => t.obstacles))];
 
-/** Ile przeszkód stawiamy na planszy — losowo, jak w Heroes 3. */
-const OBSTACLES_MIN = 5;
-const OBSTACLES_MAX = 9;
+/**
+ * Ile przeszkód stawiamy — losowo, jak w Heroes 3. Nasza plansza jest znacznie
+ * mniejsza niż tamta, więc kilka drzew wystarczy; czasem nie ma żadnego.
+ */
+const OBSTACLES_MIN = 0;
+const OBSTACLES_MAX = 4;
 
 /** Sześć wierzchołków hexa wokół podanego środka. */
 function hexPoints(cx: number, cy: number) {
@@ -267,12 +272,13 @@ export class BattleScene extends Phaser.Scene {
     for (const cell of placed) {
       const { x, y } = this.cellToXY(cell.col, cell.row);
       const kind = Phaser.Utils.Array.GetRandom(this.terrain.obstacles);
-      this.add
-        .image(x, y, kind)
-        // Pień ma stanąć na środku hexa, a korona wystawać ponad niego.
-        .setOrigin(0.5, 0.78)
-        .setDisplaySize(HEX_W * 0.86, HEX_W * 0.86 * 1.5)
-        .setDepth(10 + cell.row - 0.5);
+      // Podstawa ma stanąć na środku hexa, a korona wystawać ponad niego.
+      const obstacle = this.add.image(x, y, kind).setOrigin(0.5, 0.78);
+      // Skalujemy z zachowaniem proporcji: drzewa są wysokie, głazy przysadziste,
+      // więc sztywny rozmiar spłaszczyłby jedne albo rozciągnął drugie.
+      const fit = Math.min((HEX_W * 0.9) / obstacle.width, (HEX_W * 1.45) / obstacle.height);
+      obstacle.setScale(fit * Phaser.Math.FloatBetween(0.92, 1.06));
+      obstacle.setDepth(10 + cell.row - 0.5);
     }
   }
 
