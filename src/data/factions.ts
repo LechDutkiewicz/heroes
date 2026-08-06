@@ -56,39 +56,46 @@ function unit(index: number, sprite: string, name: string, type: UnitDef['type']
 }
 
 /**
+ * Frakcje to miejsca, bo tak jest poukładany świat pokemonów: w lesie żyją
+ * inne stworki niż w jaskini. Nazwy oddziałów są zmyślone, ale w tym samym
+ * stylu co w bajce — obco brzmiące zlepki, nie polskie rzeczowniki.
+ * Prawdziwych nazw pokemonów nie używamy: nasze stworki to autorskie rysunki,
+ * a nie te z bajki, więc nazwanie któregoś Pikachu opisywałoby coś, czym on
+ * nie jest (nie mówiąc o cudzym znaku towarowym).
+ *
  * Żywioły rozłożone tak, żeby żadna frakcja nie miała przewagi z góry.
- * Na poziomach 1-3 przewagę typu ma Mroczna Grota, na 4-6 Zielona Dolina,
- * a każda ma po dwa oddziały ognia, wody i trawy.
+ * Na poziomach 1-3 przewagę typu ma Grota, na 4-6 Bór, a każda ma po dwa
+ * oddziały ognia, wody i trawy.
  */
 export const FACTIONS: Faction[] = [
   {
-    id: 'dolina',
-    name: 'Zielona Dolina',
-    motto: 'Stworki łąk i strumieni — liczne, szybkie i zgodne.',
+    id: 'bor',
+    name: 'Bór Szmaragdowy',
+    motto: 'Stworki lasu i leśnych strumieni — liczne, zwinne i zgrane.',
     color: 0x66bb6a,
-    emoji: '\u{1F33F}',
+    emoji: '\u{1F332}',
     units: [
-      unit(0, '00025', 'Kiełek', 'grass'),
-      unit(1, '00040', 'Kropelek', 'water'),
-      unit(2, '00041', 'Żarokur', 'fire'),
-      unit(3, '00020', 'Żarptak', 'fire'),
-      unit(4, '00024', 'Skrzydliść', 'grass'),
-      unit(5, '00030', 'Skorupiec', 'water'),
+      unit(0, '00096', 'Verdiko', 'grass'),
+      unit(1, '00218', 'Aquino', 'water'),
+      unit(2, '00193', 'Pyroko', 'fire'),
+      unit(3, '00020', 'Flamir', 'fire'),
+      unit(4, '00227', 'Silvena', 'grass'),
+      unit(5, '00030', 'Torrenar', 'water'),
     ],
   },
   {
     id: 'grota',
-    name: 'Mroczna Grota',
-    motto: 'Stworki jaskiń i podziemnych ogni — twarde i nieustępliwe.',
+    name: 'Grota Księżycowa',
+    motto: 'Stworki podziemi — twarde, zarodnikowe i cierpliwe.',
     color: 0xab47bc,
-    emoji: '\u{1F573}\u{FE0F}',
+    emoji: '\u{1F311}',
     units: [
-      unit(0, '00028', 'Żarzyk', 'fire'),
-      unit(1, '00002', 'Grzybus', 'grass'),
-      unit(2, '00052', 'Twardziel', 'water'),
-      unit(3, '00050', 'Wichrolist', 'grass'),
-      unit(4, '00048', 'Płetwiak', 'water'),
-      unit(5, '00067', 'Mrocznik', 'fire'),
+      unit(0, '00263', 'Cindro', 'fire'),
+      unit(1, '00002', 'Sporex', 'grass'),
+      unit(2, '00220', 'Aquator', 'water'),
+      unit(3, '00250', 'Sporina', 'grass'),
+      unit(4, '00246', 'Glacyn', 'water'),
+      unit(5, '00196', 'Vulkaron', 'fire'),
     ],
   },
 ];
