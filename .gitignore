@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Gra sklejona w jeden plik (tools/pack_standalone.py) — artefakt, nie źródło
+pokemon-heroes.html
