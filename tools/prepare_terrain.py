@@ -157,6 +157,30 @@ def draw_rock(palette: tuple[tuple[int, int, int], ...]) -> Image.Image:
     return img
 
 
+def draw_mound(palette: tuple[tuple[int, int, int], ...]) -> Image.Image:
+    """
+    Nierówność terenu: niski pagórek z kilkoma kamykami. Nie każda przeszkoda
+    musi być wielkości drzewa — taka kępa ledwie wystaje ponad ziemię.
+    """
+    outline, shadow, body, light = (c + (255,) for c in palette)
+    w, h = 30, 16
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+
+    d.ellipse([2, h - 6, w - 3, h - 1], fill=(0, 0, 0, 55))
+    # sam pagórek — spłaszczony łuk, nie kopuła
+    hump = [(2, h - 3), (6, h - 9), (13, h - 12), (20, h - 10), (26, h - 5), (27, h - 3)]
+    d.polygon(hump, fill=outline)
+    d.polygon([(x + 1, y + 1) for x, y in hump], fill=body)
+    d.polygon([(19, h - 9), (25, h - 5), (26, h - 4), (20, h - 4)], fill=shadow)
+    d.polygon([(7, h - 7), (13, h - 10), (16, h - 8), (10, h - 6)], fill=light)
+    # dwa kamyki dla nieregularności
+    d.ellipse([4, h - 6, 8, h - 3], fill=outline)
+    d.ellipse([22, h - 7, 27, h - 3], fill=outline)
+    d.ellipse([23, h - 6, 26, h - 4], fill=light)
+    return img
+
+
 def save_obstacle(img: Image.Image, name: str) -> None:
     """Powiększamy bez wygładzania — piksele mają zostać pikselami."""
     OBSTACLES_DST.mkdir(parents=True, exist_ok=True)
@@ -190,17 +214,20 @@ def main() -> int:
     for name, tile in tiles.items():
         save_obstacle(tile, name)
 
-    # --- głazy ---
+    # --- głazy i nierówności terenu ---
     for name, palette in ROCK_PALETTES.items():
         save_obstacle(draw_rock(palette), name)
+        save_obstacle(draw_mound(palette), name.replace("glaz", "kopiec"))
 
     # --- przeszkody dla wariantów kolorystycznych ---
     for mode, sources in (
-        ("noc", ("drzewo", "sosna", "glaz")),
-        ("jesien", ("drzewo", "sosna", "krzak")),
+        ("noc", ("drzewo", "sosna", "glaz", "kopiec")),
+        ("jesien", ("drzewo", "sosna", "krzak", "kopiec")),
     ):
         for name in sources:
-            save_obstacle(recolour(tiles.get(name) or draw_rock(ROCK_PALETTES["glaz"]), mode), f"{name}_{mode}")
+            drawn = {"glaz": draw_rock, "kopiec": draw_mound}.get(name)
+            source = tiles[name] if name in tiles else drawn(ROCK_PALETTES["glaz"])
+            save_obstacle(recolour(source, mode), f"{name}_{mode}")
 
     print(f"przeszkody: {len(sorted(OBSTACLES_DST.glob('*.png')))} plików w {OBSTACLES_DST}")
     return 0

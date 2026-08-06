@@ -1,9 +1,6 @@
 import Phaser from 'phaser';
 import {
-  ALL_SPRITES,
-  ENEMY_TEAM,
   HALF_DAMAGE,
-  PLAYER_TEAM,
   TYPE_INFO,
   ABILITIES,
   applyDamage,
@@ -14,6 +11,7 @@ import {
   typeMultiplier,
   type UnitDef,
 } from '../data/units';
+import { ALL_SPRITES, FACTIONS, type Faction } from '../data/factions';
 import { hexDistance, hexNeighbours, type Cell } from '../data/hex';
 
 type Side = 'player' | 'enemy';
@@ -62,7 +60,7 @@ const ROW_STEP = HEX_R * 1.5;
 
 // Plansza wyśrodkowana: szerokość hexów wyznacza margines, nie odwrotnie.
 const BOARD_X = 62;
-const BOARD_Y = 92;
+const BOARD_Y = 100;
 const BOARD_W = HEX_W * (COLS + 0.5);
 const BOARD_H = ROW_STEP * (ROWS - 1) + HEX_H;
 const PANEL_Y = BOARD_Y + BOARD_H + 14;
@@ -83,12 +81,19 @@ const cellKey = (col: number, row: number) => `${col},${row}`;
 
 /** Tła pola bitwy — jedno losowane na bitwę, jak zmienne krajobrazy w Heroes 3. */
 const TERRAINS = [
-  { key: 'laka', label: 'Łąka', obstacles: ['drzewo', 'sosna', 'krzak', 'glaz'] },
-  { key: 'plaza', label: 'Plaża', obstacles: ['palma', 'trawa', 'glaz_piaskowy'] },
-  { key: 'snieg', label: 'Śnieżna polana', obstacles: ['sosna_snieg', 'drzewo_zimowe', 'glaz_sniezny'] },
-  { key: 'noc', label: 'Nocna łąka', obstacles: ['drzewo_noc', 'sosna_noc', 'glaz_noc'] },
-  { key: 'jesien', label: 'Jesienny las', obstacles: ['drzewo_jesien', 'sosna_jesien', 'krzak_jesien'] },
+  { key: 'laka', label: 'Łąka', obstacles: ['drzewo', 'sosna', 'krzak', 'glaz', 'kopiec'] },
+  { key: 'plaza', label: 'Plaża', obstacles: ['palma', 'trawa', 'glaz_piaskowy', 'kopiec_piaskowy'] },
+  { key: 'snieg', label: 'Śnieżna polana', obstacles: ['sosna_snieg', 'drzewo_zimowe', 'glaz_sniezny', 'kopiec_sniezny'] },
+  { key: 'noc', label: 'Nocna łąka', obstacles: ['drzewo_noc', 'sosna_noc', 'glaz_noc', 'kopiec_noc'] },
+  { key: 'jesien', label: 'Jesienny las', obstacles: ['drzewo_jesien', 'sosna_jesien', 'krzak_jesien', 'kopiec_jesien'] },
 ];
+
+/**
+ * Drobne przeszkody rysujemy znacznie mniej niż drzewa. Wcześniej wszystko
+ * dostawało rozmiar drzewa, przez co mały rysunek 16 pikseli rozdymał się
+ * na całe pole i wyglądał jak klocki.
+ */
+const isSmallObstacle = (kind: string) => /^(krzak|trawa|glaz|kopiec)/.test(kind);
 
 const ALL_OBSTACLES = [...new Set(TERRAINS.flatMap((t) => t.obstacles))];
 
@@ -164,6 +169,10 @@ export class BattleScene extends Phaser.Scene {
   /** Krajobraz tej bitwy — losowany raz, przy tworzeniu sceny. */
   private terrain = TERRAINS[0];
 
+  /** Zamki, których armie się biją. */
+  private playerFaction: Faction = FACTIONS[0];
+  private enemyFaction: Faction = FACTIONS[1];
+
   constructor() {
     super('battle');
   }
@@ -193,9 +202,11 @@ export class BattleScene extends Phaser.Scene {
 
     this.scatterObstacles();
 
-    // Obie drużyny stoją w jednej kolumnie przy swojej krawędzi, jak w Heroes 3.
-    PLAYER_TEAM.forEach((def, i) => this.spawnUnit(def, 'player', 0, START_ROWS[i]));
-    ENEMY_TEAM.forEach((def, i) => this.spawnUnit(def, 'enemy', COLS - 1, START_ROWS[i]));
+    // Obie armie stoją w jednej kolumnie przy swojej krawędzi, jak w Heroes 3.
+    // Kolejność w tablicy to poziomy 1-6, więc drobnica staje u góry, a
+    // czempion na dole; strzelcy i piechota wychodzą przy tym na przemian.
+    this.playerFaction.units.forEach((def, i) => this.spawnUnit(def, 'player', 0, START_ROWS[i]));
+    this.enemyFaction.units.forEach((def, i) => this.spawnUnit(def, 'enemy', COLS - 1, START_ROWS[i]));
 
     this.input.keyboard?.on('keydown-C', () => this.waitTurn());
     this.input.keyboard?.on('keydown-O', () => this.guardTurn());
@@ -273,10 +284,18 @@ export class BattleScene extends Phaser.Scene {
       const { x, y } = this.cellToXY(cell.col, cell.row);
       const kind = Phaser.Utils.Array.GetRandom(this.terrain.obstacles);
       // Podstawa ma stanąć na środku hexa, a korona wystawać ponad niego.
-      const obstacle = this.add.image(x, y, kind).setOrigin(0.5, 0.78);
+      // Drzewo trzyma się pnia u dołu, płaska kępa czy pagórek siedzą środkiem
+      // na polu — stąd różne punkty zaczepienia.
+      const obstacle = this.add
+        .image(x, y, kind)
+        .setOrigin(0.5, /^(kopiec|glaz)/.test(kind) ? 0.62 : 0.78);
       // Skalujemy z zachowaniem proporcji: drzewa są wysokie, głazy przysadziste,
       // więc sztywny rozmiar spłaszczyłby jedne albo rozciągnął drugie.
-      const fit = Math.min((HEX_W * 0.9) / obstacle.width, (HEX_W * 1.45) / obstacle.height);
+      const big = !isSmallObstacle(kind);
+      const fit = Math.min(
+        (HEX_W * (big ? 0.9 : 0.46)) / obstacle.width,
+        (HEX_W * (big ? 1.45 : 0.5)) / obstacle.height
+      );
       obstacle.setScale(fit * Phaser.Math.FloatBetween(0.92, 1.06));
       obstacle.setDepth(10 + cell.row - 0.5);
     }
@@ -323,7 +342,7 @@ export class BattleScene extends Phaser.Scene {
 
   private drawHud() {
     this.add
-      .text(BOARD_X, 10, 'POKEMON HEROES', {
+      .text(BOARD_X, 6, 'POKEMON HEROES', {
         fontFamily: 'Trebuchet MS, sans-serif',
         fontSize: '19px',
         color: '#ffd166',
@@ -332,14 +351,38 @@ export class BattleScene extends Phaser.Scene {
       .setAlpha(0.9);
 
     this.add
-      .text(BOARD_X + 218, 22, `\u{1F5FA}\u{FE0F} ${this.terrain.label}`, {
+      .text(BOARD_X, 50, `${this.playerFaction.emoji} ${this.playerFaction.name}`, {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '14px',
+        color: '#8fe1a2',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0, 0.5);
+    this.add
+      .text(BOARD_X + 152, 50, 'kontra', {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '12px',
+        color: '#8ea0d0',
+      })
+      .setOrigin(0, 0.5);
+    this.add
+      .text(BOARD_X + 205, 50, `${this.enemyFaction.emoji} ${this.enemyFaction.name}`, {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '14px',
+        color: '#d9a2ec',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0, 0.5);
+
+    this.add
+      .text(BOARD_X + 372, 50, `\u{1F5FA}\u{FE0F} ${this.terrain.label}`, {
         fontFamily: 'Trebuchet MS, sans-serif',
         fontSize: '13px',
         color: '#8ea0d0',
       })
       .setOrigin(0, 0.5);
 
-    this.turnText = this.add.text(BOARD_X, 58, '', {
+    this.turnText = this.add.text(BOARD_X, 74, '', {
       fontFamily: 'Trebuchet MS, sans-serif',
       fontSize: '14px',
       color: '#ffffff',
@@ -713,7 +756,8 @@ export class BattleScene extends Phaser.Scene {
     const guard = unit.defending ? '   \u{1F6E1}\u{FE0F} w obronie' : '';
 
     this.statsText.setText(
-      `${unit.def.name} ×${unit.count}   ${t.emoji} ${t.label}   (${whose})${guard}\n` +
+      `${unit.def.name} ×${unit.count}   \u{1F3F0} poziom ${unit.def.tier}   ${t.emoji} ${t.label}   ` +
+        `(${whose})${guard}\n` +
         `❤️ HP ${this.total(unit)}/${fullHp(unit.def)} (po ${unit.def.hp} na stworka)    ` +
         `\u{1F462} Ruch ${unit.def.move}${unit.def.flying ? '   \u{1F54A}\u{FE0F} lata nad wszystkim' : ''}\n` +
         `⚔️ Atak ${unit.count} × ${unit.def.atk} = ${stackAtk(unit.def, unit)}\n` +

@@ -28,6 +28,8 @@ export const ABILITIES: Record<Ability, { emoji: string; name: string; desc: str
 };
 
 export interface UnitDef {
+  /** poziom oddziału w zamku, 1-6 — im wyżej, tym mocniejsze stworki */
+  tier: number;
   /** nazwa pliku w public/sprites bez rozszerzenia */
   sprite: string;
   name: string;
@@ -60,33 +62,6 @@ export const TYPE_INFO: Record<
 
 /** Kara za zwarcie i za zbyt daleki strzał (złamana strzała). */
 export const HALF_DAMAGE = 0.5;
-
-// Kolejność w tablicy wyznacza miejsce w kolumnie startowej — walczący wręcz
-// i strzelcy stoją na przemian, żeby żaden nie zasłaniał drugiego.
-// Duże oddziały to słabe pojedyncze stworki, małe to grubasy — jak w Heroes 3,
-// gdzie chłopów są dziesiątki, a smoków kilka.
-//
-// Umiejętności są przypisane parami: oddział gracza i oddział przeciwnika
-// o tych samych statystykach dostają tę samą zdolność. Dzięki temu drużyny
-// zostają równe, a o wyniku nadal decyduje gra.
-export const PLAYER_TEAM: UnitDef[] = [
-  { sprite: '00020', name: 'Żarptak', count: 4, hp: 8, atk: 3, move: 6, shooter: false, shootRange: 0, type: 'fire', flying: true, ability: 'strikeAndReturn' },
-  { sprite: '00041', name: 'Żarokur', count: 5, hp: 4, atk: 2, move: 3, shooter: true, shootRange: 4, type: 'fire' },
-  { sprite: '00030', name: 'Skorupiec', count: 4, hp: 9, atk: 2, move: 2, shooter: false, shootRange: 0, type: 'water', ability: 'guardian' },
-  { sprite: '00040', name: 'Kropelek', count: 6, hp: 3, atk: 2, move: 3, shooter: true, shootRange: 5, type: 'water' },
-  { sprite: '00055', name: 'Modliś', count: 5, hp: 6, atk: 2, move: 3, shooter: false, shootRange: 0, type: 'grass', ability: 'double' },
-  { sprite: '00025', name: 'Kiełek', count: 15, hp: 2, atk: 1, move: 2, shooter: true, shootRange: 4, type: 'grass' },
-];
-
-// Sumy HP, obrażeń i ruchu obu drużyn są równe — o wyniku decyduje gra, nie skład.
-export const ENEMY_TEAM: UnitDef[] = [
-  { sprite: '00052', name: 'Twardziel', count: 4, hp: 9, atk: 2, move: 2, shooter: false, shootRange: 0, type: 'water', ability: 'guardian' },
-  { sprite: '00066', name: 'Iskrzyk', count: 5, hp: 4, atk: 2, move: 3, shooter: true, shootRange: 4, type: 'fire' },
-  { sprite: '00067', name: 'Mrocznik', count: 5, hp: 6, atk: 2, move: 3, shooter: false, shootRange: 0, type: 'fire', ability: 'double' },
-  { sprite: '00048', name: 'Płetwiak', count: 6, hp: 3, atk: 2, move: 3, shooter: true, shootRange: 5, type: 'water' },
-  { sprite: '00050', name: 'Wichrolist', count: 4, hp: 8, atk: 3, move: 6, shooter: false, shootRange: 0, type: 'grass', flying: true, ability: 'strikeAndReturn' },
-  { sprite: '00024', name: 'Skrzydliść', count: 15, hp: 2, atk: 1, move: 2, shooter: true, shootRange: 4, type: 'grass' },
-];
 
 /**
  * Kto komu zagraża. Krąg jest zamknięty, więc typ, którego dany oddział nie
@@ -135,6 +110,3 @@ export function applyDamage(def: UnitDef, s: StackState, damage: number): { stat
   const count = Math.ceil(left / def.hp);
   return { state: { count, topHp: left - (count - 1) * def.hp }, killed: s.count - count };
 }
-
-/** Wszystkie sprite'y, które gra musi wczytać przed bitwą. */
-export const ALL_SPRITES = [...PLAYER_TEAM, ...ENEMY_TEAM].map((u) => u.sprite);
