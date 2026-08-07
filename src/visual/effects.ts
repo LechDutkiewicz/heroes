@@ -266,13 +266,13 @@ export function slashArc(
   g.setBlendMode(Phaser.BlendModes.ADD);
   // Rysujemy dwa łuki: szeroki przygaszony robi poświatę, wąski jasny daje
   // ostrą krawędź. Ta sama sztuczka co przy obrysach w reszcie gry.
-  g.lineStyle(13, color, 0.5);
+  g.lineStyle(18, color, 0.55);
   g.beginPath();
-  g.arc(0, 0, 34, Phaser.Math.DegToRad(-56), Phaser.Math.DegToRad(56));
+  g.arc(0, 0, 38, Phaser.Math.DegToRad(-58), Phaser.Math.DegToRad(58));
   g.strokePath();
-  g.lineStyle(5, C.white, 0.95);
+  g.lineStyle(8, C.white, 0.95);
   g.beginPath();
-  g.arc(0, 0, 34, Phaser.Math.DegToRad(-48), Phaser.Math.DegToRad(48));
+  g.arc(0, 0, 38, Phaser.Math.DegToRad(-50), Phaser.Math.DegToRad(50));
   g.strokePath();
   // Łuk ma otwierać się w stronę celu, więc obracamy go o kąt natarcia.
   g.setRotation(angle);
@@ -364,15 +364,15 @@ export function launchProjectile(
   shot.add([halo, spark, head]);
   layer.add(shot);
 
-  // Ikony są rysowane czubkiem do góry, więc odejmujemy ćwierć obrotu, żeby
-  // szpic płomienia i kropli wskazywał kierunek lotu.
-  shot.setRotation(angle - Math.PI / 2);
+  // Ikony są rysowane czubkiem do góry, więc dokładamy ćwierć obrotu: wtedy
+  // szpic płomienia i kropli wskazuje kierunek lotu.
+  shot.setRotation(angle + Math.PI / 2);
 
   const trail = scene.add.particles(0, 0, FX.spark, {
     follow: shot,
     speed: { min: 10, max: 70 },
     lifespan: o.broken ? 200 : 340,
-    frequency: 8,
+    frequency: 5,
     scale: { start: o.broken ? 0.4 : 0.8, end: 0 },
     tint: [o.color, C.white, C.goldLight],
     blendMode: Phaser.BlendModes.ADD,
@@ -568,20 +568,23 @@ export function deathFlash(
   scene.time.delayedCall(1200, () => burst.destroy());
 
   // Czaszka jako pieczęć na zejściu — rysowana ikona, nie systemowe emoji.
+  // Czaszka unosi się nad pole, ale nie wyżej niż górna krawędź planszy —
+  // przy oddziale z pierwszego rzędu wyjeżdżała na pasek stanu tury.
+  const top = Math.max(y - 44, BOARD_Y + 22);
   const skull = scene.add.image(x, y - 6, ICON.skull).setDisplaySize(10, 10);
   layer.add(skull);
   scene.tweens.add({
     targets: skull,
     displayWidth: 34,
     displayHeight: 34,
-    y: y - 44,
+    y: top,
     duration: 340,
     ease: E.out,
   });
   scene.tweens.add({
     targets: skull,
     alpha: 0,
-    y: y - 62,
+    y: top - 16,
     delay: 520,
     duration: 420,
     onComplete: () => skull.destroy(),
