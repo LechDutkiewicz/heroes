@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-07 11:29",
+  "updated": "2026-08-07 11:40",
   "pieces": [
     {
       "name": "Plansza: siatka, teren, rama",
@@ -33,7 +33,7 @@
     {
       "name": "Oddziały: tabliczka, pasek HP, ikony",
       "status": "running",
-      "note": "Runda 2 w toku. Emoji zastąpione rysowanymi ikonami, etykiety przestały nachodzić — ale pasek HP nie przekonał krytyka.",
+      "note": "Runda 3 w toku. Pasek HP dostał ciało, ale oprawa zjadła treść: cztery plakietki na oddział, wszystkie o równej wadze, razem większe od stworka.",
       "shots": [
         "09-zblizenie-oddzialu"
       ],
@@ -43,6 +43,12 @@
           "blind": "oddzialy-r1",
           "gap": "Pasek HP to płaskie wypełnienie w płaskim korycie — jeden kolor, prostokątny, bez ciała. We wzorcu każdy odpowiednik ma trzy warstwy: ciemny obrys 1–2px na całym obwodzie, wypełnienie z pionowym gradientem (ok. 25–30% różnicy jasności) i wąski półprzezroczysty highlight w górnej 30–40% wysokości, plus cień 1–2px pod spodem. Sam pasek jest też za cienki: ~6px na 4px wypełnienia nie mieści żadnego modelowania, potrzeba 10–12px.",
           "note": "Krytyk dorzucił, że plakietki nadal miejscami nachodzą na siebie i na stworki, a odstępy między nazwą, plakietką i paskiem są nierówne — mimo że builder uznał ten problem za rozwiązany."
+        },
+        {
+          "win": false,
+          "blind": "oddzialy-r2",
+          "gap": "Pasek zdrowia to goły zielony prostokąt o zaokrąglonych rogach — jedno płaskie wypełnienie, i w dodatku oddzielony od liczby, która siedzi w osobnym kółku obok. Trzy oddzielne kapsułki na jedną jednostkę zajmują więcej pola niż sam stworek i nachodzą na siebie, podczas gdy wzorzec trzyma jeden pas = jedna informacja. Wpisz liczbę w prawy koniec tej samej kapsułki zamiast osobnego bąbla — to od razu usuwa jeden z trzech konkurujących elementów.",
+          "note": "Werdykt sprawdzony przeze mnie na obrazie, bo brzmiał jak zaprzeczenie tego, co builder zbudował. Koryto i gradient są w kodzie, ale przy realnej skali paska nie budują ciała. Krytyk ma rację. Sylwetka stworka zeszła do 42 px i jest najmniejszym elementem na własnym polu — odwrócona hierarchia. To runda do przeprojektowania, nie do polerowania."
         }
       ]
     },

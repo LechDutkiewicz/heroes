@@ -45,6 +45,17 @@ const inScene = (page, fn, arg) =>
     { src: fn.toString(), arg }
   );
 
+/**
+ * Zamraża i odmraża scenę. Sam zrzut kanwasu zajmuje w Playwright kilkaset
+ * milisekund zegara, a przy spowolnieniu 0.12 to i tak kilkadziesiąt
+ * milisekund animacji — dość, żeby pocisk zdążył trafić, a rozbłysk zgasnąć,
+ * zanim obraz zostanie zapisany. Pauza sceny zatrzymuje aktualizacje, ale
+ * rysowanie idzie dalej, więc zrzut pokazuje dokładnie tę klatkę, na którą
+ * czekaliśmy.
+ */
+const freeze = (page) => page.evaluate(() => window.__game.scene.pause('battle'));
+const thaw = (page) => page.evaluate(() => window.__game.scene.resume('battle'));
+
 async function open(page, query = '') {
   await page.goto(`${BASE}/?seed=${SEED}${query}`, { waitUntil: 'load' });
   await ready(page);
@@ -83,7 +94,12 @@ const main = async () => {
   await page.waitForTimeout(200);
   await shot(page, '03-prognoza-ataku');
 
-  // 4. Cios wręcz złapany w połowie wyprowadzenia.
+  // 4. Cios wręcz i moment trafienia.
+  //
+  // Nie odliczamy tu milisekund zegara ściennego, tylko czekamy na zdarzenie
+  // w grze: chwilę uderzenia zapisuje sama scena w `window.__trafienie`.
+  // Sztywne opóźnienia rozjeżdżały się przy każdej zmianie długości animacji
+  // i zrzut regularnie łapał puste pole zamiast ciosu.
   await open(page, '&terrain=laka');
   await inScene(page, (scene) => {
     scene.time.timeScale = 0.12;
@@ -95,37 +111,73 @@ const main = async () => {
     d.row = a.row;
     const p = scene.cellToXY(d.col, d.row);
     d.container.setPosition(p.x, p.y);
-    scene.meleeLunge(a, d, () => scene.resolveHit(a, d));
+    window.__trafienie = 0;
+    scene.meleeLunge(a, d, () => {
+      scene.resolveHit(a, d);
+      window.__trafienie = 1;
+    });
   });
-  await page.waitForTimeout(700);
+  await page.waitForFunction(() => window.__trafienie === 1, null, { timeout: 30000 });
+  await freeze(page);
   await shot(page, '04-cios-wrecz');
-  await page.waitForTimeout(900);
+  await thaw(page);
+  // Sekunda zegara to przy tym spowolnieniu ~120 ms sceny: iskry zdążyły się
+  // rozlecieć, a napisy z obrażeniami wypłynąć nad oddział.
+  await page.waitForTimeout(1400);
+  await freeze(page);
   await shot(page, '05-moment-trafienia');
 
-  // 5. Pocisk strzelca w locie.
+  // 5. Pocisk strzelca w locie — łapany, gdy minie połowę drogi do celu.
   await open(page, '&terrain=laka');
   await inScene(page, (scene) => {
     scene.time.timeScale = 0.12;
     scene.tweens.timeScale = 0.12;
     const a = scene.units.find((u) => u.side === 'player' && u.def.shooter);
     const d = scene.units.find((u) => u.side === 'enemy');
+    const from = scene.cellToXY(a.col, a.row);
+    const to = scene.cellToXY(d.col, d.row);
+    window.__lot = { from, to, obj: null };
     scene.fireProjectile(a, d, false, () => scene.resolveHit(a, d));
+    // Pocisk to jedyny kontener dołożony do warstwy efektów w tej chwili.
+    window.__lot.obj = scene.effectLayer.list.filter((o) => o.type === 'Container').pop();
   });
-  await page.waitForTimeout(1200);
+  await page.waitForFunction(
+    () => {
+      const l = window.__lot;
+      if (!l?.obj?.active) return false;
+      const t = (l.obj.x - l.from.x) / (l.to.x - l.from.x);
+      return t > 0.45;
+    },
+    null,
+    { timeout: 30000 }
+  );
+  await freeze(page);
   await shot(page, '06-pocisk-w-locie');
 
   // 6. Śmierć oddziału.
   await open(page, '&terrain=laka');
   await inScene(page, (scene) => {
-    scene.time.timeScale = 0.2;
-    scene.tweens.timeScale = 0.2;
+    scene.time.timeScale = 0.12;
+    scene.tweens.timeScale = 0.12;
     const a = scene.units.find((u) => u.side === 'player');
     const d = scene.units.find((u) => u.side === 'enemy');
     d.count = 1;
     d.topHp = 1;
+    // Trzymamy uchwyt do znikającego oddziału: dzięki niemu łapiemy klatkę,
+    // w której rozbłysk jeszcze świeci, a stworek dopiero zaczyna znikać.
+    // Odliczanie na sztywno trafiało w puste pole już PO zejściu.
+    window.__zejscie = d.container;
     scene.resolveHit(a, d);
   });
-  await page.waitForTimeout(700);
+  await page.waitForFunction(
+    () => {
+      const c = window.__zejscie;
+      return !c || !c.active || c.alpha <= 0.8;
+    },
+    null,
+    { timeout: 30000 }
+  );
+  await freeze(page);
   await shot(page, '07-smierc-oddzialu');
 
   // 7. Ekran zwycięstwa.
