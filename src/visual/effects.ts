@@ -244,9 +244,12 @@ function lightStack(
   const mask = boardMask(scene);
   const edge = warmEdge(color);
 
-  // Pasy od najszerszego do najwęższego. `k` to ułamek średnicy, `grow` mówi
-  // ile pas urośnie gasnąc — szeroki brzeg rozpływa się bardziej niż rdzeń,
-  // dzięki czemu światło wygląda, jakby uciekało na zewnątrz.
+  // Pasy od najszerszego do najwęższego. `k` to krotność `d`, `grow` mówi ile
+  // pas urośnie gasnąc — szeroki brzeg rozpływa się bardziej niż rdzeń, dzięki
+  // czemu światło wygląda, jakby uciekało na zewnątrz.
+  //
+  // Proporcje wprost z zalecenia krytyka: rdzeń ~15% średnicy barwnej łuny,
+  // a poświata sięga 2-3x dalej niż on.
   const bands: {
     tex: string;
     tint: number;
@@ -257,19 +260,20 @@ function lightStack(
     grow: number;
     life: number;
   }[] = [
-    // Najdalszy pas: cieplejsza barwa, ledwo widoczna, ale sięga 2-3x dalej niż
-    // rdzeń i to ona daje „globalne rozjaśnienie planszy", o które prosił krytyk.
-    { tex: FX.haze, tint: shade(edge, 0.78), mode: Phaser.BlendModes.ADD, a: 0.62, k: 1, from: 0.55, grow: 1.3, life: 300 },
-    { tex: FX.haze, tint: edge, mode: Phaser.BlendModes.NORMAL, a: 0.3, k: 1, from: 0.62, grow: 1.28, life: 300 },
+    // Najdalszy pas: cieplejsza barwa, rozlana szeroko i słabo. To on daje
+    // „globalne rozjaśnienie planszy" — sięga 1.7x dalej niż barwny rdzeń łuny
+    // i to jego widać na sąsiednich polach, kiedy reszta już zgasła.
+    { tex: FX.haze, tint: shade(edge, 0.8), mode: Phaser.BlendModes.ADD, a: 0.9, k: 1.7, from: 0.5, grow: 1.3, life: 320 },
+    { tex: FX.haze, tint: edge, mode: Phaser.BlendModes.NORMAL, a: 0.34, k: 1.7, from: 0.58, grow: 1.28, life: 320 },
     // Pas środkowy: czysta barwa żywiołu — po niej gracz poznaje, czym oberwał.
-    { tex: FX.bloom, tint: shade(color, 0.6), mode: Phaser.BlendModes.ADD, a: 0.95, k: 0.5, from: 0.45, grow: 1.35, life: 260 },
-    { tex: FX.bloom, tint: color, mode: Phaser.BlendModes.NORMAL, a: 0.5, k: 0.46, from: 0.5, grow: 1.3, life: 260 },
+    { tex: FX.bloom, tint: shade(color, 0.6), mode: Phaser.BlendModes.ADD, a: 1, k: 1, from: 0.45, grow: 1.35, life: 270 },
+    { tex: FX.bloom, tint: color, mode: Phaser.BlendModes.NORMAL, a: 0.52, k: 0.94, from: 0.5, grow: 1.3, life: 270 },
     // Gorąca obwódka rdzenia: barwa podciągnięta ku bieli. Bez niej skok od
     // barwy do białego rdzenia był twardy i rdzeń czytał się jak dziura.
-    { tex: FX.glow, tint: tintTowardsWhite(color, 0.55), mode: Phaser.BlendModes.ADD, a: 1, k: 0.3, from: 0.3, grow: 1.6, life: 210 },
-    // Rdzeń: ~15% średnicy, biały, gaśnie najszybciej — musi zdążyć zniknąć,
-    // zanim wypłynie liczba obrażeń.
-    { tex: FX.glow, tint: C.white, mode: Phaser.BlendModes.ADD, a: 1, k: 0.15, from: 0.35, grow: 2.4, life: 160 },
+    { tex: FX.glow, tint: tintTowardsWhite(color, 0.55), mode: Phaser.BlendModes.ADD, a: 1, k: 0.42, from: 0.3, grow: 1.6, life: 210 },
+    // Rdzeń: ~15% średnicy barwnej łuny, biały, gaśnie najszybciej — musi
+    // zdążyć zniknąć, zanim wypłynie liczba obrażeń.
+    { tex: FX.glow, tint: C.white, mode: Phaser.BlendModes.ADD, a: 1, k: 0.16, from: 0.35, grow: 2.4, life: 160 },
   ];
 
   for (const b of bands) {
@@ -464,7 +468,9 @@ export function impactBurst(
   // barwa i biały rdzeń bez przejścia. Teraz idzie od białego rdzenia
   // (~15% średnicy) przez barwę żywiołu po cieplejszy brzeg, gasnący
   // wykładniczo do zera i przycięty do ramy planszy.
-  const bloomPx = (215 + p * 40) * (o.strong ? 1.2 : o.weak ? 0.86 : 1);
+  // `d` to średnica BARWNEGO pasa łuny; ciepły brzeg sięga 1.7x dalej,
+  // a biały rdzeń ma 16% tej wartości.
+  const bloomPx = (196 + p * 38) * (o.strong ? 1.2 : o.weak ? 0.86 : 1);
   lightStack(scene, layer, x, y, o.color, bloomPx, o.weak ? 0.82 : 1);
 
   // 3. Pierścienie energii. Dwa, z przesunięciem — jeden wygląda jak animacja
@@ -1056,7 +1062,7 @@ export function deathFlash(
   // najważniejszy dla gracza wyglądał taniej niż zwykły cios. Łuna jest tu
   // szersza i trwa dłużej niż przy trafieniu, bo padnięcie oddziału ma być
   // wydarzeniem, a nie kolejnym błyskiem.
-  lightStack(scene, layer, x, y, color, 268, 1.05);
+  lightStack(scene, layer, x, y, color, 236, 1.05);
 
   ring(scene, layer, x, y, C.white, 5, 5, 460, 0);
   ring(scene, layer, x, y, warmEdge(color), 3, 6.5, 560, 90);
