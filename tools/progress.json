@@ -1,15 +1,21 @@
 {
-  "updated": "2026-08-07 06:33",
+  "updated": "2026-08-07 07:00",
   "pieces": [
     {
       "name": "Plansza: siatka hexów, teren, rama",
-      "status": "pending",
-      "note": "Ostre linie 1px na rozciągniętej teksturze 640x360. Wzorzec ma miękkie hexy z gradientem i kolorowym obrysem.",
+      "status": "running",
+      "note": "Runda 1: rama, winieta i wytłoczona krawędź weszły. Krytyk wybrał jednak wzorzec — pola nadal są obrysem bez wypełnienia.",
       "shots": [
+        "10-sama-plansza",
         "02-tura-gracza",
         "01-start-snieg"
       ],
-      "rounds": []
+      "rounds": [
+        {
+          "win": false,
+          "gap": "Hex to sama krawędź, nie kafel. Wzorzec ma półprzezroczyste wypełnienie z gradientem, ciemniejszy obrys od wypełnienia i jasną fazkę na trzech górnych bokach — stąd kierunek światła. U nas siatka czyta się jak drut zarzucony na teren."
+        }
+      ]
     },
     {
       "name": "Oddziały: cień, podest, oddech",
