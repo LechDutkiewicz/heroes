@@ -34,6 +34,15 @@ import {
   pulse,
 } from '../visual/board';
 import { C } from '../visual/theme';
+import { buildIcons } from '../visual/icons';
+import {
+  buildUnitView,
+  playUnitDeath,
+  refreshUnitView,
+  setUnitActive,
+  sideAccent,
+  type UnitView,
+} from '../visual/unitView';
 
 type Side = 'player' | 'enemy';
 
@@ -53,16 +62,9 @@ interface Unit {
   waited: boolean;
   /** stoi w obronie do swojej następnej kolejki */
   defending: boolean;
+  /** cały wygląd oddziału — buduje i odświeża go src/visual/unitView.ts */
+  view: UnitView;
   container: Phaser.GameObjects.Container;
-  sprite: Phaser.GameObjects.Image;
-  hpBar: Phaser.GameObjects.Rectangle;
-  hpLabel: Phaser.GameObjects.Text;
-  countLabel: Phaser.GameObjects.Text;
-  atkBadge: Phaser.GameObjects.Text;
-  shieldIcon: Phaser.GameObjects.Text;
-  /** lśniący sześciokąt pod oddziałem, który ma teraz turę */
-  activeRing: Phaser.GameObjects.Graphics;
-  platform: Phaser.GameObjects.Ellipse;
 }
 
 // Geometria siatki i całe rysowanie planszy siedzą w src/visual/board.ts.
@@ -72,9 +74,6 @@ const PANEL_Y = BOARD_Y + BOARD_H + 14;
 const PANEL_H = 208;
 /** Szerokość lewej kolumny panelu — reszta należy do przycisków. */
 const TEXT_COL_W = BOARD_W - 300;
-
-const HP_BAR_W = 50;
-const HP_BAR_H = 9;
 
 /** O tyle słabsze jest trafienie w oddział, który stoi w obronie. */
 const GUARD_REDUCTION = 0.7;
@@ -202,6 +201,9 @@ export class BattleScene extends Phaser.Scene {
   create() {
     this.terrain = Phaser.Utils.Array.GetRandom(TERRAINS);
     this.applyHarnessParams();
+    // Ikony muszą istnieć, zanim cokolwiek po nie sięgnie — rysują się do
+    // tekstur raz, przy starcie sceny.
+    buildIcons(this);
     drawBackground(this);
     drawBoard(this, this.terrain.key);
     this.drawHud();
@@ -407,98 +409,23 @@ export class BattleScene extends Phaser.Scene {
 
   private spawnUnit(def: UnitDef, side: Side, col: number, row: number) {
     const { x, y } = this.cellToXY(col, row);
-    const accent = side === 'player' ? 0x4fc3f7 : 0xef5350;
-
-    // Lśniący sześciokąt pokazuje, czyją decyzję gracz właśnie podejmuje.
-    // Dwa obrysy: szeroki i przygaszony robi poświatę, cienki daje ostry brzeg.
-    const activeRing = this.add.graphics();
-    const ringPts = hexPoints(0, 0);
-    activeRing.lineStyle(9, 0xffd166, 0.3);
-    activeRing.strokePoints(ringPts, true);
-    activeRing.lineStyle(3, 0xfff3c4, 0.95);
-    activeRing.strokePoints(ringPts, true);
-    activeRing.setVisible(false);
-
-    // Podest pod pokemonem zdradza, do kogo należy i podświetla aktywny oddział.
-    const platform = this.add.ellipse(0, 18, 42, 13, accent, 0.22).setStrokeStyle(2, accent, 0.6);
-
-    const sprite = this.add.image(0, -6, def.sprite).setDisplaySize(58, 58);
-
-    const name = this.add
-      .text(0, -31, def.name, {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '10px',
-        color: '#ffffff',
-        fontStyle: 'bold',
-        stroke: '#0d1023',
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5);
-
-    const typeBadge = this.add.text(-25, -20, TYPE_INFO[def.type].emoji, { fontSize: '12px' }).setOrigin(0.5);
-
-    // Tarcza zapala się tylko wtedy, gdy oddział stoi w obronie.
-    const shieldIcon = this.add
-      .text(24, -20, '\u{1F6E1}\u{FE0F}', { fontSize: '13px' })
-      .setOrigin(0.5)
-      .setVisible(false);
-
-    // Odznaka pokazuje siłę całego oddziału, bo to ona decyduje o trafieniu.
-    const atkBadge = this.add
-      .text(-19, 16, `${def.shooter ? '\u{1F3F9}' : '⚔️'}${def.count * def.atk}`, {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '11px',
-        color: '#ffffff',
-        backgroundColor: '#000000aa',
-        padding: { x: 3, y: 1 },
-      })
-      .setOrigin(0.5);
-
-    // Liczebność oddziału w rogu, jak w Heroes 3 — najważniejsza liczba na polu.
-    const countBg = this.add.rectangle(23, 16, 26, 16, 0x11162b, 0.92).setStrokeStyle(2, accent, 1);
-    const countLabel = this.add
-      .text(23, 16, `${def.count}`, {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '13px',
-        color: '#ffffff',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5);
-
-    const hpBarBg = this.add.rectangle(0, 28, HP_BAR_W, HP_BAR_H, 0x11162b, 0.9).setStrokeStyle(1, 0x000000, 0.6);
-    const hpBar = this.add.rectangle(-HP_BAR_W / 2, 28, HP_BAR_W, HP_BAR_H, 0x4caf50).setOrigin(0, 0.5);
-    const hpLabel = this.add
-      .text(0, 28, `${fullHp(def)}/${fullHp(def)}`, {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '9px',
-        color: '#ffffff',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5);
-
-    const hit = this.add
-      .zone(0, 0, HEX_W, HEX_H)
-      .setInteractive(this.hexHitArea(), Phaser.Geom.Polygon.Contains);
-
-    const container = this.add.container(x, y, [
-      activeRing,
-      platform,
-      sprite,
-      typeBadge,
-      shieldIcon,
-      atkBadge,
-      name,
-      hpBarBg,
-      hpBar,
-      hpLabel,
-      countBg,
-      countLabel,
-      hit,
-    ]);
-    container.setDepth(10 + row);
+    const id = this.nextId++;
+    const view = buildUnitView(this, {
+      spriteKey: def.sprite,
+      name: def.name,
+      type: def.type,
+      shooter: def.shooter,
+      side,
+      x,
+      y,
+      // Identyfikator jest różny dla każdego oddziału, więc wystarcza za
+      // ziarno przesunięcia fazy oddechu.
+      seed: id,
+    });
+    view.container.setDepth(10 + row);
 
     const unit: Unit = {
-      id: this.nextId++,
+      id,
       side,
       def,
       count: def.count,
@@ -508,17 +435,12 @@ export class BattleScene extends Phaser.Scene {
       retaliations: 1,
       waited: false,
       defending: false,
-      container,
-      sprite,
-      hpBar,
-      hpLabel,
-      countLabel,
-      atkBadge,
-      shieldIcon,
-      activeRing,
-      platform,
+      view,
+      container: view.container,
     };
+    this.refreshStack(unit);
 
+    const hit = view.hit;
     hit.on('pointerdown', () => this.onUnitClicked(unit));
     hit.on('pointerover', () => this.onUnitHover(unit));
     hit.on('pointermove', (p: Phaser.Input.Pointer) => this.onEnemyPointerMove(unit, p));
@@ -543,14 +465,13 @@ export class BattleScene extends Phaser.Scene {
 
   /** Pasek, licznik, tarcza i odznaka ataku po każdej zmianie stanu oddziału. */
   private refreshStack(unit: Unit) {
-    const max = fullHp(unit.def);
-    const ratio = Phaser.Math.Clamp(this.total(unit) / max, 0, 1);
-    unit.hpBar.width = HP_BAR_W * ratio;
-    unit.hpBar.fillColor = ratio > 0.5 ? 0x4caf50 : ratio > 0.25 ? 0xffb300 : 0xe53935;
-    unit.hpLabel.setText(`${this.total(unit)}/${max}`);
-    unit.countLabel.setText(`${unit.count}`);
-    unit.atkBadge.setText(`${unit.def.shooter ? '\u{1F3F9}' : '⚔️'}${stackAtk(unit.def, unit)}`);
-    unit.shieldIcon.setVisible(unit.defending);
+    refreshUnitView(unit.view, {
+      count: unit.count,
+      hp: this.total(unit),
+      maxHp: fullHp(unit.def),
+      atk: stackAtk(unit.def, unit),
+      defending: unit.defending,
+    });
   }
 
   // ---------- kolejka tur ----------
@@ -590,7 +511,7 @@ export class BattleScene extends Phaser.Scene {
     for (let i = 0; i < count; i++) {
       const unit = this.units.find((u) => u.id === this.roundQueue[i]);
       if (!unit) continue;
-      const accent = unit.side === 'player' ? 0x4fc3f7 : 0xef5350;
+      const accent = sideAccent(unit.side).color;
       const bg = this.add
         .circle(0, 0, 13, accent, i === 0 ? 0.45 : 0.2)
         .setStrokeStyle(2, accent, i === 0 ? 1 : 0.45);
@@ -629,28 +550,9 @@ export class BattleScene extends Phaser.Scene {
     unit.defending = false;
     this.refreshStack(unit);
 
-    this.units.forEach((u) => {
-      const accent = u.side === 'player' ? 0x4fc3f7 : 0xef5350;
-      u.platform.setStrokeStyle(2, accent, 0.75);
-      u.platform.setFillStyle(accent, 0.28);
-      this.tweens.killTweensOf(u.activeRing);
-      u.activeRing.setVisible(false).setScale(1).setAlpha(1);
-    });
-    unit.platform.setStrokeStyle(3, 0xffd166, 1);
-    unit.platform.setFillStyle(0xffd166, 0.35);
-
-    // Pierścień pulsuje: lekko rośnie i przygasa, więc wzrok sam go łapie.
-    unit.activeRing.setVisible(true);
-    this.tweens.add({
-      targets: unit.activeRing,
-      scaleX: { from: 0.94, to: 1.04 },
-      scaleY: { from: 0.94, to: 1.04 },
-      alpha: { from: 1, to: 0.45 },
-      duration: 620,
-      ease: 'Sine.easeInOut',
-      yoyo: true,
-      repeat: -1,
-    });
+    // Kto ma turę, dostaje złoty podest i pulsujący pierścień; reszta wraca
+    // do barwy swojej strony.
+    this.units.forEach((u) => setUnitActive(this, u.view, u.id === unit.id));
 
     this.turnText.setText(
       unit.side === 'player'
@@ -673,8 +575,6 @@ export class BattleScene extends Phaser.Scene {
 
   private advanceTurn() {
     if (this.gameOver) return;
-    this.tweens.killTweensOf(this.units.map((u) => u.platform));
-    this.units.forEach((u) => u.platform.setScale(1));
     this.roundQueue.shift();
     this.beginTurn();
   }
@@ -689,8 +589,6 @@ export class BattleScene extends Phaser.Scene {
     this.roundQueue.shift();
     this.roundQueue.push(unit.id);
     this.floatText(unit, '\u{23F3} Czekam', '#8ea0d0', -46);
-    this.tweens.killTweensOf(this.units.map((u) => u.platform));
-    this.units.forEach((u) => u.platform.setScale(1));
     this.beginTurn();
   }
 
@@ -1304,13 +1202,7 @@ export class BattleScene extends Phaser.Scene {
 
     if (target.count <= 0) {
       this.refreshStack(target);
-      this.tweens.add({
-        targets: target.container,
-        alpha: 0,
-        scale: 0.5,
-        duration: 320,
-        onComplete: () => target.container.destroy(),
-      });
+      playUnitDeath(this, target.view, () => {});
       this.units = this.units.filter((u) => u.id !== target.id);
       this.roundQueue = this.roundQueue.filter((id) => id !== target.id);
     } else {
