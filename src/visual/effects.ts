@@ -680,8 +680,8 @@ export function launchProjectile(
     // Jasność daje aureola w ADD, a ta plama pilnuje, żeby pocisk miał barwę
     // żywiołu także nad jasną trawą, gdzie tryby świetlne bieleją.
     .setBlendMode(Phaser.BlendModes.NORMAL)
-    .setDisplaySize(o.broken ? 60 : 96, o.broken ? 60 : 96)
-    .setAlpha(0.45);
+    .setDisplaySize(o.broken ? 54 : 82, o.broken ? 54 : 82)
+    .setAlpha(0.5);
   const halo = scene.add
     .image(0, 0, FX.glow)
     // Przygaszona barwa w ADD: świeci, ale nie wypala się do bieli — ta sama
@@ -692,10 +692,13 @@ export function launchProjectile(
     .setAlpha(0.95);
   // Jasny rdzeń pod ikoną. Bez niego ikona żywiołu — która ma gruby ciemny
   // kontur — czytała się na poświacie jak dziura, a nie jak lecące światło.
+  // Rdzeń pod ikoną celowo mały. Przy skali 2.4 rozlewał się w białą kulę
+  // szerszą od samej ikony i zjadał warkocz tuż za pociskiem — najjaśniejszy
+  // punkt ma być na czubku ikony, nie dookoła niej.
   const spark = scene.add
     .image(0, 0, FX.spark)
     .setBlendMode(Phaser.BlendModes.ADD)
-    .setScale(2.4);
+    .setScale(1.5);
   const head = scene.add
     .image(0, 0, TYPE_ICON[o.element])
     .setDisplaySize(o.broken ? 20 : 30, o.broken ? 20 : 30);
@@ -741,7 +744,7 @@ export function launchProjectile(
         const puff = scene.add
           .image(px, py, sharp ? FX.spark : FX.mote)
           // Kreska: długa wzdłuż lotu, wąska w poprzek.
-          .setDisplaySize(r * (sharp ? 14 : 18), r * (sharp ? 3.4 : 5))
+          .setDisplaySize(r * (sharp ? 20 : 24), r * (sharp ? 3 : 4.4))
           .setRotation(angle)
           .setTint(near ? hot : Phaser.Math.RND.pick([bright, o.color, cool]))
           .setBlendMode(sharp ? Phaser.BlendModes.ADD : Phaser.BlendModes.SCREEN)
@@ -755,7 +758,7 @@ export function launchProjectile(
           displayWidth: r * 2,
           displayHeight: 1,
           alpha: 0,
-          duration: o.broken ? 200 : 300,
+          duration: o.broken ? 240 : 380,
           ease: 'Quad.easeOut',
           onComplete: () => {
             puff.clearMask();
