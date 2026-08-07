@@ -137,7 +137,19 @@ const main = async () => {
   await page.waitForTimeout(400);
   await shot(page, '08-zwyciestwo');
 
-  // 8. Zbliżenie na oddział — czytelność paska HP, liczebności i odznak.
+  // 8. Sama plansza, bez HUD-u. Kawałki są oceniane osobno, więc krytyk
+  // planszy nie powinien dostawać w kadrze panelu, którym zajmuje się kto inny.
+  await open(page, '&terrain=laka');
+  {
+    const b = await page.locator('canvas').boundingBox();
+    await page.screenshot({
+      path: `${OUT}/10-sama-plansza.png`,
+      clip: { x: b.x + 50, y: b.y + 88, width: 862, height: 532 },
+    });
+    console.log('  → 10-sama-plansza.png');
+  }
+
+  // 9. Zbliżenie na oddział — czytelność paska HP, liczebności i odznak.
   await open(page, '&terrain=laka');
   const box = await page.locator('canvas').boundingBox();
   await page.screenshot({

@@ -13,6 +13,27 @@ import {
 } from '../data/units';
 import { ALL_SPRITES, FACTIONS, type Faction } from '../data/factions';
 import { hexDistance, hexNeighbours, type Cell } from '../data/hex';
+import {
+  BOARD_H,
+  BOARD_W,
+  BOARD_X,
+  BOARD_Y,
+  COLS,
+  HEX_H,
+  HEX_W,
+  ROWS,
+  cellToXY,
+  drawBackground,
+  drawBoard,
+  drawObstacleShadow,
+  hexPoints,
+  paintApproachCell,
+  paintAttackCell,
+  paintMoveCell,
+  paintPreviewCell,
+  pulse,
+} from '../visual/board';
+import { C } from '../visual/theme';
 
 type Side = 'player' | 'enemy';
 
@@ -44,25 +65,9 @@ interface Unit {
   platform: Phaser.GameObjects.Ellipse;
 }
 
-// ---------- geometria planszy z hexów ----------
-// Układ „odd-r": hexy stoją wierzchołkiem do góry, a nieparzyste rzędy są
-// przesunięte o pół hexa w prawo. Każdy hex ma sześciu sąsiadów w równej
-// odległości — nie ma już skosów tańszych albo droższych niż proste.
+// Geometria siatki i całe rysowanie planszy siedzą w src/visual/board.ts.
+// Tutaj zostaje sama rozgrywka.
 
-const COLS = 10;
-const ROWS = 7;
-/** promień hexa: od środka do wierzchołka */
-const HEX_R = 46;
-const HEX_W = Math.sqrt(3) * HEX_R;
-const HEX_H = 2 * HEX_R;
-/** pionowy odstęp między rzędami — hexy zazębiają się, stąd 3/4 wysokości */
-const ROW_STEP = HEX_R * 1.5;
-
-// Plansza wyśrodkowana: szerokość hexów wyznacza margines, nie odwrotnie.
-const BOARD_X = 62;
-const BOARD_Y = 100;
-const BOARD_W = HEX_W * (COLS + 0.5);
-const BOARD_H = ROW_STEP * (ROWS - 1) + HEX_H;
 const PANEL_Y = BOARD_Y + BOARD_H + 14;
 const PANEL_H = 208;
 /** Szerokość lewej kolumny panelu — reszta należy do przycisków. */
@@ -103,16 +108,6 @@ const ALL_OBSTACLES = [...new Set(TERRAINS.flatMap((t) => t.obstacles))];
  */
 const OBSTACLES_MIN = 0;
 const OBSTACLES_MAX = 4;
-
-/** Sześć wierzchołków hexa wokół podanego środka. */
-function hexPoints(cx: number, cy: number) {
-  const pts: Phaser.Math.Vector2[] = [];
-  for (let i = 0; i < 6; i++) {
-    const a = Phaser.Math.DegToRad(60 * i - 90);
-    pts.push(new Phaser.Math.Vector2(cx + HEX_R * Math.cos(a), cy + HEX_R * Math.sin(a)));
-  }
-  return pts;
-}
 
 /** Poprawna polska odmiana: 1 obrażenie, 2 obrażenia, 5 obrażeń. */
 function damageWord(n: number) {
@@ -207,8 +202,8 @@ export class BattleScene extends Phaser.Scene {
   create() {
     this.terrain = Phaser.Utils.Array.GetRandom(TERRAINS);
     this.applyHarnessParams();
-    this.drawBackground();
-    this.drawBoard();
+    drawBackground(this);
+    drawBoard(this, this.terrain.key);
     this.drawHud();
 
     this.previewLayer = this.add.container(0, 0).setDepth(4);
@@ -229,48 +224,6 @@ export class BattleScene extends Phaser.Scene {
 
     this.startRound();
     this.beginTurn();
-  }
-
-  // ---------- rysowanie planszy ----------
-
-  private drawBackground() {
-    const g = this.add.graphics();
-    g.fillGradientStyle(0x1b2340, 0x1b2340, 0x0d1023, 0x0d1023, 1);
-    g.fillRect(0, 0, this.scale.width, this.scale.height);
-  }
-
-  private drawBoard() {
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.35);
-    shadow.fillRoundedRect(BOARD_X - 10, BOARD_Y - 10, BOARD_W + 20, BOARD_H + 20, 14);
-
-    // Krajobraz rozciągnięty dokładnie na planszę. Maska geometryczna byłaby
-    // ładniejsza (zaokrąglone rogi), ale nie nakłada się tu na obrazek, a samo
-    // dopasowanie rozmiaru daje pewny wynik — 640x360 rozciągnięte do planszy
-    // to kilka procent różnicy w proporcjach, na łące czy śniegu niewidoczne.
-    this.add
-      .image(BOARD_X + BOARD_W / 2, BOARD_Y + BOARD_H / 2, this.terrain.key)
-      .setDisplaySize(BOARD_W + 12, BOARD_H + 12);
-
-    const g = this.add.graphics();
-
-    // Lekkie przyciemnienie, żeby napisy i paski HP nie ginęły na jasnej trawie.
-    g.fillStyle(0x0d1023, 0.22);
-    g.fillRoundedRect(BOARD_X - 6, BOARD_Y - 6, BOARD_W + 12, BOARD_H + 12, 12);
-
-    for (let row = 0; row < ROWS; row++) {
-      for (let col = 0; col < COLS; col++) {
-        const { x, y } = this.cellToXY(col, row);
-        const pts = hexPoints(x, y);
-        // Siatka tylko obrysem — teren ma być widoczny przez pola.
-        if (col === 0 || col === COLS - 1) {
-          g.fillStyle(col === 0 ? 0x4fc3f7 : 0xef5350, 0.16);
-          g.fillPoints(pts, true);
-        }
-        g.lineStyle(1, 0xffffff, 0.22);
-        g.strokePoints(pts, true);
-      }
-    }
   }
 
   /**
@@ -314,6 +267,7 @@ export class BattleScene extends Phaser.Scene {
       );
       obstacle.setScale(fit * Phaser.Math.FloatBetween(0.92, 1.06));
       obstacle.setDepth(10 + cell.row - 0.5);
+      drawObstacleShadow(this, x, y, HEX_W * (big ? 0.5 : 0.3));
     }
   }
 
@@ -435,10 +389,7 @@ export class BattleScene extends Phaser.Scene {
   // ---------- jednostki ----------
 
   private cellToXY(col: number, row: number) {
-    return {
-      x: BOARD_X + HEX_W / 2 + col * HEX_W + (row & 1 ? HEX_W / 2 : 0),
-      y: BOARD_Y + HEX_R + row * ROW_STEP,
-    };
+    return cellToXY(col, row);
   }
 
   /** Obszar kliknięcia w kształcie hexa — prostokąt zachodziłby na sąsiadów. */
@@ -910,47 +861,33 @@ export class BattleScene extends Phaser.Scene {
     // współrzędnych planszy, więc hexy siadają dokładnie na siatce.
     const g = this.add.graphics();
     this.highlightLayer.add(g);
+    pulse(this, g);
 
     for (const [key, cost] of reach) {
       if (cost === 0) continue;
       const [col, row] = key.split(',').map(Number);
-      this.addHighlight(g, col, row, 0x4fc3f7, 0.22, () => this.performMove(unit, { col, row }));
+      paintMoveCell(g, col, row);
+      this.addHighlight(col, row, () => this.performMove(unit, { col, row }));
     }
 
     for (const target of this.units.filter((u) => u.side !== unit.side)) {
       const plan = this.attackPlan(unit, target, reach);
       if (!plan) continue;
-      // Pomarańczowy obrys znaczy cel, do którego strzał doleci osłabiony.
+      // Złoty obrys znaczy cel, do którego strzał doleci osłabiony.
       const { tooFar } = this.damageOf(unit, target);
-      const attackColor = tooFar ? 0xff9800 : 0xef5350;
+      paintAttackCell(g, target.col, target.row, tooFar);
       this.addHighlight(
-        g,
         target.col,
         target.row,
-        attackColor,
-        tooFar ? 0.22 : 0.35,
         () => this.attackTarget(unit, target),
         () => this.showForecast(unit, target)
       );
     }
   }
 
-  private addHighlight(
-    g: Phaser.GameObjects.Graphics,
-    col: number,
-    row: number,
-    color: number,
-    alpha: number,
-    onClick: () => void,
-    onHover?: () => void
-  ) {
+  /** Samo pole kliknięcia — wygląd pola maluje moduł planszy. */
+  private addHighlight(col: number, row: number, onClick: () => void, onHover?: () => void) {
     const { x, y } = this.cellToXY(col, row);
-    const pts = hexPoints(x, y);
-    g.fillStyle(color, alpha);
-    g.fillPoints(pts, true);
-    g.lineStyle(2, color, 0.9);
-    g.strokePoints(pts, true);
-
     const zone = this.add
       .zone(x, y, HEX_W, HEX_H)
       .setInteractive(this.hexHitArea(), Phaser.Geom.Polygon.Contains);
@@ -964,10 +901,24 @@ export class BattleScene extends Phaser.Scene {
     this.highlightLayer.add(zone);
   }
 
+  /**
+   * Sprząta warstwę razem z jej pulsowaniem. Sam removeAll zostawiłby tween
+   * celujący w zniszczony obiekt.
+   */
+  private wipeLayer(layer?: Phaser.GameObjects.Container) {
+    if (!layer) return;
+    this.tweens.killTweensOf(layer.list);
+    layer.removeAll(true);
+  }
+
+  private clearApproachGraphics() {
+    this.wipeLayer(this.approachLayer);
+  }
+
   private clearHighlights() {
     this.clearMovePreview();
-    this.highlightLayer?.removeAll(true);
-    this.approachLayer?.removeAll(true);
+    this.wipeLayer(this.highlightLayer);
+    this.clearApproachGraphics();
     this.preferredApproach = null;
     this.forecastText?.setText('');
     this.setCursor(null);
@@ -1000,22 +951,17 @@ export class BattleScene extends Phaser.Scene {
   private showMovePreview(unit: Unit) {
     this.clearMovePreview();
     const g = this.add.graphics();
-    const color = unit.side === 'player' ? 0x4fc3f7 : 0xef5350;
+    const color = unit.side === 'player' ? C.ally : C.foe;
     for (const [key, cost] of this.reachable(unit)) {
       if (cost === 0) continue;
       const [col, row] = key.split(',').map(Number);
-      const { x, y } = this.cellToXY(col, row);
-      const pts = hexPoints(x, y);
-      g.fillStyle(color, 0.1);
-      g.fillPoints(pts, true);
-      g.lineStyle(2, color, 0.55);
-      g.strokePoints(pts, true);
+      paintPreviewCell(g, col, row, color);
     }
     this.previewLayer.add(g);
   }
 
   private clearMovePreview() {
-    this.previewLayer?.removeAll(true);
+    this.wipeLayer(this.previewLayer);
   }
 
   private onUnitHover(unit: Unit) {
@@ -1136,15 +1082,11 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private showApproachMarker(cell: Cell) {
-    this.approachLayer.removeAll(true);
-    const { x, y } = this.cellToXY(cell.col, cell.row);
-    const pts = hexPoints(x, y);
+    this.clearApproachGraphics();
     const g = this.add.graphics();
-    g.fillStyle(0xffd166, 0.28);
-    g.fillPoints(pts, true);
-    g.lineStyle(3, 0xffd166, 1);
-    g.strokePoints(pts, true);
+    paintApproachCell(g, cell.col, cell.row);
     this.approachLayer.add(g);
+    pulse(this, g, 0.75);
   }
 
   /**
@@ -1153,7 +1095,7 @@ export class BattleScene extends Phaser.Scene {
    */
   private clearApproach() {
     this.preferredApproach = null;
-    this.approachLayer?.removeAll(true);
+    this.clearApproachGraphics();
   }
 
   private setButtonsVisible(visible: boolean) {
