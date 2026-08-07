@@ -25,3 +25,9 @@ dist-ssr
 
 # Gra sklejona w jeden plik (tools/pack_standalone.py) — artefakt, nie źródło
 pokemon-heroes.html
+
+# Materiał roboczy pętli jakości: zrzuty i wzorzec pobierane narzędziami.
+tools/shots/
+tools/shots-baseline/
+tools/reference/
+tools/progress.html

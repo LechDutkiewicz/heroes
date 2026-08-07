@@ -189,8 +189,24 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * Powtarzalny stan bitwy na potrzeby zrzutów porównawczych: `?seed=7` ustala
+   * losowanie, `?terrain=snieg` wymusza krajobraz. Bez tych parametrów gra
+   * zachowuje się jak zwykle — losowo.
+   */
+  private applyHarnessParams() {
+    const params = new URLSearchParams(window.location.search);
+    const seed = params.get('seed');
+    if (seed !== null) Phaser.Math.RND.sow([seed]);
+    const wanted = params.get('terrain');
+    const found = TERRAINS.find((t) => t.key === wanted);
+    if (found) this.terrain = found;
+    return found !== undefined;
+  }
+
   create() {
     this.terrain = Phaser.Utils.Array.GetRandom(TERRAINS);
+    this.applyHarnessParams();
     this.drawBackground();
     this.drawBoard();
     this.drawHud();

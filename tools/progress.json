@@ -1,0 +1,54 @@
+{
+  "updated": "2026-08-07 06:33",
+  "pieces": [
+    {
+      "name": "Plansza: siatka hexów, teren, rama",
+      "status": "pending",
+      "note": "Ostre linie 1px na rozciągniętej teksturze 640x360. Wzorzec ma miękkie hexy z gradientem i kolorowym obrysem.",
+      "shots": [
+        "02-tura-gracza",
+        "01-start-snieg"
+      ],
+      "rounds": []
+    },
+    {
+      "name": "Oddziały: cień, podest, oddech",
+      "status": "pending",
+      "note": "Sprite'y wiszą w powietrzu, etykiety sąsiadów nachodzą na siebie, nic się nie rusza.",
+      "shots": [
+        "09-zblizenie-oddzialu"
+      ],
+      "rounds": []
+    },
+    {
+      "name": "Etykiety: HP, liczebność, ikony bez emoji",
+      "status": "pending",
+      "note": "Systemowe emoji zamiast ikon — najszybszy sygnał, że to prowizorka.",
+      "shots": [
+        "09-zblizenie-oddzialu"
+      ],
+      "rounds": []
+    },
+    {
+      "name": "Animacje walki i efekty trafienia",
+      "status": "pending",
+      "note": "Pocisk to dwa prostokąty, trafienie to drgnięcie kamery i czerwony napis.",
+      "shots": [
+        "04-cios-wrecz",
+        "06-pocisk-w-locie",
+        "07-smierc-oddzialu"
+      ],
+      "rounds": []
+    },
+    {
+      "name": "HUD: nagłówek, kolejka, panel, przyciski",
+      "status": "pending",
+      "note": "Panel to ściana tekstu z emoji na granatowym prostokącie.",
+      "shots": [
+        "02-tura-gracza",
+        "08-zwyciestwo"
+      ],
+      "rounds": []
+    }
+  ]
+}
