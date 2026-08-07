@@ -26,65 +26,62 @@
 import Phaser from 'phaser';
 import { C, E, H, T, display } from './theme';
 import { HEX_H, HEX_R, HEX_W, hexPoints } from './board';
-import { ICON, TYPE_ICON, icon, type IconKey } from './icons';
+import { ICON, TYPE_ICON, icon } from './icons';
 
 // ---------- geometria etykiet ----------
 // Wszystko liczone od środka hexa. Pas 69 pikseli dzielimy tak:
-//   -39 .. -23  nazwa
-//   -38 ..  +4  sylwetka (nazwa leży na jej górnej krawędzi, jak logo)
-//  -0.5 .. +8.5 krążek podestu pod nogami
-//   +11 .. +29  jeden rząd plakietek: pasek życia i liczebność obok siebie
+//   -44 .. -30  nazwa (leży na czubku sylwetki, jak logo na plakacie)
+//   -43 ..  +7  sylwetka
+//   +2  .. +12  krążek podestu pod nogami
+//   +13 .. +28  JEDNA kapsułka: życie i liczebność w tym samym kształcie
 //
-// Rząd plakietek jest JEDEN, nie dwa. Poprzednio pasek życia leżał pod rzędem
-// liczb i cała dolna kondygnacja miała 30 pikseli — nie mieściła się w pasie
-// rzędu, a przy okazji zjadała miejsce sylwetce. Ustawione obok siebie zajmują
-// 18 pikseli i zostaje zapas.
+// Poprzednia wersja miała cztery elementy oprawy na oddział — plakietkę ataku,
+// pasek życia, bąbel liczebności i odznakę żywiołu — wszystkie podobnej wagi.
+// Razem zajmowały więcej pola niż sam stworek i nachodziły na sąsiadów, a
+// plakietka ataku wychodziła nawet poza ramę planszy. To odwrócona hierarchia:
+// oprawa zjadała treść.
 //
-// Atak wisi z boku, na wysokości piersi. Nie u góry, bo tam zasłaniał głowy —
-// a głowa jest tym, po czym gracz rozpoznaje stworka. Na wysokości piersi
-// sylwetka jest wąska, więc plakietka wchodzi na nią najwyżej kilkoma
-// pikselami krawędzi.
+// Teraz zostają DWA elementy. Siła ataku zniknęła z pola całkiem — gracz i tak
+// dostaje prognozę obrażeń, gdy celuje, więc nie musi jej czytać z każdego
+// oddziału naraz. Życie i liczebność zrosły się w jedną kapsułkę, bo to o nich
+// podejmuje się decyzje i mają być czytane jednym spojrzeniem.
+//
+// Zwolnione miejsce dostała sylwetka: to gra o stworkach, więc stworek ma być
+// największą rzeczą na własnym polu.
 
 /** Linia, na której stworek stoi — tu leży cień i podest. */
-const FEET_Y = 4;
-const SPRITE_H = 42;
-const NAME_Y = -31;
+const FEET_Y = 7;
+const SPRITE_H = 50;
+const NAME_Y = -37;
 
 /** Podest: płaski, szeroki znacznik barwy strony tuż pod nogami. */
-const PLATE_W = 44;
+const PLATE_W = 46;
 const PLATE_H = 9;
 
 /**
- * Pasek życia. 11 pikseli, bo przy sześciu nie mieści się żadne modelowanie —
- * na cztery piksele wypełnienia nie da się nałożyć gradientu ani połysku
- * i wychodzi płaska kreska. Promień to połowa wysokości, więc jest kapsułką,
- * a nie prostokątem z zaokrąglonymi rogami.
+ * Scalona kapsułka „życie + liczebność". Wysokość 15 px, bo dopiero przy tylu
+ * mieści się modelowanie (koryto, gradient, połysk) i jednocześnie cyfra
+ * czytelna z odległości. Kapsułka jest wyśrodkowana na polu, więc przy
+ * skrajnej kolumnie nigdy nie wychodzi poza ramę planszy.
  */
-const BADGE_Y = 20;
-const HP_W = 34;
-const HP_H = 11;
-const HP_X = -15;
-
-/** Liczebność — jedyna liczba przy nogach, więc dostaje pełną wysokość rzędu. */
-const COUNT_X = 16;
-const COUNT_W = 22;
-const COUNT_H = 18;
-
-const ATK_X = -19;
-const ATK_Y = -5;
-const ATK_W = 24;
-const ATK_H = 13;
+const CAP_Y = 20;
+const CAP_H = 15;
+/** Część na pasek życia; segment z liczbą dokleja się do niej od prawej. */
+const HP_ZONE_W = 38;
+const COUNT_SEG_W = 22;
 
 /**
- * Żywioł i tarcza: okrągłe odznaki po prawej, jedna pod drugą. Wcześniej były
- * gołymi naklejkami zawieszonymi w powietrzu obok stworka i wyglądały jak
- * zgubione — we wzorcu każda ikona siedzi w okrągłej obwódce, więc te też.
+ * Żywioł i tarcza: małe okrągłe odznaki przy głowie, po przeciwnych stronach.
+ * Nie jedna pod drugą, bo kolumna dwóch krążków czytała się jak trzeci pas
+ * informacji i konkurowała z kapsułką.
  */
-const TYPE_X = 27;
-const TYPE_Y = -16;
-const SHIELD_Y = 2;
-const SIDE_ICON_SIZE = 12;
-const BADGE_D = 18;
+const TYPE_X = 25;
+// Na wysokości barków, nie przy czubku głowy — wyżej krążek wchodził
+// w ostatnie litery dłuższych nazw.
+const BADGE_Y = -17;
+const SHIELD_X = -25;
+const SIDE_ICON_SIZE = 11;
+const BADGE_D = 16;
 
 export type Side = 'player' | 'enemy';
 export type ElementKey = keyof typeof TYPE_ICON;
@@ -109,6 +106,7 @@ export interface UnitViewState {
   count: number;
   hp: number;
   maxHp: number;
+  /** Zostawione w umowie dla sceny, ale świadomie nie pokazywane na planszy. */
   atk: number;
   defending: boolean;
 }
@@ -121,14 +119,11 @@ export interface UnitView {
   /** Podest w barwie strony; przy turze przemalowywany na złoto. */
   platform: Phaser.GameObjects.Graphics;
   activeRing: Phaser.GameObjects.Graphics;
+  /** Jeden kształt na życie i liczebność naraz. */
   hpBar: Phaser.GameObjects.Graphics;
-  countBg: Phaser.GameObjects.Graphics;
   countLabel: Phaser.GameObjects.Text;
-  atkLabel: Phaser.GameObjects.Text;
   shieldIcon: Phaser.GameObjects.Image;
   shieldBg: Phaser.GameObjects.Graphics;
-  atkBg: Phaser.GameObjects.Graphics;
-  atkIcon: Phaser.GameObjects.Image;
   /** Spokojne unoszenie w spoczynku — gasimy je na czas śmierci oddziału. */
   breath?: Phaser.Tweens.Tween;
 }
@@ -196,6 +191,63 @@ function gradientCapsule(
         new Phaser.Math.Vector2(cx + h0, cy + y0),
         new Phaser.Math.Vector2(cx + h1, cy + y1),
         new Phaser.Math.Vector2(cx - h1, cy + y1),
+      ],
+      true
+    );
+  }
+}
+
+/**
+ * Kształt o niezależnych promieniach lewego i prawego końca — potrzebny, bo
+ * scalona kapsułka składa się z dwóch stref, które od środka stykają się
+ * płaską krawędzią, a na zewnątrz są zaokrąglone.
+ */
+interface Seg {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Promień lewego końca; 0 = płasko. */
+  rl: number;
+  rr: number;
+}
+
+function segRect(g: Phaser.GameObjects.Graphics, s: Seg) {
+  g.fillRoundedRect(s.x, s.y, s.w, s.h, { tl: s.rl, bl: s.rl, tr: s.rr, br: s.rr });
+}
+
+/**
+ * Pionowy gradient na takim kształcie. Graphics nie umie gradientu, więc
+ * kroimy go na poziome pasy; przy zaokrąglonych końcach pas musi być węższy,
+ * inaczej gradient wystaje poza kształt kwadratowymi rogami. Pasy zachodzą
+ * o 0.6 px, bo bez tego wygładzanie zostawia między nimi jasne szpary.
+ */
+function segGradient(g: Phaser.GameObjects.Graphics, s: Seg, lightA: number, darkA: number) {
+  const steps = 9;
+  // Wcięcie brzegu na danej wysokości: promień minus cięciwa okręgu narożnika.
+  const inset = (r: number, y: number) => {
+    if (r <= 0) return 0;
+    const d = Math.abs(y < r ? r - y : y > s.h - r ? y - (s.h - r) : 0);
+    return r - Math.sqrt(Math.max(0, r * r - d * d));
+  };
+  for (let i = 0; i < steps; i++) {
+    const t = (i + 0.5) / steps;
+    const up = t < 0.5;
+    const alpha = up ? lightA * (1 - t * 2) : darkA * (t - 0.5) * 2;
+    if (alpha <= 0.004) continue;
+    const y0 = (s.h * i) / steps;
+    const y1 = Math.min(s.h, (s.h * (i + 1)) / steps + 0.6);
+    const l0 = inset(s.rl, y0);
+    const l1 = inset(s.rl, y1);
+    const r0 = inset(s.rr, y0);
+    const r1 = inset(s.rr, y1);
+    g.fillStyle(up ? C.white : C.shadow, alpha);
+    g.fillPoints(
+      [
+        new Phaser.Math.Vector2(s.x + l0, s.y + y0),
+        new Phaser.Math.Vector2(s.x + s.w - r0, s.y + y0),
+        new Phaser.Math.Vector2(s.x + s.w - r1, s.y + y1),
+        new Phaser.Math.Vector2(s.x + l1, s.y + y1),
       ],
       true
     );
@@ -375,7 +427,7 @@ export function buildUnitView(scene: Phaser.Scene, spec: UnitViewSpec): UnitView
 
   // Nazwa jak logo z bajki: gruby ciemny kontur i cień pod spodem. Leży nad
   // głową, bo to jedyne miejsce, gdzie nie zasłania liczb.
-  const name = scene.add.text(0, NAME_Y, spec.name, display(10)).setOrigin(0.5);
+  const name = scene.add.text(0, NAME_Y, spec.name, display(9)).setOrigin(0.5);
   gradientText(name, H.white, H.panelEdge);
 
   // Żywioł i tarcza po bokach głowy — same naklejki z własnym konturem,
@@ -383,35 +435,27 @@ export function buildUnitView(scene: Phaser.Scene, spec: UnitViewSpec): UnitView
   // Okrągła odznaka żywiołu: ta sama konstrukcja co kapsułki, tylko szerokość
   // równa wysokości — dzięki temu wszystko na planszy jest z jednej rodziny.
   const typeBg = scene.add.graphics();
-  plate(typeBg, TYPE_X, TYPE_Y, BADGE_D, BADGE_D, C.panel, C.panelDeep, {
+  plate(typeBg, TYPE_X, BADGE_Y, BADGE_D, BADGE_D, C.panel, C.panelDeep, {
     light: 0.3,
     dark: 0.26,
     gloss: 0.5,
   });
-  const typeIcon = icon(scene, TYPE_ICON[spec.type], TYPE_X, TYPE_Y, SIDE_ICON_SIZE);
+  const typeIcon = icon(scene, TYPE_ICON[spec.type], TYPE_X, BADGE_Y, SIDE_ICON_SIZE);
 
+  // Tarcza po przeciwnej stronie głowy i tylko na czas obrony — element
+  // chwilowy nie może na stałe rezerwować miejsca w układzie.
   const shieldBg = scene.add.graphics().setVisible(false);
-  plate(shieldBg, TYPE_X, SHIELD_Y, BADGE_D, BADGE_D, C.gold, C.goldDeep, {
+  plate(shieldBg, SHIELD_X, BADGE_Y, BADGE_D, BADGE_D, C.gold, C.goldDeep, {
     light: 0.34,
     dark: 0.3,
     gloss: 0.45,
   });
-  const shieldIcon = icon(scene, ICON.shield, TYPE_X, SHIELD_Y, SIDE_ICON_SIZE).setVisible(false);
+  const shieldIcon = icon(scene, ICON.shield, SHIELD_X, BADGE_Y, SIDE_ICON_SIZE).setVisible(false);
 
-  // Siła oddziału: ikona broni mówi CZYM bije, liczba ILE. Ciemna kapsułka,
-  // bo to informacja pomocnicza — nie ma konkurować z liczebnością.
-  const atkKey: IconKey = spec.shooter ? ICON.bow : ICON.sword;
-  const atkBg = scene.add.graphics();
-  const atkIcon = icon(scene, atkKey, 0, ATK_Y, 11);
-  const atkLabel = scene.add
-    .text(ATK_X + 5, ATK_Y, '', { ...display(9), strokeThickness: 3 })
-    .setOrigin(0.5);
-
-  // Liczebność — najważniejsza liczba na planszy, więc dostaje największą
-  // kapsułkę i barwę strony. Gracz ma ją czytać bez zatrzymywania wzroku.
-  const countBg = scene.add.graphics();
+  // Liczebność siedzi WEWNĄTRZ kapsułki życia, w jej prawym końcu. Nie ma
+  // własnego tła — tłem jest segment kapsułki w barwie strony.
   const countLabel = scene.add
-    .text(COUNT_X, BADGE_Y, '', { ...display(12), strokeThickness: 3.5 })
+    .text(0, CAP_Y, '', { ...display(11), strokeThickness: 3 })
     .setOrigin(0.5);
 
   const hpBar = scene.add.graphics();
@@ -430,12 +474,8 @@ export function buildUnitView(scene: Phaser.Scene, spec: UnitViewSpec): UnitView
     shieldBg,
     shieldIcon,
     name,
-    atkBg,
-    atkIcon,
-    atkLabel,
-    countBg,
-    countLabel,
     hpBar,
+    countLabel,
     hit,
   ]);
 
@@ -447,13 +487,9 @@ export function buildUnitView(scene: Phaser.Scene, spec: UnitViewSpec): UnitView
     platform,
     activeRing,
     hpBar,
-    countBg,
     countLabel,
-    atkLabel,
     shieldIcon,
     shieldBg,
-    atkBg,
-    atkIcon,
   };
 
   startBreathing(scene, view, spec.seed);
@@ -483,92 +519,109 @@ function startBreathing(scene: Phaser.Scene, view: UnitView, seed: number) {
 
 export function refreshUnitView(view: UnitView, s: UnitViewState) {
   const ratio = Phaser.Math.Clamp(s.hp / Math.max(1, s.maxHp), 0, 1);
-  drawHpBar(view.hpBar, ratio);
 
   view.countLabel.setText(`${s.count}`);
   gradientText(view.countLabel, H.white, H.panelEdge);
-  view.atkLabel.setText(`${s.atk}`);
-  gradientText(view.atkLabel, H.white, H.panelEdge);
   view.shieldIcon.setVisible(s.defending);
   view.shieldBg.setVisible(s.defending);
 
-  // Obie kapsułki rosną razem z liczbą cyfr. Sztywna szerokość albo ucinała
-  // trzycyfrowy oddział, albo zostawiała dziurę obok jedynki. Rosną na
-  // zewnątrz — do środka nie mogą, bo tam stoi stworek.
-  const cw = Math.max(COUNT_W, view.countLabel.width + 10);
-  const cx = COUNT_X + (cw - COUNT_W) / 2;
-  view.countBg.clear();
-  plate(view.countBg, cx, BADGE_Y, cw, COUNT_H, accentOf(view.side), deepOf(view.side), {
-    light: 0.44,
-    dark: 0.34,
-    gloss: 0.36,
-  });
-  view.countLabel.setX(cx);
-
-  const aw = Math.max(ATK_W, view.atkLabel.width + 19);
-  const ax = ATK_X - (aw - ATK_W) / 2;
-  view.atkBg.clear();
-  // Ten sam trójwarstwowy przepis co liczebność, tylko na ciemnym atramencie:
-  // hierarchia ma wynikać z barwy i rozmiaru, nie z braku modelowania.
-  plate(view.atkBg, ax, ATK_Y, aw, ATK_H, C.inkSoft, C.hpTrack, {
-    light: 0.34,
-    dark: 0.34,
-    gloss: 0.24,
-  });
-  view.atkIcon.setX(ax - aw / 2 + 7);
-  view.atkLabel.setX(ax + 5);
+  // Segment liczby rośnie razem z liczbą cyfr, a cała kapsułka zostaje
+  // wyśrodkowana na polu — dzięki temu trzycyfrowy oddział się nie ucina,
+  // a przy skrajnej kolumnie nic nie wyjeżdża poza ramę planszy.
+  const countW = Math.max(COUNT_SEG_W, view.countLabel.width + 9);
+  drawStatCapsule(view.hpBar, ratio, view.side, countW);
+  // Środek segmentu liczby wypada zawsze na HP_ZONE_W/2 — kapsułka rośnie
+  // symetrycznie, więc przyrost szerokości znosi się z przesunięciem lewej
+  // krawędzi i liczba nie ucieka.
+  view.countLabel.setX(HP_ZONE_W / 2);
 }
 
 /**
- * Pasek życia jako pełnoprawna kapsułka, nie kreska. Koryto jest o ~45%
- * ciemniejsze od wypełnienia i ma własny cień wewnętrzny u góry, więc czyta
- * się jak wgłębienie; wypełnienie dostaje ten sam gradient i połysk co
- * plakietki, więc czyta się jak wsunięty w to wgłębienie klocek.
+ * Scalona kapsułka: po lewej życie, po prawej liczebność, oba w JEDNYM
+ * kształcie z jednym obrysem i jednym cieniem. Wcześniej były to dwa osobne
+ * bąble i razem z plakietką ataku dawały trzy konkurujące plamy pod stworkiem.
+ * Jeden kształt = jeden pas informacji, tak jak w tabeli statystyk we wzorcu.
  *
- * Barwa zmienia się na trzech progach, bo sam ubytek długości widać za słabo —
- * kolor niesie ostrzeżenie szybciej. Liczby „30/30" celowo nie ma: przy tej
- * szerokości była nieczytelna, a dokładne wartości stoją w panelu na dole.
+ * Segment liczebności jest w barwie strony, więc ta sama kapsułka odpowiada
+ * od razu na trzy pytania: ile ich jest, ile mają życia i czyje są.
+ *
+ * Barwa paska zmienia się na trzech progach, bo sam ubytek długości widać za
+ * słabo — kolor niesie ostrzeżenie szybciej.
  */
-function drawHpBar(g: Phaser.GameObjects.Graphics, ratio: number) {
-  const left = HP_X - HP_W / 2;
+function drawStatCapsule(
+  g: Phaser.GameObjects.Graphics,
+  ratio: number,
+  side: Side,
+  countW: number
+) {
   g.clear();
+  const h = CAP_H;
+  const r = h / 2;
+  const totalW = HP_ZONE_W + countW;
+  const x = -totalW / 2;
+  const y = CAP_Y - h / 2;
 
   const fill = ratio > 0.5 ? C.hpHigh : ratio > 0.25 ? C.hpMid : C.hpLow;
-  const track = shift(fill, C.shadow, 0.78);
+  // Koryto to ćwierć jasności wypełnienia — dopiero taki kontrast czyta się
+  // jako dziura, w której coś leży, a nie jako drugi, ciemniejszy pasek.
+  const track = shift(fill, C.shadow, 0.75);
 
-  // Koryto: matowe, bez połysku i bez gradientu rozjaśniającego — gdyby je
-  // dostało, przestałoby wyglądać na dziurę, a zaczęło na drugi pasek.
-  plate(g, HP_X, BADGE_Y, HP_W, HP_H, track, C.hpTrack, {
-    light: 0,
-    dark: 0.25,
-    gloss: 0,
-    edgeW: 1.6,
-  });
-
-  // Cień wewnętrzny: ciemny łuk tuż pod górną krawędzią koryta. To on sprawia,
-  // że koryto czyta się jako wgłębienie, a nie jako ciemniejszy pasek.
+  // Cień pod całą kapsułką i wspólny ciemny obrys — rysowane jako większy
+  // kształt pod spodem, bo linia 1.5 px gubi się na jasnej trawie.
+  const ew = 1.6;
   g.fillStyle(C.shadow, 0.5);
-  g.fillRoundedRect(left + 1.5, BADGE_Y - HP_H / 2 + 0.5, HP_W - 3, HP_H * 0.42, HP_H * 0.21);
+  segRect(g, { x: x - ew, y: y - ew + 2, w: totalW + ew * 2, h: h + ew * 2, rl: r + ew, rr: r + ew });
+  g.fillStyle(C.hpTrack, 1);
+  segRect(g, { x: x - ew, y: y - ew, w: totalW + ew * 2, h: h + ew * 2, rl: r + ew, rr: r + ew });
+
+  // --- strefa życia: koryto, cień wewnętrzny, wypełnienie ---
+  const trackSeg: Seg = { x, y, w: HP_ZONE_W, h, rl: r, rr: 0 };
+  g.fillStyle(track, 1);
+  segRect(g, trackSeg);
+  segGradient(g, trackSeg, 0, 0.22);
+
+  // Ciemny łuk pod górną krawędzią — to on robi wrażenie wgłębienia.
+  g.fillStyle(C.shadow, 0.45);
+  segRect(g, { x: x + 1.5, y: y + 1, w: HP_ZONE_W - 1.5, h: h * 0.4, rl: r * 0.8, rr: 0 });
 
   if (ratio > 0) {
-    // Wypełnienie jest z każdej strony o ~2 px mniejsze od koryta, więc ciemna
-    // obwódka koryta zostaje widoczna także przy pełnym życiu — bez tego pasek
-    // na 100% wyglądał jak jednolita zielona pigułka bez wnętrza.
-    const iw = HP_W - 4;
-    const ih = HP_H - 4;
-    // Minimalna długość, żeby ostatni punkt życia był widoczny jako kropka,
-    // a nie znikał zupełnie.
+    const ih = h - 4;
+    const iw = HP_ZONE_W - 3;
+    // Minimalna długość, żeby ostatni punkt życia był widoczny jako kropka.
     const w = Math.max(ih, iw * ratio);
-    // Cień pod wypełnieniem wyłączony: leży ono w korycie, więc własny cień
-    // wyszedłby ciemną obwódką w środku innej kapsułki.
-    plate(g, left + 2 + w / 2, BADGE_Y, w, ih, fill, shift(fill, C.shadow, 0.5), {
-      light: 0.5,
-      dark: 0.42,
-      gloss: 0.5,
-      drop: 0,
-      edgeW: 0.8,
+    const seg: Seg = { x: x + 2, y: y + 2, w, h: ih, rl: ih / 2, rr: ih / 2 };
+    g.fillStyle(shift(fill, C.shadow, 0.45), 1);
+    segRect(g, { ...seg, x: seg.x - 0.8, y: seg.y - 0.8, w: seg.w + 1.6, h: seg.h + 1.6, rl: ih / 2 + 0.8, rr: ih / 2 + 0.8 });
+    g.fillStyle(fill, 1);
+    segRect(g, seg);
+    // Góra jaśniejsza o ~22%, dół ciemniejszy — bez tego zielona pigułka nie
+    // ma ciała i czyta się jak jedno płaskie wypełnienie.
+    segGradient(g, seg, 0.45, 0.4);
+    // Połysk na górnych 40% wysokości, węższy od paska, żeby czytał się jak
+    // odbicie światła, a nie jak drugi pasek w środku.
+    g.fillStyle(C.white, 0.3);
+    segRect(g, {
+      x: seg.x + 1.5,
+      y: seg.y + 1,
+      w: Math.max(1, seg.w - 3),
+      h: ih * 0.4,
+      rl: ih * 0.2,
+      rr: ih * 0.2,
     });
   }
+
+  // --- strefa liczebności: barwa strony, płaska od strony paska ---
+  const cSeg: Seg = { x: x + HP_ZONE_W, y, w: countW, h, rl: 0, rr: r };
+  g.fillStyle(accentOf(side), 1);
+  segRect(g, cSeg);
+  segGradient(g, cSeg, 0.42, 0.34);
+  g.fillStyle(C.white, 0.3);
+  segRect(g, { x: cSeg.x, y: y + 1, w: countW - 1.5, h: h * 0.4, rl: 0, rr: r * 0.8 });
+
+  // Cienka ciemna szczelina na styku stref — bez niej zielony pasek przy
+  // pełnym życiu zlewa się z segmentem liczby w jedną plamę.
+  g.fillStyle(C.shadow, 0.55);
+  g.fillRect(x + HP_ZONE_W - 1, y, 1.6, h);
 }
 
 // ---------- tura ----------

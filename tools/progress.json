@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-07 11:40",
+  "updated": "2026-08-07 11:58",
   "pieces": [
     {
       "name": "Plansza: siatka, teren, rama",
@@ -55,18 +55,25 @@
     {
       "name": "Animacje walki i efekty trafienia",
       "status": "running",
-      "note": "Runda 1 w budowie. Zrzuty poniżej pokazują stan sprzed tej rundy: pocisk to prostokąt z trójkątem, trafienie to drgnięcie kamery i czerwony napis.",
+      "note": "Runda 2 w toku. Rozbłysk, iskry z grawitacją i ikony w napisach weszły, ale światło jest białą naklejką zamiast barwnej poświaty w scenie.",
       "shots": [
-        "04-cios-wrecz",
+        "05-moment-trafienia",
         "06-pocisk-w-locie",
         "07-smierc-oddzialu"
       ],
-      "rounds": []
+      "rounds": [
+        {
+          "win": false,
+          "blind": "animacje-r1",
+          "gap": "Wzorzec ma światło o realnej barwie i temperaturze, z warstwą smug i iskrami o zróżnicowanym rozmiarze i rozmyciu — z przodu ostre, w tle zdmuchnięte w pył. Światło zalewa scenę i wchodzi w postać. U nas rozbłysk to jedna biała plamka ~30 px z paroma identycznymi kreskami, bez poświaty, bez barwy, bez wpływu na resztę planszy — naklejka. Dodaj radialny gradient 200-250 px w barwie żywiołu, gasnący do zera, rozjaśniający sąsiednie pola, i rozrzuć 30-50 iskier o losowym promieniu 1-4 px.",
+          "note": "Krytyk odnotował też, że napisy nachodzą na siebie i na plakietki — potwierdzam z własnego oglądu. Builder sam znalazł wcześniej błąd w harnessie: zrzuty odliczały milisekundy zegara, a sam screenshot zjada kilkaset ms, więc przy spowolnieniu 0.12 fotografowały klatkę po efekcie. Teraz czekają na zdarzenie i pauzują scenę."
+        }
+      ]
     },
     {
       "name": "HUD: nagłówek, kolejka, panel, przyciski",
-      "status": "pending",
-      "note": "Jeszcze nietknięty. Panel to ściana tekstu z systemowymi emoji na granatowym prostokącie — obok nowej planszy widać rozjazd stylu najmocniej.",
+      "status": "running",
+      "note": "Runda 1 w budowie. Plansza i oddziały są już w jasnej bajkowej palecie, HUD został w starej ciemnej — obok nich rozjazd stylu widać najmocniej.",
       "shots": [
         "02-tura-gracza",
         "08-zwyciestwo"
