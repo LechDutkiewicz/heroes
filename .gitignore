@@ -26,8 +26,11 @@ dist-ssr
 # Gra sklejona w jeden plik (tools/pack_standalone.py) — artefakt, nie źródło
 pokemon-heroes.html
 
-# Materiał roboczy pętli jakości: zrzuty i wzorzec pobierane narzędziami.
+# Materiał roboczy pętli jakości: wszystko tu odtwarzają narzędzia z tools/,
+# więc nie ma po co trzymać w historii obrazów, które i tak zmieniają się
+# co rundę. Klucze ślepych porównań tym bardziej — po werdykcie są bezużyteczne.
 tools/shots/
 tools/shots-baseline/
 tools/reference/
+tools/blind/
 tools/progress.html
