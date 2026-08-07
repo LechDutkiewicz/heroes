@@ -576,28 +576,44 @@ export function launchProjectile(
   // szpic płomienia i kropli wskazuje kierunek lotu.
   shot.setRotation(angle + Math.PI / 2);
 
-  const trail = scene.add.particles(0, 0, FX.spark, {
-    follow: shot,
-    speed: { min: 10, max: 70 },
-    lifespan: o.broken ? 200 : 340,
-    frequency: 5,
-    scale: { start: o.broken ? 0.4 : 0.8, end: 0 },
-    alpha: { min: 0.3, max: 1 },
-    // Ślad w barwie żywiołu, tylko lekko rozjaśnionej. W rundzie 1 na liście
-    // była biel i złoto w równym udziale — smuga wychodziła biała i strzał
-    // ognisty nie różnił się od wodnego. Bez rozjaśnienia z kolei zielony
-    // ślad nad zieloną trawą znika, stąd `tintTowardsWhite` zamiast bieli:
-    // barwa zostaje, kontrast też.
-    tint: [
-      tintTowardsWhite(o.color, 0.25),
-      tintTowardsWhite(o.color, 0.25),
-      tintTowardsWhite(o.color, 0.5),
-      C.goldLight,
-    ],
-    blendMode: Phaser.BlendModes.ADD,
-    quantity: 3,
+  // Ślad pocisku sypany ręcznie, obrazek po obrazku.
+  //
+  // Wcześniej robił to emiter cząstek z listą barw — i mimo tej listy smuga
+  // wychodziła biała (widać to na zrzucie 06 z rundy 1: za niebieską kroplą
+  // lecą białe kulki). Barwienie pojedynczych obrazków działa niezawodnie,
+  // więc smugę robimy tak samo jak iskry trafienia. Przy okazji każdy ślad
+  // dostaje własny rozmiar i rozmycie — bliskie ostre, dalekie w pył — czyli
+  // to samo zróżnicowanie, którego krytyk zażądał od iskier.
+  const bright = tintTowardsWhite(o.color, 0.3);
+  const trail = scene.time.addEvent({
+    delay: 16,
+    loop: true,
+    callback: () => {
+      if (!shot.active) return;
+      const sharp = Math.random() < 0.65;
+      const r = Phaser.Math.FloatBetween(1.5, 4) * (o.broken ? 0.6 : 1);
+      const puff = scene.add
+        .image(
+          shot.x + Phaser.Math.FloatBetween(-4, 4),
+          shot.y + Phaser.Math.FloatBetween(-4, 4),
+          sharp ? FX.spark : FX.mote
+        )
+        .setDisplaySize(r * (sharp ? 5 : 8), r * (sharp ? 5 : 8))
+        .setTint(Phaser.Math.RND.pick([bright, bright, o.color, C.goldLight]))
+        .setBlendMode(sharp ? Phaser.BlendModes.ADD : Phaser.BlendModes.SCREEN)
+        .setAlpha(Phaser.Math.FloatBetween(0.45, 1));
+      layer.add(puff);
+      scene.tweens.add({
+        targets: puff,
+        displayWidth: 1,
+        displayHeight: 1,
+        alpha: 0,
+        duration: o.broken ? 220 : 340,
+        ease: 'Quad.easeOut',
+        onComplete: () => puff.destroy(),
+      });
+    },
   });
-  layer.add(trail);
 
   // Pocisk pulsuje w locie — żywioł ma wyglądać na żywy, nie na wystrzelony
   // kamień. Złamana strzała zamiast tego chybocze się i gaśnie.
@@ -627,10 +643,9 @@ export function launchProjectile(
     duration: o.broken ? 380 : 270,
     ease: o.broken ? 'Quad.easeOut' : 'Quad.easeIn',
     onComplete: () => {
-      trail.stop();
-      // Emiter musi przeżyć swoje ostatnie cząstki, inaczej smuga urywa się
-      // w powietrzu dokładnie w chwili trafienia.
-      scene.time.delayedCall(360, () => trail.destroy());
+      // Sypanie kończymy w chwili trafienia; już wypuszczone drobiny gasną
+      // same, więc smuga zwęża się naturalnie zamiast urwać się w powietrzu.
+      trail.remove();
       shot.destroy();
       onHit();
     },
@@ -912,18 +927,9 @@ export function deathFlash(
   ring(scene, layer, x, y, C.white, 5, 5, 460, 0);
   ring(scene, layer, x, y, color, 3, 6.5, 560, 90);
 
-  const burst = scene.add.particles(0, 0, FX.spark, {
-    speed: { min: 60, max: 240 },
-    lifespan: { min: 400, max: 780 },
-    scale: { start: 1, end: 0 },
-    tint: [color, C.white, C.goldLight],
-    blendMode: Phaser.BlendModes.ADD,
-    gravityY: 90,
-    emitting: false,
-  });
-  layer.add(burst);
-  burst.explode(28, x, y);
-  scene.time.delayedCall(1200, () => burst.destroy());
+  // Wybuch iskier tym samym mechanizmem co przy trafieniu — emiter cząstek
+  // gubił barwę i sypał samą bielą, a zejście oddziału ma nieść barwę strony.
+  sparkSpray(scene, layer, x, y, color, 40, 150);
 
   // Czaszka jako pieczęć na zejściu — rysowana ikona, nie systemowe emoji.
   // Czaszka unosi się nad pole, ale nie wyżej niż górna krawędź planszy —
