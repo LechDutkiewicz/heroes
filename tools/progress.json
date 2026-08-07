@@ -1,52 +1,55 @@
 {
-  "updated": "2026-08-07 07:22",
+  "updated": "2026-08-07 11:29",
   "pieces": [
     {
-      "name": "Plansza: siatka hexów, teren, rama",
+      "name": "Plansza: siatka, teren, rama",
       "status": "done",
-      "note": "Zamknięta. Hexy są kaflami z kierunkiem światła, rama i winieta dają bryłę, teren bez rozmycia. Zostaje monotonia żółto-zielona na łące i brak cienia rzucanego przez pole — krytyk odnotował oba, mimo to wybrał nasze.",
+      "note": "Zamknięta w rundzie 3. Pola są kaflami z kierunkiem światła, rama i winieta dają bryłę, teren bez rozmycia.",
       "shots": [
         "10-sama-plansza",
-        "02-tura-gracza",
         "01-start-snieg"
       ],
       "rounds": [
         {
           "win": false,
-          "gap": "Hex to sama krawędź, nie kafel. Brak wypełnienia, brak kierunku światła — siatka czyta się jak drut zarzucony na teren."
+          "blind": "plansza-r1",
+          "gap": "Krawędź heksa to pojedyncza kreska ~1px w jednym kolorze, identyczna na całej planszy — siatka wygląda jak nałożony drut, nie jak kafle terenu. We wzorcu krawędź jest trójwarstwowa: ciemny obrys zewnętrzny, wewnętrzna jasna fazka po górnych bokach i lekkie ściemnienie po dolnych, plus samo pole ma własne półprzezroczyste wypełnienie z gradientem.",
+          "note": "Werdykt trafny. Builder poszedł poprawiać."
         },
         {
           "win": false,
-          "gap": "Werdykt unieważniony: porównanie skalowało nasz zrzut do 44%, a wzorzec do 132%, więc fazka 1,8px znikała poniżej piksela. Krytyk opisał artefakt skalowania, nie naszą pracę. Naprawione — kadry idą teraz w rozdzielczości własnej."
+          "blind": "plansza-r2",
+          "gap": "Siatka to tylko półprzezroczyste linie 1px na płaskiej trawie: brak fazowania, brak cienia pod polem, brak różnicy między polem a podłożem.",
+          "note": "WERDYKT UNIEWAŻNIONY — wina po mojej stronie, nie buildera. Porównanie wpisywało oba kadry w równe kolumny, więc nasz zrzut (1732px) szedł do 44%, a wzorzec (578px) do 132%. Fazka o grubości 1,8px schodziła poniżej piksela i znikała. Krytyk opisywał artefakt skalowania, nie naszą pracę. Naprawiłem porównanie: kadry idą teraz w rozdzielczości własnej, wycinane oknem zamiast skalowane."
         },
         {
           "win": true,
-          "gap": "Krytyk wybrał nasze na uczciwym porównaniu: krawędź o realnej grubości, gradient góra-dół, spójny kierunek światła, tekstura budująca podłoże."
+          "blind": "plansza-r3",
+          "gap": "Nasz kadr ma krawędź o realnej grubości z wewnętrznym rozjaśnieniem, gradient jasność-góra → ciemniej-dół, czyli jeden spójny kierunek światła, i teksturę budującą podłoże. Wzorzec traci na tym porównaniu przez płaskie wielokąty z konturem w kolorze wypełnienia i różnobarwne obwódki rozbijające paletę.",
+          "note": "Wygrana na uczciwym porównaniu. Krytyk odnotował dwie nasze słabości mimo wyboru: monotonia żółto-zielona na łące i brak cienia rzucanego przez pole."
         }
       ]
     },
     {
-      "name": "Oddziały: cień, podest, oddech",
-      "status": "pending",
-      "note": "Sprite'y wiszą w powietrzu, etykiety sąsiadów nachodzą na siebie, nic się nie rusza.",
+      "name": "Oddziały: tabliczka, pasek HP, ikony",
+      "status": "running",
+      "note": "Runda 2 w toku. Emoji zastąpione rysowanymi ikonami, etykiety przestały nachodzić — ale pasek HP nie przekonał krytyka.",
       "shots": [
         "09-zblizenie-oddzialu"
       ],
-      "rounds": []
-    },
-    {
-      "name": "Etykiety: HP, liczebność, ikony bez emoji",
-      "status": "pending",
-      "note": "Systemowe emoji zamiast ikon — najszybszy sygnał, że to prowizorka.",
-      "shots": [
-        "09-zblizenie-oddzialu"
-      ],
-      "rounds": []
+      "rounds": [
+        {
+          "win": false,
+          "blind": "oddzialy-r1",
+          "gap": "Pasek HP to płaskie wypełnienie w płaskim korycie — jeden kolor, prostokątny, bez ciała. We wzorcu każdy odpowiednik ma trzy warstwy: ciemny obrys 1–2px na całym obwodzie, wypełnienie z pionowym gradientem (ok. 25–30% różnicy jasności) i wąski półprzezroczysty highlight w górnej 30–40% wysokości, plus cień 1–2px pod spodem. Sam pasek jest też za cienki: ~6px na 4px wypełnienia nie mieści żadnego modelowania, potrzeba 10–12px.",
+          "note": "Krytyk dorzucił, że plakietki nadal miejscami nachodzą na siebie i na stworki, a odstępy między nazwą, plakietką i paskiem są nierówne — mimo że builder uznał ten problem za rozwiązany."
+        }
+      ]
     },
     {
       "name": "Animacje walki i efekty trafienia",
-      "status": "pending",
-      "note": "Pocisk to dwa prostokąty, trafienie to drgnięcie kamery i czerwony napis.",
+      "status": "running",
+      "note": "Runda 1 w budowie. Zrzuty poniżej pokazują stan sprzed tej rundy: pocisk to prostokąt z trójkątem, trafienie to drgnięcie kamery i czerwony napis.",
       "shots": [
         "04-cios-wrecz",
         "06-pocisk-w-locie",
@@ -57,7 +60,7 @@
     {
       "name": "HUD: nagłówek, kolejka, panel, przyciski",
       "status": "pending",
-      "note": "Panel to ściana tekstu z emoji na granatowym prostokącie.",
+      "note": "Jeszcze nietknięty. Panel to ściana tekstu z systemowymi emoji na granatowym prostokącie — obok nowej planszy widać rozjazd stylu najmocniej.",
       "shots": [
         "02-tura-gracza",
         "08-zwyciestwo"

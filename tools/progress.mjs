@@ -66,6 +66,8 @@ const main = async () => {
       wanted.add(`tools/shots-baseline/${s}.png`);
       wanted.add(`tools/shots/${s}.png`);
     }
+    // Obrazy ślepych porównań: dokładnie to, na co patrzył krytyk.
+    for (const r of p.rounds || []) if (r.blind) wanted.add(`tools/blind/${r.blind}.png`);
   }
   const refs = existsSync('tools/reference')
     ? (await readdir('tools/reference')).filter((f) => /\.(png|jpe?g)$/.test(f))
@@ -98,11 +100,22 @@ const main = async () => {
         .join('');
 
       const rounds = (p.rounds || [])
-        .map(
-          (r, i) => `<li><span class="rn">${i + 1}</span>
-            <div><p class="verdict ${r.win ? 'w' : 'l'}">${r.win ? 'krytyk wybrał nasze' : 'krytyk wybrał wzorzec'}</p>
-            <p class="gap">${esc(r.gap)}</p></div></li>`
-        )
+        .map((r, i) => {
+          const void_ = /UNIEWA/.test(r.note || '');
+          const label = void_
+            ? 'runda unieważniona'
+            : r.win
+              ? 'krytyk wybrał nasze'
+              : 'krytyk wybrał wzorzec';
+          const blind = r.blind && imgs[`tools/blind/${r.blind}.png`];
+          return `<li><span class="rn ${void_ ? 'v' : r.win ? 'w' : 'l'}">${i + 1}</span>
+            <div class="rbody">
+              <p class="verdict ${void_ ? 'v' : r.win ? 'w' : 'l'}">${label}</p>
+              <blockquote>${esc(r.gap)}</blockquote>
+              ${r.note ? `<p class="gap">${esc(r.note)}</p>` : ''}
+              ${blind ? `<figure class="blind"><img src="${blind}" alt="ślepe porównanie"><figcaption>to widział krytyk — bez etykiet, kolejność losowa</figcaption></figure>` : ''}
+            </div></li>`;
+        })
         .join('');
 
       return `<article class="piece">
@@ -172,10 +185,21 @@ const main = async () => {
     color: var(--ink); font-size: 13px; font-weight: bold; display: grid; place-items: center;
     font-variant-numeric: tabular-nums;
   }
+  .rbody { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
   .verdict { margin: 0; font-size: 14px; font-weight: bold; }
   .verdict.w { color: var(--green); }
   .verdict.l { color: var(--coral); }
-  .gap { margin: 2px 0 0; font-size: 14px; color: var(--soft); }
+  .verdict.v { color: var(--gold); }
+  .rn.w { background: color-mix(in srgb, var(--green) 22%, transparent); color: var(--green); }
+  .rn.l { background: color-mix(in srgb, var(--coral) 20%, transparent); color: var(--coral); }
+  .rn.v { background: color-mix(in srgb, var(--gold) 24%, transparent); color: var(--gold); }
+  blockquote {
+    margin: 0; padding: 8px 0 8px 14px; border-left: 3px solid var(--edge);
+    font-size: 14px; color: var(--ink); font-style: italic;
+  }
+  .gap { margin: 0; font-size: 14px; color: var(--soft); }
+  .blind { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+  .blind img { width: 100%; height: auto; border-radius: 9px; border: 1px solid var(--edge); }
   .pair, .refs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 0; }
   .frame, .ref { margin: 0; display: flex; flex-direction: column; gap: 6px; }
   .frame img, .ref img {
