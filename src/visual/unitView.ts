@@ -605,16 +605,25 @@ function drawStatCapsule(g: Phaser.GameObjects.Graphics, ratio: number, side: Si
   g.fillStyle(shift(fill, C.shadow, 0.42), 1);
   pill({ x: x - ew, y: y - ew, w: BAR_W + ew * 2, h: h + ew * 2 });
 
-  // Koryto: ciemny ton wypełnienia, żeby pusta część czytała się jako brak
-  // TEGO życia, a nie jako neutralna dziura.
+  // Koryto: JASNY ton wypełnienia, nie ciemny.
+  //
+  // Przez kilka rund koryto było prawie czarne i ciążyło bardziej niż
+  // cokolwiek we wzorcu. Właściwym punktem odniesienia dla paska tej
+  // wielkości nie jest tabela statystyk z karty trenera (wiersze 30 px,
+  // przyciski 55 px), tylko pasek postępu ze świata gry, który ma niemal
+  // dokładnie naszą wysokość — i ten jest płaski, w jasnym korycie
+  // z cienkim obrysem. Patrz tools/reference/pasek-maly.png.
+  //
+  // Kontrast wobec trawy niesie ciemny obrys rysowany wyżej, więc jasne
+  // koryto nie gubi paska na jasnym tle.
   const trough: Seg = { x, y, w: BAR_W, h, rl: r, rr: r };
-  g.fillStyle(shift(fill, C.shadow, 0.78), 1);
+  g.fillStyle(shift(fill, C.white, 0.66), 1);
   segRect(g, trough);
-  // Cień wewnętrzny: wąski ciemny łuk tuż pod górną krawędzią. To on daje
-  // wrażenie wgłębienia — bez niego koryto jest płaską ciemną plamą.
-  g.fillStyle(C.shadow, 0.5);
+  // Delikatne wgłębienie pod górną krawędzią. Słabsze niż przy ciemnym
+  // korycie — na jasnym tle wystarczy ślad, mocniejszy robi brudną smugę.
+  g.fillStyle(C.shadow, 0.16);
   pill({ x: x + 1, y: y + 0.8, w: BAR_W - 2, h: h * 0.34 });
-  segGradient(g, trough, 0, 0.25);
+  segGradient(g, trough, 0, 0.12);
 
   // Wnętrze koryta — pole, po którym biegnie wypełnienie. Trzymamy je w jednym
   // miejscu, żeby podziałka i wypełnienie liczyły się z tej samej geometrii.
@@ -627,10 +636,11 @@ function drawStatCapsule(g: Phaser.GameObjects.Graphics, ratio: number, side: Si
   // długości. Kreski leżą POD wypełnieniem, więc widać wyłącznie te w pustej
   // części — czyli dokładnie tyle, ile życia brakuje. Przy pełnym pasku znikają
   // i nie zaśmiecają obrazu.
-  // Jaśniejsze od koryta, nie ciemniejsze: koryto jest już prawie czarne, więc
-  // ciemna kreska po prostu w nim znika.
+  // Ciemniejsze od koryta, odkąd koryto jest jasne — biała kreska na jasnym
+  // tle znikała. Kreska w połowie mocniejsza, bo połowa życia to próg,
+  // który gracz sprawdza najczęściej.
   for (let i = 1; i <= 3; i++) {
-    g.fillStyle(C.white, i === 2 ? 0.3 : 0.18);
+    g.fillStyle(C.shadow, i === 2 ? 0.3 : 0.17);
     g.fillRect(ix + iw * (i / 4) - 0.5, y + 2.4, 1, h - 4.8);
   }
 
