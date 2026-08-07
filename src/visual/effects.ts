@@ -706,35 +706,54 @@ export function launchProjectile(
   // dostaje własny rozmiar i rozmycie — bliskie ostre, dalekie w pył — czyli
   // to samo zróżnicowanie, którego krytyk zażądał od iskier.
   const bright = tintTowardsWhite(o.color, 0.3);
+  const hot = tintTowardsWhite(o.color, 0.65);
+  const cool = warmEdge(o.color);
+  const mask = boardMask(scene);
   const trail = scene.time.addEvent({
-    delay: 12,
+    delay: 9,
     loop: true,
     callback: () => {
       if (!shot.active) return;
-      const sharp = Math.random() < 0.65;
-      // Ślad musi być czytelny z drugiego końca planszy, więc drobiny są
-      // wyraźnie większe od iskier trafienia — te lecą gromadą, te pojedynczo.
-      const r = Phaser.Math.FloatBetween(2.5, 6) * (o.broken ? 0.6 : 1);
-      const puff = scene.add
-        .image(
-          shot.x + Phaser.Math.FloatBetween(-4, 4),
-          shot.y + Phaser.Math.FloatBetween(-4, 4),
-          sharp ? FX.spark : FX.mote
-        )
-        .setDisplaySize(r * (sharp ? 6 : 9), r * (sharp ? 6 : 9))
-        .setTint(Phaser.Math.RND.pick([bright, bright, o.color, C.goldLight]))
-        .setBlendMode(sharp ? Phaser.BlendModes.ADD : Phaser.BlendModes.SCREEN)
-        .setAlpha(Phaser.Math.FloatBetween(0.6, 1));
-      layer.add(puff);
-      scene.tweens.add({
-        targets: puff,
-        displayWidth: 1,
-        displayHeight: 1,
-        alpha: 0,
-        duration: o.broken ? 220 : 340,
-        ease: 'Quad.easeOut',
-        onComplete: () => puff.destroy(),
-      });
+      // WARKOCZ, nie poświata. Okrągłe drobiny sypane wzdłuż toru dawały
+      // rozmytą kiełbaskę światła — oko nie widziało kierunku ani prędkości.
+      // Każda drobina jest teraz KRESKĄ rozciągniętą wzdłuż lotu i odsuniętą
+      // w bok o kilka pikseli, więc ślad splata się z kilku pasm i czyta się
+      // jako pęd, a nie jako mgła.
+      for (let i = 0; i < 2; i++) {
+        const sharp = Math.random() < 0.7;
+        const r = Phaser.Math.FloatBetween(2, 5) * (o.broken ? 0.6 : 1);
+        // Odsunięcie prostopadle do toru — stąd bierze się splot pasm.
+        const off = Phaser.Math.FloatBetween(-5, 5);
+        const px = shot.x + Math.cos(angle + Math.PI / 2) * off;
+        const py = shot.y + Math.sin(angle + Math.PI / 2) * off;
+        // Rdzeń warkocza jasny i prawie biały, pasma zewnętrzne cieplejsze —
+        // ta sama temperatura co w łunie trafienia, tylko rozciągnięta w linię.
+        const near = Math.abs(off) < 2;
+        const puff = scene.add
+          .image(px, py, sharp ? FX.spark : FX.mote)
+          // Kreska: długa wzdłuż lotu, wąska w poprzek.
+          .setDisplaySize(r * (sharp ? 14 : 18), r * (sharp ? 3.4 : 5))
+          .setRotation(angle)
+          .setTint(near ? hot : Phaser.Math.RND.pick([bright, o.color, cool]))
+          .setBlendMode(sharp ? Phaser.BlendModes.ADD : Phaser.BlendModes.SCREEN)
+          .setAlpha(near ? 1 : Phaser.Math.FloatBetween(0.45, 0.85));
+        puff.setMask(mask);
+        layer.add(puff);
+        scene.tweens.add({
+          targets: puff,
+          // Kreska kurczy się głównie na długość — ogon warkocza się zwęża
+          // i cofa, zamiast po prostu blaknąć w miejscu.
+          displayWidth: r * 2,
+          displayHeight: 1,
+          alpha: 0,
+          duration: o.broken ? 200 : 300,
+          ease: 'Quad.easeOut',
+          onComplete: () => {
+            puff.clearMask();
+            puff.destroy();
+          },
+        });
+      }
     },
   });
 
