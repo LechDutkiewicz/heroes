@@ -77,7 +77,7 @@ const main = async () => {
   await page.waitForTimeout(300);
   await page.screenshot({
     path: `${OUT}/12-drabina-hp.png`,
-    clip: { x: b.x + 40, y: b.y + 90, width: 300, height: 260 },
+    clip: { x: b.x + 40, y: b.y + 80, width: 720, height: 460 },
   });
   console.log(`  → ${OUT}/12-drabina-hp.png`);
 
@@ -91,7 +91,8 @@ const main = async () => {
   await page.waitForTimeout(200);
   await page.screenshot({
     path: `${OUT}/zoom-pasek.png`,
-    clip: { x: b.x + 5 * 62, y: b.y + 5 * 116, width: 480, height: 200 },
+    fullPage: true,
+    clip: { x: b.x + 5 * 55, y: b.y + 5 * 195, width: 620, height: 700 },
   });
   console.log(`  → ${OUT}/zoom-pasek.png`);
 

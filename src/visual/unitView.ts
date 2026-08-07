@@ -627,8 +627,10 @@ function drawStatCapsule(g: Phaser.GameObjects.Graphics, ratio: number, side: Si
   // długości. Kreski leżą POD wypełnieniem, więc widać wyłącznie te w pustej
   // części — czyli dokładnie tyle, ile życia brakuje. Przy pełnym pasku znikają
   // i nie zaśmiecają obrazu.
+  // Jaśniejsze od koryta, nie ciemniejsze: koryto jest już prawie czarne, więc
+  // ciemna kreska po prostu w nim znika.
   for (let i = 1; i <= 3; i++) {
-    g.fillStyle(C.shadow, i === 2 ? 0.5 : 0.32);
+    g.fillStyle(C.white, i === 2 ? 0.3 : 0.18);
     g.fillRect(ix + iw * (i / 4) - 0.5, y + 2.4, 1, h - 4.8);
   }
 
