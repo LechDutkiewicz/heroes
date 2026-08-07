@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-07 16:51",
+  "updated": "2026-08-07 17:57",
   "pieces": [
     {
       "name": "Plansza: siatka, teren, rama",
@@ -68,9 +68,9 @@
     {
       "name": "Animacje walki i efekty trafienia",
       "status": "running",
-      "note": "Runda 2 w toku. Rozbłysk, iskry z grawitacją i ikony w napisach weszły, ale światło jest białą naklejką zamiast barwnej poświaty w scenie.",
+      "note": "Runda 3 w kolejce. Rozbłysk wreszcie realnie zalewa pole — w rundzie 1 w ogóle się nie renderował. Zostało: światło jest białe, bez temperatury.",
       "shots": [
-        "05-moment-trafienia",
+        "04b-rozblysk",
         "06-pocisk-w-locie",
         "07-smierc-oddzialu"
       ],
@@ -80,18 +80,31 @@
           "blind": "animacje-r1",
           "gap": "Wzorzec ma światło o realnej barwie i temperaturze, z warstwą smug i iskrami o zróżnicowanym rozmiarze i rozmyciu — z przodu ostre, w tle zdmuchnięte w pył. Światło zalewa scenę i wchodzi w postać. U nas rozbłysk to jedna biała plamka ~30 px z paroma identycznymi kreskami, bez poświaty, bez barwy, bez wpływu na resztę planszy — naklejka. Dodaj radialny gradient 200-250 px w barwie żywiołu, gasnący do zera, rozjaśniający sąsiednie pola, i rozrzuć 30-50 iskier o losowym promieniu 1-4 px.",
           "note": "Krytyk odnotował też, że napisy nachodzą na siebie i na plakietki — potwierdzam z własnego oglądu. Builder sam znalazł wcześniej błąd w harnessie: zrzuty odliczały milisekundy zegara, a sam screenshot zjada kilkaset ms, więc przy spowolnieniu 0.12 fotografowały klatkę po efekcie. Teraz czekają na zdarzenie i pauzują scenę."
+        },
+        {
+          "win": false,
+          "blind": "animacje-r2",
+          "gap": "Wzorzec ma światło o wyraźnej temperaturze — złoto-bursztynowy rdzeń przechodzący w cieplejszy pomarańcz na brzegach — i to światło obrysowuje postać, kładzie się na jej barwie. U nas rozbłysk to biała, przepalona plama bez rdzenia i bez barwy. Rozwarstw go: mały rdzeń ~15% średnicy w bieli, wokół barwna poświata w kolorze żywiołu sięgająca 2-3x dalej z wykładniczym spadkiem, 20-40 iskier w trzech rozmiarach i globalne rozjaśnienie planszy o 10-15% na 150-200 ms.",
+          "note": "Runda 2 przyniosła najważniejsze ustalenie całej pętli: w rundzie 1 rozbłysk W OGÓLE się nie renderował widocznie. Trzy błędy naraz — tekstura łuny z alfą 0,6 rozciągniętą na 250 px, iskry rysowane w rozmiarze 2r (jasny rdzeń schodził poniżej piksela) i barwa w trybie ADD bielejąca na jasnej łące. Widać było wyłącznie białe rozbielenie sprite'a. Werdykt rundy 1 był trafny co do skutku, ale gdyby builder poszedł ślepo za literą zalecenia, powiększyłby coś, czego i tak nie widać."
         }
       ]
     },
     {
       "name": "HUD: nagłówek, kolejka, panel, przyciski",
       "status": "running",
-      "note": "Runda 1 w budowie. Plansza i oddziały są już w jasnej bajkowej palecie, HUD został w starej ciemnej — obok nich rozjazd stylu widać najmocniej.",
+      "note": "Runda 2 w kolejce. Panel ma już tabelę z wyrównanymi wartościami i kapsułkowe przyciski, ale tinty wierszy to tęcza, a ikony nie tworzą jednego systemu.",
       "shots": [
         "02-tura-gracza",
         "08-zwyciestwo"
       ],
-      "rounds": []
+      "rounds": [
+        {
+          "win": false,
+          "blind": "hud-r1b",
+          "gap": "Pasma są poprawnie zaokrąglone, ale ich tinty to tęcza — zieleń, krem, błękit, róż, żółć — dobrana pod treść, nie pod jeden filtr, przez co panel rozpada się wizualnie. Kolumny się nie domykają: lewa ma pięć wierszy, prawa cztery, a wiersz Umiejętność łamie siatkę na całą szerokość. Ikony nie są jednym kompletem — różny styl i różna waga rysunku.",
+          "note": "Pierwsze podejście unieważniłem: krytyk zgłosił obcięty tekst i prawą kolumnę poza kadrem jako błędy układu, a to obcięło je moje okno porównania o stałej szerokości 1600 px. Naprawiłem narzędzie i powtórzyłem — werdykt się utrzymał. Krytyk dwa razy nazwał nasze ikony systemowymi emoji; sprawdziłem powiększeniem i myli się co do faktu, bo są rysowane w kodzie, ale ma rację co do wrażenia. Są pełnobarwnymi naklejkami w rejestrze emoji, mają trzy różne wagi rysunku, ikona ruchu jest w tym rozmiarze nieczytelna, a miecz powtarza się w trzech wierszach o różnym znaczeniu."
+        }
+      ]
     }
   ]
 }

@@ -65,13 +65,22 @@ const PLATE_H = 9;
  * skrajnej kolumnie nigdy nie wychodzi poza ramę planszy.
  */
 const CAP_Y = 20;
-/** Wysokość paska; promień zaokrąglenia to zawsze połowa tej liczby. */
-const BAR_H = 14;
 /**
- * Szerokość paska. Zeszła z 38+22 do 30, bo przy poprzedniej oprawa była
- * niemal tak szeroka jak sylwetka i to ona ciągnęła wzrok, a nie stworek.
+ * Wysokość KORYTA; jego promień to zawsze połowa tej liczby, więc koryto jest
+ * pigułką, nie prostokątem ze zmiękczonymi rogami.
+ *
+ * Zeszła z 14 do 11, bo pasek życia jest czytany przez PROPORCJĘ długości do
+ * wysokości. Przy 30x14 stosunek wynosił nieco ponad 2:1 i już przy połowie
+ * życia wypełnienie było niemal kwadratowe, a po zaokrągleniu — krążkiem.
  */
-const BAR_W = 30;
+const BAR_H = 11;
+/**
+ * Szerokość koryta. Podniesiona z 30 do 42: dopiero przy ~4:1 ubytek długości
+ * jest mierzalny okiem na całym zakresie. Razem z medalionem daje 54 px, czyli
+ * mniej niż dwie trzecie szerokości hexa (~80) — nadal węższe od sylwetki
+ * i bez szans na wejście w sąsiada.
+ */
+const BAR_W = 42;
 /**
  * Liczebność w OKRĄGŁEJ plakietce NACHODZĄCEJ na prawy koniec paska, zamiast
  * doklejonej do niego drugiej strefy. Dwa przylegające segmenty ze wspólną
@@ -593,7 +602,7 @@ function drawStatCapsule(g: Phaser.GameObjects.Graphics, ratio: number, side: Si
   const ew = 1.5;
   g.fillStyle(C.shadow, 0.5);
   pill({ x: x - ew, y: y - ew + 2, w: BAR_W + ew * 2, h: h + ew * 2 });
-  g.fillStyle(shift(fill, C.shadow, 0.55), 1);
+  g.fillStyle(shift(fill, C.shadow, 0.42), 1);
   pill({ x: x - ew, y: y - ew, w: BAR_W + ew * 2, h: h + ew * 2 });
 
   // Koryto: ciemny ton wypełnienia, żeby pusta część czytała się jako brak
@@ -607,21 +616,55 @@ function drawStatCapsule(g: Phaser.GameObjects.Graphics, ratio: number, side: Si
   pill({ x: x + 1, y: y + 0.8, w: BAR_W - 2, h: h * 0.34 });
   segGradient(g, trough, 0, 0.25);
 
+  // Wnętrze koryta — pole, po którym biegnie wypełnienie. Trzymamy je w jednym
+  // miejscu, żeby podziałka i wypełnienie liczyły się z tej samej geometrii.
+  const ih = h - 3.2;
+  const ix = x + 1.6;
+  const iw = BAR_W - 3.2;
+
+  // PODZIAŁKA. Trzy cienkie kreski na 1/4, 1/2 i 3/4 długości koryta. Bez nich
+  // krótkie wypełnienie mówi tylko „mało", bo oko nie ma z czym porównać jego
+  // długości. Kreski leżą POD wypełnieniem, więc widać wyłącznie te w pustej
+  // części — czyli dokładnie tyle, ile życia brakuje. Przy pełnym pasku znikają
+  // i nie zaśmiecają obrazu.
+  for (let i = 1; i <= 3; i++) {
+    g.fillStyle(C.shadow, i === 2 ? 0.5 : 0.32);
+    g.fillRect(ix + iw * (i / 4) - 0.5, y + 2.4, 1, h - 4.8);
+  }
+
   if (ratio > 0) {
-    const ih = h - 3.4;
-    const iw = BAR_W - 3.4;
-    // Minimalna długość, żeby ostatni punkt życia był widoczny jako kropka.
-    const w = Math.max(ih, iw * ratio);
-    const seg: Seg = { x: x + 1.7, y: y + 1.7, w, h: ih, rl: ih / 2, rr: ih / 2 };
+    // Lewy koniec zaokrąglony do pełna, PRAWY prawie płaski (1.4 px).
+    //
+    // To jest sedno naprawy. Przy dwóch zaokrąglonych końcach, gdy szerokość
+    // wypełnienia zbliżała się do jego wysokości, oba łuki się spotykały
+    // i pigułka degenerowała się w KÓŁKO — kształt przestawał nieść informację
+    // o długości, czyli jedyną, po którą się na pasek patrzy. Płaska prawa
+    // krawędź jest granicą stanu: nawet dwupikselowy kikut czyta się jako
+    // „słupek zaczyna się z lewej i kończy TU", a nie jako kropka.
+    const w = Math.max(3, iw * ratio);
+    const seg: Seg = { x: ix, y: y + 1.6, w, h: ih, rl: Math.min(ih / 2, w / 2), rr: 1.4 };
     g.fillStyle(fill, 1);
     segRect(g, seg);
-    // Góra jaśniejsza o ~20%, dół ciemniejszy — bez tego wypełnienie nie ma
-    // ciała i czyta się jak płaska plama farby.
-    segGradient(g, seg, 0.42, 0.4);
-    // Połysk na górnych ~35% wysokości, węższy od pigułki, żeby czytał się
-    // jako odbicie światła, a nie jako drugi pasek w środku.
-    g.fillStyle(C.white, 0.28);
-    pill({ x: seg.x + 1.2, y: seg.y + 0.9, w: Math.max(1, w - 2.4), h: ih * 0.35 });
+    // Ciało: góra jaśniejsza o ~25%, dół ciemniejszy — bez tego wypełnienie
+    // jest płaską plamą farby.
+    segGradient(g, seg, 0.44, 0.4);
+    // Pasmo połysku na górnej jednej trzeciej wysokości, wtopione w prawą
+    // krawędź (płaskie z prawej, jak samo wypełnienie).
+    if (w > 3.6) {
+      g.fillStyle(C.white, 0.3);
+      segRect(g, {
+        x: seg.x + 1.1,
+        y: seg.y + 0.8,
+        w: w - 1.9,
+        h: ih * 0.33,
+        rl: Math.min(ih * 0.165, (w - 1.9) / 2),
+        rr: 0.8,
+      });
+    }
+    // Jasna krecha na samym czole wypełnienia. Oddziela je od ciemnego koryta
+    // twardym kantem, więc koniec słupka widać nawet na tle trawy.
+    g.fillStyle(shift(fill, C.white, 0.55), 1);
+    g.fillRect(seg.x + w - 1.4, seg.y + 0.6, 1.4, ih - 1.2);
   }
 
   // --- medalion liczebności, położony NA prawym końcu paska ---

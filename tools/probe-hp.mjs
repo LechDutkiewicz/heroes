@@ -58,6 +58,43 @@ const main = async () => {
   });
   console.log(`  → ${OUT}/11-oddzialy-ranne.png`);
 
+  // DRABINA. Te same sześć oddziałów ustawione na wartościach, przy których
+  // pasek najłatwiej się psuje: pełnia, 60%, 30%, 10% i JEDEN punkt życia.
+  // Bez tego kadru nie da się sprawdzić, czy krótkie wypełnienie nadal jest
+  // słupkiem — zrzut wyżej nigdy nie schodzi tak nisko.
+  await page.evaluate(() => {
+    const scene = window.__game.scene.getScene('battle');
+    const ulamki = [1, 0.6, 0.3, 0.1, -1, 0.45]; // -1 = dokładnie jeden punkt
+    scene.units.forEach((u, i) => {
+      const f = ulamki[i % ulamki.length];
+      const pelne = u.def.count * u.def.hp;
+      const zostalo = f < 0 ? 1 : Math.max(1, Math.round(pelne * f));
+      u.count = Math.max(1, Math.ceil(zostalo / u.def.hp));
+      u.topHp = zostalo - (u.count - 1) * u.def.hp || u.def.hp;
+      scene.refreshStack(u);
+    });
+  });
+  await page.waitForTimeout(300);
+  await page.screenshot({
+    path: `${OUT}/12-drabina-hp.png`,
+    clip: { x: b.x + 40, y: b.y + 90, width: 300, height: 260 },
+  });
+  console.log(`  → ${OUT}/12-drabina-hp.png`);
+
+  // Powiększenie pięciokrotne pojedynczego paska — degeneracja kształtu jest
+  // widoczna dopiero w tej skali.
+  await page.evaluate(() => {
+    const c = document.querySelector('canvas');
+    c.style.transformOrigin = '0 0';
+    c.style.transform = 'scale(5)';
+  });
+  await page.waitForTimeout(200);
+  await page.screenshot({
+    path: `${OUT}/zoom-pasek.png`,
+    clip: { x: b.x + 5 * 62, y: b.y + 5 * 116, width: 480, height: 200 },
+  });
+  console.log(`  → ${OUT}/zoom-pasek.png`);
+
   await browser.close();
 };
 
