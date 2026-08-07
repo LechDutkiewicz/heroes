@@ -80,7 +80,15 @@ const main = async () => {
   const browser = await chromium.launch({
     executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
   });
-  const page = await browser.newPage({ viewport: { width: 1600, height: 1200 } });
+  // Okno dopasowujemy do kadrów, a nie kadry do okna. Stała szerokość 1600
+  // obcinała szersze wycinki po prawej, a krytyk zgłaszał potem „obcięty tekst"
+  // i „kolumna poza kadrem" jako błędy gry — których w grze nie było.
+  const GUTTER = 36; // marginesy kolumny
+  const wide = (c, fallback) => (c ? c[2] : fallback) + GUTTER;
+  const tall = (c, fallback) => (c ? c[3] : fallback) + 90;
+  const vw = Math.min(3000, wide(oursCrop, 900) + wide(refCrop, 900));
+  const vh = Math.min(2400, Math.max(tall(oursCrop, 700), tall(refCrop, 700)));
+  const page = await browser.newPage({ viewport: { width: vw, height: vh } });
   await page.setContent(html);
   await page.waitForTimeout(500);
   await page.locator('.row').screenshot({ path: `${OUT}/${name}.png` });
