@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-07 11:58",
+  "updated": "2026-08-07 12:05",
   "pieces": [
     {
       "name": "Plansza: siatka, teren, rama",
@@ -33,8 +33,9 @@
     {
       "name": "Oddziały: tabliczka, pasek HP, ikony",
       "status": "running",
-      "note": "Runda 3 w toku. Pasek HP dostał ciało, ale oprawa zjadła treść: cztery plakietki na oddział, wszystkie o równej wadze, razem większe od stworka.",
+      "note": "Runda 4 w toku. Cztery plakietki zeszły do dwóch, stworek odzyskał sylwetkę — ale kapsułka nadal czyta się jak prostokąt i jest za szeroka.",
       "shots": [
+        "11-oddzialy-ranne",
         "09-zblizenie-oddzialu"
       ],
       "rounds": [
@@ -49,6 +50,12 @@
           "blind": "oddzialy-r2",
           "gap": "Pasek zdrowia to goły zielony prostokąt o zaokrąglonych rogach — jedno płaskie wypełnienie, i w dodatku oddzielony od liczby, która siedzi w osobnym kółku obok. Trzy oddzielne kapsułki na jedną jednostkę zajmują więcej pola niż sam stworek i nachodzą na siebie, podczas gdy wzorzec trzyma jeden pas = jedna informacja. Wpisz liczbę w prawy koniec tej samej kapsułki zamiast osobnego bąbla — to od razu usuwa jeden z trzech konkurujących elementów.",
           "note": "Werdykt sprawdzony przeze mnie na obrazie, bo brzmiał jak zaprzeczenie tego, co builder zbudował. Koryto i gradient są w kodzie, ale przy realnej skali paska nie budują ciała. Krytyk ma rację. Sylwetka stworka zeszła do 42 px i jest najmniejszym elementem na własnym polu — odwrócona hierarchia. To runda do przeprojektowania, nie do polerowania."
+        },
+        {
+          "win": false,
+          "blind": "oddzialy-r3",
+          "gap": "Plakietka i pasek to płaskie prostokąty z ledwie zaokrąglonymi rogami, koryto jest gołym ciemnym prostokątem bez wewnętrznego cienia, a liczba siedzi w doklejonym z boku kaflu zamiast w jednym korpusie. Oprawa waży więcej niż stworek, który opisuje — pasek ma niemal szerokość sylwetki. Promień ma być równy połowie wysokości, a cały pasek zejść do 60-70% obecnej szerokości.",
+          "note": "Ciekawa różnica między kodem a odbiorem: builder faktycznie scalił życie i liczebność w jeden kształt z jednym obrysem, ale ciemna szczelina między strefami jest na tyle wyraźna, że wizualnie rozcina kapsułkę z powrotem na dwa kafle. Kod mówi „jeden kształt\", oko widzi dwa. Kierunek na rundę 4: liczba w okrągłej plakietce nachodzącej na koniec paska — nakładka czyta się jako jeden obiekt z dodatkiem, przyleganie jako dwa obiekty."
         }
       ]
     },
