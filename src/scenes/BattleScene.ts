@@ -365,28 +365,31 @@ export class BattleScene extends Phaser.Scene {
 
   /** Górna belka: tytuł, wstęgi zamków, zdanie o turze i pasek kolejki. */
   private drawTopBar() {
-    drawTitle(this, BOARD_X, 2, 'POKÉMON HEROES', 26);
+    // Górna belka ma tylko 100 pikseli do ramy planszy, a rama wystaje jeszcze
+    // kilka pikseli ponad BOARD_Y. Stąd trzy ciasno upakowane wiersze:
+    // tytuł, wstęgi zamków, zdanie o turze.
+    drawTitle(this, BOARD_X, 0, 'POKÉMON HEROES', 24);
 
     // Zamki jako wstęgi w barwach stron — ta sama barwa, którą oddziały noszą
     // na planszy, więc nie trzeba czytać nazw, żeby wiedzieć, kto jest kto.
     let x = BOARD_X;
-    const player = makeChip(this, x, 62, this.playerFaction.name, {
+    const player = makeChip(this, x, 46, this.playerFaction.name, {
       icon: ICON.banner,
       color: C.ally,
       edge: C.allyDeep,
       bold: true,
     });
     x += player.width + 8;
-    this.add.text(x, 62, 'kontra', body(12, H.panelEdge)).setOrigin(0, 0.5);
+    this.add.text(x, 46, 'kontra', body(12, H.panelEdge)).setOrigin(0, 0.5);
     x += 52;
-    const enemy = makeChip(this, x, 62, this.enemyFaction.name, {
+    const enemy = makeChip(this, x, 46, this.enemyFaction.name, {
       icon: ICON.banner,
       color: C.foe,
       edge: C.foeDeep,
       bold: true,
     });
     x += enemy.width + 10;
-    makeChip(this, x, 62, this.terrain.label, {
+    makeChip(this, x, 46, this.terrain.label, {
       icon: ICON.leaf,
       color: mix(C.panelDeep, C.skyTop, 0.3),
       edge: C.shadow,
@@ -394,7 +397,7 @@ export class BattleScene extends Phaser.Scene {
     });
 
     // Zdanie o turze z konturem, bo leży wprost na tle, nie na panelu.
-    this.turnText = this.add.text(BOARD_X, 88, '', display(14)).setOrigin(0, 0.5);
+    this.turnText = this.add.text(BOARD_X, 74, '', display(14)).setOrigin(0, 0.5);
 
     this.queue = createTurnQueue(this, BOARD_X + BOARD_W, 24);
   }
@@ -463,7 +466,8 @@ export class BattleScene extends Phaser.Scene {
       FORECAST_Y,
       CONTENT_W,
       FORECAST_H,
-      ICON.sword
+      ICON.sword,
+      'Najedź kursorem na wroga, żeby zobaczyć prognozę obrażeń'
     );
   }
 
@@ -938,7 +942,10 @@ export class BattleScene extends Phaser.Scene {
     const { value, base, typeMult, penalty, pinned, tooFar, guarded, kills } =
       this.damageOf(attacker, target);
     // Zaczynamy od liczebności razy atak — stąd bierze się siła oddziału.
-    const parts = [`Atak ${attacker.count} × ${attacker.def.atk} = ${base}`];
+    // Bez sumy pośredniej: przy braku mnożników wychodziło „= 15 = 15", co
+    // wyglądało na błąd rachunku.
+    void base;
+    const parts = [`Atak ${attacker.count} × ${attacker.def.atk}`];
     if (typeMult !== 1) parts.push(`× ${typeMult} (${typeMult > 1 ? 'przewaga typu' : 'słaby typ'})`);
     if (pinned) parts.push('× 0.5 (zablokowany strzelec bije wręcz)');
     else if (tooFar) parts.push('× 0.5 (za daleko — złamana strzała)');

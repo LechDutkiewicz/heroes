@@ -27,12 +27,14 @@ const main = async () => {
     executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
   });
   const page = await browser.newPage({ viewport: { width: 1000, height: 900 }, deviceScaleFactor: 2 });
-  page.on('pageerror', (e) => console.error('BŁĄD STRONY:', e.message));
+  page.on('pageerror', (e) => console.error('BŁĄD STRONY:', e.message, e.stack));
+  page.on('console', (m) => console.log('KONSOLA:', m.type(), m.text()));
 
   for (const terrain of ['laka', 'snieg']) {
     await page.goto(`${BASE}/?seed=7&terrain=${terrain}`, { waitUntil: 'load' });
     await ready(page);
     await page.evaluate(() => {
+      try {
       const scene = window.__game.scene.getScene('battle');
       scene.time.timeScale = 0.12;
       scene.tweens.timeScale = 0.12;
@@ -47,6 +49,7 @@ const main = async () => {
         scene.resolveHit(a, d);
         window.__trafienie = 1;
       });
+      } catch (e) { console.log('WYJATEK', e && e.message); }
     });
     await page.waitForFunction(() => window.__trafienie === 1, null, { timeout: 30000 });
     // 0.05 * 1000 ms zegara = 50 ms sceny na krok.

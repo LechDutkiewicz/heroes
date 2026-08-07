@@ -440,7 +440,8 @@ export function createForecast(
   y: number,
   w: number,
   h: number,
-  iconKey: IconKey
+  iconKey: IconKey,
+  hint: string
 ): Forecast {
   const g = scene.add.graphics().setDepth(61);
   const mark = icon(scene, iconKey, x + 10 + (h - 8) / 2, y + h / 2, h - 8).setDepth(62);
@@ -448,38 +449,44 @@ export function createForecast(
     .text(x + 14 + (h - 8), y + h / 2, '', { ...body(14, H.white), fontStyle: 'bold' })
     .setOrigin(0, 0.5)
     .setDepth(62);
-  text.setShadow(0, 1, '#00000055', 2, false, true);
 
-  const parts: Phaser.GameObjects.GameObject[] = [g, mark, text];
-  const setShown = (v: boolean) => parts.forEach((p) => (p as Phaser.GameObjects.Image).setVisible(v));
-  setShown(false);
+  /** -1 = stan spoczynku, 0 = zwykły cios, 1 = cios wybijający cały oddział. */
+  let mode = -2;
 
-  let deadlyNow: boolean | null = null;
+  const paint = (next: number) => {
+    if (mode === next) return;
+    mode = next;
+    g.clear();
+    const fill = next === 1 ? C.foe : next === 0 ? C.gold : mix(C.panel, C.panelDeep, 0.42);
+    const edge = next === 1 ? C.foeDeep : next === 0 ? C.goldDeep : C.panelEdge;
+    plate(g, x, y, w, h, h / 2, fill, edge, {
+      light: next < 0 ? 0.14 : 0.36,
+      dark: next < 0 ? 0.14 : 0.3,
+      gloss: next < 0 ? 0.1 : 0.3,
+      drop: next < 0 ? 0 : 3,
+      edgeW: next < 0 ? 1.5 : 2,
+    });
+  };
+
+  const rest = () => {
+    // W spoczynku pasek nie znika, tylko gaśnie i podpowiada, skąd wziąć
+    // prognozę. Puste miejsce w panelu wyglądało jak niedokończony układ,
+    // a przy okazji nikt nie wiedział, że prognoza w ogóle istnieje.
+    paint(-1);
+    mark.setAlpha(0.45);
+    text.setText(hint).setColor(H.inkSoft).setAlpha(0.9).setShadow(0, 0, '#00000000', 0);
+  };
+
+  rest();
 
   return {
     show(value, deadly) {
-      if (deadlyNow !== deadly) {
-        deadlyNow = deadly;
-        g.clear();
-        plate(
-          g,
-          x,
-          y,
-          w,
-          h,
-          h / 2,
-          deadly ? C.foe : C.gold,
-          deadly ? C.foeDeep : C.goldDeep,
-          { light: 0.36, dark: 0.3, gloss: 0.3, drop: 3 }
-        );
-      }
-      text.setText(value).setColor(deadly ? H.white : H.ink);
+      paint(deadly ? 1 : 0);
+      mark.setAlpha(1);
+      text.setText(value).setAlpha(1).setColor(deadly ? H.white : H.ink);
       text.setShadow(0, 1, deadly ? '#00000066' : '#ffffff55', 2, false, true);
-      setShown(true);
     },
-    hide() {
-      setShown(false);
-    },
+    hide: rest,
   };
 }
 
