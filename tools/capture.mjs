@@ -137,19 +137,7 @@ const main = async () => {
   await page.waitForTimeout(400);
   await shot(page, '08-zwyciestwo');
 
-  // 8. Sama plansza, bez HUD-u. Kawałki są oceniane osobno, więc krytyk
-  // planszy nie powinien dostawać w kadrze panelu, którym zajmuje się kto inny.
-  await open(page, '&terrain=laka');
-  {
-    const b = await page.locator('canvas').boundingBox();
-    await page.screenshot({
-      path: `${OUT}/10-sama-plansza.png`,
-      clip: { x: b.x + 50, y: b.y + 88, width: 862, height: 532 },
-    });
-    console.log('  → 10-sama-plansza.png');
-  }
-
-  // 9. Zbliżenie na oddział — czytelność paska HP, liczebności i odznak.
+  // 8. Zbliżenie na oddział — czytelność paska HP, liczebności i odznak.
   await open(page, '&terrain=laka');
   const box = await page.locator('canvas').boundingBox();
   await page.screenshot({
@@ -157,6 +145,23 @@ const main = async () => {
     clip: { x: box.x + 40, y: box.y + 90, width: 300, height: 260 },
   });
   console.log('  → 09-zblizenie-oddzialu.png');
+
+  // 9. Sama plansza bez oddziałów — do oceny terenu, siatki i ramy w oderwaniu
+  //    od tego, co na niej stoi.
+  for (const terrain of ['laka', 'snieg']) {
+    await open(page, `&terrain=${terrain}`);
+    await inScene(page, (scene) => {
+      scene.units.forEach((u) => u.container.setVisible(false));
+      scene.clearHighlights();
+    });
+    await page.waitForTimeout(200);
+    const b = await page.locator('canvas').boundingBox();
+    await page.screenshot({
+      path: `${OUT}/10-sama-plansza${terrain === 'laka' ? '' : `-${terrain}`}.png`,
+      clip: { x: b.x + 48, y: b.y + 86, width: 866, height: 536 },
+    });
+    console.log(`  → 10-sama-plansza${terrain === 'laka' ? '' : `-${terrain}`}.png`);
+  }
 
   await browser.close();
   console.log(`\nGotowe. Zrzuty w ${OUT}/`);

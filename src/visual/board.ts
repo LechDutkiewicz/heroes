@@ -65,6 +65,99 @@ function mix(a: number, b: number, t: number) {
   return chan(16) | chan(8) | chan(0);
 }
 
+/**
+ * Jedno źródło światła dla całej planszy: chłodne niebo z góry, chłodny cień
+ * u dołu. Oba odcienie są zimne, także cień — dzięki temu ciepła łąka i zimny
+ * śnieg trafiają pod to samo światło i przestają być dwiema różnymi paletami.
+ * To jest ten „akcent porządkujący": błękit rządzi planszą, a złoto zostaje
+ * zarezerwowane wyłącznie na to, co gracz ma zaraz zrobić.
+ */
+const LIGHT = mix(C.white, C.skyTop, 0.35);
+const SHADE = mix(C.shadow, C.panelDeep, 0.4);
+
+/** Połowa szerokości hexa na wysokości dy od jego środka. */
+function hexHalfWidth(dy: number, r: number) {
+  const half = (Math.sqrt(3) * r) / 2;
+  const a = Math.abs(dy);
+  return a <= r / 2 ? half : (half * (r - a)) / (r / 2);
+}
+
+interface HexFill {
+  /** równomierna mgiełka na całym polu — to ona robi z hexa bryłę, nie dziurę */
+  veil?: number;
+  base?: number;
+  /** barwa i moc rozjaśnienia u góry pola */
+  light?: number;
+  lightAlpha?: number;
+  /** barwa i moc ściemnienia u dołu */
+  dark?: number;
+  darkAlpha?: number;
+  r?: number;
+}
+
+/**
+ * Wypełnienie hexa gradientem. Graphics nie umie gradientu na wielokącie, więc
+ * kroimy pole na poziome pasy i każdy dostaje własną alfę — u góry rozjaśnienie,
+ * u dołu ściemnienie, w połowie nic. Stąd bierze się kierunek światła: pole
+ * wygląda na wypukłe, a nie na płaską plamę.
+ */
+function gradientHex(g: Phaser.GameObjects.Graphics, cx: number, cy: number, o: HexFill) {
+  const r = o.r ?? HEX_R;
+
+  if (o.veil) {
+    g.fillStyle(o.base ?? LIGHT, o.veil);
+    g.fillPoints(hexPoints(cx, cy, r), true);
+  }
+
+  const steps = 14;
+  for (let i = 0; i < steps; i++) {
+    const t = (i + 0.5) / steps;
+    const up = t < 0.5;
+    const alpha = up
+      ? (o.lightAlpha ?? 0) * (1 - t * 2)
+      : (o.darkAlpha ?? 0) * (t - 0.5) * 2;
+    if (alpha <= 0.004) continue;
+
+    const y0 = -r + (2 * r * i) / steps;
+    // Pasy zachodzą na siebie o pół piksela, inaczej wygładzanie zostawia
+    // między nimi jasne szpary.
+    const y1 = -r + (2 * r * (i + 1)) / steps + 0.6;
+    const h0 = hexHalfWidth(y0, r);
+    const h1 = hexHalfWidth(y1, r);
+
+    g.fillStyle(up ? (o.light ?? LIGHT) : (o.dark ?? SHADE), alpha);
+    g.fillPoints(
+      [
+        new Phaser.Math.Vector2(cx - h0, cy + y0),
+        new Phaser.Math.Vector2(cx + h0, cy + y0),
+        new Phaser.Math.Vector2(cx + h1, cy + y1),
+        new Phaser.Math.Vector2(cx - h1, cy + y1),
+      ],
+      true
+    );
+  }
+}
+
+/**
+ * Fazka na krawędzi. Trzy górne boki dostają jasną nitkę, trzy dolne ciemną —
+ * ta sama sztuczka, którą wytłacza się kafle w grach z rzutem izometrycznym.
+ * Bez niej hex jest tylko obrysem, z nią ma grubość.
+ */
+function bevel(
+  g: Phaser.GameObjects.Graphics,
+  cx: number,
+  cy: number,
+  r: number,
+  lightAlpha: number,
+  darkAlpha: number
+) {
+  const p = hexPoints(cx, cy, r);
+  g.lineStyle(1.8, LIGHT, lightAlpha);
+  g.strokePoints([p[4], p[5], p[0], p[1]], false);
+  g.lineStyle(1.8, SHADE, darkAlpha);
+  g.strokePoints([p[1], p[2], p[3], p[4]], false);
+}
+
 // ---------- tło za planszą ----------
 
 /**
@@ -127,6 +220,25 @@ export function drawBackground(scene: Phaser.Scene) {
 
 // ---------- podłoże, siatka, rama ----------
 
+/**
+ * Maska w kształcie planszy — trzyma teren i warstwę detalu w zaokrąglonych
+ * rogach zamiast pozwalać im wyjść pod ramę. Wspólna, bo maski geometryczne
+ * można dzielić między obiektami, a każda kosztuje osobne przejście stencilem.
+ */
+const MASKS = new WeakMap<Phaser.Scene, Phaser.Display.Masks.GeometryMask>();
+
+export function boardMask(scene: Phaser.Scene) {
+  let mask = MASKS.get(scene);
+  if (!mask) {
+    const cut = scene.make.graphics({}, false);
+    cut.fillStyle(0xffffff, 1);
+    cut.fillRoundedRect(BOARD_X, BOARD_Y, BOARD_W, BOARD_H, BOARD_RADIUS);
+    mask = cut.createGeometryMask();
+    MASKS.set(scene, mask);
+  }
+  return mask;
+}
+
 /** Rysuje całą planszę: cień, teren, winietę, siatkę hexów i ramę. */
 export function drawBoard(scene: Phaser.Scene, terrainKey: string) {
   drawGroundShadow(scene);
@@ -166,16 +278,12 @@ function drawTerrain(scene: Phaser.Scene, terrainKey: string) {
 
   const img = scene.add.image(cx, cy, terrainKey).setDepth(Z.board);
   img.setScale(Math.max(BOARD_W / img.width, BOARD_H / img.height));
-
-  const cut = scene.make.graphics({}, false);
-  cut.fillStyle(0xffffff, 1);
-  cut.fillRoundedRect(BOARD_X, BOARD_Y, BOARD_W, BOARD_H, BOARD_RADIUS);
-  img.setMask(cut.createGeometryMask());
+  img.setMask(boardMask(scene));
 
   // Warstwa detalu: rozmyte plamy światła i cienia rozbijają gładź terenu,
   // która po przeskalowaniu robi się podejrzanie równa.
   const detail = scene.add.graphics().setDepth(Z.board + 0.1);
-  detail.setMask(cut.createGeometryMask());
+  detail.setMask(boardMask(scene));
   const rnd = new Phaser.Math.RandomDataGenerator([terrainKey]);
   for (let i = 0; i < 90; i++) {
     const x = BOARD_X + rnd.frac() * BOARD_W;
@@ -211,10 +319,14 @@ function drawVignette(scene: Phaser.Scene) {
 }
 
 /**
- * Siatka. Zamiast jednej białej linii 1px rysujemy hex trzema przejściami:
- * ciemny kontur przesunięty o półtora piksela w dół robi cień pod krawędzią,
- * szeroka jasna linia daje poświatę, cienka — czysty brzeg. Z tego bierze się
- * wrażenie, że pola są wytłoczone w podłożu.
+ * Siatka. Każde pole jest wypełnionym kaflem, nie obrysem: mgiełka na całej
+ * powierzchni, gradient rozjaśniający górę i przyciemniający dół, ciemny obrys
+ * i fazka. Obrys jest CIEMNIEJSZY od wypełnienia — jasna kreska na jasnym polu
+ * czytała się jak drut naciągnięty nad planszą.
+ *
+ * Progi alfy są dobrane tak, żeby kafel był widoczny na jasnej łące i na
+ * śniegu, a teren pod nim nadal się przebijał: rozjaśnienie u góry to ok. 15%,
+ * ściemnienie u dołu ok. 12%.
  */
 function drawGrid(scene: Phaser.Scene) {
   const g = scene.add.graphics().setDepth(Z.grid);
@@ -222,24 +334,19 @@ function drawGrid(scene: Phaser.Scene) {
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
       const { x, y } = cellToXY(col, row);
+      const zone = col === 0 ? C.ally : col === COLS - 1 ? C.foe : null;
 
-      // Strefy startowe obu armii — czytelne od pierwszej sekundy, kto skąd wchodzi.
-      if (col === 0 || col === COLS - 1) {
-        const side = col === 0 ? C.ally : C.foe;
-        g.fillStyle(side, 0.14);
-        g.fillPoints(hexPoints(x, y, HEX_R - 2), true);
-        g.lineStyle(12, side, 0.08);
-        g.strokePoints(hexPoints(x, y, HEX_R - 8), true);
-      }
+      gradientHex(g, x, y, {
+        veil: zone ? 0.16 : 0.07,
+        base: zone ?? LIGHT,
+        lightAlpha: 0.15,
+        darkAlpha: 0.12,
+        r: HEX_R - 0.5,
+      });
 
-      g.lineStyle(3, C.shadow, 0.16);
-      g.strokePoints(hexPoints(x, y + 1.5), true);
-      g.lineStyle(6, C.white, 0.05);
-      g.strokePoints(hexPoints(x, y), true);
-      g.lineStyle(2.5, C.white, 0.14);
-      g.strokePoints(hexPoints(x, y), true);
-      g.lineStyle(1, C.white, 0.3);
-      g.strokePoints(hexPoints(x, y - 1, HEX_R - 1), true);
+      g.lineStyle(2, SHADE, 0.4);
+      g.strokePoints(hexPoints(x, y, HEX_R - 1), true);
+      bevel(g, x, y, HEX_R - 2.5, 0.45, 0.3);
     }
   }
 }
@@ -291,55 +398,60 @@ function drawFrame(scene: Phaser.Scene) {
 // ---------- podświetlenia pól ----------
 
 interface HexPaint {
-  /** wypełnienie całego pola */
-  fill?: number;
-  /** wewnętrzna szeroka opaska — udaje gradient gęstniejący ku krawędzi */
-  band?: number;
-  /** kolorowy brzeg 2-3px, jak w Sync Grid */
-  edge?: number;
+  /** siła barwnej mgiełki na całym polu */
+  veil: number;
+  /** obrys — zawsze ciemna odmiana barwy pola, nigdy jaśniejsza od wypełnienia */
+  edge: number;
   /** poświata na zewnątrz pola */
   glow?: number;
   /** biała aureola — w Masters ma ją pole właśnie wybrane */
   halo?: number;
 }
 
-function softHex(
+/**
+ * Podświetlone pole jest tym samym kaflem co reszta siatki, tylko przebarwionym:
+ * ta sama mgiełka, ten sam gradient i ta sama fazka. Dzięki temu pola ruchu
+ * układają się w planszę, zamiast leżeć na niej jako obca warstwa.
+ */
+function paintCell(
   g: Phaser.GameObjects.Graphics,
-  x: number,
-  y: number,
+  col: number,
+  row: number,
   color: number,
+  deep: number,
   o: HexPaint
 ) {
+  const { x, y } = cellToXY(col, row);
+
   if (o.glow) {
-    g.lineStyle(12, color, o.glow * 0.3);
+    g.lineStyle(12, color, o.glow * 0.28);
     g.strokePoints(hexPoints(x, y, HEX_R + 2), true);
-    g.lineStyle(7, color, o.glow * 0.55);
-    g.strokePoints(hexPoints(x, y, HEX_R), true);
   }
   if (o.halo) {
     g.lineStyle(5, C.white, o.halo);
     g.strokePoints(hexPoints(x, y, HEX_R + 3), true);
   }
-  if (o.fill) {
-    g.fillStyle(color, o.fill);
-    g.fillPoints(hexPoints(x, y, HEX_R - 2), true);
-  }
-  if (o.band) {
-    g.lineStyle(14, color, o.band);
-    g.strokePoints(hexPoints(x, y, HEX_R - 9), true);
-  }
-  if (o.edge) {
-    g.lineStyle(3, color, o.edge);
-    g.strokePoints(hexPoints(x, y, HEX_R - 2), true);
-    g.lineStyle(1.2, C.white, o.edge * 0.5);
-    g.strokePoints(hexPoints(x, y, HEX_R - 5), true);
-  }
+
+  gradientHex(g, x, y, {
+    veil: o.veil,
+    base: color,
+    light: mix(color, C.white, 0.7),
+    lightAlpha: 0.22,
+    dark: deep,
+    darkAlpha: 0.2,
+    r: HEX_R - 0.5,
+  });
+
+  g.lineStyle(2.5, deep, o.edge);
+  g.strokePoints(hexPoints(x, y, HEX_R - 1), true);
+  bevel(g, x, y, HEX_R - 3, o.edge * 0.55, o.edge * 0.35);
 }
 
 /** Pole, na które aktywny oddział może wejść. */
 export function paintMoveCell(g: Phaser.GameObjects.Graphics, col: number, row: number) {
-  const { x, y } = cellToXY(col, row);
-  softHex(g, x, y, C.ally, { fill: 0.16, band: 0.1, edge: 0.85, glow: 0.25 });
+  // Mocniej niż zwykły kafel: pola ruchu muszą się odcinać na pierwszy rzut oka,
+  // bo od nich zależy każda decyzja gracza.
+  paintCell(g, col, row, C.ally, C.allyDeep, { veil: 0.27, edge: 0.85, glow: 0.3 });
 }
 
 /**
@@ -352,11 +464,8 @@ export function paintAttackCell(
   row: number,
   weakened: boolean
 ) {
-  const { x, y } = cellToXY(col, row);
-  const color = weakened ? C.gold : C.foe;
-  softHex(g, x, y, color, {
-    fill: weakened ? 0.16 : 0.22,
-    band: 0.14,
+  paintCell(g, col, row, weakened ? C.gold : C.foe, weakened ? C.goldDeep : C.foeDeep, {
+    veil: weakened ? 0.22 : 0.28,
     edge: 0.95,
     glow: 0.45,
   });
@@ -369,14 +478,20 @@ export function paintPreviewCell(
   row: number,
   color: number
 ) {
-  const { x, y } = cellToXY(col, row);
-  softHex(g, x, y, color, { fill: 0.07, band: 0.06, edge: 0.4 });
+  paintCell(g, col, row, color, color === C.ally ? C.allyDeep : C.foeDeep, {
+    veil: 0.1,
+    edge: 0.4,
+  });
 }
 
 /** Pole, z którego padnie cios — najmocniej zaznaczone pole na planszy. */
 export function paintApproachCell(g: Phaser.GameObjects.Graphics, col: number, row: number) {
-  const { x, y } = cellToXY(col, row);
-  softHex(g, x, y, C.gold, { fill: 0.26, band: 0.18, edge: 1, glow: 0.5, halo: 0.55 });
+  paintCell(g, col, row, C.gold, C.goldDeep, {
+    veil: 0.34,
+    edge: 1,
+    glow: 0.5,
+    halo: 0.55,
+  });
 }
 
 /**
@@ -402,6 +517,7 @@ export function pulse(scene: Phaser.Scene, target: Phaser.GameObjects.Graphics, 
  */
 export function drawObstacleShadow(scene: Phaser.Scene, x: number, y: number, width: number) {
   const g = scene.add.graphics().setDepth(Z.grid + 0.1);
+  g.setMask(boardMask(scene));
   for (let i = 3; i >= 1; i--) {
     g.fillStyle(C.shadow, 0.1);
     g.fillEllipse(x, y + 4, width * (0.6 + i * 0.12), width * (0.2 + i * 0.05));

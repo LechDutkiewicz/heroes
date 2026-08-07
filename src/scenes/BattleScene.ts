@@ -266,6 +266,14 @@ export class BattleScene extends Phaser.Scene {
         (HEX_W * (big ? 1.45 : 0.5)) / obstacle.height
       );
       obstacle.setScale(fit * Phaser.Math.FloatBetween(0.92, 1.06));
+
+      // Korona drzewa z górnego rzędu wychodziła ponad ramę na pasek stanu tury.
+      // Skracamy ją proporcjonalnie zamiast przycinać — ucięte drzewo wyglądałoby
+      // jak błąd rysowania, niższe wygląda po prostu na młodsze.
+      const top = y - obstacle.displayHeight * obstacle.originY;
+      const limit = BOARD_Y + 8;
+      if (top < limit) obstacle.setScale(obstacle.scaleX * ((y - limit) / (y - top)));
+
       obstacle.setDepth(10 + cell.row - 0.5);
       drawObstacleShadow(this, x, y, HEX_W * (big ? 0.5 : 0.3));
     }
