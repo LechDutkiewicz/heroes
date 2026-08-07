@@ -263,17 +263,17 @@ function lightStack(
     // Najdalszy pas: cieplejsza barwa, rozlana szeroko i słabo. To on daje
     // „globalne rozjaśnienie planszy" — sięga 1.7x dalej niż barwny rdzeń łuny
     // i to jego widać na sąsiednich polach, kiedy reszta już zgasła.
-    { tex: FX.haze, tint: shade(edge, 0.8), mode: Phaser.BlendModes.ADD, a: 0.9, k: 1.7, from: 0.5, grow: 1.3, life: 320 },
-    { tex: FX.haze, tint: edge, mode: Phaser.BlendModes.NORMAL, a: 0.34, k: 1.7, from: 0.58, grow: 1.28, life: 320 },
+    { tex: FX.haze, tint: shade(edge, 0.95), mode: Phaser.BlendModes.ADD, a: 1, k: 1.7, from: 0.5, grow: 1.3, life: 320 },
+    { tex: FX.haze, tint: edge, mode: Phaser.BlendModes.NORMAL, a: 0.42, k: 1.7, from: 0.58, grow: 1.28, life: 320 },
     // Pas środkowy: czysta barwa żywiołu — po niej gracz poznaje, czym oberwał.
-    { tex: FX.bloom, tint: shade(color, 0.6), mode: Phaser.BlendModes.ADD, a: 1, k: 1, from: 0.45, grow: 1.35, life: 270 },
-    { tex: FX.bloom, tint: color, mode: Phaser.BlendModes.NORMAL, a: 0.52, k: 0.94, from: 0.5, grow: 1.3, life: 270 },
+    { tex: FX.bloom, tint: shade(color, 0.72), mode: Phaser.BlendModes.ADD, a: 1, k: 1, from: 0.45, grow: 1.35, life: 270 },
+    { tex: FX.bloom, tint: color, mode: Phaser.BlendModes.NORMAL, a: 0.6, k: 0.94, from: 0.5, grow: 1.3, life: 270 },
     // Gorąca obwódka rdzenia: barwa podciągnięta ku bieli. Bez niej skok od
     // barwy do białego rdzenia był twardy i rdzeń czytał się jak dziura.
-    { tex: FX.glow, tint: tintTowardsWhite(color, 0.55), mode: Phaser.BlendModes.ADD, a: 1, k: 0.42, from: 0.3, grow: 1.6, life: 210 },
+    { tex: FX.glow, tint: tintTowardsWhite(color, 0.4), mode: Phaser.BlendModes.ADD, a: 1, k: 0.42, from: 0.3, grow: 1.5, life: 210 },
     // Rdzeń: ~15% średnicy barwnej łuny, biały, gaśnie najszybciej — musi
     // zdążyć zniknąć, zanim wypłynie liczba obrażeń.
-    { tex: FX.glow, tint: C.white, mode: Phaser.BlendModes.ADD, a: 1, k: 0.16, from: 0.35, grow: 2.4, life: 160 },
+    { tex: FX.glow, tint: C.white, mode: Phaser.BlendModes.ADD, a: 1, k: 0.16, from: 0.35, grow: 1.35, life: 150 },
   ];
 
   for (const b of bands) {
@@ -292,7 +292,10 @@ function lightStack(
       displayWidth: size,
       displayHeight: size,
       alpha: b.a * strength,
-      duration: 65,
+      // Narastanie w 40 ms, nie 65: przy 65 ms pierwsze klatki rozbłysku miały
+      // jeszcze samą biel rdzenia (który jest najmniejszy, więc dochodzi do
+      // pełnej jasności najszybciej), a barwa dołączała za późno.
+      duration: 40,
       ease: E.snap,
     });
     scene.tweens.add({
@@ -300,7 +303,7 @@ function lightStack(
       displayWidth: size * b.grow,
       displayHeight: size * b.grow,
       alpha: 0,
-      delay: 70,
+      delay: 55,
       duration: b.life,
       ease: 'Quad.easeIn',
       onComplete: () => {
