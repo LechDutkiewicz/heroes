@@ -33,8 +33,19 @@ import {
   paintPreviewCell,
   pulse,
 } from '../visual/board';
-import { C } from '../visual/theme';
-import { buildIcons } from '../visual/icons';
+import { C, Z } from '../visual/theme';
+import { ICON, buildIcons, type IconKey } from '../visual/icons';
+import {
+  battleShake,
+  buildEffectTextures,
+  deathFlash,
+  flashTarget,
+  floatLabel,
+  impactBurst,
+  launchProjectile,
+  showOutcomeScreen,
+  slashArc,
+} from '../visual/effects';
 import {
   buildUnitView,
   playUnitDeath,
@@ -204,6 +215,9 @@ export class BattleScene extends Phaser.Scene {
     // Ikony muszą istnieć, zanim cokolwiek po nie sięgnie — rysują się do
     // tekstur raz, przy starcie sceny.
     buildIcons(this);
+    // To samo dotyczy tekstur efektów: iskra i poświata muszą istnieć, zanim
+    // padnie pierwszy cios.
+    buildEffectTextures(this);
     drawBackground(this);
     drawBoard(this, this.terrain.key);
     this.drawHud();
@@ -588,7 +602,7 @@ export class BattleScene extends Phaser.Scene {
     unit.waited = true;
     this.roundQueue.shift();
     this.roundQueue.push(unit.id);
-    this.floatText(unit, '\u{23F3} Czekam', '#8ea0d0', -46);
+    this.floatText(unit, 'Czekam', '#cfd8dc', -46, ICON.hourglass);
     this.beginTurn();
   }
 
@@ -602,7 +616,7 @@ export class BattleScene extends Phaser.Scene {
     this.clearHighlights();
     unit.defending = true;
     this.refreshStack(unit);
-    this.floatText(unit, '\u{1F6E1}\u{FE0F} Obrona', '#4fc3f7', -46);
+    this.floatText(unit, 'Obrona', '#9ce0ff', -46, ICON.shield);
     this.time.delayedCall(500, () => this.advanceTurn());
   }
 
@@ -1067,7 +1081,7 @@ export class BattleScene extends Phaser.Scene {
         finish();
         return;
       }
-      this.floatText(attacker, `${ABILITIES.strikeAndReturn.emoji} Odlatuje`, '#b3e5fc', -46);
+      this.floatText(attacker, 'Odlatuje', '#b3e5fc', -46, ICON.wing);
       this.performMove(attacker, origin, finish);
     };
 
@@ -1080,7 +1094,7 @@ export class BattleScene extends Phaser.Scene {
       if (target.retaliations <= 0) return returnHome();
 
       if (target.def.ability !== 'guardian') target.retaliations--;
-      this.floatText(target, '\u{21A9}\u{FE0F} Odwet!', '#ffd166', -60);
+      this.floatText(target, 'Odwet!', '#ffd166', -60, ICON.retaliate, 17);
       this.meleeLunge(target, attacker, () => {
         this.resolveHit(target, attacker);
         this.time.delayedCall(500, returnHome);
@@ -1091,7 +1105,7 @@ export class BattleScene extends Phaser.Scene {
       if (attacker.def.ability !== 'double' || !this.isAlive(attacker) || !this.isAlive(target)) {
         return retaliate();
       }
-      this.floatText(attacker, `${ABILITIES.double.emoji} Drugi cios!`, '#ffd166', -46);
+      this.floatText(attacker, 'Drugi cios!', '#ffd166', -46, ICON.sword, 17);
       this.meleeLunge(attacker, target, () => {
         this.resolveHit(attacker, target);
         this.time.delayedCall(450, retaliate);
@@ -1120,60 +1134,71 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * Cios wręcz: krótkie odchylenie do tyłu, szybkie natarcie i powrót.
+   * Zamach przed uderzeniem to jedna klatka więcej (60 ms), ale bez niego cios
+   * był płaskim przesunięciem — oko nie miało czego wyczekać.
+   */
   private meleeLunge(attacker: Unit, target: Unit, onDone: () => void) {
     const start = { x: attacker.container.x, y: attacker.container.y };
     const to = this.cellToXY(target.col, target.row);
+    const dx = to.x - start.x;
+    const dy = to.y - start.y;
 
     // Dwa osobne ruchy zamiast yoyo: yoyo zgłasza się raz na animowaną
     // właściwość, więc trafienie liczyłoby się podwójnie (x i y).
     this.tweens.add({
       targets: attacker.container,
-      x: start.x + (to.x - start.x) * 0.4,
-      y: start.y + (to.y - start.y) * 0.4,
-      duration: 120,
-      ease: 'Quad.easeOut',
+      x: start.x - dx * 0.12,
+      y: start.y - dy * 0.12,
+      duration: 60,
+      ease: 'Sine.easeOut',
       onComplete: () => {
-        onDone();
         this.tweens.add({
           targets: attacker.container,
-          x: start.x,
-          y: start.y,
-          duration: 150,
-          ease: 'Quad.easeIn',
+          x: start.x + dx * 0.42,
+          y: start.y + dy * 0.42,
+          duration: 105,
+          ease: 'Quad.easeOut',
+          onComplete: () => {
+            // Cięcie rysujemy w połowie drogi do celu, czyli tam, gdzie ręce
+            // faktycznie się spotykają — nie na środku hexa obrońcy.
+            slashArc(
+              this,
+              this.effectLayer,
+              start.x + dx * 0.68,
+              start.y + dy * 0.68 - 8,
+              Math.atan2(dy, dx),
+              TYPE_INFO[attacker.def.type].color
+            );
+            onDone();
+            this.tweens.add({
+              targets: attacker.container,
+              x: start.x,
+              y: start.y,
+              duration: 150,
+              ease: 'Quad.easeIn',
+            });
+          },
         });
       },
     });
   }
 
+  /** Pocisk strzelca — kształt, barwa i ślad bierze się z żywiołu (effects.ts). */
   private fireProjectile(attacker: Unit, target: Unit, broken: boolean, onDone: () => void) {
-    const from = this.cellToXY(attacker.col, attacker.row);
-    const to = this.cellToXY(target.col, target.row);
-    const color = TYPE_INFO[attacker.def.type].color;
-    const angle = Phaser.Math.Angle.Between(from.x, from.y, to.x, to.y);
-
-    const shot = this.add.container(from.x, from.y);
-    if (broken) {
-      // Złamana strzała: dwa kawałki lecące osobno, jak w Heroes 3.
-      shot.add(this.add.rectangle(-7, -2, 9, 3, color).setAngle(-12));
-      shot.add(this.add.rectangle(5, 3, 9, 3, color).setAngle(14));
-    } else {
-      shot.add(this.add.rectangle(-4, 0, 14, 3, color));
-      shot.add(this.add.triangle(7, 0, 0, -5, 0, 5, 9, 0, color));
-    }
-    shot.setRotation(angle);
-    this.effectLayer.add(shot);
-
-    this.tweens.add({
-      targets: shot,
-      x: to.x,
-      y: to.y,
-      duration: broken ? 380 : 280,
-      ease: broken ? 'Quad.easeOut' : 'Quad.easeIn',
-      onComplete: () => {
-        shot.destroy();
-        onDone();
+    launchProjectile(
+      this,
+      this.effectLayer,
+      {
+        from: this.cellToXY(attacker.col, attacker.row),
+        to: this.cellToXY(target.col, target.row),
+        color: TYPE_INFO[attacker.def.type].color,
+        element: attacker.def.type,
+        broken,
       },
-    });
+      onDone
+    );
   }
 
   /**
@@ -1186,22 +1211,38 @@ export class BattleScene extends Phaser.Scene {
     target.count = state.count;
     target.topHp = state.topHp;
 
+    // Siła ciosu jako ułamek pełnego życia oddziału — od niej zależy rozmiar
+    // błysku i wstrząs kamery. Draśnięcie ma wyglądać inaczej niż cios, który
+    // wybija pół oddziału.
+    const power = Phaser.Math.Clamp(value / Math.max(1, fullHp(target.def)), 0.08, 1);
+    const hitAt = this.cellToXY(target.col, target.row);
+    impactBurst(this, this.effectLayer, hitAt.x, hitAt.y - 10, {
+      color: TYPE_INFO[attacker.def.type].color,
+      power,
+      strong: typeMult > 1,
+      weak: typeMult < 1,
+    });
+    flashTarget(this, target.view.sprite);
+    battleShake(this, typeMult > 1 ? Math.min(1, power + 0.25) : power);
+
     if (tooFar) this.floatText(target, 'Złamana strzała — pół siły', '#ff9800', -66);
     else if (pinned) this.floatText(attacker, 'Zablokowany — bije wręcz!', '#ff9800', -60);
-    if (guarded && target.count > 0) this.floatText(target, 'Obrona zamortyzowała', '#4fc3f7', -82);
-
-    this.floatText(target, `-${value}`, '#ff8a80', -34);
-    // Liczba poległych to dla gracza ważniejsza informacja niż same obrażenia.
-    if (killed > 0 && target.count > 0) {
-      this.floatText(target, `\u{1F480} ${killed}`, '#ff5252', -50);
+    if (guarded && target.count > 0) {
+      this.floatText(target, 'Obrona zamortyzowała', '#4fc3f7', -82, ICON.shield);
     }
-    if (typeMult > 1) this.floatText(target, 'Super skuteczne!', '#66bb6a', -68);
-    else if (typeMult < 1) this.floatText(target, 'Słabo skuteczne...', '#b0bec5', -68);
 
-    this.cameras.main.shake(120, 0.003);
+    // Liczba obrażeń jest najważniejsza, więc dostaje największy stopień pisma.
+    this.floatText(target, `-${value}`, '#ffd6cf', -34, undefined, 21);
+    // Zaraz po niej liczba poległych — dla gracza ważniejsza niż samo HP.
+    if (killed > 0 && target.count > 0) {
+      this.floatText(target, `padło ${killed}`, '#ff8a80', -52, ICON.skull);
+    }
+    if (typeMult > 1) this.floatText(target, 'Super skuteczne!', '#a5f5a5', -70, ICON.star, 17);
+    else if (typeMult < 1) this.floatText(target, 'Słabo skuteczne...', '#cfd8dc', -70);
 
     if (target.count <= 0) {
       this.refreshStack(target);
+      deathFlash(this, this.effectLayer, hitAt.x, hitAt.y - 6, sideAccent(target.side).color);
       playUnitDeath(this, target.view, () => {});
       this.units = this.units.filter((u) => u.id !== target.id);
       this.roundQueue = this.roundQueue.filter((id) => id !== target.id);
@@ -1210,30 +1251,27 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private floatText(unit: Unit, text: string, color: string, offsetY: number) {
+  /**
+   * Napis ulotny nad oddziałem. Cała oprawa (kontur, ikona zamiast emoji,
+   * rozsuwanie nachodzących na siebie napisów) siedzi w effects.ts — tutaj
+   * zostaje tylko przeliczenie pola na współrzędne.
+   */
+  private floatText(
+    unit: Unit,
+    text: string,
+    color: string,
+    offsetY: number,
+    iconKey?: IconKey,
+    size?: number
+  ) {
     const cell = this.cellToXY(unit.col, unit.row);
-    const t = this.add
-      .text(cell.x, cell.y + offsetY, text, {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '14px',
-        color,
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5);
-
-    // Trzymaj napis w granicach planszy — inaczej ucieka poza ekran przy krawędzi.
-    t.x = Phaser.Math.Clamp(t.x, BOARD_X + t.width / 2, BOARD_X + BOARD_W - t.width / 2);
-    t.y = Phaser.Math.Clamp(t.y, BOARD_Y + 24, BOARD_Y + BOARD_H - 8);
-
-    this.effectLayer.add(t);
-    this.tweens.add({
-      targets: t,
-      y: t.y - 26,
-      alpha: 0,
-      duration: 850,
-      onComplete: () => t.destroy(),
+    floatLabel(this, this.effectLayer, {
+      x: cell.x,
+      y: cell.y + offsetY,
+      text,
+      color,
+      iconKey,
+      size,
     });
   }
 
@@ -1287,7 +1325,7 @@ export class BattleScene extends Phaser.Scene {
       // Nie ma kogo bić ani dokąd iść — lepiej stanąć w obronie niż stać bezczynnie.
       unit.defending = true;
       this.refreshStack(unit);
-      this.floatText(unit, '\u{1F6E1}\u{FE0F} Obrona', '#ef9a9a', -46);
+      this.floatText(unit, 'Obrona', '#ffc9c9', -46, ICON.shield);
       this.time.delayedCall(500, () => this.advanceTurn());
     } else {
       this.performMove(unit, bestCell);
@@ -1307,24 +1345,18 @@ export class BattleScene extends Phaser.Scene {
     this.turnText.setText('');
 
     const won = playersLeft;
-    const overlay = this.add.rectangle(
-      this.scale.width / 2,
-      this.scale.height / 2,
-      this.scale.width,
-      this.scale.height,
-      0x000000,
-      0.6
+    // Ekran końca należy do warstwy nakładki, nie efektów — inaczej iskry
+    // z ostatniego ciosu potrafią wylądować NAD wstęgą z napisem.
+    this.effectLayer.setDepth(Z.overlay);
+    showOutcomeScreen(
+      this,
+      this.effectLayer,
+      won,
+      BOARD_X + BOARD_W / 2,
+      BOARD_Y + BOARD_H / 2,
+      won
+        ? `${this.playerFaction.name} rozbija armię: ${this.enemyFaction.name}`
+        : `${this.enemyFaction.name} rozbija twoją armię`
     );
-    const label = this.add
-      .text(this.scale.width / 2, this.scale.height / 2, won ? 'ZWYCIĘSTWO!' : 'PORAŻKA', {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '48px',
-        color: won ? '#ffd166' : '#ef5350',
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 6,
-      })
-      .setOrigin(0.5);
-    this.effectLayer.add([overlay, label]);
   }
 }
