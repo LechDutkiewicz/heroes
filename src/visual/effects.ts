@@ -37,8 +37,18 @@ import { ICON, TYPE_ICON, type IconKey } from './icons';
 export const FX = {
   /** Miękka poświata: rdzeń błysku, aureola pocisku, światło ekranu końca. */
   glow: 'fx_poswiata',
+  /**
+   * Wielka, bardzo miękka łuna — osobna tekstura od `glow`, bo poświata
+   * trafienia ma mieć 200-250 px średnicy. Rozciąganie 128-pikselowego
+   * rdzenia na taki rozmiar dawało widoczny stopień i twardy brzeg, czyli
+   * dokładnie tę „naklejkę", którą zarzucił krytyk. Ta tekstura jest większa
+   * i gaśnie znacznie łagodniej, więc na brzegu naprawdę dochodzi do zera.
+   */
+  bloom: 'fx_luna',
   /** Okrągła iskra z jasnym środkiem — główny budulec deszczu iskier. */
   spark: 'fx_iskra',
+  /** Rozmyta drobinka bez ostrego środka — iskry „zdmuchnięte w pył" w tle. */
+  mote: 'fx_pyl',
   /** Czterokątny błysk — drobniejszy pył, żeby iskry miały różne kształty. */
   twinkle: 'fx_blyszczka',
 } as const;
@@ -47,12 +57,18 @@ export const FX = {
  * Poświata jako stos kółek o malejącym promieniu i niskiej alfie. Phaser nie
  * ma gradientu na kształcie, ale alfa nakłada się warstwami, więc środek
  * wychodzi jasny, a brzeg rozmyty — dokładnie to, czego potrzebuje błysk.
+ *
+ * `k` steruje profilem: alfa w odległości t od środka wychodzi w przybliżeniu
+ * 1 - exp(-k * (1 - t)), bo każda kolejna warstwa mnoży przezroczystość. Dzięki
+ * temu jedną liczbą ustawiamy jasność rdzenia i zawsze mamy zero na brzegu —
+ * bez tego poświata kończyła się widocznym kółkiem.
  */
-function drawGlow(g: Phaser.GameObjects.Graphics, size: number) {
+function drawGlow(g: Phaser.GameObjects.Graphics, size: number, k = 3.5, steps = 72) {
   const c = size / 2;
-  for (let r = c - 1; r > 0; r -= 1.5) {
-    g.fillStyle(C.white, 0.05);
-    g.fillCircle(c, c, r);
+  const a = k / steps;
+  for (let i = steps; i > 0; i--) {
+    g.fillStyle(C.white, a);
+    g.fillCircle(c, c, (c * i) / steps);
   }
 }
 
@@ -63,6 +79,21 @@ export function buildEffectTextures(scene: Phaser.Scene) {
   drawGlow(glow, 128);
   glow.generateTexture(FX.glow, 128, 128);
   glow.destroy();
+
+  // Łuna: duża i celowo słaba (k = 0.9 daje ~0.6 alfy w samym środku). Barwę
+  // dostaje dopiero przy użyciu przez `setTint`, więc ta sama tekstura świeci
+  // pomarańczowo dla ognia i błękitnie dla wody.
+  const bloom = scene.add.graphics();
+  drawGlow(bloom, 256, 0.9, 96);
+  bloom.generateTexture(FX.bloom, 256, 256);
+  bloom.destroy();
+
+  // Pył: ta sama metoda co łuna, ale bez jasnego środka — drobinka wygląda na
+  // nieostrą, więc iskry z niej zrobione czytają się jako dalszy plan.
+  const mote = scene.add.graphics();
+  drawGlow(mote, 32, 1.1, 24);
+  mote.generateTexture(FX.mote, 32, 32);
+  mote.destroy();
 
   const spark = scene.add.graphics();
   spark.fillStyle(C.white, 0.22);
@@ -107,10 +138,65 @@ export interface ImpactOpts {
 }
 
 /**
- * Błysk w punkcie uderzenia. Sześć warstw, każda o innym czasie życia:
- * kolorowa aureola, biały rdzeń, dwa pierścienie energii, grube iskry i drobny
- * pył. Bez tego stosu trafienie było samym drgnięciem kamery — gracz nie miał
- * gdzie skierować wzroku.
+ * Rozrzucone iskry. Krytyk zarzucił „parę identycznych kresek" — we wzorcu
+ * iskry różnią się WSZYSTKIM: rozmiarem, jasnością i ostrością, i dopiero
+ * z tego bierze się głębia (bliskie ostre, dalekie zdmuchnięte w pył).
+ *
+ * Dlatego nie emiter, tylko własne obiekty: emiter Phasera losuje prędkość
+ * i czas życia, ale rozmiar i alfę bierze z jednej krzywej dla wszystkich
+ * cząstek, więc wszystkie wyglądają tak samo. Tutaj każda iskra dostaje
+ * własny promień 1-4 px, własną alfę 0.3-1.0 i własną teksturę: ostrą albo
+ * rozmytą. Kilkadziesiąt obrazków na cios to dla Phasera nic.
+ */
+function sparkSpray(
+  scene: Phaser.Scene,
+  layer: Phaser.GameObjects.Container,
+  x: number,
+  y: number,
+  color: number,
+  count: number,
+  reach: number
+) {
+  for (let i = 0; i < count; i++) {
+    // Więcej iskier ostrych niż pyłu — pył ma tło budować, nie zamulać kadru.
+    const sharp = Math.random() < 0.6;
+    const r = Phaser.Math.FloatBetween(1, 4) * (sharp ? 1 : 1.7);
+    // Barwa żywiołu przeważa; biel i złoto tylko doprawiają, żeby błysk nie
+    // zrobił się znów biały (to był osobny zarzut).
+    const tint = Phaser.Math.RND.pick([color, color, color, C.goldLight, C.white]);
+    const sp = scene.add
+      .image(x, y, sharp ? FX.spark : FX.mote)
+      .setDisplaySize(r * 2, r * 2)
+      .setTint(tint)
+      // Pył idzie przez SCREEN: na jasnej łące ADD nie ma już zapasu i tło
+      // wychodzi na biało, a SCREEN zachowuje barwę.
+      .setBlendMode(sharp ? Phaser.BlendModes.ADD : Phaser.BlendModes.SCREEN)
+      .setAlpha(Phaser.Math.FloatBetween(0.3, 1));
+    layer.add(sp);
+
+    const a = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    const d = Phaser.Math.FloatBetween(0.25, 1) * reach * (sharp ? 1 : 0.7);
+    const life = Phaser.Math.Between(200, 520);
+    scene.tweens.add({
+      targets: sp,
+      x: x + Math.cos(a) * d,
+      // Lekkie opadanie: iskry mają ciążyć do ziemi, inaczej wyglądają jak
+      // rozjeżdżająca się rozeta.
+      y: y + Math.sin(a) * d * 0.72 + 14,
+      displayWidth: r * 0.5,
+      displayHeight: r * 0.5,
+      alpha: 0,
+      duration: life,
+      ease: 'Quad.easeOut',
+      onComplete: () => sp.destroy(),
+    });
+  }
+}
+
+/**
+ * Błysk w punkcie uderzenia. Warstwy o różnym czasie życia, od najdłuższej
+ * (poświata) po najkrótszą (przyciemnienie): bez tego stosu trafienie było
+ * samym drgnięciem kamery — gracz nie miał gdzie skierować wzroku.
  */
 export function impactBurst(
   scene: Phaser.Scene,
@@ -124,7 +210,63 @@ export function impactBurst(
   // stąd dolna granica, a nie czyste mnożenie przez siłę.
   const scale = (o.strong ? 1.5 : o.weak ? 0.72 : 1) * (0.8 + p * 0.6);
 
-  // 1. Aureola w barwie żywiołu — to ona zalewa okolicę światłem.
+  // 0. Krótkie przyciemnienie pod uderzeniem. Na jasnej łące — a tym bardziej
+  // na śniegu — tryb ADD nie ma już zapasu jasności i błysk po prostu ginie.
+  // Ciemna elipsa daje światłu tło, od którego może się odbić: przez ~90 ms
+  // pole pod celem ciemnieje, więc następna klatka z łuną czyta się jako
+  // rozbłysk, a nie jako jaśniejsza plama na jasnym.
+  const dim = scene.add
+    .ellipse(x, y + 10, 104 * scale, 50 * scale, C.shadow, 0)
+    .setBlendMode(Phaser.BlendModes.MULTIPLY);
+  layer.add(dim);
+  scene.tweens.add({
+    targets: dim,
+    fillAlpha: 0.5,
+    duration: 35,
+    yoyo: true,
+    hold: 20,
+    ease: E.snap,
+    onComplete: () => dim.destroy(),
+  });
+
+  // 1. POŚWIATA — najważniejsza warstwa i główny zarzut z rundy 1. Rdzeń miał
+  // ~30 px i był biały, więc trafienie wyglądało jak naklejka: nie wpływało na
+  // resztę planszy. Tu łuna ma 200-250 px, czyli obejmuje cel RAZEM z sąsiednimi
+  // heksami (pole ma ~80 px), świeci barwą żywiołu i gaśnie do zera na brzegu.
+  // SCREEN zamiast ADD, bo na jasnym terenie ADD wypala wszystko do bieli
+  // i barwa żywiołu przestaje być rozpoznawalna.
+  const bloomPx = (205 + p * 45) * (o.strong ? 1.18 : o.weak ? 0.82 : 1);
+  const bloom = scene.add
+    .image(x, y, FX.bloom)
+    .setTint(o.color)
+    .setBlendMode(Phaser.BlendModes.SCREEN)
+    .setDisplaySize(bloomPx * 0.55, bloomPx * 0.55)
+    .setAlpha(0);
+  layer.add(bloom);
+  // Rozbłysk: w 70 ms do pełna, potem spokojne gaśnięcie. Wolniejsze narastanie
+  // wyglądałoby jak zapalana lampa, a nie jak uderzenie.
+  scene.tweens.add({
+    targets: bloom,
+    displayWidth: bloomPx,
+    displayHeight: bloomPx,
+    alpha: 1,
+    duration: 70,
+    ease: E.snap,
+  });
+  scene.tweens.add({
+    targets: bloom,
+    displayWidth: bloomPx * 1.22,
+    displayHeight: bloomPx * 1.22,
+    alpha: 0,
+    delay: 80,
+    duration: 260,
+    ease: 'Quad.easeIn',
+    onComplete: () => bloom.destroy(),
+  });
+
+  // 2. Aureola w barwie żywiołu — gęstsze światło tuż przy punkcie kontaktu,
+  // między szeroką łuną a białym rdzeniem. Bez niej przejście od łuny do
+  // rdzenia było skokiem.
   const halo = scene.add
     .image(x, y, FX.glow)
     .setTint(o.color)
@@ -162,39 +304,37 @@ export function impactBurst(
   ring(scene, layer, x, y, C.white, 4, 3.4 * scale, 300, 0);
   ring(scene, layer, x, y, o.color, 3, 4.6 * scale, 380, 80);
 
-  // 4. Grube iskry lecące na zewnątrz. Trzy barwy na jednym wystrzale, tak jak
-  // we wzorcu, gdzie pył nie jest jednolity: żywioł, biel i złoto.
-  const big = scene.add.particles(0, 0, FX.spark, {
-    speed: { min: 90 * scale, max: 300 * scale },
-    lifespan: { min: 230, max: 480 },
-    scale: { start: 0.85 * scale, end: 0 },
-    tint: [o.color, C.white, C.goldLight],
-    blendMode: Phaser.BlendModes.ADD,
-    gravityY: 140,
-    emitting: false,
-  });
-  layer.add(big);
-  big.explode(Math.round((o.strong ? 20 : 12) + p * 12), x, y);
+  // 4. Deszcz iskier o losowym promieniu i jasności — 30-50 sztuk, część
+  // ostra, część rozmyta w pył (szczegóły w `sparkSpray`). To one dają wrażenie
+  // głębi; wcześniej wszystkie wyglądały identycznie i czytały się jak kreski.
+  sparkSpray(
+    scene,
+    layer,
+    x,
+    y,
+    o.color,
+    Math.round((o.strong ? 44 : o.weak ? 26 : 34) + p * 10),
+    120 * scale
+  );
 
-  // 5. Drobny pył o innym kształcie — od niego zależy wrażenie „gęstości".
+  // 5. Kilka błyszczek o innym kształcie — pojedyncze ostre gwiazdki w gęstwie
+  // okrągłych iskier łamią monotonię, tak jak we wzorcu.
   const dust = scene.add.particles(0, 0, FX.twinkle, {
     speed: { min: 40, max: 170 * scale },
     lifespan: { min: 300, max: 620 },
-    scale: { start: 0.5 * scale, end: 0 },
+    scale: { start: 0.45 * scale, end: 0 },
+    alpha: { min: 0.35, max: 1 },
     rotate: { start: 0, end: 180 },
-    tint: [C.white, o.color],
+    tint: [C.goldLight, o.color],
     blendMode: Phaser.BlendModes.ADD,
     emitting: false,
   });
   layer.add(dust);
-  dust.explode(Math.round((o.strong ? 18 : 10) + p * 10), x, y);
+  dust.explode(Math.round(6 + p * 6), x, y);
 
-  // Emitery żyją własnym życiem po wystrzale, więc sprzątamy je z opóźnieniem
+  // Emiter żyje własnym życiem po wystrzale, więc sprzątamy go z opóźnieniem
   // dłuższym niż najdłuższa cząstka.
-  scene.time.delayedCall(900, () => {
-    big.destroy();
-    dust.destroy();
-  });
+  scene.time.delayedCall(900, () => dust.destroy());
 
   // 6. Przy przewadze typu dokładamy wieniec gwiazdek — „super skuteczne" ma
   // się różnić OD RAZU, zanim gracz przeczyta napis.
@@ -346,6 +486,16 @@ export function launchProjectile(
   const angle = Phaser.Math.Angle.Between(o.from.x, o.from.y, o.to.x, o.to.y);
 
   const shot = scene.add.container(o.from.x, o.from.y);
+  // Barwna łuna wokół pocisku, osobno od jasnego rdzenia. Poprzednia wersja
+  // miała samą aureolę ADD i biel z rdzenia wygrywała z barwą żywiołu —
+  // strzał ognisty i wodny wyglądały tak samo. SCREEN nie wypala barwy, więc
+  // pomarańcz zostaje pomarańczą także nad jasną trawą.
+  const wash = scene.add
+    .image(0, 0, FX.bloom)
+    .setTint(o.color)
+    .setBlendMode(Phaser.BlendModes.SCREEN)
+    .setDisplaySize(o.broken ? 60 : 96, o.broken ? 60 : 96)
+    .setAlpha(0.9);
   const halo = scene.add
     .image(0, 0, FX.glow)
     .setTint(o.color)
@@ -361,7 +511,7 @@ export function launchProjectile(
   const head = scene.add
     .image(0, 0, TYPE_ICON[o.element])
     .setDisplaySize(o.broken ? 20 : 30, o.broken ? 20 : 30);
-  shot.add([halo, spark, head]);
+  shot.add([wash, halo, spark, head]);
   layer.add(shot);
 
   // Ikony są rysowane czubkiem do góry, więc dokładamy ćwierć obrotu: wtedy
@@ -374,7 +524,10 @@ export function launchProjectile(
     lifespan: o.broken ? 200 : 340,
     frequency: 5,
     scale: { start: o.broken ? 0.4 : 0.8, end: 0 },
-    tint: [o.color, C.white, C.goldLight],
+    alpha: { min: 0.3, max: 1 },
+    // Przewaga barwy żywiołu nad bielą: przy równym udziale smuga robiła się
+    // biała i ogień przestawał różnić się od wody.
+    tint: [o.color, o.color, o.color, C.goldLight, C.white],
     blendMode: Phaser.BlendModes.ADD,
     quantity: 3,
   });
@@ -421,12 +574,27 @@ export function launchProjectile(
 // ---------- napisy ulotne ----------
 
 /**
- * Zajęte prostokąty napisów, per scena. Przy jednym ciosie wyskakują nawet
- * trzy komunikaty naraz („-15", „padło 2", „Super skuteczne!") i wcześniej
- * lądowały jedne na drugich, dając nieczytelną plamę. Tutaj każdy nowy napis
- * przesuwa się w górę, dopóki nie znajdzie wolnego pasa.
+ * Zajęte prostokąty napisów, per scena — nowa tabliczka szuka wolnego pasa,
+ * zamiast lądować na poprzedniej.
  */
 const taken = new WeakMap<Phaser.Scene, Phaser.Geom.Rectangle[]>();
+
+/**
+ * Bufor napisów zgłoszonych w tej samej klatce.
+ *
+ * Rozsuwanie w pionie z rundy 1 działało między napisami, ale nie wiedziało
+ * nic o plakietkach oddziałów pod spodem — przy ciosie zabijającym część
+ * oddziału leciały trzy komunikaty naraz („-10", „padło 5", „Słabo
+ * skuteczne...") i rozpychały się po całej lewej kolumnie, wchodząc na paski
+ * życia i liczebności. Stąd zmiana podejścia: wszystkie komunikaty z jednego
+ * ciosu zbieramy przez jedną klatkę i pokazujemy jako JEDNĄ tabliczkę
+ * z wierszami, na własnym ciemnym tle. Jeden zwarty prostokąt da się odsunąć
+ * od plakietek; trzy latające napisy nie dały się.
+ */
+const pending = new WeakMap<
+  Phaser.Scene,
+  { layer: Phaser.GameObjects.Container; o: LabelOpts }[]
+>();
 
 export interface LabelOpts {
   x: number;
@@ -439,78 +607,148 @@ export interface LabelOpts {
 }
 
 /**
- * Napis ulotny: wyskakuje ze sprężyną, unosi się i gaśnie. Kontur bierzemy
- * z `display()`, więc czyta się i na jasnej trawie, i na śniegu, i na tle
- * własnych iskier.
+ * Zgłasza napis ulotny. Nie rysuje od razu: komunikaty z tego samego ciosu
+ * padają w jednym wywołaniu sceny, więc czekamy jedną klatkę i dopiero wtedy
+ * układamy je razem (patrz `pending`). Opóźnienie jest niezauważalne — napis
+ * i tak wypływał dopiero po rozbłysku.
  */
 export function floatLabel(
   scene: Phaser.Scene,
   layer: Phaser.GameObjects.Container,
   o: LabelOpts
 ) {
+  const q = pending.get(scene);
+  if (q) {
+    q.push({ layer, o });
+    return;
+  }
+  const fresh = [{ layer, o }];
+  pending.set(scene, fresh);
+  scene.time.delayedCall(0, () => {
+    pending.delete(scene);
+    flushLabels(scene, fresh);
+  });
+}
+
+/** Jeden wiersz tabliczki: ikona plus tekst, wyśrodkowane w swojej szerokości. */
+function labelRow(scene: Phaser.Scene, o: LabelOpts) {
   const size = o.size ?? 15;
   const label = scene.add.text(0, 0, o.text, display(size, o.color)).setOrigin(0, 0.5);
-  const parts: Phaser.GameObjects.GameObject[] = [label];
-
+  const parts: Phaser.GameObjects.Image[] = [label as unknown as Phaser.GameObjects.Image];
   let w = label.width;
   if (o.iconKey) {
-    const ic = scene.add.image(0, 0, o.iconKey).setDisplaySize(size + 3, size + 3).setOrigin(0, 0.5);
+    const ic = scene.add
+      .image(0, 0, o.iconKey)
+      .setDisplaySize(size + 3, size + 3)
+      .setOrigin(0, 0.5);
     label.setX(size + 6);
     w += size + 6;
     parts.push(ic);
   }
-  // Środkujemy zawartość w kontenerze, żeby pozycja odnosiła się do środka
-  // napisu — tak jak przy poprzednim setOrigin(0.5).
-  parts.forEach((p) => {
-    const go = p as Phaser.GameObjects.Image;
-    go.setX(go.x - w / 2);
-  });
+  parts.forEach((p) => p.setX(p.x - w / 2));
+  // Tryb mieszania jawnie zwykły: w tej samej warstwie leżą iskry rysowane
+  // addytywnie i bez tego napis potrafi przejąć ich tryb, przez co biel na
+  // jasnej trawie robi się prawie niewidoczna.
+  parts.forEach((p) => p.setBlendMode(Phaser.BlendModes.NORMAL));
+  return { parts, w, h: size + 7 };
+}
 
-  const h = size + 8;
-  const minY = BOARD_Y + 24;
-  const maxY = BOARD_Y + BOARD_H - 12;
-  const x = Phaser.Math.Clamp(o.x, BOARD_X + w / 2 + 4, BOARD_X + BOARD_W - w / 2 - 4);
-  const baseY = Phaser.Math.Clamp(o.y, minY, maxY);
+/**
+ * Układa zebrane komunikaty w tabliczki — po jednej na punkt na planszy.
+ * Grupujemy po pozycji, bo w jednej klatce potrafi paść komunikat przy celu
+ * i przy atakującym; to dwa różne miejsca i nie wolno ich zlepić.
+ */
+function flushLabels(
+  scene: Phaser.Scene,
+  items: { layer: Phaser.GameObjects.Container; o: LabelOpts }[]
+) {
+  const groups: { layer: Phaser.GameObjects.Container; list: LabelOpts[]; x: number; y: number }[] =
+    [];
+  for (const it of items) {
+    const g = groups.find(
+      (k) => k.layer === it.layer && Math.abs(k.x - it.o.x) < 70 && Math.abs(k.y - it.o.y) < 70
+    );
+    if (g) {
+      g.list.push(it.o);
+      // Tabliczka czepia się najwyższego z komunikatów grupy, żeby rosła w dół
+      // od stałego punktu, a nie skakała przy każdym dołożonym wierszu.
+      g.y = Math.min(g.y, it.o.y);
+    } else groups.push({ layer: it.layer, list: [it.o], x: it.o.x, y: it.o.y });
+  }
+  for (const g of groups) plate(scene, g.layer, g.x, g.y, g.list);
+}
+
+/** Ciemna kapsułka z wierszami komunikatów, wyskakująca i wypływająca w górę. */
+function plate(
+  scene: Phaser.Scene,
+  layer: Phaser.GameObjects.Container,
+  ax: number,
+  ay: number,
+  list: LabelOpts[]
+) {
+  const rows = list.map((o) => labelRow(scene, o));
+  const padX = 10;
+  const padY = 6;
+  const gap = 2;
+  const w = Math.max(...rows.map((r) => r.w)) + padX * 2;
+  const h = rows.reduce((s, r) => s + r.h, 0) + gap * (rows.length - 1) + padY * 2;
+
+  // Tło: ciemna kapsułka o wysokiej alfie. To ona odcina napis od plakietek
+  // oddziału — sam kontur liter nie wystarczał, bo pod spodem leżały paski
+  // życia i liczebność, czyli drobny, kontrastowy wzór.
+  const bg = scene.add.graphics();
+  bg.fillStyle(C.shadow, 0.8);
+  bg.fillRoundedRect(-w / 2, -h / 2, w, h, 9);
+  bg.lineStyle(2, C.white, 0.22);
+  bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 9);
+  bg.setBlendMode(Phaser.BlendModes.NORMAL);
+
+  const parts: Phaser.GameObjects.GameObject[] = [bg];
+  let cy = -h / 2 + padY;
+  for (const r of rows) {
+    r.parts.forEach((p) => p.setY(p.y + cy + r.h / 2));
+    parts.push(...r.parts);
+    cy += r.h + gap;
+  }
+
+  const minY = BOARD_Y + h / 2 + 6;
+  const maxY = BOARD_Y + BOARD_H - h / 2 - 6;
+  const x = Phaser.Math.Clamp(ax, BOARD_X + w / 2 + 4, BOARD_X + BOARD_W - w / 2 - 4);
+  // Tabliczka siada nad punktem zdarzenia, ale o własną wysokość wyżej: przy
+  // wielowierszowej treści dolna krawędź inaczej wjeżdżałaby na plakietkę
+  // stojącego niżej oddziału.
+  const baseY = Phaser.Math.Clamp(ay - (h - 24) / 2, minY, maxY);
 
   // Szukanie wolnego pasa: najpierw w górę, a gdy nad polem jest już krawędź
   // planszy — w dół. Samo spychanie do góry wypychało napisy poza planszę,
   // na pasek stanu tury, gdy cios padał w górnym rzędzie.
   const busy = taken.get(scene) ?? [];
   taken.set(scene, busy);
-  const step = h + 3;
+  const step = h + 4;
   const box = new Phaser.Geom.Rectangle(x - w / 2, baseY - h / 2, w, h);
-  for (const k of [0, -1, -2, -3, -4, 1, 2, 3, 4]) {
-    const cy = baseY + k * step;
-    if (cy < minY || cy > maxY) continue;
-    box.y = cy - h / 2;
+  for (const k of [0, -1, -2, 1, 2, -3, 3]) {
+    const ny = baseY + k * step;
+    if (ny < minY || ny > maxY) continue;
+    box.y = ny - h / 2;
     if (!busy.some((r) => Phaser.Geom.Intersects.RectangleToRectangle(r, box))) break;
   }
   const y = box.y + h / 2;
   busy.push(box);
 
-  // Tryb mieszania ustawiamy jawnie na zwykły. W tej samej warstwie leżą
-  // emitery iskier rysowane addytywnie i bez tego napis potrafi przejąć ich
-  // tryb — biel na jasnej trawie robi się wtedy prawie niewidoczna.
   const cont = scene.add
     .container(x, y, parts)
-    .setScale(0.4)
+    .setScale(0.45)
     .setBlendMode(Phaser.BlendModes.NORMAL);
-  parts.forEach((p) => (p as Phaser.GameObjects.Image).setBlendMode(Phaser.BlendModes.NORMAL));
   layer.add(cont);
 
   // Sprężyste wejście i dopiero potem wypłynięcie: skok przyciąga wzrok
   // w chwili trafienia, powolne unoszenie daje czas na przeczytanie.
+  scene.tweens.add({ targets: cont, scale: 1, duration: 170, ease: E.out });
   scene.tweens.add({
     targets: cont,
-    scale: 1,
-    duration: 170,
-    ease: E.out,
-  });
-  scene.tweens.add({
-    targets: cont,
-    y: y - 30,
+    y: y - 28,
     alpha: 0,
-    delay: 200,
+    delay: 260,
     duration: T.float,
     ease: 'Quad.easeOut',
     onComplete: () => {

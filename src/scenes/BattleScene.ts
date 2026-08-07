@@ -33,8 +33,26 @@ import {
   paintPreviewCell,
   pulse,
 } from '../visual/board';
-import { C, Z } from '../visual/theme';
-import { ICON, buildIcons, type IconKey } from '../visual/icons';
+import { C, H, Z, body, display } from '../visual/theme';
+import { ICON, TYPE_ICON, buildIcons, icon, type IconKey } from '../visual/icons';
+import {
+  blinkPanel,
+  createForecast,
+  createStatTable,
+  createTurnQueue,
+  drawPanelBody,
+  drawTitle,
+  makeChip,
+  makeHudButton,
+  mix,
+  plate,
+  type Forecast,
+  type HudButton,
+  type StatRow,
+  type StatSlot,
+  type StatTable,
+  type TurnQueue,
+} from '../visual/hud';
 import {
   battleShake,
   buildEffectTextures,
@@ -83,8 +101,33 @@ interface Unit {
 
 const PANEL_Y = BOARD_Y + BOARD_H + 14;
 const PANEL_H = 208;
-/** Szerokość lewej kolumny panelu — reszta należy do przycisków. */
-const TEXT_COL_W = BOARD_W - 300;
+const PANEL_X = BOARD_X - 6;
+const PANEL_W = BOARD_W + 12;
+/** Ramka kadłuba panelu — pole z pasmami jest w nią wpuszczone. */
+const PANEL_INSET = 8;
+/** Margines treści wewnątrz wpuszczonego pola. */
+const PANEL_PAD = 8;
+
+const CONTENT_X = PANEL_X + PANEL_INSET + PANEL_PAD;
+const CONTENT_R = PANEL_X + PANEL_W - PANEL_INSET - PANEL_PAD;
+const CONTENT_W = CONTENT_R - CONTENT_X;
+
+/** Kolumna przycisków po prawej; pasma statystyk dzielą resztę na pół. */
+const BTN_W = 180;
+const BTN_H = 44;
+const STATS_W = CONTENT_W - BTN_W - 16;
+const COL_GAP = 12;
+const COL_W = (STATS_W - COL_GAP) / 2;
+
+const ROW_H = 22;
+const ROW_STEP_Y = 26;
+/** Pierwszy wiersz zaczyna się pod pasem z nazwą oddziału. */
+const ROWS_Y = PANEL_Y + 44;
+const HEAD_Y = PANEL_Y + 14;
+const HEAD_H = 26;
+/** Prognoza siedzi najniżej i na pełnej szerokości — ma się nie gubić. */
+const FORECAST_Y = PANEL_Y + 172;
+const FORECAST_H = 26;
 
 /** O tyle słabsze jest trafienie w oddział, który stoi w obronie. */
 const GUARD_REDUCTION = 0.7;
@@ -136,12 +179,6 @@ function fellPhrase(n: number) {
   return `padnie ${n}`;
 }
 
-interface Button {
-  container: Phaser.GameObjects.Container;
-  bg: Phaser.GameObjects.Rectangle;
-  label: Phaser.GameObjects.Text;
-}
-
 export class BattleScene extends Phaser.Scene {
   private units: Unit[] = [];
   /** Kolejka na bieżącą rundę — pierwszy z brzegu ma teraz turę. */
@@ -156,14 +193,18 @@ export class BattleScene extends Phaser.Scene {
   private effectLayer!: Phaser.GameObjects.Container;
   /** Pole, z którego gracz chce uderzyć — wybierane położeniem kursora. */
   private preferredApproach: { targetId: number; cell: Cell } | null = null;
-  private queueIcons: Phaser.GameObjects.Container[] = [];
-  private queueLabel?: Phaser.GameObjects.Text;
+  private queue!: TurnQueue;
 
   private turnText!: Phaser.GameObjects.Text;
-  private statsText!: Phaser.GameObjects.Text;
-  private forecastText!: Phaser.GameObjects.Text;
-  private waitButton!: Button;
-  private guardButton!: Button;
+  /** Pas z nazwą oddziału u góry panelu — przemalowywany barwą strony. */
+  private headBand!: Phaser.GameObjects.Graphics;
+  private headName!: Phaser.GameObjects.Text;
+  private headMeta!: Phaser.GameObjects.Text;
+  private headIcon!: Phaser.GameObjects.Image;
+  private stats!: StatTable;
+  private forecast!: Forecast;
+  private waitButton!: HudButton;
+  private guardButton!: HudButton;
 
   /** Pola zajęte przez przeszkody — piechota je omija, latacze przelatują. */
   private obstacles = new Set<string>();
@@ -317,97 +358,113 @@ export class BattleScene extends Phaser.Scene {
     return false;
   }
 
-  private makeButton(x: number, y: number, w: number, h: number, onClick: () => void): Button {
-    const bg = this.add
-      .rectangle(0, 0, w, h, 0x2c3a63)
-      .setStrokeStyle(2, 0xffd166)
-      .setInteractive({ useHandCursor: true });
-    const label = this.add
-      .text(0, 0, '', {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '14px',
-        color: '#ffffff',
-        align: 'center',
-      })
-      .setOrigin(0.5);
-    bg.on('pointerdown', onClick);
-    return { container: this.add.container(x, y, [bg, label]), bg, label };
+  private drawHud() {
+    this.drawTopBar();
+    this.drawPanel();
   }
 
-  private drawHud() {
-    this.add
-      .text(BOARD_X, 6, 'POKEMON HEROES', {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '19px',
-        color: '#ffd166',
-        fontStyle: 'bold',
-      })
-      .setAlpha(0.9);
+  /** Górna belka: tytuł, wstęgi zamków, zdanie o turze i pasek kolejki. */
+  private drawTopBar() {
+    drawTitle(this, BOARD_X, 2, 'POKÉMON HEROES', 26);
 
-    this.add
-      .text(BOARD_X, 50, `${this.playerFaction.emoji} ${this.playerFaction.name}`, {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '14px',
-        color: '#8fe1a2',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0, 0.5);
-    this.add
-      .text(BOARD_X + 152, 50, 'kontra', {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '12px',
-        color: '#8ea0d0',
-      })
-      .setOrigin(0, 0.5);
-    this.add
-      .text(BOARD_X + 205, 50, `${this.enemyFaction.emoji} ${this.enemyFaction.name}`, {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '14px',
-        color: '#d9a2ec',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0, 0.5);
-
-    this.add
-      .text(BOARD_X + 372, 50, `\u{1F5FA}\u{FE0F} ${this.terrain.label}`, {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '13px',
-        color: '#8ea0d0',
-      })
-      .setOrigin(0, 0.5);
-
-    this.turnText = this.add.text(BOARD_X, 74, '', {
-      fontFamily: 'Trebuchet MS, sans-serif',
-      fontSize: '14px',
-      color: '#ffffff',
+    // Zamki jako wstęgi w barwach stron — ta sama barwa, którą oddziały noszą
+    // na planszy, więc nie trzeba czytać nazw, żeby wiedzieć, kto jest kto.
+    let x = BOARD_X;
+    const player = makeChip(this, x, 62, this.playerFaction.name, {
+      icon: ICON.banner,
+      color: C.ally,
+      edge: C.allyDeep,
+      bold: true,
+    });
+    x += player.width + 8;
+    this.add.text(x, 62, 'kontra', body(12, H.panelEdge)).setOrigin(0, 0.5);
+    x += 52;
+    const enemy = makeChip(this, x, 62, this.enemyFaction.name, {
+      icon: ICON.banner,
+      color: C.foe,
+      edge: C.foeDeep,
+      bold: true,
+    });
+    x += enemy.width + 10;
+    makeChip(this, x, 62, this.terrain.label, {
+      icon: ICON.leaf,
+      color: mix(C.panelDeep, C.skyTop, 0.3),
+      edge: C.shadow,
+      size: 12,
     });
 
-    const panel = this.add.graphics();
-    panel.fillStyle(0x141a30, 0.9);
-    panel.fillRoundedRect(BOARD_X - 6, PANEL_Y, BOARD_W + 12, PANEL_H, 10);
-    panel.lineStyle(1, 0x3a4770, 1);
-    panel.strokeRoundedRect(BOARD_X - 6, PANEL_Y, BOARD_W + 12, PANEL_H, 10);
+    // Zdanie o turze z konturem, bo leży wprost na tle, nie na panelu.
+    this.turnText = this.add.text(BOARD_X, 88, '', display(14)).setOrigin(0, 0.5);
 
-    // Teksty trzymają się lewej kolumny, przyciski prawej.
-    this.statsText = this.add.text(BOARD_X + 10, PANEL_Y + 8, '', {
-      fontFamily: 'Trebuchet MS, sans-serif',
-      fontSize: '14px',
-      color: '#e8ecff',
-      lineSpacing: 3,
-      wordWrap: { width: TEXT_COL_W },
+    this.queue = createTurnQueue(this, BOARD_X + BOARD_W, 24);
+  }
+
+  /**
+   * Dolny panel. Układ jest z góry ustalony: pas z nazwą, dwie kolumny pasm,
+   * jedno pasmo na całą szerokość dla umiejętności, kolumna przycisków po
+   * prawej i prognoza na dole. Pozycje liczymy raz — zawartość tylko się
+   * podmienia, bo panel odświeża się przy każdym ruchu kursora.
+   */
+  private drawPanel() {
+    drawPanelBody(this, PANEL_X, PANEL_Y, PANEL_W, PANEL_H, PANEL_INSET);
+
+    this.headBand = this.add.graphics().setDepth(61);
+    this.headIcon = icon(this, ICON.flame, CONTENT_X + 8 + HEAD_H / 2, HEAD_Y + HEAD_H / 2, HEAD_H - 6)
+      .setDepth(62);
+    this.headName = this.add
+      .text(CONTENT_X + 14 + HEAD_H, HEAD_Y + HEAD_H / 2, '', { ...display(16), strokeThickness: 3.5 })
+      .setOrigin(0, 0.5)
+      .setDepth(62);
+    this.headMeta = this.add
+      .text(CONTENT_X + STATS_W - 10, HEAD_Y + HEAD_H / 2, '', body(13, H.white))
+      .setOrigin(1, 0.5)
+      .setDepth(62);
+
+    // Osiem pasm w dwóch kolumnach plus dziewiąte na całą szerokość.
+    const slots: StatSlot[] = [];
+    for (let col = 0; col < 2; col++) {
+      for (let i = 0; i < 4; i++) {
+        slots.push({
+          x: CONTENT_X + col * (COL_W + COL_GAP),
+          y: ROWS_Y + i * ROW_STEP_Y,
+          w: COL_W,
+          h: ROW_H,
+        });
+      }
+    }
+    slots.push({ x: CONTENT_X, y: ROWS_Y + 4 * ROW_STEP_Y, w: STATS_W, h: ROW_H });
+    this.stats = createStatTable(this, slots);
+
+    const btnX = CONTENT_R - BTN_W / 2;
+    this.waitButton = makeHudButton(this, {
+      x: btnX,
+      y: PANEL_Y + 70,
+      w: BTN_W,
+      h: BTN_H,
+      icon: ICON.hourglass,
+      tone: C.ally,
+      toneDeep: C.allyDeep,
+      onClick: () => this.waitTurn(),
+    });
+    this.guardButton = makeHudButton(this, {
+      x: btnX,
+      y: PANEL_Y + 124,
+      w: BTN_W,
+      h: BTN_H,
+      icon: ICON.shield,
+      tone: C.gold,
+      toneDeep: C.goldDeep,
+      onClick: () => this.guardTurn(),
     });
 
-    // Prognoza stoi pod przyciskami, więc ma całą szerokość panelu.
-    this.forecastText = this.add.text(BOARD_X + 10, PANEL_Y + 166, '', {
-      fontFamily: 'Trebuchet MS, sans-serif',
-      fontSize: '14px',
-      color: '#ffd166',
-      wordWrap: { width: BOARD_W - 20 },
-    });
-
-    const right = BOARD_X + BOARD_W - 140;
-    this.waitButton = this.makeButton(right - 70, PANEL_Y + 44, 130, 42, () => this.waitTurn());
-    this.guardButton = this.makeButton(right + 70, PANEL_Y + 44, 130, 42, () => this.guardTurn());
+    this.forecast = createForecast(
+      this,
+      CONTENT_X,
+      FORECAST_Y,
+      CONTENT_W,
+      FORECAST_H,
+      ICON.sword
+    );
   }
 
   // ---------- jednostki ----------
@@ -459,7 +516,7 @@ export class BattleScene extends Phaser.Scene {
     hit.on('pointerover', () => this.onUnitHover(unit));
     hit.on('pointermove', (p: Phaser.Input.Pointer) => this.onEnemyPointerMove(unit, p));
     hit.on('pointerout', () => {
-      this.forecastText.setText('');
+      this.forecast.hide();
       this.clearApproach();
       this.setCursor(null);
       this.clearMovePreview();
@@ -503,38 +560,14 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private buildQueueIcons() {
-    this.queueIcons.forEach((c) => c.destroy());
-    this.queueIcons = [];
-
-    const count = Math.min(this.roundQueue.length, 12);
-    const spacing = 31;
-    const startX = BOARD_X + BOARD_W - (count - 1) * spacing - 14;
-
-    if (!this.queueLabel) {
-      this.queueLabel = this.add
-        .text(startX - 132, 26, '', {
-          fontFamily: 'Trebuchet MS, sans-serif',
-          fontSize: '13px',
-          color: '#8ea0d0',
-        })
-        .setOrigin(0, 0.5);
-    }
-    this.queueLabel.setText(`Runda ${this.round} — kolejka:`);
-    this.queueLabel.setX(startX - 132);
-
-    for (let i = 0; i < count; i++) {
-      const unit = this.units.find((u) => u.id === this.roundQueue[i]);
-      if (!unit) continue;
-      const accent = sideAccent(unit.side).color;
-      const bg = this.add
-        .circle(0, 0, 13, accent, i === 0 ? 0.45 : 0.2)
-        .setStrokeStyle(2, accent, i === 0 ? 1 : 0.45);
-      const face = this.add
-        .image(0, 0, unit.def.sprite)
-        .setDisplaySize(24, 24)
-        .setAlpha(i === 0 ? 1 : 0.6);
-      this.queueIcons.push(this.add.container(startX + i * spacing, 26, [bg, face]));
-    }
+    const entries = this.roundQueue
+      .map((id) => this.units.find((u) => u.id === id))
+      .filter((u): u is Unit => !!u)
+      .map((u) => {
+        const { color, deep } = sideAccent(u.side);
+        return { spriteKey: u.def.sprite, accent: color, deep };
+      });
+    this.queue.update(entries, this.round);
   }
 
   // ---------- przebieg tury ----------
@@ -620,39 +653,96 @@ export class BattleScene extends Phaser.Scene {
     this.time.delayedCall(500, () => this.advanceTurn());
   }
 
+  /**
+   * Panel oddziału. Wcześniej było to siedem linii ciągłego tekstu z emoji —
+   * gracz musiał je czytać zdanie po zdaniu, żeby znaleźć jedną liczbę. Teraz
+   * każda wartość ma stałe miejsce w tabeli i stałą barwę pasma, więc szuka
+   * się jej wzrokiem, a nie czytaniem.
+   */
   private showStats(unit: Unit) {
     const t = TYPE_INFO[unit.def.type];
     const { strong, weak } = typeMatchup(unit.def.type);
     const strongInfo = TYPE_INFO[strong];
     const weakInfo = TYPE_INFO[weak];
-    const reach = !unit.def.shooter
-      ? '⚔️ walka wręcz'
-      : this.canShoot(unit)
-        ? `\u{1F3F9} strzelec — strzela wszędzie, pełna siła do ${unit.def.shootRange} pól`
-        : '\u{1F6AB} strzelec ZABLOKOWANY — wróg obok, bije wręcz za pół siły';
-    const ability = unit.def.ability
-      ? `${ABILITIES[unit.def.ability].emoji} ${ABILITIES[unit.def.ability].name} — ${ABILITIES[unit.def.ability].desc}`
-      : '\u{2B50} brak specjalnej umiejętności';
-    const retaliation =
-      unit.def.ability === 'guardian'
-        ? '\u{21A9}\u{FE0F} Odwet: bez limitu'
-        : unit.retaliations > 0
-          ? '\u{21A9}\u{FE0F} Odwet: gotowy'
-          : '\u{21A9}\u{FE0F} Odwet: już oddał w tej rundzie';
-    const whose = unit.side === 'player' ? 'twój oddział' : 'oddział przeciwnika';
-    const guard = unit.defending ? '   \u{1F6E1}\u{FE0F} w obronie' : '';
+    const { color: accent, deep } = sideAccent(unit.side);
 
-    this.statsText.setText(
-      `${unit.def.name} ×${unit.count}   \u{1F3F0} poziom ${unit.def.tier}   ${t.emoji} ${t.label}   ` +
-        `(${whose})${guard}\n` +
-        `❤️ HP ${this.total(unit)}/${fullHp(unit.def)} (po ${unit.def.hp} na stworka)    ` +
-        `\u{1F462} Ruch ${unit.def.move}${unit.def.flying ? '   \u{1F54A}\u{FE0F} lata nad wszystkim' : ''}\n` +
-        `⚔️ Atak ${unit.count} × ${unit.def.atk} = ${stackAtk(unit.def, unit)}\n` +
-        `\u{1F4AA} Mocny przeciw ${strongInfo.emoji} ${strongInfo.dative}: bije ×1.5, obrywa ×0.67\n` +
-        `\u{1F494} Słaby wobec ${weakInfo.emoji} ${weakInfo.genitive}: obrywa ×1.5\n` +
-        `${reach}    ${retaliation}\n` +
-        `${ability}`
+    // Pas z nazwą w barwie strony — czyje to jest, widać, zanim się cokolwiek
+    // przeczyta.
+    this.headBand.clear();
+    plate(this.headBand, CONTENT_X, HEAD_Y, STATS_W, HEAD_H, HEAD_H * 0.36, accent, deep, {
+      light: 0.32,
+      dark: 0.28,
+      gloss: 0.26,
+      drop: 2,
+    });
+    this.headIcon.setTexture(TYPE_ICON[unit.def.type]).setDisplaySize(HEAD_H - 6, HEAD_H - 6);
+    this.headName.setText(`${unit.def.name} ×${unit.count}`);
+    this.headMeta.setText(
+      `poziom ${unit.def.tier} · ${unit.side === 'player' ? 'twój oddział' : 'oddział przeciwnika'}` +
+        (unit.defending ? ' · w obronie' : '')
     );
+
+    const blocked = unit.def.shooter && !this.canShoot(unit);
+    const reach: StatRow = unit.def.shooter
+      ? blocked
+        ? { label: 'Zasięg', value: 'zablokowany — pół siły', icon: ICON.bow, alert: true }
+        : {
+            label: 'Zasięg',
+            value: `strzela, pełna siła do ${unit.def.shootRange}`,
+            icon: ICON.bow,
+            tint: C.skyTop,
+          }
+      : { label: 'Zasięg', value: 'walka wręcz', icon: ICON.sword, tint: C.skyTop };
+
+    const retaliation: StatRow =
+      unit.def.ability === 'guardian'
+        ? { label: 'Odwet', value: 'bez limitu', icon: ICON.retaliate, tint: C.gold }
+        : unit.retaliations > 0
+          ? { label: 'Odwet', value: 'gotowy', icon: ICON.retaliate, tint: C.gold }
+          : { label: 'Odwet', value: 'już oddał', icon: ICON.retaliate, alert: true };
+
+    const ability: StatRow = unit.def.ability
+      ? {
+          label: 'Umiejętność',
+          value: `${ABILITIES[unit.def.ability].name} — ${ABILITIES[unit.def.ability].desc}`,
+          icon: ICON.star,
+          tint: C.gold,
+        }
+      : { label: 'Umiejętność', value: 'brak', icon: ICON.star, tint: C.panelEdge };
+
+    this.stats.update([
+      {
+        label: 'Życie',
+        value: `${this.total(unit)} / ${fullHp(unit.def)}`,
+        icon: ICON.heart,
+        tint: C.hpHigh,
+      },
+      {
+        label: 'Atak',
+        value: `${unit.count} × ${unit.def.atk} = ${stackAtk(unit.def, unit)}`,
+        icon: ICON.sword,
+        tint: C.gold,
+      },
+      {
+        label: 'Ruch',
+        value: unit.def.flying ? `${unit.def.move} — lata` : `${unit.def.move}`,
+        icon: unit.def.flying ? ICON.wing : ICON.boot,
+        tint: C.ally,
+      },
+      reach,
+      { label: 'Żywioł', value: t.label, icon: TYPE_ICON[unit.def.type], tint: t.color },
+      {
+        label: 'Mocny przeciw',
+        value: `${strongInfo.dative} ×1.5`,
+        icon: TYPE_ICON[strong],
+        tint: C.hpHigh,
+      },
+      { label: 'Słaby wobec', value: `${weakInfo.genitive} ×1.5`, icon: TYPE_ICON[weak], alert: true },
+      retaliation,
+      ability,
+    ]);
+
+    blinkPanel(this, this.headBand);
   }
 
   // ---------- zasięg ruchu i cele ----------
@@ -816,7 +906,7 @@ export class BattleScene extends Phaser.Scene {
     zone.on('pointerdown', onClick);
     if (onHover) {
       zone.on('pointerover', onHover);
-      zone.on('pointerout', () => this.forecastText.setText(''));
+      zone.on('pointerout', () => this.forecast.hide());
     }
     this.highlightLayer.add(zone);
   }
@@ -840,7 +930,7 @@ export class BattleScene extends Phaser.Scene {
     this.wipeLayer(this.highlightLayer);
     this.clearApproachGraphics();
     this.preferredApproach = null;
-    this.forecastText?.setText('');
+    this.forecast?.hide();
     this.setCursor(null);
   }
 
@@ -861,7 +951,10 @@ export class BattleScene extends Phaser.Scene {
         : kills > 0
           ? `dla ${target.def.name} — ${fellPhrase(kills)} z ${target.count}`
           : `dla ${target.def.name} — żaden nie padnie`;
-    this.forecastText.setText(`${parts.join(' ')} = ${value} ${damageWord(value)} ${outcome}`);
+    this.forecast.show(
+      `${parts.join(' ')} = ${value} ${damageWord(value)} ${outcome}`,
+      kills >= target.count
+    );
   }
 
   /**
@@ -1019,15 +1112,18 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private setButtonsVisible(visible: boolean) {
-    this.waitButton.container.setVisible(visible);
-    this.guardButton.container.setVisible(visible);
+    this.waitButton.setVisible(visible);
+    this.guardButton.setVisible(visible);
   }
 
   private updateButtons(unit: Unit) {
-    this.waitButton.label.setText(unit.waited ? '\u{23F3} Już czekałeś' : '\u{23F3} Czekaj  (C)');
-    this.waitButton.container.setAlpha(unit.waited ? 0.4 : 1);
+    // Przeczekać wolno raz na rundę, więc przycisk musi wyglądać na wyłączony,
+    // zanim gracz w niego kliknie — sama przygaszona alfa tego nie mówiła.
+    this.waitButton.setLabel(unit.waited ? 'Już czekałeś' : 'Czekaj  (C)');
+    this.waitButton.setEnabled(!unit.waited);
 
-    this.guardButton.label.setText('\u{1F6E1}\u{FE0F} Broń się  (O)');
+    this.guardButton.setLabel('Broń się  (O)');
+    this.guardButton.setEnabled(true);
   }
 
   // ---------- akcje ----------
