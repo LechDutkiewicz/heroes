@@ -586,22 +586,24 @@ export function launchProjectile(
   // to samo zróżnicowanie, którego krytyk zażądał od iskier.
   const bright = tintTowardsWhite(o.color, 0.3);
   const trail = scene.time.addEvent({
-    delay: 16,
+    delay: 12,
     loop: true,
     callback: () => {
       if (!shot.active) return;
       const sharp = Math.random() < 0.65;
-      const r = Phaser.Math.FloatBetween(1.5, 4) * (o.broken ? 0.6 : 1);
+      // Ślad musi być czytelny z drugiego końca planszy, więc drobiny są
+      // wyraźnie większe od iskier trafienia — te lecą gromadą, te pojedynczo.
+      const r = Phaser.Math.FloatBetween(2.5, 6) * (o.broken ? 0.6 : 1);
       const puff = scene.add
         .image(
           shot.x + Phaser.Math.FloatBetween(-4, 4),
           shot.y + Phaser.Math.FloatBetween(-4, 4),
           sharp ? FX.spark : FX.mote
         )
-        .setDisplaySize(r * (sharp ? 5 : 8), r * (sharp ? 5 : 8))
+        .setDisplaySize(r * (sharp ? 6 : 9), r * (sharp ? 6 : 9))
         .setTint(Phaser.Math.RND.pick([bright, bright, o.color, C.goldLight]))
         .setBlendMode(sharp ? Phaser.BlendModes.ADD : Phaser.BlendModes.SCREEN)
-        .setAlpha(Phaser.Math.FloatBetween(0.45, 1));
+        .setAlpha(Phaser.Math.FloatBetween(0.6, 1));
       layer.add(puff);
       scene.tweens.add({
         targets: puff,
