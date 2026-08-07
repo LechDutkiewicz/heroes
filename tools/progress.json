@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-07 17:57",
+  "updated": "2026-08-07 18:11",
   "pieces": [
     {
       "name": "Plansza: siatka, teren, rama",
@@ -33,10 +33,10 @@
     {
       "name": "Oddziały: tabliczka, pasek HP, ikony",
       "status": "running",
-      "note": "Cztery rundy przegrane, ale każda coś naprawiła: emoji zniknęły, plakietek jest dwie zamiast czterech, liczebność siedzi w medalionie nachodzącym na pasek, stworek odzyskał dominację. Runda 5 czeka na wolnego buildera.",
+      "note": "Wada funkcjonalna naprawiona i zweryfikowana na drabinie 100/60/30/10/1. Kawałek czeka na jedną wąską rundę: rozjaśnić koryto. Kierunek z rund 1-4 był błędny i to moja wina — patrz notatka przy rundzie 5.",
       "shots": [
         "11-oddzialy-ranne",
-        "09-zblizenie-oddzialu"
+        "12-drabina-hp"
       ],
       "rounds": [
         {
@@ -62,6 +62,12 @@
           "blind": "oddzialy-r4",
           "gap": "Pasek stanu to goły prostokąt w korycie — bez wewnętrznego cienia, bez połysku, bez zaokrąglenia wypełnienia. Zamień na kapsułkę: koryto o promieniu równym połowie wysokości, ciemny obrys 1 px i wewnętrzny cień od góry, wypełnienie z tym samym zaokrągleniem, gradientem jaśniejszym o ~25% u góry i pasmem połysku na górnej jednej trzeciej.",
           "note": "Sprawdziłem to powiększeniem paska pięciokrotnie i krytyk myli się co do faktu, a ma rację co do wniosku. Wypełnienie JEST zaokrąglone — to nie jest prostokąt. Ale przy 4/7 życia zaokrąglona pigułka degeneruje się w kółko: pasek przestaje być paskiem, bo kształt nie niesie już długości, a to jedyne zadanie paska życia. To jest realna wada, której nie nazwał żaden z czterech werdyktów. Punkt wyjścia rundy 5: wypełnienie ma zostać paskiem na całym zakresie — zaokrąglenie tylko na krańcach, nigdy kosztem czytelności długości — plus gradient i połysk, których faktycznie nie ma."
+        },
+        {
+          "win": false,
+          "blind": "pasek-r1",
+          "gap": "Piąty werdykt znów zażądał trójwarstwowej kapsułki z gradientem i połyskiem oraz stwierdził brak koryta i podziałek — których obecność sam sprawdziłem chwilę wcześniej w powiększeniu.",
+          "note": "BŁĄD POPRZECZKI, MOJA WINA. Przez pięć rund kazałem porównywać pasek życia o wysokości 14 px z pełnoekranową tabelą statystyk, gdzie wiersze mają 30 px, a przyciski 55. Gradient, połysk i wewnętrzny cień są przy 14 px fizycznie nierozróżnialne — krytyk nie kłamał, on ich naprawdę nie widział, ale opisywał brak jako wadę konstrukcji i słał buildera do przebudowy rzeczy, które już istnieją. Znalazłem właściwy wzorzec: pasek postępu Affinity w Masters EX ma niemal identyczną wysokość co nasz i jest PŁASKI — proste wypełnienie w JASNYM korycie, cienki obrys, zero gradientu, zero połysku. Trójwarstwowa kapsułka to idiom dużych przycisków, nie małych pasków. Nasz pasek jest więc bardziej rozbudowany niż wzorzec, a jedyna realna różnica to koryto: nasze prawie czarne, wzorcowe jasne. Dalsze podążanie za kierunkiem z rund 1-4 oddalałoby nas od wzorca, nie zbliżało."
         }
       ]
     },

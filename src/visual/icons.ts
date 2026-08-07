@@ -81,9 +81,17 @@ function arcPts(cx: number, cy: number, r: number, from: number, to: number, ste
 }
 
 /** Wycinek pierścienia: łuk zewnętrzny plus wewnętrzny wracający z powrotem. */
-function ring(cx: number, cy: number, rOut: number, rIn: number, from: number, to: number) {
-  const back = arcPts(cx, cy, rIn, to, from);
-  return [...arcPts(cx, cy, rOut, from, to), ...back];
+function ring(
+  cx: number,
+  cy: number,
+  rOut: number,
+  rIn: number,
+  from: number,
+  to: number,
+  steps = 14
+) {
+  const back = arcPts(cx, cy, rIn, to, from, steps);
+  return [...arcPts(cx, cy, rOut, from, to, steps), ...back];
 }
 
 /** Gruba kreska jako wypełniony kształt — żeby kontur objął ją tak jak resztę. */
@@ -257,11 +265,171 @@ const DRAW: Record<string, (g: Pen) => void> = {
   },
 };
 
+// ---------- komplet „mini": znaki do tabeli w panelu ----------
+
+/**
+ * Drugi komplet, przeznaczony WYŁĄCZNIE do dolnego panelu.
+ *
+ * Dlaczego osobny: naklejki wyżej są pełnobarwne — czerwone serce, złota
+ * gwiazda, pomarańczowy płomień. Na planszy, przy oddziale wielkości hexa, to
+ * działa: znak ma się rzucać w oczy z odległości. W tabeli statystyk ten sam
+ * zabieg daje rejestr wizualny emoji — dziewięć naklejek w dziewięciu barwach,
+ * każda krzyczy własnym kolorem i tabela rozpada się na dziewięć obrazków.
+ *
+ * Mini są dokładnie odwrotne i trzymają się trzech reguł:
+ *  1. JEDNA WAGA — sama sylwetka, bez konturu, bez błysku, bez drugiego
+ *     wypełnienia. Wcześniej serce było pełną plamą, miecz miał trzy barwy,
+ *     a ptak był cienkim zarysem, który na jasnym paśmie znikał.
+ *  2. JEDEN MODUŁ — każdy kształt mieści się w tym samym kole o średnicy
+ *     `MINI_D` w kaflu 64. Bez tego gwiazda wychodzi dwa razy większa od kropli.
+ *  3. BRAK WŁASNEJ BARWY — rysujemy na biało i barwimy dopiero przy wstawianiu
+ *     (`miniIcon`). Dzięki temu znak przyjmuje barwę swojego wiersza, zamiast
+ *     wnosić do panelu kolejny kolor.
+ */
+export const MINI = {
+  life: 'mi_zycie',
+  attack: 'mi_atak',
+  reach: 'mi_zasieg',
+  move: 'mi_ruch',
+  fly: 'mi_lot',
+  fire: 'mi_ogien',
+  water: 'mi_woda',
+  grass: 'mi_trawa',
+  strong: 'mi_mocny',
+  weak: 'mi_slaby',
+  retaliate: 'mi_odwet',
+  ability: 'mi_umiejetnosc',
+  forecast: 'mi_prognoza',
+} as const;
+
+export type MiniKey = (typeof MINI)[keyof typeof MINI];
+
+export const MINI_TYPE = {
+  fire: MINI.fire,
+  water: MINI.water,
+  grass: MINI.grass,
+} as const;
+
+/** Średnica modułu: każdy znak mieści się w tym kole, więc wszystkie ważą tyle samo. */
+const MINI_D = 52;
+const M0 = (S - MINI_D) / 2; // 6
+const M1 = S - M0; // 58
+
+/** Gwiazda o zadanej liczbie ramion — jeden przepis na iskrę i na rozbłysk. */
+function starPts(arms: number, rOut: number, rIn: number, turn = -90) {
+  const pts: number[] = [];
+  for (let i = 0; i < arms * 2; i++) {
+    const r = i % 2 === 0 ? rOut : rIn;
+    const a = Phaser.Math.DegToRad((i * 180) / arms + turn);
+    pts.push(32 + r * Math.cos(a), 32 + r * Math.sin(a));
+  }
+  return pts;
+}
+
+/** Strzałka blokowa w pionie: `dir` = -1 w górę, 1 w dół. */
+function blockArrow(g: Pen, dir: number) {
+  const t = (y: number) => 32 + dir * (y - 32);
+  poly(g, [32, t(M0), 55, t(30), 42, t(30), 42, t(M1), 22, t(M1), 22, t(30), 9, t(30)]);
+}
+
+const MINI_DRAW: Record<string, (g: Pen) => void> = {
+  [MINI.life]: (g) => {
+    g.beginPath();
+    g.moveTo(32, M1);
+    g.lineTo(9, 32);
+    g.arc(20.5, 21, 13.5, Phaser.Math.DegToRad(135), Phaser.Math.DegToRad(325), false);
+    g.arc(43.5, 21, 13.5, Phaser.Math.DegToRad(215), Phaser.Math.DegToRad(45), false);
+    g.closePath();
+    g.fillPath();
+  },
+
+  // Atak: miecz. Krępy, bo w 16 pikselach smukła klinga to kreska.
+  [MINI.attack]: (g) => {
+    poly(g, [32, M0, 41, 19, 41, 38, 32, 46, 23, 38, 23, 19]);
+    poly(g, [13, 38, 51, 38, 51, 45, 13, 45]);
+    poly(g, [28, 45, 36, 45, 36, M1, 28, M1]);
+  },
+
+  // Zasięg: tarcza celownicza. Wcześniej „Zasięg" nosił ten sam miecz co
+  // „Atak" — jeden znak na dwa różne pojęcia. Pierścienie mówią o dystansie,
+  // nie o sile ciosu, i nie mylą się z niczym innym w panelu.
+  [MINI.reach]: (g) => {
+    poly(g, ring(32, 32, 26, 20, 0, 360, 40));
+    poly(g, ring(32, 32, 14, 9, 0, 360, 32));
+    g.fillCircle(32, 32, 4.5);
+  },
+
+  [MINI.move]: (g) => {
+    poly(g, [19, M0, 34, M0, 36, 32, 55, 42, 55, M1, 16, M1, 16, 28]);
+  },
+
+  // Lot: podwójny daszek w górę. Poprzednia sylwetka ptaka w rozmiarze
+  // panelowym czytała się jak zawijas — była projektowana na duży znak przy
+  // oddziale. Daszki nie udają ptaka, ale w każdym rozmiarze mówią „w górze".
+  [MINI.fly]: (g) => {
+    bar(g, 9, 33, 32, 13, 9);
+    bar(g, 32, 13, 55, 33, 9);
+    bar(g, 9, M1, 32, 38, 9);
+    bar(g, 32, 38, 55, M1, 9);
+  },
+
+  [MINI.fire]: (g) => {
+    g.beginPath();
+    g.moveTo(32, M0);
+    g.lineTo(48, 26);
+    g.lineTo(44, 33);
+    g.lineTo(50, 38);
+    g.arc(32, 40, 18, Phaser.Math.DegToRad(-19), Phaser.Math.DegToRad(199), false);
+    g.lineTo(22, 29);
+    g.lineTo(20, 22);
+    g.closePath();
+    g.fillPath();
+  },
+
+  [MINI.water]: (g) => {
+    g.beginPath();
+    g.moveTo(32, M0);
+    g.lineTo(48, 30);
+    g.arc(32, 37, 18, Phaser.Math.DegToRad(-21), Phaser.Math.DegToRad(201), false);
+    g.closePath();
+    g.fillPath();
+  },
+
+  [MINI.grass]: (g) => {
+    poly(g, [...arcPts(11, 11, 47, 78, 6), ...arcPts(51, 51, 47, 186, 258)]);
+  },
+
+  // Przewaga i słabość: strzałki, nie ikony żywiołów. Który to żywioł, mówi
+  // napis obok; znak ma mówić, w którą stronę działa mnożnik.
+  [MINI.strong]: (g) => blockArrow(g, -1),
+  [MINI.weak]: (g) => blockArrow(g, 1),
+
+  [MINI.retaliate]: (g) => {
+    poly(g, ring(29, 37, 21, 12, 175, 355));
+    poly(g, [37, 8, 58, 21, 37, 32]);
+  },
+
+  // Umiejętność: iskra o czterech ramionach.
+  [MINI.ability]: (g) => poly(g, starPts(4, 26, 7)),
+
+  // Prognoza: rozbłysk uderzenia — dwanaście krótkich ramion. Celowo inny
+  // rysunek niż iskra umiejętności i niż miecz ataku, bo to trzecia sprawa.
+  [MINI.forecast]: (g) => poly(g, starPts(12, 26, 15)),
+};
+
 /**
  * Rysuje wszystkie ikony do tekstur. Woła się raz, na starcie sceny —
  * powtórne wywołanie nic nie psuje, bo gotowe tekstury pomijamy.
  */
 export function buildIcons(scene: Phaser.Scene) {
+  for (const [key, draw] of Object.entries(MINI_DRAW)) {
+    if (scene.textures.exists(key)) continue;
+    const g = scene.add.graphics();
+    g.fillStyle(0xffffff, 1);
+    draw(g);
+    g.generateTexture(key, S, S);
+    g.destroy();
+  }
   for (const [key, draw] of Object.entries(DRAW)) {
     if (scene.textures.exists(key)) continue;
     const g = scene.add.graphics();
