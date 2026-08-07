@@ -1,10 +1,10 @@
 {
-  "updated": "2026-08-07 07:00",
+  "updated": "2026-08-07 07:22",
   "pieces": [
     {
       "name": "Plansza: siatka hexów, teren, rama",
-      "status": "running",
-      "note": "Runda 1: rama, winieta i wytłoczona krawędź weszły. Krytyk wybrał jednak wzorzec — pola nadal są obrysem bez wypełnienia.",
+      "status": "done",
+      "note": "Zamknięta. Hexy są kaflami z kierunkiem światła, rama i winieta dają bryłę, teren bez rozmycia. Zostaje monotonia żółto-zielona na łące i brak cienia rzucanego przez pole — krytyk odnotował oba, mimo to wybrał nasze.",
       "shots": [
         "10-sama-plansza",
         "02-tura-gracza",
@@ -13,7 +13,15 @@
       "rounds": [
         {
           "win": false,
-          "gap": "Hex to sama krawędź, nie kafel. Wzorzec ma półprzezroczyste wypełnienie z gradientem, ciemniejszy obrys od wypełnienia i jasną fazkę na trzech górnych bokach — stąd kierunek światła. U nas siatka czyta się jak drut zarzucony na teren."
+          "gap": "Hex to sama krawędź, nie kafel. Brak wypełnienia, brak kierunku światła — siatka czyta się jak drut zarzucony na teren."
+        },
+        {
+          "win": false,
+          "gap": "Werdykt unieważniony: porównanie skalowało nasz zrzut do 44%, a wzorzec do 132%, więc fazka 1,8px znikała poniżej piksela. Krytyk opisał artefakt skalowania, nie naszą pracę. Naprawione — kadry idą teraz w rozdzielczości własnej."
+        },
+        {
+          "win": true,
+          "gap": "Krytyk wybrał nasze na uczciwym porównaniu: krawędź o realnej grubości, gradient góra-dół, spójny kierunek światła, tekstura budująca podłoże."
         }
       ]
     },
