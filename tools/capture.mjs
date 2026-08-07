@@ -121,6 +121,14 @@ const main = async () => {
   await freeze(page);
   await shot(page, '04-cios-wrecz');
   await thaw(page);
+  // Szczyt rozbłysku. Zrzut 04 powstaje w chwili WYWOŁANIA efektu, kiedy łuna
+  // ma jeszcze alfę 0, a 05 długo po wszystkim — samego światła nie było widać
+  // w żadnym z nich i nie dało się ocenić głównego zarzutu krytyka.
+  // 800 ms zegara przy spowolnieniu 0.12 to ~96 ms sceny, czyli tuż po pełni.
+  await page.waitForTimeout(800);
+  await freeze(page);
+  await shot(page, '04b-rozblysk');
+  await thaw(page);
   // Sekunda zegara to przy tym spowolnieniu ~120 ms sceny: iskry zdążyły się
   // rozlecieć, a napisy z obrażeniami wypłynąć nad oddział.
   await page.waitForTimeout(1400);
@@ -186,8 +194,24 @@ const main = async () => {
     scene.units = scene.units.filter((u) => u.side === 'player');
     scene.checkGameOver();
   });
-  await page.waitForTimeout(400);
+  // Wstęga wjeżdża z opóźnieniem i sprężyną (~700 ms), a podpis dochodzi po
+  // 620 ms — wcześniejszy zrzut łapał ekran w połowie wjazdu.
+  await page.waitForTimeout(1200);
   await shot(page, '08-zwyciestwo');
+
+  // 7b. Ekran porażki. Osobny zrzut, bo dotąd harness pokazywał wyłącznie
+  //     wygraną i chłodna wersja ekranu końca nigdy nie była oglądana —
+  //     a ma się od zwycięstwa różnić czymś więcej niż jednym słowem.
+  await open(page, '&terrain=laka');
+  await inScene(page, (scene) => {
+    // Oddziały gracza znikają z planszy, nie tylko z tablicy — inaczej ekran
+    // porażki pokazywałby wybitą armię wciąż stojącą na swoich polach.
+    scene.units.filter((u) => u.side === 'player').forEach((u) => u.container.setVisible(false));
+    scene.units = scene.units.filter((u) => u.side === 'enemy');
+    scene.checkGameOver();
+  });
+  await page.waitForTimeout(1200);
+  await shot(page, '08b-porazka');
 
   // 8. Zbliżenie na oddział — czytelność paska HP, liczebności i odznak.
   await open(page, '&terrain=laka');

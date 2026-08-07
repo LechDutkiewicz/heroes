@@ -546,13 +546,18 @@ export function launchProjectile(
   const wash = scene.add
     .image(0, 0, FX.bloom)
     .setTint(o.color)
-    .setBlendMode(Phaser.BlendModes.SCREEN)
+    // Zwykłe krycie o niskiej alfie: to warstwa NASYCENIA, nie jasności.
+    // Jasność daje aureola w ADD, a ta plama pilnuje, żeby pocisk miał barwę
+    // żywiołu także nad jasną trawą, gdzie tryby świetlne bieleją.
+    .setBlendMode(Phaser.BlendModes.NORMAL)
     .setDisplaySize(o.broken ? 60 : 96, o.broken ? 60 : 96)
-    .setAlpha(0.9);
+    .setAlpha(0.45);
   const halo = scene.add
     .image(0, 0, FX.glow)
-    .setTint(o.color)
-    .setBlendMode(Phaser.BlendModes.SCREEN)
+    // Przygaszona barwa w ADD: świeci, ale nie wypala się do bieli — ta sama
+    // zasada co przy łunie trafienia.
+    .setTint(shade(o.color, 0.75))
+    .setBlendMode(Phaser.BlendModes.ADD)
     .setScale(o.broken ? 0.3 : 0.55)
     .setAlpha(0.95);
   // Jasny rdzeń pod ikoną. Bez niego ikona żywiołu — która ma gruby ciemny
@@ -578,13 +583,18 @@ export function launchProjectile(
     frequency: 5,
     scale: { start: o.broken ? 0.4 : 0.8, end: 0 },
     alpha: { min: 0.3, max: 1 },
-    // Przewaga barwy żywiołu nad bielą: przy równym udziale smuga robiła się
-    // biała i ogień przestawał różnić się od wody.
-    tint: [o.color, o.color, o.color, o.color, C.goldLight],
-    // SCREEN: w ADD smuga robiła się biała i strzał ognisty nie różnił się od
-    // wodnego — to był osobny zarzut z rundy 1, samo przeważenie listy barw
-    // nie wystarczyło, bo problem siedział w trybie mieszania.
-    blendMode: Phaser.BlendModes.SCREEN,
+    // Ślad w barwie żywiołu, tylko lekko rozjaśnionej. W rundzie 1 na liście
+    // była biel i złoto w równym udziale — smuga wychodziła biała i strzał
+    // ognisty nie różnił się od wodnego. Bez rozjaśnienia z kolei zielony
+    // ślad nad zieloną trawą znika, stąd `tintTowardsWhite` zamiast bieli:
+    // barwa zostaje, kontrast też.
+    tint: [
+      tintTowardsWhite(o.color, 0.25),
+      tintTowardsWhite(o.color, 0.25),
+      tintTowardsWhite(o.color, 0.5),
+      C.goldLight,
+    ],
+    blendMode: Phaser.BlendModes.ADD,
     quantity: 3,
   });
   layer.add(trail);
@@ -996,12 +1006,16 @@ export function showOutcomeScreen(
 ) {
   const accent = won ? C.gold : C.foe;
   const deep = won ? C.goldDeep : C.foeDeep;
+  // Światło ekranu końca ma osobną barwę od wstęgi. Przy porażce wstęga jest
+  // czerwona, ale ŚWIATŁO musi być zimne i słabe — na czerwono-złotych
+  // promieniach przegrana wyglądała jak druga wersja zwycięstwa.
+  const light = won ? accent : C.skyBottom;
 
   const veil = scene.add
     .rectangle(scene.scale.width / 2, scene.scale.height / 2, scene.scale.width, scene.scale.height, C.shadow, 0)
     .setInteractive();
   layer.add(veil);
-  scene.tweens.add({ targets: veil, fillAlpha: 0.62, duration: T.fade });
+  scene.tweens.add({ targets: veil, fillAlpha: won ? 0.62 : 0.78, duration: T.fade });
 
   // Promienie: wachlarz wąskich klinów od środka. Obracają się bardzo powoli,
   // więc kadr żyje, ale nie odciąga wzroku od napisu.
@@ -1010,7 +1024,7 @@ export function showOutcomeScreen(
   for (let i = 0; i < 20; i++) {
     const a = Phaser.Math.DegToRad(i * 18);
     const spread = Phaser.Math.DegToRad(i % 2 === 0 ? 6.5 : 3);
-    rays.fillStyle(accent, i % 2 === 0 ? 0.16 : 0.09);
+    rays.fillStyle(light, (i % 2 === 0 ? 0.16 : 0.09) * (won ? 1 : 0.55));
     rays.beginPath();
     rays.moveTo(0, 0);
     rays.lineTo(Math.cos(a - spread) * len, Math.sin(a - spread) * len);
@@ -1026,17 +1040,23 @@ export function showOutcomeScreen(
   // Ciepła poświata w środku — to ona „zalewa kadr" jak we wzorcu.
   const glow = scene.add
     .image(x, y, FX.glow)
-    .setTint(accent)
+    .setTint(light)
     .setBlendMode(Phaser.BlendModes.ADD)
     .setScale(0.5)
     .setAlpha(0);
   layer.add(glow);
   // Poświata jest celowo przygaszona: przy pełnej sile zalewała środek na
   // biało i podpis pod wstęgą przestawał być czytelny.
-  scene.tweens.add({ targets: glow, scale: 4.2, alpha: 0.42, duration: 620, ease: E.snap });
+  scene.tweens.add({
+    targets: glow,
+    scale: 4.2,
+    alpha: won ? 0.42 : 0.2,
+    duration: 620,
+    ease: E.snap,
+  });
 
   ring(scene, layer, x, y, C.white, 6, 14, 900, 120);
-  ring(scene, layer, x, y, accent, 4, 20, 1100, 300);
+  ring(scene, layer, x, y, light, 4, 20, 1100, 300);
 
   // Wstęga z napisem.
   const g = scene.add.graphics();

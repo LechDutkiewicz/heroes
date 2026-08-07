@@ -35,3 +35,6 @@ tools/reference/
 tools/blind/
 tools/progress.html
 tools/shots-clean/
+
+# Jednorazowe sondy robocze builderów.
+tools/dbg*.mjs
