@@ -363,7 +363,10 @@ const BAND_FILTER = C.skyTop;
 export function markTint(hue?: number, alert = false) {
   const base = mix(C.ink, C.skyTop, 0.3);
   if (alert) return mix(base, C.foeDeep, 0.55);
-  return hue === undefined ? base : mix(base, hue, 0.5);
+  // 0,38 to granica, przy której barwa treści jeszcze jest rozpoznawalna,
+  // ale znak nie zaczyna świecić mocniej niż sąsiednie. Przy 0,5 zielona
+  // strzałka „Mocny przeciw" wyskakiwała z rzędu.
+  return hue === undefined ? base : mix(base, hue, 0.38);
 }
 
 export interface StatTable {
@@ -418,7 +421,7 @@ export function createStatTable(scene: Phaser.Scene, slots: StatSlot[]): StatTab
         // Tło wiersza NIE zależy od treści — tylko od miejsca w kolumnie
         // (zebra) i od tego, czy to wiersz tabeli, czy wstęga pod nią.
         const fill = s.ribbon
-          ? mix(C.panel, C.panelDeep, 0.13)
+          ? mix(C.panel, C.panelDeep, 0.2)
           : mix(C.panel, BAND_FILTER, s.band === 1 ? 0.17 : 0.07);
         plate(g, s.x, s.y, s.w, s.h, s.h * 0.36, fill, mix(C.panelEdge, BAND_FILTER, 0.32), {
           light: 0.2,

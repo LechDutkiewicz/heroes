@@ -746,7 +746,6 @@ export class BattleScene extends Phaser.Scene {
           label: 'Umiejętność',
           value: `${ABILITIES[unit.def.ability].name} — ${ABILITIES[unit.def.ability].desc}`,
           icon: MINI.ability,
-          mark: C.gold,
         }
       : { label: 'Umiejętność', value: 'brak', icon: MINI.ability };
 

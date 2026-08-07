@@ -348,9 +348,17 @@ const MINI_DRAW: Record<string, (g: Pen) => void> = {
 
   // Atak: miecz. Krępy, bo w 16 pikselach smukła klinga to kreska.
   [MINI.attack]: (g) => {
-    poly(g, [32, M0, 43, 20, 43, 37, 32, 46, 21, 37, 21, 20]);
-    poly(g, [11, 37, 53, 37, 53, 46, 11, 46]);
-    poly(g, [27, 46, 37, 46, 37, M1, 27, M1]);
+    // Proporcje robią różnicę: przy krótkiej klindze i wąskim jelcu znak
+    // czytał się jak choinka. Klinga długa i wąska, jelec szeroki i płaski.
+    // Miecz LEŻY NA SKOS. Pionowy, z jelcem w poprzek, w 16 pikselach czytał
+    // się raz jak choinka, raz jak krzyżyk — poziomy jelec i pionowa klinga
+    // mają tam po dwa piksele i zlewają się w jedną plamę. Skos rozdziela
+    // klingę, jelec i rękojeść na trzy różne kierunki, więc każdy z nich widać.
+    bar(g, 26, 40, 52, 14, 12);
+    poly(g, [56.2, 18.2, 47.8, 9.8, 60, 6]);
+    bar(g, 16.2, 34.2, 31.8, 49.8, 7);
+    bar(g, 24, 42, 14, 52, 9);
+    g.fillCircle(11.5, 54.5, 5.5);
   },
 
   // Zasięg: tarcza celownicza. Wcześniej „Zasięg" nosił ten sam miecz co
@@ -415,7 +423,13 @@ const MINI_DRAW: Record<string, (g: Pen) => void> = {
   },
 
   // Umiejętność: iskra o czterech ramionach.
-  [MINI.ability]: (g) => poly(g, starPts(4, 26, 9.5)),
+  [MINI.ability]: (g) => {
+    poly(g, starPts(4, 25, 8.5));
+    // Druga, mniejsza iskra — para iskier czyta się jako „coś magicznego",
+    // pojedyncza gwiazdka zbyt łatwo myli się z rękojeścią miecza.
+    g.beginPath();
+    poly(g, [49, 8, 52, 15, 59, 18, 52, 21, 49, 28, 46, 21, 39, 18, 46, 15]);
+  },
 
   // Prognoza: rozbłysk uderzenia — dwanaście krótkich ramion. Celowo inny
   // rysunek niż iskra umiejętności i niż miecz ataku, bo to trzecia sprawa.
