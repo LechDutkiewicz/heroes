@@ -34,7 +34,15 @@ import {
   pulse,
 } from '../visual/board';
 import { C, H, Z, body, display } from '../visual/theme';
-import { ICON, TYPE_ICON, buildIcons, icon, type IconKey } from '../visual/icons';
+import {
+  ICON,
+  MINI,
+  MINI_TYPE,
+  TYPE_ICON,
+  buildIcons,
+  icon,
+  type IconKey,
+} from '../visual/icons';
 import {
   blinkPanel,
   createForecast,
@@ -435,7 +443,10 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(1, 0.5)
       .setDepth(62);
 
-    // Osiem pasm w dwóch kolumnach plus dziewiąte na całą szerokość.
+    // Siatka jest domknięta: dokładnie cztery pasma po lewej i cztery po
+    // prawej, ta sama szerokość, ta sama linia bazowa. Wcześniej wychodziło
+    // pięć na cztery, bo „Umiejętność" wchodziła do siatki jako dziewiąty
+    // wiersz na całą szerokość i rozjeżdżała rytm kolumn.
     const slots: StatSlot[] = [];
     for (let col = 0; col < 2; col++) {
       for (let i = 0; i < 4; i++) {
@@ -444,10 +455,21 @@ export class BattleScene extends Phaser.Scene {
           y: ROWS_Y + i * ROW_STEP_Y,
           w: COL_W,
           h: ROW_H,
+          // Zebra liczy się z miejsca w kolumnie, nie ze znaczenia wiersza.
+          band: (i % 2) as 0 | 1,
         });
       }
     }
-    slots.push({ x: CONTENT_X, y: ROWS_Y + 4 * ROW_STEP_Y, w: STATS_W, h: ROW_H });
+    // Umiejętność ląduje POD tabelą jako wstęga na całą szerokość — tak jak
+    // we wzorcu wstęga z nazwą ruchu pod kratką przycisków. Osobne tło i brak
+    // zebry mówią, że to nie kolejny wiersz tabeli, tylko podpis do niej.
+    slots.push({
+      x: CONTENT_X,
+      y: ROWS_Y + 4 * ROW_STEP_Y,
+      w: STATS_W,
+      h: ROW_H,
+      ribbon: true,
+    });
     this.stats = createStatTable(this, slots);
 
     const btnX = CONTENT_R - BTN_W / 2;
@@ -478,7 +500,7 @@ export class BattleScene extends Phaser.Scene {
       FORECAST_Y,
       CONTENT_W,
       FORECAST_H,
-      ICON.sword,
+      MINI.forecast,
       'Najedź kursorem na wroga, żeby zobaczyć prognozę obrażeń'
     );
   }
@@ -698,62 +720,68 @@ export class BattleScene extends Phaser.Scene {
         (unit.defending ? ' · w obronie' : '')
     );
 
+    // Każdy wiersz ma WŁASNY znak. Wcześniej miecz obsługiwał „Atak", „Zasięg"
+    // i prognozę naraz — jeden rysunek na trzy różne pojęcia. Teraz zasięg to
+    // tarcza celownicza, atak to miecz, a prognoza ma własny rozbłysk.
     const blocked = unit.def.shooter && !this.canShoot(unit);
     const reach: StatRow = unit.def.shooter
       ? blocked
-        ? { label: 'Zasięg', value: 'zablokowany — pół siły', icon: ICON.bow, alert: true }
+        ? { label: 'Zasięg', value: 'zablokowany — pół siły', icon: MINI.reach, alert: true }
         : {
             label: 'Zasięg',
             value: `strzela, pełna siła do ${unit.def.shootRange}`,
-            icon: ICON.bow,
-            tint: C.skyTop,
+            icon: MINI.reach,
           }
-      : { label: 'Zasięg', value: 'walka wręcz', icon: ICON.sword, tint: C.skyTop };
+      : { label: 'Zasięg', value: 'walka wręcz', icon: MINI.reach };
 
     const retaliation: StatRow =
       unit.def.ability === 'guardian'
-        ? { label: 'Odwet', value: 'bez limitu', icon: ICON.retaliate, tint: C.gold }
+        ? { label: 'Odwet', value: 'bez limitu', icon: MINI.retaliate }
         : unit.retaliations > 0
-          ? { label: 'Odwet', value: 'gotowy', icon: ICON.retaliate, tint: C.gold }
-          : { label: 'Odwet', value: 'już oddał', icon: ICON.retaliate, alert: true };
+          ? { label: 'Odwet', value: 'gotowy', icon: MINI.retaliate }
+          : { label: 'Odwet', value: 'już oddał', icon: MINI.retaliate, alert: true };
 
     const ability: StatRow = unit.def.ability
       ? {
           label: 'Umiejętność',
           value: `${ABILITIES[unit.def.ability].name} — ${ABILITIES[unit.def.ability].desc}`,
-          icon: ICON.star,
-          tint: C.gold,
+          icon: MINI.ability,
+          mark: C.gold,
         }
-      : { label: 'Umiejętność', value: 'brak', icon: ICON.star, tint: C.panelEdge };
+      : { label: 'Umiejętność', value: 'brak', icon: MINI.ability };
 
     this.stats.update([
       {
         label: 'Życie',
         value: `${this.total(unit)} / ${fullHp(unit.def)}`,
-        icon: ICON.heart,
-        tint: C.hpHigh,
+        icon: MINI.life,
       },
       {
         label: 'Atak',
         value: `${unit.count} × ${unit.def.atk} = ${stackAtk(unit.def, unit)}`,
-        icon: ICON.sword,
-        tint: C.gold,
+        icon: MINI.attack,
       },
       {
         label: 'Ruch',
         value: unit.def.flying ? `${unit.def.move} — lata` : `${unit.def.move}`,
-        icon: unit.def.flying ? ICON.wing : ICON.boot,
-        tint: C.ally,
+        icon: unit.def.flying ? MINI.fly : MINI.move,
       },
       reach,
-      { label: 'Żywioł', value: t.label, icon: TYPE_ICON[unit.def.type], tint: t.color },
+      // Barwa żywiołu wchodzi tylko w znak i tylko w postaci stonowanej —
+      // pasmo zostaje takie samo jak w każdym innym wierszu.
+      { label: 'Żywioł', value: t.label, icon: MINI_TYPE[unit.def.type], mark: t.color },
       {
         label: 'Mocny przeciw',
         value: `${strongInfo.dative} ×1.5`,
-        icon: TYPE_ICON[strong],
-        tint: C.hpHigh,
+        icon: MINI.strong,
+        mark: strongInfo.color,
       },
-      { label: 'Słaby wobec', value: `${weakInfo.genitive} ×1.5`, icon: TYPE_ICON[weak], alert: true },
+      {
+        label: 'Słaby wobec',
+        value: `${weakInfo.genitive} ×1.5`,
+        icon: MINI.weak,
+        alert: true,
+      },
       retaliation,
       ability,
     ]);

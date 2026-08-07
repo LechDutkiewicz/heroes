@@ -20,7 +20,7 @@
 
 import Phaser from 'phaser';
 import { C, FONT, H, T, body, display } from './theme';
-import { icon, type IconKey } from './icons';
+import { icon, miniIcon, type IconKey, type MiniKey } from './icons';
 
 // ---------- barwy ----------
 
@@ -328,16 +328,42 @@ export interface StatSlot {
   y: number;
   w: number;
   h: number;
+  /** Stopień zebry: 0 jaśniejszy, 1 ciemniejszy. Liczy się z pozycji, nie z treści. */
+  band?: 0 | 1;
+  /** Wstęga na całą szerokość — inny element niż wiersz tabeli, nie łamie siatki. */
+  ribbon?: boolean;
 }
 
 export interface StatRow {
   label: string;
   value: string;
-  icon?: IconKey;
-  /** Odcień pasma — bierze się z niego tinta tła wiersza, jak we wzorcu. */
-  tint?: number;
-  /** Ostrzeżenie: liczba na czerwono, pasmo cieplejsze. */
+  icon?: MiniKey;
+  /**
+   * Barwa treści — wchodzi TYLKO w znak, nigdy w tło pasma. Tło zostaje pod
+   * wspólnym filtrem, więc panel czyta się jako jedna tabela.
+   */
+  mark?: number;
+  /** Ostrzeżenie: liczba na czerwono i znak w przygaszonej czerwieni. */
   alert?: boolean;
+}
+
+/**
+ * JEDEN FILTR NA WSZYSTKIE PASMA.
+ *
+ * Poprzednia wersja dobierała odcień pasma pod treść wiersza: życie zielone,
+ * atak kremowy, ruch błękitny, słabość różowa. Zamiar był taki, żeby gracz
+ * uczył się wierszy po barwie — skutek był taki, że panel wyglądał jak tęcza
+ * i rozpadał się na osiem osobnych pasków. We wzorcu (karta trenera) pasma
+ * statystyk chodzą przez jeden chłodny filtr o tej samej jasności; różnicę
+ * między sąsiednimi wierszami robi sama zebra, nie znaczenie.
+ */
+const BAND_FILTER = C.skyTop;
+
+/** Stonowany znak: nigdy pełne nasycenie, zawsze ściągnięty w stronę atramentu. */
+export function markTint(hue?: number, alert = false) {
+  const base = mix(C.ink, C.skyTop, 0.3);
+  if (alert) return mix(base, C.foeDeep, 0.55);
+  return hue === undefined ? base : mix(base, hue, 0.5);
 }
 
 export interface StatTable {
@@ -389,12 +415,12 @@ export function createStatTable(scene: Phaser.Scene, slots: StatSlot[]): StatTab
           return;
         }
 
-        // Naprzemienne odcienie pasm biorą się z tinty przypisanej do wiersza,
-        // nie z parzystości — dzięki temu „życie" jest zawsze zielonkawe,
-        // a „słabość" zawsze różowa i gracz uczy się ich po barwie.
-        const tint = row.alert ? C.hpLow : (row.tint ?? C.ally);
-        const fill = mix(C.panel, tint, row.alert ? 0.2 : 0.14);
-        plate(g, s.x, s.y, s.w, s.h, s.h * 0.36, fill, mix(C.panelEdge, tint, 0.3), {
+        // Tło wiersza NIE zależy od treści — tylko od miejsca w kolumnie
+        // (zebra) i od tego, czy to wiersz tabeli, czy wstęga pod nią.
+        const fill = s.ribbon
+          ? mix(C.panel, C.panelDeep, 0.13)
+          : mix(C.panel, BAND_FILTER, s.band === 1 ? 0.17 : 0.07);
+        plate(g, s.x, s.y, s.w, s.h, s.h * 0.36, fill, mix(C.panelEdge, BAND_FILTER, 0.32), {
           light: 0.2,
           dark: 0.1,
           gloss: 0.16,
@@ -404,9 +430,18 @@ export function createStatTable(scene: Phaser.Scene, slots: StatSlot[]): StatTab
 
         let textX = s.x + 10;
         if (row.icon) {
-          const d = s.h - 5;
-          icons[i] = icon(scene, row.icon, s.x + 8 + d / 2, s.y + s.h / 2, d).setDepth(62);
-          textX = s.x + 10 + d + 4;
+          // Jeden moduł rozmiarowy dla całej kolumny znaków: ta sama średnica
+          // niezależnie od kształtu, więc krawędź napisów też jest jedna.
+          const d = s.h - 6;
+          icons[i] = miniIcon(
+            scene,
+            row.icon,
+            s.x + 9 + d / 2,
+            s.y + s.h / 2,
+            d,
+            markTint(row.mark, row.alert)
+          ).setDepth(62);
+          textX = s.x + 11 + d + 5;
         }
         label.setX(textX).setY(s.y + s.h / 2).setText(row.label);
         value
@@ -440,11 +475,13 @@ export function createForecast(
   y: number,
   w: number,
   h: number,
-  iconKey: IconKey,
+  iconKey: MiniKey,
   hint: string
 ): Forecast {
   const g = scene.add.graphics().setDepth(61);
-  const mark = icon(scene, iconKey, x + 10 + (h - 8) / 2, y + h / 2, h - 8).setDepth(62);
+  // Znak z tego samego kompletu co tabela — prognoza to część panelu, nie
+  // wtręt z planszy. Barwę podmieniamy razem z tłem kapsułki.
+  const mark = miniIcon(scene, iconKey, x + 10 + (h - 8) / 2, y + h / 2, h - 10, markTint()).setDepth(62);
   const text = scene.add
     .text(x + 14 + (h - 8), y + h / 2, '', { ...body(14, H.white), fontStyle: 'bold' })
     .setOrigin(0, 0.5)
@@ -473,7 +510,7 @@ export function createForecast(
     // prognozę. Puste miejsce w panelu wyglądało jak niedokończony układ,
     // a przy okazji nikt nie wiedział, że prognoza w ogóle istnieje.
     paint(-1);
-    mark.setAlpha(0.45);
+    mark.setAlpha(0.7).setTint(markTint());
     text.setText(hint).setColor(H.inkSoft).setAlpha(0.9).setShadow(0, 0, '#00000000', 0);
   };
 
@@ -482,7 +519,7 @@ export function createForecast(
   return {
     show(value, deadly) {
       paint(deadly ? 1 : 0);
-      mark.setAlpha(1);
+      mark.setAlpha(1).setTint(deadly ? C.white : C.ink);
       text.setText(value).setAlpha(1).setColor(deadly ? H.white : H.ink);
       text.setShadow(0, 1, deadly ? '#00000066' : '#ffffff55', 2, false, true);
     },

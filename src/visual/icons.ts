@@ -326,10 +326,13 @@ function starPts(arms: number, rOut: number, rIn: number, turn = -90) {
   return pts;
 }
 
-/** Strzałka blokowa w pionie: `dir` = -1 w górę, 1 w dół. */
+/**
+ * Strzałka blokowa w pionie. Kształt bazowy ma grot u góry, więc `dir = 1` to
+ * strzałka w górę, a `dir = -1` odbija ją względem środka kafla.
+ */
 function blockArrow(g: Pen, dir: number) {
   const t = (y: number) => 32 + dir * (y - 32);
-  poly(g, [32, t(M0), 55, t(30), 42, t(30), 42, t(M1), 22, t(M1), 22, t(30), 9, t(30)]);
+  poly(g, [32, t(M0), 56, t(31), 42, t(31), 42, t(M1), 22, t(M1), 22, t(31), 8, t(31)]);
 }
 
 const MINI_DRAW: Record<string, (g: Pen) => void> = {
@@ -345,18 +348,20 @@ const MINI_DRAW: Record<string, (g: Pen) => void> = {
 
   // Atak: miecz. Krępy, bo w 16 pikselach smukła klinga to kreska.
   [MINI.attack]: (g) => {
-    poly(g, [32, M0, 41, 19, 41, 38, 32, 46, 23, 38, 23, 19]);
-    poly(g, [13, 38, 51, 38, 51, 45, 13, 45]);
-    poly(g, [28, 45, 36, 45, 36, M1, 28, M1]);
+    poly(g, [32, M0, 43, 20, 43, 37, 32, 46, 21, 37, 21, 20]);
+    poly(g, [11, 37, 53, 37, 53, 46, 11, 46]);
+    poly(g, [27, 46, 37, 46, 37, M1, 27, M1]);
   },
 
   // Zasięg: tarcza celownicza. Wcześniej „Zasięg" nosił ten sam miecz co
   // „Atak" — jeden znak na dwa różne pojęcia. Pierścienie mówią o dystansie,
   // nie o sile ciosu, i nie mylą się z niczym innym w panelu.
   [MINI.reach]: (g) => {
-    poly(g, ring(32, 32, 26, 20, 0, 360, 40));
-    poly(g, ring(32, 32, 14, 9, 0, 360, 32));
-    g.fillCircle(32, 32, 4.5);
+    // Pełny pierścień domykamy na 359,5°, a nie na 360° — przy dokładnym
+    // domknięciu pierwszy i ostatni punkt pokrywają się i triangulacja gubi
+    // ostatni trójkąt.
+    poly(g, ring(32, 32, 26, 18.5, 0, 359.5, 40));
+    poly(g, ring(32, 32, 13, 6.5, 0, 359.5, 32));
   },
 
   [MINI.move]: (g) => {
@@ -367,10 +372,10 @@ const MINI_DRAW: Record<string, (g: Pen) => void> = {
   // panelowym czytała się jak zawijas — była projektowana na duży znak przy
   // oddziale. Daszki nie udają ptaka, ale w każdym rozmiarze mówią „w górze".
   [MINI.fly]: (g) => {
-    bar(g, 9, 33, 32, 13, 9);
-    bar(g, 32, 13, 55, 33, 9);
-    bar(g, 9, M1, 32, 38, 9);
-    bar(g, 32, 38, 55, M1, 9);
+    bar(g, 8, 33, 32, 12, 10);
+    bar(g, 32, 12, 56, 33, 10);
+    bar(g, 8, M1, 32, 37, 10);
+    bar(g, 32, 37, 56, M1, 10);
   },
 
   [MINI.fire]: (g) => {
@@ -401,20 +406,20 @@ const MINI_DRAW: Record<string, (g: Pen) => void> = {
 
   // Przewaga i słabość: strzałki, nie ikony żywiołów. Który to żywioł, mówi
   // napis obok; znak ma mówić, w którą stronę działa mnożnik.
-  [MINI.strong]: (g) => blockArrow(g, -1),
-  [MINI.weak]: (g) => blockArrow(g, 1),
+  [MINI.strong]: (g) => blockArrow(g, 1),
+  [MINI.weak]: (g) => blockArrow(g, -1),
 
   [MINI.retaliate]: (g) => {
-    poly(g, ring(29, 37, 21, 12, 175, 355));
-    poly(g, [37, 8, 58, 21, 37, 32]);
+    poly(g, ring(29, 38, 22, 11, 175, 355));
+    poly(g, [36, 6, 60, 21, 36, 36]);
   },
 
   // Umiejętność: iskra o czterech ramionach.
-  [MINI.ability]: (g) => poly(g, starPts(4, 26, 7)),
+  [MINI.ability]: (g) => poly(g, starPts(4, 26, 9.5)),
 
   // Prognoza: rozbłysk uderzenia — dwanaście krótkich ramion. Celowo inny
   // rysunek niż iskra umiejętności i niż miecz ataku, bo to trzecia sprawa.
-  [MINI.forecast]: (g) => poly(g, starPts(12, 26, 15)),
+  [MINI.forecast]: (g) => poly(g, starPts(10, 26, 14)),
 };
 
 /**
@@ -442,4 +447,20 @@ export function buildIcons(scene: Phaser.Scene) {
 /** Ikona gotowa do wstawienia; `size` to docelowa wysokość w pikselach. */
 export function icon(scene: Phaser.Scene, key: IconKey, x: number, y: number, size: number) {
   return scene.add.image(x, y, key).setDisplaySize(size, size);
+}
+
+/**
+ * Znak z kompletu mini. Tekstura jest biała, więc zwykły `setTint` mnoży ją
+ * wprost przez podaną barwę — znak wychodzi dokładnie w tym odcieniu, który
+ * poda wiersz.
+ */
+export function miniIcon(
+  scene: Phaser.Scene,
+  key: MiniKey,
+  x: number,
+  y: number,
+  size: number,
+  tint: number
+) {
+  return scene.add.image(x, y, key).setDisplaySize(size, size).setTint(tint);
 }
