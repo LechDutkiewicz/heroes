@@ -80,12 +80,15 @@ export function buildEffectTextures(scene: Phaser.Scene) {
   glow.generateTexture(FX.glow, 128, 128);
   glow.destroy();
 
-  // Łuna: duża i celowo słaba (k = 0.9 daje ~0.6 alfy w samym środku). Barwę
-  // dostaje dopiero przy użyciu przez `setTint`, więc ta sama tekstura świeci
-  // pomarańczowo dla ognia i błękitnie dla wody.
+  // Łuna. Poprzednia była tak słaba (k = 0.9, czyli ~0.6 alfy w samym środku,
+  // rozciągnięte na 250 px), że po rozciągnięciu do rozmiaru trafienia w ogóle
+  // nie było jej widać — sonda pokazała pustą planszę tam, gdzie miało zalewać
+  // światło. Stąd k = 2.6: rdzeń praktycznie kryjący, brzeg nadal schodzący do
+  // zera. Tekstura ma 512 px, bo przy 256 rozciągnięcie na 250 px pokazywało
+  // stopnie warstw.
   const bloom = scene.add.graphics();
-  drawGlow(bloom, 256, 0.9, 96);
-  bloom.generateTexture(FX.bloom, 256, 256);
+  drawGlow(bloom, 512, 2.6, 128);
+  bloom.generateTexture(FX.bloom, 512, 512);
   bloom.destroy();
 
   // Pył: ta sama metoda co łuna, ale bez jasnego środka — drobinka wygląda na
@@ -122,6 +125,30 @@ export function buildEffectTextures(scene: Phaser.Scene) {
   tw.fillPath();
   tw.generateTexture(FX.twinkle, 32, 32);
   tw.destroy();
+}
+
+/**
+ * Przyciemnienie barwy przy zachowaniu proporcji kanałów.
+ *
+ * Potrzebne przy warstwach ADD: dodanie pełnej barwy żywiołu do już jasnego
+ * terenu wypycha wszystkie kanały do 255 i zostaje biel. Ta sama barwa
+ * przyciemniona dodaje mniej, ale ZACHOWUJE nierówność kanałów — i właśnie
+ * z niej bierze się temperatura światła, o którą upomniał się krytyk.
+ */
+function shade(color: number, k: number) {
+  const c = Phaser.Display.Color.IntegerToRGB(color);
+  return Phaser.Display.Color.GetColor(
+    Math.round(c.r * k),
+    Math.round(c.g * k),
+    Math.round(c.b * k)
+  );
+}
+
+/** Rozjaśnienie w stronę bieli — dla rdzenia światła, gdzie żar jest najgorętszy. */
+function tintTowardsWhite(color: number, k: number) {
+  const c = Phaser.Display.Color.IntegerToRGB(color);
+  const up = (v: number) => Math.round(v + (255 - v) * k);
+  return Phaser.Display.Color.GetColor(up(c.r), up(c.g), up(c.b));
 }
 
 // ---------- trafienie ----------
@@ -163,15 +190,25 @@ function sparkSpray(
     const r = Phaser.Math.FloatBetween(1, 4) * (sharp ? 1 : 1.7);
     // Barwa żywiołu przeważa; biel i złoto tylko doprawiają, żeby błysk nie
     // zrobił się znów biały (to był osobny zarzut).
-    const tint = Phaser.Math.RND.pick([color, color, color, C.goldLight, C.white]);
+    // Barwa żywiołu przeważa, ale rozjaśniona: drobna iskra w surowej barwie
+    // ginie na tle w tej samej barwie (zielona iskra na trawie). Rozjaśnienie
+    // trzyma hue, a daje kontrast.
+    const bright = tintTowardsWhite(color, 0.35);
+    const tint = Phaser.Math.RND.pick([bright, bright, bright, color, C.goldLight]);
     const sp = scene.add
       .image(x, y, sharp ? FX.spark : FX.mote)
-      .setDisplaySize(r * 2, r * 2)
+      // `r` to promień JASNEGO RDZENIA iskry, nie całego obrazka. Tekstura ma
+      // rdzeń o promieniu 3/16 swojej szerokości i miękką otoczkę wokół, więc
+      // żeby rdzeń miał naprawdę 1-4 px, obrazek musi być kilka razy większy.
+      // Poprzednio rysowaliśmy cały obrazek w rozmiarze 2r — rdzeń wychodził
+      // poniżej piksela i iskier po prostu nie było widać.
+      .setDisplaySize(r * (sharp ? 5.4 : 7), r * (sharp ? 5.4 : 7))
       .setTint(tint)
-      // Pył idzie przez SCREEN: na jasnej łące ADD nie ma już zapasu i tło
-      // wychodzi na biało, a SCREEN zachowuje barwę.
+      // Ostre iskry świecą (ADD) — są małe, więc wypalenie do bieli im nie
+      // grozi, a muszą się przebić przez jasny teren. Pył idzie przez SCREEN:
+      // ma być zdmuchniętą mgiełką w barwie żywiołu, nie punktem światła.
       .setBlendMode(sharp ? Phaser.BlendModes.ADD : Phaser.BlendModes.SCREEN)
-      .setAlpha(Phaser.Math.FloatBetween(0.3, 1));
+      .setAlpha(Phaser.Math.FloatBetween(0.35, 1));
     layer.add(sp);
 
     const a = Phaser.Math.FloatBetween(0, Math.PI * 2);
@@ -183,8 +220,8 @@ function sparkSpray(
       // Lekkie opadanie: iskry mają ciążyć do ziemi, inaczej wyglądają jak
       // rozjeżdżająca się rozeta.
       y: y + Math.sin(a) * d * 0.72 + 14,
-      displayWidth: r * 0.5,
-      displayHeight: r * 0.5,
+      displayWidth: r * 0.8,
+      displayHeight: r * 0.8,
       alpha: 0,
       duration: life,
       ease: 'Quad.easeOut',
@@ -232,47 +269,61 @@ export function impactBurst(
   // 1. POŚWIATA — najważniejsza warstwa i główny zarzut z rundy 1. Rdzeń miał
   // ~30 px i był biały, więc trafienie wyglądało jak naklejka: nie wpływało na
   // resztę planszy. Tu łuna ma 200-250 px, czyli obejmuje cel RAZEM z sąsiednimi
-  // heksami (pole ma ~80 px), świeci barwą żywiołu i gaśnie do zera na brzegu.
-  // SCREEN zamiast ADD, bo na jasnym terenie ADD wypala wszystko do bieli
-  // i barwa żywiołu przestaje być rozpoznawalna.
+  // heksami (pole ma ~80 px) i gaśnie do zera na brzegu.
+  //
+  // Światło buduje się z DWÓCH warstw, bo żaden pojedynczy tryb mieszania nie
+  // daje naraz jasności i barwy (sprawdzone sondą na łące i na śniegu):
+  //  - ADD rozjaśnia i naprawdę „zalewa scenę", ale przy jasnej barwie żywiołu
+  //    wypala wszystko do bieli;
+  //  - SCREEN barwę trzyma, ale zielona poświata na zielonej trawie nie
+  //    rozjaśnia niczego — trafienie Verdiko było po prostu niewidoczne.
+  // Stąd: przygaszona barwa w ADD (nierówne kanały, więc światło ma temperaturę)
+  // plus pełna barwa położona zwyczajnie, która nasyca to, co ADD rozjaśniło.
   const bloomPx = (205 + p * 45) * (o.strong ? 1.18 : o.weak ? 0.82 : 1);
-  const bloom = scene.add
-    .image(x, y, FX.bloom)
-    .setTint(o.color)
-    .setBlendMode(Phaser.BlendModes.SCREEN)
-    .setDisplaySize(bloomPx * 0.55, bloomPx * 0.55)
-    .setAlpha(0);
-  layer.add(bloom);
-  // Rozbłysk: w 70 ms do pełna, potem spokojne gaśnięcie. Wolniejsze narastanie
-  // wyglądałoby jak zapalana lampa, a nie jak uderzenie.
-  scene.tweens.add({
-    targets: bloom,
-    displayWidth: bloomPx,
-    displayHeight: bloomPx,
-    alpha: 1,
-    duration: 70,
-    ease: E.snap,
-  });
-  scene.tweens.add({
-    targets: bloom,
-    displayWidth: bloomPx * 1.22,
-    displayHeight: bloomPx * 1.22,
-    alpha: 0,
-    delay: 80,
-    duration: 260,
-    ease: 'Quad.easeIn',
-    onComplete: () => bloom.destroy(),
-  });
+  const lights: Phaser.GameObjects.Image[] = [];
+  const addLight = (tint: number, mode: number, alpha: number, from: number) => {
+    const img = scene.add
+      .image(x, y, FX.bloom)
+      .setTint(tint)
+      .setBlendMode(mode)
+      .setDisplaySize(bloomPx * from, bloomPx * from)
+      .setAlpha(0);
+    layer.add(img);
+    // Rozbłysk: w 70 ms do pełna, potem spokojne gaśnięcie. Wolniejsze
+    // narastanie wyglądałoby jak zapalana lampa, a nie jak uderzenie.
+    scene.tweens.add({
+      targets: img,
+      displayWidth: bloomPx,
+      displayHeight: bloomPx,
+      alpha,
+      duration: 70,
+      ease: E.snap,
+    });
+    scene.tweens.add({
+      targets: img,
+      displayWidth: bloomPx * 1.25,
+      displayHeight: bloomPx * 1.25,
+      alpha: 0,
+      delay: 80,
+      duration: 260,
+      ease: 'Quad.easeIn',
+      onComplete: () => img.destroy(),
+    });
+    lights.push(img);
+  };
+  addLight(shade(o.color, 0.62), Phaser.BlendModes.ADD, 1, 0.5);
+  addLight(o.color, Phaser.BlendModes.NORMAL, 0.5, 0.62);
 
-  // 2. Aureola w barwie żywiołu — gęstsze światło tuż przy punkcie kontaktu,
-  // między szeroką łuną a białym rdzeniem. Bez niej przejście od łuny do
-  // rdzenia było skokiem.
+  // 2. Aureola — gęstsze światło tuż przy punkcie kontaktu, między szeroką łuną
+  // a białym rdzeniem. Bez niej przejście od łuny do rdzenia było skokiem.
+  // Barwa rozjaśniona w stronę bieli, bo tutaj światło jest już tak mocne, że
+  // czysta barwa żywiołu czytałaby się jak plama farby, a nie jak żar.
   const halo = scene.add
     .image(x, y, FX.glow)
-    .setTint(o.color)
+    .setTint(tintTowardsWhite(o.color, 0.45))
     .setBlendMode(Phaser.BlendModes.ADD)
-    .setScale(0.3 * scale)
-    .setAlpha(0.95);
+    .setScale(0.34 * scale)
+    .setAlpha(1);
   layer.add(halo);
   scene.tweens.add({
     targets: halo,
@@ -284,10 +335,12 @@ export function impactBurst(
   });
 
   // 2. Biały rdzeń — gaśnie najszybciej, żeby zaraz odsłonić liczbę obrażeń.
+  // Celowo mały: to on był całym rozbłyskiem z rundy 1 („biała plamka ~30 px").
+  // Teraz jest tylko punktem kontaktu wewnątrz barwnego światła.
   const core = scene.add
     .image(x, y, FX.glow)
     .setBlendMode(Phaser.BlendModes.ADD)
-    .setScale(0.14 * scale)
+    .setScale(0.11 * scale)
     .setAlpha(1);
   layer.add(core);
   scene.tweens.add({
@@ -302,7 +355,7 @@ export function impactBurst(
   // 3. Pierścienie energii. Dwa, z przesunięciem — jeden wygląda jak animacja
   // ładowania, dwa jak fala uderzeniowa.
   ring(scene, layer, x, y, C.white, 4, 3.4 * scale, 300, 0);
-  ring(scene, layer, x, y, o.color, 3, 4.6 * scale, 380, 80);
+  ring(scene, layer, x, y, tintTowardsWhite(o.color, 0.3), 3, 4.6 * scale, 380, 80);
 
   // 4. Deszcz iskier o losowym promieniu i jasności — 30-50 sztuk, część
   // ostra, część rozmyta w pył (szczegóły w `sparkSpray`). To one dają wrażenie
@@ -325,7 +378,7 @@ export function impactBurst(
     scale: { start: 0.45 * scale, end: 0 },
     alpha: { min: 0.35, max: 1 },
     rotate: { start: 0, end: 180 },
-    tint: [C.goldLight, o.color],
+    tint: [tintTowardsWhite(o.color, 0.4), C.goldLight],
     blendMode: Phaser.BlendModes.ADD,
     emitting: false,
   });
@@ -499,7 +552,7 @@ export function launchProjectile(
   const halo = scene.add
     .image(0, 0, FX.glow)
     .setTint(o.color)
-    .setBlendMode(Phaser.BlendModes.ADD)
+    .setBlendMode(Phaser.BlendModes.SCREEN)
     .setScale(o.broken ? 0.3 : 0.55)
     .setAlpha(0.95);
   // Jasny rdzeń pod ikoną. Bez niego ikona żywiołu — która ma gruby ciemny
@@ -527,8 +580,11 @@ export function launchProjectile(
     alpha: { min: 0.3, max: 1 },
     // Przewaga barwy żywiołu nad bielą: przy równym udziale smuga robiła się
     // biała i ogień przestawał różnić się od wody.
-    tint: [o.color, o.color, o.color, C.goldLight, C.white],
-    blendMode: Phaser.BlendModes.ADD,
+    tint: [o.color, o.color, o.color, o.color, C.goldLight],
+    // SCREEN: w ADD smuga robiła się biała i strzał ognisty nie różnił się od
+    // wodnego — to był osobny zarzut z rundy 1, samo przeważenie listy barw
+    // nie wystarczyło, bo problem siedział w trybie mieszania.
+    blendMode: Phaser.BlendModes.SCREEN,
     quantity: 3,
   });
   layer.add(trail);
@@ -578,6 +634,26 @@ export function launchProjectile(
  * zamiast lądować na poprzedniej.
  */
 const taken = new WeakMap<Phaser.Scene, Phaser.Geom.Rectangle[]>();
+
+/**
+ * Skąd tabliczka wie, CO leży pod spodem.
+ *
+ * Rozsuwanie z rundy 1 pilnowało tylko innych napisów, więc trzy komunikaty
+ * z jednego ciosu owszem nie zlewały się ze sobą, ale całą kolumną siadały na
+ * plakietkach sąsiednich oddziałów (widać to na zrzucie 05: „-10 / padło 5 /
+ * Słabo skuteczne..." przykrywa Verdiko i Cindro razem z paskami życia).
+ * Napis ulotny gaśnie po chwili, a plakietka jest stałą informacją — to napis
+ * ma ustąpić, nie odwrotnie.
+ *
+ * Scena rejestruje tu funkcję zwracającą prostokąty zajęte przez oddziały.
+ * Funkcja, nie gotowa lista, bo oddziały chodzą i giną w trakcie bitwy, a
+ * tabliczka musi znać stan z chwili, w której wyskakuje.
+ */
+const obstacles = new WeakMap<Phaser.Scene, () => Phaser.Geom.Rectangle[]>();
+
+export function setLabelObstacles(scene: Phaser.Scene, fn: () => Phaser.Geom.Rectangle[]) {
+  obstacles.set(scene, fn);
+}
 
 /**
  * Bufor napisów zgłoszonych w tej samej klatce.
@@ -719,24 +795,58 @@ function plate(
   // stojącego niżej oddziału.
   const baseY = Phaser.Math.Clamp(ay - (h - 24) / 2, minY, maxY);
 
-  // Szukanie wolnego pasa: najpierw w górę, a gdy nad polem jest już krawędź
-  // planszy — w dół. Samo spychanie do góry wypychało napisy poza planszę,
-  // na pasek stanu tury, gdy cios padał w górnym rzędzie.
+  // Szukanie wolnego miejsca. Nie „pierwsze, które nie koliduje" — przy
+  // zatłoczonym rogu planszy takiego miejsca po prostu nie ma i trzeba wybrać
+  // najmniej złe. Dlatego każdy kandydat dostaje karę i wygrywa najmniejsza.
+  //
+  // Kandydaci idą też w bok, nie tylko w pionie: cios w narożniku ma nad sobą
+  // krawędź planszy i pod sobą sąsiada, więc jedyne wolne miejsce bywa obok.
   const busy = taken.get(scene) ?? [];
   taken.set(scene, busy);
+  const units = obstacles.get(scene)?.() ?? [];
+  const minX = BOARD_X + w / 2 + 4;
+  const maxX = BOARD_X + BOARD_W - w / 2 - 4;
   const step = h + 4;
-  const box = new Phaser.Geom.Rectangle(x - w / 2, baseY - h / 2, w, h);
-  for (const k of [0, -1, -2, 1, 2, -3, 3]) {
-    const ny = baseY + k * step;
-    if (ny < minY || ny > maxY) continue;
-    box.y = ny - h / 2;
-    if (!busy.some((r) => Phaser.Geom.Intersects.RectangleToRectangle(r, box))) break;
+
+  const probe = new Phaser.Geom.Rectangle(0, 0, w, h);
+  const overlap = (r: Phaser.Geom.Rectangle) => {
+    const ox = Math.min(probe.right, r.right) - Math.max(probe.left, r.left);
+    const oy = Math.min(probe.bottom, r.bottom) - Math.max(probe.top, r.top);
+    return ox > 0 && oy > 0 ? ox * oy : 0;
+  };
+
+  let bestX = Phaser.Math.Clamp(x, minX, maxX);
+  let bestY = Phaser.Math.Clamp(baseY, minY, maxY);
+  let bestCost = Infinity;
+  for (const dy of [-1, -2, 0, -3, 1, 2, 3, -4]) {
+    for (const dx of [0, -0.75, 0.75, -1.4, 1.4]) {
+      const cx = Phaser.Math.Clamp(x + dx * w, minX, maxX);
+      const cy = Phaser.Math.Clamp(baseY + dy * step, minY, maxY);
+      probe.setPosition(cx - w / 2, cy - h / 2);
+      // Nachodzenie na inną tabliczkę jest gorsze niż na oddział: dwa napisy
+      // na sobie są nie do przeczytania, napis na stworku tylko go zasłania.
+      let cost = 0;
+      for (const r of busy) cost += overlap(r) * 3;
+      for (const r of units) cost += overlap(r);
+      // Drobna kara za oddalenie od zdarzenia — przy równym koszcie tabliczka
+      // ma zostać przy tym, kogo dotyczy, inaczej gracz nie wie, kto oberwał.
+      cost += (Math.abs(cx - x) + Math.abs(cy - baseY) * 1.6) * 6;
+      if (cost < bestCost) {
+        bestCost = cost;
+        bestX = cx;
+        bestY = cy;
+      }
+      if (bestCost === 0) break;
+    }
+    if (bestCost === 0) break;
   }
-  const y = box.y + h / 2;
+  const x2 = bestX;
+  const y = bestY;
+  const box = new Phaser.Geom.Rectangle(x2 - w / 2, y - h / 2, w, h);
   busy.push(box);
 
   const cont = scene.add
-    .container(x, y, parts)
+    .container(x2, y, parts)
     .setScale(0.45)
     .setBlendMode(Phaser.BlendModes.NORMAL);
   layer.add(cont);

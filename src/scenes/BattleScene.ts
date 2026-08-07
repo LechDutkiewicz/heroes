@@ -61,6 +61,7 @@ import {
   floatLabel,
   impactBurst,
   launchProjectile,
+  setLabelObstacles,
   showOutcomeScreen,
   slashArc,
 } from '../visual/effects';
@@ -267,6 +268,17 @@ export class BattleScene extends Phaser.Scene {
     this.highlightLayer = this.add.container(0, 0).setDepth(5);
     this.approachLayer = this.add.container(0, 0).setDepth(6);
     this.effectLayer = this.add.container(0, 0).setDepth(100);
+
+    // Napisy ulotne mają omijać oddziały, więc dajemy warstwie efektów wgląd
+    // w to, gdzie kto stoi. Pas -46..+30 od środka pola to sylwetka razem
+    // z nazwą u góry i kapsułką życia pod nogami — czyli wszystko, czego
+    // zasłonić nie wolno.
+    setLabelObstacles(this, () =>
+      this.units.map((u) => {
+        const p = this.cellToXY(u.col, u.row);
+        return new Phaser.Geom.Rectangle(p.x - 46, p.y - 46, 92, 76);
+      })
+    );
 
     this.scatterObstacles();
 
