@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-07 12:05",
+  "updated": "2026-08-07 16:51",
   "pieces": [
     {
       "name": "Plansza: siatka, teren, rama",
@@ -33,7 +33,7 @@
     {
       "name": "Oddziały: tabliczka, pasek HP, ikony",
       "status": "running",
-      "note": "Runda 4 w toku. Cztery plakietki zeszły do dwóch, stworek odzyskał sylwetkę — ale kapsułka nadal czyta się jak prostokąt i jest za szeroka.",
+      "note": "Cztery rundy przegrane, ale każda coś naprawiła: emoji zniknęły, plakietek jest dwie zamiast czterech, liczebność siedzi w medalionie nachodzącym na pasek, stworek odzyskał dominację. Runda 5 czeka na wolnego buildera.",
       "shots": [
         "11-oddzialy-ranne",
         "09-zblizenie-oddzialu"
@@ -56,6 +56,12 @@
           "blind": "oddzialy-r3",
           "gap": "Plakietka i pasek to płaskie prostokąty z ledwie zaokrąglonymi rogami, koryto jest gołym ciemnym prostokątem bez wewnętrznego cienia, a liczba siedzi w doklejonym z boku kaflu zamiast w jednym korpusie. Oprawa waży więcej niż stworek, który opisuje — pasek ma niemal szerokość sylwetki. Promień ma być równy połowie wysokości, a cały pasek zejść do 60-70% obecnej szerokości.",
           "note": "Ciekawa różnica między kodem a odbiorem: builder faktycznie scalił życie i liczebność w jeden kształt z jednym obrysem, ale ciemna szczelina między strefami jest na tyle wyraźna, że wizualnie rozcina kapsułkę z powrotem na dwa kafle. Kod mówi „jeden kształt\", oko widzi dwa. Kierunek na rundę 4: liczba w okrągłej plakietce nachodzącej na koniec paska — nakładka czyta się jako jeden obiekt z dodatkiem, przyleganie jako dwa obiekty."
+        },
+        {
+          "win": false,
+          "blind": "oddzialy-r4",
+          "gap": "Pasek stanu to goły prostokąt w korycie — bez wewnętrznego cienia, bez połysku, bez zaokrąglenia wypełnienia. Zamień na kapsułkę: koryto o promieniu równym połowie wysokości, ciemny obrys 1 px i wewnętrzny cień od góry, wypełnienie z tym samym zaokrągleniem, gradientem jaśniejszym o ~25% u góry i pasmem połysku na górnej jednej trzeciej.",
+          "note": "Sprawdziłem to powiększeniem paska pięciokrotnie i krytyk myli się co do faktu, a ma rację co do wniosku. Wypełnienie JEST zaokrąglone — to nie jest prostokąt. Ale przy 4/7 życia zaokrąglona pigułka degeneruje się w kółko: pasek przestaje być paskiem, bo kształt nie niesie już długości, a to jedyne zadanie paska życia. To jest realna wada, której nie nazwał żaden z czterech werdyktów. Punkt wyjścia rundy 5: wypełnienie ma zostać paskiem na całym zakresie — zaokrąglenie tylko na krańcach, nigdy kosztem czytelności długości — plus gradient i połysk, których faktycznie nie ma."
         }
       ]
     },
