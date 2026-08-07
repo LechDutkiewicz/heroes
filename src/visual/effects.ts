@@ -45,6 +45,14 @@ export const FX = {
    * i gaśnie znacznie łagodniej, więc na brzegu naprawdę dochodzi do zera.
    */
   bloom: 'fx_luna',
+  /**
+   * Bardzo miękka, szeroka otoczka — zewnętrzny, najcieplejszy pas łuny.
+   * Osobna od `bloom`, bo tamta ma prawie kryjący rdzeń (plateau), a tutaj
+   * potrzebny jest sam wykładniczy ogon: gdyby zewnętrzny pas też miał
+   * jasny środek, przykryłby barwne warstwy pod sobą i temperatura znów
+   * zlałaby się w jedną płaską plamę.
+   */
+  haze: 'fx_mgla',
   /** Okrągła iskra z jasnym środkiem — główny budulec deszczu iskier. */
   spark: 'fx_iskra',
   /** Rozmyta drobinka bez ostrego środka — iskry „zdmuchnięte w pył" w tle. */
@@ -90,6 +98,13 @@ export function buildEffectTextures(scene: Phaser.Scene) {
   drawGlow(bloom, 512, 2.6, 128);
   bloom.generateTexture(FX.bloom, 512, 512);
   bloom.destroy();
+
+  // Mgła: k = 1.1, czyli alfa w środku ~0.67 i bardzo długi, łagodny ogon.
+  // To nią malujemy najdalszy, najcieplejszy pas światła.
+  const haze = scene.add.graphics();
+  drawGlow(haze, 512, 1.1, 128);
+  haze.generateTexture(FX.haze, 512, 512);
+  haze.destroy();
 
   // Pył: ta sama metoda co łuna, ale bez jasnego środka — drobinka wygląda na
   // nieostrą, więc iskry z niej zrobione czytają się jako dalszy plan.
@@ -151,6 +166,147 @@ function tintTowardsWhite(color: number, k: number) {
   return Phaser.Display.Color.GetColor(up(c.r), up(c.g), up(c.b));
 }
 
+/**
+ * Cieplejszy, mocniej nasycony wariant barwy — dla ZEWNĘTRZNEGO pasa łuny.
+ *
+ * We wzorcu (masters-08) światło ma wyraźną temperaturę: biały rdzeń, złoto
+ * w środku, cieplejszy pomarańcz na brzegach. Jedna barwa rozciągnięta na całą
+ * łunę zawsze wygląda jak przezroczysta naklejka, bo prawdziwe światło stygnie
+ * z odległością od źródła. Dlatego brzeg dostaje barwę obróconą o kilkanaście
+ * stopni w stronę bursztynu (30°) i dociśniętą w nasyceniu.
+ *
+ * Obrót jest mały i po krótszym łuku, więc woda nie robi się ogniem — robi się
+ * cieplejszym, głębszym błękitem, a ogień pełnym pomarańczem.
+ */
+function warmEdge(color: number) {
+  const c = Phaser.Display.Color.IntegerToRGB(color);
+  const hsv = Phaser.Display.Color.RGBToHSV(c.r, c.g, c.b) as {
+    h: number;
+    s: number;
+    v: number;
+  };
+  // Bursztyn wzorca leży przy 30° = 0.0833 w skali 0-1. Idziemy do niego
+  // krótszą drogą po kole, ale tylko o 14% dystansu.
+  const target = 30 / 360;
+  let d = target - hsv.h;
+  if (d > 0.5) d -= 1;
+  if (d < -0.5) d += 1;
+  const h = (hsv.h + d * 0.14 + 1) % 1;
+  const out = Phaser.Display.Color.HSVToRGB(h, Math.min(1, hsv.s * 1.25 + 0.12), hsv.v);
+  const o = out as Phaser.Display.Color;
+  return Phaser.Display.Color.GetColor(o.red, o.green, o.blue);
+}
+
+/**
+ * Maska przycinająca światło do prostokąta planszy.
+ *
+ * Bez niej łuna z górnego rzędu wylewała się na pasek tytułu (zrzut 04b) —
+ * i wtedy nie czyta się jako łuna nad łąką, tylko jako przeciek renderu.
+ * Maska jest jedna na scenę i współdzielona przez wszystkie warstwy światła:
+ * tworzenie jej na każdy cios kosztowałoby nowy Graphics kilka razy na turę.
+ */
+const masks = new WeakMap<Phaser.Scene, Phaser.Display.Masks.GeometryMask>();
+
+function boardMask(scene: Phaser.Scene) {
+  let m = masks.get(scene);
+  if (!m) {
+    const g = scene.make.graphics({}, false);
+    g.fillStyle(0xffffff, 1);
+    g.fillRoundedRect(BOARD_X, BOARD_Y, BOARD_W, BOARD_H, 18);
+    m = g.createGeometryMask();
+    masks.set(scene, m);
+  }
+  return m;
+}
+
+/**
+ * Rozwarstwione światło: mały biały rdzeń, barwa żywiołu w środkowym pasie,
+ * cieplejszy brzeg gasnący wykładniczo do zera.
+ *
+ * Wspólne dla trafienia i zejścia oddziału — po rundzie 2 rozbłysk śmierci był
+ * jedynym, który nie dostał barwy i przez to wyglądał na tańszy od reszty.
+ *
+ * Każdy pas idzie w dwóch trybach: przygaszona barwa w ADD (daje jasność
+ * i „zalewanie" sceny) plus ta sama barwa zwyczajnie (pilnuje nasycenia, bo
+ * ADD nad jasną łąką bieleje). Rdzeń jest wyłącznie w ADD — on MA być biały.
+ *
+ * @param d  średnica najszerszego pasa w pikselach
+ */
+function lightStack(
+  scene: Phaser.Scene,
+  layer: Phaser.GameObjects.Container,
+  x: number,
+  y: number,
+  color: number,
+  d: number,
+  strength = 1
+) {
+  const mask = boardMask(scene);
+  const edge = warmEdge(color);
+
+  // Pasy od najszerszego do najwęższego. `k` to ułamek średnicy, `grow` mówi
+  // ile pas urośnie gasnąc — szeroki brzeg rozpływa się bardziej niż rdzeń,
+  // dzięki czemu światło wygląda, jakby uciekało na zewnątrz.
+  const bands: {
+    tex: string;
+    tint: number;
+    mode: number;
+    a: number;
+    k: number;
+    from: number;
+    grow: number;
+    life: number;
+  }[] = [
+    // Najdalszy pas: cieplejsza barwa, ledwo widoczna, ale sięga 2-3x dalej niż
+    // rdzeń i to ona daje „globalne rozjaśnienie planszy", o które prosił krytyk.
+    { tex: FX.haze, tint: shade(edge, 0.78), mode: Phaser.BlendModes.ADD, a: 0.62, k: 1, from: 0.55, grow: 1.3, life: 300 },
+    { tex: FX.haze, tint: edge, mode: Phaser.BlendModes.NORMAL, a: 0.3, k: 1, from: 0.62, grow: 1.28, life: 300 },
+    // Pas środkowy: czysta barwa żywiołu — po niej gracz poznaje, czym oberwał.
+    { tex: FX.bloom, tint: shade(color, 0.6), mode: Phaser.BlendModes.ADD, a: 0.95, k: 0.5, from: 0.45, grow: 1.35, life: 260 },
+    { tex: FX.bloom, tint: color, mode: Phaser.BlendModes.NORMAL, a: 0.5, k: 0.46, from: 0.5, grow: 1.3, life: 260 },
+    // Gorąca obwódka rdzenia: barwa podciągnięta ku bieli. Bez niej skok od
+    // barwy do białego rdzenia był twardy i rdzeń czytał się jak dziura.
+    { tex: FX.glow, tint: tintTowardsWhite(color, 0.55), mode: Phaser.BlendModes.ADD, a: 1, k: 0.3, from: 0.3, grow: 1.6, life: 210 },
+    // Rdzeń: ~15% średnicy, biały, gaśnie najszybciej — musi zdążyć zniknąć,
+    // zanim wypłynie liczba obrażeń.
+    { tex: FX.glow, tint: C.white, mode: Phaser.BlendModes.ADD, a: 1, k: 0.15, from: 0.35, grow: 2.4, life: 160 },
+  ];
+
+  for (const b of bands) {
+    const size = d * b.k;
+    const img = scene.add
+      .image(x, y, b.tex)
+      .setTint(b.tint)
+      .setBlendMode(b.mode)
+      .setDisplaySize(size * b.from, size * b.from)
+      .setAlpha(0);
+    img.setMask(mask);
+    layer.add(img);
+    // Rozbłysk: szybkie narastanie (uderzenie), potem spokojne gaśnięcie.
+    scene.tweens.add({
+      targets: img,
+      displayWidth: size,
+      displayHeight: size,
+      alpha: b.a * strength,
+      duration: 65,
+      ease: E.snap,
+    });
+    scene.tweens.add({
+      targets: img,
+      displayWidth: size * b.grow,
+      displayHeight: size * b.grow,
+      alpha: 0,
+      delay: 70,
+      duration: b.life,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        img.clearMask();
+        img.destroy();
+      },
+    });
+  }
+}
+
 // ---------- trafienie ----------
 
 export interface ImpactOpts {
@@ -184,17 +340,36 @@ function sparkSpray(
   count: number,
   reach: number
 ) {
+  const mask = boardMask(scene);
+  const edge = warmEdge(color);
   for (let i = 0; i < count; i++) {
-    // Więcej iskier ostrych niż pyłu — pył ma tło budować, nie zamulać kadru.
-    const sharp = Math.random() < 0.6;
-    const r = Phaser.Math.FloatBetween(1, 4) * (sharp ? 1 : 1.7);
-    // Barwa żywiołu przeważa; biel i złoto tylko doprawiają, żeby błysk nie
-    // zrobił się znów biały (to był osobny zarzut).
-    // Barwa żywiołu przeważa, ale rozjaśniona: drobna iskra w surowej barwie
-    // ginie na tle w tej samej barwie (zielona iskra na trawie). Rozjaśnienie
-    // trzyma hue, a daje kontrast.
+    // TRZY KLASY ROZMIARU, nie jedno losowanie z zakresu.
+    //
+    // Losowy promień 1-4 px dawał w praktyce chmurę iskier średnich — rozkład
+    // jednostajny nie tworzy hierarchii, a we wzorcu widać wyraźnie trzy różne
+    // populacje: gruby, ostry żar tuż przy źródle, średnie iskry i mgła pyłu
+    // rozsypana daleko. Dlatego klasa jest losowana najpierw, a dopiero potem
+    // rozmiar w jej wąskim zakresie.
+    //  0 — pył: najmniejszy, najbardziej rozmyty, leci najdalej (tło);
+    //  1 — iskra średnia, umiarkowanie ostra;
+    //  2 — żar: największy i najostrzejszy, zostaje blisko punktu kontaktu.
+    const roll = Math.random();
+    const cls = roll < 0.45 ? 0 : roll < 0.8 ? 1 : 2;
+    const sharp = cls > 0;
+    // Promień jasnego rdzenia iskry: ~1 / 2 / 4 px, czyli obrazek 2/4/8 px.
+    const r = cls === 0 ? Phaser.Math.FloatBetween(0.8, 1.4)
+      : cls === 1 ? Phaser.Math.FloatBetween(1.8, 2.6)
+      : Phaser.Math.FloatBetween(3.4, 4.6);
+    // Temperatura także w iskrach: żar przy źródle jest najbielszy, średnie
+    // iskry niosą barwę żywiołu, daleki pył jest najcieplejszy i najciemniejszy.
+    // To ten sam gradient co w łunie, tylko rozłożony na cząstkach.
     const bright = tintTowardsWhite(color, 0.35);
-    const tint = Phaser.Math.RND.pick([bright, bright, bright, color, C.goldLight]);
+    const tint =
+      cls === 2
+        ? Phaser.Math.RND.pick([tintTowardsWhite(color, 0.6), bright, C.white])
+        : cls === 1
+          ? Phaser.Math.RND.pick([bright, bright, color, C.goldLight])
+          : Phaser.Math.RND.pick([edge, edge, shade(edge, 0.85), color]);
     const sp = scene.add
       .image(x, y, sharp ? FX.spark : FX.mote)
       // `r` to promień JASNEGO RDZENIA iskry, nie całego obrazka. Tekstura ma
@@ -202,17 +377,27 @@ function sparkSpray(
       // żeby rdzeń miał naprawdę 1-4 px, obrazek musi być kilka razy większy.
       // Poprzednio rysowaliśmy cały obrazek w rozmiarze 2r — rdzeń wychodził
       // poniżej piksela i iskier po prostu nie było widać.
-      .setDisplaySize(r * (sharp ? 5.4 : 7), r * (sharp ? 5.4 : 7))
+      // Rozmycie rośnie odwrotnie do klasy: żar (2) ma rdzeń prawie na całym
+      // obrazku i jest ostry, pył (0) ma ten sam rdzeń rozdmuchany na obrazek
+      // wielokrotnie większy, więc czyta się jako nieostry, dalszy plan.
+      .setDisplaySize(r * BLUR[cls], r * BLUR[cls])
       .setTint(tint)
       // Ostre iskry świecą (ADD) — są małe, więc wypalenie do bieli im nie
       // grozi, a muszą się przebić przez jasny teren. Pył idzie przez SCREEN:
       // ma być zdmuchniętą mgiełką w barwie żywiołu, nie punktem światła.
       .setBlendMode(sharp ? Phaser.BlendModes.ADD : Phaser.BlendModes.SCREEN)
-      .setAlpha(Phaser.Math.FloatBetween(0.35, 1));
+      // Żar świeci pełną mocą, pył ledwie majaczy — inaczej trzy klasy
+      // rozmiaru zlewałyby się w jedną jasność.
+      .setAlpha(cls === 2 ? Phaser.Math.FloatBetween(0.85, 1)
+        : cls === 1 ? Phaser.Math.FloatBetween(0.6, 0.95)
+        : Phaser.Math.FloatBetween(0.22, 0.5));
+    sp.setMask(mask);
     layer.add(sp);
 
     const a = Phaser.Math.FloatBetween(0, Math.PI * 2);
-    const d = Phaser.Math.FloatBetween(0.25, 1) * reach * (sharp ? 1 : 0.7);
+    // Pył leci najdalej, żar zostaje przy punkcie kontaktu — to ta odległość
+    // buduje głębię, nie sam rozmiar.
+    const d = Phaser.Math.FloatBetween(0.25, 1) * reach * REACH[cls];
     const life = Phaser.Math.Between(200, 520);
     scene.tweens.add({
       targets: sp,
@@ -225,10 +410,18 @@ function sparkSpray(
       alpha: 0,
       duration: life,
       ease: 'Quad.easeOut',
-      onComplete: () => sp.destroy(),
+      onComplete: () => {
+        sp.clearMask();
+        sp.destroy();
+      },
     });
   }
 }
+
+/** Mnożnik obrazka względem rdzenia iskry — im większy, tym bardziej rozmyta. */
+const BLUR = [11, 6.2, 4.4];
+/** Mnożnik zasięgu lotu wg klasy: pył daleko, żar blisko. */
+const REACH = [1.15, 0.85, 0.55];
 
 /**
  * Błysk w punkcie uderzenia. Warstwy o różnym czasie życia, od najdłuższej
@@ -266,108 +459,36 @@ export function impactBurst(
     onComplete: () => dim.destroy(),
   });
 
-  // 1. POŚWIATA — najważniejsza warstwa i główny zarzut z rundy 1. Rdzeń miał
-  // ~30 px i był biały, więc trafienie wyglądało jak naklejka: nie wpływało na
-  // resztę planszy. Tu łuna ma 200-250 px, czyli obejmuje cel RAZEM z sąsiednimi
-  // heksami (pole ma ~80 px) i gaśnie do zera na brzegu.
-  //
-  // Światło buduje się z DWÓCH warstw, bo żaden pojedynczy tryb mieszania nie
-  // daje naraz jasności i barwy (sprawdzone sondą na łące i na śniegu):
-  //  - ADD rozjaśnia i naprawdę „zalewa scenę", ale przy jasnej barwie żywiołu
-  //    wypala wszystko do bieli;
-  //  - SCREEN barwę trzyma, ale zielona poświata na zielonej trawie nie
-  //    rozjaśnia niczego — trafienie Verdiko było po prostu niewidoczne.
-  // Stąd: przygaszona barwa w ADD (nierówne kanały, więc światło ma temperaturę)
-  // plus pełna barwa położona zwyczajnie, która nasyca to, co ADD rozjaśniło.
-  const bloomPx = (205 + p * 45) * (o.strong ? 1.18 : o.weak ? 0.82 : 1);
-  const lights: Phaser.GameObjects.Image[] = [];
-  const addLight = (tint: number, mode: number, alpha: number, from: number) => {
-    const img = scene.add
-      .image(x, y, FX.bloom)
-      .setTint(tint)
-      .setBlendMode(mode)
-      .setDisplaySize(bloomPx * from, bloomPx * from)
-      .setAlpha(0);
-    layer.add(img);
-    // Rozbłysk: w 70 ms do pełna, potem spokojne gaśnięcie. Wolniejsze
-    // narastanie wyglądałoby jak zapalana lampa, a nie jak uderzenie.
-    scene.tweens.add({
-      targets: img,
-      displayWidth: bloomPx,
-      displayHeight: bloomPx,
-      alpha,
-      duration: 70,
-      ease: E.snap,
-    });
-    scene.tweens.add({
-      targets: img,
-      displayWidth: bloomPx * 1.25,
-      displayHeight: bloomPx * 1.25,
-      alpha: 0,
-      delay: 80,
-      duration: 260,
-      ease: 'Quad.easeIn',
-      onComplete: () => img.destroy(),
-    });
-    lights.push(img);
-  };
-  addLight(shade(o.color, 0.62), Phaser.BlendModes.ADD, 1, 0.5);
-  addLight(o.color, Phaser.BlendModes.NORMAL, 0.5, 0.62);
-
-  // 2. Aureola — gęstsze światło tuż przy punkcie kontaktu, między szeroką łuną
-  // a białym rdzeniem. Bez niej przejście od łuny do rdzenia było skokiem.
-  // Barwa rozjaśniona w stronę bieli, bo tutaj światło jest już tak mocne, że
-  // czysta barwa żywiołu czytałaby się jak plama farby, a nie jak żar.
-  const halo = scene.add
-    .image(x, y, FX.glow)
-    .setTint(tintTowardsWhite(o.color, 0.45))
-    .setBlendMode(Phaser.BlendModes.ADD)
-    .setScale(0.34 * scale)
-    .setAlpha(1);
-  layer.add(halo);
-  scene.tweens.add({
-    targets: halo,
-    scale: 1.5 * scale,
-    alpha: 0,
-    duration: 300,
-    ease: E.snap,
-    onComplete: () => halo.destroy(),
-  });
-
-  // 2. Biały rdzeń — gaśnie najszybciej, żeby zaraz odsłonić liczbę obrażeń.
-  // Celowo mały: to on był całym rozbłyskiem z rundy 1 („biała plamka ~30 px").
-  // Teraz jest tylko punktem kontaktu wewnątrz barwnego światła.
-  const core = scene.add
-    .image(x, y, FX.glow)
-    .setBlendMode(Phaser.BlendModes.ADD)
-    .setScale(0.11 * scale)
-    .setAlpha(1);
-  layer.add(core);
-  scene.tweens.add({
-    targets: core,
-    scale: 0.52 * scale,
-    alpha: 0,
-    duration: 170,
-    ease: E.snap,
-    onComplete: () => core.destroy(),
-  });
+  // 1. ŚWIATŁO — rozwarstwione na pasy o różnej temperaturze (patrz
+  // `lightStack`). Po rundzie 2 światło było już widoczne, ale płaskie: jedna
+  // barwa i biały rdzeń bez przejścia. Teraz idzie od białego rdzenia
+  // (~15% średnicy) przez barwę żywiołu po cieplejszy brzeg, gasnący
+  // wykładniczo do zera i przycięty do ramy planszy.
+  const bloomPx = (215 + p * 40) * (o.strong ? 1.2 : o.weak ? 0.86 : 1);
+  lightStack(scene, layer, x, y, o.color, bloomPx, o.weak ? 0.82 : 1);
 
   // 3. Pierścienie energii. Dwa, z przesunięciem — jeden wygląda jak animacja
   // ładowania, dwa jak fala uderzeniowa.
   ring(scene, layer, x, y, C.white, 4, 3.4 * scale, 300, 0);
-  ring(scene, layer, x, y, tintTowardsWhite(o.color, 0.3), 3, 4.6 * scale, 380, 80);
+  // Drugi pierścień w cieplejszej barwie brzegu — fala uderzeniowa jest tym
+  // dalszym, chłodniejszym końcem światła, więc ma nieść tę samą barwę co brzeg łuny.
+  ring(scene, layer, x, y, warmEdge(o.color), 3, 4.6 * scale, 380, 80);
 
-  // 4. Deszcz iskier o losowym promieniu i jasności — 30-50 sztuk, część
-  // ostra, część rozmyta w pył (szczegóły w `sparkSpray`). To one dają wrażenie
-  // głębi; wcześniej wszystkie wyglądały identycznie i czytały się jak kreski.
+  // 4. Deszcz iskier w trzech klasach rozmiaru (szczegóły w `sparkSpray`).
+  //
+  // Liczba i zasięg iskier są ODERWANE od siły ciosu. Wcześniej słaby cios
+  // dostawał 26 iskier na 80 px i deszcz przestawał być deszczem — a to iskry
+  // niosą wrażenie mocy, więc ich rzednięcie odbierało słabym ciosom całą
+  // oprawę zamiast tylko ją przygasić. Siła zmienia teraz jasność i średnicę
+  // światła; iskier jest zawsze tyle, żeby chmura miała gęstość.
   sparkSpray(
     scene,
     layer,
     x,
     y,
     o.color,
-    Math.round((o.strong ? 44 : o.weak ? 26 : 34) + p * 10),
-    120 * scale
+    Math.round((o.strong ? 46 : 34) + p * 6),
+    132 * (o.strong ? 1.15 : 1)
   );
 
   // 5. Kilka błyszczek o innym kształcie — pojedyncze ostre gwiazdki w gęstwie
@@ -911,27 +1032,19 @@ export function deathFlash(
   y: number,
   color: number
 ) {
-  const flash = scene.add
-    .image(x, y, FX.glow)
-    .setTint(C.white)
-    .setBlendMode(Phaser.BlendModes.ADD)
-    .setScale(0.2);
-  layer.add(flash);
-  scene.tweens.add({
-    targets: flash,
-    scale: 1.9,
-    alpha: 0,
-    duration: 420,
-    ease: E.snap,
-    onComplete: () => flash.destroy(),
-  });
+  // Zejście oddziału dostaje DOKŁADNIE ten sam rozwarstwiony stos światła co
+  // trafienie. Po rundzie 2 był tu goły biały `glow` i to było widać: moment
+  // najważniejszy dla gracza wyglądał taniej niż zwykły cios. Łuna jest tu
+  // szersza i trwa dłużej niż przy trafieniu, bo padnięcie oddziału ma być
+  // wydarzeniem, a nie kolejnym błyskiem.
+  lightStack(scene, layer, x, y, color, 268, 1.05);
 
   ring(scene, layer, x, y, C.white, 5, 5, 460, 0);
-  ring(scene, layer, x, y, color, 3, 6.5, 560, 90);
+  ring(scene, layer, x, y, warmEdge(color), 3, 6.5, 560, 90);
 
   // Wybuch iskier tym samym mechanizmem co przy trafieniu — emiter cząstek
   // gubił barwę i sypał samą bielą, a zejście oddziału ma nieść barwę strony.
-  sparkSpray(scene, layer, x, y, color, 40, 150);
+  sparkSpray(scene, layer, x, y, color, 52, 168);
 
   // Czaszka jako pieczęć na zejściu — rysowana ikona, nie systemowe emoji.
   // Czaszka unosi się nad pole, ale nie wyżej niż górna krawędź planszy —
