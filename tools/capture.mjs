@@ -160,8 +160,12 @@ const main = async () => {
     const p = scene.cellToXY(d.col, d.row);
     d.container.setPosition(p.x, p.y);
     window.__trafienie = 0;
-    scene.meleeLunge(a, d, () => {
-      scene.resolveHit(a, d);
+    // Trafienie odgrywa teraz scena z dziennika, który zwróciło battle.ts —
+    // harness nie ma już własnej ścieżki ciosu, tylko podgląda tę prawdziwą.
+    const pokaz = scene.showHit.bind(scene);
+    const podswietlenie = scene.activeUnit();
+    scene.showHit = (ev) => {
+      pokaz(ev);
       // ZATRZYMANIE SCENY DOKŁADNIE W CHWILI TRAFIENIA.
       //
       // Wcześniej Playwright dopiero odpytywał flagę `__trafienie`, a scena
@@ -174,7 +178,11 @@ const main = async () => {
       // odmierzamy klatki paska.
       scene.scene.pause();
       window.__trafienie = 1;
-    });
+    };
+    scene.resolveAttack(a, d, { col: a.col, row: a.row });
+    // Atak gasi podświetlenia tury; przywracamy je, żeby kadr pokazywał to samo
+    // co przed scaleniem i dało się porównać paski klatka w klatkę.
+    if (podswietlenie) scene.showOptions(podswietlenie);
   });
   await page.waitForFunction(() => window.__trafienie === 1, null, { timeout: 30000 });
   await freeze(page);
@@ -228,13 +236,17 @@ const main = async () => {
       const p = scene.cellToXY(d.col, d.row);
       d.container.setPosition(p.x, p.y);
       window.__trafienie = 0;
-      scene.meleeLunge(a, d, () => {
-        scene.resolveHit(a, d);
+      const pokaz = scene.showHit.bind(scene);
+      const podswietlenie = scene.activeUnit();
+      scene.showHit = (ev) => {
+        pokaz(ev);
         // Scena zatrzymuje się SAMA w chwili trafienia (patrz pasek wręcz),
         // więc pasek ognisty mierzy czas od tego samego zera.
         scene.scene.pause();
         window.__trafienie = 1;
-      });
+      };
+      scene.resolveAttack(a, d, { col: a.col, row: a.row });
+      if (podswietlenie) scene.showOptions(podswietlenie);
     },
     'fire'
   );
@@ -266,7 +278,7 @@ const main = async () => {
     const from = scene.cellToXY(a.col, a.row);
     const to = scene.cellToXY(d.col, d.row);
     window.__lot = { from, to, obj: null };
-    scene.fireProjectile(a, d, false, () => scene.resolveHit(a, d));
+    scene.resolveAttack(a, d, { col: a.col, row: a.row });
     // Pocisk to jedyny kontener dołożony do warstwy efektów w tej chwili.
     window.__lot.obj = scene.effectLayer.list.filter((o) => o.type === 'Container').pop();
   });
@@ -300,11 +312,18 @@ const main = async () => {
     const d = scene.units.find((u) => u.side === 'enemy');
     d.count = 1;
     d.topHp = 1;
+    // Napastnika stawiamy obok celu: atak idzie teraz pełną ścieżką z wypadem,
+    // więc z drugiego końca planszy wyglądałby jak skok przez całe pole bitwy.
+    // Cel zostaje na swoim heksie, żeby kadr zejścia był ten sam co dotąd.
+    a.col = d.col - 1;
+    a.row = d.row;
+    const pa = scene.cellToXY(a.col, a.row);
+    a.container.setPosition(pa.x, pa.y);
     // Trzymamy uchwyt do znikającego oddziału: dzięki niemu łapiemy klatkę,
     // w której rozbłysk jeszcze świeci, a stworek dopiero zaczyna znikać.
     // Odliczanie na sztywno trafiało w puste pole już PO zejściu.
     window.__zejscie = d.container;
-    scene.resolveHit(a, d);
+    scene.resolveAttack(a, d, { col: a.col, row: a.row });
   });
   await page.waitForFunction(
     () => {
@@ -320,7 +339,7 @@ const main = async () => {
   // 7. Ekran zwycięstwa.
   await open(page, '&terrain=laka');
   await inScene(page, (scene) => {
-    scene.units = scene.units.filter((u) => u.side === 'player');
+    scene.battle.units = scene.units.filter((u) => u.side === 'player');
     scene.checkGameOver();
   });
   // Wstęga wjeżdża z opóźnieniem i sprężyną (~700 ms), a podpis dochodzi po
@@ -336,7 +355,7 @@ const main = async () => {
     // Oddziały gracza znikają z planszy, nie tylko z tablicy — inaczej ekran
     // porażki pokazywałby wybitą armię wciąż stojącą na swoich polach.
     scene.units.filter((u) => u.side === 'player').forEach((u) => u.container.setVisible(false));
-    scene.units = scene.units.filter((u) => u.side === 'enemy');
+    scene.battle.units = scene.units.filter((u) => u.side === 'enemy');
     scene.checkGameOver();
   });
   await page.waitForTimeout(1200);
