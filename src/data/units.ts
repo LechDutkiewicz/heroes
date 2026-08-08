@@ -74,6 +74,16 @@ export function typeMatchup(type: ElementType): { strong: ElementType; weak: Ele
   return { strong: strong[type], weak: weak[type] };
 }
 
+/**
+ * Siła przewagi żywiołu. Było 1.5 / 0.67, czyli 2,24-krotny rozstrzał między
+ * atakiem z przewagą a atakiem pod prąd — tyle, że o wyniku bitwy decydował
+ * wyłącznie układ żywiołów, a starcia frakcji rozstrzygały się w 90-98%.
+ * Symulator to pokazał (`npm run balans`). Węższy rozstrzał zostawia
+ * przewagę typu odczuwalną, ale nie przesądzającą.
+ */
+export const TYPE_STRONG = 1.25;
+export const TYPE_WEAK = 0.85;
+
 /** Ogień bije trawę, trawa bije wodę, woda bije ogień. */
 export function typeMultiplier(attacker: ElementType, defender: ElementType): number {
   if (attacker === defender) return 1;
@@ -81,7 +91,7 @@ export function typeMultiplier(attacker: ElementType, defender: ElementType): nu
     (attacker === 'fire' && defender === 'grass') ||
     (attacker === 'grass' && defender === 'water') ||
     (attacker === 'water' && defender === 'fire');
-  return strong ? 1.5 : 0.67;
+  return strong ? TYPE_STRONG : TYPE_WEAK;
 }
 
 /**

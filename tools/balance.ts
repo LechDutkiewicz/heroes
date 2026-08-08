@@ -51,7 +51,7 @@ function starcie(a: Faction, b: Faction, ile: number): Wynik {
   const w: Wynik = { lewa: 0, prawa: 0, remisy: 0, rundy: [], zadane: new Map() };
   for (let i = 0; i < ile; i++) {
     const rng = makeRng(i * 2654435761 + 1);
-    const bitwa = createBattle(a, b, przeszkody(rng));
+    const bitwa = createBattle(a, b, przeszkody(rng), rng);
     const { outcome, rounds } = runBattle(bitwa);
     if (outcome === 'player') w.lewa++;
     else if (outcome === 'enemy') w.prawa++;

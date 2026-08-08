@@ -286,13 +286,29 @@ export function takeTurn(b: Battle, unit: SimUnit) {
   }
 }
 
-/** Nowa runda: odwet się odnawia, kolejność od najszybszego. */
+/**
+ * Nowa runda: odwet się odnawia, kolejność od najszybszego.
+ *
+ * Przy równej szybkości pierwszeństwo ODWRACA SIĘ co rundę. Wcześniej remis
+ * rozstrzygał numer oddziału, a numery rosną od lewej armii do prawej, więc
+ * przy lustrzanych szybkościach cała lewa strona ruszała się przed całą prawą
+ * w każdej rundzie bez wyjątku. To dawało prawej stronie trwałą przewagę:
+ * lewa rozprowadzała obrażenia po sześciu oddziałach, a prawa zamieniała je
+ * w ZABICIA — a zabity oddział przestaje i zadawać, i oddawać. Symulator
+ * pokazywał z tego powodu, że strona ruszająca się pierwsza przegrywa
+ * wszystkie starcia sześć na sześć, choć w pojedynku jeden na jednego
+ * wygrywa. Naprzemienność znosi tę przewagę, nie ruszając samych statystyk.
+ */
 export function startRound(b: Battle) {
   for (const u of b.units) {
     u.waited = false;
     u.retaliations = 1;
   }
-  b.roundQueue = [...b.units].sort((x, y) => y.def.move - x.def.move || x.id - y.id).map((u) => u.id);
+  const najpierwGracz = b.round % 2 === 1;
+  const waga = (u: SimUnit) => (u.side === 'player' ? (najpierwGracz ? 0 : 1) : najpierwGracz ? 1 : 0);
+  b.roundQueue = [...b.units]
+    .sort((x, y) => y.def.move - x.def.move || waga(x) - waga(y) || x.id - y.id)
+    .map((u) => u.id);
 }
 
 export function makeUnit(def: UnitDef, side: Side, col: number, row: number, id: number): SimUnit {
@@ -314,12 +330,40 @@ export interface Army {
   units: UnitDef[];
 }
 
-/** Ustawia obie armie przy swoich krawędziach i zwraca gotową bitwę. */
-export function createBattle(left: Army, right: Army, obstacles: string[] = []): Battle {
+/** Tasowanie w miejscu, z podanego źródła losowości — powtarzalne przy ziarnie. */
+export function shuffle<T>(xs: T[], rng: () => number): T[] {
+  for (let i = xs.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [xs[i], xs[j]] = [xs[j], xs[i]];
+  }
+  return xs;
+}
+
+/**
+ * Ustawia obie armie przy swoich krawędziach.
+ *
+ * `rng` losuje, który oddział staje w którym rzędzie. Bez tego bitwa jest
+ * w pełni deterministyczna — obrażenia liczone bez losowości, wybór celu bez
+ * losowości, pozycje stałe — a symulacja tysiąca starć rozgrywa tysiąc razy
+ * TĘ SAMĄ bitwę i zwraca 0% albo 100%, nigdy nic pomiędzy. Wyglądało to jak
+ * mocny wynik statystyczny, a było jednym wynikiem powielonym.
+ *
+ * Losowy układ jest zresztą potrzebny samej grze: bez niego gracz rozgrywa
+ * w kółko identyczne starcie.
+ */
+export function createBattle(
+  left: Army,
+  right: Army,
+  obstacles: string[] = [],
+  rng?: () => number
+): Battle {
   let id = 1;
   const units: SimUnit[] = [];
-  left.units.forEach((def, i) => units.push(makeUnit(def, 'player', 0, START_ROWS[i], id++)));
-  right.units.forEach((def, i) => units.push(makeUnit(def, 'enemy', COLS - 1, START_ROWS[i], id++)));
+  const rzedy = () => (rng ? shuffle([...START_ROWS], rng) : [...START_ROWS]);
+  const rzedyL = rzedy();
+  const rzedyP = rzedy();
+  left.units.forEach((def, i) => units.push(makeUnit(def, 'player', 0, rzedyL[i], id++)));
+  right.units.forEach((def, i) => units.push(makeUnit(def, 'enemy', COLS - 1, rzedyP[i], id++)));
   const b: Battle = {
     units,
     obstacles: new Set(obstacles),

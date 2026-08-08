@@ -11,7 +11,7 @@ import {
   typeMultiplier,
   type UnitDef,
 } from '../data/units';
-import { ALL_SPRITES, FACTIONS, type Faction } from '../data/factions';
+import { ALL_SPRITES, FACTIONS, factionById, type Faction } from '../data/factions';
 import { hexDistance, hexNeighbours, type Cell } from '../data/hex';
 import {
   BOARD_H,
@@ -256,11 +256,41 @@ export class BattleScene extends Phaser.Scene {
     const wanted = params.get('terrain');
     const found = TERRAINS.find((t) => t.key === wanted);
     if (found) this.terrain = found;
+    // Zrzuty porównawcze muszą pokazywać tę samą bitwę między rundami, więc
+    // przy wymuszonym krajobrazie ustawiamy też stałe frakcje. Bez tego każdy
+    // przebieg harnessu porównywałby inne wojska i nie dałoby się odróżnić
+    // zmiany w kodzie od zmiany w losowaniu.
+    const frakcje = params.get('frakcje');
+    if (frakcje) {
+      const [a, b] = frakcje.split(',');
+      this.playerFaction = factionById(a) ?? this.playerFaction;
+      this.enemyFaction = factionById(b) ?? this.enemyFaction;
+      return true;
+    }
     return found !== undefined;
+  }
+
+  /**
+   * Losuje bitwę: dwie różne frakcje i układ oddziałów w kolumnie startowej.
+   *
+   * Bez tego gracz rozgrywa w kółko dokładnie to samo starcie — te same dwa
+   * wojska w tej samej kolejności rzędów. Rzędy tasujemy osobno dla każdej
+   * strony, więc nawet lustrzane frakcje ustawią się inaczej.
+   */
+  private drawArmies() {
+    const pula = Phaser.Utils.Array.Shuffle([...FACTIONS]);
+    this.playerFaction = pula[0];
+    this.enemyFaction = pula[1];
+  }
+
+  /** Rzędy startowe w losowej kolejności — osobno dla każdej strony. */
+  private startRows() {
+    return Phaser.Utils.Array.Shuffle([...START_ROWS]);
   }
 
   create() {
     this.terrain = Phaser.Utils.Array.GetRandom(TERRAINS);
+    this.drawArmies();
     this.applyHarnessParams();
     // Ikony muszą istnieć, zanim cokolwiek po nie sięgnie — rysują się do
     // tekstur raz, przy starcie sceny.
@@ -293,8 +323,10 @@ export class BattleScene extends Phaser.Scene {
     // Obie armie stoją w jednej kolumnie przy swojej krawędzi, jak w Heroes 3.
     // Kolejność w tablicy to poziomy 1-6, więc drobnica staje u góry, a
     // czempion na dole; strzelcy i piechota wychodzą przy tym na przemian.
-    this.playerFaction.units.forEach((def, i) => this.spawnUnit(def, 'player', 0, START_ROWS[i]));
-    this.enemyFaction.units.forEach((def, i) => this.spawnUnit(def, 'enemy', COLS - 1, START_ROWS[i]));
+    const rzedyGracza = this.startRows();
+    const rzedyWroga = this.startRows();
+    this.playerFaction.units.forEach((def, i) => this.spawnUnit(def, 'player', 0, rzedyGracza[i]));
+    this.enemyFaction.units.forEach((def, i) => this.spawnUnit(def, 'enemy', COLS - 1, rzedyWroga[i]));
 
     this.input.keyboard?.on('keydown-C', () => this.waitTurn());
     this.input.keyboard?.on('keydown-O', () => this.guardTurn());
