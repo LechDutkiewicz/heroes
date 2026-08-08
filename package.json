@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "balans": "rm -rf .balans && mkdir -p .balans && echo '{\"type\":\"commonjs\"}' > .balans/package.json && tsc --ignoreConfig --ignoreDeprecations 6.0 --outDir .balans --module commonjs --target es2022 --moduleResolution node --skipLibCheck --strict false tools/balance.ts ; node .balans/tools/balance.js"
   },
   "devDependencies": {
     "playwright": "^1.62.1",

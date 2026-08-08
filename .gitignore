@@ -38,3 +38,4 @@ tools/shots-clean/
 
 # Jednorazowe sondy robocze builderów.
 tools/dbg*.mjs
+.balans/
