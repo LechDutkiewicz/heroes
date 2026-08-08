@@ -1,18 +1,34 @@
 import Phaser from 'phaser';
 import {
-  HALF_DAMAGE,
   TYPE_INFO,
   ABILITIES,
-  applyDamage,
   fullHp,
   stackAtk,
-  totalHp,
   typeMatchup,
-  typeMultiplier,
   type UnitDef,
 } from '../data/units';
 import { ALL_SPRITES, FACTIONS, factionById, type Faction } from '../data/factions';
-import { hexDistance, hexNeighbours, type Cell } from '../data/hex';
+import { type Cell } from '../data/hex';
+// Wszystkie zasady walki biorą się STĄD i tylko stąd. Scena ma je odgrywać,
+// nie powtarzać — druga kopia reguł rozjechałaby się z symulatorem balansu.
+import {
+  GUARD_REDUCTION,
+  START_ROWS,
+  attackPlan,
+  canShoot,
+  cellKey,
+  chooseAction,
+  damageOf,
+  makeUnit,
+  neighbours,
+  performAttack,
+  reachable,
+  startRound,
+  total,
+  type Battle,
+  type BattleEvent,
+  type SimUnit,
+} from '../data/battle';
 import {
   BOARD_H,
   BOARD_W,
@@ -84,22 +100,12 @@ import {
 
 type Side = 'player' | 'enemy';
 
-interface Unit {
-  id: number;
-  side: Side;
-  def: UnitDef;
-  /** ilu stworków zostało w oddziale */
-  count: number;
-  /** HP stworka stojącego z przodu — reszta ma pełne */
-  topHp: number;
-  col: number;
-  row: number;
-  /** ile razy jeszcze odda w tej rundzie (Nieograniczony odwet ignoruje limit) */
-  retaliations: number;
-  /** przeczekał już w tej rundzie — drugi raz nie wolno */
-  waited: boolean;
-  /** stoi w obronie do swojej następnej kolejki */
-  defending: boolean;
+/**
+ * Oddział na planszy to oddział z symulacji PLUS jego wygląd. Dzięki
+ * rozszerzeniu `SimUnit` tablicę oddziałów sceny można podać wprost funkcjom
+ * z `data/battle.ts` — bez przepisywania stanu tam i z powrotem.
+ */
+interface Unit extends SimUnit {
   /** cały wygląd oddziału — buduje i odświeża go src/visual/unitView.ts */
   view: UnitView;
   container: Phaser.GameObjects.Container;
@@ -137,14 +143,6 @@ const HEAD_H = 26;
 /** Prognoza siedzi najniżej i na pełnej szerokości — ma się nie gubić. */
 const FORECAST_Y = PANEL_Y + 172;
 const FORECAST_H = 26;
-
-/** O tyle słabsze jest trafienie w oddział, który stoi w obronie. */
-const GUARD_REDUCTION = 0.7;
-
-/** Sześć oddziałów w kolumnie z przerwą pośrodku — reszta rzędów zostaje wolna. */
-const START_ROWS = [0, 1, 2, 4, 5, 6];
-
-const cellKey = (col: number, row: number) => `${col},${row}`;
 
 /** Tła pola bitwy — jedno losowane na bitwę, jak zmienne krajobrazy w Heroes 3. */
 const TERRAINS = [
@@ -189,10 +187,39 @@ function fellPhrase(n: number) {
 }
 
 export class BattleScene extends Phaser.Scene {
-  private units: Unit[] = [];
+  /**
+   * Stan bitwy — ten sam obiekt, na którym pracuje symulator. Scena nie trzyma
+   * własnych kopii listy oddziałów ani kolejki: `resolveHit` przy śmierci celu
+   * PODMIENIA `units` na nową tablicę, więc każda odłożona referencja
+   * zestarzałaby się po pierwszym poległym.
+   */
+  private battle: Battle = {
+    units: [],
+    obstacles: new Set<string>(),
+    roundQueue: [],
+    round: 1,
+    dealt: new Map(),
+  };
+
+  /**
+   * Wszystkie oddziały, także polegli. Zejście trzeba jeszcze zanimować, a
+   * z `battle.units` nieboszczyk znika w chwili śmierci.
+   */
+  private roster = new Map<number, Unit>();
+
+  private get units(): Unit[] {
+    return this.battle.units as Unit[];
+  }
+
   /** Kolejka na bieżącą rundę — pierwszy z brzegu ma teraz turę. */
-  private roundQueue: number[] = [];
-  private round = 1;
+  private get roundQueue(): number[] {
+    return this.battle.roundQueue;
+  }
+
+  private get obstacles(): Set<string> {
+    return this.battle.obstacles;
+  }
+
   private nextId = 1;
 
   private highlightLayer!: Phaser.GameObjects.Container;
@@ -214,9 +241,6 @@ export class BattleScene extends Phaser.Scene {
   private forecast!: Forecast;
   private waitButton!: HudButton;
   private guardButton!: HudButton;
-
-  /** Pola zajęte przez przeszkody — piechota je omija, latacze przelatują. */
-  private obstacles = new Set<string>();
 
   private busy = false;
   private gameOver = false;
@@ -331,7 +355,7 @@ export class BattleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-C', () => this.waitTurn());
     this.input.keyboard?.on('keydown-O', () => this.guardTurn());
 
-    this.startRound();
+    startRound(this.battle);
     this.beginTurn();
   }
 
@@ -400,7 +424,7 @@ export class BattleScene extends Phaser.Scene {
     while (queue.length > 0) {
       const cur = queue.shift()!;
       if (cur.col === COLS - 1) return true;
-      for (const n of this.neighbours(cur)) {
+      for (const n of neighbours(cur)) {
         const key = cellKey(n.col, n.row);
         if (seen.has(key) || this.obstacles.has(key)) continue;
         seen.add(key);
@@ -565,20 +589,9 @@ export class BattleScene extends Phaser.Scene {
     });
     view.container.setDepth(10 + row);
 
-    const unit: Unit = {
-      id,
-      side,
-      def,
-      count: def.count,
-      topHp: def.hp,
-      col,
-      row,
-      retaliations: 1,
-      waited: false,
-      defending: false,
-      view,
-      container: view.container,
-    };
+    // Wartości startowe oddziału bierzemy z `battle.ts`, żeby nowe pole stanu
+    // nie musiało być dopisywane w dwóch miejscach.
+    const unit: Unit = { ...makeUnit(def, side, col, row, id), view, container: view.container };
     this.refreshStack(unit);
 
     const hit = view.hit;
@@ -596,19 +609,19 @@ export class BattleScene extends Phaser.Scene {
     });
 
     this.units.push(unit);
+    this.roster.set(id, unit);
     return unit;
   }
 
-  /** Ile HP ma cały oddział razem. */
-  private total(unit: Unit) {
-    return totalHp(unit.def, unit);
+  private unitById(id: number) {
+    return this.roster.get(id)!;
   }
 
   /** Pasek, licznik, tarcza i odznaka ataku po każdej zmianie stanu oddziału. */
   private refreshStack(unit: Unit) {
     refreshUnitView(unit.view, {
       count: unit.count,
-      hp: this.total(unit),
+      hp: total(unit),
       maxHp: fullHp(unit.def),
       atk: stackAtk(unit.def, unit),
       defending: unit.defending,
@@ -616,18 +629,6 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ---------- kolejka tur ----------
-
-  /** Nowa runda: wszyscy żywi ustawiają się od najszybszego. */
-  private startRound() {
-    // Odwet odnawia się co rundę — jak w Heroes 3, gdzie oddział oddaje raz.
-    this.units.forEach((u) => {
-      u.waited = false;
-      u.retaliations = 1;
-    });
-    this.roundQueue = [...this.units]
-      .sort((a, b) => b.def.move - a.def.move || a.id - b.id)
-      .map((u) => u.id);
-  }
 
   private buildQueueIcons() {
     const entries = this.roundQueue
@@ -637,7 +638,7 @@ export class BattleScene extends Phaser.Scene {
         const { color, deep } = sideAccent(u.side);
         return { spriteKey: u.def.sprite, accent: color, deep };
       });
-    this.queue.update(entries, this.round);
+    this.queue.update(entries, this.battle.round);
   }
 
   // ---------- przebieg tury ----------
@@ -656,8 +657,8 @@ export class BattleScene extends Phaser.Scene {
       this.roundQueue.shift();
     }
     if (this.roundQueue.length === 0) {
-      this.round++;
-      this.startRound();
+      this.battle.round++;
+      startRound(this.battle);
     }
 
     const unit = this.activeUnit();
@@ -682,7 +683,7 @@ export class BattleScene extends Phaser.Scene {
 
     if (unit.side === 'enemy') {
       this.setButtonsVisible(false);
-      this.time.delayedCall(600, () => this.enemyAct(unit));
+      this.time.delayedCall(600, () => this.enemyTurn(unit));
     } else {
       this.setButtonsVisible(true);
       this.updateButtons(unit);
@@ -755,7 +756,7 @@ export class BattleScene extends Phaser.Scene {
     // Każdy wiersz ma WŁASNY znak. Wcześniej miecz obsługiwał „Atak", „Zasięg"
     // i prognozę naraz — jeden rysunek na trzy różne pojęcia. Teraz zasięg to
     // tarcza celownicza, atak to miecz, a prognoza ma własny rozbłysk.
-    const blocked = unit.def.shooter && !this.canShoot(unit);
+    const blocked = unit.def.shooter && !canShoot(this.battle, unit);
     const reach: StatRow = unit.def.shooter
       ? blocked
         ? { label: 'Zasięg', value: 'zablokowany — pół siły', icon: MINI.reach, alert: true }
@@ -784,7 +785,7 @@ export class BattleScene extends Phaser.Scene {
     this.stats.update([
       {
         label: 'Życie',
-        value: `${this.total(unit)} / ${fullHp(unit.def)}`,
+        value: `${total(unit)} / ${fullHp(unit.def)}`,
         icon: MINI.life,
       },
       {
@@ -822,125 +823,11 @@ export class BattleScene extends Phaser.Scene {
 
   // ---------- zasięg ruchu i cele ----------
 
-  private blockedCells(excludeId: number) {
-    const set = new Set<string>();
-    this.units.filter((u) => u.id !== excludeId).forEach((u) => set.add(cellKey(u.col, u.row)));
-    return set;
-  }
-
-  private neighbours(cell: Cell): Cell[] {
-    return hexNeighbours(cell, COLS, ROWS);
-  }
-
-  /** BFS po planszy — zwraca koszt dojścia do każdego osiągalnego pola. */
-  private reachable(unit: Unit): Map<string, number> {
-    const blocked = this.blockedCells(unit.id);
-
-    // Lataczowi nic nie zagradza drogi — liczy się sama odległość w linii
-    // prostej. Musi tylko mieć gdzie wylądować: na drzewie ani na cudzej
-    // głowie nie usiądzie.
-    if (unit.def.flying) {
-      const dist = new Map<string, number>();
-      for (let row = 0; row < ROWS; row++) {
-        for (let col = 0; col < COLS; col++) {
-          const cost = hexDistance(unit, { col, row });
-          if (cost > unit.def.move) continue;
-          const key = cellKey(col, row);
-          if (cost > 0 && (blocked.has(key) || this.obstacles.has(key))) continue;
-          dist.set(key, cost);
-        }
-      }
-      return dist;
-    }
-
-    const dist = new Map<string, number>([[cellKey(unit.col, unit.row), 0]]);
-    const queue: Cell[] = [{ col: unit.col, row: unit.row }];
-
-    while (queue.length > 0) {
-      const cur = queue.shift()!;
-      const cost = dist.get(cellKey(cur.col, cur.row))!;
-      if (cost >= unit.def.move) continue;
-
-      for (const n of this.neighbours(cur)) {
-        const key = cellKey(n.col, n.row);
-        if (blocked.has(key) || this.obstacles.has(key) || dist.has(key)) continue;
-        dist.set(key, cost + 1);
-        queue.push(n);
-      }
-    }
-    return dist;
-  }
-
-  private isAdjacent(a: Cell, b: Cell) {
-    return hexDistance(a, b) === 1;
-  }
-
-  private hasAdjacentEnemy(unit: Unit) {
-    return this.units.some((u) => u.side !== unit.side && this.isAdjacent(unit, u));
-  }
-
-  /**
-   * Czy strzelec może w ogóle strzelać. Wróg tuż obok blokuje go tak jak
-   * w Heroes 3: łucznik nie ma jak naciągnąć cięciwy i musi bić wręcz.
-   */
-  private canShoot(unit: Unit) {
-    return unit.def.shooter && !this.hasAdjacentEnemy(unit);
-  }
-
-  /**
-   * Cel jest atakowalny, gdy strzelec ma go w zasięgu, albo gdy jednostka
-   * walcząca wręcz stoi obok lub może dojść na sąsiednie wolne pole.
-   */
-  private attackPlan(unit: Unit, target: Unit, reach: Map<string, number>): { from: Cell } | null {
-    // Wolny strzelec, jak łucznik w Heroes 3, dosięga każdego celu na planszy.
-    if (this.canShoot(unit)) return { from: { col: unit.col, row: unit.row } };
-    if (this.isAdjacent(unit, target)) return { from: { col: unit.col, row: unit.row } };
-
-    // Zablokowany strzelec nie odbiega, żeby uderzyć kogoś dalej — albo bije
-    // tego, kto go trzyma, albo ucieka, ale to już zwykły ruch, nie atak.
-    if (unit.def.shooter) return null;
-
-    let best: { from: Cell; cost: number } | null = null;
-    for (const cell of this.neighbours(target)) {
-      const cost = reach.get(cellKey(cell.col, cell.row));
-      if (cost === undefined) continue;
-      if (!best || cost < best.cost) best = { from: cell, cost };
-    }
-    return best ? { from: best.from } : null;
-  }
-
-  private damageOf(attacker: Unit, target: Unit) {
-    const typeMult = typeMultiplier(attacker.def.type, target.def.type);
-
-    // Strzelec traci połowę siły w zwarciu albo gdy cel stoi za daleko.
-    const pinned = attacker.def.shooter && this.hasAdjacentEnemy(attacker);
-    const tooFar =
-      attacker.def.shooter && !pinned && hexDistance(attacker, target) > attacker.def.shootRange;
-    const penalty = pinned || tooFar ? HALF_DAMAGE : 1;
-    const guard = target.defending ? GUARD_REDUCTION : 1;
-
-    // Bije cały oddział naraz, więc podstawą jest liczebność razy atak stworka.
-    const base = stackAtk(attacker.def, attacker);
-    const value = Math.max(1, Math.round(base * typeMult * penalty * guard));
-
-    return {
-      value,
-      base,
-      typeMult,
-      penalty,
-      pinned,
-      tooFar,
-      guarded: target.defending,
-      /** ilu stworków celu padnie od tego trafienia */
-      kills: applyDamage(target.def, target, value).killed,
-    };
-  }
-
   // ---------- interakcja gracza ----------
 
   private showOptions(unit: Unit) {
     this.clearHighlights();
-    const reach = this.reachable(unit);
+    const reach = reachable(this.battle, unit);
 
     // Jedna warstwa Graphics na wszystkie podświetlenia: rysuje we
     // współrzędnych planszy, więc hexy siadają dokładnie na siatce.
@@ -956,10 +843,10 @@ export class BattleScene extends Phaser.Scene {
     }
 
     for (const target of this.units.filter((u) => u.side !== unit.side)) {
-      const plan = this.attackPlan(unit, target, reach);
+      const plan = attackPlan(this.battle, unit, target, reach);
       if (!plan) continue;
       // Złoty obrys znaczy cel, do którego strzał doleci osłabiony.
-      const { tooFar } = this.damageOf(unit, target);
+      const { tooFar } = damageOf(this.battle, unit, target);
       paintAttackCell(g, target.col, target.row, tooFar);
       this.addHighlight(
         target.col,
@@ -1011,7 +898,7 @@ export class BattleScene extends Phaser.Scene {
 
   private showForecast(attacker: Unit, target: Unit) {
     const { value, base, typeMult, penalty, pinned, tooFar, guarded, kills } =
-      this.damageOf(attacker, target);
+      damageOf(this.battle, attacker, target);
     // Zaczynamy od liczebności razy atak — stąd bierze się siła oddziału.
     // Bez sumy pośredniej: przy braku mnożników wychodziło „= 15 = 15", co
     // wyglądało na błąd rachunku.
@@ -1043,7 +930,7 @@ export class BattleScene extends Phaser.Scene {
     this.clearMovePreview();
     const g = this.add.graphics();
     const color = unit.side === 'player' ? C.ally : C.foe;
-    for (const [key, cost] of this.reachable(unit)) {
+    for (const [key, cost] of reachable(this.battle, unit)) {
       if (cost === 0) continue;
       const [col, row] = key.split(',').map(Number);
       paintPreviewCell(g, col, row, color);
@@ -1065,7 +952,7 @@ export class BattleScene extends Phaser.Scene {
       !this.busy &&
       active.side === 'player' &&
       unit.side !== active.side &&
-      !!this.attackPlan(active, unit, this.reachable(active));
+      !!attackPlan(this.battle, active, unit, reachable(this.battle, active));
 
     // Zasięg ruchu pokazujemy tylko wtedy, gdy nie celujemy. Przy wrogu na
     // wyciągnięcie ręki liczy się kursor ataku i prognoza, a nie to, dokąd on
@@ -1090,14 +977,14 @@ export class BattleScene extends Phaser.Scene {
 
   /** Atakuje z pola wskazanego kursorem, a gdy go nie ma — z pola wyliczonego. */
   private attackTarget(attacker: Unit, target: Unit) {
-    const plan = this.attackPlan(attacker, target, this.reachable(attacker));
+    const plan = attackPlan(this.battle, attacker, target, reachable(this.battle, attacker));
     if (!plan) return;
     const chosen =
       this.preferredApproach && this.preferredApproach.targetId === target.id
         ? this.preferredApproach.cell
         : plan.from;
     this.setCursor(null);
-    this.performAttack(attacker, target, chosen);
+    this.resolveAttack(attacker, target, chosen);
   }
 
   private cursorFor(name: string) {
@@ -1110,8 +997,8 @@ export class BattleScene extends Phaser.Scene {
 
   /** Które pola sąsiadujące z celem da się wykorzystać do ataku wręcz. */
   private approachOptions(attacker: Unit, target: Unit): Cell[] {
-    const reach = this.reachable(attacker);
-    return this.neighbours(target).filter(
+    const reach = reachable(this.battle, attacker);
+    return neighbours(target).filter(
       (c) => (c.col === attacker.col && c.row === attacker.row) || reach.has(cellKey(c.col, c.row))
     );
   }
@@ -1131,14 +1018,14 @@ export class BattleScene extends Phaser.Scene {
     if (this.gameOver || this.busy || !active || active.side !== 'player') return;
     if (target.side === active.side) return;
 
-    if (!this.attackPlan(active, target, this.reachable(active))) {
+    if (!attackPlan(this.battle, active, target, reachable(this.battle, active))) {
       this.setCursor(null);
       this.clearApproach();
       return;
     }
 
-    if (this.canShoot(active)) {
-      const { tooFar } = this.damageOf(active, target);
+    if (canShoot(this.battle, active)) {
+      const { tooFar } = damageOf(this.battle, active, target);
       this.setCursor(tooFar ? 'bolt_broken' : 'bolt');
       this.clearApproach();
       return;
@@ -1206,106 +1093,110 @@ export class BattleScene extends Phaser.Scene {
 
   // ---------- akcje ----------
 
-  private performMove(unit: Unit, cell: Cell, onDone?: () => void) {
-    this.busy = true;
-    this.clearHighlights();
-    unit.col = cell.col;
-    unit.row = cell.row;
+  /** Sam tween przejścia na pole — stanu nie rusza, ten zmienia `battle.ts`. */
+  private animateMove(unit: Unit, col: number, row: number, onDone: () => void) {
     // Niższe rzędy zasłaniają wyższe, żeby oddziały i drzewa układały się
     // w naturalnej kolejności.
-    unit.container.setDepth(10 + cell.row);
-    const { x, y } = this.cellToXY(cell.col, cell.row);
+    unit.container.setDepth(10 + row);
+    const { x, y } = this.cellToXY(col, row);
     this.tweens.add({
       targets: unit.container,
       x,
       y,
       duration: 260,
       ease: 'Sine.easeInOut',
-      onComplete: () => (onDone ? onDone() : this.advanceTurn()),
+      onComplete: onDone,
     });
   }
 
-  private isAlive(unit: Unit) {
-    return this.units.includes(unit);
+  /** Zwykły ruch bez ataku — jedyne miejsce, gdzie scena sama przestawia pionek. */
+  private performMove(unit: Unit, cell: Cell, onDone?: () => void) {
+    this.busy = true;
+    this.clearHighlights();
+    unit.col = cell.col;
+    unit.row = cell.row;
+    this.animateMove(unit, cell.col, cell.row, () => (onDone ? onDone() : this.advanceTurn()));
   }
 
   /**
-   * Cały przebieg ataku: dojście, cios (u niektórych podwójny), odwet obrońcy
-   * i powrót na swoje pole u tych, co uderzają i odlatują. Kolejne kroki
-   * odpalają się z opóźnieniem, żeby dało się je nadążyć obejrzeć.
+   * Atak. Cały jego przebieg — dojście, cios, drugi cios, odwet i powrót —
+   * rozstrzyga `battle.ts` i oddaje dziennik zdarzeń. Scena tylko go odgrywa,
+   * więc kolejność zdarzeń istnieje już w jednym egzemplarzu, a nie w dwóch.
    */
-  private performAttack(attacker: Unit, target: Unit, from: Cell) {
+  private resolveAttack(attacker: Unit, target: Unit, from: Cell) {
     this.busy = true;
     this.clearHighlights();
 
-    const origin = { col: attacker.col, row: attacker.row };
-    // O strzale decydujemy przed ruchem: po podejściu strzelec byłby już
-    // w zwarciu i wychodziłoby, że wali wręcz mimo wystrzelonego pocisku.
-    const shooting = this.canShoot(attacker);
-
-    const finish = () => {
+    const log = performAttack(this.battle, attacker, target, from);
+    this.playLog(log, () => {
       this.checkGameOver();
       if (!this.gameOver) this.time.delayedCall(450, () => this.advanceTurn());
-    };
+    });
+  }
 
-    // Uderz i wróć: harpia z Heroes 3 odskakuje na pole, z którego ruszyła.
-    const returnHome = () => {
-      const moved = attacker.col !== origin.col || attacker.row !== origin.row;
-      if (attacker.def.ability !== 'strikeAndReturn' || !this.isAlive(attacker) || !moved) {
-        finish();
+  /**
+   * Odgrywa dziennik krok po kroku. Przerwy po ciosie są te same, co dawniej:
+   * po odwecie dłuższa, bo domyka wymianę i oko musi zdążyć ją odczytać.
+   */
+  private playLog(log: BattleEvent[], onDone: () => void) {
+    let i = 0;
+
+    const next = () => {
+      if (i >= log.length) {
+        onDone();
         return;
       }
-      this.floatText(attacker, 'Odlatuje', '#b3e5fc', -46, ICON.wing);
-      this.performMove(attacker, origin, finish);
-    };
+      const ev = log[i++];
 
-    const retaliate = () => {
-      // Strzał nie prowokuje odwetu, tak jak łucznik w Heroes 3 nie obrywa
-      // od kogoś z drugiego końca planszy.
-      if (shooting || !this.isAlive(attacker) || !this.isAlive(target)) return returnHome();
-      // Kto uderza i odlatuje, temu odwet nie sięga.
-      if (attacker.def.ability === 'strikeAndReturn') return returnHome();
-      if (target.retaliations <= 0) return returnHome();
-
-      if (target.def.ability !== 'guardian') target.retaliations--;
-      this.floatText(target, 'Odwet!', '#ffd166', -60, ICON.retaliate, 17);
-      this.meleeLunge(target, attacker, () => {
-        this.resolveHit(target, attacker);
-        this.time.delayedCall(500, returnHome);
-      });
-    };
-
-    const secondStrike = () => {
-      if (attacker.def.ability !== 'double' || !this.isAlive(attacker) || !this.isAlive(target)) {
-        return retaliate();
+      if (ev.rodzaj === 'ruch') {
+        this.animateMove(this.unitById(ev.kto), ev.doKol, ev.doRzed, next);
+        return;
       }
-      this.floatText(attacker, 'Drugi cios!', '#ffd166', -46, ICON.sword, 17);
-      this.meleeLunge(attacker, target, () => {
-        this.resolveHit(attacker, target);
-        this.time.delayedCall(450, retaliate);
-      });
-    };
 
-    const strike = () => {
-      if (shooting) {
-        const { tooFar } = this.damageOf(attacker, target);
-        this.fireProjectile(attacker, target, tooFar, () => {
-          this.resolveHit(attacker, target);
-          this.time.delayedCall(450, retaliate);
+      if (ev.rodzaj === 'powrot') {
+        // Uderz i wróć: harpia z Heroes 3 odskakuje na pole, z którego ruszyła.
+        const unit = this.unitById(ev.kto);
+        // Napis zostawiamy tam, gdzie oddział stoi NA EKRANIE — w stanie gry
+        // jest już z powrotem u siebie, więc pole by go przeniosło za wcześnie.
+        floatLabel(this, this.effectLayer, {
+          x: unit.container.x,
+          y: unit.container.y - 46,
+          text: 'Odlatuje',
+          color: '#b3e5fc',
+          iconKey: ICON.wing,
         });
-      } else {
-        this.meleeLunge(attacker, target, () => {
-          this.resolveHit(attacker, target);
-          this.time.delayedCall(450, secondStrike);
-        });
+        this.animateMove(unit, ev.doKol, ev.doRzed, next);
+        return;
       }
+
+      if (ev.rodzaj === 'zejscie') {
+        this.playDeath(ev.kto);
+        next();
+        return;
+      }
+
+      const attacker = this.unitById(ev.kto);
+      const target = this.unitById(ev.wKogo);
+
+      const landed = () => {
+        this.showHit(ev);
+        // Zejście pada w tej samej chwili co cios, który je spowodował —
+        // dlatego zdejmujemy je z dziennika od razu, a nie po przerwie.
+        while (i < log.length && log[i].rodzaj === 'zejscie') {
+          this.playDeath((log[i] as { kto: number }).kto);
+          i++;
+        }
+        this.time.delayedCall(ev.odwet ? 500 : 450, next);
+      };
+
+      if (ev.drugi) this.floatText(attacker, 'Drugi cios!', '#ffd166', -46, ICON.sword, 17);
+      if (ev.odwet) this.floatText(attacker, 'Odwet!', '#ffd166', -60, ICON.retaliate, 17);
+
+      if (ev.strzal) this.fireProjectile(attacker, target, ev.tooFar, landed);
+      else this.meleeLunge(attacker, target, landed);
     };
 
-    if (from.col !== attacker.col || from.row !== attacker.row) {
-      this.performMove(attacker, from, strike);
-    } else {
-      strike();
-    }
+    next();
   }
 
   /**
@@ -1376,14 +1267,16 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * Nalicza jedno trafienie: obrażenia, poległych i napisy. Turą się nie
-   * zajmuje — ciosem, odwetem i powrotem steruje performAttack.
+   * Odgrywa jedno trafienie z dziennika: rozbłysk, wstrząs, napisy i plakietka.
+   * Niczego nie liczy — wszystkie wartości przyszły w zdarzeniu, bo policzył
+   * je już `battle.ts`.
    */
-  private resolveHit(attacker: Unit, target: Unit) {
-    const { value, typeMult, pinned, tooFar, guarded } = this.damageOf(attacker, target);
-    const { state, killed } = applyDamage(target.def, target, value);
-    target.count = state.count;
-    target.topHp = state.topHp;
+  private showHit(ev: Extract<BattleEvent, { rodzaj: 'cios' }>) {
+    const attacker = this.unitById(ev.kto);
+    const target = this.unitById(ev.wKogo);
+    const { obrazenia: value, polegli: killed, typeMult, pinned, tooFar, guarded } = ev;
+    target.count = ev.celLiczebnoscPo;
+    target.topHp = ev.celTopHpPo;
 
     // Siła ciosu jako ułamek pełnego życia oddziału — od niej zależy rozmiar
     // błysku i wstrząs kamery. Draśnięcie ma wyglądać inaczej niż cios, który
@@ -1417,15 +1310,15 @@ export class BattleScene extends Phaser.Scene {
     if (typeMult > 1) this.floatText(target, 'Super skuteczne!', '#a5f5a5', -70, ICON.star, 17);
     else if (typeMult < 1) this.floatText(target, 'Słabo skuteczne...', '#cfd8dc', -70);
 
-    if (target.count <= 0) {
-      this.refreshStack(target);
-      deathFlash(this, this.effectLayer, hitAt.x, hitAt.y - 6, sideAccent(target.side).color);
-      playUnitDeath(this, target.view, () => {});
-      this.units = this.units.filter((u) => u.id !== target.id);
-      this.roundQueue = this.roundQueue.filter((id) => id !== target.id);
-    } else {
-      this.refreshStack(target);
-    }
+    this.refreshStack(target);
+  }
+
+  /** Zejście oddziału. Z listy żywych zdjął go już `battle.ts`. */
+  private playDeath(id: number) {
+    const unit = this.unitById(id);
+    const at = this.cellToXY(unit.col, unit.row);
+    deathFlash(this, this.effectLayer, at.x, at.y - 6, sideAccent(unit.side).color);
+    playUnitDeath(this, unit.view, () => {});
   }
 
   /**
@@ -1454,59 +1347,32 @@ export class BattleScene extends Phaser.Scene {
 
   // ---------- AI przeciwnika ----------
 
-  private enemyAct(unit: Unit) {
+  /**
+   * Tura przeciwnika. Decyzję podejmuje `chooseAction` z `battle.ts` — ta sama,
+   * którą gra symulator. Scena dobiera do niej tylko animację.
+   */
+  private enemyTurn(unit: Unit) {
     if (this.gameOver) return;
-    const targets = this.units.filter((u) => u.side === 'player');
-    if (targets.length === 0) {
+
+    const action = chooseAction(this.battle, unit);
+
+    if (action.rodzaj === 'nic') {
       this.checkGameOver();
       return;
     }
-
-    const reach = this.reachable(unit);
-
-    let best: { target: Unit; from: Cell; score: number } | null = null;
-    for (const target of targets) {
-      const plan = this.attackPlan(unit, target, reach);
-      if (!plan) continue;
-      const { value: dmg, kills } = this.damageOf(unit, target);
-      // Wybij cały oddział, jeśli się da; poza tym licz się z liczbą poległych,
-      // bo każdy padły stworek to trwale słabszy przeciwnik.
-      const score =
-        (dmg >= this.total(target) ? 100 : 0) + kills * 10 + dmg + (target.def.shooter ? 5 : 0);
-      if (!best || score > best.score) best = { target, from: plan.from, score };
-    }
-
-    if (best) {
-      this.performAttack(unit, best.target, best.from);
+    if (action.rodzaj === 'atak') {
+      this.resolveAttack(unit, action.cel as Unit, action.from);
       return;
     }
-
-    // Nikt w zasięgu — podejdź w stronę najbliższego celu.
-    let nearest = targets[0];
-    for (const t of targets) {
-      if (hexDistance(unit, t) < hexDistance(unit, nearest)) nearest = t;
-    }
-
-    let bestCell: Cell = { col: unit.col, row: unit.row };
-    let bestDist = hexDistance(unit, nearest);
-    for (const key of reach.keys()) {
-      const [col, row] = key.split(',').map(Number);
-      const d = hexDistance({ col, row }, nearest);
-      if (d < bestDist) {
-        bestDist = d;
-        bestCell = { col, row };
-      }
-    }
-
-    if (bestCell.col === unit.col && bestCell.row === unit.row) {
-      // Nie ma kogo bić ani dokąd iść — lepiej stanąć w obronie niż stać bezczynnie.
+    if (action.rodzaj === 'obrona') {
+      // Nie ma kogo bić ani dokąd iść — lepiej stanąć w obronie niż bezczynnie.
       unit.defending = true;
       this.refreshStack(unit);
       this.floatText(unit, 'Obrona', '#ffc9c9', -46, ICON.shield);
       this.time.delayedCall(500, () => this.advanceTurn());
-    } else {
-      this.performMove(unit, bestCell);
+      return;
     }
+    this.performMove(unit, action.cel);
   }
 
   // ---------- koniec bitwy ----------
