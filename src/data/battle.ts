@@ -170,12 +170,22 @@ export function damageOf(b: Battle, attacker: SimUnit, target: SimUnit) {
   const guard = target.defending ? GUARD_REDUCTION : 1;
   const base = stackAtk(attacker.def, attacker);
   const value = Math.max(1, Math.round(base * typeMult * penalty * guard));
-  return { value, base, typeMult, pinned, tooFar, kills: applyDamage(target.def, target, value).killed };
+  return {
+    value,
+    base,
+    typeMult,
+    penalty,
+    pinned,
+    tooFar,
+    guarded: target.defending,
+    kills: applyDamage(target.def, target, value).killed,
+  };
 }
 
 /** Nalicza jedno trafienie. Zwraca liczbę poległych. */
 export function resolveHit(b: Battle, attacker: SimUnit, target: SimUnit) {
-  const { value } = damageOf(b, attacker, target);
+  const { value, typeMult, pinned, tooFar } = damageOf(b, attacker, target);
+  const guarded = target.defending;
   const { state, killed } = applyDamage(target.def, target, value);
   // Liczymy obrażenia FAKTYCZNIE zadane, nie wyliczone: cios w oddział, któremu
   // zostały trzy punkty życia, wart jest trzy, a nie trzydzieści. Inaczej
@@ -188,28 +198,98 @@ export function resolveHit(b: Battle, attacker: SimUnit, target: SimUnit) {
     b.units = b.units.filter((u) => u.id !== target.id);
     b.roundQueue = b.roundQueue.filter((id) => id !== target.id);
   }
-  return { damage: value, killed };
+  // Zwracamy też stan celu PO ciosie i wszystkie mnożniki, bo scena ma tylko
+  // odegrać to, co się stało — nie wolno jej niczego doliczać samodzielnie,
+  // inaczej znów istniałyby dwie kopie tego samego rachunku.
+  return {
+    damage: value,
+    killed,
+    typeMult,
+    pinned,
+    tooFar,
+    guarded,
+    countAfter: target.count,
+    topHpAfter: target.topHp,
+  };
 }
+
+/**
+ * Dziennik ataku: co po kolei się wydarzyło. Scena odgrywa go animacjami,
+ * zamiast prowadzić własną, równoległą kolejność zdarzeń — bo to właśnie
+ * kolejność (dojście, cios, drugi cios, odwet, powrót), a nie same liczby,
+ * decyduje o wyniku starcia.
+ */
+export type BattleEvent =
+  | { rodzaj: 'ruch'; kto: number; doKol: number; doRzed: number }
+  | {
+      rodzaj: 'cios';
+      kto: number;
+      wKogo: number;
+      obrazenia: number;
+      polegli: number;
+      celLiczebnoscPo: number;
+      celTopHpPo: number;
+      /** to trafienie jest odwetem obrońcy */
+      odwet: boolean;
+      /** to trafienie jest strzałem — leci pocisk, nie ma zwarcia */
+      strzal: boolean;
+      /** to drugi cios oddziału z podwójnym uderzeniem */
+      drugi: boolean;
+      typeMult: number;
+      pinned: boolean;
+      tooFar: boolean;
+      guarded: boolean;
+    }
+  | { rodzaj: 'zejscie'; kto: number }
+  | { rodzaj: 'powrot'; kto: number; doKol: number; doRzed: number };
 
 /**
  * Pełna wymiana: dojście, cios, ewentualny drugi cios, odwet i powrót.
  * Kolejność jest ta sama co w scenie — to ona, a nie same liczby, decyduje
  * o tym, ile oddział realnie znosi i zadaje.
  */
-export function performAttack(b: Battle, attacker: SimUnit, target: SimUnit, from: Cell) {
+export function performAttack(
+  b: Battle,
+  attacker: SimUnit,
+  target: SimUnit,
+  from: Cell
+): BattleEvent[] {
   const origin = { col: attacker.col, row: attacker.row };
   const shooting = canShoot(b, attacker);
+  const log: BattleEvent[] = [];
+
+  const hit = (a: SimUnit, t: SimUnit, opts: { odwet: boolean; strzal: boolean; drugi: boolean }) => {
+    const r = resolveHit(b, a, t);
+    log.push({
+      rodzaj: 'cios',
+      kto: a.id,
+      wKogo: t.id,
+      obrazenia: r.damage,
+      polegli: r.killed,
+      celLiczebnoscPo: r.countAfter,
+      celTopHpPo: r.topHpAfter,
+      odwet: opts.odwet,
+      strzal: opts.strzal,
+      drugi: opts.drugi,
+      typeMult: r.typeMult,
+      pinned: r.pinned,
+      tooFar: r.tooFar,
+      guarded: r.guarded,
+    });
+    if (t.count <= 0) log.push({ rodzaj: 'zejscie', kto: t.id });
+  };
 
   if (from.col !== attacker.col || from.row !== attacker.row) {
     attacker.col = from.col;
     attacker.row = from.row;
+    log.push({ rodzaj: 'ruch', kto: attacker.id, doKol: from.col, doRzed: from.row });
   }
 
-  resolveHit(b, attacker, target);
+  hit(attacker, target, { odwet: false, strzal: shooting, drugi: false });
 
   // Podwójny cios pada, zanim obrońca zdąży oddać.
   if (attacker.def.ability === 'double' && isAlive(b, attacker) && isAlive(b, target)) {
-    resolveHit(b, attacker, target);
+    hit(attacker, target, { odwet: false, strzal: shooting, drugi: true });
   }
 
   // Strzał nie prowokuje odwetu; uderz-i-wróć też go nie dostaje.
@@ -222,7 +302,7 @@ export function performAttack(b: Battle, attacker: SimUnit, target: SimUnit, fro
 
   if (retaliates) {
     if (target.def.ability !== 'guardian') target.retaliations--;
-    resolveHit(b, target, attacker);
+    hit(target, attacker, { odwet: true, strzal: false, drugi: false });
   }
 
   // Harpia odskakuje na pole, z którego ruszyła.
@@ -234,8 +314,11 @@ export function performAttack(b: Battle, attacker: SimUnit, target: SimUnit, fro
     if (!occupied) {
       attacker.col = origin.col;
       attacker.row = origin.row;
+      log.push({ rodzaj: 'powrot', kto: attacker.id, doKol: origin.col, doRzed: origin.row });
     }
   }
+
+  return log;
 }
 
 /**
@@ -243,9 +326,20 @@ export function performAttack(b: Battle, attacker: SimUnit, target: SimUnit, fro
  * gra przeciwnik — w symulacji stosujemy ją do obu stron, żeby porównywać
  * frakcje, a nie umiejętności dwóch różnych algorytmów.
  */
-export function takeTurn(b: Battle, unit: SimUnit) {
+/**
+ * Decyzja maszyny, bez wykonania. Wydzielona z `takeTurn`, żeby scena mogła
+ * podjąć TĘ SAMĄ decyzję, a potem odegrać ją animacjami — wcześniej miała
+ * własną kopię punktacji celów i to ona rozjeżdżała się z symulacją.
+ */
+export type AiAction =
+  | { rodzaj: 'atak'; cel: SimUnit; from: Cell }
+  | { rodzaj: 'ruch'; cel: Cell }
+  | { rodzaj: 'obrona' }
+  | { rodzaj: 'nic' };
+
+export function chooseAction(b: Battle, unit: SimUnit): AiAction {
   const targets = b.units.filter((u) => u.side !== unit.side);
-  if (targets.length === 0) return;
+  if (targets.length === 0) return { rodzaj: 'nic' };
 
   const reach = reachable(b, unit);
 
@@ -259,10 +353,7 @@ export function takeTurn(b: Battle, unit: SimUnit) {
     if (!best || score > best.score) best = { target, from: plan.from, score };
   }
 
-  if (best) {
-    performAttack(b, unit, best.target, best.from);
-    return;
-  }
+  if (best) return { rodzaj: 'atak', cel: best.target, from: best.from };
 
   let nearest = targets[0];
   for (const t of targets) {
@@ -278,11 +369,17 @@ export function takeTurn(b: Battle, unit: SimUnit) {
       bestCell = { col, row };
     }
   }
-  if (bestCell.col === unit.col && bestCell.row === unit.row) {
-    unit.defending = true;
-  } else {
-    unit.col = bestCell.col;
-    unit.row = bestCell.row;
+  if (bestCell.col === unit.col && bestCell.row === unit.row) return { rodzaj: 'obrona' };
+  return { rodzaj: 'ruch', cel: bestCell };
+}
+
+export function takeTurn(b: Battle, unit: SimUnit) {
+  const action = chooseAction(b, unit);
+  if (action.rodzaj === 'atak') performAttack(b, unit, action.cel, action.from);
+  else if (action.rodzaj === 'obrona') unit.defending = true;
+  else if (action.rodzaj === 'ruch') {
+    unit.col = action.cel.col;
+    unit.row = action.cel.row;
   }
 }
 
