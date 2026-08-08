@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-07 18:11",
+  "updated": "2026-08-08 06:34",
   "pieces": [
     {
       "name": "Plansza: siatka, teren, rama",
@@ -74,11 +74,10 @@
     {
       "name": "Animacje walki i efekty trafienia",
       "status": "running",
-      "note": "Runda 3 w kolejce. Rozbłysk wreszcie realnie zalewa pole — w rundzie 1 w ogóle się nie renderował. Zostało: światło jest białe, bez temperatury.",
+      "note": "Runda 5 w toku. Obwiednia czasowa naprawiona, światło żyje przez cały przebieg. Poprzeczka skorygowana — patrz notatka przy rundzie 4.",
       "shots": [
-        "04b-rozblysk",
-        "06-pocisk-w-locie",
-        "07-smierc-oddzialu"
+        "04-przebieg-rozblysku",
+        "06-pocisk-w-locie"
       ],
       "rounds": [
         {
@@ -92,13 +91,19 @@
           "blind": "animacje-r2",
           "gap": "Wzorzec ma światło o wyraźnej temperaturze — złoto-bursztynowy rdzeń przechodzący w cieplejszy pomarańcz na brzegach — i to światło obrysowuje postać, kładzie się na jej barwie. U nas rozbłysk to biała, przepalona plama bez rdzenia i bez barwy. Rozwarstw go: mały rdzeń ~15% średnicy w bieli, wokół barwna poświata w kolorze żywiołu sięgająca 2-3x dalej z wykładniczym spadkiem, 20-40 iskier w trzech rozmiarach i globalne rozjaśnienie planszy o 10-15% na 150-200 ms.",
           "note": "Runda 2 przyniosła najważniejsze ustalenie całej pętli: w rundzie 1 rozbłysk W OGÓLE się nie renderował widocznie. Trzy błędy naraz — tekstura łuny z alfą 0,6 rozciągniętą na 250 px, iskry rysowane w rozmiarze 2r (jasny rdzeń schodził poniżej piksela) i barwa w trybie ADD bielejąca na jasnej łące. Widać było wyłącznie białe rozbielenie sprite'a. Werdykt rundy 1 był trafny co do skutku, ale gdyby builder poszedł ślepo za literą zalecenia, powiększyłby coś, czego i tak nie widać."
+        },
+        {
+          "win": false,
+          "blind": "animacje-r4b",
+          "gap": "Wzorzec ma budowę: rdzeń u nasady, wachlarz promieni o różnej szerokości i rozmyciu, osobna fala rozchodząca się po ziemi, która realnie rozjaśnia teren i sylwetkę. U nas garść drobnych iskierek i mglista plamka — brak rdzenia, brak promieni, brak fali. Nic nie jest oświetlone: heks, sprite i pasek mają tę samą jasność co poza efektem. Dodatkowo barwa efektu trawiastego jest niemal identyczna z barwą trawy, więc efekt ginie.",
+          "note": "DRUGI BŁĄD POPRZECZKI, MOJA WINA — złapany po jednej rundzie zamiast po pięciu. Trzy pierwsze werdykty animacji wydano na masters-08.jpg, czyli na PEŁNOEKRANOWEJ SCENCE EWOLUCJI, gdzie cały kadr jest oddany jednemu świecącemu stworkowi. Nasz efekt zajmuje jeden heks z siedemdziesięciu, a reszta kadru musi pokazywać stan gry. Ta konkurencja jest nie do wygrania, a gonienie jej oznaczałoby zalanie planszy światłem przy każdym z kilkudziesięciu trafień w bitwie. Krytyk sam się o to otarł, żądając globalnego rozjaśnienia. Zmieniłem wzorzec na ekran „Theme Skills!\" z tej samej gry — rozbłysk położony NA SCENIE WALKI, przez który świat pozostaje czytelny. Werdykt na właściwym wzorcu utrzymał się, ale jego zalecenia są teraz lokalne i wykonalne."
         }
       ]
     },
     {
       "name": "HUD: nagłówek, kolejka, panel, przyciski",
-      "status": "running",
-      "note": "Runda 2 w kolejce. Panel ma już tabelę z wyrównanymi wartościami i kapsułkowe przyciski, ale tinty wierszy to tęcza, a ikony nie tworzą jednego systemu.",
+      "status": "done",
+      "note": "ZAMKNIĘTY w rundzie 3. Panel to jeden system kapsułek z hierarchią na trzech poziomach, znaki mini w jednej wadze, domknięty rytm kolumn i osobna strefa podpisów pod tabelą.",
       "shots": [
         "02-tura-gracza",
         "08-zwyciestwo"
@@ -109,6 +114,18 @@
           "blind": "hud-r1b",
           "gap": "Pasma są poprawnie zaokrąglone, ale ich tinty to tęcza — zieleń, krem, błękit, róż, żółć — dobrana pod treść, nie pod jeden filtr, przez co panel rozpada się wizualnie. Kolumny się nie domykają: lewa ma pięć wierszy, prawa cztery, a wiersz Umiejętność łamie siatkę na całą szerokość. Ikony nie są jednym kompletem — różny styl i różna waga rysunku.",
           "note": "Pierwsze podejście unieważniłem: krytyk zgłosił obcięty tekst i prawą kolumnę poza kadrem jako błędy układu, a to obcięło je moje okno porównania o stałej szerokości 1600 px. Naprawiłem narzędzie i powtórzyłem — werdykt się utrzymał. Krytyk dwa razy nazwał nasze ikony systemowymi emoji; sprawdziłem powiększeniem i myli się co do faktu, bo są rysowane w kodzie, ale ma rację co do wrażenia. Są pełnobarwnymi naklejkami w rejestrze emoji, mają trzy różne wagi rysunku, ikona ruchu jest w tym rozmiarze nieczytelna, a miecz powtarza się w trzech wierszach o różnym znaczeniu."
+        },
+        {
+          "win": false,
+          "blind": "hud-r2",
+          "gap": "Pasma są równe i liczby dobrze wyrównane, ale wszystko leży płasko: etykiety to nieobrobiony sans bez konturu i cienia, hierarchia opiera się wyłącznie na pogrubieniu. Rytm pęka na dole — dwa pełnoszerokie pasma łamią dwukolumnową siatkę bez różnicy w traktowaniu.",
+          "note": "Pewność krytyka spadła z wysokiej na średnią — pierwszy sygnał, że kawałek się domyka. Zarzut o „systemowych emoji\" sprawdziłem powiększeniem i jest nieprawdziwy: znaki mini są jednobarwnymi sylwetkami w tej samej wadze. Trafna była tylko część o znaku żywiołu schodzącym w brąz."
+        },
+        {
+          "win": true,
+          "blind": "hud-r3",
+          "gap": "Nasze pasma tworzą jeden system — każdy wiersz to ta sama kapsułka z konturem, gradientem i wewnętrznym rozjaśnieniem, a etykieta i wartość mają jasną hierarchię, więc tekst siedzi NA paśmie. Przyciski mają ciało i czytają się jako klikalne. Rytm domknięty: dwie kolumny równej wysokości, dwa pełnoszerokie wiersze pod spodem jako osobna strefa. Wzorzec rozjeżdża się na cztery moduły o niezgodnych wysokościach i sześć pasteli bez akcentu.",
+          "note": "Ciekawe rozwiązanie brązowienia znaku żywiołu: brąz to ciemna pomarańcza o niskiej chromie, więc KAŻDE stonowanie ciepłej barwy chłodną bazą albo przyciemnieniem daje brąz. Builder rozdzielił drogi — ciepłe znaki najpierw odsuwa od własnej szarości, dopiero potem ściemnia do tej samej wagi optycznej co zimne. Typografię rozwiązał odwrotnie niż wzorzec: biała otoczka zamiast ciemnego konturu, bo pasma są jasne i czarny obrys zrobiłby jarmark."
         }
       ]
     }
