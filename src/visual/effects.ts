@@ -280,14 +280,19 @@ function lightStack(
     // „globalne rozjaśnienie planszy" — sięga 1.7x dalej niż barwny rdzeń łuny
     // i to jego widać na sąsiednich polach, kiedy reszta już zgasła. Wchodzi
     // NAJPÓŹNIEJ i schodzi NAJPÓŹNIEJ: światło stygnie od środka na zewnątrz.
-    { tex: FX.haze, tint: shade(edge, 0.95), mode: Phaser.BlendModes.ADD, a: 0.9, k: 1.7, from: 0.5, grow: 1.34, wait: 40, rise: 120, hold: 150, fade: 330 },
-    { tex: FX.haze, tint: edge, mode: Phaser.BlendModes.NORMAL, a: 0.5, k: 1.7, from: 0.58, grow: 1.3, wait: 40, rise: 130, hold: 170, fade: 350 },
+    { tex: FX.haze, tint: shade(edge, 0.7), mode: Phaser.BlendModes.ADD, a: 0.55, k: 1.5, from: 0.5, grow: 1.3, wait: 40, rise: 120, hold: 150, fade: 330 },
+    { tex: FX.haze, tint: edge, mode: Phaser.BlendModes.NORMAL, a: 0.66, k: 1.5, from: 0.58, grow: 1.26, wait: 40, rise: 130, hold: 170, fade: 350 },
     // Pas środkowy: czysta barwa żywiołu — po niej gracz poznaje, czym oberwał.
     // Szczytuje w okolicach 110 ms, czyli DOKŁADNIE wtedy, gdy biały rdzeń już
     // zgasł. To jest treść efektu i ma ją widać najdłużej ze wszystkiego, co
     // niesie kolor rozpoznawalny jako żywioł.
-    { tex: FX.bloom, tint: shade(color, 0.78), mode: Phaser.BlendModes.ADD, a: 1, k: 1, from: 0.45, grow: 1.38, wait: 20, rise: 95, hold: 110, fade: 280 },
-    { tex: FX.bloom, tint: color, mode: Phaser.BlendModes.NORMAL, a: 0.68, k: 0.94, from: 0.5, grow: 1.32, wait: 20, rise: 100, hold: 130, fade: 300 },
+    // Waga przesunięta z ADD na NORMAL. Pasek po pierwszej poprawce obwiedni
+    // pokazał światło we wszystkich czterech klatkach, ale BLADE: nad jasną
+    // łąką ADD dokłada głównie jasność, więc barwa rozjeżdżała się w mlecznobiałą
+    // mgłę. NORMAL nakłada hue wprost i nie da się go wypalić, więc to on niesie
+    // teraz rozpoznawalność żywiołu, a ADD jest już tylko dopalaczem jasności.
+    { tex: FX.bloom, tint: shade(color, 0.6), mode: Phaser.BlendModes.ADD, a: 0.66, k: 1, from: 0.45, grow: 1.34, wait: 20, rise: 95, hold: 110, fade: 280 },
+    { tex: FX.bloom, tint: color, mode: Phaser.BlendModes.NORMAL, a: 0.82, k: 0.94, from: 0.5, grow: 1.28, wait: 20, rise: 100, hold: 130, fade: 300 },
     // Gorąca obwódka rdzenia: barwa podciągnięta ku bieli. Bez niej skok od
     // barwy do białego rdzenia był twardy i rdzeń czytał się jak dziura.
     // Jest pomostem między błyskiem a łuną, więc gaśnie w połowie drogi.
