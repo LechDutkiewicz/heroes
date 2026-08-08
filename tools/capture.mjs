@@ -147,10 +147,12 @@ const main = async () => {
   // Sztywne opóźnienia rozjeżdżały się przy każdej zmianie długości animacji
   // i zrzut regularnie łapał puste pole zamiast ciosu.
   await open(page, '&terrain=laka');
-  await inScene(page, (scene) => {
+  await inScene(page, (scene, zywiol) => {
     scene.time.timeScale = 0.12;
     scene.tweens.timeScale = 0.12;
-    const a = scene.units.find((u) => u.side === 'player' && !u.def.shooter);
+    const a = scene.units.find(
+      (u) => u.side === 'player' && !u.def.shooter && (!zywiol || u.def.type === zywiol)
+    );
     const d = scene.units.find((u) => u.side === 'enemy');
     // Postaw obok siebie, żeby cios był z bliska i widoczny.
     d.col = a.col + 1;
@@ -188,6 +190,48 @@ const main = async () => {
     await thaw(page);
   }
   await strip(browser, klatki, `${OUT}/04-przebieg-rozblysku.png`);
+
+  // 4b. Ten sam przebieg dla ataku OGNISTEGO.
+  //
+  // Atak trawiasty nad łąką to najgorszy możliwy przypadek: hue efektu i hue
+  // tła są niemal identyczne, więc z jednego paska nie da się odróżnić „efekt
+  // jest źle zrobiony" od „efekt ma pecha do podłoża". Ogień ma kontrast do
+  // trawy z natury, więc drugi pasek rozdziela te dwie sprawy — jeśli ognisty
+  // wygląda dobrze, a trawiasty nie, problemem jest paleta, nie rzemiosło.
+  await open(page, '&terrain=laka');
+  await inScene(
+    page,
+    (scene, zywiol) => {
+      scene.time.timeScale = 0.12;
+      scene.tweens.timeScale = 0.12;
+      const a = scene.units.find(
+        (u) => u.side === 'player' && !u.def.shooter && u.def.type === zywiol
+      );
+      const d = scene.units.find((u) => u.side === 'enemy');
+      d.col = a.col + 1;
+      d.row = a.row;
+      const p = scene.cellToXY(d.col, d.row);
+      d.container.setPosition(p.x, p.y);
+      window.__trafienie = 0;
+      scene.meleeLunge(a, d, () => {
+        scene.resolveHit(a, d);
+        window.__trafienie = 1;
+      });
+    },
+    'fire'
+  );
+  await page.waitForFunction(() => window.__trafienie === 1, null, { timeout: 30000 });
+  const ogien = [];
+  for (const [i, czekaj] of [260, 420, 700, 900].entries()) {
+    await page.waitForTimeout(czekaj);
+    await freeze(page);
+    const nazwa = `04g${i + 1}`;
+    await shot(page, nazwa);
+    ogien.push(`${OUT}/${nazwa}.png`);
+    await thaw(page);
+  }
+  await strip(browser, ogien, `${OUT}/04-przebieg-ognisty.png`);
+
   // Sekunda zegara to przy tym spowolnieniu ~120 ms sceny: iskry zdążyły się
   // rozlecieć, a napisy z obrażeniami wypłynąć nad oddział.
   await page.waitForTimeout(1400);
