@@ -1364,6 +1364,15 @@ export class BattleScene extends Phaser.Scene {
       this.resolveAttack(unit, action.cel as Unit, action.from);
       return;
     }
+    if (action.rodzaj === 'czekanie') {
+      // Maszyna też umie czekać — nie rzuca się na linię przeciwnika sama.
+      unit.waited = true;
+      this.roundQueue.shift();
+      this.roundQueue.push(unit.id);
+      this.floatText(unit, 'Czekam', '#cfd8dc', -46, ICON.hourglass);
+      this.time.delayedCall(400, () => this.beginTurn());
+      return;
+    }
     if (action.rodzaj === 'obrona') {
       // Nie ma kogo bić ani dokąd iść — lepiej stanąć w obronie niż bezczynnie.
       unit.defending = true;

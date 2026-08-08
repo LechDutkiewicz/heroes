@@ -122,17 +122,22 @@ function unit(
 /**
  * Trzy charaktery. Sumy mocy są zbliżone, rozłożone inaczej:
  *  - Bór: liczny i szybki, ale kruchy — bije często, znosi mało.
- *  - Grota: powolna i twarda — dochodzi później, ale trudno ją wybić.
- *  - Zbocze: uderzeniowe — najmocniejszy cios, najmniej życia i sztuk.
+ *  - Grota: powolna, twarda i ciężka w ciosie — dochodzi na końcu, ale kogo
+ *    dosięgnie, tego rozjeżdża; płaci za to najmniejszą liczebnością.
+ *  - Zbocze: wyrównane i solidne — nic nie wystaje, nic nie zawodzi.
  */
-// Uwaga przy strojeniu: liczebność mnoży ZARAZEM atak i życie, więc
-// przeżywalność zwraca się podwójnie — oddział, który przeżył, dalej bije
-// pełną siłą. Życie jest tu warte więcej niż atak i profil z samym „+HP"
-// wygrywa wszystko. Dlatego twarda Grota ma wyraźnie obniżony atak, a nie
-// tylko lekko. Liczby pilnuje `npm run balans`, nie intuicja.
-const BOR: Profil = { hp: 0.8, atk: 0.95, count: 1.2, move: 1 };
-const GROTA: Profil = { hp: 1.15, atk: 0.95, count: 0.9, move: 0 };
-const ZBOCZE: Profil = { hp: 1.12, atk: 1.12, count: 0.95, move: 0 };
+// Uwaga przy strojeniu: te liczby NIE są liniowe i nie da się ich dobrać
+// intuicją. Liczebność mnoży ZARAZEM atak i życie, więc działa kwadratowo —
+// zmiana Groty z 0.90 na 0.95 przerzuciła starcie z Borem z 58:42 na 18:82.
+// Do tego statystyki są całkowite, więc drobne mnożniki znikają w
+// zaokrągleniu: atak 1.15 i 1.22 dają dokładnie te same oddziały. Jeśli
+// zmiana „nic nie robi", to zwykle nie jest za mała, tylko wpadła między
+// dwie liczby całkowite — a jeśli robi za dużo, to trafiła w próg.
+// Do przeszukiwania siatki wariantów jest `npx tsx tools/strojenie.ts`,
+// do sprawdzenia wyniku `npm run balans`.
+const BOR: Profil = { hp: 0.75, atk: 0.95, count: 1.2, move: 1 };
+const GROTA: Profil = { hp: 1.15, atk: 1.22, count: 0.9, move: 0 };
+const ZBOCZE: Profil = { hp: 1.12, atk: 1.05, count: 0.95, move: 0 };
 
 /**
  * Frakcje to miejsca, bo tak jest poukładany świat pokemonów: w lesie żyją
@@ -171,7 +176,7 @@ export const FACTIONS: Faction[] = [
     units: [
       unit(0, '00246', 'Glacyn', 'water', GROTA),
       unit(1, '00002', 'Sporex', 'grass', GROTA, { atk: 1.15 }),
-      unit(2, '00263', 'Cindro', 'fire', GROTA, { hp: 1.3 }),
+      unit(2, '00263', 'Cindro', 'fire', GROTA, { hp: 1.45 }),
       unit(3, '00250', 'Sporina', 'grass', GROTA, { move: -2 }),
       unit(4, '00220', 'Aquator', 'water', GROTA),
       unit(5, '00196', 'Vulkaron', 'fire', GROTA, { atk: 1.1 }),

@@ -335,7 +335,59 @@ export type AiAction =
   | { rodzaj: 'atak'; cel: SimUnit; from: Cell }
   | { rodzaj: 'ruch'; cel: Cell }
   | { rodzaj: 'obrona' }
+  | { rodzaj: 'czekanie' }
   | { rodzaj: 'nic' };
+
+/**
+ * Czy to byłaby samotna szarża — czyli wejście pod cios kilku wrogów naraz,
+ * bez nikogo swojego obok?
+ *
+ * To jest lekarstwo na odwrócone znaczenie szybkości. Sonda
+ * `tools/probe-szybkosc.ts` mierzyła to wprost: ta sama frakcja, jednej
+ * stronie dodane +1 ruchu, i ta strona wygrywała 0-1% starć, zadając połowę
+ * obrażeń. Nie było w tym nic z liczb — winna była maszyna, która atakowała
+ * ZAWSZE, kiedy tylko dosięgła. Szybszy oddział dobiegał pierwszy i stawał
+ * samotnie przed całą linią przeciwnika, po czym ginął, zanim reszta jego
+ * armii zdążyła dojść. Im szybsza armia, tym wcześniej podawała wrogowi
+ * swoje oddziały po jednym.
+ *
+ * Teraz taki oddział używa czekania — mechaniki wprost z Heroes 3: schodzi na
+ * koniec kolejki i uderza, kiedy swoi już się zrównali. Warunki są celowo
+ * wąskie, żeby czekanie nie zamieniło bitwy w stanie: tylko oddział, który
+ * MUSI się przemieścić, żeby uderzyć (strzelec i tak strzela z miejsca,
+ * a stojący już w zwarciu nie ma czego unikać), tylko dopóki NIKT ze swoich
+ * nie jest jeszcze w zwarciu — czyli tylko przy otwarciu bitwy — i tylko raz
+ * na rundę. Po pierwszym starciu maszyna bije normalnie, więc bitwa nie
+ * zamiera w dwóch armiach czekających na siebie nawzajem.
+ *
+ * Efekt zmierzony sondą (ta sama frakcja, jednej stronie +1 ruchu):
+ *   przed: Bór 35%, Grota 1%, Zbocze 0%
+ *   po:    Bór 86%, Grota 54%, Zbocze 21%
+ * Szybkość przestała być samobójstwem. Bitwy wydłużyły się z 4-5 rund do 7,
+ * bo armie najpierw się schodzą, a dopiero potem zwierają.
+ */
+function szarzaSamotna(b: Battle, unit: SimUnit, from: Cell): boolean {
+  if (unit.waited) return false;
+  if (from.col === unit.col && from.row === unit.row) return false;
+  // Nie ma sensu czekać, jeśli nikt swój i tak nie ruszy się po nas.
+  if (!b.roundQueue.some((id) => id !== unit.id && b.units.find((u) => u.id === id)?.side === unit.side))
+    return false;
+  // Czy ktokolwiek z naszych jest już w zwarciu? Jeśli tak, bitwa się zaczęła
+  // i nie ma po co zwlekać. Jeśli nie, to ten oddział otwierałby ją sam.
+  const zwarcieTrwa = b.units.some(
+    (u) => u.side === unit.side && u.id !== unit.id && hasAdjacentEnemy(b, u)
+  );
+  if (zwarcieTrwa) return false;
+
+  let wrogowie = 0;
+  let swoi = 0;
+  for (const u of b.units) {
+    if (u.id === unit.id || !isAdjacent(from, u)) continue;
+    if (u.side === unit.side) swoi++;
+    else wrogowie++;
+  }
+  return wrogowie > swoi;
+}
 
 export function chooseAction(b: Battle, unit: SimUnit): AiAction {
   const targets = b.units.filter((u) => u.side !== unit.side);
@@ -353,7 +405,10 @@ export function chooseAction(b: Battle, unit: SimUnit): AiAction {
     if (!best || score > best.score) best = { target, from: plan.from, score };
   }
 
-  if (best) return { rodzaj: 'atak', cel: best.target, from: best.from };
+  if (best) {
+    if (szarzaSamotna(b, unit, best.from)) return { rodzaj: 'czekanie' };
+    return { rodzaj: 'atak', cel: best.target, from: best.from };
+  }
 
   let nearest = targets[0];
   for (const t of targets) {
@@ -373,14 +428,20 @@ export function chooseAction(b: Battle, unit: SimUnit): AiAction {
   return { rodzaj: 'ruch', cel: bestCell };
 }
 
-export function takeTurn(b: Battle, unit: SimUnit) {
+/**
+ * Wykonuje decyzję maszyny. Zwraca ją, bo czekanie nie kończy tury oddziału —
+ * ten wraca na koniec kolejki i pętla musi o tym wiedzieć.
+ */
+export function takeTurn(b: Battle, unit: SimUnit): AiAction {
   const action = chooseAction(b, unit);
   if (action.rodzaj === 'atak') performAttack(b, unit, action.cel, action.from);
   else if (action.rodzaj === 'obrona') unit.defending = true;
+  else if (action.rodzaj === 'czekanie') unit.waited = true;
   else if (action.rodzaj === 'ruch') {
     unit.col = action.cel.col;
     unit.row = action.cel.row;
   }
+  return action;
 }
 
 /**
@@ -493,7 +554,8 @@ export function runBattle(b: Battle, maxRounds = 60): { outcome: Outcome; rounds
       const unit = b.units.find((u) => u.id === id);
       if (!unit) continue;
       unit.defending = false;
-      takeTurn(b, unit);
+      const action = takeTurn(b, unit);
+      if (action.rodzaj === 'czekanie') b.roundQueue.push(unit.id);
 
       const left = b.units.some((u) => u.side === 'player');
       const right = b.units.some((u) => u.side === 'enemy');
