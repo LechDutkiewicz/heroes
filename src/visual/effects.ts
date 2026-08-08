@@ -313,8 +313,15 @@ function boardMask(scene: Phaser.Scene) {
  * jedynym, który nie dostał barwy i przez to wyglądał na tańszy od reszty.
  *
  * Każdy pas idzie w dwóch trybach: przygaszona barwa w ADD (daje jasność
- * i „zalewanie" sceny) plus ta sama barwa zwyczajnie (pilnuje nasycenia, bo
+ * i „zalewanie" sceny) plus ta sama barwa w SCREEN (pilnuje nasycenia, bo
  * ADD nad jasną łąką bieleje). Rdzeń jest wyłącznie w ADD — on MA być biały.
+ *
+ * SCREEN, a NIE zwykłe krycie. Warstwa nasycenia szła wcześniej w NORMAL i to
+ * był błąd nie do obronienia: średnio jasna oliwka położona na jaśniejszej od
+ * niej łące PRZYCIEMNIA teren. Na pasku widać było dokładnie to — w drugiej
+ * klatce pole celu robiło się szaro-brunatne, czyli „światło" brudziło scenę
+ * zamiast ją rozjaśniać. SCREEN z definicji nie zejdzie poniżej jasności tła,
+ * więc barwa dochodzi, a teren może już tylko pojaśnieć.
  *
  * @param d  średnica najszerszego pasa w pikselach
  */
@@ -367,7 +374,7 @@ function lightStack(
     // stała tam pełną mocą, przez co czytała się jak filtr nałożony na planszę,
     // a nie jak dogasające światło. Teraz ostatnia klatka łapie ją już w zaniku.
     { tex: FX.haze, tint: shade(edge, 0.7), mode: Phaser.BlendModes.ADD, a: 0.5, k: 1.5, from: 0.5, grow: 1.3, wait: 40, rise: 120, hold: 70, fade: 320 },
-    { tex: FX.haze, tint: edge, mode: Phaser.BlendModes.NORMAL, a: 0.56, k: 1.5, from: 0.58, grow: 1.26, wait: 40, rise: 130, hold: 80, fade: 340 },
+    { tex: FX.haze, tint: edge, mode: Phaser.BlendModes.SCREEN, a: 0.7, k: 1.5, from: 0.58, grow: 1.26, wait: 40, rise: 130, hold: 80, fade: 340 },
     // Pas środkowy: czysta barwa żywiołu — po niej gracz poznaje, czym oberwał.
     // Szczytuje w okolicach 110 ms, czyli DOKŁADNIE wtedy, gdy biały rdzeń już
     // zgasł. To jest treść efektu i ma ją widać najdłużej ze wszystkiego, co
@@ -378,7 +385,7 @@ function lightStack(
     // mgłę. NORMAL nakłada hue wprost i nie da się go wypalić, więc to on niesie
     // teraz rozpoznawalność żywiołu, a ADD jest już tylko dopalaczem jasności.
     { tex: FX.bloom, tint: shade(color, 0.6), mode: Phaser.BlendModes.ADD, a: 0.66, k: 1, from: 0.45, grow: 1.34, wait: 20, rise: 95, hold: 110, fade: 280 },
-    { tex: FX.bloom, tint: color, mode: Phaser.BlendModes.NORMAL, a: 0.82, k: 0.94, from: 0.5, grow: 1.28, wait: 20, rise: 100, hold: 130, fade: 300 },
+    { tex: FX.bloom, tint: color, mode: Phaser.BlendModes.SCREEN, a: 0.9, k: 0.94, from: 0.5, grow: 1.28, wait: 20, rise: 100, hold: 130, fade: 300 },
     // RDZEŃ MA BUDOWĘ, nie jest białą plamą. To był osobny zarzut rundy 4:
     // „brak rdzenia". Trzy warstwy zamiast jednej:
     //
@@ -386,7 +393,7 @@ function lightStack(
     //     to ona sprawia, że światło ma barwę już w samym środku, a nie dopiero
     //     w łunie dookoła. Elipsa, bo we wzorcu światło siedzi NA ZIEMI i jest
     //     przez to ściśnięte w pionie, a nie zawieszone w próżni.
-    { tex: FX.bloom, tint: color, mode: Phaser.BlendModes.NORMAL, a: 0.9, k: 0.34, from: 0.25, grow: 1.45, squash: 0.66, wait: 0, rise: 40, hold: 55, fade: 190 },
+    { tex: FX.bloom, tint: color, mode: Phaser.BlendModes.SCREEN, a: 1, k: 0.34, from: 0.25, grow: 1.45, squash: 0.66, wait: 0, rise: 40, hold: 55, fade: 190 },
     // (b) gorąca obwódka — pomost między barwą a bielą, żeby biały punkt nie
     //     czytał się jak dziura wycięta w barwie.
     { tex: FX.glow, tint: tintTowardsWhite(color, 0.55), mode: Phaser.BlendModes.ADD, a: 0.8, k: 0.3, from: 0.22, grow: 1.6, squash: 0.72, wait: 0, rise: 38, hold: 30, fade: 150 },
@@ -943,13 +950,19 @@ export function flashTarget(
     .setOrigin(sprite.originX, sprite.originY)
     .setDisplaySize(sprite.displayWidth, sprite.displayHeight)
     .setFlipX(sprite.flipX)
-    .setTint(shade(color, 0.42))
+    // Kopia jest CIEMNA i PÓŁPRZEZROCZYSTA, bo w trybie ADD dokłada się do
+    // oryginału. Pierwsza wersja miała jasność 0.42 przy pełnej alfie i przez
+    // 200 ms trafiony stworek był na pasku białą sylwetką — czyli dokładnie
+    // to, co miała naprawić: zamiast oświetlić, kasowała kształt i barwę.
+    // 0.22 przy alfie 0.4 daje rozjaśnienie rzędu 25-40% z zalecenia krytyka,
+    // przy którym stworka nadal widać.
+    .setTint(shade(color, 0.22))
     .setBlendMode(Phaser.BlendModes.ADD)
     .setAlpha(0);
   if (parent) parent.add(lit);
   scene.tweens.add({
     targets: lit,
-    alpha: 1,
+    alpha: 0.4,
     duration: 50,
     ease: E.snap,
     onComplete: () => {
