@@ -1363,8 +1363,11 @@ export class BattleScene extends Phaser.Scene {
       power,
       strong: typeMult > 1,
       weak: typeMult < 1,
+      // Środek heksa: rozbłysk celuje w korpus stworka, ale oświetlenie
+      // terenu musi trafić w pole pod nim (patrz ImpactOpts.cellY).
+      cellY: hitAt.y,
     });
-    flashTarget(this, target.view.sprite);
+    flashTarget(this, target.view.sprite, TYPE_INFO[attacker.def.type].color);
     battleShake(this, typeMult > 1 ? Math.min(1, power + 0.25) : power);
 
     if (tooFar) this.floatText(target, 'Złamana strzała — pół siły', '#ff9800', -66);
