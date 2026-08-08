@@ -7,7 +7,7 @@
 //   node tools/capture.mjs [--out tools/shots] [--url http://localhost:4173]
 
 import { chromium } from 'playwright';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(name);
@@ -55,6 +55,34 @@ const inScene = (page, fn, arg) =>
  */
 const freeze = (page) => page.evaluate(() => window.__game.scene.pause('battle'));
 const thaw = (page) => page.evaluate(() => window.__game.scene.resume('battle'));
+
+/**
+ * Skleja klatki w poziomy pasek, wycinając z każdej ten sam fragment planszy.
+ * Kadrujemy do okolic uderzenia, bo cały ekran obok siebie cztery razy daje
+ * miniatury, na których nie widać tego, co się ocenia.
+ */
+async function strip(browser, pliki, out, clip = { x: 150, y: 180, w: 620, h: 470 }) {
+  // Pasek składamy na OSOBNEJ stronie. Sklejanie na stronie gry podmieniało
+  // jej zawartość i wszystkie następne zrzuty szukały już nieistniejącego
+  // kanwasu — przebieg wywalał się zaraz po pasku.
+  const dane = [];
+  for (const f of pliki) dane.push((await readFile(f)).toString('base64'));
+  const p = await browser.newPage({
+    viewport: { width: clip.w * dane.length + 8, height: clip.h + 8 },
+  });
+  await p.setContent(`<style>
+    body{margin:0;background:#1c1c1c}
+    .r{display:flex}
+    .k{width:${clip.w}px;height:${clip.h}px;overflow:hidden;position:relative;border-right:2px solid #000}
+    .k img{position:absolute;left:${-clip.x}px;top:${-clip.y}px}
+  </style><div class="r">${dane
+    .map((b64) => `<div class="k"><img src="data:image/png;base64,${b64}"></div>`)
+    .join('')}</div>`);
+  await p.waitForTimeout(300);
+  await p.locator('.r').screenshot({ path: out });
+  await p.close();
+  console.log(`  → ${out.split('/').pop()} (pasek ${dane.length} klatek)`);
+}
 
 async function open(page, query = '') {
   await page.goto(`${BASE}/?seed=${SEED}${query}`, { waitUntil: 'load' });
@@ -121,14 +149,27 @@ const main = async () => {
   await freeze(page);
   await shot(page, '04-cios-wrecz');
   await thaw(page);
-  // Szczyt rozbłysku. Zrzut 04 powstaje w chwili WYWOŁANIA efektu, kiedy łuna
-  // ma jeszcze alfę 0, a 05 długo po wszystkim — samego światła nie było widać
-  // w żadnym z nich i nie dało się ocenić głównego zarzutu krytyka.
-  // 800 ms zegara przy spowolnieniu 0.12 to ~96 ms sceny, czyli tuż po pełni.
-  await page.waitForTimeout(800);
-  await freeze(page);
-  await shot(page, '04b-rozblysk');
-  await thaw(page);
+  // Rozbłysk łapiemy jako PASEK KLATEK, nie jedno zdjęcie.
+  //
+  // Jedna klatka animacji zawsze kłamie, i to w obie strony: wcześniejsza
+  // pokazywała szczyt białego rdzenia, kiedy barwna łuna dopiero się rozwija,
+  // a przesunięta pokazywała już gaśnięcie. Na podstawie pierwszej oceniano
+  // „brak barwy", na podstawie drugiej wyszłoby „efekt ledwo widoczny".
+  // Do tego każda zmiana długości efektu rozjeżdżała sztywne opóźnienie —
+  // dostrajanie go po każdej rundzie to była walka z wiatrakami.
+  //
+  // Pasek czterech klatek pokazuje przebieg: narastanie, szczyt rdzenia,
+  // szczyt barwy, gaśnięcie. Efekt ruchu ocenia się z przebiegu, nie ze stopklatki.
+  const klatki = [];
+  for (const [i, czekaj] of [260, 420, 700, 900].entries()) {
+    await page.waitForTimeout(czekaj);
+    await freeze(page);
+    const nazwa = `04f${i + 1}`;
+    await shot(page, nazwa);
+    klatki.push(`${OUT}/${nazwa}.png`);
+    await thaw(page);
+  }
+  await strip(browser, klatki, `${OUT}/04-przebieg-rozblysku.png`);
   // Sekunda zegara to przy tym spowolnieniu ~120 ms sceny: iskry zdążyły się
   // rozlecieć, a napisy z obrażeniami wypłynąć nad oddział.
   await page.waitForTimeout(1400);
@@ -149,16 +190,24 @@ const main = async () => {
     // Pocisk to jedyny kontener dołożony do warstwy efektów w tej chwili.
     window.__lot.obj = scene.effectLayer.list.filter((o) => o.type === 'Container').pop();
   });
-  await page.waitForFunction(
-    () => {
-      const l = window.__lot;
-      if (!l?.obj?.active) return false;
-      const t = (l.obj.x - l.from.x) / (l.to.x - l.from.x);
-      return t > 0.45;
-    },
-    null,
-    { timeout: 30000 }
-  );
+  // Czekamy, aż pocisk minie połowę drogi, ale NIE upieramy się przy tym.
+  // Heurystyka „ostatni kontener w warstwie efektów" zależy od tego, jak
+  // zbudowany jest pocisk, a to się zmienia z rundy na rundę — gdy przestaje
+  // trafiać, cały przebieg zrzutów wywalał się z przeterminowaniem i psuł
+  // wszystkie następne kadry. Lepszy jest zrzut z przybliżonej chwili niż
+  // brak zrzutu i przerwany przebieg.
+  await page
+    .waitForFunction(
+      () => {
+        const l = window.__lot;
+        if (!l?.obj?.active) return false;
+        const t = (l.obj.x - l.from.x) / (l.to.x - l.from.x);
+        return t > 0.45;
+      },
+      null,
+      { timeout: 6000 }
+    )
+    .catch(() => console.log('  (pocisku nie wyśledzono — zrzut z przybliżonej chwili)'));
   await freeze(page);
   await shot(page, '06-pocisk-w-locie');
 
