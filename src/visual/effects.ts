@@ -254,13 +254,21 @@ function warmEdge(color: number) {
  * mgiełką. Żaden dobór alfy tego nie naprawi, bo problem leży w odległości
  * barw, nie w jasności.
  *
- * Plansza jest w większości krajobrazów zielono-żółta (łąka, jesień, częściowo
- * plaża), więc to zieleń w paśmie ok. 70-150° jest tą, która się zlewa.
- * Barwy z tego pasma dostają mocny skręt w stronę limonki (~68°) i dociśnięte
- * nasycenie z jasnością — trawa nadal czyta się jako trawa, ale jako JASNA,
- * kwaśna limonka odcinająca się od matowej oliwki terenu. Barwy spoza pasma
- * (ogień, woda, lód) mają kontrast do łąki z natury i zostają nietknięte —
- * przesuwanie ich tylko zafałszowałoby żywioł.
+ * Kierunek skrętu policzony, nie zgadnięty. Trawa jako żywioł ma hue 98°,
+ * a łąka pod nią jest ŻÓŁTO-zielona, czyli leży w okolicach 70-85°. Pierwsza
+ * wersja tej funkcji ciągnęła zieleń w stronę limonki (68°) — czyli PROSTO
+ * W BARWĘ TERENU. Efekt robił się przez to jeszcze bliższy tłu niż surowa
+ * barwa żywiołu, dokładnie odwrotnie do zamiaru. Uciekać trzeba w drugą
+ * stronę: ku szmaragdowi (~155°), bo tam teren nie sięga w żadnym z pięciu
+ * krajobrazów.
+ *
+ * Do tego jasność i nasycenie w górę. Łąka jest matowa i średnio jasna, więc
+ * czysty, jaskrawy szmaragd odcina się od niej trzema parametrami naraz —
+ * barwą, nasyceniem i jasnością — a nadal jednoznacznie czyta się jako trawa.
+ *
+ * Barwy spoza pasma zieleni (ogień, woda, lód) mają kontrast do łąki z natury
+ * i zostają NIETKNIĘTE: pasek ognisty potwierdził, że tam nie ma czego
+ * naprawiać, a przesuwanie ich tylko zafałszowałoby żywioł.
  */
 function standOut(color: number) {
   const c = Phaser.Display.Color.IntegerToRGB(color);
@@ -270,15 +278,15 @@ function standOut(color: number) {
     v: number;
   };
   const deg = hsv.h * 360;
-  if (deg < 68 || deg > 150) return color;
-  // Im bliżej środka pasma zieleni, tym mocniejszy skręt — barwa graniczna
-  // przesuwa się ledwo, żeby nie było widocznego progu między żywiołami.
-  const pull = 1 - Math.abs(deg - 110) / 42;
-  const h = (hsv.h + ((68 / 360 - hsv.h) * (0.55 + 0.35 * pull)) + 1) % 1;
+  if (deg < 60 || deg > 140) return color;
+  // Im bliżej barwy terenu, tym mocniejsza ucieczka — żywioł już wyraźnie
+  // szmaragdowy prawie nie drgnie, żeby nie było progu między odcieniami.
+  const pull = Phaser.Math.Clamp(1 - (deg - 60) / 80, 0, 1);
+  const h = (hsv.h + (155 / 360 - hsv.h) * (0.3 + 0.35 * pull)) % 1;
   const out = Phaser.Display.Color.HSVToRGB(
     h,
-    Math.min(1, hsv.s * 1.15 + 0.1),
-    Math.min(1, hsv.v * 1.1 + 0.12)
+    Math.min(1, hsv.s * 1.2 + 0.14),
+    Math.min(1, hsv.v * 1.1 + 0.16)
   ) as Phaser.Display.Color;
   return Phaser.Display.Color.GetColor(out.red, out.green, out.blue);
 }
