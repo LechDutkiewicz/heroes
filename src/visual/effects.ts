@@ -17,7 +17,7 @@
  * Reguła druga, ważniejsza od pierwszej: efekt nie może zjeść informacji.
  * Gracz musi widzieć, kto kogo uderzył, za ile i ilu stworków padło. Stąd
  * trzy ograniczenia, które w kodzie widać jako liczby:
- *  - rdzeń błysku gaśnie w ~170 ms, zanim wypłynie napis z liczbą obrażeń;
+ *  - biały rdzeń błysku gaśnie w ~95 ms, na długo przed napisem z obrażeniami;
  *  - iskry lecą NA ZEWNĄTRZ od punktu trafienia, więc środek pola zostaje czysty;
  *  - napisy ulotne same się rozsuwają w pionie (patrz `floatLabel`), bo przy
  *    jednym ciosie potrafią wyskoczyć trzy naraz i wcześniej zlewały się
@@ -26,6 +26,15 @@
  * Reguła trzecia: walka ma zostać żwawa. Cała oprawa jednego ciosu mieści się
  * w około 400 ms i nie blokuje przebiegu tury — scena woła `onDone` wtedy,
  * kiedy wołała wcześniej, a iskry dopalają się już po fakcie.
+ *
+ * Reguła czwarta, dopisana po obejrzeniu PASKA KLATEK zamiast stopklatki:
+ * o tym, czy efekt ma barwę, decyduje nie paleta, tylko OBWIEDNIA W CZASIE.
+ * Rundy 1-3 miały barwę w kodzie, a mimo to na pasku widać było jedno białe
+ * zdjęcie i trzy puste — bo biały rdzeń świecił pełną mocą przez cały czas
+ * życia efektu, a barwa szczytowała dopiero wtedy, gdy całość już gasła.
+ * Dlatego warstwy nie mają już „narastania i gaśnięcia", tylko trzy fazy:
+ * narastanie, PRZYTRZYMANIE i gaśnięcie, a ich kolejność jest odwrotna do
+ * jasności — biel wchodzi pierwsza i schodzi pierwsza, barwa trzyma najdłużej.
  */
 
 import Phaser from 'phaser';
@@ -258,22 +267,39 @@ function lightStack(
     k: number;
     from: number;
     grow: number;
-    life: number;
+    /** Ile pas czeka, zanim zacznie narastać — stąd bierze się kolejność warstw. */
+    wait: number;
+    /** Czas narastania do pełnej alfy. */
+    rise: number;
+    /** Ile pas TRZYMA pełną alfę. To on decyduje, czy efekt ma treść w czasie. */
+    hold: number;
+    /** Czas gaśnięcia. */
+    fade: number;
   }[] = [
     // Najdalszy pas: cieplejsza barwa, rozlana szeroko i słabo. To on daje
     // „globalne rozjaśnienie planszy" — sięga 1.7x dalej niż barwny rdzeń łuny
-    // i to jego widać na sąsiednich polach, kiedy reszta już zgasła.
-    { tex: FX.haze, tint: shade(edge, 0.95), mode: Phaser.BlendModes.ADD, a: 1, k: 1.7, from: 0.5, grow: 1.3, life: 320 },
-    { tex: FX.haze, tint: edge, mode: Phaser.BlendModes.NORMAL, a: 0.42, k: 1.7, from: 0.58, grow: 1.28, life: 320 },
+    // i to jego widać na sąsiednich polach, kiedy reszta już zgasła. Wchodzi
+    // NAJPÓŹNIEJ i schodzi NAJPÓŹNIEJ: światło stygnie od środka na zewnątrz.
+    { tex: FX.haze, tint: shade(edge, 0.95), mode: Phaser.BlendModes.ADD, a: 0.9, k: 1.7, from: 0.5, grow: 1.34, wait: 40, rise: 120, hold: 150, fade: 330 },
+    { tex: FX.haze, tint: edge, mode: Phaser.BlendModes.NORMAL, a: 0.5, k: 1.7, from: 0.58, grow: 1.3, wait: 40, rise: 130, hold: 170, fade: 350 },
     // Pas środkowy: czysta barwa żywiołu — po niej gracz poznaje, czym oberwał.
-    { tex: FX.bloom, tint: shade(color, 0.72), mode: Phaser.BlendModes.ADD, a: 1, k: 1, from: 0.45, grow: 1.35, life: 270 },
-    { tex: FX.bloom, tint: color, mode: Phaser.BlendModes.NORMAL, a: 0.6, k: 0.94, from: 0.5, grow: 1.3, life: 270 },
+    // Szczytuje w okolicach 110 ms, czyli DOKŁADNIE wtedy, gdy biały rdzeń już
+    // zgasł. To jest treść efektu i ma ją widać najdłużej ze wszystkiego, co
+    // niesie kolor rozpoznawalny jako żywioł.
+    { tex: FX.bloom, tint: shade(color, 0.78), mode: Phaser.BlendModes.ADD, a: 1, k: 1, from: 0.45, grow: 1.38, wait: 20, rise: 95, hold: 110, fade: 280 },
+    { tex: FX.bloom, tint: color, mode: Phaser.BlendModes.NORMAL, a: 0.68, k: 0.94, from: 0.5, grow: 1.32, wait: 20, rise: 100, hold: 130, fade: 300 },
     // Gorąca obwódka rdzenia: barwa podciągnięta ku bieli. Bez niej skok od
     // barwy do białego rdzenia był twardy i rdzeń czytał się jak dziura.
-    { tex: FX.glow, tint: tintTowardsWhite(color, 0.4), mode: Phaser.BlendModes.ADD, a: 1, k: 0.42, from: 0.3, grow: 1.5, life: 210 },
-    // Rdzeń: ~15% średnicy barwnej łuny, biały, gaśnie najszybciej — musi
-    // zdążyć zniknąć, zanim wypłynie liczba obrażeń.
-    { tex: FX.glow, tint: C.white, mode: Phaser.BlendModes.ADD, a: 1, k: 0.16, from: 0.35, grow: 1.35, life: 150 },
+    // Jest pomostem między błyskiem a łuną, więc gaśnie w połowie drogi.
+    { tex: FX.glow, tint: tintTowardsWhite(color, 0.4), mode: Phaser.BlendModes.ADD, a: 0.85, k: 0.42, from: 0.3, grow: 1.6, wait: 0, rise: 45, hold: 40, fade: 170 },
+    // Rdzeń: BŁYSK INICJUJĄCY, nie treść efektu.
+    //
+    // Runda 3 miała go na pełnej alfie przez 205 ms — czyli przez cały czas,
+    // w którym rozbłysk był w ogóle widoczny. Na pasku klatek wychodziło z tego
+    // jedno białe zdjęcie i trzy puste. Teraz: alfa 0.5 zamiast 1 i życie ~95 ms
+    // łącznie, więc rdzeń zdąży zniknąć, ZANIM barwna łuna dojdzie do szczytu.
+    // Oko dostaje najpierw uderzenie, a potem ma na czym spocząć.
+    { tex: FX.glow, tint: C.white, mode: Phaser.BlendModes.ADD, a: 0.5, k: 0.16, from: 0.35, grow: 1.5, wait: 0, rise: 28, hold: 0, fade: 68 },
   ];
 
   for (const b of bands) {
@@ -286,29 +312,45 @@ function lightStack(
       .setAlpha(0);
     img.setMask(mask);
     layer.add(img);
-    // Rozbłysk: szybkie narastanie (uderzenie), potem spokojne gaśnięcie.
+
+    // Trzy fazy jako ŁAŃCUCH, nie dwa równoległe tweeny.
+    //
+    // Wcześniej narastanie i gaśnięcie były dwoma tweenami na tym samym
+    // obiekcie, z których drugi startował po 55 ms — a że oba ruszały tę samą
+    // właściwość `alpha`, Phaser rozstrzygał konflikt po swojemu i pas gasł
+    // niemal natychmiast po dojściu do szczytu. Stąd pasek, na którym po
+    // klatce z bielą nie ma już nic. Faza kolejna startuje teraz dopiero
+    // w `onComplete` poprzedniej, więc obwiednia w czasie jest dokładnie taka,
+    // jak ją tu opisano — narastanie, PRZYTRZYMANIE, gaśnięcie.
+    const peak = b.a * strength;
     scene.tweens.add({
       targets: img,
       displayWidth: size,
       displayHeight: size,
-      alpha: b.a * strength,
-      // Narastanie w 40 ms, nie 65: przy 65 ms pierwsze klatki rozbłysku miały
-      // jeszcze samą biel rdzenia (który jest najmniejszy, więc dochodzi do
-      // pełnej jasności najszybciej), a barwa dołączała za późno.
-      duration: 40,
+      alpha: peak,
+      delay: b.wait,
+      duration: b.rise,
       ease: E.snap,
-    });
-    scene.tweens.add({
-      targets: img,
-      displayWidth: size * b.grow,
-      displayHeight: size * b.grow,
-      alpha: 0,
-      delay: 55,
-      duration: b.life,
-      ease: 'Quad.easeIn',
       onComplete: () => {
-        img.clearMask();
-        img.destroy();
+        scene.tweens.add({
+          targets: img,
+          displayWidth: size * b.grow,
+          displayHeight: size * b.grow,
+          alpha: 0,
+          // Przytrzymanie szczytu robimy opóźnieniem gaśnięcia: pas rośnie
+          // dalej dopiero, gdy zaczyna słabnąć, więc w chwili „hold" łuna
+          // stoi nieruchomo i da się ją zobaczyć, a nie tylko mignąć.
+          delay: b.hold,
+          duration: b.fade,
+          // easeOut, nie easeIn: przy easeIn alfa spadała gwałtownie na
+          // początku i ogon gaśnięcia był pustym czasem. Teraz łuna traci
+          // jasność powoli i widać ją przez całe gaśnięcie.
+          ease: 'Quad.easeOut',
+          onComplete: () => {
+            img.clearMask();
+            img.destroy();
+          },
+        });
       },
     });
   }
@@ -478,7 +520,11 @@ export function impactBurst(
 
   // 3. Pierścienie energii. Dwa, z przesunięciem — jeden wygląda jak animacja
   // ładowania, dwa jak fala uderzeniowa.
-  ring(scene, layer, x, y, C.white, 4, 3.4 * scale, 300, 0);
+  // Pierwszy pierścień był czysto biały i szeroki na 4 px — razem z rdzeniem
+  // dokładał się do tej samej białej plamy, którą widać na pierwszej klatce
+  // paska. Cieńszy i już podbarwiony żywiołem: nadal czyta się jako ostra fala,
+  // ale nie licytuje się z łuną o to, co jest treścią kadru.
+  ring(scene, layer, x, y, tintTowardsWhite(o.color, 0.62), 3, 3.4 * scale, 340, 0);
   // Drugi pierścień w cieplejszej barwie brzegu — fala uderzeniowa jest tym
   // dalszym, chłodniejszym końcem światła, więc ma nieść tę samą barwę co brzeg łuny.
   ring(scene, layer, x, y, warmEdge(o.color), 3, 4.6 * scale, 380, 80);
