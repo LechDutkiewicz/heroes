@@ -925,45 +925,39 @@ export function flashTarget(
   sprite: Phaser.GameObjects.Image,
   color: number = C.white
 ) {
-  // W Phaser 4 barwa i tryb barwienia to dwa osobne ustawienia; samo
-  // `setTintFill()` jest już tylko pustą zaślepką po Phaserze 3.
+  // ROZBIELENIE PRZEZ `TintModes.FILL` USUNIĘTE — i to nie z powodu doboru
+  // czasu, tylko dlatego, że sam mechanizm jest zły.
   //
-  // Pełne rozbielenie skrócone z 90 do 45 ms: to sygnał kontaktu, nie
-  // oświetlenie. Przy 90 ms na pasku klatek trafiony stworek był białą
-  // sylwetką jeszcze wtedy, gdy rozbłysk dawno zgasł — gracz tracił z oczu,
-  // KTO oberwał, bo sprite przestawał być rozpoznawalny.
-  sprite.setTint(C.white).setTintMode(Phaser.TintModes.FILL);
-  scene.time.delayedCall(45, () => {
-    if (!sprite.active) return;
-    sprite.setTintMode(Phaser.TintModes.MULTIPLY);
-    sprite.clearTint();
-  });
-
-  // Po rozbieleniu zostaje ŚWIATŁO NA SYLWETCE: kopia sprite'a w trybie ADD,
-  // przyciemniona do jednej trzeciej i podbarwiona żywiołem. Dzięki temu
-  // stworek jest przez chwilę realnie oświetlony — widać jego kształt i barwę,
-  // tylko jaśniejsze — zamiast zamienić się w białą plamę. To druga połowa
-  // zarzutu „nic w A nie jest oświetlone": rozjaśnić trzeba i teren, i cel.
+  // FILL zamienia sprite w jednolitą sylwetkę: kasuje kształt wewnętrzny,
+  // barwę i wszystko, po czym gracz poznaje stworka. Trzy razy z rzędu na
+  // pasku klatek trafiony oddział był z tego powodu białą plamą przez większość
+  // widocznego czasu efektu, mimo skracania (90 → 45 ms). Rozbielony sprite
+  // nie jest sprite'em OŚWIETLONYM, tylko wymazanym — a wzorzec pokazuje coś
+  // dokładnie odwrotnego: sylwetka jest tam jaśniejsza, ale nadal w pełni
+  // czytelna.
+  //
+  // Zostaje więc sam mechanizm poprawny: kopia sprite'a w trybie ADD,
+  // przyciemniona i podbarwiona żywiołem. Dodaje jasności do tego, co już jest
+  // na ekranie, zamiast to zastępować, więc stworek robi się jaśniejszy
+  // i cieplejszy, ale przez cały czas widać, kto to jest. Krótki mocniejszy
+  // skok na starcie zastępuje dawne rozbielenie jako sygnał kontaktu.
   const parent = sprite.parentContainer;
   const lit = scene.add
     .image(sprite.x, sprite.y, sprite.texture.key, sprite.frame.name)
     .setOrigin(sprite.originX, sprite.originY)
     .setDisplaySize(sprite.displayWidth, sprite.displayHeight)
     .setFlipX(sprite.flipX)
-    // Kopia jest CIEMNA i PÓŁPRZEZROCZYSTA, bo w trybie ADD dokłada się do
-    // oryginału. Pierwsza wersja miała jasność 0.42 przy pełnej alfie i przez
-    // 200 ms trafiony stworek był na pasku białą sylwetką — czyli dokładnie
-    // to, co miała naprawić: zamiast oświetlić, kasowała kształt i barwę.
-    // 0.22 przy alfie 0.4 daje rozjaśnienie rzędu 25-40% z zalecenia krytyka,
-    // przy którym stworka nadal widać.
-    .setTint(shade(color, 0.22))
+    // Kopia jest CIEMNA, bo w trybie ADD dokłada się do oryginału. Jasność
+    // 0.3 przy alfie szczytowej 0.55 daje rozjaśnienie rzędu 25-40%
+    // z zalecenia krytyka — widoczne, ale nie kasujące sylwetki.
+    .setTint(shade(color, 0.3))
     .setBlendMode(Phaser.BlendModes.ADD)
     .setAlpha(0);
   if (parent) parent.add(lit);
   scene.tweens.add({
     targets: lit,
-    alpha: 0.4,
-    duration: 50,
+    alpha: 0.55,
+    duration: 40,
     ease: E.snap,
     onComplete: () => {
       scene.tweens.add({
