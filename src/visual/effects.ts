@@ -280,8 +280,12 @@ function lightStack(
     // „globalne rozjaśnienie planszy" — sięga 1.7x dalej niż barwny rdzeń łuny
     // i to jego widać na sąsiednich polach, kiedy reszta już zgasła. Wchodzi
     // NAJPÓŹNIEJ i schodzi NAJPÓŹNIEJ: światło stygnie od środka na zewnątrz.
-    { tex: FX.haze, tint: shade(edge, 0.7), mode: Phaser.BlendModes.ADD, a: 0.55, k: 1.5, from: 0.5, grow: 1.3, wait: 40, rise: 120, hold: 150, fade: 330 },
-    { tex: FX.haze, tint: edge, mode: Phaser.BlendModes.NORMAL, a: 0.66, k: 1.5, from: 0.58, grow: 1.26, wait: 40, rise: 130, hold: 170, fade: 350 },
+    // Krótsze przytrzymanie niż u pasa barwnego, mimo że gaśnie najdłużej:
+    // na pasku ostatnia klatka trafiała dokładnie w plateau i szeroka mgła
+    // stała tam pełną mocą, przez co czytała się jak filtr nałożony na planszę,
+    // a nie jak dogasające światło. Teraz ostatnia klatka łapie ją już w zaniku.
+    { tex: FX.haze, tint: shade(edge, 0.7), mode: Phaser.BlendModes.ADD, a: 0.5, k: 1.5, from: 0.5, grow: 1.3, wait: 40, rise: 120, hold: 70, fade: 320 },
+    { tex: FX.haze, tint: edge, mode: Phaser.BlendModes.NORMAL, a: 0.56, k: 1.5, from: 0.58, grow: 1.26, wait: 40, rise: 130, hold: 80, fade: 340 },
     // Pas środkowy: czysta barwa żywiołu — po niej gracz poznaje, czym oberwał.
     // Szczytuje w okolicach 110 ms, czyli DOKŁADNIE wtedy, gdy biały rdzeń już
     // zgasł. To jest treść efektu i ma ją widać najdłużej ze wszystkiego, co
