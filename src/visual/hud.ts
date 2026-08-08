@@ -378,9 +378,17 @@ export function markTint(hue?: number, alert = false) {
   const r = (hue >> 16) & 0xff;
   const b = hue & 0xff;
   if (r > b + 24) {
-    // Ciepłe: 0,44 daje tę samą wagę optyczną co chłodne znaki obok, więc
-    // płomień nie wyskakuje z kolumny, a mimo to jest pomarańczą, nie brązem.
-    return mix(hue, C.shadow, 0.44);
+    // Ciepłe stonowanie w dwóch krokach, bo samo przyciemnienie pomarańczy
+    // TEŻ daje brąz — brąz to po prostu ciemna pomarańcza o niskiej chromie.
+    // Najpierw więc rozciągamy barwę od jej własnej szarości (chroma w górę),
+    // a dopiero potem lekko ściemniamy do tej samej wagi optycznej, jaką mają
+    // chłodne znaki obok (luma ≈ 120). Efekt: płomień zostaje ogniem.
+    const g0 = (hue >> 8) & 0xff;
+    const gray = 0.299 * r + 0.587 * g0 + 0.114 * b;
+    const pump = (v: number) =>
+      Math.max(0, Math.min(255, Math.round(gray + (v - gray) * 1.35)));
+    const vivid = (pump(r) << 16) | (pump(g0) << 8) | pump(b);
+    return mix(vivid, C.shadow, 0.18);
   }
   // 0,38 to granica, przy której barwa treści jeszcze jest rozpoznawalna,
   // ale znak nie zaczyna świecić mocniej niż sąsiednie. Przy 0,5 zielona
