@@ -164,17 +164,25 @@ export function buildEffectTextures(scene: Phaser.Scene) {
   // i malejącym zasięgu. Z nakładania wychodzi klin jasny w osi i u nasady,
   // gasnący i w bok, i na wylocie. Rysowana jest poziomo, w prawo; obrót
   // i długość ustawia dopiero `rayBurst`.
+  // Kształt to WRZECIONO, nie trójkąt: zwęża się nie tylko na wylocie, ale
+  // i u samej nasady. Pierwsza wersja była najjaśniejsza w punkcie x = 0
+  // i dziesięć promieni sumowało tam swoje alfy — na pasku ognistym środek
+  // rozbłysku wypalał się przez to na czystą biel, zamiast mieć mały gorący
+  // rdzeń jak we wzorcu. Wrzeciono wnosi w punkt wspólny prawie zero, więc
+  // to rdzeń decyduje o jasności środka, a nie przypadkowa suma promieni.
   const ray = scene.add.graphics();
   const rs = 26;
   for (let i = rs; i > 0; i--) {
     const t = i / rs;
+    const w = 13 * t;
     ray.fillStyle(C.white, 2.2 / rs);
     ray.beginPath();
-    ray.moveTo(0, 16 - 13 * t);
-    ray.lineTo(0, 16 + 13 * t);
+    ray.moveTo(0, 16);
+    ray.lineTo(23, 16 - w);
     // Krótsze warstwy w środku stosu dają zwężenie: wylot promienia jest
     // rozmyty, bo dochodzi tam już tylko kilka najdłuższych warstw.
     ray.lineTo(128 * (0.4 + 0.6 * t), 16);
+    ray.lineTo(23, 16 + w);
     ray.closePath();
     ray.fillPath();
   }
@@ -466,7 +474,11 @@ function rayBurst(
   strength: number
 ) {
   const mask = boardMask(scene);
-  const hot = tintTowardsWhite(color, 0.72);
+  // Promienie NIOSĄ BARWĘ, nie biel. Przy 0.72 w stronę bieli wachlarz ognisty
+  // sumował się w białą gwiazdę i po barwie nie dało się poznać żywiołu —
+  // dokładnie ten błąd, który rundy 1-3 miały w rdzeniu, tylko przeniesiony
+  // o warstwę wyżej. Biel zostaje wyłącznie w rdzeniu.
+  const hot = tintTowardsWhite(color, 0.3);
   const n = 10;
   for (let i = 0; i < n; i++) {
     // Bazowy rozkład równomierny plus rozchwianie o pół działki — inaczej
@@ -493,7 +505,7 @@ function rayBurst(
     scene.tweens.add({
       targets: r,
       displayWidth: len,
-      alpha: (soft ? 0.45 : 0.9) * strength,
+      alpha: (soft ? 0.36 : 0.72) * strength,
       duration: 55,
       ease: E.snap,
       onComplete: () => {
@@ -716,24 +728,15 @@ export function impactBurst(
   // stąd dolna granica, a nie czyste mnożenie przez siłę.
   const scale = (o.strong ? 1.5 : o.weak ? 0.72 : 1) * (0.8 + p * 0.6);
 
-  // 0. Krótkie przyciemnienie pod uderzeniem. Na jasnej łące — a tym bardziej
-  // na śniegu — tryb ADD nie ma już zapasu jasności i błysk po prostu ginie.
-  // Ciemna elipsa daje światłu tło, od którego może się odbić: przez ~90 ms
-  // pole pod celem ciemnieje, więc następna klatka z łuną czyta się jako
-  // rozbłysk, a nie jako jaśniejsza plama na jasnym.
-  const dim = scene.add
-    .ellipse(x, y + 10, 104 * scale, 50 * scale, C.shadow, 0)
-    .setBlendMode(Phaser.BlendModes.MULTIPLY);
-  layer.add(dim);
-  scene.tweens.add({
-    targets: dim,
-    fillAlpha: 0.5,
-    duration: 35,
-    yoyo: true,
-    hold: 20,
-    ease: E.snap,
-    onComplete: () => dim.destroy(),
-  });
+  // 0. Przyciemnienie pod uderzeniem USUNIĘTE.
+  //
+  // Była to proteza: skoro ADD nad jasną łąką nie miał zapasu jasności, to
+  // podkładaliśmy pod błysk ciemną elipsę, żeby światło miało od czego się
+  // odbić. Odkąd trafione pole jest realnie ROZJAŚNIANE (`hexLight`),
+  // przyciemnienie działa dokładnie przeciwko temu — a na pasku ognistym
+  // zostawało pod rozbłyskiem jako szara plama, czyli brud, nie cień.
+  // Właściwym rozwiązaniem problemu „jasne na jasnym" jest oświetlenie sceny,
+  // nie zabrudzenie jej pod spodem.
 
   // 1. ŚWIATŁO — rozwarstwione na pasy o różnej temperaturze (patrz
   // `lightStack`). Po rundzie 2 światło było już widoczne, ale płaskie: jedna
