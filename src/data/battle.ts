@@ -245,8 +245,8 @@ export type BattleEvent =
 
 /**
  * Pełna wymiana: dojście, cios, ewentualny drugi cios, odwet i powrót.
- * Kolejność jest ta sama co w scenie — to ona, a nie same liczby, decyduje
- * o tym, ile oddział realnie znosi i zadaje.
+ * Ta kolejność decyduje o wyniku bardziej niż same liczby, więc istnieje
+ * TYLKO tutaj — scena dostaje dziennik i go odgrywa.
  */
 export function performAttack(
   b: Battle,
