@@ -520,7 +520,14 @@ export function createStatTable(scene: Phaser.Scene, slots: StatSlot[]): StatTab
           ).setDepth(62);
           textX = rx + 11 + d + 5;
         }
-        label.setX(textX).setY(ry + rh / 2).setText(row.label);
+        label
+          .setX(textX)
+          .setY(ry + rh / 2)
+          .setText(row.label)
+          // Wstęga jest ciemniejsza od pasm tabeli, więc przygaszony atrament
+          // etykiety by na niej zniknął — tam etykieta idzie pełną głębią,
+          // a różnicę do wartości nadal robi stopień pisma i otoczka.
+          .setColor(s.ribbon ? H.ink : H.inkSoft);
         value
           .setX(rx + rw - 10)
           .setY(ry + rh / 2)
