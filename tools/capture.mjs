@@ -162,6 +162,17 @@ const main = async () => {
     window.__trafienie = 0;
     scene.meleeLunge(a, d, () => {
       scene.resolveHit(a, d);
+      // ZATRZYMANIE SCENY DOKŁADNIE W CHWILI TRAFIENIA.
+      //
+      // Wcześniej Playwright dopiero odpytywał flagę `__trafienie`, a scena
+      // biegła dalej — przy spowolnieniu 0.12 sekunda odpytywania to ponad
+      // 100 ms efektu. Przez to każdy przebieg łapał rozbłysk w innym miejscu:
+      // raz z pełnym wachlarzem promieni, raz już po wszystkim, przy
+      // identycznym kodzie. Nie dało się na tym niczego ocenić, bo różnice
+      // między paskami brały się z harnessu, a nie ze zmian w efekcie.
+      // Pauza wołana z wnętrza sceny daje twarde zero: dopiero od niego
+      // odmierzamy klatki paska.
+      scene.scene.pause();
       window.__trafienie = 1;
     });
   });
@@ -181,7 +192,11 @@ const main = async () => {
   // Pasek czterech klatek pokazuje przebieg: narastanie, szczyt rdzenia,
   // szczyt barwy, gaśnięcie. Efekt ruchu ocenia się z przebiegu, nie ze stopklatki.
   const klatki = [];
-  for (const [i, czekaj] of [260, 420, 700, 900].entries()) {
+  // Odstępy, nie znaczniki czasu: scena stoi między klatkami, więc każda
+  // liczba to kawałek czasu sceny DOŁOŻONY do poprzedniej klatki. Przy
+  // spowolnieniu 0.12 daje to mniej więcej 30 / 90 / 200 / 370 ms efektu,
+  // czyli narastanie, szczyt barwy, gaśnięcie i ogon.
+  for (const [i, czekaj] of [260, 500, 900, 1400].entries()) {
     await page.waitForTimeout(czekaj);
     await freeze(page);
     const nazwa = `04f${i + 1}`;
@@ -215,6 +230,9 @@ const main = async () => {
       window.__trafienie = 0;
       scene.meleeLunge(a, d, () => {
         scene.resolveHit(a, d);
+        // Scena zatrzymuje się SAMA w chwili trafienia (patrz pasek wręcz),
+        // więc pasek ognisty mierzy czas od tego samego zera.
+        scene.scene.pause();
         window.__trafienie = 1;
       });
     },
@@ -222,7 +240,7 @@ const main = async () => {
   );
   await page.waitForFunction(() => window.__trafienie === 1, null, { timeout: 30000 });
   const ogien = [];
-  for (const [i, czekaj] of [260, 420, 700, 900].entries()) {
+  for (const [i, czekaj] of [260, 500, 900, 1400].entries()) {
     await page.waitForTimeout(czekaj);
     await freeze(page);
     const nazwa = `04g${i + 1}`;
