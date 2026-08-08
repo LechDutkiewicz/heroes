@@ -84,9 +84,27 @@ async function strip(browser, pliki, out, clip = { x: 150, y: 180, w: 620, h: 47
   console.log(`  → ${out.split('/').pop()} (pasek ${dane.length} klatek)`);
 }
 
+/**
+ * Wejście na stronę. Dwie rzeczy bronią przed przeterminowaniem, które łapał
+ * ostatni krok przebiegu (`09-zblizenie-oddzialu`):
+ *
+ *  1. Czekamy na `domcontentloaded`, nie na `load`. Poprzedni krok kończył się
+ *     na ekranie końca bitwy, gdzie chodzą pętle animacji i timery — zdarzenie
+ *     `load` potrafiło nie dojść w limicie, choć scena dawno stała gotowa.
+ *  2. Jedna ponowna próba przez twarde przeładowanie. Jeżeli mimo wszystko
+ *     scena nie wstanie, wolimy stracić kilka sekund niż cały przebieg.
+ */
 async function open(page, query = '') {
-  await page.goto(`${BASE}/?seed=${SEED}${query}`, { waitUntil: 'load' });
-  await ready(page);
+  const url = `${BASE}/?seed=${SEED}${query}`;
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await ready(page);
+  } catch (e) {
+    console.warn(`  ! ponawiam wejście na ${url}: ${e.message.split('\n')[0]}`);
+    await page.goto('about:blank');
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await ready(page);
+  }
 }
 
 const main = async () => {
