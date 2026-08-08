@@ -359,14 +359,64 @@ export interface StatRow {
  */
 const BAND_FILTER = C.skyTop;
 
-/** Stonowany znak: nigdy pełne nasycenie, zawsze ściągnięty w stronę atramentu. */
+/**
+ * Stonowany znak: nigdy pełne nasycenie, zawsze ściągnięty w dół jasności.
+ *
+ * Sposób stonowania zależy od temperatury żywiołu i to jest sedno tej funkcji.
+ * Baza `mix(ink, skyTop)` jest chłodna, a więc dla czerwieni i pomarańczy leży
+ * po przeciwnej stronie koła barw — mieszanie z nią nie przygasza hue, tylko go
+ * ODBARWIA i płomień wychodził murkowatym brązem. Dlatego ciepłe znaki
+ * przyciemniamy samym cieniem: jasność spada tak samo, ale hue zostaje ogniem.
+ * Zimne (woda, trawa, lód) mieszamy jak dawniej — tam baza jest sąsiadem hue
+ * i nic nie brudzi.
+ */
 export function markTint(hue?: number, alert = false) {
   const base = mix(C.ink, C.skyTop, 0.3);
   if (alert) return mix(base, C.foeDeep, 0.55);
+  if (hue === undefined) return base;
+
+  const r = (hue >> 16) & 0xff;
+  const b = hue & 0xff;
+  if (r > b + 24) {
+    // Ciepłe: 0,44 daje tę samą wagę optyczną co chłodne znaki obok, więc
+    // płomień nie wyskakuje z kolumny, a mimo to jest pomarańczą, nie brązem.
+    return mix(hue, C.shadow, 0.44);
+  }
   // 0,38 to granica, przy której barwa treści jeszcze jest rozpoznawalna,
   // ale znak nie zaczyna świecić mocniej niż sąsiednie. Przy 0,5 zielona
   // strzałka „Mocny przeciw" wyskakiwała z rzędu.
-  return hue === undefined ? base : mix(base, hue, 0.38);
+  return mix(base, hue, 0.38);
+}
+
+/**
+ * TYPOGRAFIA PASMA — dlaczego napisy w tabeli nie mogą być gołym sansem.
+ *
+ * We wzorcu żaden napis nie leży płasko w tle: ma jasną otoczkę i cień pod
+ * spodem, przez co siedzi NA paśmie jak naklejka. Bez tego różnicę między
+ * etykietą a wartością robi wyłącznie pogrubienie i cała tabela jest szara.
+ *
+ * Tu otoczka jest BIAŁA, nie ciemna jak w logo: pasma są jasne, więc biel
+ * odcina literę od tła, nie zamieniając panelu w jarmark z czarnymi konturami.
+ * Hierarchia jest budowana trzema rzeczami naraz — stopniem pisma, głębią
+ * atramentu i grubością otoczki — a nie samym boldem.
+ */
+function bandLabelStyle(): Phaser.Types.GameObjects.Text.TextStyle {
+  return {
+    ...body(13, H.inkSoft),
+    stroke: H.white,
+    strokeThickness: 2.5,
+    shadow: { offsetX: 0, offsetY: 1, color: '#0a223033', blur: 2, fill: true },
+  };
+}
+
+function bandValueStyle(): Phaser.Types.GameObjects.Text.TextStyle {
+  return {
+    ...body(15, H.ink),
+    fontStyle: 'bold',
+    stroke: H.white,
+    strokeThickness: 3.5,
+    shadow: { offsetX: 0, offsetY: 1.5, color: '#0a223055', blur: 3, fill: true },
+  };
 }
 
 export interface StatTable {
@@ -389,11 +439,11 @@ export function createStatTable(scene: Phaser.Scene, slots: StatSlot[]): StatTab
 
   for (const s of slots) {
     labels.push(
-      scene.add.text(0, s.y + s.h / 2, '', body(13, H.inkSoft)).setOrigin(0, 0.5).setDepth(62)
+      scene.add.text(0, s.y + s.h / 2, '', bandLabelStyle()).setOrigin(0, 0.5).setDepth(62)
     );
     values.push(
       scene.add
-        .text(s.x + s.w - 10, s.y + s.h / 2, '', { ...body(14, H.ink), fontStyle: 'bold' })
+        .text(s.x + s.w - 10, s.y + s.h / 2, '', bandValueStyle())
         .setOrigin(1, 0.5)
         .setDepth(62)
     );
@@ -420,36 +470,52 @@ export function createStatTable(scene: Phaser.Scene, slots: StatSlot[]): StatTab
 
         // Tło wiersza NIE zależy od treści — tylko od miejsca w kolumnie
         // (zebra) i od tego, czy to wiersz tabeli, czy wstęga pod nią.
+        //
+        // STREFA POD TABELĄ. Pasmo pełnej szerokości łamie siatkę dwóch kolumn,
+        // więc nie wolno mu udawać dziewiątego wiersza tabeli. Dostaje inną
+        // GEOMETRIĘ, nie tylko inny odcień: węższe o 6 px z każdej strony,
+        // niższe (stąd widoczna szpara pod tabelą) i zaokrąglone na kapsułkę.
+        // Ten sam język dostaje pasek prognozy niżej, dzięki czemu dwa pełne
+        // pasma czytają się jako jedna strefa podpisów, a nie jako dwa wyłomy.
+        const rx = s.ribbon ? s.x + 6 : s.x;
+        const rw = s.ribbon ? s.w - 12 : s.w;
+        const ry = s.ribbon ? s.y + 3 : s.y;
+        const rh = s.ribbon ? s.h - 5 : s.h;
         const fill = s.ribbon
-          ? mix(C.panel, C.panelDeep, 0.2)
+          ? mix(C.panel, C.panelDeep, 0.26)
           : mix(C.panel, BAND_FILTER, s.band === 1 ? 0.17 : 0.07);
-        plate(g, s.x, s.y, s.w, s.h, s.h * 0.36, fill, mix(C.panelEdge, BAND_FILTER, 0.32), {
-          light: 0.2,
-          dark: 0.1,
-          gloss: 0.16,
+        const edge = s.ribbon
+          ? mix(C.panelEdge, C.panelDeep, 0.45)
+          : mix(C.panelEdge, BAND_FILTER, 0.32);
+        plate(g, rx, ry, rw, rh, s.ribbon ? rh / 2 : s.h * 0.36, fill, edge, {
+          // Wstęga jest wpuszczona (mało światła u góry, więcej cienia u dołu),
+          // pasma tabeli wypukłe — to drugi sygnał, że to inna warstwa układu.
+          light: s.ribbon ? 0.1 : 0.2,
+          dark: s.ribbon ? 0.22 : 0.1,
+          gloss: s.ribbon ? 0.1 : 0.16,
           drop: 0,
           edgeW: 1.5,
         });
 
-        let textX = s.x + 10;
+        let textX = rx + 10;
         if (row.icon) {
           // Jeden moduł rozmiarowy dla całej kolumny znaków: ta sama średnica
           // niezależnie od kształtu, więc krawędź napisów też jest jedna.
-          const d = s.h - 6;
+          const d = rh - 6;
           icons[i] = miniIcon(
             scene,
             row.icon,
-            s.x + 9 + d / 2,
-            s.y + s.h / 2,
+            rx + 9 + d / 2,
+            ry + rh / 2,
             d,
             markTint(row.mark, row.alert)
           ).setDepth(62);
-          textX = s.x + 11 + d + 5;
+          textX = rx + 11 + d + 5;
         }
-        label.setX(textX).setY(s.y + s.h / 2).setText(row.label);
+        label.setX(textX).setY(ry + rh / 2).setText(row.label);
         value
-          .setX(s.x + s.w - 10)
-          .setY(s.y + s.h / 2)
+          .setX(rx + rw - 10)
+          .setY(ry + rh / 2)
           .setText(row.value)
           .setColor(row.alert ? hex(C.foeDeep) : H.ink);
       });
@@ -486,7 +552,7 @@ export function createForecast(
   // wtręt z planszy. Barwę podmieniamy razem z tłem kapsułki.
   const mark = miniIcon(scene, iconKey, x + 10 + (h - 8) / 2, y + h / 2, h - 10, markTint()).setDepth(62);
   const text = scene.add
-    .text(x + 14 + (h - 8), y + h / 2, '', { ...body(14, H.white), fontStyle: 'bold' })
+    .text(x + 14 + (h - 8), y + h / 2, '', { ...body(15, H.white), fontStyle: 'bold' })
     .setOrigin(0, 0.5)
     .setDepth(62);
 
@@ -497,8 +563,11 @@ export function createForecast(
     if (mode === next) return;
     mode = next;
     g.clear();
-    const fill = next === 1 ? C.foe : next === 0 ? C.gold : mix(C.panel, C.panelDeep, 0.42);
-    const edge = next === 1 ? C.foeDeep : next === 0 ? C.goldDeep : C.panelEdge;
+    // Spoczynek trzyma dokładnie ten sam odcień i obrys co wstęga umiejętności
+    // nad nim — dwa pełnoszerokie pasma mają być jedną strefą pod tabelą.
+    const fill = next === 1 ? C.foe : next === 0 ? C.gold : mix(C.panel, C.panelDeep, 0.26);
+    const edge =
+      next === 1 ? C.foeDeep : next === 0 ? C.goldDeep : mix(C.panelEdge, C.panelDeep, 0.45);
     plate(g, x, y, w, h, h / 2, fill, edge, {
       light: next < 0 ? 0.14 : 0.36,
       dark: next < 0 ? 0.14 : 0.3,
@@ -514,7 +583,14 @@ export function createForecast(
     // a przy okazji nikt nie wiedział, że prognoza w ogóle istnieje.
     paint(-1);
     mark.setAlpha(0.7).setTint(markTint());
-    text.setText(hint).setColor(H.inkSoft).setAlpha(0.9).setShadow(0, 0, '#00000000', 0);
+    // Podpowiedź też dostaje białą otoczkę — inaczej jedyny napis w panelu bez
+    // niej wygląda jak wklejony z innego interfejsu.
+    text
+      .setText(hint)
+      .setColor(H.inkSoft)
+      .setAlpha(0.95)
+      .setStroke(H.white, 2.5)
+      .setShadow(0, 1, '#0a223033', 2, false, true);
   };
 
   rest();
