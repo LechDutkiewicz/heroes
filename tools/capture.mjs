@@ -85,6 +85,20 @@ async function strip(browser, pliki, out, clip = { x: 150, y: 180, w: 620, h: 47
 }
 
 /**
+ * Kadr wokół punktu uderzenia, przycięty do obrazu.
+ *
+ * Zrzuty powstają przy `deviceScaleFactor: 2`, więc współrzędne sceny trzeba
+ * podwoić. Kadr wpisany na sztywno przestał działać, gdy gra zaczęła losować
+ * frakcje i układ — bitwa toczy się za każdym razem w innym miejscu planszy.
+ */
+function wokol(punkt, w = 620, h = 470, obrazW = 1920, obrazH = 1700) {
+  const cx = (punkt?.x ?? 480) * 2;
+  const cy = (punkt?.y ?? 425) * 2;
+  const zakres = (c, rozmiar, max) => Math.round(Math.min(Math.max(c - rozmiar / 2, 0), max - rozmiar));
+  return { x: zakres(cx, w, obrazW), y: zakres(cy, h, obrazH), w, h };
+}
+
+/**
  * Wejście na stronę. Dwie rzeczy bronią przed przeterminowaniem, które łapał
  * ostatni krok przebiegu (`09-zblizenie-oddzialu`):
  *
@@ -147,7 +161,7 @@ const main = async () => {
   // Sztywne opóźnienia rozjeżdżały się przy każdej zmianie długości animacji
   // i zrzut regularnie łapał puste pole zamiast ciosu.
   await open(page, '&terrain=laka');
-  await inScene(page, (scene, zywiol) => {
+  const miejsceCiosu = await inScene(page, (scene, zywiol) => {
     scene.time.timeScale = 0.12;
     scene.tweens.timeScale = 0.12;
     const a = scene.units.find(
@@ -183,6 +197,11 @@ const main = async () => {
     // Atak gasi podświetlenia tury; przywracamy je, żeby kadr pokazywał to samo
     // co przed scaleniem i dało się porównać paski klatka w klatkę.
     if (podswietlenie) scene.showOptions(podswietlenie);
+    // Zwracamy punkt uderzenia, żeby pasek klatek dało się wykadrować wokół
+    // niego. Kadr był wpisany na sztywno, a od czasu losowania frakcji i
+    // układu walka toczy się za każdym razem gdzie indziej — rozbłysk
+    // regularnie wypadał poza kadr i wyglądało to na brak efektu.
+    return { x: p.x, y: p.y };
   });
   await page.waitForFunction(() => window.__trafienie === 1, null, { timeout: 30000 });
   await freeze(page);
@@ -212,7 +231,7 @@ const main = async () => {
     klatki.push(`${OUT}/${nazwa}.png`);
     await thaw(page);
   }
-  await strip(browser, klatki, `${OUT}/04-przebieg-rozblysku.png`);
+  await strip(browser, klatki, `${OUT}/04-przebieg-rozblysku.png`, wokol(miejsceCiosu));
 
   // 4b. Ten sam przebieg dla ataku OGNISTEGO.
   //
