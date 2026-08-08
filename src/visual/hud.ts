@@ -600,7 +600,10 @@ export function createForecast(
       paint(deadly ? 1 : 0);
       mark.setAlpha(1).setTint(deadly ? C.white : C.ink);
       text.setText(value).setAlpha(1).setColor(deadly ? H.white : H.ink);
-      text.setShadow(0, 1, deadly ? '#00000066' : '#ffffff55', 2, false, true);
+      // Na gorących tłach otoczka jest ciemna, na złocie biała — zawsze
+      // przeciwna do tła, bo o to w konturze chodzi.
+      text.setStroke(deadly ? hex(C.foeDeep) : H.white, 3.5);
+      text.setShadow(0, 1.5, deadly ? '#0a223077' : '#0a223055', 3, false, true);
     },
     hide: rest,
   };
