@@ -1036,19 +1036,17 @@ export class BattleScene extends Phaser.Scene {
     // oddział, który ma turę: ten ma już narysowane pełne pola ruchu.
     if (unit.id !== active?.id && !canAttack) this.showMovePreview(unit);
 
-    // Karta ALBO prognoza, nigdy oba naraz.
+    // Najechanie na kogokolwiek pokazuje jego kartę — także wroga w zasięgu.
     //
-    // Najechanie na wroga w zasięgu to celowanie, nie studiowanie: gracz pyta
-    // „ile mu zabiorę", a odpowiedź stoi w pasku na dole. Karta dołożona do
-    // tego zasłaniałaby planszę dokładnie w chwili, w której trzeba na nią
-    // patrzeć. Przy każdym innym oddziale — swoim albo wrogu poza zasięgiem —
-    // pytanie brzmi „kto to jest", więc wychodzi karta.
-    if (canAttack) {
-      this.hideStats();
-      this.showForecast(active!, unit);
-    } else {
-      this.showStats(unit);
-    }
+    // Była tu przez chwilę reguła „karta ALBO prognoza": przy wrogu w zasięgu
+    // karta się chowała, bo miało to być celowanie, a nie studiowanie. To był
+    // błąd. Żeby zdecydować, CZY atakować, trzeba wiedzieć, ile ten oddział ma
+    // życia, jaki ma żywioł i czy ma gotowy odwet — a to jest właśnie treść
+    // karty. Reguła zabierała te dane dokładnie w chwili, w której zapada
+    // decyzja. Prognoza mówi „ile mu zabiorę", karta mówi „i co mi za to
+    // zrobi"; jedno bez drugiego nie wystarcza.
+    this.showStats(unit);
+    if (canAttack) this.showForecast(active!, unit);
   }
 
   private onUnitClicked(unit: Unit) {
