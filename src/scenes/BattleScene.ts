@@ -21,6 +21,7 @@ import {
   chooseAction,
   damageOf,
   makeUnit,
+  movePath,
   neighbours,
   performAttack,
   reachable,
@@ -1180,31 +1181,92 @@ export class BattleScene extends Phaser.Scene {
   // ---------- akcje ----------
 
   /** Sam tween przejścia na pole — stanu nie rusza, ten zmienia `battle.ts`. */
-  private animateMove(unit: Unit, col: number, row: number, onDone: () => void) {
-    // Krok. Cicho i tylko raz na przejście, nie na pole — dwanaście oddziałów
-    // maszerujących co rundę z dźwiękiem na każdy heks robi z bitwy deptak.
+  /**
+   * Przejście oddziału na pole — po TRASIE, nie po odcinku.
+   *
+   * Wcześniej był tu jeden tween z pola startowego wprost na docelowe. Latacz
+   * ma tak lecieć i nadal leci, ale piechota szła przez to na ukos przez
+   * siatkę i przy ciasnym ustawieniu przechodziła przez inne oddziały.
+   * Trasę liczy `movePath` z battle.ts — po tej samej siatce i z tymi samymi
+   * blokadami co zasady, więc animacja nie może pokazać drogi, której zasady
+   * by nie pozwoliły przejść.
+   *
+   * `zKol`/`zRzed` to pole, z którego oddział wychodzi. Trzeba je podać
+   * jawnie, bo w chwili animowania jego stan wskazuje już cel — dziennik
+   * odgrywamy po fakcie.
+   */
+  private animateMove(
+    unit: Unit,
+    col: number,
+    row: number,
+    onDone: () => void,
+    zKol = unit.col,
+    zRzed = unit.row
+  ) {
+    // Trasę liczymy od pola wyjścia, więc na czas liczenia udajemy, że oddział
+    // tam stoi. Inaczej `movePath` dostałby cel jako punkt startowy i zwrócił
+    // pustą trasę.
+    const trasa = movePath(
+      this.battle,
+      { ...unit, col: zKol, row: zRzed } as SimUnit,
+      { col, row }
+    );
+    const kroki = trasa.length > 0 ? trasa : [{ col, row }];
+
+    // Krok słychać raz na przejście, nie raz na pole — dwanaście oddziałów
+    // maszerujących co rundę z dźwiękiem na każdym heksie robi z bitwy deptak.
     sfx(this, 'krok');
-    // Niższe rzędy zasłaniają wyższe, żeby oddziały i drzewa układały się
-    // w naturalnej kolejności.
-    unit.container.setDepth(10 + row);
-    const { x, y } = this.cellToXY(col, row);
-    this.tweens.add({
-      targets: unit.container,
-      x,
-      y,
-      duration: 260,
-      ease: 'Sine.easeInOut',
-      onComplete: onDone,
-    });
+
+    // Czas całego przejścia rośnie z długością trasy, ale wolniej niż liniowo:
+    // marsz przez pół planszy nie może trwać sześć razy dłużej niż krok obok,
+    // bo gracz czeka. Za to nie może też lecieć w stałym czasie, bo wtedy
+    // dalekie przejście wygląda jak teleport z rozmyciem.
+    const naKrok = Phaser.Math.Clamp(300 / Math.sqrt(kroki.length), 90, 260);
+
+    let i = 0;
+    const dalej = () => {
+      if (i >= kroki.length) {
+        onDone();
+        return;
+      }
+      const k = kroki[i++];
+      // Niższe rzędy zasłaniają wyższe, żeby oddziały i drzewa układały się
+      // w naturalnej kolejności. Przeliczamy na KAŻDYM polu, bo w trakcie
+      // marszu oddział mija innych i musi chować się za właściwymi.
+      unit.container.setDepth(10 + k.row);
+      const { x, y } = this.cellToXY(k.col, k.row);
+      this.tweens.add({
+        targets: unit.container,
+        x,
+        y,
+        duration: naKrok,
+        // Płynne wejście i wyjście ma sens dla całego przejścia, nie dla
+        // pojedynczego pola: przy trasie z ośmiu kroków dałoby osiem
+        // przystanków. Środkowe pola przelatujemy jednostajnie.
+        ease: kroki.length === 1 ? 'Sine.easeInOut' : 'Linear',
+        onComplete: dalej,
+      });
+    };
+    dalej();
   }
 
   /** Zwykły ruch bez ataku — jedyne miejsce, gdzie scena sama przestawia pionek. */
   private performMove(unit: Unit, cell: Cell, onDone?: () => void) {
     this.busy = true;
     this.clearHighlights();
+    // Pole wyjścia zapamiętane PRZED zmianą stanu — trasa liczy się od niego.
+    const zKol = unit.col;
+    const zRzed = unit.row;
     unit.col = cell.col;
     unit.row = cell.row;
-    this.animateMove(unit, cell.col, cell.row, () => (onDone ? onDone() : this.advanceTurn()));
+    this.animateMove(
+      unit,
+      cell.col,
+      cell.row,
+      () => (onDone ? onDone() : this.advanceTurn()),
+      zKol,
+      zRzed
+    );
   }
 
   /**
@@ -1238,7 +1300,7 @@ export class BattleScene extends Phaser.Scene {
       const ev = log[i++];
 
       if (ev.rodzaj === 'ruch') {
-        this.animateMove(this.unitById(ev.kto), ev.doKol, ev.doRzed, next);
+        this.animateMove(this.unitById(ev.kto), ev.doKol, ev.doRzed, next, ev.zKol, ev.zRzed);
         return;
       }
 

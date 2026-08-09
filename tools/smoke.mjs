@@ -41,7 +41,14 @@ page.on('response', (r) => {
 const stan = () =>
   page.evaluate(() => {
     const s = window.__game.scene.getScene('battle');
-    return { runda: s.battle.round, zywe: s.battle.units.length, koniec: !!s.gameOver };
+    // `kolejka` to licznik postępu: skraca się z każdą wykonaną turą.
+    // Sama runda rośnie za rzadko, żeby na niej opierać wykrywanie zastoju.
+    return {
+      runda: s.battle.round,
+      zywe: s.battle.units.length,
+      kolejka: s.battle.roundQueue.length,
+      koniec: !!s.gameOver,
+    };
   });
 
 /**
@@ -69,21 +76,42 @@ for (const seed of SEEDS) {
     null,
     { timeout: 30000 }
   );
-  await page.evaluate(() => (window.__game.scene.getScene('battle').time.timeScale = 12));
+  await page.evaluate(() => {
+    const s = window.__game.scene.getScene('battle');
+    // Przyspieszamy ZEGAR I TWEENY. Sam zegar nie wystarcza: opóźnienia między
+    // turami skracały się, ale same animacje szły w normalnym tempie, więc
+    // odkąd przejście oddziału idzie po heksach (a nie jednym skokiem),
+    // bitwa przestała mieścić się w budżecie i test zgłaszał „bitwa stoi"
+    // na grze, która działała poprawnie.
+    s.time.timeScale = 12;
+    s.tweens.timeScale = 12;
+  });
 
   const start = Date.now();
-  let ostatni = await stan();
+  const pierwszy = await stan();
+  let ostatni = pierwszy;
+  // Postęp to KAŻDA zmiana stanu, nie tylko nowa runda: zdjęta tura, poległy
+  // oddział, nowa runda. Poprzednie kryterium („runda nadal 1") oblewało
+  // wolniejsze bitwy, które działały bez zarzutu — a to jest test na
+  // wywrotkę sceny, nie na tempo.
+  let ruszylo = false;
   while (Date.now() - start < BUDZET && !ostatni.koniec) {
     await page.keyboard.press('o').catch(() => {});
     await page.waitForTimeout(60);
     ostatni = await stan().catch(() => ostatni);
+    if (
+      ostatni.runda !== pierwszy.runda ||
+      ostatni.zywe !== pierwszy.zywe ||
+      ostatni.kolejka !== pierwszy.kolejka
+    )
+      ruszylo = true;
   }
 
   const dzwieki = await probki().catch(() => 0);
   const nowe = bledy.length - przed;
   // Bitwa nie musi się rozstrzygnąć w budżecie, ale musi się posuwać:
   // brak jakiegokolwiek postępu to zakleszczona kolejka albo martwa tura.
-  const stoi = ostatni.runda <= 1 && ostatni.zywe === 12;
+  const stoi = !ruszylo && !ostatni.koniec;
   const brakDzwiekow = dzwieki < PROBEK;
   const zle = nowe > 0 || stoi || brakDzwiekow;
   if (zle) zleSeedy++;

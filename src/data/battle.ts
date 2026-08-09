@@ -130,6 +130,63 @@ export function reachable(b: Battle, unit: SimUnit): Map<string, number> {
   return dist;
 }
 
+/**
+ * Trasa przejścia, pole po polu — do animacji, nie do zasad.
+ *
+ * Scena animowała ruch jednym tweenem z pola startowego wprost na docelowe,
+ * czyli po odcinku prostym. Dla latacza to jest poprawne i tak ma zostać:
+ * on faktycznie przecina planszę w powietrzu. Ale piechota szła przez to
+ * NA UKOS PRZEZ SIATKĘ — przecinała rogi pól, a przy ciasnym ustawieniu
+ * przechodziła przez własnych i cudzych, bo odcinek A→B nie wie nic o tym,
+ * kto stoi po drodze. W Heroes 3 chodzący idzie z heksa na heks i ta droga
+ * omija zajęte pola; dopiero to wygląda jak marsz, a nie jak przesuwanie
+ * pionka po szkle.
+ *
+ * Trasa MUSI powstawać tutaj, obok `reachable`, a nie w scenie. Idzie po tej
+ * samej siatce, z tymi samymi blokadami — gdyby scena liczyła ją po swojemu,
+ * mielibyśmy dwie wersje tego, którędy da się przejść, i pierwsza zmiana
+ * zasad rozjechałaby animację z rozgrywką.
+ *
+ * Zwraca pola OD pierwszego kroku DO celu włącznie (bez pola startowego).
+ */
+export function movePath(b: Battle, unit: SimUnit, cel: Cell): Cell[] {
+  // Latacz: prosto do celu, jednym skokiem. Żadnego kluczenia po heksach.
+  if (unit.def.flying) return [{ col: cel.col, row: cel.row }];
+
+  const blocked = blockedCells(b, unit.id);
+  const start = cellKey(unit.col, unit.row);
+  const meta = cellKey(cel.col, cel.row);
+  if (start === meta) return [];
+
+  const skad = new Map<string, Cell>();
+  const widziane = new Set<string>([start]);
+  const kolejka: Cell[] = [{ col: unit.col, row: unit.row }];
+  while (kolejka.length > 0) {
+    const cur = kolejka.shift()!;
+    if (cellKey(cur.col, cur.row) === meta) break;
+    for (const n of neighbours(cur)) {
+      const key = cellKey(n.col, n.row);
+      if (widziane.has(key) || blocked.has(key) || b.obstacles.has(key)) continue;
+      widziane.add(key);
+      skad.set(key, cur);
+      kolejka.push(n);
+    }
+  }
+
+  // Celu nie da się osiągnąć chodząc? Nie zgadujemy trasy — oddajemy sam cel,
+  // czyli dawne zachowanie. Lepiej jeden brzydki skok niż animacja, która
+  // pokazuje coś innego niż to, co zaszło w zasadach.
+  if (!skad.has(meta)) return [{ col: cel.col, row: cel.row }];
+
+  const trasa: Cell[] = [];
+  let kur: Cell = { col: cel.col, row: cel.row };
+  while (cellKey(kur.col, kur.row) !== start) {
+    trasa.unshift(kur);
+    kur = skad.get(cellKey(kur.col, kur.row))!;
+  }
+  return trasa;
+}
+
 export const isAdjacent = (a: Cell, c: Cell) => hexDistance(a, c) === 1;
 
 export function hasAdjacentEnemy(b: Battle, unit: SimUnit) {
@@ -220,7 +277,10 @@ export function resolveHit(b: Battle, attacker: SimUnit, target: SimUnit) {
  * decyduje o wyniku starcia.
  */
 export type BattleEvent =
-  | { rodzaj: 'ruch'; kto: number; doKol: number; doRzed: number }
+  // Ruch niesie też pole, z KTÓREGO oddział wyszedł. Scena animuje dziennik
+  // po fakcie — w chwili odgrywania oddział stoi już na polu docelowym, więc
+  // bez tej pary nie da się odtworzyć trasy przejścia (patrz `movePath`).
+  | { rodzaj: 'ruch'; kto: number; zKol: number; zRzed: number; doKol: number; doRzed: number }
   | {
       rodzaj: 'cios';
       kto: number;
@@ -280,9 +340,11 @@ export function performAttack(
   };
 
   if (from.col !== attacker.col || from.row !== attacker.row) {
+    const zKol = attacker.col;
+    const zRzed = attacker.row;
     attacker.col = from.col;
     attacker.row = from.row;
-    log.push({ rodzaj: 'ruch', kto: attacker.id, doKol: from.col, doRzed: from.row });
+    log.push({ rodzaj: 'ruch', kto: attacker.id, zKol, zRzed, doKol: from.col, doRzed: from.row });
   }
 
   hit(attacker, target, { odwet: false, strzal: shooting, drugi: false });
