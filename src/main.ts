@@ -1,11 +1,13 @@
 import Phaser from 'phaser';
-import { BattleScene } from './scenes/BattleScene';
+import { BattleScene, SCENE_H } from './scenes/BattleScene';
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'app',
   width: 960,
-  height: 850,
+  // Wysokość liczona z geometrii układu (górna belka + plansza + dolny pasek),
+  // a nie wpisana na oko: patrz SCENE_H w BattleScene.
+  height: SCENE_H,
   backgroundColor: '#0d1023',
   scene: [BattleScene],
 });

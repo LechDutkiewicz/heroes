@@ -91,7 +91,10 @@ async function strip(browser, pliki, out, clip = { x: 150, y: 180, w: 620, h: 47
  * podwoić. Kadr wpisany na sztywno przestał działać, gdy gra zaczęła losować
  * frakcje i układ — bitwa toczy się za każdym razem w innym miejscu planszy.
  */
-function wokol(punkt, w = 620, h = 470, obrazW = 1920, obrazH = 1700) {
+// obrazH to 2 × wysokość kanwasu (deviceScaleFactor 2). Okno schudło z 850 do
+// 694 px, gdy dolny panel zamienił się w wąski pasek — stara wartość 1700
+// wypuszczała kadr poza obraz i Playwright odrzucał zrzut.
+function wokol(punkt, w = 620, h = 470, obrazW = 1920, obrazH = 1388) {
   const cx = (punkt?.x ?? 480) * 2;
   const cy = (punkt?.y ?? 425) * 2;
   const zakres = (c, rozmiar, max) => Math.round(Math.min(Math.max(c - rozmiar / 2, 0), max - rozmiar));

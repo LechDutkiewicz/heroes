@@ -11,7 +11,7 @@ import { ALL_SPRITES, FACTIONS, factionById, type Faction } from '../data/factio
 import { type Cell } from '../data/hex';
 // Wszystkie zasady walki biorą się STĄD i tylko stąd. Scena ma je odgrywać,
 // nie powtarzać — druga kopia reguł rozjechałaby się z symulatorem balansu.
-import { initSfx, loadSfx, sfx, toggleSfx } from '../audio/sfx';
+import { initSfx, loadSfx, sfx, startMusic, stopMusic, toggleSfx } from '../audio/sfx';
 import {
   GUARD_REDUCTION,
   START_ROWS,
@@ -113,35 +113,64 @@ interface Unit extends SimUnit {
 // Geometria siatki i całe rysowanie planszy siedzą w src/visual/board.ts.
 // Tutaj zostaje sama rozgrywka.
 
-const PANEL_Y = BOARD_Y + BOARD_H + 14;
-const PANEL_H = 208;
-const PANEL_X = BOARD_X - 6;
-const PANEL_W = BOARD_W + 12;
-/** Ramka kadłuba panelu — pole z pasmami jest w nią wpuszczone. */
-const PANEL_INSET = 8;
-/** Margines treści wewnątrz wpuszczonego pola. */
-const PANEL_PAD = 8;
+/**
+ * UKŁAD: WĄSKI PASEK ZAMIAST PANELU (wzorzec: Heroes 3 / HotA).
+ *
+ * Dolny panel miał 208 px i przy oknie 850 px wysokości prognoza obrażeń —
+ * jedyna liczba, którą gracz czyta PRZED kliknięciem — wypadała poniżej
+ * krawędzi ekranu laptopa. W Heroes 3 plansza zajmuje prawie cały ekran,
+ * a na dole jest wąski pasek z jedną linią podpowiedzi; pełnych statystyk
+ * nie widać nigdy na stałe, wyskakują pod prawym przyciskiem na oddziale.
+ *
+ * Robimy to samo, tylko wywołane MYSZĄ zamiast prawym przyciskiem: pasek na
+ * dole niesie prognozę i dwa przyciski, a cała tabela przenosi się do karty
+ * oddziału, która wyskakuje nad planszą przy najechaniu.
+ */
+const BAR_X = BOARD_X - 6;
+const BAR_W = BOARD_W + 12;
+const BAR_H = 62;
+const BAR_Y = BOARD_Y + BOARD_H + 12;
+const BAR_INSET = 6;
+const BAR_PAD = 8;
 
-const CONTENT_X = PANEL_X + PANEL_INSET + PANEL_PAD;
-const CONTENT_R = PANEL_X + PANEL_W - PANEL_INSET - PANEL_PAD;
+const CONTENT_X = BAR_X + BAR_INSET + BAR_PAD;
+const CONTENT_R = BAR_X + BAR_W - BAR_INSET - BAR_PAD;
 const CONTENT_W = CONTENT_R - CONTENT_X;
 
-/** Kolumna przycisków po prawej; pasma statystyk dzielą resztę na pół. */
-const BTN_W = 180;
-const BTN_H = 44;
-const STATS_W = CONTENT_W - BTN_W - 16;
-const COL_GAP = 12;
-const COL_W = (STATS_W - COL_GAP) / 2;
+/** Wysokość okna liczona z geometrii: plansza + pasek + margines pod cień. */
+export const SCENE_H = BAR_Y + BAR_H + 14;
+
+/** Dwa przyciski obok siebie, dosunięte do prawej krawędzi paska. */
+const BTN_W = 148;
+const BTN_H = 34;
+const BTN_GAP = 10;
+const BTN_Y = BAR_Y + BAR_H / 2;
+
+const FORECAST_H = 30;
+const FORECAST_Y = BAR_Y + (BAR_H - FORECAST_H) / 2;
+const FORECAST_W = CONTENT_W - (BTN_W * 2 + BTN_GAP) - 14;
+
+// ---------- karta oddziału ----------
+
+/** Jedna kolumna pasm, bo karta stoi przy krawędzi planszy, nie na całą jej szerokość. */
+const CARD_W = 336;
+const CARD_INSET = 7;
+const CARD_PAD = 7;
+const CARD_CONTENT_X = CARD_INSET + CARD_PAD;
+const CARD_CONTENT_W = CARD_W - CARD_CONTENT_X * 2;
 
 const ROW_H = 22;
 const ROW_STEP_Y = 26;
-/** Pierwszy wiersz zaczyna się pod pasem z nazwą oddziału. */
-const ROWS_Y = PANEL_Y + 44;
-const HEAD_Y = PANEL_Y + 14;
+const HEAD_Y = 12;
 const HEAD_H = 26;
-/** Prognoza siedzi najniżej i na pełnej szerokości — ma się nie gubić. */
-const FORECAST_Y = PANEL_Y + 172;
-const FORECAST_H = 26;
+/** Pierwszy wiersz zaczyna się pod pasem z nazwą oddziału. */
+const ROWS_Y = HEAD_Y + HEAD_H + 8;
+/** Osiem wierszy tabeli plus wstęga z umiejętnością pod nimi. */
+const CARD_H = ROWS_Y + 9 * ROW_STEP_Y + 6;
+/** Karta wisi w pionie na środku planszy — nigdy nie wychodzi poza jej ramę. */
+const CARD_Y = BOARD_Y + (BOARD_H - CARD_H) / 2;
+const CARD_LEFT_X = BOARD_X + 10;
+const CARD_RIGHT_X = BOARD_X + BOARD_W - CARD_W - 10;
 
 /** Tła pola bitwy — jedno losowane na bitwę, jak zmienne krajobrazy w Heroes 3. */
 const TERRAINS = [
@@ -231,7 +260,9 @@ export class BattleScene extends Phaser.Scene {
   private queue!: TurnQueue;
 
   private turnText!: Phaser.GameObjects.Text;
-  /** Pas z nazwą oddziału u góry panelu — przemalowywany barwą strony. */
+  /** Karta statystyk nad planszą — pokazuje oddział spod kursora. */
+  private card!: Phaser.GameObjects.Container;
+  /** Pas z nazwą oddziału u góry karty — przemalowywany barwą strony. */
   private headBand!: Phaser.GameObjects.Graphics;
   private headName!: Phaser.GameObjects.Text;
   private headMeta!: Phaser.GameObjects.Text;
@@ -323,6 +354,9 @@ export class BattleScene extends Phaser.Scene {
     // padnie pierwszy cios.
     buildEffectTextures(this);
     initSfx(this);
+    // Podkład rusza sam, gdy przeglądarka odblokuje dźwięk — czyli przy
+    // pierwszym kliknięciu gracza. Szczegóły w src/audio/sfx.ts.
+    startMusic(this);
     drawBackground(this);
     drawBoard(this, this.terrain.key);
     this.drawHud();
@@ -448,7 +482,8 @@ export class BattleScene extends Phaser.Scene {
 
   private drawHud() {
     this.drawTopBar();
-    this.drawPanel();
+    this.drawBottomBar();
+    this.drawStatCard();
   }
 
   /** Górna belka: tytuł, wstęgi zamków, zdanie o turze i pasek kolejki. */
@@ -474,59 +509,28 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * Dolny panel. Układ jest z góry ustalony: pas z nazwą, dwie kolumny pasm,
-   * jedno pasmo na całą szerokość dla umiejętności, kolumna przycisków po
-   * prawej i prognoza na dole. Pozycje liczymy raz — zawartość tylko się
-   * podmienia, bo panel odświeża się przy każdym ruchu kursora.
+   * Dolny PASEK. Jedna linia tekstu kontekstowego po lewej — domyślnie
+   * podpowiedź, a przy celowaniu prognoza obrażeń — i dwa przyciski po prawej.
+   * Nic więcej: statystyki mają swoją kartę, a pasek ma się mieścić na ekranie.
    */
-  private drawPanel() {
-    drawPanelBody(this, PANEL_X, PANEL_Y, PANEL_W, PANEL_H, PANEL_INSET);
+  private drawBottomBar() {
+    drawPanelBody(this, BAR_X, BAR_Y, BAR_W, BAR_H, BAR_INSET);
 
-    this.headBand = this.add.graphics().setDepth(61);
-    this.headIcon = icon(this, ICON.flame, CONTENT_X + 8 + HEAD_H / 2, HEAD_Y + HEAD_H / 2, HEAD_H - 6)
-      .setDepth(62);
-    this.headName = this.add
-      .text(CONTENT_X + 14 + HEAD_H, HEAD_Y + HEAD_H / 2, '', { ...display(16), strokeThickness: 3.5 })
-      .setOrigin(0, 0.5)
-      .setDepth(62);
-    this.headMeta = this.add
-      .text(CONTENT_X + STATS_W - 10, HEAD_Y + HEAD_H / 2, '', body(13, H.white))
-      .setOrigin(1, 0.5)
-      .setDepth(62);
+    this.forecast = createForecast(
+      this,
+      CONTENT_X,
+      FORECAST_Y,
+      FORECAST_W,
+      FORECAST_H,
+      MINI.forecast,
+      'Kliknij pole, by podejść, albo wroga, by zaatakować  ·  M wycisza dźwięk'
+    );
 
-    // Siatka jest domknięta: dokładnie cztery pasma po lewej i cztery po
-    // prawej, ta sama szerokość, ta sama linia bazowa. Wcześniej wychodziło
-    // pięć na cztery, bo „Umiejętność" wchodziła do siatki jako dziewiąty
-    // wiersz na całą szerokość i rozjeżdżała rytm kolumn.
-    const slots: StatSlot[] = [];
-    for (let col = 0; col < 2; col++) {
-      for (let i = 0; i < 4; i++) {
-        slots.push({
-          x: CONTENT_X + col * (COL_W + COL_GAP),
-          y: ROWS_Y + i * ROW_STEP_Y,
-          w: COL_W,
-          h: ROW_H,
-          // Zebra liczy się z miejsca w kolumnie, nie ze znaczenia wiersza.
-          band: (i % 2) as 0 | 1,
-        });
-      }
-    }
-    // Umiejętność ląduje POD tabelą jako wstęga na całą szerokość — tak jak
-    // we wzorcu wstęga z nazwą ruchu pod kratką przycisków. Osobne tło i brak
-    // zebry mówią, że to nie kolejny wiersz tabeli, tylko podpis do niej.
-    slots.push({
-      x: CONTENT_X,
-      y: ROWS_Y + 4 * ROW_STEP_Y,
-      w: STATS_W,
-      h: ROW_H,
-      ribbon: true,
-    });
-    this.stats = createStatTable(this, slots);
-
-    const btnX = CONTENT_R - BTN_W / 2;
+    const guardX = CONTENT_R - BTN_W / 2;
+    const waitX = guardX - BTN_W - BTN_GAP;
     this.waitButton = makeHudButton(this, {
-      x: btnX,
-      y: PANEL_Y + 70,
+      x: waitX,
+      y: BTN_Y,
       w: BTN_W,
       h: BTN_H,
       icon: ICON.hourglass,
@@ -535,8 +539,8 @@ export class BattleScene extends Phaser.Scene {
       onClick: () => this.waitTurn(),
     });
     this.guardButton = makeHudButton(this, {
-      x: btnX,
-      y: PANEL_Y + 124,
+      x: guardX,
+      y: BTN_Y,
       w: BTN_W,
       h: BTN_H,
       icon: ICON.shield,
@@ -544,16 +548,88 @@ export class BattleScene extends Phaser.Scene {
       toneDeep: C.goldDeep,
       onClick: () => this.guardTurn(),
     });
+  }
 
-    this.forecast = createForecast(
+  /**
+   * KARTA ODDZIAŁU NA ŻĄDANIE.
+   *
+   * To ta sama tabela, co dotąd w dolnym panelu — te same pasma, ten sam pas
+   * z nazwą w barwie strony — tylko przeniesiona nad planszę i zwinięta do
+   * jednej kolumny. Wyskakuje po najechaniu na dowolny oddział, a bez kursora
+   * pokazuje tego, kto ma turę, żeby gracz nigdy nie został bez informacji
+   * o samym sobie.
+   *
+   * Cała karta siedzi w jednym kontenerze, więc jej współrzędne są lokalne
+   * i przestawienie jej na drugą krawędź planszy to jedno `setX`.
+   */
+  private drawStatCard() {
+    // Karta jest domyślnie SCHOWANA i to jest jej najważniejsza cecha.
+    //
+    // Pierwsza wersja pokazywała ją zawsze — dla oddziału, który ma turę —
+    // więc wisiała na ekranie bez przerwy i przykrywała kilka pól z armią
+    // przeciwnika. To ten sam problem, od którego uciekaliśmy, tylko
+    // przeniesiony z dołu ekranu na bok: informacja pomocnicza zasłaniała
+    // stan gry. W Heroes 3 statystyk nie widać domyślnie NIGDY — pojawiają
+    // się na żądanie i znikają, gdy przestajesz pytać. Tak samo tutaj:
+    // karta wychodzi na najechanie i chowa się, gdy kursor zejdzie.
+    // Kto ma turę, mówi zdanie w górnej belce, nie karta.
+    this.card = this.add.container(CARD_RIGHT_X, CARD_Y).setDepth(90).setAlpha(0.94);
+    this.card.setVisible(false);
+
+    drawPanelBody(this, 0, 0, CARD_W, CARD_H, CARD_INSET, this.card);
+
+    this.headBand = this.add.graphics().setDepth(61);
+    this.headIcon = icon(
       this,
-      CONTENT_X,
-      FORECAST_Y,
-      CONTENT_W,
-      FORECAST_H,
-      MINI.forecast,
-      'Najedź kursorem na wroga, żeby zobaczyć prognozę obrażeń  ·  M wycisza dźwięk'
-    );
+      ICON.flame,
+      CARD_CONTENT_X + 8 + HEAD_H / 2,
+      HEAD_Y + HEAD_H / 2,
+      HEAD_H - 6
+    ).setDepth(62);
+    this.headName = this.add
+      .text(CARD_CONTENT_X + 14 + HEAD_H, HEAD_Y + HEAD_H / 2, '', {
+        ...display(15),
+        strokeThickness: 3.5,
+      })
+      .setOrigin(0, 0.5)
+      .setDepth(62);
+    this.headMeta = this.add
+      .text(CARD_CONTENT_X + CARD_CONTENT_W - 10, HEAD_Y + HEAD_H / 2, '', body(12, H.white))
+      .setOrigin(1, 0.5)
+      .setDepth(62);
+    this.card.add([this.headBand, this.headIcon, this.headName, this.headMeta]);
+
+    // Osiem pasm jedno pod drugim; zebra nadal liczy się z miejsca w kolumnie,
+    // nie ze znaczenia wiersza.
+    const slots: StatSlot[] = [];
+    for (let i = 0; i < 8; i++) {
+      slots.push({
+        x: CARD_CONTENT_X,
+        y: ROWS_Y + i * ROW_STEP_Y,
+        w: CARD_CONTENT_W,
+        h: ROW_H,
+        band: (i % 2) as 0 | 1,
+      });
+    }
+    // Umiejętność zostaje wstęgą POD tabelą: inna geometria i brak zebry mówią,
+    // że to podpis do tabeli, a nie jej dziewiąty wiersz.
+    slots.push({
+      x: CARD_CONTENT_X,
+      y: ROWS_Y + 8 * ROW_STEP_Y,
+      w: CARD_CONTENT_W,
+      h: ROW_H,
+      ribbon: true,
+    });
+    this.stats = createStatTable(this, slots, this.card);
+  }
+
+  /**
+   * Karta nie może zasłaniać oddziału, który opisuje. Oddział z lewej połowy
+   * planszy dostaje kartę przy prawej krawędzi i odwrotnie — tak samo jak
+   * w Heroes 3 okno statystyk odsuwa się od klikniętego stworka.
+   */
+  private placeCard(unit: Unit) {
+    this.card.setX(unit.col < COLS / 2 ? CARD_RIGHT_X : CARD_LEFT_X);
   }
 
   // ---------- jednostki ----------
@@ -598,9 +674,8 @@ export class BattleScene extends Phaser.Scene {
       this.clearApproach();
       this.setCursor(null);
       this.clearMovePreview();
-      // Wracamy do statystyk tego, kto ma turę.
-      const active = this.activeUnit();
-      if (active) this.showStats(active);
+      // Kursor zszedł z oddziału — pytanie się skończyło, karta znika.
+      this.hideStats();
     });
 
     this.units.push(unit);
@@ -674,7 +749,9 @@ export class BattleScene extends Phaser.Scene {
     );
 
     this.buildQueueIcons();
-    this.showStats(unit);
+    // Nowa tura NIE otwiera karty — patrz komentarz przy `this.card`.
+    // Kto się rusza, mówi zdanie w górnej belce.
+    this.hideStats();
 
     if (unit.side === 'enemy') {
       this.setButtonsVisible(false);
@@ -725,6 +802,11 @@ export class BattleScene extends Phaser.Scene {
    * każda wartość ma stałe miejsce w tabeli i stałą barwę pasma, więc szuka
    * się jej wzrokiem, a nie czytaniem.
    */
+  /** Chowa kartę oddziału. Domyślny stan ekranu to plansza bez niczego na wierzchu. */
+  private hideStats() {
+    this.card.setVisible(false);
+  }
+
   private showStats(unit: Unit) {
     const t = TYPE_INFO[unit.def.type];
     const { strong, weak } = typeMatchup(unit.def.type);
@@ -734,8 +816,10 @@ export class BattleScene extends Phaser.Scene {
 
     // Pas z nazwą w barwie strony — czyje to jest, widać, zanim się cokolwiek
     // przeczyta.
+    this.placeCard(unit);
+    this.card.setVisible(true);
     this.headBand.clear();
-    plate(this.headBand, CONTENT_X, HEAD_Y, STATS_W, HEAD_H, HEAD_H * 0.36, accent, deep, {
+    plate(this.headBand, CARD_CONTENT_X, HEAD_Y, CARD_CONTENT_W, HEAD_H, HEAD_H * 0.36, accent, deep, {
       light: 0.32,
       dark: 0.28,
       gloss: 0.26,
@@ -743,10 +827,9 @@ export class BattleScene extends Phaser.Scene {
     });
     this.headIcon.setTexture(TYPE_ICON[unit.def.type]).setDisplaySize(HEAD_H - 6, HEAD_H - 6);
     this.headName.setText(`${unit.def.name} ×${unit.count}`);
-    this.headMeta.setText(
-      `poziom ${unit.def.tier} · ${unit.side === 'player' ? 'twój oddział' : 'oddział przeciwnika'}` +
-        (unit.defending ? ' · w obronie' : '')
-    );
+    // W wąskiej karcie nie ma miejsca na „twój oddział / oddział przeciwnika":
+    // to samo mówi barwa pasa z nazwą, ta sama co plakietka pod stworkiem.
+    this.headMeta.setText(`poziom ${unit.def.tier}` + (unit.defending ? ' · w obronie' : ''));
 
     // Każdy wiersz ma WŁASNY znak. Wcześniej miecz obsługiwał „Atak", „Zasięg"
     // i prognozę naraz — jeden rysunek na trzy różne pojęcia. Teraz zasięg to
@@ -939,8 +1022,6 @@ export class BattleScene extends Phaser.Scene {
 
   private onUnitHover(unit: Unit) {
     if (this.gameOver) return;
-    // Najechanie na kogokolwiek pokazuje jego statystyki — także wroga.
-    this.showStats(unit);
     const active = this.activeUnit();
     const canAttack =
       !!active &&
@@ -955,7 +1036,19 @@ export class BattleScene extends Phaser.Scene {
     // oddział, który ma turę: ten ma już narysowane pełne pola ruchu.
     if (unit.id !== active?.id && !canAttack) this.showMovePreview(unit);
 
-    if (canAttack) this.showForecast(active!, unit);
+    // Karta ALBO prognoza, nigdy oba naraz.
+    //
+    // Najechanie na wroga w zasięgu to celowanie, nie studiowanie: gracz pyta
+    // „ile mu zabiorę", a odpowiedź stoi w pasku na dole. Karta dołożona do
+    // tego zasłaniałaby planszę dokładnie w chwili, w której trzeba na nią
+    // patrzeć. Przy każdym innym oddziale — swoim albo wrogu poza zasięgiem —
+    // pytanie brzmi „kto to jest", więc wychodzi karta.
+    if (canAttack) {
+      this.hideStats();
+      this.showForecast(active!, unit);
+    } else {
+      this.showStats(unit);
+    }
   }
 
   private onUnitClicked(unit: Unit) {
@@ -1417,6 +1510,9 @@ export class BattleScene extends Phaser.Scene {
     // Ekran końca należy do warstwy nakładki, nie efektów — inaczej iskry
     // z ostatniego ciosu potrafią wylądować NAD wstęgą z napisem.
     this.effectLayer.setDepth(Z.overlay);
+    // Muzyka schodzi pod ekran końca, nie razem z nim: ucięcie jej w tej samej
+    // klatce, w której pada ostatni oddział, brzmi jak awaria odtwarzacza.
+    stopMusic(this);
     showOutcomeScreen(
       this,
       this.effectLayer,

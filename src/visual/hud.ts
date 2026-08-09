@@ -439,22 +439,31 @@ export interface StatTable {
  * i tworzenie ich na nowo przy każdym najechaniu myszą (a to dzieje się przy
  * każdym ruchu kursora nad oddziałem) zostawiało po sobie tysiące tekstur.
  */
-export function createStatTable(scene: Phaser.Scene, slots: StatSlot[]): StatTable {
+export function createStatTable(
+  scene: Phaser.Scene,
+  slots: StatSlot[],
+  /**
+   * Gdy podany, wszystko ląduje w tym kontenerze i współrzędne slotów są
+   * LOKALNE. Dzięki temu ta sama tabela raz stoi w dolnym panelu, a raz
+   * w karcie oddziału, którą przesuwamy na drugą krawędź planszy.
+   */
+  parent?: Phaser.GameObjects.Container
+): StatTable {
   const g = scene.add.graphics().setDepth(61);
+  parent?.add(g);
   const labels: Phaser.GameObjects.Text[] = [];
   const values: Phaser.GameObjects.Text[] = [];
   const icons: (Phaser.GameObjects.Image | undefined)[] = [];
 
   for (const s of slots) {
-    labels.push(
-      scene.add.text(0, s.y + s.h / 2, '', bandLabelStyle()).setOrigin(0, 0.5).setDepth(62)
-    );
-    values.push(
-      scene.add
-        .text(s.x + s.w - 10, s.y + s.h / 2, '', bandValueStyle())
-        .setOrigin(1, 0.5)
-        .setDepth(62)
-    );
+    const label = scene.add.text(0, s.y + s.h / 2, '', bandLabelStyle()).setOrigin(0, 0.5).setDepth(62);
+    const value = scene.add
+      .text(s.x + s.w - 10, s.y + s.h / 2, '', bandValueStyle())
+      .setOrigin(1, 0.5)
+      .setDepth(62);
+    parent?.add([label, value]);
+    labels.push(label);
+    values.push(value);
     icons.push(undefined);
   }
 
@@ -518,6 +527,7 @@ export function createStatTable(scene: Phaser.Scene, slots: StatSlot[]): StatTab
             d,
             markTint(row.mark, row.alert)
           ).setDepth(62);
+          parent?.add(icons[i]!);
           textX = rx + 11 + d + 5;
         }
         label
@@ -529,10 +539,31 @@ export function createStatTable(scene: Phaser.Scene, slots: StatSlot[]): StatTab
           // a różnicę do wartości nadal robi stopień pisma i otoczka.
           .setColor(s.ribbon ? H.ink : H.inkSoft);
         value
+          .setScale(1)
           .setX(rx + rw - 10)
           .setY(ry + rh / 2)
           .setText(row.value)
           .setColor(row.alert ? hex(C.foeDeep) : H.ink);
+
+        // Wartość musi się zmieścić w tym, co zostało po etykiecie. Wiersze
+        // trafiają teraz do wąskiej karty oddziału, a nie w szeroki panel na
+        // pół ekranu — bez tego „Umiejętność" wyjeżdżałaby poza pasmo.
+        // Dwa progi: przy 0,72 etykieta ustępuje wartości, a dopiero potem
+        // wartość wolno zjechać do 0,58. Odwrotna kolejność dawała mikroskopijny
+        // napis obok wygodnie rozłożonej etykiety.
+        const MIN_SCALE = 0.58;
+        let avail = rx + rw - 10 - (textX + label.width + 8);
+        if (value.width * 0.72 > avail) {
+          // Nawet po zmniejszeniu wartość nie mieści się obok etykiety. Wtedy
+          // etykieta ustępuje: w wierszu z umiejętnością („Uderz i wróć —
+          // wraca na swoje pole…") to i tak sam znak niesie znaczenie, a napis
+          // nachodzący na napis jest gorszy niż brak podpisu.
+          label.setText('');
+          avail = rx + rw - 10 - textX;
+        }
+        if (avail > 0 && value.width > avail) {
+          value.setScale(Math.max(MIN_SCALE, avail / value.width));
+        }
       });
     },
   };
@@ -571,6 +602,20 @@ export function createForecast(
     .setOrigin(0, 0.5)
     .setDepth(62);
 
+  /**
+   * Prognoza siedzi teraz w wąskim pasku na dole, obok przycisków, a nie na
+   * całą szerokość panelu. Najdłuższe zdanie („Atak 8 × 6 × 1.5 (przewaga
+   * typu) = 72 obrażenia — cały oddział Charizard padnie") jest dłuższe niż
+   * kapsułka, więc zamiast pozwolić mu wyjechać na przyciski, zmniejszamy
+   * stopień pisma. Skracanie z wielokropkiem ucinałoby końcówkę, a to właśnie
+   * ona mówi, czy cios wybija oddział.
+   */
+  const maxTextW = w - (14 + (h - 8)) - 12;
+  const fit = () => {
+    text.setScale(1);
+    if (text.width > maxTextW) text.setScale(Math.max(0.6, maxTextW / text.width));
+  };
+
   /** -1 = stan spoczynku, 0 = zwykły cios, 1 = cios wybijający cały oddział. */
   let mode = -2;
 
@@ -606,6 +651,7 @@ export function createForecast(
       .setAlpha(0.95)
       .setStroke(H.white, 2.5)
       .setShadow(0, 1, '#0a223033', 2, false, true);
+    fit();
   };
 
   rest();
@@ -619,6 +665,7 @@ export function createForecast(
       // przeciwna do tła, bo o to w konturze chodzi.
       text.setStroke(deadly ? hex(C.foeDeep) : H.white, 3.5);
       text.setShadow(0, 1.5, deadly ? '#0a223077' : '#0a223055', 3, false, true);
+      fit();
     },
     hide: rest,
   };
@@ -746,9 +793,11 @@ export function drawPanelBody(
   y: number,
   w: number,
   h: number,
-  inset: number
+  inset: number,
+  parent?: Phaser.GameObjects.Container
 ) {
   const g = scene.add.graphics().setDepth(60);
+  parent?.add(g);
   plate(g, x, y, w, h, 18, C.panel, C.panelDeep, {
     light: 0.22,
     dark: 0.2,
