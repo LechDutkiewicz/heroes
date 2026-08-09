@@ -67,9 +67,7 @@ import {
   createTurnQueue,
   drawPanelBody,
   drawTitle,
-  makeChip,
   makeHudButton,
-  mix,
   plate,
   type Forecast,
   type HudButton,
@@ -460,34 +458,17 @@ export class BattleScene extends Phaser.Scene {
     // tytuł, wstęgi zamków, zdanie o turze.
     drawTitle(this, BOARD_X, 0, 'POKÉMON HEROES', 24);
 
-    // Zamki jako wstęgi w barwach stron — ta sama barwa, którą oddziały noszą
-    // na planszy, więc nie trzeba czytać nazw, żeby wiedzieć, kto jest kto.
-    let x = BOARD_X;
-    const player = makeChip(this, x, 46, this.playerFaction.name, {
-      icon: ICON.banner,
-      color: C.ally,
-      edge: C.allyDeep,
-      bold: true,
-    });
-    x += player.width + 8;
-    this.add.text(x, 46, 'kontra', body(12, H.panelEdge)).setOrigin(0, 0.5);
-    x += 52;
-    const enemy = makeChip(this, x, 46, this.enemyFaction.name, {
-      icon: ICON.banner,
-      color: C.foe,
-      edge: C.foeDeep,
-      bold: true,
-    });
-    x += enemy.width + 10;
-    makeChip(this, x, 46, this.terrain.label, {
-      icon: ICON.leaf,
-      color: mix(C.panelDeep, C.skyTop, 0.3),
-      edge: C.shadow,
-      size: 12,
-    });
+    // Wstęg z nazwami zamków i kaflem terenu tu NIE MA — świadomie.
+    //
+    // Trzy kafle zajmowały cały wiersz górnej belki, żeby powtórzyć rzeczy,
+    // które gracz i tak widzi: strony rozróżnia barwa oddziałów (ta sama, co
+    // na wstędze), a teren widać na planszy, bo się po nim chodzi. Nazwa
+    // zamku nie wpływa na żadną decyzję w bitwie — to podpis pod obrazkiem.
+    // Miejsce po nich idzie na zdanie o turze, które jest instrukcją, a nie
+    // podpisem.
 
     // Zdanie o turze z konturem, bo leży wprost na tle, nie na panelu.
-    this.turnText = this.add.text(BOARD_X, 74, '', display(14)).setOrigin(0, 0.5);
+    this.turnText = this.add.text(BOARD_X, 52, '', display(15)).setOrigin(0, 0.5);
 
     this.queue = createTurnQueue(this, BOARD_X + BOARD_W, 24);
   }
