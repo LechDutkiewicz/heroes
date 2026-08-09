@@ -638,14 +638,14 @@ function rayBurst(
     // koniec losowania) mają ~1.6x promienia rdzenia, najdłuższe w osi ~9x,
     // czyli sięgają daleko poza barwne ciało łuny.
     const len =
-      coreR * (1.9 + 3.6 * align) * Phaser.Math.FloatBetween(0.62, 1.55);
+      coreR * (2.3 + 4.4 * align) * Phaser.Math.FloatBetween(0.6, 1.6);
     // Szerokość kątowa losowana niezależnie od długości — we wzorcu smuga
     // długa bywa cienka, a krótka gruba, i to psuje regularność.
     const wide =
-      coreR * Phaser.Math.FloatBetween(0.14, 0.7) * (soft ? 2.1 : 0.85);
+      coreR * Phaser.Math.FloatBetween(0.14, 0.62) * (soft ? 1.6 : 0.85);
     // Faza zaniku też losowa: promienie nie gasną jednym frontem, tylko
     // rozsypują się w czasie, przez co wachlarz „dopala się" nierówno.
-    const hold = Phaser.Math.Between(30, 130) + (soft ? 40 : 0);
+    const hold = Phaser.Math.Between(60, 190) + (soft ? 40 : 0);
     const fade = Phaser.Math.Between(150, 330) * (soft ? 1.15 : 1);
     const r = scene.add
       .image(x, y, soft ? HIT.raySoft : HIT.ray)
@@ -668,8 +668,8 @@ function rayBurst(
       // Jasność też losowa — jednakowa alfa na wszystkich smugach czytała się
       // jak wachlarz wycięty z jednego kawałka.
       alpha:
-        (soft ? Phaser.Math.FloatBetween(0.26, 0.5) : Phaser.Math.FloatBetween(0.3, 0.52)) *
-        (0.55 + 0.45 * align) *
+        (soft ? Phaser.Math.FloatBetween(0.4, 0.72) : Phaser.Math.FloatBetween(0.5, 0.85)) *
+        (0.62 + 0.38 * align) *
         strength,
       duration: Phaser.Math.Between(46, 78),
       ease: E.snap,
@@ -788,7 +788,7 @@ function impactLight(
     // potrafi zejść poniżej jasności tła, ale hue nakłada wprost.
     { tex: HIT.glow, tint: edge, mode: Phaser.BlendModes.SCREEN, a: 0.5, k: 1.45, from: 0.55, grow: 1.2, squash: 0.86, wait: 25, rise: 105, hold: 45, fade: 215 },
     // (2) Ciało barwne — to po nim gracz poznaje żywioł, więc trzyma najdłużej.
-    { tex: HIT.glow, tint: color, mode: Phaser.BlendModes.SCREEN, a: 0.9, k: 1, from: 0.5, grow: 1.26, squash: 0.82, wait: 10, rise: 80, hold: 85, fade: 205 },
+    { tex: HIT.glow, tint: color, mode: Phaser.BlendModes.SCREEN, a: 0.95, k: 1, from: 0.5, grow: 1.26, squash: 0.82, wait: 10, rise: 70, hold: 130, fade: 235 },
     // (3) Dopalacz jasności pod barwą: przygaszona barwa w ADD. Przygaszona,
     // bo pełna wypycha wszystkie kanały do 255 i zostaje biel (patrz `shade`).
     { tex: HIT.glow, tint: shade(color, 0.5), mode: Phaser.BlendModes.ADD, a: 0.5, k: 0.72, from: 0.4, grow: 1.35, squash: 0.82, wait: 5, rise: 62, hold: 55, fade: 175 },
@@ -1128,8 +1128,13 @@ export function impactBurst(
     layer,
     x,
     o.cellY ?? y,
-    hitTone(o.color),
-    (o.strong ? 0.42 : o.weak ? 0.26 : 0.34) * (0.75 + p * 0.35)
+    // Barwa pola ROZBIELONA. Na pasku widać było, że po zgaśnięciu rozbłysku
+    // zostaje na dwie klatki jednolicie POMARAŃCZOWY heks — i to on odpowiada
+    // za zarzut „rdzeń ma tę samą temperaturę co tło, błysk zlewa się
+    // z podłożem". Pole ma być OŚWIETLONE, czyli jaśniejsze i bledsze, a nie
+    // pomalowane barwą żywiołu.
+    tintTowardsWhite(hitTone(o.color), 0.32),
+    (o.strong ? 0.38 : o.weak ? 0.24 : 0.31) * (0.75 + p * 0.35)
   );
 
   impactLight(scene, layer, x, y, o.color, bloomPx, o.weak ? 0.88 : 1);
@@ -1138,7 +1143,7 @@ export function impactBurst(
   // Promień odniesienia to promień ciepłego środka (k = 0.3 w `impactLight`),
   // więc promienie wychodzą zza gorącej strefy, a nie znikąd; najdłuższe mają
   // ~8x tyle i wystają daleko poza barwne ciało łuny.
-  rayBurst(scene, layer, x, y, o.color, bloomPx * 0.15, o.weak ? 0.8 : 1, o.axis);
+  rayBurst(scene, layer, x, y, o.color, bloomPx * 0.17, o.weak ? 0.8 : 1, o.axis);
 
   // 3. Pierścienie energii. Dwa, z przesunięciem — jeden wygląda jak animacja
   // ładowania, dwa jak fala uderzeniowa.
@@ -1171,7 +1176,7 @@ export function impactBurst(
     // dopiero taka gęstość czyta się jako PYŁ, a nie jako policzalne kropki.
     // Osiemdziesiąt obrazków o krótkim życiu to dla Phasera nic, a każdy
     // niszczy się w `onComplete` swojego tweena.
-    Math.round((o.strong ? 96 : 76) + p * 12),
+    Math.round((o.strong ? 72 : 58) + p * 10),
     132 * (o.strong ? 1.15 : 1)
   );
 

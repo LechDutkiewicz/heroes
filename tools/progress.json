@@ -1,5 +1,5 @@
 {
- "updated": "2026-08-09 13:30",
+ "updated": "2026-08-09 14:16",
  "pieces": [
   {
    "name": "Plansza: siatka, teren, rama",
@@ -80,10 +80,12 @@
   },
   {
    "name": "Animacje walki i efekty trafienia",
-   "status": "running",
-   "note": "Runda 6 przebudowana i oceniona — przegrana, ale postęp jest realny: zniknęła przepalona biała plama i filtr na całej planszy, doszedł wachlarz promieni i rozjaśnienie trafionego pola. Zarzut przesunął się z „jedna plama\" na „za mało promieni\". Buduje się runda 7.",
+   "status": "done",
+   "note": "ZAMKNIĘTY w rundzie 7 wygraną ze wzorcem. Wachlarz 30 smug o osi wskazującej napastnika, mały biały rdzeń z wąskim pierścieniem przejścia w barwę żywiołu, halo bez widocznej krawędzi. Krytyk wybrał nasz kadr i wytknął wzorcowi płaskie, mlecznoszare kliny bez rozgrzanego rdzenia.",
    "shots": [
+    "04-przebieg-ognisty",
     "04-przebieg-rozblysku",
+    "05-moment-trafienia",
     "06-pocisk-w-locie"
    ],
    "rounds": [
@@ -116,6 +118,12 @@
      "blind": "animacje-r6",
      "gap": "Wzorzec ma wachlarz kilkudziesięciu długich smug o zróżnicowanej szerokości, długości i przezroczystości, wygasających nieliniowo bez widocznej krawędzi. U nas kilka krótkich, niemal jednakowych kolców o twardym brzegu, doklejonych do okrągłej plamy. Rdzeń ma być przepalony do czystej BIELI i dopiero przez wąski pierścień przechodzić w barwę żywiołu.",
      "note": "Sprzeczność między krytykami, rozstrzygnięta rozmiarem: runda 6 zmniejszyła biały rdzeń, bo poprzedni krytyk nazwał go przepaloną plamą; ten chce bieli z powrotem. Ma być MAŁY twardy biały rdzeń, nie duży biały dysk. Osobno dołożyłem oś wachlarza wskazującą napastnika — dotąd była losowa."
+    },
+    {
+     "win": true,
+     "blind": "animacje-r7",
+     "gap": "Nasz kadr buduje światło warstwowo: maleńki wypalony biały rdzeń, wokół niego ciepła bursztynowa poświata z wykładniczym wygaszaniem, dopiero na tym iskry. Wzorzec przegrywa płaskimi, mlecznoszarymi klinami rysowanymi zwykłym alfa-over — brudna mgła zamiast rozbłysku, nigdzie punktu przepalonego do bieli, promienie startują daleko od środka i nie mają skąd wystrzeliwać.",
+     "note": "Osobno naprawiłem harness: pasek klatek trafiał w losowy cios, więc runda 6 była oceniana na mocnym uderzeniu, a 7 na słabym — nieporównywalne. Obrońca jest teraz dobierany po żywiole, żeby pasek zawsze pokazywał pełną, docelową siłę efektu. Znane ograniczenie: atak trawiasty nad łąką nadal zbiela, bo hue efektu i hue tła są niemal identyczne — to paleta, nie rzemiosło."
     }
    ]
   },

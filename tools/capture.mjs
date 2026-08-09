@@ -249,7 +249,18 @@ const main = async () => {
       const a = scene.units.find(
         (u) => u.side === 'player' && !u.def.shooter && u.def.type === zywiol
       );
-      const d = scene.units.find((u) => u.side === 'enemy');
+      // Obrońca dobierany po ŻYWIOLE, nie „pierwszy z brzegu".
+      //
+      // Siła rozbłysku zależy od przewagi typu, a przy losowanych frakcjach
+      // pierwszy wróg z listy bywał raz odporny, raz podatny. Dwie rundy
+      // oceniane na dwóch różnych siłach ciosu są nieporównywalne: runda
+      // wypadała gorzej nie dlatego, że efekt był słabszy, tylko dlatego, że
+      // trafiła na „słabo skuteczne". Wymuszamy przewagę typu, żeby pasek
+      // zawsze pokazywał efekt w jego pełnej, docelowej sile.
+      const slaby = { fire: 'grass', water: 'fire', grass: 'water' }[zywiol];
+      const d =
+        scene.units.find((u) => u.side === 'enemy' && u.def.type === slaby) ??
+        scene.units.find((u) => u.side === 'enemy');
       d.col = a.col + 1;
       d.row = a.row;
       const p = scene.cellToXY(d.col, d.row);
