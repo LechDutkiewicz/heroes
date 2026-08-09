@@ -477,7 +477,14 @@ function lightStack(
 //    i dawał „twardy obwód tam, gdzie biel się urywa");
 //  - promienia o sterowanym profilu alfy wzdłuż długości, z ostrym spadkiem
 //    ku końcówce i miękkim przekrojem w poprzek.
-const HIT = { glow: 'fx_traf_luna', ray: 'fx_traf_promien' } as const;
+const HIT = {
+  glow: 'fx_traf_luna',
+  /** Bardzo szeroka, bardzo płaska poświata — halo bez widocznej krawędzi. */
+  halo: 'fx_traf_halo',
+  ray: 'fx_traf_promien',
+  /** Ten sam promień, ale rozmyty w poprzek i z dłuższym ogonem. */
+  raySoft: 'fx_traf_promien_m',
+} as const;
 
 /**
  * Poświata o zadanej krzywej: alfa w odległości t od środka wynosi DOKŁADNIE
@@ -520,30 +527,55 @@ function buildHitTextures(scene: Phaser.Scene) {
   glow.generateTexture(HIT.glow, 256, 256);
   glow.destroy();
 
-  // Promień składany z PIONOWYCH PLASTERKÓW — Phaser nie ma gradientu, więc
-  // profil wzdłuż promienia rysujemy kolumna po kolumnie, z zakładką 0.6 px
-  // (ta sama sztuczka co przy pasmach w reszcie pliku).
-  //
-  // Każda kolumna to trzy prostokąty jeden w drugim: pełna wysokość na słabej
-  // alfie, 55% na średniej i 22% na pełnej. Stąd bierze się miękki przekrój
-  // w poprzek — bez niego promień jest paskiem taśmy, a nie światłem.
+  // Halo: ta sama krzywa, ale prawie płaska (pow 1.5). Rozciągane na 2.6x
+  // średnicy barwnego ciała i puszczane na alfie ~0.12 — nie widać go jako
+  // osobnej warstwy, widać tylko BRAK krawędzi tam, gdzie łuna się kończy.
+  const halo = scene.add.graphics();
+  radialFalloff(halo, 256, 1.5, 144);
+  halo.generateTexture(HIT.halo, 256, 256);
+  halo.destroy();
+
+  drawRay(scene, HIT.ray, 2.6, 3);
+  // Wariant miękki: wolniejszy spadek wzdłuż długości (dłuższy ogon) i wyraźnie
+  // szerszy rozmyty przekrój. To on niesie barwę w SCREEN, a ostry — jasność.
+  drawRay(scene, HIT.raySoft, 1.9, 6);
+}
+
+/**
+ * Promień składany z PIONOWYCH PLASTERKÓW — Phaser nie ma gradientu, więc
+ * profil wzdłuż promienia rysujemy kolumna po kolumnie.
+ *
+ * Każda kolumna to stos prostokątów jeden w drugim, od pełnej wysokości na
+ * słabej alfie po wąski rdzeń na pełnej. Stąd bierze się ROZMYCIE POPRZECZNE —
+ * bez niego promień jest paskiem taśmy o twardym brzegu, dokładnie tym, co
+ * krytyk zobaczył jako „kolce". `blur` mówi, z ilu warstw składa się przekrój:
+ * więcej warstw = łagodniejsze zbocze.
+ *
+ * @param pow  wykładnik zaniku alfy wzdłuż długości (2-3 daje ostre wygaszenie)
+ */
+function drawRay(scene: Phaser.Scene, key: string, pow: number, blur: number) {
   const W = 192;
-  const H = 40;
+  const H = 48;
   const ray = scene.add.graphics();
   for (let px = 0; px < W; px++) {
     const u = px / W;
-    // Ostry spadek ku końcówce; nasada nie jest najjaśniejszym punktem, bo
-    // dziesięć promieni sumowałoby tam alfy i znów wypaliło środek na biel.
-    const prof = Math.pow(1 - u, 2.6) * Math.min(1, 0.18 + u / 0.09);
+    // Nasada nie jest najjaśniejszym punktem: trzydzieści promieni sumowałoby
+    // tam alfy i znów wypaliłoby środek na biel. Rdzeniem zajmuje się `impactLight`.
+    const prof = Math.pow(1 - u, pow) * Math.min(1, 0.14 + u / 0.1);
     // Wrzeciono: zwęża się i u nasady, i na wylocie.
     const half = (H / 2) * 0.94 * Math.pow(u + 0.02, 0.3) * Math.pow(1 - u, 0.62) * 1.55;
     if (prof <= 0.002 || half <= 0.2) continue;
-    for (const [k, m] of [[1, 0.3], [0.55, 0.45], [0.22, 0.7]] as const) {
-      ray.fillStyle(C.white, Math.min(1, prof * m));
+    for (let j = 0; j < blur; j++) {
+      // Zewnętrzna warstwa najszersza i najsłabsza, wewnętrzna najwęższa
+      // i najjaśniejsza — suma daje miękkie zbocze poprzeczne.
+      const t = (j + 1) / blur;
+      const k = 1 - 0.82 * (1 - t);
+      const m = 0.22 + 0.55 * Math.pow(t, 2.1);
+      ray.fillStyle(C.white, Math.min(1, (prof * m) / (blur * 0.42)));
       ray.fillRect(px, H / 2 - half * k, 1.6, half * 2 * k);
     }
   }
-  ray.generateTexture(HIT.ray, W, H);
+  ray.generateTexture(key, W, H);
   ray.destroy();
 }
 
@@ -582,28 +614,46 @@ function rayBurst(
 ) {
   const mask = boardMask(scene);
   const tone = hitTone(color);
-  const hot = tintTowardsWhite(tone, 0.34);
-  // 9 promieni z przedziału 6-12 podanego przez krytyka. Mniej niż 6 czyta się
-  // jak gwiazda z ikony, więcej niż 12 znów zlewa się w dysk.
-  const n = 9;
+  const hot = tintTowardsWhite(tone, 0.42);
+  // TRZYDZIEŚCI promieni zamiast dziewięciu. Dziewięć czytało się jako „kilka
+  // symetrycznych kolców doklejonych do plamy" — wachlarz zaczyna wyglądać jak
+  // światło dopiero wtedy, gdy pojedynczej smugi nie da się już policzyć wzrokiem.
+  //
+  // Liczba rośnie, ale SUMA ALFY nie: pojedynczy promień w ADD schodzi z 0.98
+  // na ~0.42, a dwie trzecie wachlarza idzie w SCREEN. Bez tego trzydzieści
+  // smug w ADD zrobiłoby dokładnie tę białą plamę, którą naprawiała runda 6.
+  const n = strength >= 1 ? 30 : 24;
   const axis = os ?? Phaser.Math.FloatBetween(0, Math.PI * 2);
   for (let i = 0; i < n; i++) {
-    const a = Phaser.Math.DegToRad((i * 360) / n + Phaser.Math.FloatBetween(-13, 13));
-    // Bliskość do osi wachlarza: 1 w osi, 0 w poprzek. Podniesiona do kwadratu,
-    // żeby wydłużenie dotyczyło paru promieni, a nie połowy wachlarza.
+    // Kąt losowany z ROZKŁADU SKUPIONEGO NA OSI, nie z równych wycinków koła.
+    // Równe wycinki + drobny jitter dawały gwiazdkę; tutaj gęstość smug maleje
+    // z odchyleniem od osi, więc widać jedno ognisko i wachlarz z niego.
+    const t = Phaser.Math.FloatBetween(-1, 1);
+    const a = axis + Math.PI * Math.sign(t) * Math.pow(Math.abs(t), 1.4);
     const align = Math.pow(Math.abs(Math.cos(a - axis)), 2);
-    const soft = i % 3 === 0;
-    // 3.2-8.4x promienia rdzenia: rdzeń ma kilkanaście pikseli, więc najdłuższe
-    // promienie mają ~110 px i wychodzą daleko poza łunę.
-    const len = coreR * (2.9 + 2.6 * align) * Phaser.Math.FloatBetween(0.8, 1.4);
-    const wide = coreR * Phaser.Math.FloatBetween(0.3, 0.8) * (soft ? 1.9 : 1);
+    // Dwie trzecie smug jest miękka i szeroka (SCREEN, niesie barwę), jedna
+    // trzecia cienka i ostra (ADD, niesie jasność).
+    const soft = i % 3 !== 0;
+    // Rozrzut długości grubo ponad 3:1. Najkrótsze smugi (poprzeczne, dolny
+    // koniec losowania) mają ~1.6x promienia rdzenia, najdłuższe w osi ~9x,
+    // czyli sięgają daleko poza barwne ciało łuny.
+    const len =
+      coreR * (1.9 + 3.6 * align) * Phaser.Math.FloatBetween(0.62, 1.55);
+    // Szerokość kątowa losowana niezależnie od długości — we wzorcu smuga
+    // długa bywa cienka, a krótka gruba, i to psuje regularność.
+    const wide =
+      coreR * Phaser.Math.FloatBetween(0.14, 0.7) * (soft ? 2.1 : 0.85);
+    // Faza zaniku też losowa: promienie nie gasną jednym frontem, tylko
+    // rozsypują się w czasie, przez co wachlarz „dopala się" nierówno.
+    const hold = Phaser.Math.Between(30, 130) + (soft ? 40 : 0);
+    const fade = Phaser.Math.Between(150, 330) * (soft ? 1.15 : 1);
     const r = scene.add
-      .image(x, y, HIT.ray)
+      .image(x, y, soft ? HIT.raySoft : HIT.ray)
       // Nasada promienia siedzi w punkcie trafienia, więc obracamy go wokół
       // lewej krawędzi, a nie wokół środka.
       .setOrigin(0, 0.5)
       .setRotation(a)
-      .setDisplaySize(coreR * 0.6, wide)
+      .setDisplaySize(coreR * 0.5, wide)
       .setTint(soft ? tone : hot)
       .setBlendMode(soft ? Phaser.BlendModes.SCREEN : Phaser.BlendModes.ADD)
       .setAlpha(0);
@@ -615,19 +665,24 @@ function rayBurst(
     scene.tweens.add({
       targets: r,
       displayWidth: len,
-      alpha: (soft ? 0.62 : 0.98) * strength,
-      duration: 58,
+      // Jasność też losowa — jednakowa alfa na wszystkich smugach czytała się
+      // jak wachlarz wycięty z jednego kawałka.
+      alpha:
+        (soft ? Phaser.Math.FloatBetween(0.26, 0.5) : Phaser.Math.FloatBetween(0.3, 0.52)) *
+        (0.55 + 0.45 * align) *
+        strength,
+      duration: Phaser.Math.Between(46, 78),
       ease: E.snap,
       onComplete: () => {
         scene.tweens.add({
           targets: r,
           // Promień wystrzeliwuje jeszcze kawałek dalej gasnąc — światło ucieka
           // na zewnątrz, tak jak w łunie.
-          displayWidth: len * 1.28,
-          displayHeight: wide * 0.55,
+          displayWidth: len * Phaser.Math.FloatBetween(1.15, 1.4),
+          displayHeight: wide * 0.5,
           alpha: 0,
-          delay: soft ? 70 : 55,
-          duration: soft ? 240 : 175,
+          delay: hold,
+          duration: fade,
           ease: 'Quad.easeOut',
           onComplete: () => {
             r.clearMask();
@@ -709,6 +764,14 @@ function impactLight(
     hold: number;
     fade: number;
   }[] = [
+    // (-1) HALO. Krytyk zobaczył, że „poświata kończy się ostrym okręgiem na
+    // granicy heksa". To nie była krawędź tekstury, tylko krawędź WIDOCZNOŚCI:
+    // każda z warstw niżej dochodzi do zera, ale robi to na tym samym promieniu,
+    // więc suma ma tam wyraźny próg. Halo to bardzo płaska (pow 1.5) poświata
+    // sięgająca 2.6x dalej i idąca na alfie ~0.12 — nie widać jej jako warstwy,
+    // widać tylko brak progu. Nie „na cały kadr": 2.6x średnicy barwnego ciała
+    // to ~3 heksy, a przy tej alfie plansza pod spodem zostaje w pełni czytelna.
+    { tex: HIT.halo, tint: color, mode: Phaser.BlendModes.SCREEN, a: 0.13, k: 2.6, from: 0.62, grow: 1.3, squash: 0.88, wait: 20, rise: 130, hold: 40, fade: 380 },
     // (0) ŁOŻE BARWY w zwykłym kryciu, pod wszystkim.
     //
     // Tryby świetlne nad jasną łąką oddają barwę tym gorzej, im jaśniejsze
@@ -729,13 +792,21 @@ function impactLight(
     // (3) Dopalacz jasności pod barwą: przygaszona barwa w ADD. Przygaszona,
     // bo pełna wypycha wszystkie kanały do 255 i zostaje biel (patrz `shade`).
     { tex: HIT.glow, tint: shade(color, 0.5), mode: Phaser.BlendModes.ADD, a: 0.5, k: 0.72, from: 0.4, grow: 1.35, squash: 0.82, wait: 5, rise: 62, hold: 55, fade: 175 },
-    // (4) Ciepły środek — pomost między bielą rdzenia a barwą obrzeża, żeby
-    // biały punkt nie czytał się jak dziura wycięta w kolorze.
-    { tex: HIT.glow, tint: tintTowardsWhite(color, 0.5), mode: Phaser.BlendModes.ADD, a: 0.78, k: 0.3, from: 0.3, grow: 1.6, squash: 0.86, wait: 0, rise: 34, hold: 26, fade: 125 },
-    // (5) RDZEŃ: 15 px, biel, `FX.glow` (twarda, z plateau) zamiast miękkiej
-    // krzywej — rdzeń MA być twardy, tylko mały. Gaśnie w ~90 ms, na długo
-    // przed napisem z obrażeniami.
-    { tex: FX.glow, tint: C.white, mode: Phaser.BlendModes.ADD, a: 1, px: 18, from: 0.35, grow: 1.9, squash: 0.9, wait: 0, rise: 20, hold: 0, fade: 70 },
+    // (4) WĄSKI PIERŚCIEŃ PRZEJŚCIA. To jest cały mechanizm „prześwietlonego
+    // sensora": biel nie ma się rozpływać w barwę na przestrzeni pół heksa,
+    // tylko przeskakiwać w nią na kilkunastu pikselach. Stąd rozmiar podany
+    // w px (36), a nie w krotności łuny — pas ma zostać wąski także wtedy, gdy
+    // cios jest mocny i cała łuna rośnie.
+    { tex: HIT.glow, tint: tintTowardsWhite(color, 0.42), mode: Phaser.BlendModes.ADD, a: 0.72, px: 36, from: 0.3, grow: 1.7, squash: 0.88, wait: 0, rise: 30, hold: 26, fade: 120 },
+    // (5) RDZEŃ: 20 px, CZYSTA BIEL, `FX.glow` (twarda, z plateau) zamiast
+    // miękkiej krzywej. Runda 6 zmniejszyła go, bo poprzedni krytyk nazwał go
+    // przepaloną plamą — i słusznie, ale lekarstwem jest ROZMIAR, nie
+    // przygaszenie. Rdzeń wraca do pełnej alfy przy średnicy jednego kciuka:
+    // dwie warstwy jedna w drugiej, żeby w samym środku ADD naprawdę wysycił
+    // wszystkie kanały do 255 i było widać prześwietlenie, a nie jasny żółty
+    // placek. Gaśnie w ~90 ms, na długo przed napisem z obrażeniami.
+    { tex: FX.glow, tint: C.white, mode: Phaser.BlendModes.ADD, a: 1, px: 20, from: 0.35, grow: 1.9, squash: 0.9, wait: 0, rise: 20, hold: 10, fade: 70 },
+    { tex: FX.glow, tint: C.white, mode: Phaser.BlendModes.ADD, a: 1, px: 10, from: 0.4, grow: 2.4, squash: 1, wait: 0, rise: 14, hold: 34, fade: 62 },
   ];
 
   for (const b of bands) {
@@ -935,19 +1006,29 @@ function sparkSpray(
     const cls = roll < 0.45 ? 0 : roll < 0.8 ? 1 : 2;
     const sharp = cls > 0;
     // Promień jasnego rdzenia iskry: ~1 / 2 / 4 px, czyli obrazek 2/4/8 px.
-    const r = cls === 0 ? Phaser.Math.FloatBetween(0.8, 1.4)
-      : cls === 1 ? Phaser.Math.FloatBetween(1.8, 2.6)
-      : Phaser.Math.FloatBetween(3.4, 4.6);
+    // Rozmiary zjechały o ~40% względem rundy 6: tamte iskry krytyk odczytał
+    // jako „pojedyncze piksele artefaktów", bo przy 3-5 px i trzydziestu
+    // sztukach każda była osobnym obiektem do policzenia. Pył ma być pyłem —
+    // drobny i liczny — a nie garścią kropek.
+    const r = cls === 0 ? Phaser.Math.FloatBetween(0.5, 0.85)
+      : cls === 1 ? Phaser.Math.FloatBetween(1, 1.6)
+      : Phaser.Math.FloatBetween(2, 2.9);
     // Temperatura także w iskrach: żar przy źródle jest najbielszy, średnie
     // iskry niosą barwę żywiołu, daleki pył jest najcieplejszy i najciemniejszy.
     // To ten sam gradient co w łunie, tylko rozłożony na cząstkach.
-    const bright = tintTowardsWhite(color, 0.35);
+    // Temperatura PRZESUNIĘTA W GÓRĘ względem rundy 6. Zarzut brzmiał: iskry
+    // mają tę samą temperaturę barwową co pomarańczowe podłoże heksa, więc
+    // błysk zlewa się z tłem. Złoto (`C.goldLight`) było tu głównym winowajcą —
+    // leży dokładnie w barwie ziemi. Teraz żar jest praktycznie biały, iskra
+    // średnia mocno rozbielona, a ciepły wariant brzegu został tylko w pyle,
+    // który i tak leci daleko poza pole.
+    const bright = tintTowardsWhite(color, 0.55);
     const tint =
       cls === 2
-        ? Phaser.Math.RND.pick([tintTowardsWhite(color, 0.6), bright, C.white])
+        ? Phaser.Math.RND.pick([C.white, C.white, tintTowardsWhite(color, 0.78)])
         : cls === 1
-          ? Phaser.Math.RND.pick([bright, bright, color, C.goldLight])
-          : Phaser.Math.RND.pick([edge, edge, shade(edge, 0.85), color]);
+          ? Phaser.Math.RND.pick([bright, bright, tintTowardsWhite(color, 0.3)])
+          : Phaser.Math.RND.pick([color, color, edge, tintTowardsWhite(color, 0.25)]);
     const sp = scene.add
       .image(x, y, sharp ? FX.spark : FX.mote)
       // `r` to promień JASNEGO RDZENIA iskry, nie całego obrazka. Tekstura ma
@@ -1086,7 +1167,11 @@ export function impactBurst(
     x,
     y,
     o.color,
-    Math.round((o.strong ? 46 : 34) + p * 6),
+    // Iskier jest ponad dwa razy więcej niż w rundzie 6 i są dużo drobniejsze:
+    // dopiero taka gęstość czyta się jako PYŁ, a nie jako policzalne kropki.
+    // Osiemdziesiąt obrazków o krótkim życiu to dla Phasera nic, a każdy
+    // niszczy się w `onComplete` swojego tweena.
+    Math.round((o.strong ? 96 : 76) + p * 12),
     132 * (o.strong ? 1.15 : 1)
   );
 
@@ -1095,10 +1180,12 @@ export function impactBurst(
   const dust = scene.add.particles(0, 0, FX.twinkle, {
     speed: { min: 40, max: 170 * scale },
     lifespan: { min: 300, max: 620 },
-    scale: { start: 0.45 * scale, end: 0 },
+    scale: { start: 0.3 * scale, end: 0 },
     alpha: { min: 0.35, max: 1 },
     rotate: { start: 0, end: 180 },
-    tint: [tintTowardsWhite(o.color, 0.4), C.goldLight],
+    // Bez złota: leżało w tej samej temperaturze co pomarańczowe podłoże heksa
+    // i błyszczki po prostu w nim ginęły. Biel i mocno rozbielony żywioł.
+    tint: [tintTowardsWhite(o.color, 0.72), C.white],
     blendMode: Phaser.BlendModes.ADD,
     emitting: false,
   });
