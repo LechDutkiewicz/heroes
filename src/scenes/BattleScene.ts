@@ -1291,6 +1291,13 @@ export class BattleScene extends Phaser.Scene {
       // Środek heksa: rozbłysk celuje w korpus stworka, ale oświetlenie
       // terenu musi trafić w pole pod nim (patrz ImpactOpts.cellY).
       cellY: hitAt.y,
+      // Wachlarz promieni ma wskazywać stronę, z której przyszedł cios.
+      // Kąt liczymy od napastnika do celu; przy strzale z drugiego końca
+      // planszy to jest właśnie tor pocisku.
+      axis: Math.atan2(
+        hitAt.y - this.cellToXY(attacker.col, attacker.row).y,
+        hitAt.x - this.cellToXY(attacker.col, attacker.row).x
+      ),
     });
     flashTarget(this, target.view.sprite, TYPE_INFO[attacker.def.type].color);
     battleShake(this, typeMult > 1 ? Math.min(1, power + 0.25) : power);

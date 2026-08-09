@@ -466,18 +466,108 @@ function lightStack(
   }
 }
 
+// ---------- tekstury WYŁĄCZNIE dla rozbłysku trafienia ----------
+//
+// Osobne od `FX`, bo tamte służą też pociskowi, iskrom i zejściu oddziału,
+// a rozbłysk potrzebuje dwóch kształtów, których tam nie ma i których nie
+// wolno tamtym efektom podmienić:
+//
+//  - poświaty o krzywej WYKŁADNICZEJ bez plateau (`FX.bloom` ma prawie kryjący
+//    środek na 45% promienia — to właśnie ten placek wypalał się na biel
+//    i dawał „twardy obwód tam, gdzie biel się urywa");
+//  - promienia o sterowanym profilu alfy wzdłuż długości, z ostrym spadkiem
+//    ku końcówce i miękkim przekrojem w poprzek.
+const HIT = { glow: 'fx_traf_luna', ray: 'fx_traf_promien' } as const;
+
 /**
- * Wachlarz promieni radialnych — element, którego wzorzec ma, a rundy 1-4 nie
- * miały wcale.
+ * Poświata o zadanej krzywej: alfa w odległości t od środka wynosi DOKŁADNIE
+ * (1 - t)^pow, a nie „mniej więcej tyle, ile wyjdzie ze stosu kółek".
  *
- * Kluczowe jest ZRÓŻNICOWANIE: we wzorcu promienie mają różną długość, różną
- * szerokość i różne rozmycie, i dopiero z tej nierówności bierze się wrażenie
- * wybuchu światła. Dziesięć identycznych klinów w równych odstępach wygląda
- * jak tarcza zegara, więc i kąt dostaje losowe rozchwianie.
+ * Kółka rysowane od zewnątrz do środka mnożą przezroczystość, więc alfa i-tej
+ * warstwy liczona jest z odwrotności tego mnożenia: a = (f - prev) / (1 - prev).
+ * Dzięki temu jedną liczbą (`pow`) ustawiamy całą charakterystykę światła
+ * i mamy pewność, że na brzegu jest zero, a w środku nie ma płaskiego placka.
+ */
+function radialFalloff(
+  g: Phaser.GameObjects.Graphics,
+  size: number,
+  pow: number,
+  steps = 128
+) {
+  const c = size / 2;
+  let prev = 0;
+  for (let i = steps; i >= 1; i--) {
+    const t = i / steps;
+    const f = Math.pow(1 - t, pow);
+    const a = (f - prev) / (1 - prev);
+    if (a > 0.0015) {
+      g.fillStyle(C.white, Math.min(1, a));
+      g.fillCircle(c, c, c * t);
+    }
+    prev = f;
+  }
+}
+
+/** Tekstury rozbłysku budowane leniwie, przy pierwszym ciosie w scenie. */
+function buildHitTextures(scene: Phaser.Scene) {
+  if (scene.textures.exists(HIT.glow)) return;
+
+  // pow = 2.6, czyli z zalecanego przedziału 2-3. Przy 1 (liniowo) poświata
+  // ma widoczny, twardy obwód; przy 3 gaśnie tak szybko, że po barwie nie
+  // zostaje nic poza rdzeniem.
+  const glow = scene.add.graphics();
+  radialFalloff(glow, 256, 2.6, 144);
+  glow.generateTexture(HIT.glow, 256, 256);
+  glow.destroy();
+
+  // Promień składany z PIONOWYCH PLASTERKÓW — Phaser nie ma gradientu, więc
+  // profil wzdłuż promienia rysujemy kolumna po kolumnie, z zakładką 0.6 px
+  // (ta sama sztuczka co przy pasmach w reszcie pliku).
+  //
+  // Każda kolumna to trzy prostokąty jeden w drugim: pełna wysokość na słabej
+  // alfie, 55% na średniej i 22% na pełnej. Stąd bierze się miękki przekrój
+  // w poprzek — bez niego promień jest paskiem taśmy, a nie światłem.
+  const W = 192;
+  const H = 40;
+  const ray = scene.add.graphics();
+  for (let px = 0; px < W; px++) {
+    const u = px / W;
+    // Ostry spadek ku końcówce; nasada nie jest najjaśniejszym punktem, bo
+    // dziesięć promieni sumowałoby tam alfy i znów wypaliło środek na biel.
+    const prof = Math.pow(1 - u, 2.6) * Math.min(1, 0.18 + u / 0.09);
+    // Wrzeciono: zwęża się i u nasady, i na wylocie.
+    const half = (H / 2) * 0.94 * Math.pow(u + 0.02, 0.3) * Math.pow(1 - u, 0.62) * 1.55;
+    if (prof <= 0.002 || half <= 0.2) continue;
+    for (const [k, m] of [[1, 0.3], [0.55, 0.45], [0.22, 0.7]] as const) {
+      ray.fillStyle(C.white, Math.min(1, prof * m));
+      ray.fillRect(px, H / 2 - half * k, 1.6, half * 2 * k);
+    }
+  }
+  ray.generateTexture(HIT.ray, W, H);
+  ray.destroy();
+}
+
+/**
+ * Wachlarz promieni — to W NICH ma siedzieć energia rozbłysku, nie w dysku.
  *
- * Promienie wchodzą i schodzą razem z rdzeniem, nie z łuną: to one SĄ błyskiem.
- * Gdyby zostały na dłużej, powtórzyłby się błąd rundy 3 — najgłośniejszy,
- * najbielszy element trwałby przez cały efekt.
+ * Zarzut krytyka brzmiał: „nasz błysk to jedna przepalona plama bez struktury
+ * promieni, wzorzec ma czytelny, KIERUNKOWY wachlarz o zróżnicowanej szerokości
+ * i długości". Trzy rzeczy z tego wynikają i wszystkie trzy są tu wprost:
+ *
+ *  1. Promienie wystają DALEKO poza jasną część łuny. Poprzednio miały 1,5-3x
+ *     promienia rdzenia, czyli 50-100 px, a barwny dysk miał 98 px promienia —
+ *     cały wachlarz tonął w środku plamy i nie było go widać ani na pasku,
+ *     ani na oko. Teraz najdłuższe sięgają ~3x dalej niż jasna strefa łuny.
+ *  2. Wachlarz ma OŚ. Losowany jest jeden kierunek na cios i promienie bliskie
+ *     tej osi są wyraźnie dłuższe — bez tego mamy symetryczną gwiazdkę, czyli
+ *     dokładnie tę „prawie kolistą plamę", tylko z ząbkami.
+ *  3. Szerokość i ostrość różnią się w obrębie jednego wachlarza, a nie tylko
+ *     między ciosami.
+ *
+ * Tryby: cienkie promienie idą w ADD (mała powierzchnia, biel im nie grozi),
+ * szerokie i miękkie w SCREEN — one niosą barwę, a ADD rozlany na dużej
+ * powierzchni nad jasną łąką bieleje. Ten podział jest jedynym powodem, dla
+ * którego wachlarz ognisty zostaje pomarańczowy.
  */
 function rayBurst(
   scene: Phaser.Scene,
@@ -486,57 +576,201 @@ function rayBurst(
   y: number,
   color: number,
   coreR: number,
-  strength: number
+  strength: number,
+  /** Oś wachlarza; brak = losowa (patrz ImpactOpts.axis). */
+  os?: number
 ) {
   const mask = boardMask(scene);
-  // Promienie NIOSĄ BARWĘ, nie biel. Przy 0.72 w stronę bieli wachlarz ognisty
-  // sumował się w białą gwiazdę i po barwie nie dało się poznać żywiołu —
-  // dokładnie ten błąd, który rundy 1-3 miały w rdzeniu, tylko przeniesiony
-  // o warstwę wyżej. Biel zostaje wyłącznie w rdzeniu.
-  const hot = tintTowardsWhite(color, 0.3);
-  const n = 10;
+  const tone = hitTone(color);
+  const hot = tintTowardsWhite(tone, 0.34);
+  // 9 promieni z przedziału 6-12 podanego przez krytyka. Mniej niż 6 czyta się
+  // jak gwiazda z ikony, więcej niż 12 znów zlewa się w dysk.
+  const n = 9;
+  const axis = os ?? Phaser.Math.FloatBetween(0, Math.PI * 2);
   for (let i = 0; i < n; i++) {
-    // Bazowy rozkład równomierny plus rozchwianie o pół działki — inaczej
-    // wachlarz czyta się jak rysunek techniczny, a nie jak rozbłysk.
-    const a = Phaser.Math.DegToRad((i * 360) / n + Phaser.Math.FloatBetween(-16, 16));
-    // Zalecenie krytyka wprost: długość 1,5-3x promienia rdzenia.
-    const len = coreR * Phaser.Math.FloatBetween(1.5, 3);
-    const wide = Phaser.Math.FloatBetween(0.34, 1.15);
-    // Co trzeci promień jest wyraźnie bledszy i szerszy — to on daje
-    // „różne rozmycie" ze wzorca. Bez tego wszystkie mają jedną ostrość.
+    const a = Phaser.Math.DegToRad((i * 360) / n + Phaser.Math.FloatBetween(-13, 13));
+    // Bliskość do osi wachlarza: 1 w osi, 0 w poprzek. Podniesiona do kwadratu,
+    // żeby wydłużenie dotyczyło paru promieni, a nie połowy wachlarza.
+    const align = Math.pow(Math.abs(Math.cos(a - axis)), 2);
     const soft = i % 3 === 0;
+    // 3.2-8.4x promienia rdzenia: rdzeń ma kilkanaście pikseli, więc najdłuższe
+    // promienie mają ~110 px i wychodzą daleko poza łunę.
+    const len = coreR * (2.9 + 2.6 * align) * Phaser.Math.FloatBetween(0.8, 1.4);
+    const wide = coreR * Phaser.Math.FloatBetween(0.3, 0.8) * (soft ? 1.9 : 1);
     const r = scene.add
-      .image(x, y, FX.ray)
+      .image(x, y, HIT.ray)
       // Nasada promienia siedzi w punkcie trafienia, więc obracamy go wokół
       // lewej krawędzi, a nie wokół środka.
       .setOrigin(0, 0.5)
       .setRotation(a)
-      .setDisplaySize(coreR * 0.5, coreR * wide * (soft ? 1.5 : 1))
-      .setTint(soft ? color : hot)
-      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDisplaySize(coreR * 0.6, wide)
+      .setTint(soft ? tone : hot)
+      .setBlendMode(soft ? Phaser.BlendModes.SCREEN : Phaser.BlendModes.ADD)
       .setAlpha(0);
     r.setMask(mask);
     layer.add(r);
+    // Obwiednia rise → hold → fade, każda faza jako osobne ogniwo łańcucha.
+    // Dwa tweeny na tej samej alfie tego samego obiektu Phaser rozstrzyga po
+    // swojemu i efekt zapadał się tuż po szczycie — patrz komentarz w bandach.
     scene.tweens.add({
       targets: r,
       displayWidth: len,
-      alpha: (soft ? 0.36 : 0.72) * strength,
-      duration: 55,
+      alpha: (soft ? 0.62 : 0.98) * strength,
+      duration: 58,
       ease: E.snap,
       onComplete: () => {
         scene.tweens.add({
           targets: r,
           // Promień wystrzeliwuje jeszcze kawałek dalej gasnąc — światło ucieka
           // na zewnątrz, tak jak w łunie.
-          displayWidth: len * 1.35,
-          displayHeight: r.displayHeight * 0.7,
+          displayWidth: len * 1.28,
+          displayHeight: wide * 0.55,
           alpha: 0,
-          delay: 35,
-          duration: soft ? 210 : 150,
+          delay: soft ? 70 : 55,
+          duration: soft ? 240 : 175,
           ease: 'Quad.easeOut',
           onComplete: () => {
             r.clearMask();
             r.destroy();
+          },
+        });
+      },
+    });
+  }
+}
+
+/**
+ * Barwa rozbłysku: `standOut` plus jeszcze jedno dociśnięcie nasycenia.
+ *
+ * Sonda na łące pokazała, że ognisty rozbłysk czyta się dobrze, a trawiasty
+ * ledwie majaczy — i to mimo `standOut`, które odsuwa zieleń w stronę
+ * szmaragdu. Powód jest arytmetyczny: SCREEN nad jasnym podłożem oddaje tym
+ * mniej barwy, im bliżej bieli jest już tło, a łąka jest jasna. Rozbłysk
+ * potrzebuje więc barwy o krok bardziej nasyconej niż reszta oprawy — łuna
+ * pocisku czy zejście oddziału leżą nad ciemniejszym tłem i tego nie wymagają,
+ * dlatego to dociśnięcie jest LOKALNE dla trafienia, a nie w `standOut`.
+ */
+function hitTone(color: number) {
+  const c = Phaser.Display.Color.IntegerToRGB(standOut(color));
+  const hsv = Phaser.Display.Color.RGBToHSV(c.r, c.g, c.b) as {
+    h: number;
+    s: number;
+    v: number;
+  };
+  const out = Phaser.Display.Color.HSVToRGB(
+    hsv.h,
+    Math.min(1, hsv.s * 1.18 + 0.08),
+    Math.min(1, hsv.v * 1.04 + 0.04)
+  ) as Phaser.Display.Color;
+  return Phaser.Display.Color.GetColor(out.red, out.green, out.blue);
+}
+
+/**
+ * Trójwarstwowe światło trafienia: MAŁY twardy rdzeń, wykładniczy gradient
+ * z ciepłym środkiem i barwą żywiołu na obrzeżu, nic poza tym.
+ *
+ * Osobne od `lightStack`, choć robią pozornie to samo. `lightStack` obsługuje
+ * też zejście oddziału, gdzie wielka, długa łuna jest w porządku — to
+ * wydarzenie raz na kilka tur. Rozbłysk trafienia leci KILKADZIESIĄT razy
+ * w bitwie i rządzi się odwrotną ekonomią: siedem pasm o łącznej alfie grubo
+ * ponad 1, z których dwa miały 300 px średnicy, dawało dokładnie to, co
+ * zobaczył krytyk — przepaloną plamę i planszę zalaną filtrem przez trzy
+ * klatki z czterech. Tutaj pasm jest pięć, najszersze ma 1,45x średnicy bazowej
+ * i idzie na alfie 0.42, a cała energia jest przeniesiona do promieni.
+ *
+ * @param d średnica pasa BARWNEGO (ciepły brzeg sięga 1.45x dalej)
+ */
+function impactLight(
+  scene: Phaser.Scene,
+  layer: Phaser.GameObjects.Container,
+  x: number,
+  y: number,
+  raw: number,
+  d: number,
+  strength: number
+) {
+  const mask = boardMask(scene);
+  const color = hitTone(raw);
+  const edge = warmEdge(color);
+
+  const bands: {
+    tex: string;
+    tint: number;
+    mode: number;
+    a: number;
+    /** Średnica pasa: krotność `d`, albo wartość bezwzględna w px (`px`). */
+    k?: number;
+    px?: number;
+    from: number;
+    grow: number;
+    squash?: number;
+    wait: number;
+    rise: number;
+    hold: number;
+    fade: number;
+  }[] = [
+    // (0) ŁOŻE BARWY w zwykłym kryciu, pod wszystkim.
+    //
+    // Tryby świetlne nad jasną łąką oddają barwę tym gorzej, im jaśniejsze
+    // podłoże — a to jest najjaśniejszy krajobraz w grze. NORMAL nakłada hue
+    // wprost i nie da się go wypalić, więc to on gwarantuje, że atak trawiasty
+    // ma barwę także tam, gdzie SCREEN prawie nic nie wnosi. Ryzyko
+    // przyciemnienia terenu (błąd sprzed dwóch rund) jest zdjęte dwiema
+    // rzeczami: barwa jest jaskrawa i jasna (`hitTone`), a pas mały i o niskiej
+    // alfie, więc leży TYLKO tam, gdzie zaraz i tak przykryje go rdzeń.
+    { tex: HIT.glow, tint: color, mode: Phaser.BlendModes.NORMAL, a: 0.52, k: 0.88, from: 0.4, grow: 1.28, squash: 0.85, wait: 5, rise: 60, hold: 70, fade: 190 },
+    // (1) Obrzeże w barwie żywiołu — SCREEN, nie ADD. To jest miejsce, w którym
+    // krytyk chciał „przebarwienia: biel przechodząca w barwę". ADD nad jasną
+    // łąką dokłada tu głównie jasność i obrzeże robi się mleczne; SCREEN nie
+    // potrafi zejść poniżej jasności tła, ale hue nakłada wprost.
+    { tex: HIT.glow, tint: edge, mode: Phaser.BlendModes.SCREEN, a: 0.5, k: 1.45, from: 0.55, grow: 1.2, squash: 0.86, wait: 25, rise: 105, hold: 45, fade: 215 },
+    // (2) Ciało barwne — to po nim gracz poznaje żywioł, więc trzyma najdłużej.
+    { tex: HIT.glow, tint: color, mode: Phaser.BlendModes.SCREEN, a: 0.9, k: 1, from: 0.5, grow: 1.26, squash: 0.82, wait: 10, rise: 80, hold: 85, fade: 205 },
+    // (3) Dopalacz jasności pod barwą: przygaszona barwa w ADD. Przygaszona,
+    // bo pełna wypycha wszystkie kanały do 255 i zostaje biel (patrz `shade`).
+    { tex: HIT.glow, tint: shade(color, 0.5), mode: Phaser.BlendModes.ADD, a: 0.5, k: 0.72, from: 0.4, grow: 1.35, squash: 0.82, wait: 5, rise: 62, hold: 55, fade: 175 },
+    // (4) Ciepły środek — pomost między bielą rdzenia a barwą obrzeża, żeby
+    // biały punkt nie czytał się jak dziura wycięta w kolorze.
+    { tex: HIT.glow, tint: tintTowardsWhite(color, 0.5), mode: Phaser.BlendModes.ADD, a: 0.78, k: 0.3, from: 0.3, grow: 1.6, squash: 0.86, wait: 0, rise: 34, hold: 26, fade: 125 },
+    // (5) RDZEŃ: 15 px, biel, `FX.glow` (twarda, z plateau) zamiast miękkiej
+    // krzywej — rdzeń MA być twardy, tylko mały. Gaśnie w ~90 ms, na długo
+    // przed napisem z obrażeniami.
+    { tex: FX.glow, tint: C.white, mode: Phaser.BlendModes.ADD, a: 1, px: 18, from: 0.35, grow: 1.9, squash: 0.9, wait: 0, rise: 20, hold: 0, fade: 70 },
+  ];
+
+  for (const b of bands) {
+    const size = b.px ?? d * (b.k ?? 1);
+    const sq = b.squash ?? 1;
+    const img = scene.add
+      .image(x, y, b.tex)
+      .setTint(b.tint)
+      .setBlendMode(b.mode)
+      .setDisplaySize(size * b.from, size * b.from * sq)
+      .setAlpha(0);
+    img.setMask(mask);
+    layer.add(img);
+
+    const peak = b.a * strength;
+    scene.tweens.add({
+      targets: img,
+      displayWidth: size,
+      displayHeight: size * sq,
+      alpha: peak,
+      delay: b.wait,
+      duration: b.rise,
+      ease: E.snap,
+      onComplete: () => {
+        scene.tweens.add({
+          targets: img,
+          displayWidth: size * b.grow,
+          displayHeight: size * b.grow * sq,
+          alpha: 0,
+          delay: b.hold,
+          duration: b.fade,
+          ease: 'Quad.easeOut',
+          onComplete: () => {
+            img.clearMask();
+            img.destroy();
           },
         });
       },
@@ -565,23 +799,52 @@ function hexLight(
   const g = scene.add.graphics({ x, y });
   // Heks planszy jest szpicem do góry (patrz board.ts: ROW_STEP = 1.5 * R),
   // więc wierzchołki liczymy od kąta -90°.
-  const pts: number[] = [];
-  for (let i = 0; i < 6; i++) {
-    const a = Phaser.Math.DegToRad(i * 60 - 90);
-    pts.push(Math.cos(a) * HEX_R * 0.97, Math.sin(a) * HEX_R * 0.97);
-  }
+  const hex = (cx: number, cy: number, s: number) => {
+    const pts: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      const a = Phaser.Math.DegToRad(i * 60 - 90);
+      pts.push(cx + Math.cos(a) * HEX_R * s, cy + Math.sin(a) * HEX_R * s);
+    }
+    return pts;
+  };
+  const path = (pts: number[], fill: boolean) => {
+    g.beginPath();
+    g.moveTo(pts[0], pts[1]);
+    for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]);
+    g.closePath();
+    if (fill) g.fillPath();
+    else g.strokePath();
+  };
+
+  // NAJBLIŻSZE SĄSIEDZTWO. Zarzut brzmiał „światło nie kładzie się na
+  // otoczeniu", ale odpowiedzią nie może być łuna na pół planszy — efekt leci
+  // kilkadziesiąt razy na bitwę i poprzednia wersja (dwa pasma mgły po 300 px)
+  // zostawiała na pasku planszę pod żółtym filtrem przez trzy klatki z czterech.
+  // Zamiast tego: sześć sąsiednich heksów, każdy na ułamku jasności celu.
+  // Geometria szpica do góry — odstęp poziomy √3·R, rząd co 1.5·R.
+  const sx = Math.sqrt(3) * HEX_R;
+  const around: [number, number][] = [
+    [sx, 0], [-sx, 0],
+    [sx / 2, 1.5 * HEX_R], [-sx / 2, 1.5 * HEX_R],
+    [sx / 2, -1.5 * HEX_R], [-sx / 2, -1.5 * HEX_R],
+  ];
+  g.fillStyle(color, 0.12);
+  for (const [dx, dy] of around) path(hex(dx, dy, 0.94), true);
+
   // Dwa wypełnienia: mocniejsze w środku pola, słabsze przy krawędziach —
   // płaski sześciokąt jednej jasności wyglądał jak podświetlenie kursora,
   // a ma wyglądać jak światło padające z góry na to pole.
   g.fillStyle(color, 0.34);
-  g.beginPath();
-  g.moveTo(pts[0], pts[1]);
-  for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]);
-  g.closePath();
-  g.fillPath();
+  path(hex(0, 0, 0.97), true);
   g.fillStyle(tintTowardsWhite(color, 0.5), 0.3);
   g.fillCircle(0, 0, HEX_R * 0.62);
+  // ROZJAŚNIONA KRAWĘDŹ trafionego pola — osobny punkt werdyktu. Sam jasny
+  // środek pola czyta się jak plama pod sprite'em; dopiero obrys mówi, że to
+  // KONKRETNE POLE dostało światło.
+  g.lineStyle(3, tintTowardsWhite(color, 0.7), 0.55);
+  path(hex(0, 0, 0.95), false);
   g.setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
+  g.setMask(boardMask(scene));
   layer.add(g);
 
   scene.tweens.add({
@@ -597,7 +860,10 @@ function hexLight(
         // rozjaśnienie terenu, za mało, by pole zostało „podświetlone".
         duration: 200,
         ease: 'Quad.easeOut',
-        onComplete: () => g.destroy(),
+        onComplete: () => {
+          g.clearMask();
+          g.destroy();
+        },
       });
     },
   });
@@ -621,6 +887,15 @@ export interface ImpactOpts {
    * pikseli za wysoko i nie pokrywał się z siatką.
    */
   cellY?: number;
+  /**
+   * Kierunek, z którego przyszedł cios, w radianach — oś wachlarza promieni.
+   *
+   * Bez tego wachlarz losował sobie oś przy każdym trafieniu i światło
+   * rozchodziło się w przypadkową stronę, niezwiązaną z tym, kto uderzył.
+   * Wachlarz z osią jest po to, żeby uderzenie MIAŁO kierunek; losowa oś daje
+   * tylko niesymetryczną plamę. Pominięty — oś losowa, jak było.
+   */
+  axis?: number;
 }
 
 /**
@@ -741,7 +1016,7 @@ export function impactBurst(
   const p = Phaser.Math.Clamp(o.power, 0, 1);
   // Słaby cios ma zostać czytelnie mniejszy od mocnego, ale nie może zniknąć —
   // stąd dolna granica, a nie czyste mnożenie przez siłę.
-  const scale = (o.strong ? 1.5 : o.weak ? 0.72 : 1) * (0.8 + p * 0.6);
+  const scale = (o.strong ? 1.5 : o.weak ? 0.8 : 1) * (0.8 + p * 0.6);
 
   // 0. Przyciemnienie pod uderzeniem USUNIĘTE.
   //
@@ -753,14 +1028,14 @@ export function impactBurst(
   // Właściwym rozwiązaniem problemu „jasne na jasnym" jest oświetlenie sceny,
   // nie zabrudzenie jej pod spodem.
 
-  // 1. ŚWIATŁO — rozwarstwione na pasy o różnej temperaturze (patrz
-  // `lightStack`). Po rundzie 2 światło było już widoczne, ale płaskie: jedna
-  // barwa i biały rdzeń bez przejścia. Teraz idzie od białego rdzenia
-  // (~15% średnicy) przez barwę żywiołu po cieplejszy brzeg, gasnący
-  // wykładniczo do zera i przycięty do ramy planszy.
-  // `d` to średnica BARWNEGO pasa łuny; ciepły brzeg sięga 1.7x dalej,
-  // a biały rdzeń ma 16% tej wartości.
-  const bloomPx = (196 + p * 38) * (o.strong ? 1.2 : o.weak ? 0.86 : 1);
+  buildHitTextures(scene);
+
+  // 1. ŚWIATŁO — patrz `impactLight`. Średnica barwnego ciała zjechała z 196-234
+  // px na 104-124, czyli z dwóch i pół heksa na półtora. To nie jest kosmetyka:
+  // przy poprzedniej wielkości promienie mieściły się CAŁE w jasnej części
+  // dysku i wachlarza po prostu nie było widać, a to on jest treścią rozbłysku.
+  // Ciepłe obrzeże sięga 1.45x dalej (~180 px, dwa heksy) i idzie na alfie 0.42.
+  const bloomPx = (128 + p * 26) * (o.strong ? 1.18 : o.weak ? 0.92 : 1);
 
   // 0b. OŚWIETLENIE POLA. Idzie przed łuną, żeby leżało pod nią: najpierw
   // rozjaśnia się teren, potem dopiero kładzie się na nim światło. Odwrotna
@@ -772,16 +1047,17 @@ export function impactBurst(
     layer,
     x,
     o.cellY ?? y,
-    standOut(o.color),
+    hitTone(o.color),
     (o.strong ? 0.42 : o.weak ? 0.26 : 0.34) * (0.75 + p * 0.35)
   );
 
-  lightStack(scene, layer, x, y, o.color, bloomPx, o.weak ? 0.82 : 1);
+  impactLight(scene, layer, x, y, o.color, bloomPx, o.weak ? 0.88 : 1);
 
-  // 2. WACHLARZ PROMIENI — brakujący element ze wzorca. Promień rdzenia to
-  // połowa średnicy nasady rdzenia z `lightStack` (k = 0.34), więc promienie
-  // wychodzą dokładnie zza gorącego środka, a nie znikąd.
-  rayBurst(scene, layer, x, y, o.color, bloomPx * 0.17, o.weak ? 0.7 : 1);
+  // 2. WACHLARZ PROMIENI — tu, a nie w dysku, siedzi teraz energia błysku.
+  // Promień odniesienia to promień ciepłego środka (k = 0.3 w `impactLight`),
+  // więc promienie wychodzą zza gorącej strefy, a nie znikąd; najdłuższe mają
+  // ~8x tyle i wystają daleko poza barwne ciało łuny.
+  rayBurst(scene, layer, x, y, o.color, bloomPx * 0.15, o.weak ? 0.8 : 1, o.axis);
 
   // 3. Pierścienie energii. Dwa, z przesunięciem — jeden wygląda jak animacja
   // ładowania, dwa jak fala uderzeniowa.
@@ -789,7 +1065,10 @@ export function impactBurst(
   // dokładał się do tej samej białej plamy, którą widać na pierwszej klatce
   // paska. Cieńszy i już podbarwiony żywiołem: nadal czyta się jako ostra fala,
   // ale nie licytuje się z łuną o to, co jest treścią kadru.
-  ring(scene, layer, x, y, tintTowardsWhite(o.color, 0.62), 3, 3.4 * scale, 340, 0);
+  // Jeszcze cieńszy i jeszcze mniej rozbielony niż w rundzie 5: przy 3 px
+  // i 0.62 w stronę bieli pierścień dokładał się do tej samej białej plamy,
+  // którą krytyk zobaczył w środku kadru. Teraz to ostra, barwna fala.
+  ring(scene, layer, x, y, tintTowardsWhite(hitTone(o.color), 0.3), 2, 3.4 * scale, 340, 0);
   // Drugi pierścień w cieplejszej barwie brzegu — fala uderzeniowa jest tym
   // dalszym, chłodniejszym końcem światła, więc ma nieść tę samą barwę co brzeg łuny.
   ring(scene, layer, x, y, warmEdge(o.color), 3, 4.6 * scale, 380, 80);

@@ -241,7 +241,7 @@ const main = async () => {
   // trawy z natury, więc drugi pasek rozdziela te dwie sprawy — jeśli ognisty
   // wygląda dobrze, a trawiasty nie, problemem jest paleta, nie rzemiosło.
   await open(page, '&terrain=laka');
-  await inScene(
+  const miejsceOgnia = await inScene(
     page,
     (scene, zywiol) => {
       scene.time.timeScale = 0.12;
@@ -266,6 +266,10 @@ const main = async () => {
       };
       scene.resolveAttack(a, d, { col: a.col, row: a.row });
       if (podswietlenie) scene.showOptions(podswietlenie);
+      // Ten sam zwrot co przy pasku wręcz — bez niego pasek ognisty jechał na
+      // kadrze wpisanym na sztywno i przy losowym układzie armii rozbłysk
+      // regularnie lądował w rogu albo poza kadrem.
+      return { x: p.x, y: p.y };
     },
     'fire'
   );
@@ -279,7 +283,7 @@ const main = async () => {
     ogien.push(`${OUT}/${nazwa}.png`);
     await thaw(page);
   }
-  await strip(browser, ogien, `${OUT}/04-przebieg-ognisty.png`);
+  await strip(browser, ogien, `${OUT}/04-przebieg-ognisty.png`, wokol(miejsceOgnia));
 
   // Sekunda zegara to przy tym spowolnieniu ~120 ms sceny: iskry zdążyły się
   // rozlecieć, a napisy z obrażeniami wypłynąć nad oddział.

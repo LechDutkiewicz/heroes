@@ -1,5 +1,5 @@
 {
- "updated": "2026-08-09 12:38",
+ "updated": "2026-08-09 13:30",
  "pieces": [
   {
    "name": "Plansza: siatka, teren, rama",
@@ -81,7 +81,7 @@
   {
    "name": "Animacje walki i efekty trafienia",
    "status": "running",
-   "note": "Runda 5 oceniona — przegrana. Rdzeń rozbłysku jest przepaloną białą plamą; energia ma przejść w promienie. Buduje się runda 6.",
+   "note": "Runda 6 przebudowana i oceniona — przegrana, ale postęp jest realny: zniknęła przepalona biała plama i filtr na całej planszy, doszedł wachlarz promieni i rozjaśnienie trafionego pola. Zarzut przesunął się z „jedna plama\" na „za mało promieni\". Buduje się runda 7.",
    "shots": [
     "04-przebieg-rozblysku",
     "06-pocisk-w-locie"
@@ -110,6 +110,12 @@
      "blind": "animacje-r5",
      "gap": "Nasz rozbłysk to jedna przepalona, niemal kolista plama czystej bieli — rdzeń, halo i poświata zlewają się w jeden clipping, bez struktury promieni. Wzorzec ma kierunkowy wachlarz promieni o zróżnicowanej długości i grubości, z miękkim wygaszaniem końcówek i przejściem barwy zamiast bieli do bieli. Rdzeń ma być DUŻO mniejszy, a energia przeniesiona do promieni; spadek poświaty nieliniowy (pow 2-3).",
      "note": "Krytyk dorzucił, że światło nie kładzie się na otoczeniu — sąsiednie pola, pasek życia i sprite zachowują bazową jasność, więc błysk wygląda jak naklejka nad planszą."
+    },
+    {
+     "win": false,
+     "blind": "animacje-r6",
+     "gap": "Wzorzec ma wachlarz kilkudziesięciu długich smug o zróżnicowanej szerokości, długości i przezroczystości, wygasających nieliniowo bez widocznej krawędzi. U nas kilka krótkich, niemal jednakowych kolców o twardym brzegu, doklejonych do okrągłej plamy. Rdzeń ma być przepalony do czystej BIELI i dopiero przez wąski pierścień przechodzić w barwę żywiołu.",
+     "note": "Sprzeczność między krytykami, rozstrzygnięta rozmiarem: runda 6 zmniejszyła biały rdzeń, bo poprzedni krytyk nazwał go przepaloną plamą; ten chce bieli z powrotem. Ma być MAŁY twardy biały rdzeń, nie duży biały dysk. Osobno dołożyłem oś wachlarza wskazującą napastnika — dotąd była losowa."
     }
    ]
   },
