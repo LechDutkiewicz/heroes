@@ -299,6 +299,49 @@ const main = async () => {
   }
   await strip(browser, ogien, `${OUT}/04-przebieg-ognisty.png`, wokol(miejsceOgnia));
 
+  // 4c. PRZEJŚCIE ODDZIAŁU — pasek klatek dla chodzącego i dla latacza.
+  //
+  // Ruch ocenia się wyłącznie z przebiegu. Jedna klatka pokazuje pionek gdzieś
+  // pomiędzy polami i nie mówi nic o tym, czy on idzie, czy jest przesuwany.
+  // Dwa paski, bo chód i lot mają wyglądać INACZEJ: chodzący styka się
+  // z ziemią i podskakuje, latacz płynie i przechyla się w stronę lotu.
+  for (const [nazwa, lata] of [
+    ['05a-przejscie-piechota', false],
+    ['05b-przejscie-latacz', true],
+  ]) {
+    await open(page, '&terrain=laka');
+    const cel = await inScene(
+      page,
+      (scene, chceLatacz) => {
+        scene.time.timeScale = 0.18;
+        scene.tweens.timeScale = 0.18;
+        const u = scene.units.find((x) => x.side === 'player' && !!x.def.flying === chceLatacz);
+        if (!u) return null;
+        // Cel po drugiej stronie planszy, żeby trasa miała kilka pól i dało
+        // się zobaczyć cykl, a nie pojedynczy przeskok.
+        const doKol = Math.min(u.col + Math.max(3, u.def.move - 1), 8);
+        const wolne = { col: doKol, row: u.row };
+        const start = scene.cellToXY(u.col, u.row);
+        scene.performMove(u, wolne);
+        const koniec = scene.cellToXY(wolne.col, wolne.row);
+        return { x: (start.x + koniec.x) / 2, y: (start.y + koniec.y) / 2 };
+      },
+      lata
+    );
+    if (!cel) continue;
+    const klatki = [];
+    for (const [i, czekaj] of [200, 380, 380, 380].entries()) {
+      await page.waitForTimeout(czekaj);
+      await freeze(page);
+      const k = `${lata ? '05l' : '05p'}${i + 1}`;
+      await shot(page, k);
+      klatki.push(`${OUT}/${k}.png`);
+      await thaw(page);
+    }
+    await strip(browser, klatki, `${OUT}/${nazwa}.png`, wokol(cel, 900, 400));
+  }
+
+  await open(page, '&terrain=laka');
   // Sekunda zegara to przy tym spowolnieniu ~120 ms sceny: iskry zdążyły się
   // rozlecieć, a napisy z obrażeniami wypłynąć nad oddział.
   await page.waitForTimeout(1400);
