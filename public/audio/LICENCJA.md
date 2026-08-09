@@ -1,6 +1,18 @@
 # Dźwięki — pochodzenie i licencja
 
-Wszystkie pliki w tym katalogu pochodzą z darmowych paczek Kenneya
+## Muzyka
+
+`motyw-bitwy.ogg` to **„Cynic Battle Loop"** z OpenGameArt, licencja
+**CC0 1.0** — <https://opengameart.org/content/cynic-battle-loop>.
+
+Wybrany za długość, nie za charakter: 92 sekundy. Krótsze pętle (znalezione
+kandydatki miały po 30-40 s) obracają się w typowej bitwie kilka razy i to
+słychać. Podmiana utworu to podłożenie innego pliku pod tę samą nazwę
+i poprawienie stałej `MUZYKA` w `src/audio/sfx.ts`.
+
+## Efekty
+
+Pozostałe pliki w tym katalogu pochodzą z darmowych paczek Kenneya
 (<https://kenney.nl>) i są objęte licencją **CC0 1.0 Universal** — czyli
 zrzeczeniem się praw autorskich. Wolno ich używać komercyjnie, zmieniać
 i rozpowszechniać, bez podawania źródła.

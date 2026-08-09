@@ -11,7 +11,11 @@
  *
  * ŚWIADOMY ZAKRES: tylko zdarzenia walki. Żadnych kliknięć, najechań ani
  * potwierdzeń — w bitwie jest kilkadziesiąt zdarzeń i dźwięk interfejsu
- * dołożony do tego zamienia się w terkot. Muzyki też nie ma.
+ * dołożony do tego zamienia się w terkot.
+ *
+ * Podkład muzyczny JEST, ale trzymany krótko za uzdę: cicho, z narostem
+ * i z zanikiem na koniec bitwy. Muzyka w gatunku turowym gra przez cały czas
+ * myślenia gracza, więc łatwiej nią zaszkodzić niż pomóc.
  */
 
 import Phaser from 'phaser';
@@ -31,6 +35,23 @@ const PLIKI = [
   'pocisk',
   'krok',
 ] as const;
+
+/**
+ * Podkład muzyczny. Osobno od próbek, bo rządzi się innymi prawami: gra
+ * bez przerwy, musi być wyraźnie cichszy od zdarzeń i nie wolno mu ruszyć
+ * z pełnej głośności.
+ *
+ * Utwór: „Cynic Battle Loop", CC0, OpenGameArt — patrz public/audio/LICENCJA.md.
+ * Wybrany za DŁUGOŚĆ (92 s), nie za charakter: krótsza pętla obraca się
+ * w typowej bitwie po kilka razy i to słychać. Podmiana to jeden plik
+ * i jedna linia niżej.
+ */
+const MUZYKA = 'motyw-bitwy';
+/** Docelowa głośność podkładu. Ma być tłem, nie treścią. */
+const MUZYKA_GLOSNOSC = 0.18;
+/** Wejście i wyjście podkładu (ms). Muzyka włączona na sztywno szarpie. */
+const NAROST = 1800;
+const ZANIK = 900;
 
 /**
  * Zdarzenia, na które gra reaguje dźwiękiem, i próbki im przypisane.
@@ -64,7 +85,8 @@ export type Zdarzenie = keyof typeof ZDARZENIA;
 
 /** Wczytanie próbek. Wołane z `preload` sceny. */
 export function loadSfx(scene: Phaser.Scene) {
-  for (const k of PLIKI) scene.load.audio(k, `${import.meta.env.BASE_URL}audio/${k}.ogg`);
+  for (const k of [...PLIKI, MUZYKA])
+    scene.load.audio(k, `${import.meta.env.BASE_URL}audio/${k}.ogg`);
 }
 
 /**
@@ -80,6 +102,7 @@ interface Stan {
   wlaczony: boolean;
   ostatnie: Map<Zdarzenie, number>;
   gra: number;
+  muzyka?: Phaser.Sound.BaseSound;
 }
 
 const stany = new WeakMap<Phaser.Scene, Stan>();
@@ -101,6 +124,59 @@ export function initSfx(scene: Phaser.Scene, wlaczony = true) {
   stany.set(scene, { wlaczony, ostatnie: new Map(), gra: 0 });
 }
 
+/**
+ * Włącza podkład muzyczny.
+ *
+ * Osobno od `initSfx`, bo start muzyki musi poczekać na gest gracza. Autoplay
+ * jest zablokowany w każdej dzisiejszej przeglądarce i próba obejścia tego
+ * kończy się nie muzyką, tylko wyjątkiem w konsoli. Jeśli kontekst jest
+ * zamknięty, podpinamy się pod zdarzenie `unlocked` i ruszamy dopiero wtedy —
+ * czyli w praktyce przy pierwszym kliknięciu na planszę.
+ */
+export function startMusic(scene: Phaser.Scene) {
+  const s = stany.get(scene);
+  if (!s || s.muzyka || !scene.cache.audio.exists(MUZYKA)) return;
+
+  const puscic = () => {
+    if (!s.wlaczony || s.muzyka) return;
+    const m = scene.sound.add(MUZYKA, { loop: true, volume: 0 });
+    s.muzyka = m;
+    m.play();
+    // Narost głośności zamiast startu z pełnej — wejście muzyki ma być
+    // niezauważalne, a nie oznajmione.
+    scene.tweens.add({
+      targets: m,
+      volume: MUZYKA_GLOSNOSC,
+      duration: NAROST,
+      ease: 'Sine.easeOut',
+    });
+  };
+
+  if (scene.sound.locked) scene.sound.once('unlocked', puscic);
+  else puscic();
+}
+
+/**
+ * Wygasza podkład — na koniec bitwy.
+ *
+ * Ucięcie muzyki w tej samej klatce, w której pada ostatni oddział, brzmi jak
+ * awaria odtwarzacza. Ekran końca ma swój moment ciszy, więc muzyka schodzi
+ * pod niego, a nie razem z nim.
+ */
+export function stopMusic(scene: Phaser.Scene) {
+  const s = stany.get(scene);
+  const m = s?.muzyka;
+  if (!s || !m) return;
+  s.muzyka = undefined;
+  scene.tweens.add({
+    targets: m,
+    volume: 0,
+    duration: ZANIK,
+    ease: 'Sine.easeIn',
+    onComplete: () => m.destroy(),
+  });
+}
+
 export function sfxEnabled(scene: Phaser.Scene) {
   return stany.get(scene)?.wlaczony ?? false;
 }
@@ -110,7 +186,15 @@ export function toggleSfx(scene: Phaser.Scene) {
   const s = stany.get(scene);
   if (!s) return false;
   s.wlaczony = !s.wlaczony;
-  if (!s.wlaczony) scene.sound.stopAll();
+  if (s.wlaczony) {
+    startMusic(scene);
+  } else {
+    // `stopAll` zdejmuje też podkład, więc czyścimy uchwyt — inaczej po
+    // ponownym włączeniu `startMusic` uznałby, że muzyka już gra, i zostałaby
+    // cisza aż do końca bitwy.
+    s.muzyka = undefined;
+    scene.sound.stopAll();
+  }
   return s.wlaczony;
 }
 

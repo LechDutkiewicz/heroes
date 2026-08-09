@@ -57,8 +57,8 @@ const stan = () =>
 const probki = () =>
   page.evaluate(() => window.__game.scene.getScene('battle').cache.audio.getKeys().length);
 
-/** Tyle plików leży w public/audio — patrz PLIKI w src/audio/sfx.ts. */
-const PROBEK = 12;
+/** Tyle plików leży w public/audio: 12 próbek + podkład muzyczny. */
+const PROBEK = 13;
 
 let zleSeedy = 0;
 for (const seed of SEEDS) {
