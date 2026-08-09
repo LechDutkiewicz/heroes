@@ -8,7 +8,7 @@ import {
   type UnitDef,
 } from '../data/units';
 import { ALL_SPRITES, FACTIONS, factionById, type Faction } from '../data/factions';
-import { type Cell } from '../data/hex';
+import { hexDistance, type Cell } from '../data/hex';
 // Wszystkie zasady walki biorą się STĄD i tylko stąd. Scena ma je odgrywać,
 // nie powtarzać — druga kopia reguł rozjechałaby się z symulatorem balansu.
 import { initSfx, loadSfx, sfx, startMusic, stopMusic, toggleSfx } from '../audio/sfx';
@@ -90,8 +90,11 @@ import {
   slashArc,
 } from '../visual/effects';
 import {
+  beginUnitMove,
   buildUnitView,
+  endUnitMove,
   playUnitDeath,
+  stepUnitMove,
   refreshUnitView,
   setUnitActive,
   sideAccent,
@@ -1221,11 +1224,26 @@ export class BattleScene extends Phaser.Scene {
     // marsz przez pół planszy nie może trwać sześć razy dłużej niż krok obok,
     // bo gracz czeka. Za to nie może też lecieć w stałym czasie, bo wtedy
     // dalekie przejście wygląda jak teleport z rozmyciem.
-    const naKrok = Phaser.Math.Clamp(300 / Math.sqrt(kroki.length), 90, 260);
+    //
+    // Latacz jest osobnym przypadkiem, bo jego „trasa" to jedno pole — cel.
+    // Przy stałym czasie 260 ms przelot przez pół planszy trwał tyle samo co
+    // skok na sąsiedni heks, więc falowanie w locie nie miało się kiedy
+    // pokazać, a sam przelot wyglądał jak przeskok. Dla niego liczymy czas
+    // z FAKTYCZNEJ odległości, nie z liczby kroków.
+    const dystans = Math.max(1, hexDistance({ col: zKol, row: zRzed }, { col, row }));
+    const naKrok = unit.def.flying
+      ? Phaser.Math.Clamp(190 * Math.sqrt(dystans), 240, 760)
+      : Phaser.Math.Clamp(300 / Math.sqrt(kroki.length), 90, 260);
+
+    // Chód i lot mają wyglądać inaczej; sam przebieg trasy zostaje bez zmian,
+    // dokłada się tylko warstwa przekształceń sylwetki (patrz unitView.ts).
+    const lata = !!unit.def.flying;
+    beginUnitMove(this, unit.view, lata);
 
     let i = 0;
     const dalej = () => {
       if (i >= kroki.length) {
+        endUnitMove(this, unit.view, lata);
         onDone();
         return;
       }
@@ -1235,6 +1253,14 @@ export class BattleScene extends Phaser.Scene {
       // marszu oddział mija innych i musi chować się za właściwymi.
       unit.container.setDepth(10 + k.row);
       const { x, y } = this.cellToXY(k.col, k.row);
+      // Kierunek liczony z RZECZYWISTEGO przesunięcia, żeby stworek pochylał
+      // się w stronę marszu, a nie zawsze w prawo.
+      const dx = x - unit.container.x;
+      stepUnitMove(this, unit.view, {
+        dirX: Math.abs(dx) < 0.5 ? 0 : Math.sign(dx),
+        duration: naKrok,
+        flying: lata,
+      });
       this.tweens.add({
         targets: unit.container,
         x,

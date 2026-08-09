@@ -330,7 +330,12 @@ const main = async () => {
     );
     if (!cel) continue;
     const klatki = [];
-    for (const [i, czekaj] of [200, 380, 380, 380].entries()) {
+    // Latacz przelatuje CAŁĄ trasę jednym tweenem (jego droga to odcinek
+    // prosty, nie ciąg pól), więc trwa to tyle co jeden krok piechoty. Przy
+    // odstępach dobranych do marszu wszystkie cztery klatki wypadały już po
+    // lądowaniu, a przy kadrze 900 px sylwetka zdążyła z niego wyjechać.
+    const odstepy = lata ? [40, 70, 70, 80] : [200, 380, 380, 380];
+    for (const [i, czekaj] of odstepy.entries()) {
       await page.waitForTimeout(czekaj);
       await freeze(page);
       const k = `${lata ? '05l' : '05p'}${i + 1}`;
@@ -338,7 +343,7 @@ const main = async () => {
       klatki.push(`${OUT}/${k}.png`);
       await thaw(page);
     }
-    await strip(browser, klatki, `${OUT}/${nazwa}.png`, wokol(cel, 900, 400));
+    await strip(browser, klatki, `${OUT}/${nazwa}.png`, wokol(cel, lata ? 1400 : 900, 400));
   }
 
   await open(page, '&terrain=laka');

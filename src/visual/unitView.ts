@@ -145,8 +145,29 @@ export interface UnitView {
   countLabel: Phaser.GameObjects.Text;
   shieldIcon: Phaser.GameObjects.Image;
   shieldBg: Phaser.GameObjects.Graphics;
+  /** Cień pod nogami — w ruchu pracuje osobno od sylwetki. */
+  shadow: Phaser.GameObjects.Graphics;
+  /**
+   * Skala sylwetki w spoczynku. Sprite jest wpasowywany w wysokość przez
+   * setDisplaySize, więc jego scaleX/scaleY NIE są jedynkami — każde ugięcie
+   * musi być liczone jako mnożnik tych wartości, inaczej stworek skacze
+   * do rozmiaru surowego PNG.
+   */
+  baseScaleX: number;
+  baseScaleY: number;
+  /** Do odtworzenia oddechu po zakończeniu ruchu. */
+  seed: number;
   /** Spokojne unoszenie w spoczynku — gasimy je na czas śmierci oddziału. */
   breath?: Phaser.Tweens.Tween;
+  /**
+   * Uchwyty tweenów ruchu, po jednym na WŁAŚCIWOŚĆ. Phaser potrafi puścić dwa
+   * tweeny na to samo pole tego samego obiektu i wtedy animacja zapada się po
+   * szczycie, więc każdy nowy tween najpierw usuwa poprzednika.
+   */
+  moveHop?: Phaser.Tweens.Tween;
+  moveSquash?: Phaser.Tweens.Tween;
+  moveLean?: Phaser.Tweens.Tween;
+  moveShadow?: Phaser.Tweens.Tween;
 }
 
 // ---------- barwy pomocnicze ----------
@@ -406,11 +427,18 @@ function drawPlatform(g: Phaser.GameObjects.Graphics, color: number, deep: numbe
  * Cień. Kilka elips o rosnącym promieniu zamiast jednej — pojedyncza ma
  * twardy kant i stworek wygląda, jakby stał na naklejce. Bez cienia wisiał
  * w powietrzu, co było najbardziej rzucającą się w oczy wadą pierwszej wersji.
+ *
+ * Rysowany wokół WŁASNEGO punktu (0,0), a na miejsce przesuwany pozycją
+ * obiektu. Dzięki temu skalowanie cienia w ruchu ściąga go do własnego środka,
+ * a nie do środka hexa — inaczej przy podskoku plama uciekałaby w górę.
  */
+const SHADOW_Y = FEET_Y + 2;
+const SHADOW_REST = 0.75;
+
 function drawShadow(g: Phaser.GameObjects.Graphics) {
   for (let i = 4; i >= 1; i--) {
-    g.fillStyle(C.shadow, 0.08);
-    g.fillEllipse(0, FEET_Y + 2, 18 + i * 6, 3 + i * 1.8);
+    g.fillStyle(C.shadow, 0.107);
+    g.fillEllipse(0, 0, 18 + i * 6, 3 + i * 1.8);
   }
 }
 
@@ -435,8 +463,12 @@ export function buildUnitView(scene: Phaser.Scene, spec: UnitViewSpec): UnitView
   activeRing.strokePoints(pts(HEX_R - 4), true);
   activeRing.setVisible(false);
 
-  const shadow = scene.add.graphics();
+  const shadow = scene.add.graphics({ x: 0, y: SHADOW_Y });
   drawShadow(shadow);
+  // Cień jest rysowany MOCNIEJ niż wygląda w spoczynku, a przygaszany alfą
+  // obiektu. Dzięki temu w ruchu jest gdzie iść w OBIE strony: przy zetknięciu
+  // do pełnej mocy, w powietrzu poniżej stanu spoczynkowego.
+  shadow.setAlpha(SHADOW_REST);
 
   const platform = scene.add.graphics();
   drawPlatform(platform, accent, deep, false);
@@ -511,6 +543,10 @@ export function buildUnitView(scene: Phaser.Scene, spec: UnitViewSpec): UnitView
     countLabel,
     shieldIcon,
     shieldBg,
+    shadow,
+    baseScaleX: sprite.scaleX,
+    baseScaleY: sprite.scaleY,
+    seed: spec.seed,
   };
 
   startBreathing(scene, view, spec.seed);
@@ -727,6 +763,211 @@ export function setUnitActive(scene: Phaser.Scene, view: UnitView, active: boole
   }
 }
 
+// ---------- przemieszczanie ----------
+//
+// Sprite'y stworków to pojedyncze statyczne PNG — nie ma klatek chodu, więc
+// cała różnica między marszem a lotem musi wyjść z przekształceń jednego
+// obrazka: położenia, dwóch skal, obrotu oraz z pracy cienia.
+//
+// Chodzący ma być PRZYWIĄZANY DO ZIEMI: podskok na każde pole, ugięcie przy
+// zetknięciu, wyciągnięcie w locie i cień w PRZECIWFAZIE (mniejszy i jaśniejszy
+// u szczytu). Bez przeciwfazy cienia podskok czyta się jak drganie obrazka.
+//
+// Latacz ma być ODERWANY OD ZIEMI: unosi się na starcie, płynie po sinusie bez
+// jednego zetknięcia, przechyla w stronę lotu i opada przy lądowaniu; jego cień
+// zostaje na ziemi, maleje i blednie, więc odległość od sylwetki niesie wysokość.
+//
+// Wszystkie tweeny są trzymane za uchwyt i usuwane przed założeniem nowego na
+// TĘ SAMĄ właściwość — dwa tweeny na jedno pole Phaser rozstrzyga po swojemu
+// i animacja zapada się po szczycie.
+
+/** Podskok piechoty: tyle pikseli nad linią stóp na szczycie kroku. */
+const STEP_HOP = 12;
+/** Ugięcie i wyciągnięcie sylwetki; objętość zachowana, bo X idzie odwrotnie. */
+const SQUASH = 0.17;
+/** Pochylenie w stronę marszu. */
+const WALK_LEAN = 8;
+/** Latacz: wysokość przelotu nad linią stóp i amplituda sinusa. */
+const FLY_RISE = 13;
+const FLY_BOB = 3.5;
+const FLY_TILT = 11;
+
+/** Czy obiekt wciąż żyje — ruch bywa przerywany śmiercią albo końcem bitwy. */
+const alive = (view: UnitView) => view.container.active && view.sprite.active;
+
+/**
+ * Zdejmuje wszystko, co ruch założył, i przywraca stan spoczynkowy: sylwetka
+ * na linii stóp, skala bazowa, obrót zero, cień w pełni. Wołane i na końcu
+ * przejścia, i przy śmierci — zostawiony przechył albo ugięcie to najgorszy
+ * możliwy ślad po tej animacji.
+ */
+function resetMoveTweens(view: UnitView) {
+  view.moveHop?.remove();
+  view.moveSquash?.remove();
+  view.moveLean?.remove();
+  view.moveShadow?.remove();
+  view.moveHop = view.moveSquash = view.moveLean = view.moveShadow = undefined;
+}
+
+/** Przygotowanie do przejścia: gasimy oddech, żeby nie walczył o `y` sylwetki. */
+export function beginUnitMove(scene: Phaser.Scene, view: UnitView, flying: boolean) {
+  if (!alive(view)) return;
+  view.breath?.remove();
+  view.breath = undefined;
+  resetMoveTweens(view);
+  view.sprite.setPosition(0, FEET_Y).setAngle(0).setScale(view.baseScaleX, view.baseScaleY);
+  view.shadow.setPosition(0, SHADOW_Y).setScale(1).setAlpha(SHADOW_REST);
+
+  if (!flying) return;
+
+  // Latacz: wznosi się RAZ, przed pierwszym polem, i dopiero na górze zaczyna
+  // sinus. Wznoszenie i sinus to dwa tweeny na to samo `y`, więc drugi startuje
+  // dopiero z zakończenia pierwszego, nigdy równolegle.
+  const rise = scene.tweens.add({
+    targets: view.sprite,
+    y: FEET_Y - FLY_RISE,
+    duration: 140,
+    ease: 'Sine.easeOut',
+    onComplete: () => {
+      if (!alive(view) || view.moveHop !== rise) return;
+      view.moveHop = scene.tweens.add({
+        targets: view.sprite,
+        y: { from: FEET_Y - FLY_RISE + FLY_BOB, to: FEET_Y - FLY_RISE - FLY_BOB },
+        duration: 420,
+        ease: E.soft,
+        yoyo: true,
+        repeat: -1,
+      });
+    },
+  });
+  view.moveHop = rise;
+
+  // Cień zostaje na ziemi: odsuwa się od sylwetki, maleje i blednie.
+  view.moveShadow = scene.tweens.add({
+    targets: view.shadow,
+    y: SHADOW_Y + 3,
+    scaleX: 0.6,
+    scaleY: 0.55,
+    alpha: 0.3,
+    duration: 140,
+    ease: 'Sine.easeOut',
+  });
+}
+
+/**
+ * Jedno pole trasy. Dla piechoty to pełny cykl kroku — stąd synchronizacja
+ * podskoków z heksami. Dla latacza tylko przechył, bo jego unoszenie jest
+ * ciągłe i nie ma prawa wiedzieć o granicach pól.
+ *
+ * `dirX` to znak przemieszczenia; pochylenie idzie w stronę marszu, nie zawsze
+ * w prawo. Przy ruchu czysto pionowym zostaje ostatni przechył.
+ */
+export function stepUnitMove(
+  scene: Phaser.Scene,
+  view: UnitView,
+  opts: { dirX: number; duration: number; flying: boolean }
+) {
+  if (!alive(view)) return;
+  const { dirX, duration, flying } = opts;
+  const lean = (flying ? FLY_TILT : WALK_LEAN) * (dirX >= 0 ? 1 : -1);
+
+  if (dirX !== 0 && Math.round(view.sprite.angle) !== Math.round(lean)) {
+    view.moveLean?.remove();
+    view.moveLean = scene.tweens.add({
+      targets: view.sprite,
+      angle: lean,
+      duration: Math.min(220, duration),
+      ease: E.snap,
+    });
+  }
+
+  if (flying) return;
+
+  // Krok: odbicie z ziemi, wyciągnięcie w locie, ugięcie przy lądowaniu.
+  // `yoyo` domyka cykl dokładnie na granicy pola, więc następny krok zaczyna
+  // się z tego samego stanu, w którym poprzedni skończył.
+  const half = duration / 2;
+  view.moveHop?.remove();
+  view.moveHop = scene.tweens.add({
+    targets: view.sprite,
+    y: { from: FEET_Y, to: FEET_Y - STEP_HOP },
+    duration: half,
+    ease: 'Sine.easeOut',
+    yoyo: true,
+  });
+
+  view.moveSquash?.remove();
+  view.moveSquash = scene.tweens.add({
+    targets: view.sprite,
+    scaleX: { from: view.baseScaleX * (1 + SQUASH), to: view.baseScaleX * (1 - SQUASH * 0.7) },
+    scaleY: { from: view.baseScaleY * (1 - SQUASH), to: view.baseScaleY * (1 + SQUASH * 0.9) },
+    duration: half,
+    ease: 'Sine.easeOut',
+    yoyo: true,
+  });
+
+  // Cień w PRZECIWFAZIE: u szczytu mniejszy i jaśniejszy, przy zetknięciu
+  // szerszy i ciemniejszy. To ono robi z podskoku oderwanie się od ziemi.
+  view.moveShadow?.remove();
+  view.moveShadow = scene.tweens.add({
+    targets: view.shadow,
+    scaleX: { from: 1.22, to: 0.55 },
+    scaleY: { from: 1.22, to: 0.55 },
+    alpha: { from: 1, to: 0.34 },
+    duration: half,
+    ease: 'Sine.easeOut',
+    yoyo: true,
+  });
+}
+
+/**
+ * Koniec przejścia. Latacz opada na linię stóp, piechota już na niej stoi;
+ * w obu wypadkach przechył jest wychodzony, a oddech wraca.
+ */
+export function endUnitMove(scene: Phaser.Scene, view: UnitView, flying: boolean) {
+  if (!alive(view)) {
+    resetMoveTweens(view);
+    return;
+  }
+  resetMoveTweens(view);
+
+  const land = flying ? 260 : 140;
+  view.moveHop = scene.tweens.add({
+    targets: view.sprite,
+    y: FEET_Y,
+    duration: land,
+    ease: flying ? 'Sine.easeIn' : E.snap,
+    onComplete: () => {
+      if (!alive(view)) return;
+      view.sprite.setPosition(0, FEET_Y).setAngle(0).setScale(view.baseScaleX, view.baseScaleY);
+      view.moveHop = undefined;
+      startBreathing(scene, view, view.seed);
+    },
+  });
+  view.moveSquash = scene.tweens.add({
+    targets: view.sprite,
+    scaleX: view.baseScaleX,
+    scaleY: view.baseScaleY,
+    duration: land,
+    ease: E.snap,
+  });
+  view.moveLean = scene.tweens.add({
+    targets: view.sprite,
+    angle: 0,
+    duration: land,
+    ease: E.snap,
+  });
+  view.moveShadow = scene.tweens.add({
+    targets: view.shadow,
+    y: SHADOW_Y,
+    scaleX: 1,
+    scaleY: 1,
+    alpha: SHADOW_REST,
+    duration: land,
+    ease: E.snap,
+  });
+}
+
 // ---------- śmierć ----------
 
 /**
@@ -736,6 +977,9 @@ export function setUnitActive(scene: Phaser.Scene, view: UnitView, active: boole
  */
 export function playUnitDeath(scene: Phaser.Scene, view: UnitView, onDone: () => void) {
   view.breath?.remove();
+  // Ruch mógł zostać przerwany śmiercią — zdejmujemy jego tweeny, żeby nic nie
+  // dociągało sylwetki w trakcie rozsypki.
+  resetMoveTweens(view);
   scene.tweens.killTweensOf(view.activeRing);
   view.activeRing.setVisible(false);
 
