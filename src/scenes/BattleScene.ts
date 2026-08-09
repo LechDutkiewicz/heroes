@@ -11,6 +11,7 @@ import { ALL_SPRITES, FACTIONS, factionById, type Faction } from '../data/factio
 import { type Cell } from '../data/hex';
 // Wszystkie zasady walki biorą się STĄD i tylko stąd. Scena ma je odgrywać,
 // nie powtarzać — druga kopia reguł rozjechałaby się z symulatorem balansu.
+import { initSfx, loadSfx, sfx, toggleSfx } from '../audio/sfx';
 import {
   GUARD_REDUCTION,
   START_ROWS,
@@ -266,6 +267,7 @@ export class BattleScene extends Phaser.Scene {
     for (const key of ALL_OBSTACLES) {
       this.load.image(key, `${import.meta.env.BASE_URL}terrain/obstacles/${key}.png`);
     }
+    loadSfx(this);
   }
 
   /**
@@ -322,6 +324,7 @@ export class BattleScene extends Phaser.Scene {
     // To samo dotyczy tekstur efektów: iskra i poświata muszą istnieć, zanim
     // padnie pierwszy cios.
     buildEffectTextures(this);
+    initSfx(this);
     drawBackground(this);
     drawBoard(this, this.terrain.key);
     this.drawHud();
@@ -354,6 +357,17 @@ export class BattleScene extends Phaser.Scene {
 
     this.input.keyboard?.on('keydown-C', () => this.waitTurn());
     this.input.keyboard?.on('keydown-O', () => this.guardTurn());
+    // Wyciszenie. Dźwięku nie da się przeczekać wzrokiem jak animacji — kto go
+    // nie chce, musi mieć czym wyłączyć od razu, bez wchodzenia w ustawienia.
+    this.input.keyboard?.on('keydown-M', () => {
+      const wlaczony = toggleSfx(this);
+      floatLabel(this, this.effectLayer, {
+        x: this.scale.width / 2,
+        y: 96,
+        text: wlaczony ? 'Dźwięk włączony  (M)' : 'Dźwięk wyciszony  (M)',
+        color: '#cfd8dc',
+      });
+    });
 
     startRound(this.battle);
     this.beginTurn();
@@ -557,7 +571,7 @@ export class BattleScene extends Phaser.Scene {
       CONTENT_W,
       FORECAST_H,
       MINI.forecast,
-      'Najedź kursorem na wroga, żeby zobaczyć prognozę obrażeń'
+      'Najedź kursorem na wroga, żeby zobaczyć prognozę obrażeń  ·  M wycisza dźwięk'
     );
   }
 
@@ -1095,6 +1109,9 @@ export class BattleScene extends Phaser.Scene {
 
   /** Sam tween przejścia na pole — stanu nie rusza, ten zmienia `battle.ts`. */
   private animateMove(unit: Unit, col: number, row: number, onDone: () => void) {
+    // Krok. Cicho i tylko raz na przejście, nie na pole — dwanaście oddziałów
+    // maszerujących co rundę z dźwiękiem na każdy heks robi z bitwy deptak.
+    sfx(this, 'krok');
     // Niższe rzędy zasłaniają wyższe, żeby oddziały i drzewa układały się
     // w naturalnej kolejności.
     unit.container.setDepth(10 + row);
@@ -1228,6 +1245,7 @@ export class BattleScene extends Phaser.Scene {
           onComplete: () => {
             // Cięcie rysujemy w połowie drogi do celu, czyli tam, gdzie ręce
             // faktycznie się spotykają — nie na środku hexa obrońcy.
+            sfx(this, 'ciecie');
             slashArc(
               this,
               this.effectLayer,
@@ -1252,6 +1270,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** Pocisk strzelca — kształt, barwa i ślad bierze się z żywiołu (effects.ts). */
   private fireProjectile(attacker: Unit, target: Unit, broken: boolean, onDone: () => void) {
+    sfx(this, 'strzal');
     launchProjectile(
       this,
       this.effectLayer,
@@ -1283,6 +1302,15 @@ export class BattleScene extends Phaser.Scene {
     // wybija pół oddziału.
     const power = Phaser.Math.Clamp(value / Math.max(1, fullHp(target.def)), 0.08, 1);
     const hitAt = this.cellToXY(target.col, target.row);
+
+    // Dźwięk trafienia. Trzy różne, bo przewaga typu jest informacją, którą
+    // gracz i tak czyta z napisu — ucho odbiera ją szybciej niż wzrok, jeśli
+    // cios z przewagą brzmi inaczej niż cios odbity. Dzwon przewagi idzie
+    // NAD uderzeniem, nie zamiast: sam dzwon bez trzasku brzmi jak nagroda,
+    // a nie jak cios.
+    if (ev.strzal) sfx(this, 'pocisk', power);
+    sfx(this, typeMult > 1 ? 'trafienieMocne' : typeMult < 1 ? 'trafienieSlabe' : 'trafienie', power);
+    if (typeMult > 1) sfx(this, 'przewaga', power);
     impactBurst(this, this.effectLayer, hitAt.x, hitAt.y - 10, {
       color: TYPE_INFO[attacker.def.type].color,
       power,
@@ -1324,6 +1352,7 @@ export class BattleScene extends Phaser.Scene {
   private playDeath(id: number) {
     const unit = this.unitById(id);
     const at = this.cellToXY(unit.col, unit.row);
+    sfx(this, 'smierc');
     deathFlash(this, this.effectLayer, at.x, at.y - 6, sideAccent(unit.side).color);
     playUnitDeath(this, unit.view, () => {});
   }

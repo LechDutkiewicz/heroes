@@ -44,6 +44,22 @@ const stan = () =>
     return { runda: s.battle.round, zywe: s.battle.units.length, koniec: !!s.gameOver };
   });
 
+/**
+ * Ile próbek dźwięku faktycznie się wczytało.
+ *
+ * Czego to NIE sprawdza: czy cokolwiek słychać. Przeglądarka bez karty
+ * dźwiękowej i bez gestu użytkownika trzyma kontekst zablokowany, więc
+ * liczenie odtworzeń nic by nie powiedziało. Sprawdzamy to, co da się
+ * sprawdzić uczciwie: że pliki są pod właściwymi adresami i dają się
+ * zdekodować. Zła ścieżka albo zły format wywala się właśnie tutaj,
+ * a nie dopiero w uszach gracza.
+ */
+const probki = () =>
+  page.evaluate(() => window.__game.scene.getScene('battle').cache.audio.getKeys().length);
+
+/** Tyle plików leży w public/audio — patrz PLIKI w src/audio/sfx.ts. */
+const PROBEK = 12;
+
 let zleSeedy = 0;
 for (const seed of SEEDS) {
   const przed = bledy.length;
@@ -63,16 +79,19 @@ for (const seed of SEEDS) {
     ostatni = await stan().catch(() => ostatni);
   }
 
+  const dzwieki = await probki().catch(() => 0);
   const nowe = bledy.length - przed;
   // Bitwa nie musi się rozstrzygnąć w budżecie, ale musi się posuwać:
   // brak jakiegokolwiek postępu to zakleszczona kolejka albo martwa tura.
   const stoi = ostatni.runda <= 1 && ostatni.zywe === 12;
-  const zle = nowe > 0 || stoi;
+  const brakDzwiekow = dzwieki < PROBEK;
+  const zle = nowe > 0 || stoi || brakDzwiekow;
   if (zle) zleSeedy++;
   console.log(
     `seed ${String(seed).padStart(2)}: runda ${ostatni.runda}, żywych ${ostatni.zywe}` +
       `${ostatni.koniec ? ', rozstrzygnięta' : ''}` +
-      `  ${zle ? `ŹLE${stoi ? ' (bitwa stoi)' : ''}` : 'ok'}`
+      `, próbek ${dzwieki}/${PROBEK}` +
+      `  ${zle ? `ŹLE${stoi ? ' (bitwa stoi)' : ''}${brakDzwiekow ? ' (brak próbek)' : ''}` : 'ok'}`
   );
 }
 
