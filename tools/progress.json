@@ -1,133 +1,146 @@
 {
-  "updated": "2026-08-08 06:34",
-  "pieces": [
+ "updated": "2026-08-09 12:38",
+ "pieces": [
+  {
+   "name": "Plansza: siatka, teren, rama",
+   "status": "done",
+   "note": "Zamknięta w rundzie 3. Pola są kaflami z kierunkiem światła, rama i winieta dają bryłę, teren bez rozmycia.",
+   "shots": [
+    "10-sama-plansza",
+    "01-start-snieg"
+   ],
+   "rounds": [
     {
-      "name": "Plansza: siatka, teren, rama",
-      "status": "done",
-      "note": "Zamknięta w rundzie 3. Pola są kaflami z kierunkiem światła, rama i winieta dają bryłę, teren bez rozmycia.",
-      "shots": [
-        "10-sama-plansza",
-        "01-start-snieg"
-      ],
-      "rounds": [
-        {
-          "win": false,
-          "blind": "plansza-r1",
-          "gap": "Krawędź heksa to pojedyncza kreska ~1px w jednym kolorze, identyczna na całej planszy — siatka wygląda jak nałożony drut, nie jak kafle terenu. We wzorcu krawędź jest trójwarstwowa: ciemny obrys zewnętrzny, wewnętrzna jasna fazka po górnych bokach i lekkie ściemnienie po dolnych, plus samo pole ma własne półprzezroczyste wypełnienie z gradientem.",
-          "note": "Werdykt trafny. Builder poszedł poprawiać."
-        },
-        {
-          "win": false,
-          "blind": "plansza-r2",
-          "gap": "Siatka to tylko półprzezroczyste linie 1px na płaskiej trawie: brak fazowania, brak cienia pod polem, brak różnicy między polem a podłożem.",
-          "note": "WERDYKT UNIEWAŻNIONY — wina po mojej stronie, nie buildera. Porównanie wpisywało oba kadry w równe kolumny, więc nasz zrzut (1732px) szedł do 44%, a wzorzec (578px) do 132%. Fazka o grubości 1,8px schodziła poniżej piksela i znikała. Krytyk opisywał artefakt skalowania, nie naszą pracę. Naprawiłem porównanie: kadry idą teraz w rozdzielczości własnej, wycinane oknem zamiast skalowane."
-        },
-        {
-          "win": true,
-          "blind": "plansza-r3",
-          "gap": "Nasz kadr ma krawędź o realnej grubości z wewnętrznym rozjaśnieniem, gradient jasność-góra → ciemniej-dół, czyli jeden spójny kierunek światła, i teksturę budującą podłoże. Wzorzec traci na tym porównaniu przez płaskie wielokąty z konturem w kolorze wypełnienia i różnobarwne obwódki rozbijające paletę.",
-          "note": "Wygrana na uczciwym porównaniu. Krytyk odnotował dwie nasze słabości mimo wyboru: monotonia żółto-zielona na łące i brak cienia rzucanego przez pole."
-        }
-      ]
+     "win": false,
+     "blind": "plansza-r1",
+     "gap": "Krawędź heksa to pojedyncza kreska ~1px w jednym kolorze, identyczna na całej planszy — siatka wygląda jak nałożony drut, nie jak kafle terenu. We wzorcu krawędź jest trójwarstwowa: ciemny obrys zewnętrzny, wewnętrzna jasna fazka po górnych bokach i lekkie ściemnienie po dolnych, plus samo pole ma własne półprzezroczyste wypełnienie z gradientem.",
+     "note": "Werdykt trafny. Builder poszedł poprawiać."
     },
     {
-      "name": "Oddziały: tabliczka, pasek HP, ikony",
-      "status": "running",
-      "note": "Wada funkcjonalna naprawiona i zweryfikowana na drabinie 100/60/30/10/1. Kawałek czeka na jedną wąską rundę: rozjaśnić koryto. Kierunek z rund 1-4 był błędny i to moja wina — patrz notatka przy rundzie 5.",
-      "shots": [
-        "11-oddzialy-ranne",
-        "12-drabina-hp"
-      ],
-      "rounds": [
-        {
-          "win": false,
-          "blind": "oddzialy-r1",
-          "gap": "Pasek HP to płaskie wypełnienie w płaskim korycie — jeden kolor, prostokątny, bez ciała. We wzorcu każdy odpowiednik ma trzy warstwy: ciemny obrys 1–2px na całym obwodzie, wypełnienie z pionowym gradientem (ok. 25–30% różnicy jasności) i wąski półprzezroczysty highlight w górnej 30–40% wysokości, plus cień 1–2px pod spodem. Sam pasek jest też za cienki: ~6px na 4px wypełnienia nie mieści żadnego modelowania, potrzeba 10–12px.",
-          "note": "Krytyk dorzucił, że plakietki nadal miejscami nachodzą na siebie i na stworki, a odstępy między nazwą, plakietką i paskiem są nierówne — mimo że builder uznał ten problem za rozwiązany."
-        },
-        {
-          "win": false,
-          "blind": "oddzialy-r2",
-          "gap": "Pasek zdrowia to goły zielony prostokąt o zaokrąglonych rogach — jedno płaskie wypełnienie, i w dodatku oddzielony od liczby, która siedzi w osobnym kółku obok. Trzy oddzielne kapsułki na jedną jednostkę zajmują więcej pola niż sam stworek i nachodzą na siebie, podczas gdy wzorzec trzyma jeden pas = jedna informacja. Wpisz liczbę w prawy koniec tej samej kapsułki zamiast osobnego bąbla — to od razu usuwa jeden z trzech konkurujących elementów.",
-          "note": "Werdykt sprawdzony przeze mnie na obrazie, bo brzmiał jak zaprzeczenie tego, co builder zbudował. Koryto i gradient są w kodzie, ale przy realnej skali paska nie budują ciała. Krytyk ma rację. Sylwetka stworka zeszła do 42 px i jest najmniejszym elementem na własnym polu — odwrócona hierarchia. To runda do przeprojektowania, nie do polerowania."
-        },
-        {
-          "win": false,
-          "blind": "oddzialy-r3",
-          "gap": "Plakietka i pasek to płaskie prostokąty z ledwie zaokrąglonymi rogami, koryto jest gołym ciemnym prostokątem bez wewnętrznego cienia, a liczba siedzi w doklejonym z boku kaflu zamiast w jednym korpusie. Oprawa waży więcej niż stworek, który opisuje — pasek ma niemal szerokość sylwetki. Promień ma być równy połowie wysokości, a cały pasek zejść do 60-70% obecnej szerokości.",
-          "note": "Ciekawa różnica między kodem a odbiorem: builder faktycznie scalił życie i liczebność w jeden kształt z jednym obrysem, ale ciemna szczelina między strefami jest na tyle wyraźna, że wizualnie rozcina kapsułkę z powrotem na dwa kafle. Kod mówi „jeden kształt\", oko widzi dwa. Kierunek na rundę 4: liczba w okrągłej plakietce nachodzącej na koniec paska — nakładka czyta się jako jeden obiekt z dodatkiem, przyleganie jako dwa obiekty."
-        },
-        {
-          "win": false,
-          "blind": "oddzialy-r4",
-          "gap": "Pasek stanu to goły prostokąt w korycie — bez wewnętrznego cienia, bez połysku, bez zaokrąglenia wypełnienia. Zamień na kapsułkę: koryto o promieniu równym połowie wysokości, ciemny obrys 1 px i wewnętrzny cień od góry, wypełnienie z tym samym zaokrągleniem, gradientem jaśniejszym o ~25% u góry i pasmem połysku na górnej jednej trzeciej.",
-          "note": "Sprawdziłem to powiększeniem paska pięciokrotnie i krytyk myli się co do faktu, a ma rację co do wniosku. Wypełnienie JEST zaokrąglone — to nie jest prostokąt. Ale przy 4/7 życia zaokrąglona pigułka degeneruje się w kółko: pasek przestaje być paskiem, bo kształt nie niesie już długości, a to jedyne zadanie paska życia. To jest realna wada, której nie nazwał żaden z czterech werdyktów. Punkt wyjścia rundy 5: wypełnienie ma zostać paskiem na całym zakresie — zaokrąglenie tylko na krańcach, nigdy kosztem czytelności długości — plus gradient i połysk, których faktycznie nie ma."
-        },
-        {
-          "win": false,
-          "blind": "pasek-r1",
-          "gap": "Piąty werdykt znów zażądał trójwarstwowej kapsułki z gradientem i połyskiem oraz stwierdził brak koryta i podziałek — których obecność sam sprawdziłem chwilę wcześniej w powiększeniu.",
-          "note": "BŁĄD POPRZECZKI, MOJA WINA. Przez pięć rund kazałem porównywać pasek życia o wysokości 14 px z pełnoekranową tabelą statystyk, gdzie wiersze mają 30 px, a przyciski 55. Gradient, połysk i wewnętrzny cień są przy 14 px fizycznie nierozróżnialne — krytyk nie kłamał, on ich naprawdę nie widział, ale opisywał brak jako wadę konstrukcji i słał buildera do przebudowy rzeczy, które już istnieją. Znalazłem właściwy wzorzec: pasek postępu Affinity w Masters EX ma niemal identyczną wysokość co nasz i jest PŁASKI — proste wypełnienie w JASNYM korycie, cienki obrys, zero gradientu, zero połysku. Trójwarstwowa kapsułka to idiom dużych przycisków, nie małych pasków. Nasz pasek jest więc bardziej rozbudowany niż wzorzec, a jedyna realna różnica to koryto: nasze prawie czarne, wzorcowe jasne. Dalsze podążanie za kierunkiem z rund 1-4 oddalałoby nas od wzorca, nie zbliżało."
-        }
-      ]
+     "win": false,
+     "blind": "plansza-r2",
+     "gap": "Siatka to tylko półprzezroczyste linie 1px na płaskiej trawie: brak fazowania, brak cienia pod polem, brak różnicy między polem a podłożem.",
+     "note": "WERDYKT UNIEWAŻNIONY — wina po mojej stronie, nie buildera. Porównanie wpisywało oba kadry w równe kolumny, więc nasz zrzut (1732px) szedł do 44%, a wzorzec (578px) do 132%. Fazka o grubości 1,8px schodziła poniżej piksela i znikała. Krytyk opisywał artefakt skalowania, nie naszą pracę. Naprawiłem porównanie: kadry idą teraz w rozdzielczości własnej, wycinane oknem zamiast skalowane."
     },
     {
-      "name": "Animacje walki i efekty trafienia",
-      "status": "running",
-      "note": "Runda 5 w toku. Obwiednia czasowa naprawiona, światło żyje przez cały przebieg. Poprzeczka skorygowana — patrz notatka przy rundzie 4.",
-      "shots": [
-        "04-przebieg-rozblysku",
-        "06-pocisk-w-locie"
-      ],
-      "rounds": [
-        {
-          "win": false,
-          "blind": "animacje-r1",
-          "gap": "Wzorzec ma światło o realnej barwie i temperaturze, z warstwą smug i iskrami o zróżnicowanym rozmiarze i rozmyciu — z przodu ostre, w tle zdmuchnięte w pył. Światło zalewa scenę i wchodzi w postać. U nas rozbłysk to jedna biała plamka ~30 px z paroma identycznymi kreskami, bez poświaty, bez barwy, bez wpływu na resztę planszy — naklejka. Dodaj radialny gradient 200-250 px w barwie żywiołu, gasnący do zera, rozjaśniający sąsiednie pola, i rozrzuć 30-50 iskier o losowym promieniu 1-4 px.",
-          "note": "Krytyk odnotował też, że napisy nachodzą na siebie i na plakietki — potwierdzam z własnego oglądu. Builder sam znalazł wcześniej błąd w harnessie: zrzuty odliczały milisekundy zegara, a sam screenshot zjada kilkaset ms, więc przy spowolnieniu 0.12 fotografowały klatkę po efekcie. Teraz czekają na zdarzenie i pauzują scenę."
-        },
-        {
-          "win": false,
-          "blind": "animacje-r2",
-          "gap": "Wzorzec ma światło o wyraźnej temperaturze — złoto-bursztynowy rdzeń przechodzący w cieplejszy pomarańcz na brzegach — i to światło obrysowuje postać, kładzie się na jej barwie. U nas rozbłysk to biała, przepalona plama bez rdzenia i bez barwy. Rozwarstw go: mały rdzeń ~15% średnicy w bieli, wokół barwna poświata w kolorze żywiołu sięgająca 2-3x dalej z wykładniczym spadkiem, 20-40 iskier w trzech rozmiarach i globalne rozjaśnienie planszy o 10-15% na 150-200 ms.",
-          "note": "Runda 2 przyniosła najważniejsze ustalenie całej pętli: w rundzie 1 rozbłysk W OGÓLE się nie renderował widocznie. Trzy błędy naraz — tekstura łuny z alfą 0,6 rozciągniętą na 250 px, iskry rysowane w rozmiarze 2r (jasny rdzeń schodził poniżej piksela) i barwa w trybie ADD bielejąca na jasnej łące. Widać było wyłącznie białe rozbielenie sprite'a. Werdykt rundy 1 był trafny co do skutku, ale gdyby builder poszedł ślepo za literą zalecenia, powiększyłby coś, czego i tak nie widać."
-        },
-        {
-          "win": false,
-          "blind": "animacje-r4b",
-          "gap": "Wzorzec ma budowę: rdzeń u nasady, wachlarz promieni o różnej szerokości i rozmyciu, osobna fala rozchodząca się po ziemi, która realnie rozjaśnia teren i sylwetkę. U nas garść drobnych iskierek i mglista plamka — brak rdzenia, brak promieni, brak fali. Nic nie jest oświetlone: heks, sprite i pasek mają tę samą jasność co poza efektem. Dodatkowo barwa efektu trawiastego jest niemal identyczna z barwą trawy, więc efekt ginie.",
-          "note": "DRUGI BŁĄD POPRZECZKI, MOJA WINA — złapany po jednej rundzie zamiast po pięciu. Trzy pierwsze werdykty animacji wydano na masters-08.jpg, czyli na PEŁNOEKRANOWEJ SCENCE EWOLUCJI, gdzie cały kadr jest oddany jednemu świecącemu stworkowi. Nasz efekt zajmuje jeden heks z siedemdziesięciu, a reszta kadru musi pokazywać stan gry. Ta konkurencja jest nie do wygrania, a gonienie jej oznaczałoby zalanie planszy światłem przy każdym z kilkudziesięciu trafień w bitwie. Krytyk sam się o to otarł, żądając globalnego rozjaśnienia. Zmieniłem wzorzec na ekran „Theme Skills!\" z tej samej gry — rozbłysk położony NA SCENIE WALKI, przez który świat pozostaje czytelny. Werdykt na właściwym wzorcu utrzymał się, ale jego zalecenia są teraz lokalne i wykonalne."
-        }
-      ]
-    },
-    {
-      "name": "HUD: nagłówek, kolejka, panel, przyciski",
-      "status": "done",
-      "note": "ZAMKNIĘTY w rundzie 3. Panel to jeden system kapsułek z hierarchią na trzech poziomach, znaki mini w jednej wadze, domknięty rytm kolumn i osobna strefa podpisów pod tabelą.",
-      "shots": [
-        "02-tura-gracza",
-        "08-zwyciestwo"
-      ],
-      "rounds": [
-        {
-          "win": false,
-          "blind": "hud-r1b",
-          "gap": "Pasma są poprawnie zaokrąglone, ale ich tinty to tęcza — zieleń, krem, błękit, róż, żółć — dobrana pod treść, nie pod jeden filtr, przez co panel rozpada się wizualnie. Kolumny się nie domykają: lewa ma pięć wierszy, prawa cztery, a wiersz Umiejętność łamie siatkę na całą szerokość. Ikony nie są jednym kompletem — różny styl i różna waga rysunku.",
-          "note": "Pierwsze podejście unieważniłem: krytyk zgłosił obcięty tekst i prawą kolumnę poza kadrem jako błędy układu, a to obcięło je moje okno porównania o stałej szerokości 1600 px. Naprawiłem narzędzie i powtórzyłem — werdykt się utrzymał. Krytyk dwa razy nazwał nasze ikony systemowymi emoji; sprawdziłem powiększeniem i myli się co do faktu, bo są rysowane w kodzie, ale ma rację co do wrażenia. Są pełnobarwnymi naklejkami w rejestrze emoji, mają trzy różne wagi rysunku, ikona ruchu jest w tym rozmiarze nieczytelna, a miecz powtarza się w trzech wierszach o różnym znaczeniu."
-        },
-        {
-          "win": false,
-          "blind": "hud-r2",
-          "gap": "Pasma są równe i liczby dobrze wyrównane, ale wszystko leży płasko: etykiety to nieobrobiony sans bez konturu i cienia, hierarchia opiera się wyłącznie na pogrubieniu. Rytm pęka na dole — dwa pełnoszerokie pasma łamią dwukolumnową siatkę bez różnicy w traktowaniu.",
-          "note": "Pewność krytyka spadła z wysokiej na średnią — pierwszy sygnał, że kawałek się domyka. Zarzut o „systemowych emoji\" sprawdziłem powiększeniem i jest nieprawdziwy: znaki mini są jednobarwnymi sylwetkami w tej samej wadze. Trafna była tylko część o znaku żywiołu schodzącym w brąz."
-        },
-        {
-          "win": true,
-          "blind": "hud-r3",
-          "gap": "Nasze pasma tworzą jeden system — każdy wiersz to ta sama kapsułka z konturem, gradientem i wewnętrznym rozjaśnieniem, a etykieta i wartość mają jasną hierarchię, więc tekst siedzi NA paśmie. Przyciski mają ciało i czytają się jako klikalne. Rytm domknięty: dwie kolumny równej wysokości, dwa pełnoszerokie wiersze pod spodem jako osobna strefa. Wzorzec rozjeżdża się na cztery moduły o niezgodnych wysokościach i sześć pasteli bez akcentu.",
-          "note": "Ciekawe rozwiązanie brązowienia znaku żywiołu: brąz to ciemna pomarańcza o niskiej chromie, więc KAŻDE stonowanie ciepłej barwy chłodną bazą albo przyciemnieniem daje brąz. Builder rozdzielił drogi — ciepłe znaki najpierw odsuwa od własnej szarości, dopiero potem ściemnia do tej samej wagi optycznej co zimne. Typografię rozwiązał odwrotnie niż wzorzec: biała otoczka zamiast ciemnego konturu, bo pasma są jasne i czarny obrys zrobiłby jarmark."
-        }
-      ]
+     "win": true,
+     "blind": "plansza-r3",
+     "gap": "Nasz kadr ma krawędź o realnej grubości z wewnętrznym rozjaśnieniem, gradient jasność-góra → ciemniej-dół, czyli jeden spójny kierunek światła, i teksturę budującą podłoże. Wzorzec traci na tym porównaniu przez płaskie wielokąty z konturem w kolorze wypełnienia i różnobarwne obwódki rozbijające paletę.",
+     "note": "Wygrana na uczciwym porównaniu. Krytyk odnotował dwie nasze słabości mimo wyboru: monotonia żółto-zielona na łące i brak cienia rzucanego przez pole."
     }
-  ]
+   ]
+  },
+  {
+   "name": "Oddziały: tabliczka, pasek HP, ikony",
+   "status": "done",
+   "note": "ZAMKNIĘTY w rundzie 6. Po rozjaśnieniu koryta pasek WYGRAŁ ślepe porównanie z komercyjnym wzorcem (pasek Affinity z Masters EX) — krytyk wybrał nasz kadr i wytknął wzorcowi brak rowka, brak połysku i niespójną typografię. Poprzedni werdykt (runda 5) był wydany na złej poprzeczce, moja wina.",
+   "shots": [
+    "11-oddzialy-ranne",
+    "12-drabina-hp",
+    "zoom-pasek"
+   ],
+   "rounds": [
+    {
+     "win": false,
+     "blind": "oddzialy-r1",
+     "gap": "Pasek HP to płaskie wypełnienie w płaskim korycie — jeden kolor, prostokątny, bez ciała. We wzorcu każdy odpowiednik ma trzy warstwy: ciemny obrys 1–2px na całym obwodzie, wypełnienie z pionowym gradientem (ok. 25–30% różnicy jasności) i wąski półprzezroczysty highlight w górnej 30–40% wysokości, plus cień 1–2px pod spodem. Sam pasek jest też za cienki: ~6px na 4px wypełnienia nie mieści żadnego modelowania, potrzeba 10–12px.",
+     "note": "Krytyk dorzucił, że plakietki nadal miejscami nachodzą na siebie i na stworki, a odstępy między nazwą, plakietką i paskiem są nierówne — mimo że builder uznał ten problem za rozwiązany."
+    },
+    {
+     "win": false,
+     "blind": "oddzialy-r2",
+     "gap": "Pasek zdrowia to goły zielony prostokąt o zaokrąglonych rogach — jedno płaskie wypełnienie, i w dodatku oddzielony od liczby, która siedzi w osobnym kółku obok. Trzy oddzielne kapsułki na jedną jednostkę zajmują więcej pola niż sam stworek i nachodzą na siebie, podczas gdy wzorzec trzyma jeden pas = jedna informacja. Wpisz liczbę w prawy koniec tej samej kapsułki zamiast osobnego bąbla — to od razu usuwa jeden z trzech konkurujących elementów.",
+     "note": "Werdykt sprawdzony przeze mnie na obrazie, bo brzmiał jak zaprzeczenie tego, co builder zbudował. Koryto i gradient są w kodzie, ale przy realnej skali paska nie budują ciała. Krytyk ma rację. Sylwetka stworka zeszła do 42 px i jest najmniejszym elementem na własnym polu — odwrócona hierarchia. To runda do przeprojektowania, nie do polerowania."
+    },
+    {
+     "win": false,
+     "blind": "oddzialy-r3",
+     "gap": "Plakietka i pasek to płaskie prostokąty z ledwie zaokrąglonymi rogami, koryto jest gołym ciemnym prostokątem bez wewnętrznego cienia, a liczba siedzi w doklejonym z boku kaflu zamiast w jednym korpusie. Oprawa waży więcej niż stworek, który opisuje — pasek ma niemal szerokość sylwetki. Promień ma być równy połowie wysokości, a cały pasek zejść do 60-70% obecnej szerokości.",
+     "note": "Ciekawa różnica między kodem a odbiorem: builder faktycznie scalił życie i liczebność w jeden kształt z jednym obrysem, ale ciemna szczelina między strefami jest na tyle wyraźna, że wizualnie rozcina kapsułkę z powrotem na dwa kafle. Kod mówi „jeden kształt\", oko widzi dwa. Kierunek na rundę 4: liczba w okrągłej plakietce nachodzącej na koniec paska — nakładka czyta się jako jeden obiekt z dodatkiem, przyleganie jako dwa obiekty."
+    },
+    {
+     "win": false,
+     "blind": "oddzialy-r4",
+     "gap": "Pasek stanu to goły prostokąt w korycie — bez wewnętrznego cienia, bez połysku, bez zaokrąglenia wypełnienia. Zamień na kapsułkę: koryto o promieniu równym połowie wysokości, ciemny obrys 1 px i wewnętrzny cień od góry, wypełnienie z tym samym zaokrągleniem, gradientem jaśniejszym o ~25% u góry i pasmem połysku na górnej jednej trzeciej.",
+     "note": "Sprawdziłem to powiększeniem paska pięciokrotnie i krytyk myli się co do faktu, a ma rację co do wniosku. Wypełnienie JEST zaokrąglone — to nie jest prostokąt. Ale przy 4/7 życia zaokrąglona pigułka degeneruje się w kółko: pasek przestaje być paskiem, bo kształt nie niesie już długości, a to jedyne zadanie paska życia. To jest realna wada, której nie nazwał żaden z czterech werdyktów. Punkt wyjścia rundy 5: wypełnienie ma zostać paskiem na całym zakresie — zaokrąglenie tylko na krańcach, nigdy kosztem czytelności długości — plus gradient i połysk, których faktycznie nie ma."
+    },
+    {
+     "win": false,
+     "blind": "pasek-r1",
+     "gap": "Piąty werdykt znów zażądał trójwarstwowej kapsułki z gradientem i połyskiem oraz stwierdził brak koryta i podziałek — których obecność sam sprawdziłem chwilę wcześniej w powiększeniu.",
+     "note": "BŁĄD POPRZECZKI, MOJA WINA. Przez pięć rund kazałem porównywać pasek życia o wysokości 14 px z pełnoekranową tabelą statystyk, gdzie wiersze mają 30 px, a przyciski 55. Gradient, połysk i wewnętrzny cień są przy 14 px fizycznie nierozróżnialne — krytyk nie kłamał, on ich naprawdę nie widział, ale opisywał brak jako wadę konstrukcji i słał buildera do przebudowy rzeczy, które już istnieją. Znalazłem właściwy wzorzec: pasek postępu Affinity w Masters EX ma niemal identyczną wysokość co nasz i jest PŁASKI — proste wypełnienie w JASNYM korycie, cienki obrys, zero gradientu, zero połysku. Trójwarstwowa kapsułka to idiom dużych przycisków, nie małych pasków. Nasz pasek jest więc bardziej rozbudowany niż wzorzec, a jedyna realna różnica to koryto: nasze prawie czarne, wzorcowe jasne. Dalsze podążanie za kierunkiem z rund 1-4 oddalałoby nas od wzorca, nie zbliżało."
+    },
+    {
+     "win": true,
+     "blind": "pasek-r2",
+     "gap": "Nasz pasek to kapsułka o promieniu równym połowie wysokości, z ciemnym obrysem ~2 px, pasem połysku w górnej połowie wypełnienia i miękkim cieniem — czyta się jako obiekt leżący nad tłem. Wzorzec przegrywa jako pojedynczy prostokąt wypełnienia na płaskim tle panelu, bez rowka i bez cienia.",
+     "note": "Wygrana na uczciwej poprzeczce: oba paski w rozdzielczości własnej i o zbliżonej wysokości (~28 px). Dopiero po naprawieniu porównania z rundy 5 dało się to rozstrzygnąć."
+    }
+   ]
+  },
+  {
+   "name": "Animacje walki i efekty trafienia",
+   "status": "running",
+   "note": "Runda 5 oceniona — przegrana. Rdzeń rozbłysku jest przepaloną białą plamą; energia ma przejść w promienie. Buduje się runda 6.",
+   "shots": [
+    "04-przebieg-rozblysku",
+    "06-pocisk-w-locie"
+   ],
+   "rounds": [
+    {
+     "win": false,
+     "blind": "animacje-r1",
+     "gap": "Wzorzec ma światło o realnej barwie i temperaturze, z warstwą smug i iskrami o zróżnicowanym rozmiarze i rozmyciu — z przodu ostre, w tle zdmuchnięte w pył. Światło zalewa scenę i wchodzi w postać. U nas rozbłysk to jedna biała plamka ~30 px z paroma identycznymi kreskami, bez poświaty, bez barwy, bez wpływu na resztę planszy — naklejka. Dodaj radialny gradient 200-250 px w barwie żywiołu, gasnący do zera, rozjaśniający sąsiednie pola, i rozrzuć 30-50 iskier o losowym promieniu 1-4 px.",
+     "note": "Krytyk odnotował też, że napisy nachodzą na siebie i na plakietki — potwierdzam z własnego oglądu. Builder sam znalazł wcześniej błąd w harnessie: zrzuty odliczały milisekundy zegara, a sam screenshot zjada kilkaset ms, więc przy spowolnieniu 0.12 fotografowały klatkę po efekcie. Teraz czekają na zdarzenie i pauzują scenę."
+    },
+    {
+     "win": false,
+     "blind": "animacje-r2",
+     "gap": "Wzorzec ma światło o wyraźnej temperaturze — złoto-bursztynowy rdzeń przechodzący w cieplejszy pomarańcz na brzegach — i to światło obrysowuje postać, kładzie się na jej barwie. U nas rozbłysk to biała, przepalona plama bez rdzenia i bez barwy. Rozwarstw go: mały rdzeń ~15% średnicy w bieli, wokół barwna poświata w kolorze żywiołu sięgająca 2-3x dalej z wykładniczym spadkiem, 20-40 iskier w trzech rozmiarach i globalne rozjaśnienie planszy o 10-15% na 150-200 ms.",
+     "note": "Runda 2 przyniosła najważniejsze ustalenie całej pętli: w rundzie 1 rozbłysk W OGÓLE się nie renderował widocznie. Trzy błędy naraz — tekstura łuny z alfą 0,6 rozciągniętą na 250 px, iskry rysowane w rozmiarze 2r (jasny rdzeń schodził poniżej piksela) i barwa w trybie ADD bielejąca na jasnej łące. Widać było wyłącznie białe rozbielenie sprite'a. Werdykt rundy 1 był trafny co do skutku, ale gdyby builder poszedł ślepo za literą zalecenia, powiększyłby coś, czego i tak nie widać."
+    },
+    {
+     "win": false,
+     "blind": "animacje-r4b",
+     "gap": "Wzorzec ma budowę: rdzeń u nasady, wachlarz promieni o różnej szerokości i rozmyciu, osobna fala rozchodząca się po ziemi, która realnie rozjaśnia teren i sylwetkę. U nas garść drobnych iskierek i mglista plamka — brak rdzenia, brak promieni, brak fali. Nic nie jest oświetlone: heks, sprite i pasek mają tę samą jasność co poza efektem. Dodatkowo barwa efektu trawiastego jest niemal identyczna z barwą trawy, więc efekt ginie.",
+     "note": "DRUGI BŁĄD POPRZECZKI, MOJA WINA — złapany po jednej rundzie zamiast po pięciu. Trzy pierwsze werdykty animacji wydano na masters-08.jpg, czyli na PEŁNOEKRANOWEJ SCENCE EWOLUCJI, gdzie cały kadr jest oddany jednemu świecącemu stworkowi. Nasz efekt zajmuje jeden heks z siedemdziesięciu, a reszta kadru musi pokazywać stan gry. Ta konkurencja jest nie do wygrania, a gonienie jej oznaczałoby zalanie planszy światłem przy każdym z kilkudziesięciu trafień w bitwie. Krytyk sam się o to otarł, żądając globalnego rozjaśnienia. Zmieniłem wzorzec na ekran „Theme Skills!\" z tej samej gry — rozbłysk położony NA SCENIE WALKI, przez który świat pozostaje czytelny. Werdykt na właściwym wzorcu utrzymał się, ale jego zalecenia są teraz lokalne i wykonalne."
+    },
+    {
+     "win": false,
+     "blind": "animacje-r5",
+     "gap": "Nasz rozbłysk to jedna przepalona, niemal kolista plama czystej bieli — rdzeń, halo i poświata zlewają się w jeden clipping, bez struktury promieni. Wzorzec ma kierunkowy wachlarz promieni o zróżnicowanej długości i grubości, z miękkim wygaszaniem końcówek i przejściem barwy zamiast bieli do bieli. Rdzeń ma być DUŻO mniejszy, a energia przeniesiona do promieni; spadek poświaty nieliniowy (pow 2-3).",
+     "note": "Krytyk dorzucił, że światło nie kładzie się na otoczeniu — sąsiednie pola, pasek życia i sprite zachowują bazową jasność, więc błysk wygląda jak naklejka nad planszą."
+    }
+   ]
+  },
+  {
+   "name": "HUD: nagłówek, kolejka, panel, przyciski",
+   "status": "done",
+   "note": "ZAMKNIĘTY w rundzie 3. Panel to jeden system kapsułek z hierarchią na trzech poziomach, znaki mini w jednej wadze, domknięty rytm kolumn i osobna strefa podpisów pod tabelą.",
+   "shots": [
+    "02-tura-gracza",
+    "08-zwyciestwo"
+   ],
+   "rounds": [
+    {
+     "win": false,
+     "blind": "hud-r1b",
+     "gap": "Pasma są poprawnie zaokrąglone, ale ich tinty to tęcza — zieleń, krem, błękit, róż, żółć — dobrana pod treść, nie pod jeden filtr, przez co panel rozpada się wizualnie. Kolumny się nie domykają: lewa ma pięć wierszy, prawa cztery, a wiersz Umiejętność łamie siatkę na całą szerokość. Ikony nie są jednym kompletem — różny styl i różna waga rysunku.",
+     "note": "Pierwsze podejście unieważniłem: krytyk zgłosił obcięty tekst i prawą kolumnę poza kadrem jako błędy układu, a to obcięło je moje okno porównania o stałej szerokości 1600 px. Naprawiłem narzędzie i powtórzyłem — werdykt się utrzymał. Krytyk dwa razy nazwał nasze ikony systemowymi emoji; sprawdziłem powiększeniem i myli się co do faktu, bo są rysowane w kodzie, ale ma rację co do wrażenia. Są pełnobarwnymi naklejkami w rejestrze emoji, mają trzy różne wagi rysunku, ikona ruchu jest w tym rozmiarze nieczytelna, a miecz powtarza się w trzech wierszach o różnym znaczeniu."
+    },
+    {
+     "win": false,
+     "blind": "hud-r2",
+     "gap": "Pasma są równe i liczby dobrze wyrównane, ale wszystko leży płasko: etykiety to nieobrobiony sans bez konturu i cienia, hierarchia opiera się wyłącznie na pogrubieniu. Rytm pęka na dole — dwa pełnoszerokie pasma łamią dwukolumnową siatkę bez różnicy w traktowaniu.",
+     "note": "Pewność krytyka spadła z wysokiej na średnią — pierwszy sygnał, że kawałek się domyka. Zarzut o „systemowych emoji\" sprawdziłem powiększeniem i jest nieprawdziwy: znaki mini są jednobarwnymi sylwetkami w tej samej wadze. Trafna była tylko część o znaku żywiołu schodzącym w brąz."
+    },
+    {
+     "win": true,
+     "blind": "hud-r3",
+     "gap": "Nasze pasma tworzą jeden system — każdy wiersz to ta sama kapsułka z konturem, gradientem i wewnętrznym rozjaśnieniem, a etykieta i wartość mają jasną hierarchię, więc tekst siedzi NA paśmie. Przyciski mają ciało i czytają się jako klikalne. Rytm domknięty: dwie kolumny równej wysokości, dwa pełnoszerokie wiersze pod spodem jako osobna strefa. Wzorzec rozjeżdża się na cztery moduły o niezgodnych wysokościach i sześć pasteli bez akcentu.",
+     "note": "Ciekawe rozwiązanie brązowienia znaku żywiołu: brąz to ciemna pomarańcza o niskiej chromie, więc KAŻDE stonowanie ciepłej barwy chłodną bazą albo przyciemnieniem daje brąz. Builder rozdzielił drogi — ciepłe znaki najpierw odsuwa od własnej szarości, dopiero potem ściemnia do tej samej wagi optycznej co zimne. Typografię rozwiązał odwrotnie niż wzorzec: biała otoczka zamiast ciemnego konturu, bo pasma są jasne i czarny obrys zrobiłby jarmark."
+    }
+   ]
+  }
+ ]
 }

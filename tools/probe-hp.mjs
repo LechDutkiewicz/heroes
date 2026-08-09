@@ -5,7 +5,7 @@
 // koryto jest niewidoczne. Krytyk oceniający modelowanie paska nie miał
 // czego oglądać — trzy rundy z rzędu.
 //
-//   node tools/probe-hp.mjs [--url http://localhost:4188] [--out tools/shots-clean]
+//   node tools/probe-hp.mjs [--url http://localhost:4173] [--out tools/shots-clean]
 
 import { chromium } from 'playwright';
 import { mkdir } from 'node:fs/promises';
@@ -14,7 +14,7 @@ const arg = (n, d) => {
   const i = process.argv.indexOf(n);
   return i !== -1 ? process.argv[i + 1] : d;
 };
-const BASE = arg('--url', 'http://localhost:4188');
+const BASE = arg('--url', 'http://localhost:4173');
 const OUT = arg('--out', 'tools/shots-clean');
 
 const main = async () => {
