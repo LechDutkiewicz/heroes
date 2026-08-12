@@ -1,6 +1,6 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-08-09.
+Ostatnia aktualizacja: 2026-08-12.
 
 Ten plik istnieje po to, żeby po przerwie nie trzeba było odtwarzać kontekstu
 z pamięci. Zapisuję tu, co jest skończone, co jest w połowie i czego świadomie
@@ -22,6 +22,8 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `npm run balans` | odsetek zwycięstw każdej pary frakcji na setkach bitew bez grafiki |
 | `node tools/capture.mjs` | komplet zrzutów, w tym paski czterech klatek dla animacji |
 | `npx tsx tools/probe-trasa.ts` | poprawność tras ruchu na ~128 tys. przypadków |
+| `npx tsx tools/probe-mapa.ts` | plansza przygody: kształt, mieszczenie się w oknie, dostępność obiektów |
+| `node tools/zrzut-mapa.mjs` | zrzut mapy przygody (osobno, bo `capture.mjs` zna tylko bitwę) |
 | `node tools/probe-dzwiek.mjs` | ile dźwięków realnie pada w bitwie |
 | `node tools/probe-najechanie.mjs` | co widać po najechaniu na wroga w zasięgu |
 | `node tools/probe-lot.mjs` | wzniesienie, falowanie, przechył i cień w locie |
@@ -56,10 +58,26 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
   o 12 px, zmniejszony do 0,60 i przygaszony do 0,30 alfy. Mierzy to
   `tools/probe-lot.mjs`.
 
+- **Mapa przygody — pierwsza plansza.** Układ przeniesiony z HotA, teren
+  układa się sam z arkusza narożnikowego, drogi rysowane, woda animowana.
+  Wejście: `?ekran=mapa`. Szczegóły niżej.
+
 ## W połowie
 
-Nic. Animacja lotu, ostatnia pozycja z tej listy, jest domknięta — patrz niżej,
-co przy okazji wyszło.
+**Mapa przygody chodzi, ale nie jest jeszcze grą.** Ruch, trasy, koszty pól,
+zbieranie surowców, dochód z kopalni i koniec tury działają. Nie działa to,
+co z mapy robi Heroes 3:
+
+- **wejście na potwora nie zaczyna bitwy** — wypisuje tylko komunikat.
+  Scena bitwy istnieje obok, ale nic ich nie łączy;
+- **do zamku nie da się wejść** — nie ma ekranu miasta ani rekrutacji;
+- **kopalnia nie ma chorągiewki** po przejęciu, więc nie widać, czyja jest;
+- **nie ma mgły wojny** ani przewijania — plansza mieści się na ekranie
+  w całości i to ona wyznaczyła rozmiar 14 × 12;
+- **domyślnym ekranem jest wciąż bitwa.** Mapa siedzi pod `?ekran=mapa`,
+  bo wszystkie narzędzia pomiarowe wchodzą na „/" i czekają na scenę
+  `battle`. Przełączenie domyślnego ekranu to zmiana w `src/main.ts`
+  plus poprawka adresów w `capture.mjs`, `smoke.mjs` i sondach.
 
 ## Znalezione przy zamykaniu lotu
 
@@ -90,6 +108,31 @@ stoi w środku każdej komórki. Teraz kadr jedzie poziomo, a w pionie stoi.
   `tools/strojenie.ts`, nie intuicji.
 - **Muzyka nie została odsłuchana.** Wybrana po długości (92 s) i licencji,
   nie ze słuchu. Podmiana: jeden plik plus stała `MUZYKA` w `src/audio/sfx.ts`.
+
+## Znalezione przy mapie przygody
+
+**Arkusz `mpwsp01` jest narożnikowy, nie sąsiedzki.** O tym, który kafelek
+pasuje, decydują cztery rogi kafelka, a nie to, co leży obok pola. Dlatego
+mapa rysuje się siatką przesuniętą o pół pola: każdy kafelek leży na styku
+czterech pól i jego sygnatura (np. `GGGP`) wychodzi wprost z terenu w rogach.
+Tablicę sygnatur ODCZYTUJE `tools/kafelki_autotile.py` — przepisywanie
+czterdziestu indeksów z obrazka ręcznie skończyłoby się pomyłką, która nie
+wygląda na pomyłkę, tylko na dziwny teren.
+
+Brakuje sześciu układów „w szachownicę" (trawa–woda–woda–trawa i podobne).
+Nie ma ich w żadnym arkuszu autokafelkowania i nie warto ich dorabiać —
+scena kładzie wtedy teren, którego w rogach jest najwięcej.
+
+**`RenderTexture` w Phaserze 4 gubi zawartość po pierwszej klatce.** Domyślny
+tryb `render` czyści bufor poleceń, więc z całej mapy zostawała sama rama.
+Działa dopiero `setRenderMode('all', true)`. Z typów to nie wynika; wyszło
+z porównania zrzutów z trzech trybów po kolei.
+
+**Rzeczy, które trzeba było zobaczyć, żeby wiedzieć, że są złe:** ścieżka
+szeroka na dwa pola zostawiała na skosach trójkąty trawy i wyglądała jak tory
+kolejowe; krzaki z arkusza mają wtopiony kwadrat trawy, więc rozsypane po
+mapie robiły jasne kafelki; głazy z arkusza są brązowe i na trawie czytały się
+jak kupki ziemi. Żadnej z tych trzech rzeczy nie dało się przewidzieć z kodu.
 
 ## Rzecz, o której warto pamiętać przy każdej następnej rundzie
 
