@@ -124,7 +124,19 @@ export interface Obiekt {
    * jak stos jagód i cała mechanika była nieczytelna.
    */
   nasz?: boolean;
+  /**
+   * Zamek: ile oddziałów każdego poziomu czeka na rekrutację. Przyrasta co
+   * dzień, tak jak w Heroes 3 przyrasta tygodniowo — u nas codziennie i po
+   * trochu, bo tydzień to dla ośmiolatka bardzo długo.
+   */
+  dostepne?: number[];
+  /** Z której frakcji rekrutuje ten zamek. */
+  frakcjaZamku?: string;
 }
+
+/** Ile pokeballi kosztuje oddział danego poziomu i ile przybywa dziennie. */
+export const KOSZT_ODDZIALU = [2, 4, 7, 12, 20, 35];
+export const PRZYROST_ODDZIALU = [3, 2, 2, 1, 1, 1];
 
 /** Oddział w armii — to samo, co slot w bitwie: jeden gatunek i jego liczba. */
 export interface Oddzial {
@@ -448,7 +460,10 @@ export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
     };
   }
 
-  if (o.rodzaj === 'zamek') return { opis: o.nazwa, zamek: o };
+  if (o.rodzaj === 'zamek') {
+    if (!o.nasz) return { opis: `${o.nazwa}\nZamek przeciwnika — jeszcze nie do zdobycia` };
+    return { opis: o.nazwa, zamek: o };
+  }
 
   return { opis: o.nazwa };
 }
@@ -471,6 +486,13 @@ export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
   const wplyw = dochod(s);
   for (const [co, ile] of Object.entries(wplyw)) {
     s.skarbiec[co as Surowiec] += ile;
+  }
+  // Przyrost w zamkach. Bez niego rekrutacja byłaby jednorazowa i cała
+  // gospodarka kończyłaby się w pierwszym dniu.
+  for (const o of s.obiekty) {
+    if (o.rodzaj === 'zamek' && o.nasz && o.dostepne) {
+      o.dostepne = o.dostepne.map((ile, t) => Math.min(ile + PRZYROST_ODDZIALU[t], 99));
+    }
   }
   return wplyw;
 }

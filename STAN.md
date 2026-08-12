@@ -24,7 +24,8 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `npx tsx tools/probe-trasa.ts` | poprawność tras ruchu na ~128 tys. przypadków |
 | `npx tsx tools/probe-mapa.ts` | plansza przygody: kształt, okno, dostępność obiektów, odcisk tła |
 | `node tools/probe-kopalnia.mjs` | czy budynek produkcyjny się ZAJMUJE, a nie zbiera |
-| `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia z wyborem, artefakt, bitwa i powrót |
+| `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia, artefakt, bitwa, zamek, powrót |
+| `node tools/probe-klik.mjs` | czy KLIKNIĘCIE prowadzi bohatera tam, gdzie się kliknęło |
 | `node tools/zrzut-mapa.mjs` | zrzut mapy przygody (osobno, bo `capture.mjs` zna tylko bitwę) |
 
 Grafiki mapy są generowane, nie wrzucane ręcznie. Po zmianie planszy albo
@@ -96,14 +97,21 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
 - **Skrzynia jest pytaniem, nie nagrodą** — pokeballe albo doświadczenie,
   trzy warianty jak w Heroes 3, rzadko artefakt.
 - **Artefakty** dodają na stałe atak, obronę albo punkty ruchu.
+- **Zamek z rekrutacją.** Sześć poziomów, zapas przyrasta codziennie, oddział
+  tego samego gatunku dokleja się do istniejącego slotu. To domyka pętlę
+  „zbierz — kup — wygraj".
+- **Strefy kontroli potworów** — strażnika nie da się ominąć bokiem.
+- **Straż na mapie to zawsze jeden gatunek**, ewentualnie rozbity na kilka
+  stosów. Mieszane armie są w Heroes 3 wyłącznie w budynkach.
 
 ## W połowie
 
-**Zostało jedno duże brakujące ogniwo: ZAMEK.**
+**Zamek jest, ale sam handel — bez rozbudowy.**
 
-- **do zamku nie da się wejść** — nie ma ekranu miasta, rekrutacji ani
-  rozbudowy. Wejście na zamek wypisuje tylko komunikat, że ekran powstaje.
-  Bez tego zebrane pokeballe nie mają na co iść, a to psuje sens zbierania;
+- **nie ma rozbudowy budynków ani ulepszania oddziałów.** Kamienie ewolucji
+  i odłamki nie mają jeszcze na co iść; wydaje się tylko pokeballe;
+- **do zamku przeciwnika nie da się wejść** — mówi to wprost, ale zdobycia
+  zamku nie ma;
 - **przeciwnik nie gra** — jego zamek stoi, ale nikt nim nie rusza;
 - **potwory nie proponują dołączenia ani nie uciekają** — progi są policzone
   w `zasady-h3.ts`, ale nic ich jeszcze nie używa;
@@ -186,6 +194,32 @@ szeroka na dwa pola zostawiała na skosach trójkąty trawy i wyglądała jak to
 kolejowe; krzaki z arkusza mają wtopiony kwadrat trawy, więc rozsypane po
 mapie robiły jasne kafelki; głazy z arkusza są brązowe i na trawie czytały się
 jak kupki ziemi. Żadnej z tych trzech rzeczy nie dało się przewidzieć z kodu.
+
+## Znalezione przy poprawkach po testach
+
+**Sonda, która omija drogę gracza, nie sprawdza gry.** `probe-przygoda.mjs`
+przestawiała bohatera obok celu i wołała `idz()` wprost — sprawdzała więc
+wszystko OPRÓCZ przeliczenia punktu z ekranu na pole. Kiedy właśnie to się
+zepsuło, 21 sprawdzeń dalej przechodziło, a gra była nie do grania: bohater
+lądował obok celu i niczego nie dało się podnieść. Stąd `probe-klik.mjs`,
+która klika myszą.
+
+**Pierwsza wersja tej sondy była tautologiczna.** Liczyła punkt kliknięcia tym
+samym wzorem, którego używa scena — więc gdyby wzór był zły, i tak by przeszła.
+Sprawdzenie ma sens dopiero wtedy, gdy mierzy się CZYMŚ INNYM: tutaj własnym
+`getWorldPoint` Phasera i faktycznymi granicami rysunku.
+
+**Wejście Phasera testuje kamerą główną.** Odkąd świat rysuje druga kamera,
+oznaczenie obrazka jako interaktywnego przestało cokolwiek dawać — kliknięcia
+do niego nie docierały. Trafianie w obiekty liczymy sami, z granic rysunków.
+
+**Rysunek stoi wyżej niż jego pole.** Zamek ma prawie dwa pola wysokości,
+stworek ponad jedno. Kliknięcie w to, co widać, trafiało w pole obok. Dlatego
+celem kliknięcia jest teraz OBIEKT, a nie geometria pola pod kursorem.
+
+**Kolejność w `create` decyduje o tym, co widać.** Rozliczenie bitwy szło po
+narysowaniu obiektów, więc pokonany strażnik znikał z zasad gry, ale zostawał
+na ekranie: nie blokował drogi, nie dało się go zaatakować, a sprite stał.
 
 ## Znalezione przy mapie 36 × 36
 

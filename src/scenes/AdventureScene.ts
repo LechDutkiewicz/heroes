@@ -98,6 +98,8 @@ export class AdventureScene extends Phaser.Scene {
   private podpisy: Record<string, Phaser.GameObjects.Text> = {};
   private dochody: Record<string, Phaser.GameObjects.Text> = {};
   private ikonyObiektow: Record<number, Phaser.GameObjects.Container> = {};
+  /** Rysunki obiektów wraz z ich obiektami — do samodzielnego trafiania kliknięciem. */
+  private trafienia: Array<{ o: Obiekt; im: Phaser.GameObjects.Image }> = [];
   private ruchTekst!: Phaser.GameObjects.Text;
   private statTeksty: Phaser.GameObjects.Text[] = [];
   private poziomTekst!: Phaser.GameObjects.Text;
@@ -192,17 +194,22 @@ export class AdventureScene extends Phaser.Scene {
     this.podpisy = {};
     this.dochody = {};
     this.ikonyObiektow = {};
+    this.trafienia = [];
 
     this.stan = this.wczytajStan();
     buildIcons(this);
     this.przygotujAnimacje();
+
+    // Wynik bitwy rozliczamy PRZED zbudowaniem świata. Wcześniej szło to po
+    // `rysujObiekty`, więc pokonany strażnik był już narysowany, zanim ktokolwiek
+    // oznaczył go jako pokonanego — znikał z zasad gry, ale zostawał na ekranie.
+    this.rozliczBitwe();
 
     this.rysujTlo();
     this.budujSwiat();
     this.rysujPanel();
     this.rysujPasekSurowcow();
     this.rozdzielKamery();
-    this.rozliczBitwe();
     this.odswiezWszystko();
     this.wysrodkujNaBohaterze(false);
 
@@ -571,9 +578,21 @@ export class AdventureScene extends Phaser.Scene {
       kont.add(cien);
 
       const { klucz, wys } = this.grafikaObiektu(o);
-      const im = this.add.image(0, KAFEL * 0.38, klucz).setOrigin(0.5, 1);
+      const im = this.add.image(0, KAFEL * 0.46, klucz).setOrigin(0.5, 1);
       im.setScale(wys / im.height);
       kont.add(im);
+
+      // Klik w RYSUNEK ma celować w pole obiektu.
+      //
+      // Bez tego trzeba trafić w pole, a rysunek stoi wyżej niż ono: zamek ma
+      // prawie dwa pola wysokości, stworek ponad jedno. Kliknięcie w to, co
+      // widać, trafiało w sąsiednie pole i bohater zatrzymywał się obok celu,
+      // niczego nie podnosząc.
+      //
+      // Trafienie liczymy SAMI, zamiast oznaczać obrazek jako interaktywny.
+      // Wejście Phasera testuje kamerą główną, a świat rysuje druga kamera —
+      // kliknięcia w te obrazki po prostu do nich nie docierały.
+      this.trafienia.push({ o, im });
 
       // Artefakt pulsuje — to jedyny obiekt, którego nie da się pomylić
       // z surowcem samym kształtem, więc dostaje własny sygnał.
@@ -931,7 +950,7 @@ export class AdventureScene extends Phaser.Scene {
       this.podpowiedz.setText('Nieznany teren — trzeba tam podejść.');
       return;
     }
-    const o = obiektNa(this.stan, x, y);
+    const o = this.obiektPodKursorem(p) ?? obiektNa(this.stan, x, y);
     if (o) {
       this.podpowiedz.setText(this.opisObiektu(o));
       return;
@@ -975,9 +994,32 @@ export class AdventureScene extends Phaser.Scene {
 
   private klikMapa(p: Phaser.Input.Pointer) {
     if (this.zajety || !this.wRamie(p.x, p.y)) return;
-    const { x, y } = this.zEkranu(p.x, p.y);
-    if (!this.wGranicach(x, y) || kosztPola(this.stan, x, y) === null) return;
+    const cel = this.obiektPodKursorem(p) ?? this.zEkranu(p.x, p.y);
+    this.celujW(cel.x, cel.y);
+  }
 
+  /**
+   * Który obiekt gracz naprawdę wskazał. Sprawdzamy prostokąty rysunków,
+   * od najniżej stojącego — obiekt bliżej dołu ekranu zasłania te za nim,
+   * więc to on ma pierwszeństwo, tak jak przy rysowaniu.
+   */
+  private obiektPodKursorem(p: Phaser.Input.Pointer) {
+    const swiatowy = this.kamera.getWorldPoint(p.x, p.y);
+    let najlepszy: Obiekt | undefined;
+    for (const { o, im } of this.trafienia) {
+      if (o.zebrany || !im.active) continue;
+      if (!im.getBounds().contains(swiatowy.x, swiatowy.y)) continue;
+      if (!najlepszy || o.y > najlepszy.y) najlepszy = o;
+    }
+    return najlepszy;
+  }
+
+  /**
+   * Pierwsze wskazanie pola pokazuje trasę, drugie w to samo miejsce nią rusza.
+   * Wspólne dla kliknięcia w teren i w rysunek obiektu.
+   */
+  private celujW(x: number, y: number) {
+    if (!this.wGranicach(x, y) || kosztPola(this.stan, x, y) === null) return;
     const t = this.trasaBiezaca;
     const cel = t && t.length > 0 ? t[t.length - 1] : null;
     if (cel && cel.x === x && cel.y === y) {
@@ -1199,12 +1241,9 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   private pokazZamek(o: Obiekt) {
-    // Ekran miasta jeszcze nie istnieje. Mówimy to wprost, zamiast zostawiać
-    // wrażenie, że kliknięcie nic nie zrobiło.
-    this.napisUlotny(
-      o.nasz ? `${o.nazwa}\nEkran zamku jeszcze powstaje` : `${o.nazwa}\nZamek przeciwnika`
-    );
-    this.odswiezWszystko();
+    this.registry.set(KLUCZ_STANU, this.stan);
+    this.registry.set('otwarty-zamek', o.id);
+    this.scene.start('zamek');
   }
 
   /**
@@ -1240,7 +1279,7 @@ export class AdventureScene extends Phaser.Scene {
     if (wynik.wygrana) {
       if (o) o.zebrany = true;
       this.stan.bohater.doswiadczenie += 80;
-      this.time.delayedCall(400, () => this.napisUlotny('Zwycięstwo!\n+80 doświadczenia'));
+      this.time.delayedCall(900, () => this.napisUlotny('Zwycięstwo!\n+80 doświadczenia'));
     } else {
       // Przegrana nie kończy gry: bohater wraca do zamku i traci resztę dnia.
       // Dla ośmiolatka „przegrałeś, zacznij od nowa" to koniec zabawy.

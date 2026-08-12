@@ -250,6 +250,68 @@ if (strefa.droga) {
 }
 
 await page.locator('canvas').screenshot({ path: 'tools/shots/mapa-po-bitwie.png' });
+
+// --- zamek ---
+console.log('\n=== zamek ===');
+const doZamku = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const z = s.stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.nasz);
+  s.stan.bohater.x = z.x;
+  s.stan.bohater.y = z.y - 1;
+  s.stan.bohater.ruch = 2000;
+  s.stan.skarbiec.pokeball = 40;
+  s.zajety = false;
+  window.__zamek = z.id;
+  const przed = s.stan.bohater.armia.reduce((a, o) => a + o.ile, 0);
+  s.idz([{ x: z.x, y: z.y, koszt: 100 }]);
+  return { nazwa: z.nazwa, przed };
+});
+await page.waitForTimeout(1400);
+await scena('zamek');
+sprawdz(`wejście do zamku (${doZamku.nazwa}) otwiera ekran miasta`, true);
+
+const werbunek = await page.evaluate(() => {
+  const t = window.__game.scene.getScene('zamek');
+  const przed = {
+    pokeballe: t.stan.skarbiec.pokeball,
+    armia: t.stan.bohater.armia.reduce((a, o) => a + o.ile, 0),
+    dostepne: [...(t.zamek.dostepne ?? [])],
+  };
+  t.kup(0);
+  return {
+    przed,
+    po: {
+      pokeballe: t.stan.skarbiec.pokeball,
+      armia: t.stan.bohater.armia.reduce((a, o) => a + o.ile, 0),
+      dostepne: [...(t.zamek.dostepne ?? [])],
+    },
+  };
+});
+sprawdz('werbunek powiększa armię', werbunek.po.armia > werbunek.przed.armia, `${werbunek.przed.armia} → ${werbunek.po.armia}`);
+sprawdz('werbunek kosztuje pokeballe', werbunek.po.pokeballe < werbunek.przed.pokeballe, `${werbunek.przed.pokeballe} → ${werbunek.po.pokeballe}`);
+sprawdz('zapas w zamku maleje', werbunek.po.dostepne[0] < werbunek.przed.dostepne[0], `${werbunek.przed.dostepne[0]} → ${werbunek.po.dostepne[0]}`);
+
+await page.locator('canvas').screenshot({ path: 'tools/shots/zamek.png' });
+await page.evaluate(() => window.__game.scene.getScene('zamek').scene.start('adventure'));
+await scena('adventure');
+const poZamku = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const potwor = s.stan.obiekty.find((o) => o.id === window.__potwor);
+  return {
+    armia: s.stan.bohater.armia.reduce((a, o) => a + o.ile, 0),
+    zajety: s.zajety,
+    // Pokonany strażnik NIE ma prawa dalej stać na mapie.
+    sprytPokonanego: !!s.ikonyObiektow[window.__potwor],
+    potworZebrany: !!potwor?.zebrany,
+  };
+});
+sprawdz('zakup przeżywa powrót na mapę', poZamku.armia > doZamku.przed);
+sprawdz('po wyjściu z zamku da się sterować', poZamku.zajety === false);
+sprawdz(
+  'pokonany strażnik NIE jest już rysowany na mapie',
+  poZamku.sprytPokonanego === false && poZamku.potworZebrany === true
+);
+
 console.log(`\n${bledy === 0 ? 'Wszystko się zgadza.' : `Błędów: ${bledy}`}`);
 await browser.close();
 process.exit(bledy === 0 ? 0 : 1);

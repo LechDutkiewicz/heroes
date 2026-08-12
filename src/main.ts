@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BattleScene, SCENE_H } from './scenes/BattleScene';
 import { AdventureScene } from './scenes/AdventureScene';
+import { TownScene } from './scenes/TownScene';
 
 // Który ekran otworzyć. Domyślnie bitwa, bo tak wchodzą wszystkie narzędzia
 // pomiarowe (zrzuty, test dymny, sondy) i nie chcę ich unieważniać, zanim
@@ -15,7 +16,10 @@ const game = new Phaser.Game({
   // a nie wpisana na oko: patrz SCENE_H w BattleScene.
   height: SCENE_H,
   backgroundColor: '#0d1023',
-  scene: ekran === 'mapa' ? [AdventureScene, BattleScene] : [BattleScene, AdventureScene],
+  scene:
+    ekran === 'mapa'
+      ? [AdventureScene, BattleScene, TownScene]
+      : [BattleScene, AdventureScene, TownScene],
 });
 
 // Most dla narzędzia do zrzutów (tools/capture.mjs). Pozwala ustawić bitwę

@@ -66,22 +66,41 @@ const NAZWY_BUDYNKU: Record<Surowiec, string> = {
  * jedynego przejścia na mapie i ma być wyraźnie trudniejszy od wszystkiego,
  * co gracz spotkał wcześniej.
  */
-const STRAZE: Record<string, { frakcja: string; tiery: number[]; mnoznik: number }> = {
-  slaby: { frakcja: 'grota', tiery: [0], mnoznik: 0.6 },
-  straznik: { frakcja: 'zbocze', tiery: [1, 2], mnoznik: 1.0 },
-  silny: { frakcja: 'zbocze', tiery: [2, 3], mnoznik: 1.1 },
-};
+const STRAZE: Record<string, { frakcja: string; tiery: number[]; mnoznik: number; stosy: number }> =
+  {
+    slaby: { frakcja: 'grota', tiery: [0, 1], mnoznik: 0.6, stosy: 1 },
+    straznik: { frakcja: 'zbocze', tiery: [2, 3], mnoznik: 1.0, stosy: 3 },
+    silny: { frakcja: 'zbocze', tiery: [2, 3], mnoznik: 1.1, stosy: 2 },
+  };
 
+/**
+ * Straż na mapie to ZAWSZE jeden gatunek — ewentualnie rozbity na kilka stosów.
+ *
+ * Tak jest w Heroes 3: włóczące się oddziały nigdy nie mieszają gatunków,
+ * mieszane armie stoją wyłącznie w budynkach. Wcześniej strażnik przełęczy
+ * miał dwa różne stworki naraz i wyglądał jak armia bohatera, a nie jak
+ * dzikie stado.
+ */
 function oddzialyStrazy(sila: string, losuj: () => number): Oddzial[] {
   const wzor = STRAZE[sila] ?? STRAZE.slaby;
   const frakcja = factionById(wzor.frakcja) ?? FACTIONS[0];
-  return wzor.tiery.map((t) => {
-    const u = frakcja.units[t];
-    const podstawa = u.count * wzor.mnoznik;
-    // ±25% liczebności, żeby dwa te same posterunki nie były identyczne.
-    const ile = Math.max(1, Math.round(podstawa * (0.75 + losuj() * 0.5)));
-    return { sprite: u.sprite, nazwa: u.name, ile, frakcja: frakcja.id, tier: t };
-  });
+  const tier = wzor.tiery[Math.floor(losuj() * wzor.tiery.length)];
+  const u = frakcja.units[tier];
+  // ±25% liczebności, żeby dwa te same posterunki nie były identyczne.
+  const razem = Math.max(
+    wzor.stosy,
+    Math.round(u.count * wzor.mnoznik * (0.75 + losuj() * 0.5))
+  );
+  // Rozdział na stosy: reszta z dzielenia idzie do pierwszego, żeby suma
+  // zgadzała się co do sztuki.
+  const podstawa = Math.floor(razem / wzor.stosy);
+  return Array.from({ length: wzor.stosy }, (_, i) => ({
+    sprite: u.sprite,
+    nazwa: u.name,
+    ile: podstawa + (i === 0 ? razem - podstawa * wzor.stosy : 0),
+    frakcja: frakcja.id,
+    tier,
+  }));
 }
 
 /** Losowa wielkość stosu w widełkach z Heroes 3. */
@@ -155,6 +174,8 @@ export function planszaPrzygody(): StanMapy {
     y: PUNKTY['zamek gracza'].y,
     nazwa: 'Bór Szmaragdowy',
     nasz: true,
+    frakcjaZamku: 'bor',
+    dostepne: [6, 4, 3, 2, 1, 0],
   });
   obiekty.push({
     id: id++,
@@ -162,6 +183,8 @@ export function planszaPrzygody(): StanMapy {
     x: PUNKTY['zamek wroga'].x,
     y: PUNKTY['zamek wroga'].y,
     nazwa: 'Grota Księżycowa',
+    frakcjaZamku: 'grota',
+    dostepne: [6, 4, 3, 2, 1, 0],
   });
 
   // Armia startowa: cztery najniższe oddziały Boru. Punkty ruchu liczymy
