@@ -175,7 +175,12 @@ export function planszaPrzygody(): StanMapy {
     nazwa: 'Bór Szmaragdowy',
     nasz: true,
     frakcjaZamku: 'bor',
-    dostepne: [6, 4, 3, 2, 1, 0],
+    // Zamek gracza zaczyna z ratuszem i dwoma siedliskami — tyle, żeby było
+    // co werbować pierwszego dnia, i o osiem budynków za mało, żeby było co
+    // budować przez resztę gry. Zapas czeka tylko w tym, co postawione;
+    // pusty zamek wygląda dla dziecka na zepsuty.
+    postawione: ['ratusz1', 'siedlisko1', 'siedlisko2'],
+    dostepne: [6, 4, 0, 0, 0, 0],
   });
   obiekty.push({
     id: id++,
@@ -184,7 +189,11 @@ export function planszaPrzygody(): StanMapy {
     y: PUNKTY['zamek wroga'].y,
     nazwa: 'Grota Księżycowa',
     frakcjaZamku: 'grota',
-    dostepne: [6, 4, 3, 2, 1, 0],
+    // Zamek przeciwnika stoi rozbudowany dalej niż nasz. To nie jest kaprys:
+    // jak długo nikt nim nie gra, jego stan widać dopiero po zdobyciu — a wtedy
+    // ma być nagrodą, a nie pustym placem.
+    postawione: ['ratusz1', 'ratusz2', 'fort', 'siedlisko1', 'siedlisko2', 'siedlisko3'],
+    dostepne: [6, 4, 3, 0, 0, 0],
   });
 
   // Armia startowa: cztery najniższe oddziały Boru. Punkty ruchu liczymy

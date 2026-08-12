@@ -1,4 +1,13 @@
 import { PROMIEN_WIDZENIA, SKRZYNIE } from './zasady-h3';
+import {
+  brakuje,
+  budynek,
+  daryZamku,
+  moznaBudowac,
+  przyrostZamku,
+  stacNas,
+  zaplac,
+} from './zamki';
 
 /**
  * Mapa przygody — dane i zasady, bez rysowania.
@@ -132,6 +141,19 @@ export interface Obiekt {
   dostepne?: number[];
   /** Z której frakcji rekrutuje ten zamek. */
   frakcjaZamku?: string;
+  /**
+   * Zamek: co już w nim stoi (identyfikatory z `zamki.ts`). To jest cała
+   * pamięć rozbudowy — reszta (dochód, przyrost, co wolno zwerbować) liczy
+   * się z tej listy, więc nie da się mieć siedliska, które daje oddziały,
+   * ale nie widać go na panoramie.
+   */
+  postawione?: string[];
+  /**
+   * Którego dnia postawiono tu ostatni budynek. Heroes 3 pozwala na jeden
+   * budynek dziennie i to jest powód, dla którego kolejność rozbudowy w ogóle
+   * jest wyborem.
+   */
+  budowanoDnia?: number;
 }
 
 /** Ile pokeballi kosztuje oddział danego poziomu i ile przybywa dziennie. */
@@ -468,12 +490,23 @@ export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
   return { opis: o.nazwa };
 }
 
-/** Ile surowców wpłynie jutro z zajętych budynków. */
+/**
+ * Ile surowców wpłynie jutro z zajętych budynków — z kopalń NA mapie
+ * i z tego, co postawione w naszych zamkach. Ratusz jest tu razem z kopalnią
+ * celowo: dla gracza to jedna liczba („ile mi jutro przybędzie"), a nie dwa
+ * osobne rachunki, których trzeba się domyślać.
+ */
 export function dochod(s: StanMapy): Partial<Record<Surowiec, number>> {
   const suma: Partial<Record<Surowiec, number>> = {};
   for (const o of s.obiekty) {
     if (o.rodzaj === 'kopalnia' && o.nasz && o.surowiec) {
       suma[o.surowiec] = (suma[o.surowiec] ?? 0) + (o.ile ?? 1);
+    }
+    if (o.rodzaj === 'zamek' && o.nasz) {
+      const dary = daryZamku(o.postawione ?? [], o.frakcjaZamku ?? 'bor');
+      for (const [co, ile] of Object.entries(dary)) {
+        suma[co as Surowiec] = (suma[co as Surowiec] ?? 0) + ile;
+      }
     }
   }
   return suma;
@@ -489,12 +522,69 @@ export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
   }
   // Przyrost w zamkach. Bez niego rekrutacja byłaby jednorazowa i cała
   // gospodarka kończyłaby się w pierwszym dniu.
+  //
+  // Przyrasta tylko to, co POSTAWIONE: siedlisko, którego nie ma, nie hoduje
+  // niczego, a fort podnosi przyrost we wszystkich naraz. Dopóki liczyło się
+  // to z samej tablicy `PRZYROST_ODDZIALU`, rozbudowa miasta nie zmieniała
+  // nic w armii i drzewko budynków było dekoracją.
   for (const o of s.obiekty) {
     if (o.rodzaj === 'zamek' && o.nasz && o.dostepne) {
-      o.dostepne = o.dostepne.map((ile, t) => Math.min(ile + PRZYROST_ODDZIALU[t], 99));
+      const przyrost = przyrostZamku(o.postawione ?? [], PRZYROST_ODDZIALU);
+      o.dostepne = o.dostepne.map((ile, t) => Math.min(ile + przyrost[t], 99));
     }
   }
   return wplyw;
+}
+
+export interface WynikBudowy {
+  ok: boolean;
+  opis: string;
+}
+
+/**
+ * Postawienie budynku w zamku. Cała decyzja siedzi tutaj, a nie w scenie,
+ * bo to są zasady gry: jeden budynek dziennie, tylko po spełnieniu warunków
+ * i tylko za pełną cenę.
+ *
+ * Odmowa zawsze mówi DLACZEGO. Zablokowany przycisk bez powodu jest dla
+ * dziecka ślepym zaułkiem — nie wie, czy ma szukać surowca, czy postawić
+ * najpierw co innego, czy po prostu poczekać do jutra.
+ */
+export function zbuduj(s: StanMapy, zamek: Obiekt, id: string): WynikBudowy {
+  const frakcja = zamek.frakcjaZamku ?? 'bor';
+  const b = budynek(frakcja, id);
+  if (!b) return { ok: false, opis: 'Nie ma tu czego budować.' };
+
+  const postawione = (zamek.postawione ??= []);
+  if (postawione.includes(id)) return { ok: false, opis: `${b.nazwa} już stoi.` };
+  if (!moznaBudowac(b, postawione)) {
+    const brak = b.wymaga
+      .filter((w) => !postawione.includes(w))
+      .map((w) => budynek(frakcja, w)?.nazwa ?? w);
+    return { ok: false, opis: `Najpierw: ${brak.join(', ')}.` };
+  }
+  if (zamek.budowanoDnia === s.dzien) {
+    return { ok: false, opis: 'Dziś już tu budowano. Jeden budynek dziennie.' };
+  }
+  if (!stacNas(s.skarbiec, b.koszt)) {
+    const brak = brakuje(s.skarbiec, b.koszt)
+      .map((x) => `${x.ile} ${SUROWIEC_INFO[x.surowiec].dopelniacz}`)
+      .join(', ');
+    return { ok: false, opis: `Brakuje: ${brak}.` };
+  }
+
+  zaplac(s.skarbiec, b.koszt);
+  postawione.push(id);
+  zamek.budowanoDnia = s.dzien;
+
+  // Nowe siedlisko od razu ma kogo dać. W Heroes 3 wybudowane siedlisko
+  // dostaje tygodniowy przyrost natychmiast — bez tego dziecko stawia budynek
+  // i nic się nie zmienia, więc nie widzi związku między budową a armią.
+  if (b.rodzaj === 'siedlisko' && b.poziom !== undefined && zamek.dostepne) {
+    const przyrost = przyrostZamku(postawione, PRZYROST_ODDZIALU);
+    zamek.dostepne[b.poziom] += przyrost[b.poziom];
+  }
+  return { ok: true, opis: `${b.nazwa} — gotowe!` };
 }
 
 /** Data w formacie z Heroes 3: tydzień i dzień tygodnia. */

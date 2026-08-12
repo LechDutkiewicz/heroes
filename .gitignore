@@ -39,3 +39,7 @@ tools/shots-clean/
 # Jednorazowe sondy robocze builderów.
 tools/dbg*.mjs
 .balans/
+
+# Pliki Pythona po kompilacji — artefakt narzędzi, nie źródło.
+__pycache__/
+*.pyc

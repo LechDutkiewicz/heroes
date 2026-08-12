@@ -161,3 +161,27 @@ export const PROMIEN_WIDZENIA = 5;
  */
 export const PROG_UCIECZKI = 2.5;
 export const PROG_DOLACZENIA = 5;
+
+// ---------------------------------------------------------------------------
+// ZAMEK
+// ---------------------------------------------------------------------------
+
+/**
+ * [H3] W mieście stawia się JEDEN budynek dziennie. To jest cała ekonomia
+ * Heroes 3 w jednym zdaniu: surowce zbierasz szybciej, niż możesz je wydać,
+ * więc liczy się kolejność, a nie tempo. Gracz, który ma na trzy budynki,
+ * i tak musi wybrać, który stanie dziś.
+ *
+ * [NASZE] To samo. Bez tej zasady ekran miasta zamienia się w listę zakupów:
+ * klika się wszystko, na co starczy, i drzewko rozwoju przestaje być wyborem.
+ */
+export const BUDYNKOW_NA_DZIEN = 1;
+
+/**
+ * [H3] Przyrost w siedliskach jest tygodniowy, a fort (i jego ulepszenia)
+ * podnosi go we wszystkich siedliskach naraz.
+ *
+ * [NASZE] Przyrost jest dzienny i mniejszy — tydzień to dla ośmiolatka bardzo
+ * długo, a nagroda musi być widoczna następnego dnia. Mnożnik fortu został.
+ */
+export const MNOZNIK_FORTU = 1.5;

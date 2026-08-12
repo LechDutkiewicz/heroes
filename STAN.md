@@ -1,6 +1,6 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-08-12 (mapa 36 × 36, mgła, bitwa z mapy).
+Ostatnia aktualizacja: 2026-08-12 (ekran miasta: panorama i rozbudowa).
 
 Ten plik istnieje po to, żeby po przerwie nie trzeba było odtwarzać kontekstu
 z pamięci. Zapisuję tu, co jest skończone, co jest w połowie i czego świadomie
@@ -26,6 +26,8 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `node tools/probe-kopalnia.mjs` | czy budynek produkcyjny się ZAJMUJE, a nie zbiera |
 | `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia, artefakt, bitwa, zamek, powrót |
 | `node tools/probe-klik.mjs` | czy KLIKNIĘCIE prowadzi bohatera tam, gdzie się kliknęło |
+| `node tools/probe-miasto.mjs` | ekran miasta: klikanie w bryły, budowa, jeden budynek dziennie, przyrost |
+| `npx tsx tools/probe-zamki.ts` | drzewko budynków: przechodniość, ceny, czas rozbudowy |
 | `node tools/zrzut-mapa.mjs` | zrzut mapy przygody (osobno, bo `capture.mjs` zna tylko bitwę) |
 
 Grafiki mapy są generowane, nie wrzucane ręcznie. Po zmianie planszy albo
@@ -38,6 +40,7 @@ palety trzeba puścić:
 | `python3 tools/render_mapa.py` | składa i wygładza tło planszy (4 klatki wody) |
 | `python3 tools/prepare_mapa_obiekty.py` | wycina i wygładza drzewa, skały, zamki, bohatera |
 | `python3 tools/rysuj_obiekty_mapy.py` | rysuje surowce, budynki i ozdoby |
+| `python3 tools/rysuj_miasto.py` | rysuje panoramy trzech miast i bryły jedenastu budynków |
 | `node tools/probe-dzwiek.mjs` | ile dźwięków realnie pada w bitwie |
 | `node tools/probe-najechanie.mjs` | co widać po najechaniu na wroga w zasięgu |
 | `node tools/probe-lot.mjs` | wzniesienie, falowanie, przechył i cień w locie |
@@ -100,23 +103,45 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
 - **Zamek z rekrutacją.** Sześć poziomów, zapas przyrasta codziennie, oddział
   tego samego gatunku dokleja się do istniejącego slotu. To domyka pętlę
   „zbierz — kup — wygraj".
+- **Ekran miasta jest malowaną panoramą, nie listą.** Budynki stoją
+  w krajobrazie, każdy klikalny, wielkość i głębia mówią o wadze. Trzy frakcje
+  mają te same sylwetki, a różnią się paletą i porą dnia — miasto rozpoznaje
+  się po kolorze, zanim przeczyta się nazwę. Grafiki generuje
+  `tools/rysuj_miasto.py`.
+- **Rozbudowa zamku działa.** Jedenaście budynków: trzy ratusze (dochód), fort
+  (przyrost we wszystkich siedliskach naraz), sześć siedlisk i budynek
+  specjalny dający rzadki surowiec. Warunki tworzą ścieżkę „ratusz → fort →
+  wyższe siedliska", a **jeden budynek dziennie** (zasada z Heroes 3) sprawia,
+  że liczy się kolejność, a nie tempo klikania.
+- **Rozbudowa naprawdę zmienia grę.** Niepostawione siedlisko nie hoduje
+  nikogo, fort podnosi przyrost o połowę, ratusz i budynek specjalny wpadają
+  do dziennego dochodu na pasku mapy. Wcześniej przyrost szedł z gołej tablicy
+  i drzewko budynków byłoby dekoracją.
+- **Zarysy zamiast pustych miejsc.** Budynek, którego nie ma, stoi na panoramie
+  jako blady kształt, a nad tym, na który już stać, unosi się gwiazdka. Heroes 3
+  nie pokazuje nic — u nas panorama JEST menu budowy, więc dziecko musi widzieć,
+  co może stanąć i gdzie.
 - **Strefy kontroli potworów** — strażnika nie da się ominąć bokiem.
 - **Straż na mapie to zawsze jeden gatunek**, ewentualnie rozbity na kilka
   stosów. Mieszane armie są w Heroes 3 wyłącznie w budynkach.
 
 ## W połowie
 
-**Zamek jest, ale sam handel — bez rozbudowy.**
+**Miasto się rozbudowuje, ale wojna o nie jeszcze nie istnieje.**
 
-- **nie ma rozbudowy budynków ani ulepszania oddziałów.** Kamienie ewolucji
-  i odłamki nie mają jeszcze na co iść; wydaje się tylko pokeballe;
+- **nie ma ulepszania oddziałów.** Kamienie ewolucji idą dziś tylko na
+  najdroższe budynki; w Heroes 3 to od ulepszeń siedlisk zależy siła armii
+  i tego u nas brakuje;
 - **do zamku przeciwnika nie da się wejść** — mówi to wprost, ale zdobycia
-  zamku nie ma;
+  zamku nie ma. Zamek wroga ma już własną rozbudowę w stanie gry (stoi w nim
+  sześć budynków), więc po zdobyciu byłoby co przejmować;
 - **przeciwnik nie gra** — jego zamek stoi, ale nikt nim nie rusza;
 - **potwory nie proponują dołączenia ani nie uciekają** — progi są policzone
   w `zasady-h3.ts`, ale nic ich jeszcze nie używa;
-- **nie ma mgły wojny** ani przewijania — plansza mieści się na ekranie
-  w całości i to ona wyznaczyła rozmiar 14 × 12;
+- **na mapie przygody zamek wygląda tak samo bez względu na rozbudowę.**
+  Panorama się zmienia, ikona na planszy nie;
+- **budynku obronnego nie widać w bitwie** — fort podnosi przyrost, ale murów
+  w walce o miasto nie ma, bo nie ma jeszcze walki o miasto;
 - **domyślnym ekranem jest wciąż bitwa.** Mapa siedzi pod `?ekran=mapa`,
   bo wszystkie narzędzia pomiarowe wchodzą na „/" i czekają na scenę
   `battle`. Przełączenie domyślnego ekranu to zmiana w `src/main.ts`
@@ -248,6 +273,49 @@ ruchu z Heroes 3 zgłosił błąd, choć zachowanie było poprawne — w Heroes 
 pierwszy dzień naprawdę pokazuje kilkanaście obiektów. Teraz sprawdzamy to,
 o co naprawdę chodzi: żeby było co robić i żeby nie dało się pierwszego dnia
 dojechać do zamku przeciwnika.
+
+## Znalezione przy ekranie miasta
+
+**Miejsce na panoramie to GŁĘBIA, nie wysokość na ekranie.** Pierwsza wersja
+brała `y` z `zamki.ts` wprost jako ułamek wysokości i połowa budynków lądowała
+nad horyzontem — wisiały w niebie nad wzgórzami. Teraz `y` znaczy „jak blisko
+patrzącego": scena przelicza je na punkt w pasie ziemi i na perspektywę (co
+dalej, to mniejsze). Dopiero z tym drugim panorama przestała wyglądać jak
+naklejki na tapecie.
+
+**Głębokości rysowania muszą zmieścić się PONIŻEJ `Z.hud`.** Bryły dostawały
+`Z.sky + y × 100`, czyli do 87 przy `Z.hud` równym 60 — i wysoki budynek
+przykrywał kartę, która właśnie go opisywała. Wygląda to jak usterka karty,
+a jest arytmetyką warstw.
+
+**`ImageDraw` bez trybu `'RGBA'` WPISUJE alfę, zamiast mieszać.** Półprzezroczysta
+kreska cienia wychodzi wtedy jaśniejszą plamą niż tło, a nie ciemniejszą.
+Zjadło to splot na krawędzi gniazda: zamiast wikliny wyszły jasne prostokąty.
+Rysunki z alfą wymagają `ImageDraw.Draw(im, 'RGBA')` — panorama tak ma, bryły nie.
+
+**Dwa jednakowe jajka nad krawędzią gniazda składają się w twarz.** Symetryczna
+para jasnych plam z ciemnym łukiem pod spodem czyta się jak oczy i uśmiech —
+i nie da się tego przewidzieć z kodu, widać dopiero na gotowym obrazku. To ta
+sama rodzina błędów, co ścieżka wyglądająca jak tory kolejowe przy mapie.
+Ratunek: różne wielkości i przesunięcie z osi.
+
+**Blady zarys potrzebuje CIEMNEJ otoczki pod jasnym konturem.** Sam biały
+kontur ginął na jasnej trawie Boru, a sam ciemny — na fiolecie Groty. Dwie
+obwódki naraz działają na obu paletach; to ta sama sztuczka, co kontur napisów
+w HUD-zie.
+
+**Trzy ratusze to jeden budynek, więc na panoramie może stać tylko jeden.**
+Rysowanie stopnia postawionego i zarysu następnego w tym samym punkcie dawało
+dwa domy w sobie. Rozbudowę otwiera się teraz kliknięciem w ten ratusz, który
+stoi — i to jest dokładnie zachowanie z Heroes 3.
+
+**Sonda ogłosiła zepsuty powrót z bitwy, a zepsuty był pomiar — po raz kolejny.**
+`probe-przygoda.mjs` czekała `waitForTimeout(3600)` na ekran końca, który
+odlicza 2600 ms CZASU GRY. Na maszynie bez sprzętowego rysowania gra chodzi
+po kilka klatek na sekundę i te 2,6 s rozciągają się do czterdziestu. Zegar
+sceny biegł, `delta` wyglądała normalnie (16,66 ms), a zdarzenie odmierzało
+67 ms na sekundę zegara ściennego — dopiero to pokazało, o co chodzi. Sonda
+czeka teraz na SCENĘ, nie na sekundy.
 
 ## Rzecz, o której warto pamiętać przy każdej następnej rundzie
 

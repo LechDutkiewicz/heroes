@@ -39,11 +39,18 @@ page.on('pageerror', (e) => {
   console.log('  BŁĄD JS —', String(e));
 });
 
-const scena = (nazwa) =>
+/**
+ * Czekanie na scenę. Limit jest hojny, bo ekran końca bitwy odlicza 2600 ms
+ * CZASU GRY, a nie zegara ściennego — na maszynie bez sprzętowego rysowania
+ * gra chodzi po kilka klatek na sekundę i te 2,6 s rozciąga się do
+ * kilkudziesięciu. Wcześniej stało tu `waitForTimeout(3600)` i sonda ogłaszała
+ * zepsuty powrót z bitwy tam, gdzie powrót po prostu jeszcze trwał.
+ */
+const scena = (nazwa, timeout = 120000) =>
   page.waitForFunction(
     (n) => window.__game?.scene.getScene(n)?.sys.settings.status === 5,
     nazwa,
-    { timeout: 30000 }
+    { timeout }
   );
 
 await page.goto(`${BASE}/?ekran=mapa`, { waitUntil: 'domcontentloaded' });
@@ -188,7 +195,6 @@ const koniec = await page.evaluate(() => {
 });
 sprawdz('bitwa uznaje zwycięstwo', koniec.zywiWrogowie === 0);
 sprawdz('bitwa odkłada wynik dla mapy', koniec.wynik !== null, JSON.stringify(koniec.wynik));
-await page.waitForTimeout(3600);
 await scena('adventure');
 const poBitwie = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');

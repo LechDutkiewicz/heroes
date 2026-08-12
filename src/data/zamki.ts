@@ -1,4 +1,5 @@
 import type { Skarbiec, Surowiec } from './mapa';
+import { MNOZNIK_FORTU } from './zasady-h3';
 
 /**
  * Zamki: budynki, ich koszty, warunki i ekonomia.
@@ -34,20 +35,33 @@ export interface Budynek {
   poziom?: number;
   /** Dla ratusza: ile pokeballi dziennie dokłada. */
   dochod?: number;
-  /** Gdzie stoi na panoramie miasta — ułamek szerokości i wysokości. */
+  /**
+   * Miejsce na panoramie miasta: `x` to ułamek szerokości ekranu, `y` to
+   * GŁĘBIA — 0 znaczy „przy horyzoncie", 1 „na samym przodzie". Scena przelicza
+   * głębię na wysokość i na perspektywę (co dalej, to mniejsze), więc te dwie
+   * liczby wystarczą, żeby ustawić budynek w krajobrazie.
+   */
   x: number;
   y: number;
-  /** Względna wielkość bryły na panoramie. */
+  /** Względna wielkość bryły — waga budynku, niezależna od głębi. */
   skala: number;
 }
 
 export interface ProfilZamku {
   frakcja: string;
   nazwa: string;
-  /** Barwa wiodąca panoramy — po niej rozpoznaje się miasto z daleka. */
+  /** Co dokłada codziennie budynek specjalny tej frakcji. */
+  dar: { surowiec: Surowiec; ile: number };
+  /**
+   * Barwa wiodąca miasta — paski interfejsu biorą z niej akcent, żeby ekran
+   * i panorama należały do jednego miejsca.
+   *
+   * Barw NIEBA i ZIEMI tu nie ma celowo: panorama jest malowana w
+   * `tools/rysuj_miasto.py` i to tam leży jej paleta. Trzymanie tych samych
+   * liczb w dwóch miejscach kończy się tym, że jedno się zmienia, a drugie nie,
+   * i nikt nie wie, które jest prawdziwe.
+   */
   barwa: number;
-  barwaNieba: number;
-  barwaZiemi: number;
   /** Krótkie zdanie na ekranie miasta. */
   motto: string;
   budynki: Budynek[];
@@ -74,17 +88,69 @@ interface Szkielet {
 }
 
 const SZKIELET: Szkielet[] = [
-  { id: 'ratusz1', rodzaj: 'ratusz', dochod: 6, wymaga: [], x: 0.5, y: 0.52, skala: 1.0 },
-  { id: 'ratusz2', rodzaj: 'ratusz', dochod: 14, wymaga: ['ratusz1'], x: 0.5, y: 0.52, skala: 1.15 },
-  { id: 'ratusz3', rodzaj: 'ratusz', dochod: 26, wymaga: ['ratusz2', 'fort'], x: 0.5, y: 0.52, skala: 1.3 },
-  { id: 'fort', rodzaj: 'fort', wymaga: ['ratusz1'], x: 0.22, y: 0.44, skala: 1.1 },
-  { id: 'siedlisko1', rodzaj: 'siedlisko', poziom: 0, wymaga: [], x: 0.13, y: 0.72, skala: 0.6 },
-  { id: 'siedlisko2', rodzaj: 'siedlisko', poziom: 1, wymaga: ['siedlisko1'], x: 0.3, y: 0.78, skala: 0.62 },
-  { id: 'siedlisko3', rodzaj: 'siedlisko', poziom: 2, wymaga: ['siedlisko1'], x: 0.72, y: 0.74, skala: 0.66 },
-  { id: 'siedlisko4', rodzaj: 'siedlisko', poziom: 3, wymaga: ['fort', 'siedlisko2'], x: 0.86, y: 0.66, skala: 0.72 },
-  { id: 'siedlisko5', rodzaj: 'siedlisko', poziom: 4, wymaga: ['fort', 'siedlisko3'], x: 0.68, y: 0.38, skala: 0.8 },
-  { id: 'siedlisko6', rodzaj: 'siedlisko', poziom: 5, wymaga: ['ratusz2', 'siedlisko5'], x: 0.34, y: 0.3, skala: 0.9 },
-  { id: 'specjalny', rodzaj: 'specjalny', wymaga: ['ratusz2'], x: 0.88, y: 0.86, skala: 0.5 },
+  // Rozstawienie czyta się jak krajobraz, nie jak tabela: ratusz pośrodku,
+  // przy drodze, bo to serce miasta; fort z tyłu po lewej, bo mur należy do
+  // obrzeży; siedliska od najniższego z przodu po najwyższe w głębi — dzięki
+  // temu w miarę rozbudowy miasto rośnie WGŁĄB, a nie przybywa mu wierszy.
+  { id: 'ratusz1', rodzaj: 'ratusz', dochod: 6, wymaga: [], x: 0.5, y: 0.45, skala: 1.0 },
+  { id: 'ratusz2', rodzaj: 'ratusz', dochod: 14, wymaga: ['ratusz1'], x: 0.5, y: 0.45, skala: 1.15 },
+  {
+    id: 'ratusz3',
+    rodzaj: 'ratusz',
+    dochod: 26,
+    wymaga: ['ratusz2', 'fort'],
+    x: 0.5,
+    y: 0.45,
+    skala: 1.3,
+  },
+  { id: 'fort', rodzaj: 'fort', wymaga: ['ratusz1'], x: 0.17, y: 0.16, skala: 1.15 },
+  { id: 'siedlisko1', rodzaj: 'siedlisko', poziom: 0, wymaga: [], x: 0.11, y: 0.78, skala: 0.62 },
+  {
+    id: 'siedlisko2',
+    rodzaj: 'siedlisko',
+    poziom: 1,
+    wymaga: ['siedlisko1'],
+    x: 0.32,
+    y: 0.96,
+    skala: 0.66,
+  },
+  {
+    id: 'siedlisko3',
+    rodzaj: 'siedlisko',
+    poziom: 2,
+    wymaga: ['siedlisko1'],
+    x: 0.74,
+    y: 0.86,
+    skala: 0.7,
+  },
+  {
+    id: 'siedlisko4',
+    rodzaj: 'siedlisko',
+    poziom: 3,
+    wymaga: ['fort', 'siedlisko2'],
+    x: 0.9,
+    y: 0.62,
+    skala: 0.76,
+  },
+  {
+    id: 'siedlisko5',
+    rodzaj: 'siedlisko',
+    poziom: 4,
+    wymaga: ['fort', 'siedlisko3'],
+    x: 0.78,
+    y: 0.3,
+    skala: 0.85,
+  },
+  {
+    id: 'siedlisko6',
+    rodzaj: 'siedlisko',
+    poziom: 5,
+    wymaga: ['ratusz2', 'siedlisko5'],
+    x: 0.33,
+    y: 0.06,
+    skala: 1.0,
+  },
+  { id: 'specjalny', rodzaj: 'specjalny', wymaga: ['ratusz2'], x: 0.95, y: 1.0, skala: 0.55 },
 ];
 
 /**
@@ -174,28 +240,49 @@ const NAZWY: Record<string, Record<string, [string, string]>> = {
     siedlisko4: ['Żarowisko', 'Cyndery nie gasną.'],
     siedlisko5: ['Osuwisko', 'Lawiny czekają na pierwszy ruch.'],
     siedlisko6: ['Komin Wulkanu', 'Sadziny schodzą tylko na wojnę.'],
-    specjalny: ['Piec Ewolucji', 'Dokłada kamień ewolucji co kilka dni.'],
+    specjalny: ['Piec Ewolucji', 'Dokłada kamień ewolucji każdego dnia.'],
   },
 };
 
-const BARWY: Record<string, { barwa: number; niebo: number; ziemia: number; motto: string }> = {
+/**
+ * Barwy i dar budynku specjalnego.
+ *
+ * Dar jest półtora raza większy od zwykłej kopalni tego samego surowca —
+ * inaczej budynek za sześćdziesiąt pokeballi dawałby dokładnie tyle, co
+ * kopalnia zajęta za darmo po drodze, i nikt by go nie postawił. Kamień
+ * ewolucji jest wyjątkiem: jeden dziennie, bo to najrzadszy surowiec w grze
+ * i dwa dziennie wywracałyby cenę wszystkiego, co za niego kupujemy.
+ */
+const BARWY: Record<
+  string,
+  {
+    barwa: number;
+    niebo: number;
+    ziemia: number;
+    motto: string;
+    dar: { surowiec: Surowiec; ile: number };
+  }
+> = {
   bor: {
     barwa: 0x66bb6a,
     niebo: 0x9fd8b0,
     ziemia: 0x3d6b3a,
     motto: 'Las żywi tych, którzy go słuchają.',
+    dar: { surowiec: 'jagoda', ile: 3 },
   },
   grota: {
     barwa: 0xab47bc,
     niebo: 0x2b2350,
     ziemia: 0x3a3358,
     motto: 'W ciemności rośnie to, czego nikt nie widzi.',
+    dar: { surowiec: 'odlamek', ile: 2 },
   },
   zbocze: {
     barwa: 0xff7043,
     niebo: 0x6b3b2e,
     ziemia: 0x4a3630,
     motto: 'Popiół pamięta każdy ogień.',
+    dar: { surowiec: 'kamien', ile: 1 },
   },
 };
 
@@ -206,9 +293,8 @@ function zbudujProfil(frakcja: string, nazwaMiasta: string): ProfilZamku {
   return {
     frakcja,
     nazwa: nazwaMiasta,
+    dar: b.dar,
     barwa: b.barwa,
-    barwaNieba: b.niebo,
-    barwaZiemi: b.ziemia,
     motto: b.motto,
     budynki: SZKIELET.map((s) => ({
       id: s.id,
@@ -254,7 +340,7 @@ export function zaplac(skarbiec: Skarbiec, koszt: Partial<Skarbiec>) {
  * najciekawszą decyzją: brać go zamiast kolejnego siedliska czy po nim.
  */
 export function przyrostZamku(postawione: string[], bazowy: number[]) {
-  const mnoznik = postawione.includes('fort') ? 1.5 : 1;
+  const mnoznik = postawione.includes('fort') ? MNOZNIK_FORTU : 1;
   return bazowy.map((ile, poziom) => {
     const jest = postawione.includes(`siedlisko${poziom + 1}`);
     return jest ? Math.max(1, Math.round(ile * mnoznik)) : 0;
@@ -267,4 +353,40 @@ export function dochodZamku(postawione: string[], frakcja: string) {
     (x) => x.rodzaj === 'ratusz' && postawione.includes(x.id)
   );
   return b.reduce((max, x) => Math.max(max, x.dochod ?? 0), 0);
+}
+
+/**
+ * Wszystko, co miasto daje dziennie: pokeballe z ratusza i surowiec z budynku
+ * specjalnego. Jedno miejsce, bo pasek surowców na mapie i ekran miasta muszą
+ * pokazywać ten sam dochód — dwa osobne rachunki rozjeżdżają się przy
+ * pierwszej zmianie cen i wtedy pasek kłamie.
+ */
+export function daryZamku(
+  postawione: string[],
+  frakcja: string
+): Partial<Record<Surowiec, number>> {
+  const suma: Partial<Record<Surowiec, number>> = {};
+  const zloto = dochodZamku(postawione, frakcja);
+  if (zloto > 0) suma.pokeball = zloto;
+  if (postawione.includes('specjalny')) {
+    const dar = profilZamku(frakcja).dar;
+    suma[dar.surowiec] = (suma[dar.surowiec] ?? 0) + dar.ile;
+  }
+  return suma;
+}
+
+/** Budynek po identyfikatorze — scena pyta o nazwy i koszty po `id`. */
+export function budynek(frakcja: string, id: string) {
+  return profilZamku(frakcja).budynki.find((b) => b.id === id);
+}
+
+/**
+ * Czego brakuje do postawienia budynku. Zwraca listę par surowiec–ile, bo
+ * „nie stać cię" bez podania czego brakuje jest dla dziecka ślepym zaułkiem:
+ * widzi zablokowany przycisk i nie wie, czego szukać na mapie.
+ */
+export function brakuje(skarbiec: Skarbiec, koszt: Partial<Skarbiec>) {
+  return Object.entries(koszt)
+    .map(([co, ile]) => ({ surowiec: co as Surowiec, ile: ile - skarbiec[co as Surowiec] }))
+    .filter((x) => x.ile > 0);
 }
