@@ -57,11 +57,21 @@ const freeze = (page) => page.evaluate(() => window.__game.scene.pause('battle')
 const thaw = (page) => page.evaluate(() => window.__game.scene.resume('battle'));
 
 /**
- * Skleja klatki w poziomy pasek, wycinając z każdej ten sam fragment planszy.
+ * Skleja klatki w poziomy pasek, wycinając z każdej fragment planszy.
  * Kadrujemy do okolic uderzenia, bo cały ekran obok siebie cztery razy daje
  * miniatury, na których nie widać tego, co się ocenia.
+ *
+ * `clip` może być jednym prostokątem dla wszystkich klatek albo TABLICĄ
+ * prostokątów, po jednym na klatkę. Wspólny kadr jest właściwy, gdy ocenia się
+ * pokonywanie dystansu — pionek ma się po pasku przesuwać. Kadr osobny dla
+ * każdej klatki jest właściwy, gdy ocenia się sam cykl ruchu: sylwetka stoi
+ * wtedy w środku każdej komórki i widać, co robi z sobą, a nie dokąd doszła.
+ * Bez tego drugiego trybu daleki lot wymuszał kadr tak szeroki, że sylwetka
+ * schodziła do kilku pikseli i nie dało się ocenić ani przechyłu, ani falowania.
  */
 async function strip(browser, pliki, out, clip = { x: 150, y: 180, w: 620, h: 470 }) {
+  const kadry = Array.isArray(clip) ? clip : null;
+  if (kadry) clip = kadry[0];
   // Pasek składamy na OSOBNEJ stronie. Sklejanie na stronie gry podmieniało
   // jej zawartość i wszystkie następne zrzuty szukały już nieistniejącego
   // kanwasu — przebieg wywalał się zaraz po pasku.
@@ -74,9 +84,12 @@ async function strip(browser, pliki, out, clip = { x: 150, y: 180, w: 620, h: 47
     body{margin:0;background:#1c1c1c}
     .r{display:flex}
     .k{width:${clip.w}px;height:${clip.h}px;overflow:hidden;position:relative;border-right:2px solid #000}
-    .k img{position:absolute;left:${-clip.x}px;top:${-clip.y}px}
+    .k img{position:absolute}
   </style><div class="r">${dane
-    .map((b64) => `<div class="k"><img src="data:image/png;base64,${b64}"></div>`)
+    .map((b64, i) => {
+      const k = kadry ? kadry[i] : clip;
+      return `<div class="k"><img style="left:${-k.x}px;top:${-k.y}px" src="data:image/png;base64,${b64}"></div>`;
+    })
     .join('')}</div>`);
   await p.waitForTimeout(300);
   await p.locator('.r').screenshot({ path: out });
@@ -322,6 +335,9 @@ const main = async () => {
         const doKol = Math.min(u.col + Math.max(3, u.def.move - 1), 8);
         const wolne = { col: doKol, row: u.row };
         const start = scene.cellToXY(u.col, u.row);
+        // Zapamiętujemy ruszający się oddział, żeby dało się odczytać jego
+        // położenie w każdej klatce i kadrować pasek wokół niego.
+        window.__ruch = u;
         scene.performMove(u, wolne);
         const koniec = scene.cellToXY(wolne.col, wolne.row);
         return { x: (start.x + koniec.x) / 2, y: (start.y + koniec.y) / 2 };
@@ -330,6 +346,7 @@ const main = async () => {
     );
     if (!cel) continue;
     const klatki = [];
+    const pozycje = [];
     // Latacz przelatuje CAŁĄ trasę jednym tweenem (jego droga to odcinek
     // prosty, nie ciąg pól), więc trwa to tyle co jeden krok piechoty. Przy
     // odstępach dobranych do marszu wszystkie cztery klatki wypadały już po
@@ -341,9 +358,26 @@ const main = async () => {
       const k = `${lata ? '05l' : '05p'}${i + 1}`;
       await shot(page, k);
       klatki.push(`${OUT}/${k}.png`);
+      // Położenie czytamy przy ZAMROŻONEJ scenie, czyli dokładnie to, które
+      // widać na właśnie zapisanej klatce.
+      pozycje.push(await inScene(page, () => {
+        const u = window.__ruch;
+        return u ? { x: u.container.x, y: u.container.y } : null;
+      }));
       await thaw(page);
     }
-    await strip(browser, klatki, `${OUT}/${nazwa}.png`, wokol(cel, lata ? 1400 : 900, 400));
+    // Piechota: wspólny kadr, bo idzie pole po polu i przesuwanie się po pasku
+    // jest częścią tego, co oceniamy.
+    //
+    // Latacz: kadr śledzi go W POZIOMIE, ale w pionie stoi. To nie jest
+    // drobiazg — lot ma polegać na unoszeniu się, więc gdyby kadr szedł za
+    // sylwetką również w pionie, skasowałby z obrazu dokładnie tę jedną rzecz,
+    // którą mamy ocenić. Przy nieruchomej wysokości falowanie widać jako ruch
+    // sylwetki wewnątrz komórki, względem linii heksów.
+    const kadr = lata
+      ? pozycje.map((p) => wokol({ x: p?.x ?? cel.x, y: cel.y }, 420, 380))
+      : wokol(cel, 900, 400);
+    await strip(browser, klatki, `${OUT}/${nazwa}.png`, kadr);
   }
 
   await open(page, '&terrain=laka');

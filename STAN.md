@@ -24,6 +24,7 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `npx tsx tools/probe-trasa.ts` | poprawność tras ruchu na ~128 tys. przypadków |
 | `node tools/probe-dzwiek.mjs` | ile dźwięków realnie pada w bitwie |
 | `node tools/probe-najechanie.mjs` | co widać po najechaniu na wroga w zasięgu |
+| `node tools/probe-lot.mjs` | wzniesienie, falowanie, przechył i cień w locie |
 | `npx tsx tools/probe-szybkosc.ts` | czy szybkość jest zaletą czy wadą |
 | `npx tsx tools/strojenie.ts` | przeszukiwanie siatki profili frakcji |
 
@@ -49,19 +50,31 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
   lecą prostą. Sprawdzone na 128 227 trasach.
 - **Animacja chodu**: podskok domknięty na granicy heksa, ugięcie i wyciągnięcie
   sylwetki, pochylenie w stronę marszu.
+- **Animacja lotu — zweryfikowana liczbami.** Na przelocie przez dziewięć pól
+  pomiar zgadza się z kodem co do wartości: wzniesienie 11,8 px średnio przy
+  zadanych 13, amplituda falowania 3,5 px dokładnie, przechył 11°, cień odsunięty
+  o 12 px, zmniejszony do 0,60 i przygaszony do 0,30 alfy. Mierzy to
+  `tools/probe-lot.mjs`.
 
 ## W połowie
 
-**Animacja lotu.** Kod jest napisany (unoszenie po sinusie, przechył, cień
-zostający na ziemi) i wygląda poprawnie w kodzie, ale **nie jest zweryfikowany
-obrazem**. Pasek klatek `tools/shots/05b-przejscie-latacz.png` jest za szeroko
-wykadrowany — sylwetka wychodzi na nim kilkupikselowa i nie da się ocenić ani
-przechyłu, ani falowania.
+Nic. Animacja lotu, ostatnia pozycja z tej listy, jest domknięta — patrz niżej,
+co przy okazji wyszło.
 
-Do zrobienia: poprawić kadr w bloku „4c" w `tools/capture.mjs`. Latacz
-przelatuje dłuższy dystans niż piechota, więc kadr musi być szerszy, ale wtedy
-sylwetka maleje. Właściwe rozwiązanie to kadrowanie WOKÓŁ SPRITE'A w każdej
-klatce z osobna, zamiast jednego wspólnego prostokąta na cały pasek.
+## Znalezione przy zamykaniu lotu
+
+**Na krótkim przelocie falowanie prawie nie istnieje, i to nie jest usterka.**
+Sinus ma okres 420 ms, a przelot na cztery pola trwa 380 ms i zaczyna się od
+140 ms wznoszenia — zostaje ćwierć okresu. Zmierzona amplituda spada wtedy
+z 3,5 px do 2,2 px. Wygląda to naturalnie (krótki skok nie ma prawa falować),
+więc nic nie zmieniałem, ale gdyby kiedyś miało falować także na krótkich
+trasach, trzeba skrócić okres albo startować sinus z przesunięciem fazy,
+a nie zwiększać amplitudę.
+
+**Kadr paska klatek dla lotu musi śledzić sylwetkę tylko w poziomie.** Pierwsza
+poprawka śledziła w obu osiach i skasowała z obrazu dokładnie to, co miała
+pokazać: przy kadrze jadącym za sylwetką w pionie unoszenie znika, bo sylwetka
+stoi w środku każdej komórki. Teraz kadr jedzie poziomo, a w pionie stoi.
 
 ## Nie zrobione, świadomie
 
@@ -85,3 +98,10 @@ w ślepym porównaniu, poprzeczka dobrana do innego elementu, pasek klatek
 trafiający w losowy cios. Za każdym razem kosztowało to kilka rund poprawiania
 czegoś, co działało. Zanim uznasz, że coś jest zepsute — sprawdź najpierw,
 czym to mierzysz.
+
+Przy zamykaniu lotu ta sama pułapka zadziałała jeszcze trzy razy pod rząd:
+sonda liczyła średnią razem z bezruchem po wylądowaniu, potem myliła wzlot
+z falowaniem, a potem zbierała siedem próbek na dwusekundowy przelot, bo każdy
+odczyt szedł osobną podróżą do przeglądarki. Za każdym razem liczby mówiły
+„animacji nie ma", a animacja była. Dopiero rejestrator wewnątrz strony,
+próbkujący klatka po klatce, pokazał prawdę.
