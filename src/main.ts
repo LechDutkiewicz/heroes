@@ -1,5 +1,11 @@
 import Phaser from 'phaser';
 import { BattleScene, SCENE_H } from './scenes/BattleScene';
+import { AdventureScene } from './scenes/AdventureScene';
+
+// Który ekran otworzyć. Domyślnie bitwa, bo tak wchodzą wszystkie narzędzia
+// pomiarowe (zrzuty, test dymny, sondy) i nie chcę ich unieważniać, zanim
+// mapa przygody będzie skończona. `?ekran=mapa` otwiera mapę przygody.
+const ekran = new URLSearchParams(location.search).get('ekran');
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -9,7 +15,7 @@ const game = new Phaser.Game({
   // a nie wpisana na oko: patrz SCENE_H w BattleScene.
   height: SCENE_H,
   backgroundColor: '#0d1023',
-  scene: [BattleScene],
+  scene: ekran === 'mapa' ? [AdventureScene, BattleScene] : [BattleScene, AdventureScene],
 });
 
 // Most dla narzędzia do zrzutów (tools/capture.mjs). Pozwala ustawić bitwę
