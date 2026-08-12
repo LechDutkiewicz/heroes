@@ -258,7 +258,46 @@ def kwiaty():
     return r.gotowe()
 
 
+# ---------- teren ----------
+
+
+# Próba rysowania gór wielokątami skończyła się szarymi piramidami — płaskimi
+# i gorszymi od sprite'ów, które już mamy w przeszkodach bitewnych. Góry biorą
+# się teraz stamtąd (patrz tools/prepare_mapa_obiekty.py), a tutaj zostają
+# tylko drobiazgi, których nigdzie nie było.
+
+
+SKALA_C = (78, 84, 96)
+SKALA_S = (126, 134, 148)
+SKALA_J = (176, 186, 200)
+
+
+def pniak():
+    """Pniak po ściętym drzewie — drobiazg na skraju lasu."""
+    b = int(KAFEL * 0.44)
+    r = Rys(b, int(b * 0.7))
+    r.cien(b * 0.5, b * 0.64, b * 0.3, b * 0.06)
+    r.prost([b * 0.28, b * 0.3, b * 0.72, b * 0.66], fill=BRAZ_C)
+    r.elipsa([b * 0.28, b * 0.18, b * 0.72, b * 0.42], fill=BRAZ)
+    r.elipsa([b * 0.4, b * 0.25, b * 0.6, b * 0.35], fill=BRAZ_J)
+    return r.gotowe()
+
+
+def kamyki():
+    """Trzy kamyki — najtańszy sposób, żeby pusta trawa przestała być pusta."""
+    b = int(KAFEL * 0.4)
+    r = Rys(b, int(b * 0.5))
+    for cx, cy, s in ((0.22, 0.7, 0.5), (0.55, 0.82, 0.72), (0.82, 0.66, 0.42)):
+        r.elipsa([b * (cx - 0.11 * s * 2), b * (cy - 0.16 * s), b * (cx + 0.11 * s * 2), b * (cy + 0.06 * s)],
+                 fill=SKALA_S)
+        r.elipsa([b * (cx - 0.09 * s * 2), b * (cy - 0.15 * s), b * (cx + 0.05 * s * 2), b * (cy - 0.02 * s)],
+                 fill=SKALA_J)
+    return r.gotowe()
+
+
 OBIEKTY = {
+    'pniak': pniak,
+    'kamyki': kamyki,
     'pokeball': pokeball,
     'jagody': jagody,
     'kamien-ewolucji': kamien_ewolucji,

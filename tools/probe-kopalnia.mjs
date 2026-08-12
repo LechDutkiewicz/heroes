@@ -87,14 +87,21 @@ sprawdz(
   'skarbiec NIE zmienił się od samego zajęcia',
   JSON.stringify(po.skarbiec) === JSON.stringify(przed.skarbiec)
 );
-sprawdz('pasek pokazuje dochód dzienny', po.dochodNaPasku.includes('/dzień'), po.dochodNaPasku);
+// Napis na pasku został skrócony do samego „+2", bo przy czterech surowcach
+// „+2/dzień" nie mieściło się obok liczby. Sprawdzamy więc treść, a nie słowo.
+sprawdz('pasek pokazuje dochód dzienny', po.dochodNaPasku === `+${przed.ile}`, po.dochodNaPasku);
 
 await page.evaluate(() => window.__game.scene.getScene('adventure').koniecTury());
 await page.waitForTimeout(400);
 
 const jutro = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
-  return { skarbiec: { ...s.stan.skarbiec }, ruch: s.stan.bohater.ruch, dzien: s.stan.dzien };
+  return {
+    skarbiec: { ...s.stan.skarbiec },
+    ruch: s.stan.bohater.ruch,
+    ruchMax: s.stan.bohater.ruchMax,
+    dzien: s.stan.dzien,
+  };
 });
 const przyrost = jutro.skarbiec[przed.surowiec] - przed.skarbiec[przed.surowiec];
 sprawdz(
@@ -102,7 +109,10 @@ sprawdz(
   przyrost === przed.ile,
   `przyrost ${przyrost}, oczekiwany ${przed.ile}`
 );
-sprawdz('nowy dzień odnowił punkty ruchu', jutro.ruch === 700, String(jutro.ruch));
+// Punkty ruchu liczą się teraz wzorem z Heroes 3 (od szybkości najwolniejszego
+// oddziału), więc nie wpisujemy liczby — sprawdzamy, że dzień je odnowił do
+// pełna, cokolwiek nim jest.
+sprawdz('nowy dzień odnowił punkty ruchu', jutro.ruch === jutro.ruchMax, `${jutro.ruch} z ${jutro.ruchMax}`);
 sprawdz('licznik dni ruszył', jutro.dzien === 2, `dzień ${jutro.dzien}`);
 
 await page.locator('canvas').screenshot({ path: 'tools/shots/mapa-kopalnia.png' });

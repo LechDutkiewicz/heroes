@@ -11,6 +11,7 @@ import {
   odslon,
   odwiedz,
   poziom,
+  strzezoneProzez,
   statystyki,
   trasa,
   wezZeSkrzyni,
@@ -52,6 +53,19 @@ const BOHATER_KLATKA = 96;
 const KIERUNEK_WIERSZ = { dol: 0, lewo: 1, prawo: 2, gora: 3 } as const;
 type Kierunek = keyof typeof KIERUNEK_WIERSZ;
 
+/**
+ * Ile pikseli płótna mgły przypada na jedno pole planszy.
+ *
+ * Przy jednym pikselu na pole obrazek był rozciągany czterdziestoośmiokrotnie
+ * i rozmycie z filtrowania sięgało pół pola w głąb odsłoniętego terenu —
+ * cała mapa wyglądała przez to na przyciemnioną. Przy czterech pikselach
+ * na pole rozmycie ma kilkanaście pikseli: granica jest wciąż miękka,
+ * a odsłonięty teren zostaje w pełnym kolorze.
+ */
+const MGLA_GESTOSC = 4;
+/** Mgła nie jest czarna. Ma zasłaniać, ale nie odbierać planszy koloru. */
+const MGLA_ALFA = 0.88;
+
 /** Klucze, pod którymi stan przeżywa przejście do bitwy i z powrotem. */
 const KLUCZ_STANU = 'stan-mapy';
 const KLUCZ_WYNIKU = 'wynik-bitwy';
@@ -66,6 +80,13 @@ export class AdventureScene extends Phaser.Scene {
   private mapaY = GORA;
 
   private swiat!: Phaser.GameObjects.Container;
+  /**
+   * Kamera pokazująca planszę. Przycinanie robi jej prostokąt widoku, a nie
+   * maska: maska na kontenerze w Phaserze 4 po prostu nie działała i świat
+   * wychodził poza ramę. Nie było tego widać, dopóki mgła była niemal czarna
+   * i zlewała się z tłem — po jej rozjaśnieniu wyszło od razu.
+   */
+  private kamera!: Phaser.Cameras.Scene2D.Camera;
   private plansza!: Phaser.GameObjects.Image;
   private naklejkiWody: Phaser.GameObjects.Image[] = [];
   private mgla!: Phaser.GameObjects.Image;
@@ -109,10 +130,19 @@ export class AdventureScene extends Phaser.Scene {
       'sosna',
       'sosna-mala',
       'drzewo',
+      'sosna-b',
+      'drzewo-b',
+      'palma',
       'skala',
+      'skala-2',
       'kopiec',
+      'kopiec-2',
+      'krzak',
+      'krzak-2',
       'kepka',
       'kwiaty',
+      'pniak',
+      'kamyki',
       'pokeball',
       'jagody',
       'kamien-ewolucji',
@@ -146,6 +176,23 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   create() {
+    // Phaser używa TEJ SAMEJ instancji sceny przy każdym `scene.start`, więc
+    // pola klasy przeżywają przejście do bitwy i z powrotem. `zajety` zostawało
+    // włączone po wyjściu do bitwy i po powrocie nie dało się już sterować
+    // bohaterem. Reszta to tablice trzymające obiekty, których Phaser już nie ma.
+    this.zajety = false;
+    this.trasaBiezaca = null;
+    this.kierunek = 'dol';
+    this.klatkaWody = 0;
+    this.przewX = 0;
+    this.przewY = 0;
+    this.naklejkiWody = [];
+    this.slotyArmii = [];
+    this.statTeksty = [];
+    this.podpisy = {};
+    this.dochody = {};
+    this.ikonyObiektow = {};
+
     this.stan = this.wczytajStan();
     buildIcons(this);
     this.przygotujAnimacje();
@@ -154,6 +201,7 @@ export class AdventureScene extends Phaser.Scene {
     this.budujSwiat();
     this.rysujPanel();
     this.rysujPasekSurowcow();
+    this.rozdzielKamery();
     this.rozliczBitwe();
     this.odswiezWszystko();
     this.wysrodkujNaBohaterze(false);
@@ -212,9 +260,13 @@ export class AdventureScene extends Phaser.Scene {
 
   /** Pole pod kursorem. Uwzględnia i ramę, i przewinięcie. */
   private zEkranu(px: number, py: number) {
+    // Punkt na ekranie → punkt świata: odejmujemy początek prostokąta kamery
+    // i dodajemy jej przewinięcie.
+    const sx = this.kamera?.scrollX ?? 0;
+    const sy = this.kamera?.scrollY ?? 0;
     return {
-      x: Math.floor((px - this.mapaX - this.przewX) / KAFEL),
-      y: Math.floor((py - this.mapaY - this.przewY) / KAFEL),
+      x: Math.floor((px - this.mapaX + sx) / KAFEL),
+      y: Math.floor((py - this.mapaY + sy) / KAFEL),
     };
   }
 
@@ -236,16 +288,18 @@ export class AdventureScene extends Phaser.Scene {
   private przewin(x: number, y: number, plynnie = true) {
     this.przewX = Phaser.Math.Clamp(x, this.oknoW - this.mapaW, 0);
     this.przewY = Phaser.Math.Clamp(y, this.oknoH - this.mapaH, 0);
+    if (!this.kamera) return;
     if (plynnie) {
       this.tweens.add({
-        targets: this.swiat,
-        x: this.mapaX + this.przewX,
-        y: this.mapaY + this.przewY,
+        targets: this.kamera,
+        scrollX: -this.przewX,
+        scrollY: -this.przewY,
         duration: 220,
         ease: E.soft,
+        onUpdate: () => this.rysujRamkeWidoku(),
       });
     } else {
-      this.swiat.setPosition(this.mapaX + this.przewX, this.mapaY + this.przewY);
+      this.kamera.setScroll(-this.przewX, -this.przewY);
     }
     this.rysujRamkeWidoku();
   }
@@ -264,7 +318,10 @@ export class AdventureScene extends Phaser.Scene {
    * i po kilku krokach nie wiadomo, gdzie się jest.
    */
   private dosunDoBohatera() {
-    const margines = 3 * KAFEL;
+    // Margines to niemal trzecia część okna. Przy trzech polach trzeba było
+    // dojść niemal do samej krawędzi, żeby kadr drgnął — a wtedy człowiek
+    // idzie w ciemno, bo nie widzi, dokąd.
+    const margines = 4.5 * KAFEL;
     const ex = this.stan.bohater.x * KAFEL + this.przewX;
     const ey = this.stan.bohater.y * KAFEL + this.przewY;
     if (ex < margines || ey < margines || ex > this.oknoW - margines || ey > this.oknoH - margines) {
@@ -343,10 +400,59 @@ export class AdventureScene extends Phaser.Scene {
     this.rysujObiekty();
     this.rysujBohatera();
     this.rysujMgle();
+
+    this.kamera = this.cameras.add(this.mapaX, this.mapaY, this.oknoW, this.oknoH);
+    this.kamera.setBounds(0, 0, this.mapaW, this.mapaH);
+  }
+
+  /**
+   * Rozdziela, co widzi która kamera. MUSI iść na samym końcu `create`: lista
+   * ignorowanych jest zdejmowana raz, więc wszystko dorysowane po niej kamera
+   * planszy narysuje w środku mapy. Pasek surowców pojawiał się przez to dwa
+   * razy — na dole ekranu i w poprzek planszy.
+   */
+  private rozdzielKamery() {
+    this.cameras.main.ignore(this.swiat);
+    this.kamera.ignore(this.children.list.filter((o) => o !== this.swiat));
+  }
+
+  /**
+   * Chowa przed kamerą planszy to, co dorysowaliśmy do HUD-u po jej powstaniu.
+   * Bez tego okno skrzyni i napisy panelu pojawiają się także wewnątrz mapy,
+   * przesunięte o przewinięcie.
+   */
+  private tylkoHud(...obiekty: Phaser.GameObjects.GameObject[]) {
+    this.kamera?.ignore(obiekty);
   }
 
   private wariant(x: number, y: number, ile: number) {
     return (x * 7 + y * 13) % ile;
+  }
+
+  /**
+   * Stawia jeden element terenu i od razu go różnicuje.
+   *
+   * Odbicie w poziomie jest tu najtańszą rzeczą, jaka istnieje: podwaja liczbę
+   * widocznych sylwetek bez ani jednego nowego pliku. Razem ze zmienną skalą
+   * i przesunięciem sprawia, że dwa sąsiednie pola tego samego rodzaju nigdy
+   * nie wyglądają identycznie — a to właśnie powtarzalność sprawiała, że pasmo
+   * gór czytało się jak tapeta.
+   */
+  private element(
+    klucz: string,
+    ex: number,
+    ey: number,
+    wysokosc: number,
+    depth: number,
+    ziarno: number
+  ) {
+    const im = this.add.image(ex, ey, klucz);
+    im.setScale((KAFEL * wysokosc) / im.height)
+      .setOrigin(0.5, 1)
+      .setFlipX(ziarno % 2 === 1)
+      .setDepth(depth);
+    this.swiat.add(im);
+    return im;
   }
 
   private rysujPrzeszkody() {
@@ -355,29 +461,55 @@ export class AdventureScene extends Phaser.Scene {
         const t = this.stan.teren[y][x];
         if (t !== 'las' && t !== 'skaly') continue;
         const { x: ex, y: ey } = this.naEkran(x, y);
+        const z = this.wariant(x, y, 6);
 
         if (t === 'las') {
-          const klucz = ['m-sosna', 'm-drzewo', 'm-sosna-mala'][this.wariant(x, y, 3)];
-          const jx = ((this.wariant(x, y, 5) - 2) / 2) * KAFEL * 0.11;
-          const im = this.add.image(ex + jx, ey + KAFEL * (0.3 + this.wariant(y, x, 3) * 0.03), klucz);
-          im.setScale((KAFEL * (1.34 + this.wariant(x + 1, y, 3) * 0.06)) / im.height)
-            .setOrigin(0.5, 1)
-            .setDepth(y);
-          this.swiat.add(im);
-        } else {
-          for (const [dx, dy, s] of [
-            [-0.17, 0.08, 0.78],
-            [0.2, 0.24, 0.5],
-          ] as Array<[number, number, number]>) {
-            const klucz = ['m-skala', 'm-kopiec'][this.wariant(x + Math.round(dx * 10), y, 2)];
-            const jx = ((this.wariant(x, y + 2, 5) - 2) / 2) * KAFEL * 0.12;
-            const jy = ((this.wariant(y, x + 3, 3) - 1) / 2) * KAFEL * 0.08;
-            const im = this.add.image(ex + dx * KAFEL + jx, ey + dy * KAFEL + jy, klucz);
-            im.setScale((KAFEL * (s + this.wariant(x + y, y, 3) * 0.05)) / im.height)
-              .setOrigin(0.5, 0.95)
-              .setDepth(y + dy);
-            this.swiat.add(im);
+          // Las to nie sad: na jednym polu stoi drzewo główne i podszyt.
+          // Przy jednym drzewie na pole widać kratę, w której rosną, i cały
+          // obszar przestaje wyglądać na las.
+          const glowne = ['m-sosna', 'm-drzewo', 'm-sosna-b', 'm-drzewo-b'][
+            this.wariant(x, y, 4)
+          ];
+          this.element(
+            glowne,
+            ex + ((this.wariant(x, y, 5) - 2) / 2) * KAFEL * 0.16,
+            ey + KAFEL * (0.3 + this.wariant(y, x, 3) * 0.04),
+            1.3 + this.wariant(x + 1, y, 4) * 0.07,
+            y,
+            z
+          );
+          if (this.wariant(x + 2, y + 1, 3) !== 0) {
+            const podszyt = ['m-sosna-mala', 'm-krzak', 'm-krzak-2'][this.wariant(y, x, 3)];
+            this.element(
+              podszyt,
+              ex + ((this.wariant(y, x, 4) - 1.5) / 1.5) * KAFEL * 0.3,
+              ey + KAFEL * 0.42,
+              0.5 + this.wariant(x, y + 3, 3) * 0.08,
+              y - 0.2,
+              z + 1
+            );
           }
+        } else {
+          // Skały: duża bryła z tyłu i mniejsza z przodu, obie z czterech
+          // sylwetek. Rytm łamie odbicie i skala, nie liczba plików.
+          const duza = ['m-skala', 'm-skala-2', 'm-kopiec', 'm-kopiec-2'][this.wariant(x, y, 4)];
+          this.element(
+            duza,
+            ex + ((this.wariant(x, y + 2, 5) - 2) / 2) * KAFEL * 0.14,
+            ey + KAFEL * (0.34 + this.wariant(y, x + 3, 3) * 0.05),
+            0.82 + this.wariant(x + y, y, 4) * 0.09,
+            y,
+            z
+          );
+          const mala = ['m-kopiec', 'm-skala', 'm-kopiec-2'][this.wariant(y, x, 3)];
+          this.element(
+            mala,
+            ex + KAFEL * (0.16 + this.wariant(x, y, 3) * 0.06),
+            ey + KAFEL * 0.46,
+            0.44 + this.wariant(y + 1, x, 3) * 0.06,
+            y + 0.3,
+            z + 1
+          );
         }
       }
     }
@@ -388,18 +520,29 @@ export class AdventureScene extends Phaser.Scene {
       for (let x = 0; x < this.stan.szer; x++) {
         if (this.stan.teren[y][x] !== 'trawa') continue;
         if (obiektNa(this.stan, x, y)) continue;
-        const h = (x * 17 + y * 31 + x * y * 5) % 7;
-        if (h > 2) continue;
+        const h = (x * 17 + y * 31 + x * y * 5) % 9;
+        if (h > 4) continue;
         const { x: ex, y: ey } = this.naEkran(x, y);
-        const im = this.add.image(
-          ex + ((h - 1) * KAFEL) / 5,
-          ey + KAFEL * (0.18 + h * 0.06),
-          h === 2 ? 'm-kwiaty' : 'm-kepka'
+        // Pięć rodzajów drobiazgów zamiast dwóch. Krzak i pniak są wyraźnie
+        // większe od kępki, więc pusta trawa dostaje nie tylko więcej, ale też
+        // różnej wielkości rzeczy — a to dopiero robi wrażenie zarośniętej.
+        const [klucz, wysokosc] = (
+          [
+            ['m-kepka', 0.22],
+            ['m-kwiaty', 0.22],
+            ['m-kamyki', 0.16],
+            ['m-pniak', 0.26],
+            ['m-krzak', 0.46],
+          ] as Array<[string, number]>
+        )[h];
+        this.element(
+          klucz,
+          ex + ((h - 2) * KAFEL) / 6,
+          ey + KAFEL * (0.2 + (h % 3) * 0.07),
+          wysokosc,
+          y - 0.5,
+          x + y
         );
-        im.setScale(0.7 + h * 0.1)
-          .setOrigin(0.5, 1)
-          .setDepth(y - 0.5);
-        this.swiat.add(im);
       }
     }
   }
@@ -493,7 +636,7 @@ export class AdventureScene extends Phaser.Scene {
    */
   private rysujMgle() {
     if (!this.textures.exists('mgla')) {
-      this.textures.createCanvas('mgla', this.stan.szer, this.stan.wys);
+      this.textures.createCanvas('mgla', this.stan.szer * MGLA_GESTOSC, this.stan.wys * MGLA_GESTOSC);
     }
     this.mgla = this.add.image(0, 0, 'mgla').setOrigin(0, 0).setDepth(this.stan.wys + 50);
     this.mgla.setDisplaySize(this.mapaW, this.mapaH);
@@ -504,11 +647,12 @@ export class AdventureScene extends Phaser.Scene {
   private malujMgle() {
     const tekstura = this.textures.get('mgla') as Phaser.Textures.CanvasTexture;
     const ctx = tekstura.getContext();
-    ctx.clearRect(0, 0, this.stan.szer, this.stan.wys);
-    ctx.fillStyle = 'rgba(10, 14, 28, 0.95)';
+    const g = MGLA_GESTOSC;
+    ctx.clearRect(0, 0, this.stan.szer * g, this.stan.wys * g);
+    ctx.fillStyle = `rgba(10, 14, 28, ${MGLA_ALFA})`;
     for (let y = 0; y < this.stan.wys; y++) {
       for (let x = 0; x < this.stan.szer; x++) {
-        if (!this.stan.odkryte[y][x]) ctx.fillRect(x, y, 1, 1);
+        if (!this.stan.odkryte[y][x]) ctx.fillRect(x * g, y * g, g, g);
       }
     }
     tekstura.refresh();
@@ -793,6 +937,13 @@ export class AdventureScene extends Phaser.Scene {
       return;
     }
     const teren = TEREN_INFO[this.stan.teren[y][x]];
+    const straz = strzezoneProzez(this.stan, x, y);
+    if (straz && teren.koszt !== null) {
+      this.podpowiedz.setText(
+        `${teren.nazwa} — koszt ${teren.koszt}\nPilnuje tego: ${straz.nazwa}.\nWejście tu zaczyna bitwę.`
+      );
+      return;
+    }
     this.podpowiedz.setText(
       teren.koszt === null
         ? `${teren.nazwa} — nie do przejścia`
@@ -815,6 +966,11 @@ export class AdventureScene extends Phaser.Scene {
     if (o.rodzaj === 'skrzynia') return 'Skrzynia\nW środku pokeballe albo doświadczenie.';
     if (o.rodzaj === 'artefakt') return `${o.nazwa}\nArtefakt — wzmacnia bohatera na stałe.`;
     return `${o.nazwa}\n+${o.ile} ${SUROWIEC_INFO[o.surowiec ?? 'pokeball'].dopelniacz}`;
+  }
+
+  /** Trasa do pola — wystawione dla sond, żeby dało się sprawdzić omijanie stref. */
+  trasaDo(x: number, y: number) {
+    return trasa(this.stan, x, y);
   }
 
   private klikMapa(p: Phaser.Input.Pointer) {
@@ -875,7 +1031,15 @@ export class AdventureScene extends Phaser.Scene {
         this.bohaterSprite.stop();
         this.bohaterSprite.setFrame(KIERUNEK_WIERSZ[this.kierunek] * 4);
         const o = obiektNa(this.stan, this.stan.bohater.x, this.stan.bohater.y);
-        if (o) this.wejdzNa(o);
+        if (o) {
+          this.wejdzNa(o);
+        } else {
+          // Wejście w strefę kontroli potwora — bez wchodzenia na jego pole —
+          // też zaczyna bitwę. Tak działa Heroes 3 i tylko dlatego strażnicy
+          // czegokolwiek pilnują.
+          const straz = strzezoneProzez(this.stan, this.stan.bohater.x, this.stan.bohater.y);
+          if (straz) this.zacznijBitwe(straz);
+        }
         this.odswiezWszystko();
         return;
       }
@@ -959,12 +1123,14 @@ export class AdventureScene extends Phaser.Scene {
     const wys = 176;
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
+    // Okno należy do HUD-u, nie do planszy — inaczej jechałoby razem z mapą.
+    const doHud: Phaser.GameObjects.GameObject[] = [];
 
     const zaslona = this.add
       .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.45)
       .setOrigin(0, 0)
-      .setDepth(Z.effects);
-    const tlo = this.add.graphics().setDepth(Z.effects + 1);
+      .setDepth(Z.overlay);
+    const tlo = this.add.graphics().setDepth(Z.overlay + 1);
     plate(tlo, cx - szer / 2, cy - wys / 2, szer, wys, 12, C.panel, C.gold, {
       light: 0.24,
       dark: 0.22,
@@ -975,12 +1141,15 @@ export class AdventureScene extends Phaser.Scene {
       this.add
         .text(cx, cy - wys / 2 + 24, 'Skrzynia!', display(20, H.gold))
         .setOrigin(0.5)
-        .setDepth(Z.effects + 2),
+        .setDepth(Z.overlay + 2),
       this.add
         .text(cx, cy - wys / 2 + 54, 'Co wolisz?', body(13, H.ink))
         .setOrigin(0.5)
-        .setDepth(Z.effects + 2),
+        .setDepth(Z.overlay + 2),
     ];
+
+    doHud.push(zaslona, tlo, ...napisy);
+    this.tylkoHud(...doHud);
 
     const zamknij = (co: 'pokeballe' | 'doswiadczenie') => {
       const opis = wezZeSkrzyni(this.stan, w, co);
@@ -992,6 +1161,10 @@ export class AdventureScene extends Phaser.Scene {
       this.odswiezWszystko();
     };
 
+    // Przyciski powstają jako osobne obiekty sceny, więc kamera planszy też by
+    // je narysowała — w środku mapy i przesunięte o przewinięcie. Notujemy,
+    // co przybyło, i chowamy to przed nią.
+    const przedPrzyciskami = this.children.list.length;
     const przyciski = [
       makeHudButton(this, {
         x: cx - 86,
@@ -1001,6 +1174,11 @@ export class AdventureScene extends Phaser.Scene {
         icon: ICON.star,
         tone: C.gold,
         toneDeep: C.goldDeep,
+        // Przyciski HUD siedzą domyślnie na głębokości 62, czyli POD zasłoną
+        // okna (100). Dlatego okno skrzyni wyglądało na puste: tło i napisy
+        // były, a jedyne, co miało w nim znaczenie — przyciski — chowało się
+        // pod przyciemnieniem.
+        depth: Z.overlay + 3,
         onClick: () => zamknij('pokeballe'),
       }),
       makeHudButton(this, {
@@ -1011,9 +1189,11 @@ export class AdventureScene extends Phaser.Scene {
         icon: ICON.banner,
         tone: C.ally,
         toneDeep: C.panelDeep,
+        depth: Z.overlay + 3,
         onClick: () => zamknij('doswiadczenie'),
       }),
     ];
+    this.tylkoHud(...this.children.list.slice(przedPrzyciskami));
     przyciski[0].setLabel(`${w.pokeballe} pokeballi`);
     przyciski[1].setLabel(`${w.doswiadczenie} dośw.`);
   }

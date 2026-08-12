@@ -49,8 +49,22 @@ for nazwa, r in {
 }.items():
     zapisz(nazwa, przytnij(wygladz(arkusz.crop(r))))
 
-print('skały (te same, co przeszkody na planszy bitewnej):')
-for nazwa, plik in {'skala': 'glaz.png', 'kopiec': 'kopiec.png'}.items():
+# Cztery sylwetki skalne zamiast dwóch i trzy krzewy. Powód: pasmo górskie
+# złożone z jednego powtarzanego kształtu czyta się jak tapeta, a nie jak góry.
+# Przy czterech sylwetkach, odbiciu w poziomie i zmiennej skali to samo pasmo
+# przestaje się powtarzać w widocznym rytmie.
+print('skały i krzewy (te same sprite\'y, co przeszkody na planszy bitewnej):')
+for nazwa, plik in {
+    'skala': 'glaz.png',
+    'skala-2': 'glaz_sniezny.png',
+    'kopiec': 'kopiec.png',
+    'kopiec-2': 'kopiec_sniezny.png',
+    'krzak': 'krzak.png',
+    'krzak-2': 'krzak_jesien.png',
+    'palma': 'palma.png',
+    'sosna-b': 'sosna.png',
+    'drzewo-b': 'drzewo.png',
+}.items():
     # Te sprite'y są już w skali ekranu i mają wtopiony pas trawy z planszy
     # bitewnej. Wygładzamy je bez powiększania — chodzi tylko o zmiękczenie
     # schodków, nie o zmianę rozmiaru.

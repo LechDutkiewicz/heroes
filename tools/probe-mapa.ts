@@ -79,12 +79,19 @@ sprawdz(
   !obiektNa(s, s.bohater.x, s.bohater.y) && kosztPola(s, s.bohater.x, s.bohater.y) !== null
 );
 
-console.log('\n=== dostępność ===');
+console.log('\n=== dostępność (bez uwzględniania strażników) ===');
 // Każdy obiekt musi dać się osiągnąć. Trasa nie przechodzi PRZEZ obiekty,
 // więc jeśli potwór zamyka jedyne przejście do zamku, wyjdzie to właśnie tu.
 for (const o of s.obiekty) {
-  const t = trasa(s, o.x, o.y);
-  if (t === null) sprawdz(`da się dojść do: ${o.nazwa} (${o.x},${o.y})`, false, 'brak trasy');
+  // Osiągalność sprawdzamy z POMINIĘCIEM strażników: część mapy leży celowo
+  // za potworem i dopóki się go nie pokona, trasy tam nie ma. To jest zamysł,
+  // a nie usterka. Interesuje nas, czy plansza nie rozpada się na kawałki
+  // niepołączone terenem.
+  const bezStrazy: StanMapy = { ...s, obiekty: s.obiekty.filter((x) => x.rodzaj !== 'potwor') };
+  const t = trasa(bezStrazy, o.x, o.y);
+  if (t === null && !(o.x === s.bohater.x && o.y === s.bohater.y)) {
+    sprawdz(`da się dojść do: ${o.nazwa} (${o.x},${o.y})`, false, 'brak trasy');
+  }
 }
 
 console.log('\n=== pierwsza tura ma sens ===');

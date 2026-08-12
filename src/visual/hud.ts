@@ -700,6 +700,8 @@ export function makeHudButton(
     tone: number;
     toneDeep: number;
     onClick: () => void;
+    /** Głębokość kontenera. Domyślnie 62 — nad panelem HUD, pod efektami. */
+    depth?: number;
   }
 ): HudButton {
   const { w, h } = opts;
@@ -726,7 +728,7 @@ export function makeHudButton(
 
   const zone = scene.add.zone(0, 0, w, h).setInteractive({ useHandCursor: true });
   const container = scene.add.container(opts.x, opts.y, [normal, hover, off, mark, label, zone]);
-  container.setDepth(62);
+  container.setDepth(opts.depth ?? 62);
 
   let enabled = true;
   let over = false;

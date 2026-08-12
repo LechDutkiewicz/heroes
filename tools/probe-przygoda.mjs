@@ -199,13 +199,55 @@ const poBitwie = await page.evaluate(() => {
     dosw: s.stan.bohater.doswiadczenie,
     artefakty: s.stan.bohater.artefakty.length,
     odkryte: s.stan.odkryte.flat().filter(Boolean).length,
+    zajety: s.zajety,
   };
 });
 sprawdz('po bitwie wracamy na mapę', poBitwie.naMapie === true);
+sprawdz(
+  'po bitwie DA SIĘ znowu sterować bohaterem',
+  poBitwie.zajety === false,
+  poBitwie.zajety ? 'scena została zablokowana' : ''
+);
 sprawdz('pokonany potwór znika z mapy', poBitwie.potworZebrany === true);
 sprawdz('doświadczenie za wygraną wpłynęło', poBitwie.dosw > poWyborze.dosw);
 sprawdz('stan mapy przeżył bitwę — artefakt', poBitwie.artefakty === 1);
 sprawdz('stan mapy przeżył bitwę — mgła', poBitwie.odkryte > mgla.przed, `${poBitwie.odkryte} pól`);
+
+// --- strefa kontroli potwora ---
+console.log('\n=== strefa kontroli potwora ===');
+const strefa = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const o = s.stan.obiekty.find((x) => x.rodzaj === 'potwor' && !x.zebrany);
+  // Stajemy z jednej strony potwora i celujemy w pole po jego drugiej stronie.
+  s.stan.bohater.x = o.x - 2;
+  s.stan.bohater.y = o.y;
+  s.stan.bohater.ruch = 2000;
+  s.zajety = false;
+  const t = s.constructor.name && window.__trasa ? null : null;
+  void t;
+  const droga = s.trasaDo ? s.trasaDo(o.x + 2, o.y) : null;
+  return {
+    potwor: o.nazwa,
+    x: o.x,
+    y: o.y,
+    droga: droga ? droga.map((k) => [k.x, k.y]) : null,
+  };
+});
+if (strefa.droga) {
+  const przezStrefe = strefa.droga.some(
+    ([x, y]) =>
+      Math.abs(x - strefa.x) <= 1 &&
+      Math.abs(y - strefa.y) <= 1 &&
+      !(x === strefa.droga[strefa.droga.length - 1][0] && y === strefa.droga[strefa.droga.length - 1][1])
+  );
+  sprawdz(
+    `trasa NIE przechodzi przez strefę potwora (${strefa.potwor})`,
+    !przezStrefe,
+    strefa.droga.length + ' pól'
+  );
+} else {
+  sprawdz('trasa omija strefę potwora — nie ma innej drogi, więc trasy brak', true);
+}
 
 await page.locator('canvas').screenshot({ path: 'tools/shots/mapa-po-bitwie.png' });
 console.log(`\n${bledy === 0 ? 'Wszystko się zgadza.' : `Błędów: ${bledy}`}`);

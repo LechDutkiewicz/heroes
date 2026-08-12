@@ -236,6 +236,26 @@ export const obiektNa = (s: StanMapy, x: number, y: number) =>
   s.obiekty.find((o) => o.x === x && o.y === y && !o.zebrany);
 
 /**
+ * Strefa kontroli potwora: pole, na którym stoi, i osiem pól wokół niego.
+ *
+ * Tak działa to w Heroes 3 i to jest cały powód, dla którego strażnicy coś
+ * znaczą. Bez strefy potwora obchodzi się bokiem i pilnowanie przełęczy jest
+ * fikcją — wystarczy przejść o jedno pole obok. Ze strefą trzeba albo stanąć
+ * do walki, albo naprawdę nadłożyć drogi.
+ *
+ * Zwraca potwora, którego strefa obejmuje dane pole (o ile jakiś obejmuje).
+ */
+export function strzezoneProzez(s: StanMapy, x: number, y: number): Obiekt | undefined {
+  return s.obiekty.find(
+    (o) =>
+      o.rodzaj === 'potwor' &&
+      !o.zebrany &&
+      Math.abs(o.x - x) <= 1 &&
+      Math.abs(o.y - y) <= 1
+  );
+}
+
+/**
  * Koszt wejścia na pole. Obiekty do odwiedzenia (surowiec, skrzynia, potwór)
  * stoją na przejezdnym terenie — wchodzi się na nie. Zamek i kopalnia też,
  * bo w Heroes 3 wjeżdża się na nie wprost.
@@ -288,14 +308,32 @@ export function trasa(s: StanMapy, doX: number, doY: number): Krok[] | null {
     if (cur.x === doX && cur.y === doY) break;
     if (cur.k > (koszty.get(`${cur.x},${cur.y}`) ?? Infinity)) continue;
 
-    for (const [dx, dy, mnoznik] of KIERUNKI) {
+    // Strefa kontroli potwora jest KOŃCOWA, nie zakazana: można w nią wejść
+    // (i wtedy zaczyna się bitwa), ale nie da się przez nią przejść dalej.
+    // Dzięki temu strażnika nie obchodzi się o jedno pole, a jednocześnie da
+    // się do niego dojść. Pierwsza wersja po prostu zakazywała tych pól —
+    // i wtedy nie dało się dojść do żadnego potwora, bo wszystkie pola wokół
+    // niego są jego strefą.
+    //
+    // Wyjątek: z pola strefy wolno zrobić jeden krok na samego potwora,
+    // bo to jest atak, a nie przejście. Pole, na którym stoi bohater, nie
+    // ogranicza niczego — inaczej po przegranej bitwie nie dałoby się ruszyć.
+    const straz = strzezoneProzez(s, cur.x, cur.y);
+    const naStarcie = cur.x === s.bohater.x && cur.y === s.bohater.y;
+    const wolneKierunki =
+      straz && !naStarcie
+        ? KIERUNKI.filter(([dx, dy]) => cur.x + dx === straz.x && cur.y + dy === straz.y)
+        : KIERUNKI;
+
+    for (const [dx, dy, mnoznik] of wolneKierunki) {
       const nx = cur.x + dx;
       const ny = cur.y + dy;
       const bazowy = kosztPola(s, nx, ny);
       if (bazowy === null) continue;
       // Na obiekt wchodzi się tylko jako na cel trasy — bohater nie przechodzi
       // przez potwora ani przez zamek w drodze gdzie indziej.
-      if (obiektNa(s, nx, ny) && !(nx === doX && ny === doY)) continue;
+      const koncowe = nx === doX && ny === doY;
+      if (obiektNa(s, nx, ny) && !koncowe) continue;
       const klucz = `${nx},${ny}`;
       const nowy = cur.k + bazowy * mnoznik;
       if (nowy < (koszty.get(klucz) ?? Infinity)) {
