@@ -168,6 +168,21 @@ export function stopMusic(scene: Phaser.Scene) {
   const m = s?.muzyka;
   if (!s || !m) return;
   s.muzyka = undefined;
+  // Najpierw ubijamy narastanie głośności ze startu sceny. Trwa ono kilka
+  // sekund i potrafi być jeszcze żywe, kiedy bitwa już się kończy — a wtedy
+  // pisze głośność do dźwięku, którego już nie ma, i wyjątek przerywa
+  // zakończenie bitwy w połowie: wynik jest odłożony, ale powrót na mapę
+  // nigdy nie następuje.
+  scene.tweens.killTweensOf(m);
+  // Ścieżka, która nigdy nie ruszyła (bo przeglądarka nie odblokowała dźwięku),
+  // nie ma czego wyciszać — a wygaszanie jej głośności tweenem kończyło się
+  // wyjątkiem „Cannot set properties of null (setting 'volume')" i przerywało
+  // zakończenie bitwy w połowie. Wychodziło to tylko w sondach, bo tam nikt
+  // nie klika, ale wywalić się mogło każdemu, kto wygra przed pierwszym klikiem.
+  if (!m.isPlaying) {
+    m.destroy();
+    return;
+  }
   scene.tweens.add({
     targets: m,
     volume: 0,

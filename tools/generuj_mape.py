@@ -29,7 +29,7 @@ from collections import deque
 from pathlib import Path
 
 KORZEN = Path(__file__).resolve().parent.parent
-WYNIK = KORZEN / 'src' / 'data' / 'mapa2-teren.ts'
+WYNIK = KORZEN / 'src' / 'data' / 'plansza-teren.ts'
 
 SKALA = 3
 BOK = 36
@@ -298,14 +298,14 @@ naglowek = f'''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 // Plansza {BOK} × {BOK} — rozmiar małej mapy z Heroes 3.
 // Znaki: . trawa, = ścieżka, , piasek, T las, # skały, ~ woda.
 
-export const TEREN_MAPY_2 = [
+export const TEREN = [
 '''
 tresc = naglowek + ''.join(f"  '{w}',\n" for w in wiersze) + '];\n\n'
-tresc += 'export const PUNKTY_MAPY_2 = {\n'
+tresc += 'export const PUNKTY = {\n'
 for nazwa, (x, y) in PUNKTY.items():
     tresc += f"  '{nazwa}': {{ x: {x}, y: {y} }},\n"
 tresc += '};\n\n'
-tresc += 'export const ROZSTAWIENIE_MAPY_2: Array<{ x: number; y: number; rodzaj: string; surowiec?: string; sila?: string }> = [\n'
+tresc += 'export const ROZSTAWIENIE: Array<{ x: number; y: number; rodzaj: string; surowiec?: string; sila?: string }> = [\n'
 for (x, y), (rodzaj, co) in obiekty:
     if rodzaj == 'potwor':
         tresc += f"  {{ x: {x}, y: {y}, rodzaj: 'potwor', sila: '{co}' }},\n"

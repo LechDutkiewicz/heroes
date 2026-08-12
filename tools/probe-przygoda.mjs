@@ -1,0 +1,213 @@
+// Czy interakcje na mapie przygody naprawdę działają — sprawdzane grą, nie okiem.
+//
+// Po co: „wejście na potwora zaczyna bitwę" to zdanie, które łatwo napisać
+// w kodzie i łatwo uznać za prawdziwe po zrzucie ekranu. Zrzut pokazuje mapę
+// przed wejściem albo bitwę po nim, ale nie pokazuje, czy stan mapy przeżył
+// przejście tam i z powrotem. A to jest właśnie to, co się psuje.
+//
+//   node tools/probe-przygoda.mjs [--url http://localhost:4173]
+
+import { chromium } from 'playwright';
+
+const arg = (n, d) => {
+  const i = process.argv.indexOf(n);
+  return i !== -1 ? process.argv[i + 1] : d;
+};
+const BASE = arg('--url', 'http://localhost:4173');
+
+let bledy = 0;
+const sprawdz = (co, ok, szczegol = '') => {
+  if (!ok) bledy++;
+  console.log(`  ${ok ? 'OK  ' : 'ŹLE '} ${co}${szczegol ? ` — ${szczegol}` : ''}`);
+};
+
+/**
+ * Klik w punkt PŁÓTNA, nie strony. Pierwsza wersja liczyła współrzędne od
+ * lewego górnego rogu okna przeglądarki i chybiała, bo płótno ma wokół siebie
+ * margines strony. Wyglądało to jak niedziałający przycisk w oknie skrzyni,
+ * a przycisk działał — chybiał pomiar.
+ */
+async function klikNaPlotnie(page, x, y) {
+  const p = await page.locator('canvas').boundingBox();
+  await page.mouse.click(p.x + x, p.y + y);
+}
+
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+const page = await browser.newPage({ viewport: { width: 1000, height: 760 } });
+page.on('pageerror', (e) => {
+  bledy++;
+  console.log('  BŁĄD JS —', String(e));
+});
+
+const scena = (nazwa) =>
+  page.waitForFunction(
+    (n) => window.__game?.scene.getScene(n)?.sys.settings.status === 5,
+    nazwa,
+    { timeout: 30000 }
+  );
+
+await page.goto(`${BASE}/?ekran=mapa`, { waitUntil: 'domcontentloaded' });
+await scena('adventure');
+await page.waitForTimeout(900);
+
+// --- mgła wojny ---
+console.log('\n=== mgła wojny ===');
+const mgla = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const ile = () => s.stan.odkryte.flat().filter(Boolean).length;
+  const przed = ile();
+  // Przechodzimy pięć pól w bok — odsłonięte powinno przybyć.
+  const b = s.stan.bohater;
+  const kroki = [];
+  for (let i = 1; i <= 5; i++) kroki.push({ x: b.x + i, y: b.y, koszt: 100 });
+  s.idz(kroki);
+  return { przed, kroki: kroki.length };
+});
+await page.waitForTimeout(1600);
+const poMgle = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  return {
+    odkryte: s.stan.odkryte.flat().filter(Boolean).length,
+    ruch: s.stan.bohater.ruch,
+    przewX: s.przewX,
+  };
+});
+sprawdz('marsz odsłania nowe pola', poMgle.odkryte > mgla.przed, `${mgla.przed} → ${poMgle.odkryte}`);
+sprawdz('marsz zużywa punkty ruchu', poMgle.ruch < 1563, String(poMgle.ruch));
+
+// --- skrzynia: wybór, nie nagroda ---
+console.log('\n=== skrzynia ===');
+const skrzynia = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const o = s.stan.obiekty.find((x) => x.rodzaj === 'skrzynia' && !x.artefakt);
+  s.stan.bohater.x = o.x;
+  s.stan.bohater.y = o.y - 1;
+  s.stan.bohater.ruch = 2000;
+  window.__skrzynia = o;
+  const przed = { ...s.stan.skarbiec, dosw: s.stan.bohater.doswiadczenie };
+  s.idz([{ x: o.x, y: o.y, koszt: 100 }]);
+  return przed;
+});
+await page.waitForTimeout(900);
+const okno = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  return {
+    zajety: s.zajety,
+    zebrana: !!window.__skrzynia.zebrany,
+    skarbiec: { ...s.stan.skarbiec },
+  };
+});
+sprawdz('skrzynia NIE daje nagrody od razu', okno.zebrana === false && okno.zajety === true);
+sprawdz(
+  'skarbiec czeka na decyzję',
+  JSON.stringify(okno.skarbiec) === JSON.stringify({
+    pokeball: skrzynia.pokeball,
+    jagoda: skrzynia.jagoda,
+    kamien: skrzynia.kamien,
+    odlamek: skrzynia.odlamek,
+  })
+);
+
+// Klikamy „doświadczenie" — prawy przycisk w oknie skrzyni.
+await klikNaPlotnie(page, 8 + 336 + 86, 44 + 288 + 36);
+await page.waitForTimeout(500);
+const poWyborze = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  return {
+    dosw: s.stan.bohater.doswiadczenie,
+    pokeball: s.stan.skarbiec.pokeball,
+    zebrana: !!window.__skrzynia.zebrany,
+    zajety: s.zajety,
+  };
+});
+sprawdz('wybór doświadczenia daje doświadczenie', poWyborze.dosw > skrzynia.dosw, `${skrzynia.dosw} → ${poWyborze.dosw}`);
+sprawdz('i NIE daje pokeballi', poWyborze.pokeball === skrzynia.pokeball);
+sprawdz('skrzynia znika po decyzji', poWyborze.zebrana === true);
+sprawdz('gra wraca do sterowania', poWyborze.zajety === false);
+
+// --- artefakt ---
+console.log('\n=== artefakt ===');
+const artefakt = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const o = s.stan.obiekty.find((x) => x.rodzaj === 'artefakt' && !x.zebrany);
+  s.stan.bohater.x = o.x;
+  s.stan.bohater.y = o.y - 1;
+  s.stan.bohater.ruch = 2000;
+  const przed = { ...s.statystyki?.(s.stan.bohater) };
+  s.idz([{ x: o.x, y: o.y, koszt: 100 }]);
+  return { nazwa: o.nazwa, artefakt: o.artefakt, przed };
+});
+await page.waitForTimeout(900);
+const poArtefakcie = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  return { ile: s.stan.bohater.artefakty.length, noszone: s.stan.bohater.artefakty };
+});
+sprawdz(`artefakt ląduje u bohatera (${artefakt.nazwa})`, poArtefakcie.ile === 1, poArtefakcie.noszone.join(', '));
+
+// --- bitwa ---
+console.log('\n=== bitwa ===');
+const bitwa = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const o = s.stan.obiekty.find((x) => x.rodzaj === 'potwor' && !x.zebrany);
+  s.stan.bohater.x = o.x;
+  s.stan.bohater.y = o.y - 1;
+  s.stan.bohater.ruch = 2000;
+  window.__potwor = o.id;
+  s.idz([{ x: o.x, y: o.y, koszt: 100 }]);
+  return { nazwa: o.nazwa, id: o.id, wrog: (o.oddzialy ?? []).length };
+});
+await page.waitForTimeout(1400);
+await scena('battle');
+const wBitwie = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('battle');
+  return {
+    aktywna: window.__game.scene.isActive('battle'),
+    gracz: s.units.filter((u) => u.side === 'player').length,
+    wrog: s.units.filter((u) => u.side === 'enemy').length,
+    nazwyWroga: s.units.filter((u) => u.side === 'enemy').map((u) => u.def.name),
+  };
+});
+sprawdz(`wejście na potwora (${bitwa.nazwa}) uruchamia bitwę`, wBitwie.aktywna === true);
+sprawdz('po naszej stronie stoi armia z mapy', wBitwie.gracz === 4, `${wBitwie.gracz} oddziały`);
+sprawdz(
+  'po stronie wroga stoi dokładnie to, co stało na mapie',
+  wBitwie.wrog === bitwa.wrog,
+  wBitwie.nazwyWroga.join(', ')
+);
+
+// Rozstrzygamy bitwę po naszej myśli i sprawdzamy powrót.
+// Kończymy bitwę METODĄ SCENY, nie podmieniając jej pól z zewnątrz.
+// Pierwsza wersja robiła `s.units = s.units.filter(...)` i cicho nic nie
+// osiągała: `units` jest getterem na tablicę symulacji, więc przypisanie
+// przepadało, a scena dalej uważała, że wróg stoi. Wyglądało to jak zepsuty
+// powrót z bitwy, a zepsuta była sonda.
+const koniec = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('battle');
+  s.rozstrzygnijNatychmiast(true);
+  return { zywiWrogowie: s.units.filter((u) => u.side === 'enemy').length, wynik: window.__game.registry.get('wynik-bitwy') ?? null };
+});
+sprawdz('bitwa uznaje zwycięstwo', koniec.zywiWrogowie === 0);
+sprawdz('bitwa odkłada wynik dla mapy', koniec.wynik !== null, JSON.stringify(koniec.wynik));
+await page.waitForTimeout(3600);
+await scena('adventure');
+const poBitwie = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const o = s.stan.obiekty.find((x) => x.id === window.__potwor);
+  return {
+    naMapie: window.__game.scene.isActive('adventure'),
+    potworZebrany: !!o?.zebrany,
+    dosw: s.stan.bohater.doswiadczenie,
+    artefakty: s.stan.bohater.artefakty.length,
+    odkryte: s.stan.odkryte.flat().filter(Boolean).length,
+  };
+});
+sprawdz('po bitwie wracamy na mapę', poBitwie.naMapie === true);
+sprawdz('pokonany potwór znika z mapy', poBitwie.potworZebrany === true);
+sprawdz('doświadczenie za wygraną wpłynęło', poBitwie.dosw > poWyborze.dosw);
+sprawdz('stan mapy przeżył bitwę — artefakt', poBitwie.artefakty === 1);
+sprawdz('stan mapy przeżył bitwę — mgła', poBitwie.odkryte > mgla.przed, `${poBitwie.odkryte} pól`);
+
+await page.locator('canvas').screenshot({ path: 'tools/shots/mapa-po-bitwie.png' });
+console.log(`\n${bledy === 0 ? 'Wszystko się zgadza.' : `Błędów: ${bledy}`}`);
+await browser.close();
+process.exit(bledy === 0 ? 0 : 1);

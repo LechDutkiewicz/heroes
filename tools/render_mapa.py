@@ -21,7 +21,7 @@ Woda ma cztery klatki animacji, więc i plansza ma cztery klatki.
 Kontrola zgodności
 ------------------
 Skrypt zapisuje obok obrazków odcisk rysunku mapy. `tools/probe-mapa.ts`
-sprawdza, czy odcisk zgadza się z bieżącym `mapa1.ts` — inaczej łatwo
+sprawdza, czy odcisk zgadza się z bieżącym terenem — inaczej łatwo
 zmienić planszę w kodzie i oglądać stare tło, nie wiedząc o tym.
 
     python3 tools/render_mapa.py
@@ -33,7 +33,8 @@ import re
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter
+import numpy as np
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from wygladzanie import SKALA, wygladz  # noqa: E402
@@ -66,8 +67,8 @@ def wczytaj_sygnatury():
 
 
 def wczytaj_rysunek():
-    src = (KORZEN / 'src' / 'data' / 'mapa1.ts').read_text(encoding='utf-8')
-    blok = re.search(r'const RYSUNEK = \[(.*?)\];', src, re.S).group(1)
+    src = (KORZEN / 'src' / 'data' / 'plansza-teren.ts').read_text(encoding='utf-8')
+    blok = re.search(r'export const TEREN = \[(.*?)\];', src, re.S).group(1)
     return re.findall(r"'([^']+)'", blok)
 
 
@@ -153,15 +154,48 @@ def drogi(rozmiar):
 
 KATALOG.mkdir(parents=True, exist_ok=True)
 podklad = drogi((SZER * KAFEL, WYS * KAFEL))
-for klatka in range(4):
-    plansza = wygladz(teren(klatka)).crop((0, 0, SZER * KAFEL, WYS * KAFEL))
+klatki = []
+for k in range(4):
+    plansza = wygladz(teren(k)).crop((0, 0, SZER * KAFEL, WYS * KAFEL))
     plansza.alpha_composite(podklad)
-    plansza.save(KATALOG / f'plansza-1-{klatka}.png')
-    print(f'  plansza-1-{klatka}.png  {plansza.width} × {plansza.height}')
+    klatki.append(plansza)
+
+# Klatka 0 idzie w całości; kolejne TYLKO jako to, co się od niej różni,
+# reszta przezroczysta. Scena kładzie je na wierzch.
+#
+# Przy planszy 36 × 36 pełna klatka to 1728 × 1728 pikseli, a różni się między
+# klatkami wyłącznie woda — kilka procent mapy. Pierwsze podejście wycinało
+# prostokąt otaczający różnice, ale woda jest i na północnym zachodzie, i na
+# południowym wschodzie, więc prostokąt objął prawie całą planszę i nic nie
+# oszczędził. Przezroczysta maska nie ma tego problemu: PNG ściska jednolitą
+# przezroczystość niemal do zera, niezależnie od tego, gdzie leży woda.
+baza = klatki[0]
+baza.save(KATALOG / 'plansza-0.png')
+print(f'  plansza-0.png  {baza.width} × {baza.height}  (pełna)')
+
+for k in range(1, 4):
+    rozne = (
+        ImageChops.difference(klatki[k].convert('RGB'), baza.convert('RGB'))
+        .convert('L')
+        .point(lambda v: 255 if v > 8 else 0)
+    )
+    # Piksele spoza maski trzeba WYZEROWAĆ, nie tylko przykryć przezroczystością.
+    # PNG zapisuje kolor także tam, gdzie alfa wynosi zero, więc sama maska nie
+    # zmniejszyła pliku ani o bajt — dopiero jednolite zero się ściska.
+    tab = np.asarray(klatki[k]).copy()
+    widoczne = np.asarray(rozne) > 0
+    tab[~widoczne] = 0
+    tab[:, :, 3] = np.where(widoczne, 255, 0)
+    Image.fromarray(tab, 'RGBA').save(KATALOG / f'plansza-{k}.png')
+    print(f'  plansza-{k}.png  naklejka, {widoczne.mean() * 100:.1f}% powierzchni')
 
 odcisk = hashlib.sha256('\n'.join(RYSUNEK).encode('utf-8')).hexdigest()[:16]
-(KATALOG / 'plansza-1.json').write_text(
-    json.dumps({'odcisk': odcisk, 'szer': SZER, 'wys': WYS, 'kafel': KAFEL}, indent=2) + '\n',
+(KATALOG / 'plansza.json').write_text(
+    json.dumps(
+        {'odcisk': odcisk, 'szer': SZER, 'wys': WYS, 'kafel': KAFEL},
+        indent=2,
+    )
+    + '\n',
     encoding='utf-8',
 )
-print(f'  odcisk rysunku: {odcisk}')
+print(f'  odcisk terenu: {odcisk}')

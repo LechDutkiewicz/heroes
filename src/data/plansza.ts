@@ -1,0 +1,204 @@
+import { PUNKTY, ROZSTAWIENIE, TEREN } from './plansza-teren';
+import { PRODUKCJA, STOS, SZANSA_ARTEFAKTU, ruchNaDzien } from './zasady-h3';
+import {
+  ARTEFAKTY,
+  odslon,
+  type Obiekt,
+  type Oddzial,
+  type StanMapy,
+  type Surowiec,
+  type Teren,
+} from './mapa';
+import { FACTIONS, factionById } from './factions';
+
+/**
+ * Plansza przygody — teren z generatora plus obiekty z liczbami z Heroes 3.
+ *
+ * Podział pracy: `tools/generuj_mape.py` decyduje GDZIE (teren, drogi, pola
+ * pod obiekty), a ten plik decyduje CO tam stoi i ile daje. Rozdzielenie jest
+ * celowe — układ mapy zmienia się rzadko i wymaga oglądania, a wartości zmienia
+ * się przy każdym strojeniu i sprawdza liczbami.
+ */
+
+const ZNAKI: Record<string, Teren> = {
+  '.': 'trawa',
+  '=': 'sciezka',
+  ',': 'piasek',
+  T: 'las',
+  '#': 'skaly',
+  '~': 'woda',
+};
+
+/**
+ * Losowanie z ustalonym ziarnem. Mapa MUSI wyglądać tak samo po każdym wejściu
+ * do gry: inaczej nie da się jej ani przetestować, ani porównać zrzutów, ani
+ * powiedzieć dziecku „skrzynia była koło jeziora". Heroes 3 losuje zawartość
+ * raz, przy generowaniu mapy — my tak samo, tylko robimy to przy wczytaniu.
+ */
+function losowarka(ziarno: number) {
+  let stan = ziarno >>> 0;
+  return () => {
+    // xorshift32 — krótki, powtarzalny i bez zależności.
+    stan ^= stan << 13;
+    stan ^= stan >>> 17;
+    stan ^= stan << 5;
+    return ((stan >>> 0) % 100000) / 100000;
+  };
+}
+
+const NAZWY_STOSU: Record<Surowiec, string> = {
+  jagoda: 'Kiść jagód',
+  kamien: 'Kamień ewolucji',
+  odlamek: 'Odłamki',
+  pokeball: 'Zgubione pokeballe',
+};
+
+const NAZWY_BUDYNKU: Record<Surowiec, string> = {
+  jagoda: 'Sad jagodowy',
+  kamien: 'Kamieniołom ewolucji',
+  odlamek: 'Kopalnia odłamków',
+  pokeball: 'Obóz łowców',
+};
+
+/**
+ * Straże. Trzy poziomy siły, dobrane tak, żeby dziecko widziało po sprite'ie
+ * i liczbie, czy to jest na teraz. Strażnik przełęczy jest osobno, bo pilnuje
+ * jedynego przejścia na mapie i ma być wyraźnie trudniejszy od wszystkiego,
+ * co gracz spotkał wcześniej.
+ */
+const STRAZE: Record<string, { frakcja: string; tiery: number[]; mnoznik: number }> = {
+  slaby: { frakcja: 'grota', tiery: [0], mnoznik: 0.6 },
+  straznik: { frakcja: 'zbocze', tiery: [1, 2], mnoznik: 1.0 },
+  silny: { frakcja: 'zbocze', tiery: [2, 3], mnoznik: 1.1 },
+};
+
+function oddzialyStrazy(sila: string, losuj: () => number): Oddzial[] {
+  const wzor = STRAZE[sila] ?? STRAZE.slaby;
+  const frakcja = factionById(wzor.frakcja) ?? FACTIONS[0];
+  return wzor.tiery.map((t) => {
+    const u = frakcja.units[t];
+    const podstawa = u.count * wzor.mnoznik;
+    // ±25% liczebności, żeby dwa te same posterunki nie były identyczne.
+    const ile = Math.max(1, Math.round(podstawa * (0.75 + losuj() * 0.5)));
+    return { sprite: u.sprite, nazwa: u.name, ile, frakcja: frakcja.id, tier: t };
+  });
+}
+
+/** Losowa wielkość stosu w widełkach z Heroes 3. */
+function wielkoscStosu(co: Surowiec, losuj: () => number) {
+  const [min, max] = STOS[co];
+  return min + Math.floor(losuj() * (max - min + 1));
+}
+
+export function planszaPrzygody(): StanMapy {
+  const losuj = losowarka(20260812);
+  const teren: Teren[][] = TEREN.map((w) => [...w].map((z) => ZNAKI[z] ?? 'trawa'));
+
+  const obiekty: Obiekt[] = [];
+  let id = 1;
+
+  for (const wpis of ROZSTAWIENIE) {
+    const wspolne = { id: id++, x: wpis.x, y: wpis.y };
+    const co = (wpis.surowiec ?? 'pokeball') as Surowiec;
+
+    if (wpis.rodzaj === 'surowiec') {
+      obiekty.push({
+        ...wspolne,
+        rodzaj: 'surowiec',
+        nazwa: NAZWY_STOSU[co],
+        surowiec: co,
+        ile: wielkoscStosu(co, losuj),
+      });
+    } else if (wpis.rodzaj === 'kopalnia') {
+      obiekty.push({
+        ...wspolne,
+        rodzaj: 'kopalnia',
+        nazwa: NAZWY_BUDYNKU[co],
+        surowiec: co,
+        ile: PRODUKCJA[co],
+      });
+    } else if (wpis.rodzaj === 'skrzynia') {
+      // Wariant nagrody i rzadki artefakt losujemy TERAZ, a nie przy otwarciu:
+      // inaczej dałoby się zapisać grę przed skrzynią i losować do skutku.
+      const artefakt = losuj() < SZANSA_ARTEFAKTU;
+      obiekty.push({
+        ...wspolne,
+        rodzaj: 'skrzynia',
+        nazwa: 'Skrzynia',
+        wariant: Math.floor(losuj() * 3),
+        artefakt: artefakt ? ARTEFAKTY[Math.floor(losuj() * ARTEFAKTY.length)].id : undefined,
+      });
+    } else if (wpis.rodzaj === 'artefakt') {
+      // Im dalej od startu, tym lepsza klasa — bliskie artefakty są drobne.
+      const daleko = Math.max(Math.abs(wpis.x - PUNKTY.start.x), Math.abs(wpis.y - PUNKTY.start.y));
+      const klasa = daleko > 20 ? 'relikt' : daleko > 12 ? 'znaczny' : 'drobny';
+      const pula = ARTEFAKTY.filter((a) => a.klasa === klasa);
+      const a = pula[Math.floor(losuj() * pula.length)];
+      obiekty.push({ ...wspolne, rodzaj: 'artefakt', nazwa: a.nazwa, artefakt: a.id });
+    } else if (wpis.rodzaj === 'potwor') {
+      const sila = wpis.sila ?? 'slaby';
+      const oddzialy = oddzialyStrazy(sila, losuj);
+      obiekty.push({
+        ...wspolne,
+        rodzaj: 'potwor',
+        nazwa: sila === 'straznik' ? 'Strażnik Przełęczy' : oddzialy[0].nazwa,
+        frakcja: STRAZE[sila]?.frakcja,
+        oddzialy,
+      });
+    }
+  }
+
+  obiekty.push({
+    id: id++,
+    rodzaj: 'zamek',
+    x: PUNKTY['zamek gracza'].x,
+    y: PUNKTY['zamek gracza'].y,
+    nazwa: 'Bór Szmaragdowy',
+    nasz: true,
+  });
+  obiekty.push({
+    id: id++,
+    rodzaj: 'zamek',
+    x: PUNKTY['zamek wroga'].x,
+    y: PUNKTY['zamek wroga'].y,
+    nazwa: 'Grota Księżycowa',
+  });
+
+  // Armia startowa: cztery najniższe oddziały Boru. Punkty ruchu liczymy
+  // z szybkości najwolniejszego, dokładnie jak w Heroes 3 — dzięki temu
+  // dobór armii naprawdę wpływa na to, jak daleko się dojdzie.
+  const bor = factionById('bor') ?? FACTIONS[0];
+  const armia: Oddzial[] = bor.units.slice(0, 4).map((u, i) => ({
+    sprite: u.sprite,
+    nazwa: u.name,
+    ile: [20, 9, 6, 4][i],
+    frakcja: bor.id,
+    tier: i,
+  }));
+  const najwolniejszy = Math.min(...bor.units.slice(0, 4).map((u) => u.move));
+  const ruchMax = ruchNaDzien(najwolniejszy);
+
+  const stan: StanMapy = {
+    szer: TEREN[0].length,
+    wys: TEREN.length,
+    teren,
+    obiekty,
+    bohater: {
+      x: PUNKTY.start.x,
+      y: PUNKTY.start.y,
+      ruch: ruchMax,
+      ruchMax,
+      imie: 'Janek',
+      atak: 2,
+      obrona: 1,
+      armia,
+      artefakty: [],
+      doswiadczenie: 0,
+    },
+    skarbiec: { pokeball: 15, jagoda: 6, kamien: 1, odlamek: 2 },
+    dzien: 1,
+    odkryte: TEREN.map(() => new Array(TEREN[0].length).fill(false)),
+  };
+  odslon(stan);
+  return stan;
+}

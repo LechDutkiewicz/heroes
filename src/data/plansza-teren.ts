@@ -4,7 +4,7 @@
 // Plansza 36 × 36 — rozmiar małej mapy z Heroes 3.
 // Znaki: . trawa, = ścieżka, , piasek, T las, # skały, ~ woda.
 
-export const TEREN_MAPY_2 = [
+export const TEREN = [
   '~~~~~~~~,,,,,,,......#######....TTTT',
   '~~~~~~~,~,,,,,.,.....########....TTT',
   '~~~~~~~~,,,,,,.......#####......T.TT',
@@ -43,7 +43,7 @@ export const TEREN_MAPY_2 = [
   '.....................#####..........',
 ];
 
-export const PUNKTY_MAPY_2 = {
+export const PUNKTY = {
   'start': { x: 4, y: 10 },
   'zamek gracza': { x: 4, y: 16 },
   'rozstaje': { x: 16, y: 10 },
@@ -52,7 +52,7 @@ export const PUNKTY_MAPY_2 = {
   'zamek wroga': { x: 31, y: 28 },
 };
 
-export const ROZSTAWIENIE_MAPY_2: Array<{ x: number; y: number; rodzaj: string; surowiec?: string; sila?: string }> = [
+export const ROZSTAWIENIE: Array<{ x: number; y: number; rodzaj: string; surowiec?: string; sila?: string }> = [
   { x: 8, y: 7, rodzaj: 'surowiec', surowiec: 'jagoda' },
   { x: 0, y: 11, rodzaj: 'surowiec', surowiec: 'jagoda' },
   { x: 0, y: 15, rodzaj: 'kopalnia', surowiec: 'jagoda' },

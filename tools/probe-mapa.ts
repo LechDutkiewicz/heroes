@@ -14,7 +14,7 @@ import {
   wGranicach,
   type StanMapy,
 } from '../src/data/mapa';
-import { pierwszaMapa } from '../src/data/mapa1';
+import { planszaPrzygody } from '../src/data/plansza';
 import { MAPA_H, MAPA_W, OKNO_H, OKNO_W } from '../src/visual/uklad';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -28,7 +28,7 @@ const sprawdz = (co: string, ok: boolean, szczegol = '') => {
   console.log(`  ${ok ? 'OK  ' : 'ŹLE '} ${co}${szczegol ? ` — ${szczegol}` : ''}`);
 };
 
-const s: StanMapy = pierwszaMapa();
+const s: StanMapy = planszaPrzygody();
 
 console.log('=== kształt planszy ===');
 sprawdz('wszystkie wiersze równej długości', s.teren.every((w) => w.length === s.szer), `${s.szer} × ${s.wys}`);
@@ -36,6 +36,8 @@ sprawdz('wszystkie wiersze równej długości', s.teren.every((w) => w.length ==
 console.log('\n=== układ mieści się w oknie gry ===');
 sprawdz('szerokość', MAPA_W <= OKNO_W, `${MAPA_W} ≤ ${OKNO_W}`);
 sprawdz('wysokość', MAPA_H <= OKNO_H, `${MAPA_H} ≤ ${OKNO_H}`);
+// Plansza jest teraz większa od okna — to ona wymusiła przewijanie.
+sprawdz('plansza większa od okna (jest co przewijać)', s.szer > 14 && s.wys > 12, `${s.szer} × ${s.wys}`);
 
 console.log('\n=== tło zgodne z rysunkiem planszy ===');
 // Tło jest generowane z `RYSUNEK` przez tools/render_mapa.py. Bez tej kontroli
@@ -49,7 +51,7 @@ console.log('\n=== tło zgodne z rysunkiem planszy ===');
   const teraz = createHash('sha256').update(rysunek, 'utf8').digest('hex').slice(0, 16);
   let zapisany = '(brak pliku)';
   try {
-    zapisany = JSON.parse(readFileSync('public/mapa/plansza-1.json', 'utf8')).odcisk;
+    zapisany = JSON.parse(readFileSync('public/mapa/plansza.json', 'utf8')).odcisk;
   } catch {
     /* zostaje „brak pliku" */
   }
@@ -61,14 +63,15 @@ console.log('\n=== tło zgodne z rysunkiem planszy ===');
 }
 
 console.log('\n=== obiekty ===');
+let zleStojace = 0;
 for (const o of s.obiekty) {
   const nateren = wGranicach(s, o.x, o.y) ? s.teren[o.y][o.x] : null;
-  sprawdz(
-    `${o.nazwa} (${o.x},${o.y})`,
-    nateren !== null && TEREN_INFO[nateren].koszt !== null,
-    nateren === null ? 'poza planszą' : TEREN_INFO[nateren].nazwa
-  );
+  if (!(nateren !== null && TEREN_INFO[nateren].koszt !== null)) {
+    zleStojace++;
+    sprawdz(`${o.nazwa} (${o.x},${o.y})`, false, nateren === null ? 'poza planszą' : TEREN_INFO[nateren].nazwa);
+  }
 }
+sprawdz(`wszystkie ${s.obiekty.length} obiektów stoi na terenie przejezdnym`, zleStojace === 0);
 const zajete = new Set(s.obiekty.map((o) => `${o.x},${o.y}`));
 sprawdz('żadne dwa obiekty nie stoją na tym samym polu', zajete.size === s.obiekty.length);
 sprawdz(
@@ -81,12 +84,7 @@ console.log('\n=== dostępność ===');
 // więc jeśli potwór zamyka jedyne przejście do zamku, wyjdzie to właśnie tu.
 for (const o of s.obiekty) {
   const t = trasa(s, o.x, o.y);
-  const koszt = t?.reduce((a, k) => a + k.koszt, 0) ?? 0;
-  sprawdz(
-    `da się dojść do: ${o.nazwa}`,
-    t !== null,
-    t ? `${t.length} pól, ${Math.round(koszt)} pkt ruchu (zapas na turę: ${s.bohater.ruchMax})` : 'brak trasy'
-  );
+  if (t === null) sprawdz(`da się dojść do: ${o.nazwa} (${o.x},${o.y})`, false, 'brak trasy');
 }
 
 console.log('\n=== pierwsza tura ma sens ===');
@@ -96,11 +94,25 @@ const wZasiegu = s.obiekty.filter((o) => {
   const t = trasa(s, o.x, o.y);
   return t !== null && t.reduce((a, k) => a + k.koszt, 0) <= s.bohater.ruchMax;
 });
+// Poprzednia wersja tego sprawdzenia wymagała 2–4 osiągalnych obiektów i była
+// dobrana do planszy 14 × 12. Po przejściu na 36 × 36 i punkty ruchu z Heroes 3
+// (1500–2000, czyli 15–20 pól dziennie) w pierwszym dniu widać kilkanaście
+// obiektów — i tak właśnie wygląda pierwszy dzień w Heroes 3. Nie liczba jest
+// tu istotna, tylko dwie rzeczy: żeby było co robić i żeby nie dało się od razu
+// pojechać na koniec mapy.
+sprawdz('w pierwszym dniu jest co robić', wZasiegu.length >= 3, `${wZasiegu.length} obiektów`);
+const wrogiZamek = s.obiekty.find((o) => o.rodzaj === 'zamek' && !o.nasz)!;
 sprawdz(
-  'w pierwszej turze osiągalne 2–4 obiekty',
-  wZasiegu.length >= 2 && wZasiegu.length <= 4,
-  wZasiegu.map((o) => o.nazwa).join(', ') || 'żaden'
+  'zamek przeciwnika NIE jest osiągalny pierwszego dnia',
+  !wZasiegu.includes(wrogiZamek)
 );
+const straznik = s.obiekty.find((o) => o.nazwa === 'Strażnik Przełęczy')!;
+sprawdz('strażnik przełęczy stoi poza zasięgiem pierwszego dnia', !wZasiegu.includes(straznik));
+
+console.log('\n=== mgła wojny ===');
+const odkrytych = s.odkryte.flat().filter(Boolean).length;
+sprawdz('na starcie odsłonięty jest tylko fragment', odkrytych > 20 && odkrytych < s.szer * s.wys * 0.15, `${odkrytych} z ${s.szer * s.wys} pól`);
+sprawdz('każdy obiekt daleko od startu jest zakryty', !s.obiekty.every((o) => s.odkryte[o.y][o.x]));
 
 console.log(`\n${bledy === 0 ? 'Wszystko się zgadza.' : `Błędów: ${bledy}`}`);
 process.exit(bledy === 0 ? 0 : 1);

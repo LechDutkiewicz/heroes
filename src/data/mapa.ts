@@ -1,3 +1,5 @@
+import { PROMIEN_WIDZENIA, SKRZYNIE } from './zasady-h3';
+
 /**
  * Mapa przygody — dane i zasady, bez rysowania.
  *
@@ -57,7 +59,42 @@ export interface Pole {
   y: number;
 }
 
-export type RodzajObiektu = 'surowiec' | 'kopalnia' | 'zamek' | 'potwor' | 'skrzynia';
+export type RodzajObiektu =
+  | 'surowiec'
+  | 'kopalnia'
+  | 'zamek'
+  | 'potwor'
+  | 'skrzynia'
+  | 'artefakt';
+
+/**
+ * Artefakty. W Heroes 3 dzielą się na klasy o rosnącej sile; u nas trzy klasy
+ * wystarczą, bo bohater ma trzy statystyki, na które mogą działać.
+ *
+ * Każdy daje stały dodatek — żadnych warunków ani „działa tylko w bitwie".
+ * Ośmiolatek ma zobaczyć, że liczba w panelu urosła.
+ */
+export interface Artefakt {
+  id: string;
+  nazwa: string;
+  klasa: 'drobny' | 'znaczny' | 'relikt';
+  atak?: number;
+  obrona?: number;
+  ruch?: number;
+}
+
+export const ARTEFAKTY: Artefakt[] = [
+  { id: 'opaska', nazwa: 'Opaska Treningowa', klasa: 'drobny', atak: 1 },
+  { id: 'kamizelka', nazwa: 'Kamizelka Ochronna', klasa: 'drobny', obrona: 1 },
+  { id: 'buty', nazwa: 'Buty Wędrowca', klasa: 'drobny', ruch: 150 },
+  { id: 'pazur', nazwa: 'Pazur Ostrza', klasa: 'znaczny', atak: 2 },
+  { id: 'tarcza', nazwa: 'Tarcza z Łusek', klasa: 'znaczny', obrona: 2 },
+  { id: 'rower', nazwa: 'Rower Terenowy', klasa: 'znaczny', ruch: 300 },
+  { id: 'mistrz', nazwa: 'Pas Mistrza Areny', klasa: 'relikt', atak: 3, obrona: 2 },
+  { id: 'skrzydla', nazwa: 'Skrzydła Latającego', klasa: 'relikt', ruch: 450, obrona: 1 },
+];
+
+export const artefaktPoId = (id: string) => ARTEFAKTY.find((a) => a.id === id);
 
 export interface Obiekt {
   id: number;
@@ -68,6 +105,10 @@ export interface Obiekt {
   /** dla surowca i skrzyni: co i ile daje */
   surowiec?: Surowiec;
   ile?: number;
+  /** dla skrzyni: który z trzech wariantów z Heroes 3 (0–2) i czy kryje artefakt */
+  wariant?: number;
+  /** dla artefaktu i skrzyni z niespodzianką: identyfikator z `ARTEFAKTY` */
+  artefakt?: string;
   /** dla potwora: która frakcja go wystawia i co konkretnie stoi na drodze */
   frakcja?: string;
   oddzialy?: Oddzial[];
@@ -91,6 +132,13 @@ export interface Oddzial {
   sprite: string;
   nazwa: string;
   ile: number;
+  /**
+   * Skąd wziąć pełną definicję oddziału (statystyki, żywioł, umiejętność),
+   * kiedy mapa oddaje sterowanie scenie bitwy. Bez tego bitwa musiałaby
+   * odgadywać, czym jest oddział o danym sprite'ie.
+   */
+  frakcja: string;
+  tier: number;
 }
 
 export interface Bohater {
@@ -104,6 +152,42 @@ export interface Bohater {
   obrona: number;
   /** Armia. Karta bohatera pokazuje ją tak jak w Heroes 3: rząd slotów. */
   armia: Oddzial[];
+  /** Zebrane artefakty (identyfikatory z `ARTEFAKTY`). */
+  artefakty: string[];
+  doswiadczenie: number;
+}
+
+/**
+ * Statystyki bohatera z doliczonymi artefaktami. Trzymamy je osobno od
+ * `Bohater`, żeby podniesienie artefaktu nie wymagało przeliczania i zapisywania
+ * niczego — dodatki zawsze liczą się z tego, co bohater aktualnie nosi, więc
+ * nie da się ich policzyć dwa razy.
+ */
+export function statystyki(b: Bohater) {
+  let atak = b.atak;
+  let obrona = b.obrona;
+  let ruchMax = b.ruchMax;
+  for (const id of b.artefakty) {
+    const a = artefaktPoId(id);
+    if (!a) continue;
+    atak += a.atak ?? 0;
+    obrona += a.obrona ?? 0;
+    ruchMax += a.ruch ?? 0;
+  }
+  return { atak, obrona, ruchMax };
+}
+
+/** Poziom bohatera z doświadczenia. Progi rosną, jak w Heroes 3. */
+export function poziom(doswiadczenie: number) {
+  let p = 1;
+  let prog = 100;
+  let suma = prog;
+  while (doswiadczenie >= suma) {
+    p++;
+    prog = Math.round(prog * 1.4);
+    suma += prog;
+  }
+  return p;
 }
 
 export interface StanMapy {
@@ -114,6 +198,33 @@ export interface StanMapy {
   bohater: Bohater;
   skarbiec: Skarbiec;
   dzien: number;
+  /**
+   * Mgła wojny. `true` znaczy „już tu byliśmy". Raz odsłonięte pole zostaje
+   * odsłonięte — tak jest w Heroes 3 i tak jest łaskawiej dla dziecka niż
+   * mgła, która wraca.
+   */
+  odkryte: boolean[][];
+}
+
+/** Odsłania mgłę wokół bohatera. Zwraca, ile pól przybyło. */
+export function odslon(s: StanMapy, promien = PROMIEN_WIDZENIA): number {
+  let nowe = 0;
+  const { x, y } = s.bohater;
+  for (let dy = -promien; dy <= promien; dy++) {
+    for (let dx = -promien; dx <= promien; dx++) {
+      // Koło, nie kwadrat — inaczej odsłonięty obszar ma widoczne rogi
+      // i wygląda jak usterka, a nie jak zasięg wzroku.
+      if (dx * dx + dy * dy > promien * promien) continue;
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= s.szer || ny >= s.wys) continue;
+      if (!s.odkryte[ny][nx]) {
+        s.odkryte[ny][nx] = true;
+        nowe++;
+      }
+    }
+  }
+  return nowe;
 }
 
 /** Czy pole leży na mapie. */
@@ -228,17 +339,64 @@ export interface WynikWejscia {
   bitwaZ?: Obiekt;
   /** budynek właśnie zajęty — scena zatyka na nim chorągiewkę */
   zajete?: Obiekt;
+  /** wejście do zamku — scena otwiera ekran miasta */
+  zamek?: Obiekt;
+  /**
+   * Skrzynia czeka na decyzję gracza. Scena musi zapytać, zanim cokolwiek
+   * doda — to jest cała mechanika skrzyni w Heroes 3 i bez pytania znika.
+   */
+  wybor?: WyborSkrzyni;
+}
+
+export interface WyborSkrzyni {
+  obiekt: Obiekt;
+  pokeballe: number;
+  doswiadczenie: number;
+}
+
+/** Rozstrzygnięcie wyboru ze skrzyni. */
+export function wezZeSkrzyni(s: StanMapy, w: WyborSkrzyni, co: 'pokeballe' | 'doswiadczenie') {
+  w.obiekt.zebrany = true;
+  if (co === 'pokeballe') {
+    s.skarbiec.pokeball += w.pokeballe;
+    return `+${w.pokeballe} pokeballi`;
+  }
+  s.bohater.doswiadczenie += w.doswiadczenie;
+  return `+${w.doswiadczenie} doświadczenia`;
 }
 
 /** Wejście na pole z obiektem: zbiera, zajmuje albo zaczyna bitwę. */
 export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
   if (o.rodzaj === 'potwor') return { opis: `${o.nazwa} zagradza drogę!`, bitwaZ: o };
 
-  if (o.rodzaj === 'surowiec' || o.rodzaj === 'skrzynia') {
+  if (o.rodzaj === 'surowiec') {
     const co = o.surowiec ?? 'pokeball';
     s.skarbiec[co] += o.ile ?? 0;
     o.zebrany = true;
     return { opis: `+${o.ile} ${SUROWIEC_INFO[co].dopelniacz}` };
+  }
+
+  if (o.rodzaj === 'artefakt') {
+    o.zebrany = true;
+    const a = artefaktPoId(o.artefakt ?? '');
+    if (a) s.bohater.artefakty.push(a.id);
+    return { opis: a ? `Znaleziono: ${a.nazwa}` : 'Pusto' };
+  }
+
+  if (o.rodzaj === 'skrzynia') {
+    // Rzadka skrzynia z artefaktem rozstrzyga się od razu — nie ma tu czego
+    // wybierać, a pytanie „artefakt czy artefakt" byłoby tylko kliknięciem.
+    if (o.artefakt) {
+      o.zebrany = true;
+      const a = artefaktPoId(o.artefakt);
+      if (a) s.bohater.artefakty.push(a.id);
+      return { opis: a ? `W skrzyni był artefakt!\n${a.nazwa}` : 'Pusta skrzynia' };
+    }
+    const w = SKRZYNIE[o.wariant ?? 0];
+    return {
+      opis: '',
+      wybor: { obiekt: o, pokeballe: w.pokeballe, doswiadczenie: w.doswiadczenie },
+    };
   }
 
   if (o.rodzaj === 'kopalnia') {
@@ -252,7 +410,9 @@ export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
     };
   }
 
-  return { opis: `${o.nazwa}: tu stanie zamek` };
+  if (o.rodzaj === 'zamek') return { opis: o.nazwa, zamek: o };
+
+  return { opis: o.nazwa };
 }
 
 /** Ile surowców wpłynie jutro z zajętych budynków. */
@@ -269,7 +429,7 @@ export function dochod(s: StanMapy): Partial<Record<Surowiec, number>> {
 /** Nowa tura: odnawia ruch, dolicza dochód z zajętych budynków. */
 export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
   s.dzien++;
-  s.bohater.ruch = s.bohater.ruchMax;
+  s.bohater.ruch = statystyki(s.bohater).ruchMax;
   const wplyw = dochod(s);
   for (const [co, ile] of Object.entries(wplyw)) {
     s.skarbiec[co as Surowiec] += ile;

@@ -1,6 +1,6 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-08-12 (po ujednoliceniu stylu mapy).
+Ostatnia aktualizacja: 2026-08-12 (mapa 36 × 36, mgła, bitwa z mapy).
 
 Ten plik istnieje po to, żeby po przerwie nie trzeba było odtwarzać kontekstu
 z pamięci. Zapisuję tu, co jest skończone, co jest w połowie i czego świadomie
@@ -24,6 +24,7 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `npx tsx tools/probe-trasa.ts` | poprawność tras ruchu na ~128 tys. przypadków |
 | `npx tsx tools/probe-mapa.ts` | plansza przygody: kształt, okno, dostępność obiektów, odcisk tła |
 | `node tools/probe-kopalnia.mjs` | czy budynek produkcyjny się ZAJMUJE, a nie zbiera |
+| `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia z wyborem, artefakt, bitwa i powrót |
 | `node tools/zrzut-mapa.mjs` | zrzut mapy przygody (osobno, bo `capture.mjs` zna tylko bitwę) |
 
 Grafiki mapy są generowane, nie wrzucane ręcznie. Po zmianie planszy albo
@@ -32,6 +33,7 @@ palety trzeba puścić:
 | Skrypt | Co robi |
 |---|---|
 | `python3 tools/kafelki_autotile.py` | odczytuje z arkusza tablicę kafelków przejściowych |
+| `python3 tools/generuj_mape.py` | składa planszę 36 × 36 ze szkicu krain i rozstawia obiekty |
 | `python3 tools/render_mapa.py` | składa i wygładza tło planszy (4 klatki wody) |
 | `python3 tools/prepare_mapa_obiekty.py` | wycina i wygładza drzewa, skały, zamki, bohatera |
 | `python3 tools/rysuj_obiekty_mapy.py` | rysuje surowce, budynki i ozdoby |
@@ -83,16 +85,28 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
   pokazuje dochód dzienny, więc widać, po co je zajmować.
 - **Bohater jest trenerem**, nie stworkiem — z arkusza postaci z pakietu,
   z animacją chodu w czterech kierunkach.
+- **Plansza 36 × 36** — rozmiar małej mapy z Heroes 3 — z przewijaniem
+  (strzałki, spacja, klik w minimapę), mgłą wojny i ramką widoku na minimapie.
+- **Zasady z Heroes 3 spisane ze źródłami** w `src/data/zasady-h3.ts`,
+  z rozdziałem na potwierdzone i dobrane przez nas.
+- **Bitwa startuje z mapy i wraca z wynikiem.** Wchodzisz na strażnika,
+  bijesz się jego armią, po wygranej znika, ocalałe oddziały wracają
+  z liczebnością z końca bitwy. Stan mapy siedzi w rejestrze gry, więc
+  surowce, kopalnie, artefakty i mgła przeżywają przejście.
+- **Skrzynia jest pytaniem, nie nagrodą** — pokeballe albo doświadczenie,
+  trzy warianty jak w Heroes 3, rzadko artefakt.
+- **Artefakty** dodają na stałe atak, obronę albo punkty ruchu.
 
 ## W połowie
 
-**Mapa przygody chodzi, ale nie jest jeszcze grą.** Ruch, trasy, koszty pól,
-zbieranie surowców, dochód z kopalni i koniec tury działają. Nie działa to,
-co z mapy robi Heroes 3:
+**Zostało jedno duże brakujące ogniwo: ZAMEK.**
 
-- **wejście na potwora nie zaczyna bitwy** — wypisuje tylko komunikat.
-  Scena bitwy istnieje obok, ale nic ich nie łączy;
-- **do zamku nie da się wejść** — nie ma ekranu miasta ani rekrutacji;
+- **do zamku nie da się wejść** — nie ma ekranu miasta, rekrutacji ani
+  rozbudowy. Wejście na zamek wypisuje tylko komunikat, że ekran powstaje.
+  Bez tego zebrane pokeballe nie mają na co iść, a to psuje sens zbierania;
+- **przeciwnik nie gra** — jego zamek stoi, ale nikt nim nie rusza;
+- **potwory nie proponują dołączenia ani nie uciekają** — progi są policzone
+  w `zasady-h3.ts`, ale nic ich jeszcze nie używa;
 - **nie ma mgły wojny** ani przewijania — plansza mieści się na ekranie
   w całości i to ona wyznaczyła rozmiar 14 × 12;
 - **domyślnym ekranem jest wciąż bitwa.** Mapa siedzi pod `?ekran=mapa`,
@@ -172,6 +186,34 @@ szeroka na dwa pola zostawiała na skosach trójkąty trawy i wyglądała jak to
 kolejowe; krzaki z arkusza mają wtopiony kwadrat trawy, więc rozsypane po
 mapie robiły jasne kafelki; głazy z arkusza są brązowe i na trawie czytały się
 jak kupki ziemi. Żadnej z tych trzech rzeczy nie dało się przewidzieć z kodu.
+
+## Znalezione przy mapie 36 × 36
+
+**`units` w scenie bitwy jest GETTEREM na tablicę symulacji.** Sonda kasowała
+wrogów przez `s.units = s.units.filter(...)` i to cicho nic nie robiło —
+przypisanie do gettera przepada bez błędu. Wyglądało to jak zepsuty powrót
+z bitwy przez trzy podejścia. Stąd `rozstrzygnijNatychmiast` w scenie bitwy:
+sonda ma kończyć bitwę drogą gry, a nie podmieniając jej pola z zewnątrz.
+
+**Narastanie głośności potrafi przeżyć bitwę i wywalić jej zakończenie.**
+Muzyka wchodzi tweenem trwającym kilka sekund; jeśli bitwa skończy się
+wcześniej, `stopMusic` niszczy dźwięk, a żywy tween pisze do niego głośność
+i rzuca wyjątkiem. Zakończenie bitwy przerywało się w połowie: wynik był
+odłożony, ale powrót na mapę nigdy nie następował. `stopMusic` ubija teraz
+tweeny celu, zanim cokolwiek zniszczy. To nie była usterka sondy — wywalić
+się mogło każdemu, kto wygra bitwę przed pierwszym kliknięciem.
+
+**Maskę kontenera musi robić obiekt Z LISTY WYŚWIETLANIA.** `make.graphics({},
+false)` daje obiekt poza listą i maska z niego po prostu nie działa, bez
+żadnego ostrzeżenia — mapa wyjeżdżała poza ramę na panel. Musi być
+`add.graphics().setVisible(false)`.
+
+**Sprawdzenia też się starzeją.** Warunek „w pierwszej turze osiągalne 2–4
+obiekty" był dobrany do planszy 14 × 12. Po przejściu na 36 × 36 i punkty
+ruchu z Heroes 3 zgłosił błąd, choć zachowanie było poprawne — w Heroes 3
+pierwszy dzień naprawdę pokazuje kilkanaście obiektów. Teraz sprawdzamy to,
+o co naprawdę chodzi: żeby było co robić i żeby nie dało się pierwszego dnia
+dojechać do zamku przeciwnika.
 
 ## Rzecz, o której warto pamiętać przy każdej następnej rundzie
 

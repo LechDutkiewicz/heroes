@@ -9,6 +9,22 @@ import {
 } from '../data/units';
 import { ALL_SPRITES, FACTIONS, factionById, type Faction } from '../data/factions';
 import { hexDistance, type Cell } from '../data/hex';
+
+/** Oddział przekazany z mapy przygody: liczebność plus wskazanie definicji. */
+interface OddzialZMapy {
+  sprite: string;
+  nazwa: string;
+  ile: number;
+  frakcja: string;
+  tier: number;
+}
+
+interface DaneZPrzygody {
+  gracz: OddzialZMapy[];
+  wrog: OddzialZMapy[];
+  oObiekt: number;
+  powrot?: string;
+}
 // Wszystkie zasady walki biorą się STĄD i tylko stąd. Scena ma je odgrywać,
 // nie powtarzać — druga kopia reguł rozjechałaby się z symulatorem balansu.
 import { initSfx, loadSfx, sfx, startMusic, stopMusic, toggleSfx } from '../audio/sfx';
@@ -279,6 +295,17 @@ export class BattleScene extends Phaser.Scene {
   private busy = false;
   private gameOver = false;
 
+  /**
+   * Skład bitwy narzucony przez mapę przygody. Kiedy jest ustawiony, scena
+   * NIE losuje frakcji — wystawia dokładnie te oddziały, na które gracz
+   * wszedł na mapie, i po zakończeniu wraca tam z wynikiem.
+   *
+   * Kiedy go nie ma, wszystko działa jak dotąd: losowa bitwa dwóch frakcji.
+   * To ta ścieżka jest używana przez test dymny i narzędzia do zrzutów, więc
+   * musi zostać nietknięta.
+   */
+  private zPrzygody?: DaneZPrzygody;
+
   /** Krajobraz tej bitwy — losowany raz, przy tworzeniu sceny. */
   private terrain = TERRAINS[0];
 
@@ -347,6 +374,13 @@ export class BattleScene extends Phaser.Scene {
     return Phaser.Utils.Array.Shuffle([...START_ROWS]);
   }
 
+  init(dane?: DaneZPrzygody) {
+    // `init` dostaje pusty obiekt także przy zwykłym starcie sceny, więc
+    // o narzuconym składzie decyduje obecność armii, a nie samego obiektu.
+    this.zPrzygody = dane && dane.gracz?.length ? dane : undefined;
+    this.gameOver = false;
+  }
+
   create() {
     this.terrain = Phaser.Utils.Array.GetRandom(TERRAINS);
     this.drawArmies();
@@ -388,8 +422,14 @@ export class BattleScene extends Phaser.Scene {
     // czempion na dole; strzelcy i piechota wychodzą przy tym na przemian.
     const rzedyGracza = this.startRows();
     const rzedyWroga = this.startRows();
-    this.playerFaction.units.forEach((def, i) => this.spawnUnit(def, 'player', 0, rzedyGracza[i]));
-    this.enemyFaction.units.forEach((def, i) => this.spawnUnit(def, 'enemy', COLS - 1, rzedyWroga[i]));
+    if (this.zPrzygody) {
+      this.wystawZPrzygody(rzedyGracza, rzedyWroga);
+    } else {
+      this.playerFaction.units.forEach((def, i) => this.spawnUnit(def, 'player', 0, rzedyGracza[i]));
+      this.enemyFaction.units.forEach((def, i) =>
+        this.spawnUnit(def, 'enemy', COLS - 1, rzedyWroga[i])
+      );
+    }
 
     this.input.keyboard?.on('keydown-C', () => this.waitTurn());
     this.input.keyboard?.on('keydown-O', () => this.guardTurn());
@@ -645,6 +685,30 @@ export class BattleScene extends Phaser.Scene {
   /** Obszar kliknięcia w kształcie hexa — prostokąt zachodziłby na sąsiadów. */
   private hexHitArea() {
     return new Phaser.Geom.Polygon(hexPoints(HEX_W / 2, HEX_H / 2));
+  }
+
+  /**
+   * Wystawia oddziały podane przez mapę. Liczebność bierzemy z mapy, a resztę
+   * statystyk z definicji frakcji — dzięki temu bitwa nie musi znać się na
+   * oddziałach, a mapa nie musi przechowywać ich statystyk.
+   */
+  private wystawZPrzygody(rzedyGracza: number[], rzedyWroga: number[]) {
+    const wystaw = (sklad: OddzialZMapy[], side: Side, col: number, rzedy: number[]) => {
+      sklad.forEach((o, i) => {
+        const frakcja = factionById(o.frakcja);
+        const def = frakcja?.units[o.tier];
+        if (!def) return;
+        this.spawnUnit({ ...def, count: o.ile }, side, col, rzedy[i % rzedy.length]);
+      });
+    };
+    wystaw(this.zPrzygody!.gracz, 'player', 0, rzedyGracza);
+    wystaw(this.zPrzygody!.wrog, 'enemy', COLS - 1, rzedyWroga);
+    // Nazwy stron w ekranie końca biorą się z frakcji, więc dopasowujemy je
+    // do tego, kto naprawdę stanął do walki.
+    const frakcjaGracza = factionById(this.zPrzygody!.gracz[0]?.frakcja ?? '');
+    const frakcjaWroga = factionById(this.zPrzygody!.wrog[0]?.frakcja ?? '');
+    if (frakcjaGracza) this.playerFaction = frakcjaGracza;
+    if (frakcjaWroga) this.enemyFaction = frakcjaWroga;
   }
 
   private spawnUnit(def: UnitDef, side: Side, col: number, row: number) {
@@ -1580,7 +1644,54 @@ export class BattleScene extends Phaser.Scene {
     this.performMove(unit, action.cel);
   }
 
+  /**
+   * Wraca na mapę przygody z wynikiem. Ocalałe oddziały wracają z liczebnością
+   * z końca bitwy — inaczej wygrana byłaby darmowa i nie byłoby powodu unikać
+   * silniejszych strażników.
+   */
+  private wrocDoPrzygody(wygrana: boolean) {
+    const ocalali = this.zPrzygody!.gracz.map((o) => {
+      const zywy = this.units.find(
+        (u) => u.side === 'player' && u.def.sprite === o.sprite
+      );
+      return { ...o, ile: zywy ? zywy.count : 0 };
+    });
+    this.registry.set('wynik-bitwy', {
+      oObiekt: this.zPrzygody!.oObiekt,
+      wygrana,
+      armia: ocalali,
+    });
+    // Chwila na przeczytanie ekranu końca, dopiero potem powrót.
+    this.time.delayedCall(2600, () => this.scene.start(this.zPrzygody!.powrot ?? 'adventure'));
+  }
+
   // ---------- koniec bitwy ----------
+
+  /**
+   * Kończy bitwę natychmiast z zadanym wynikiem.
+   *
+   * Potrzebne z dwóch powodów. Po pierwsze, sondy muszą umieć sprawdzić drogę
+   * powrotną na mapę, a rozgrywanie całej bitwy klik po kliku trwałoby minuty
+   * i zależałoby od losowania. Po drugie, to jest zalążek „szybkiej walki"
+   * z Heroes 3 — tam też można oddać bitwę silnikowi i dostać sam wynik.
+   *
+   * Wcześniej sonda kasowała oddziały, sięgając wprost do pól sceny. Nie
+   * działało to i nie mogło działać: takie podmienienie tablicy omija całą
+   * resztę stanu bitwy, więc scena dalej uważała, że wróg stoi.
+   */
+  rozstrzygnijNatychmiast(wygrana: boolean) {
+    if (this.gameOver) return;
+    const przegrani = wygrana ? 'enemy' : 'player';
+    for (const u of [...this.units]) {
+      if (u.side !== przegrani) continue;
+      u.count = 0;
+      u.view.container.destroy();
+      this.units.splice(this.units.indexOf(u), 1);
+      const wSymulacji = this.battle.units.indexOf(u);
+      if (wSymulacji !== -1) this.battle.units.splice(wSymulacji, 1);
+    }
+    this.checkGameOver();
+  }
 
   private checkGameOver() {
     const playersLeft = this.units.some((u) => u.side === 'player');
@@ -1593,6 +1704,7 @@ export class BattleScene extends Phaser.Scene {
     this.turnText.setText('');
 
     const won = playersLeft;
+    if (this.zPrzygody) this.wrocDoPrzygody(won);
     // Ekran końca należy do warstwy nakładki, nie efektów — inaczej iskry
     // z ostatniego ciosu potrafią wylądować NAD wstęgą z napisem.
     this.effectLayer.setDepth(Z.overlay);
