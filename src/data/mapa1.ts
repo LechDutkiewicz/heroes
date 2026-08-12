@@ -12,6 +12,10 @@ import type { Obiekt, StanMapy, Teren } from './mapa';
  * Ścieżka ma szerokość JEDNEGO pola. Przy dwóch polach obok siebie na skosach
  * zostawały trójkąty trawy wewnątrz wstęgi drogi i całość wyglądała jak tory
  * kolejowe, a nie jak trakt.
+ *
+ * UWAGA: tło planszy jest generowane z tego rysunku przez
+ * `tools/render_mapa.py`. Po każdej zmianie trzeba je przegenerować —
+ * `tools/probe-mapa.ts` sprawdza odcisk i krzyknie, jeśli się rozjedzie.
  */
 const RYSUNEK = [
   '~~~,,,.......T',
@@ -39,15 +43,27 @@ const ZNAKI: Record<string, Teren> = {
 
 /**
  * Obiekty. Rozstawione tak, żeby pierwsza tura miała oczywisty cel (dwa
- * surowce w zasięgu), a dalsza droga wymagała już decyzji: obejść potwora
- * dookoła czy stanąć do walki i skrócić drogę do zamku.
+ * surowce i sad w zasięgu), a dalsza droga wymagała już decyzji: obejść
+ * potwora dookoła czy stanąć do walki i skrócić drogę do zamku.
+ *
+ * Budynki produkcyjne (`kopalnia`) różnią się od stosów surowca (`surowiec`)
+ * tym, że się ich nie podnosi — zajmuje się je i zostają na mapie, dając
+ * `ile` surowca każdego dnia.
  */
 const OBIEKTY: Array<Omit<Obiekt, 'id'>> = [
-  { rodzaj: 'surowiec', x: 6, y: 1, nazwa: 'Stos drewna', surowiec: 'drewno', ile: 5 },
-  { rodzaj: 'surowiec', x: 3, y: 4, nazwa: 'Bryła kamienia', surowiec: 'kamien', ile: 4 },
-  { rodzaj: 'skrzynia', x: 12, y: 2, nazwa: 'Skrzynia', surowiec: 'zloto', ile: 500 },
-  { rodzaj: 'surowiec', x: 12, y: 6, nazwa: 'Kryształ', surowiec: 'krysztal', ile: 2 },
-  { rodzaj: 'kopalnia', x: 2, y: 9, nazwa: 'Tartak', surowiec: 'drewno', ile: 2 },
+  { rodzaj: 'surowiec', x: 6, y: 1, nazwa: 'Kiść jagód', surowiec: 'jagoda', ile: 5 },
+  {
+    rodzaj: 'surowiec',
+    x: 3,
+    y: 4,
+    nazwa: 'Kamień ewolucji',
+    surowiec: 'kamien',
+    ile: 1,
+  },
+  { rodzaj: 'skrzynia', x: 12, y: 2, nazwa: 'Skrzynia trenera', surowiec: 'pokeball', ile: 8 },
+  { rodzaj: 'surowiec', x: 12, y: 6, nazwa: 'Odłamki', surowiec: 'odlamek', ile: 3 },
+  { rodzaj: 'kopalnia', x: 2, y: 9, nazwa: 'Sad jagodowy', surowiec: 'jagoda', ile: 2 },
+  { rodzaj: 'kopalnia', x: 4, y: 8, nazwa: 'Kopalnia odłamków', surowiec: 'odlamek', ile: 1 },
   {
     rodzaj: 'potwor',
     x: 9,
@@ -67,7 +83,7 @@ const OBIEKTY: Array<Omit<Obiekt, 'id'>> = [
       { sprite: '00058', nazwa: 'Ashko', ile: 6 },
     ],
   },
-  { rodzaj: 'zamek', x: 13, y: 11, nazwa: 'Bór Szmaragdowy' },
+  { rodzaj: 'zamek', x: 12, y: 11, nazwa: 'Bór Szmaragdowy' },
 ];
 
 export function pierwszaMapa(): StanMapy {
@@ -90,11 +106,10 @@ export function pierwszaMapa(): StanMapy {
       ruch: 700,
       ruchMax: 700,
       imie: 'Janek',
-      // Prowadzi Verdiko — to jego widać na mapie. Reszta armii siedzi
-      // w karcie bohatera, jak rząd slotów w Heroes 3.
-      sprite: '00096',
       atak: 2,
       obrona: 1,
+      // Armia. Bohater jest trenerem, a nie stworkiem — stworki są armią,
+      // więc bohater grany przez Pokemona nie miał sensu.
       armia: [
         { sprite: '00193', nazwa: 'Pyroko', ile: 20 },
         { sprite: '00020', nazwa: 'Flamir', ile: 9 },
@@ -102,7 +117,7 @@ export function pierwszaMapa(): StanMapy {
         { sprite: '00096', nazwa: 'Verdiko', ile: 4 },
       ],
     },
-    skarbiec: { drewno: 10, kamien: 8, krysztal: 2, zloto: 2000 },
+    skarbiec: { pokeball: 15, jagoda: 6, kamien: 1, odlamek: 2 },
     dzien: 1,
   };
 }

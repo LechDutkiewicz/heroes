@@ -4,6 +4,7 @@ import {
   SUROWIEC_INFO,
   TEREN_INFO,
   data,
+  dochod,
   kosztPola,
   nowaTura,
   obiektNa,
@@ -15,7 +16,6 @@ import {
   type StanMapy,
 } from '../data/mapa';
 import { pierwszaMapa } from '../data/mapa1';
-import { KLATEK, SYGNATURY } from '../data/kafelki';
 import { C, E, FONT, H, Z, body, display } from '../visual/theme';
 import { drawPanelBody, makeHudButton, mix, plate } from '../visual/hud';
 import { ICON, buildIcons } from '../visual/icons';
@@ -28,15 +28,27 @@ import { GORA, KAFEL, MARGINES, PANEL_W, PASEK_H } from '../visual/uklad';
  * odbiorca i chodzi o to, żeby wiedział, gdzie co jest, zanim cokolwiek
  * kliknie. Stąd: mapa po lewej w ramie, prawa kolumna z minimapą (litery
  * stron świata na ramce), karta bohatera z portretem, statystykami i rzędem
- * oddziałów, a na samym dole pasek surowców z datą po prawej.
+ * oddziałów, a na samym dole pasek surowców z datą.
  *
  * Rysunek jest nasz, pokemonowy — z układu bierzemy rozmieszczenie, nie grafikę.
  *
- * Scena tylko pokazuje stan; wszystkie zasady siedzą w `src/data/mapa.ts`.
+ * Tło planszy przychodzi jako gotowy obrazek z `tools/render_mapa.py`. Scena
+ * nie składa terenu z kafelków: kafelki trzeba by powiększać trzykrotnie
+ * „najbliższym sąsiadem" i teren byłby kanciasty obok gładkich stworków.
+ * Wygładzić da się dopiero całą złożoną mapę, a to robota dla narzędzia,
+ * nie dla przeglądarki.
+ *
+ * Zasady siedzą w `src/data/mapa.ts`; scena tylko pokazuje stan.
  */
 
-/** Co ile milisekund woda przechodzi na następną klatkę. */
+/** Co ile milisekund plansza przechodzi na następną klatkę (animacja wody). */
 const WODA_MS = 550;
+const KLATEK_PLANSZY = 4;
+
+/** Arkusz bohatera: 4 kierunki (wiersze) × 4 klatki chodu (kolumny). */
+const BOHATER_KLATKA = 96;
+const KIERUNEK_WIERSZ = { dol: 0, lewo: 1, prawo: 2, gora: 3 } as const;
+type Kierunek = keyof typeof KIERUNEK_WIERSZ;
 
 /**
  * Tekst w polu podpowiedzi, kiedy kursor nie stoi na niczym. Mówi wprost, jak
@@ -46,19 +58,18 @@ const WODA_MS = 550;
 const DOMYSLNA_PODPOWIEDZ =
   'Kliknij pole, żeby zobaczyć trasę. Kliknij drugi raz w to samo miejsce, żeby ruszyć.';
 
-/** Barwy drogi. Ziemia z arkusza, przyciemniona na obrzeżu. */
-const DROGA = 0xd7a463;
-const DROGA_BRZEG = 0xa1723c;
-
 export class AdventureScene extends Phaser.Scene {
   private stan!: StanMapy;
   private mapaX = MARGINES;
   private mapaY = GORA;
 
-  private teren!: Phaser.GameObjects.RenderTexture;
+  private plansza!: Phaser.GameObjects.Image;
   private warstwaTrasy!: Phaser.GameObjects.Graphics;
   private bohaterObj!: Phaser.GameObjects.Container;
+  private bohaterSprite!: Phaser.GameObjects.Sprite;
+  private kierunek: Kierunek = 'dol';
   private podpisy: Record<string, Phaser.GameObjects.Text> = {};
+  private dochody: Record<string, Phaser.GameObjects.Text> = {};
   private ikonyObiektow: Record<number, Phaser.GameObjects.Container> = {};
   private ruchTekst!: Phaser.GameObjects.Text;
   private dataTekst!: Phaser.GameObjects.Text;
@@ -74,34 +85,35 @@ export class AdventureScene extends Phaser.Scene {
 
   preload() {
     const b = import.meta.env.BASE_URL;
-    this.load.spritesheet('kafelki', `${b}mapa-tileset.png`, {
-      frameWidth: 16,
-      frameHeight: 16,
+    for (let i = 0; i < KLATEK_PLANSZY; i++) {
+      this.load.image(`plansza-${i}`, `${b}mapa/plansza-1-${i}.png`);
+    }
+    this.load.spritesheet('bohater', `${b}mapa/bohater.png`, {
+      frameWidth: BOHATER_KLATKA,
+      frameHeight: BOHATER_KLATKA,
     });
     for (const n of [
       'sosna',
       'sosna-mala',
       'drzewo',
+      'skala',
+      'kopiec',
       'kepka',
       'kwiaty',
-      'krysztal-2',
-      'drewno',
-      'kamien',
+      'pokeball',
+      'jagody',
+      'kamien-ewolucji',
+      'odlamki',
+      'sad',
+      'kopalnia',
       'skrzynia',
-      'tartak',
       'zamek-las',
     ]) {
       this.load.image(`m-${n}`, `${b}mapa/${n}.png`);
     }
-    // Głazy z arkusza są brązowe i na trawie czytały się jak kupki ziemi.
-    // Szare skały mamy już przygotowane pod planszę bitewną — te same wchodzą
-    // na mapę, dzięki czemu góra widziana z mapy i przeszkoda w bitwie to
-    // wciąż ta sama rzecz.
-    this.load.image('m-skala', `${b}terrain/obstacles/glaz.png`);
-    this.load.image('m-kopiec', `${b}terrain/obstacles/kopiec.png`);
-    // Sprite'y stworków: bohater, jego armia i to, co stoi na mapie.
+    // Sprite'y stworków: armia bohatera i to, co stoi na mapie.
     const stan = pierwszaMapa();
-    const potrzebne = new Set<string>([stan.bohater.sprite]);
+    const potrzebne = new Set<string>();
     for (const o of stan.bohater.armia) potrzebne.add(o.sprite);
     for (const ob of stan.obiekty) for (const o of ob.oddzialy ?? []) potrzebne.add(o.sprite);
     for (const s of potrzebne) this.load.image(`p-${s}`, `${b}sprites/${s}.png`);
@@ -110,20 +122,10 @@ export class AdventureScene extends Phaser.Scene {
   create() {
     this.stan = pierwszaMapa();
     buildIcons(this);
-
-    // Grafika terenu i obiektów jest pikselowa i powiększana trzykrotnie.
-    // Przy domyślnym wygładzaniu na styku kafelków pojawiała się jasna kreska,
-    // bo próbkowanie sięgało poza brzeg klatki. Filtrowanie „najbliższy sąsiad"
-    // to usuwa i przy okazji zostawia piksele pikselami.
-    for (const klucz of this.textures.getTextureKeys()) {
-      if (klucz.startsWith('m-') || klucz === 'kafelki') {
-        this.textures.get(klucz).setFilter(Phaser.Textures.FilterMode.NEAREST);
-      }
-    }
+    this.przygotujAnimacje();
 
     this.rysujTlo();
-    this.rysujTeren();
-    this.rysujDrogi();
+    this.rysujPlansze();
     this.warstwaTrasy = this.add.graphics().setDepth(Z.board + 2);
     this.rysujPrzeszkody();
     this.rysujOzdoby();
@@ -133,14 +135,14 @@ export class AdventureScene extends Phaser.Scene {
     this.rysujPasekSurowcow();
     this.odswiezPanel();
 
-    // Woda w arkuszu ma cztery klatki. Bez animacji morze wygląda jak
-    // niebieska tapeta i mapa robi wrażenie zatrzymanej.
+    // Woda ma cztery klatki. Bez animacji morze wygląda jak niebieska tapeta
+    // i cała mapa robi wrażenie zatrzymanej.
     this.time.addEvent({
       delay: WODA_MS,
       loop: true,
       callback: () => {
-        this.klatkaWody = (this.klatkaWody + 1) % KLATEK;
-        this.malujTeren();
+        this.klatkaWody = (this.klatkaWody + 1) % KLATEK_PLANSZY;
+        this.plansza.setTexture(`plansza-${this.klatkaWody}`);
       },
     });
 
@@ -148,6 +150,20 @@ export class AdventureScene extends Phaser.Scene {
     // tak samo jak w Heroes 3, gdzie trasę najpierw się widzi, a potem zatwierdza.
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => this.klikMapa(p));
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => this.ruchMyszy(p));
+  }
+
+  private przygotujAnimacje() {
+    for (const [nazwa, wiersz] of Object.entries(KIERUNEK_WIERSZ)) {
+      this.anims.create({
+        key: `chod-${nazwa}`,
+        frames: this.anims.generateFrameNumbers('bohater', {
+          start: wiersz * 4,
+          end: wiersz * 4 + 3,
+        }),
+        frameRate: 8,
+        repeat: -1,
+      });
+    }
   }
 
   // ---------- geometria ----------
@@ -170,7 +186,7 @@ export class AdventureScene extends Phaser.Scene {
     return this.stan.wys * KAFEL;
   }
 
-  // ---------- teren ----------
+  // ---------- plansza ----------
 
   private rysujTlo() {
     const g = this.add.graphics().setDepth(Z.sky);
@@ -183,21 +199,7 @@ export class AdventureScene extends Phaser.Scene {
       .setDepth(Z.hud);
   }
 
-  /**
-   * Litera terenu na potrzeby autokafelkowania. Las, skały i ścieżka stoją na
-   * trawie — las i skały dostają na wierzch sprite, a droga jest dorysowana,
-   * bo w arkuszu nie ma kafelków drogi.
-   */
-  private litera(x: number, y: number): string {
-    const kx = Math.max(0, Math.min(this.stan.szer - 1, x));
-    const ky = Math.max(0, Math.min(this.stan.wys - 1, y));
-    const t = this.stan.teren[ky][kx];
-    if (t === 'woda') return 'W';
-    if (t === 'piasek') return 'P';
-    return 'G';
-  }
-
-  private rysujTeren() {
+  private rysujPlansze() {
     // Ramka pod mapą — jak gruba, złota rama wokół mapy w Heroes 3.
     const rama = this.add.graphics().setDepth(Z.board - 1);
     rama.fillStyle(C.shadow, 0.5);
@@ -207,103 +209,10 @@ export class AdventureScene extends Phaser.Scene {
     rama.lineStyle(2, C.gold, 1);
     rama.strokeRoundedRect(this.mapaX - 3, this.mapaY - 3, this.mapaW + 6, this.mapaH + 6, 7);
 
-    // Teren idzie w jedną teksturę, a nie w kilkaset osobnych obrazków.
-    // Dwa powody: kafelki siatki podwójnej wystają o pół pola poza planszę
-    // i tekstura przycina to sama, a przemalowanie klatki wody to jedno
-    // przerysowanie zamiast szukania, które kafelki są wodą.
-    this.teren = this.add
-      .renderTexture(this.mapaX, this.mapaY, this.mapaW, this.mapaH)
+    this.plansza = this.add
+      .image(this.mapaX, this.mapaY, 'plansza-0')
       .setOrigin(0, 0)
       .setDepth(Z.board);
-    // Tryb „all" plus `preserve`. W domyślnym trybie „render" bufor poleceń
-    // znika po pierwszej klatce i z całej mapy zostaje sama rama — sprawdzone
-    // na trzech trybach po kolei, bo z samego opisu w typach to nie wynika.
-    this.teren.setRenderMode('all', true);
-    this.malujTeren();
-  }
-
-  /**
-   * Siatka podwójna: kafelki są przesunięte o pół pola, więc każdy z nich
-   * leży na styku CZTERECH pól mapy i jego cztery rogi mówią wprost, którego
-   * kafelka przejściowego użyć. To dlatego brzeg wody jest miękki, a nie
-   * schodkowy — a układa się to bez ani jednej ręcznie wpisanej reguły.
-   */
-  private malujTeren() {
-    const rt = this.teren;
-    rt.clear();
-    const zapas = SYGNATURY.GGGG[0];
-    for (let j = 0; j <= this.stan.wys; j++) {
-      for (let i = 0; i <= this.stan.szer; i++) {
-        const sig =
-          this.litera(i - 1, j - 1) + this.litera(i, j - 1) + this.litera(i - 1, j) + this.litera(i, j);
-        // Braki to wyłącznie układy „w szachownicę" (np. trawa–woda–woda–trawa),
-        // których nie ma w żadnym arkuszu autokafelkowania. Wtedy kładziemy
-        // teren, którego w rogach jest najwięcej.
-        const klatki =
-          SYGNATURY[sig] ??
-          SYGNATURY[[...sig].sort((a, b) => sig.split(b).length - sig.split(a).length)[0].repeat(4)] ??
-          [zapas, zapas, zapas, zapas];
-        rt.stamp('kafelki', klatki[this.klatkaWody % klatki.length], i * KAFEL, j * KAFEL, {
-          originX: 0.5,
-          originY: 0.5,
-          scaleX: KAFEL / 16,
-          scaleY: KAFEL / 16,
-        });
-      }
-    }
-  }
-
-  /**
-   * Drogi. Arkusz ich nie ma, więc rysujemy je jako grubą kreskę łączącą
-   * środki sąsiadujących pól ścieżki. Tak też wyglądają drogi w Heroes 3:
-   * ciągłą wstęgą z rozwidleniami, a nie kwadratami pole po polu — i tylko
-   * dlatego widać na pierwszy rzut oka, że tędy idzie się taniej.
-   */
-  private rysujDrogi() {
-    const g = this.add.graphics().setDepth(Z.board + 1);
-    const jest = (x: number, y: number) =>
-      x >= 0 && y >= 0 && x < this.stan.szer && y < this.stan.wys && this.stan.teren[y][x] === 'sciezka';
-
-    // Dwa przejścia: ciemny brzeg i jasna nawierzchnia. W każdym najpierw
-    // wszystkie odcinki, potem wszystkie kółka na środkach pól — przy odwrotnej
-    // kolejności na zakrętach wychodziły jasne trójkąty, bo odcinek zakrywał
-    // kółko postawione wcześniej.
-    //
-    // Trzeciego, jaśniejszego pasa pośrodku (śladu kół) tu nie ma: na skosach
-    // łamał się w szewrony i cała droga zaczynała wyglądać jak tory kolejowe.
-    for (const [barwa, grubosc, alfa] of [
-      [DROGA_BRZEG, KAFEL * 0.44, 1],
-      [DROGA, KAFEL * 0.32, 1],
-    ] as Array<[number, number, number]>) {
-      g.lineStyle(grubosc, barwa, alfa);
-      for (let y = 0; y < this.stan.wys; y++) {
-        for (let x = 0; x < this.stan.szer; x++) {
-          if (!jest(x, y)) continue;
-          const a = this.naEkran(x, y);
-          // Tylko połowa kierunków — odcinek rysowany z obu końców byłby
-          // rysowany dwa razy, a przy przezroczystości widać by to było.
-          for (const [dx, dy] of [
-            [1, 0],
-            [0, 1],
-            [1, 1],
-            [1, -1],
-          ]) {
-            if (!jest(x + dx, y + dy)) continue;
-            const b = this.naEkran(x + dx, y + dy);
-            g.lineBetween(a.x, a.y, b.x, b.y);
-          }
-        }
-      }
-      g.fillStyle(barwa, alfa);
-      for (let y = 0; y < this.stan.wys; y++) {
-        for (let x = 0; x < this.stan.szer; x++) {
-          if (jest(x, y)) {
-            const a = this.naEkran(x, y);
-            g.fillCircle(a.x, a.y, grubosc / 2);
-          }
-        }
-      }
-    }
   }
 
   /**
@@ -336,8 +245,6 @@ export class AdventureScene extends Phaser.Scene {
             [0.2, 0.24, 0.5],
           ] as Array<[number, number, number]>) {
             const klucz = ['m-skala', 'm-kopiec'][wariant(x + Math.round(dx * 10), y, 2)];
-            // To samo rozsunięcie co przy drzewach: równe rzędy głazów czytały
-            // się jak murek, a nie jak zbocze.
             const jx = ((wariant(x, y + 2, 5) - 2) / 2) * KAFEL * 0.12;
             const jy = ((wariant(y, x + 3, 3) - 1) / 2) * KAFEL * 0.08;
             const im = this.add
@@ -351,10 +258,9 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   /**
-   * Kępki trawy i krzaki na pustych polach. Nic nie blokują — są po to, żeby
+   * Kępki trawy i kwiatki na pustych polach. Nic nie blokują — są po to, żeby
    * trawa nie była jednolitą plamą. W Heroes 3 pusty kawałek mapy praktycznie
    * nie istnieje; tu też nie powinien, bo puste pole wygląda na niedokończone.
-   * Co czwarte pole, wyznaczane z położenia, więc układ jest zawsze ten sam.
    */
   private rysujOzdoby() {
     for (let y = 0; y < this.stan.wys; y++) {
@@ -364,30 +270,26 @@ export class AdventureScene extends Phaser.Scene {
         const h = (x * 17 + y * 31 + x * y * 5) % 7;
         if (h > 2) continue;
         const { x: ex, y: ey } = this.naEkran(x, y);
-        // Krzaki z arkusza odpadły: są narysowane razem z kwadratem trawy pod
-        // spodem, więc na mapie zostawiały jasne kafelki. Kępka i kwiatki są
-        // rysowane u nas, na przezroczystym tle.
         const klucz = h === 2 ? 'm-kwiaty' : 'm-kepka';
         const im = this.add
           .image(ex + ((h - 1) * KAFEL) / 5, ey + KAFEL * (0.18 + h * 0.06), klucz)
           .setDepth(Z.units + y - 0.5);
-        im.setScale((KAFEL * (0.2 + h * 0.03)) / im.height).setOrigin(0.5, 1);
+        im.setScale(0.7 + h * 0.1).setOrigin(0.5, 1);
       }
     }
   }
 
   // ---------- obiekty ----------
 
-  /** Czym rysujemy obiekt: sprite z arkusza, sprite stworka albo nic. */
+  /** Czym rysujemy obiekt i jak wysoki ma być względem pola. */
   private grafikaObiektu(o: Obiekt): { klucz: string; wys: number } {
     if (o.rodzaj === 'zamek') return { klucz: 'm-zamek-las', wys: KAFEL * 1.9 };
-    if (o.rodzaj === 'kopalnia') return { klucz: 'm-tartak', wys: KAFEL * 1.15 };
-    if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: KAFEL * 0.72 };
+    if (o.rodzaj === 'kopalnia')
+      return { klucz: o.surowiec === 'jagoda' ? 'm-sad' : 'm-kopalnia', wys: KAFEL * 1.25 };
+    if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: KAFEL * 0.78 };
     if (o.rodzaj === 'potwor')
       return { klucz: `p-${o.oddzialy?.[0].sprite ?? '00002'}`, wys: KAFEL * 1.05 };
-    if (o.surowiec === 'drewno') return { klucz: 'm-drewno', wys: KAFEL * 0.72 };
-    if (o.surowiec === 'kamien') return { klucz: 'm-kamien', wys: KAFEL * 0.72 };
-    return { klucz: 'm-krysztal-2', wys: KAFEL * 0.66 };
+    return { klucz: `m-${SUROWIEC_INFO[o.surowiec ?? 'pokeball'].ikona}`, wys: KAFEL * 0.7 };
   }
 
   private rysujObiekty() {
@@ -396,8 +298,8 @@ export class AdventureScene extends Phaser.Scene {
       const kont = this.add.container(x, y).setDepth(Z.units + o.y + 0.5);
 
       const cien = this.add.graphics();
-      cien.fillStyle(C.shadow, 0.3);
-      cien.fillEllipse(0, KAFEL * 0.36, KAFEL * 0.56, KAFEL * 0.18);
+      cien.fillStyle(C.shadow, 0.28);
+      cien.fillEllipse(0, KAFEL * 0.36, KAFEL * 0.54, KAFEL * 0.17);
       kont.add(cien);
 
       const { klucz, wys } = this.grafikaObiektu(o);
@@ -405,15 +307,16 @@ export class AdventureScene extends Phaser.Scene {
       im.setScale(wys / im.height);
       kont.add(im);
 
-      // Potwór dostaje chorągiewkę w barwie frakcji — z daleka to jedyna
-      // rzecz, po której widać, że to przeciwnik, a nie neutralny surowiec.
-      if (o.rodzaj === 'potwor') {
-        const f = this.add.graphics();
-        f.fillStyle(C.foe, 1);
-        f.fillTriangle(-2, -KAFEL * 0.62, 16, -KAFEL * 0.55, -2, -KAFEL * 0.46);
-        f.lineStyle(2, C.shadow, 0.8);
-        f.lineBetween(-2, -KAFEL * 0.66, -2, -KAFEL * 0.3);
+      // Potwór dostaje chorągiewkę w barwie przeciwnika — z daleka to jedyna
+      // rzecz, po której widać, że to walka, a nie surowiec do podniesienia.
+      if (o.rodzaj === 'potwor') kont.add(this.chorag(C.foe));
+      // Budynek produkcyjny: chorągiewka pojawia się dopiero po zajęciu,
+      // dokładnie jak w Heroes 3. Do tego czasu stoi bez flagi = niczyj.
+      if (o.rodzaj === 'kopalnia') {
+        const f = this.chorag(C.ally).setVisible(!!o.nasz);
+        f.setData('flaga', o.id);
         kont.add(f);
+        kont.setData('flaga', f);
       }
 
       kont.setData('obiekt', o);
@@ -421,26 +324,31 @@ export class AdventureScene extends Phaser.Scene {
     }
   }
 
+  /** Chorągiewka na maszcie — w Heroes 3 to ona mówi, czyje jest to, co stoi pod nią. */
+  private chorag(barwa: number) {
+    const g = this.add.graphics();
+    g.lineStyle(2.5, C.shadow, 0.75);
+    g.lineBetween(-2, -KAFEL * 0.66, -2, -KAFEL * 0.28);
+    g.fillStyle(barwa, 1);
+    g.fillTriangle(-1, -KAFEL * 0.64, 17, -KAFEL * 0.56, -1, -KAFEL * 0.46);
+    g.lineStyle(1.5, C.white, 0.6);
+    g.strokeTriangle(-1, -KAFEL * 0.64, 17, -KAFEL * 0.56, -1, -KAFEL * 0.46);
+    return g;
+  }
+
   private rysujBohatera() {
     const { x, y } = this.naEkran(this.stan.bohater.x, this.stan.bohater.y);
     this.bohaterObj = this.add.container(x, y).setDepth(Z.units + this.stan.bohater.y + 0.8);
 
     const cien = this.add.graphics();
-    cien.fillStyle(C.shadow, 0.38);
-    cien.fillEllipse(0, KAFEL * 0.36, KAFEL * 0.58, KAFEL * 0.19);
+    cien.fillStyle(C.shadow, 0.34);
+    cien.fillEllipse(0, KAFEL * 0.34, KAFEL * 0.5, KAFEL * 0.16);
     this.bohaterObj.add(cien);
 
-    const im = this.add.image(0, KAFEL * 0.38, `p-${this.stan.bohater.sprite}`).setOrigin(0.5, 1);
-    im.setScale((KAFEL * 1.1) / im.height);
-    this.bohaterObj.add(im);
-
-    // Chorągiewka nad bohaterem — w Heroes 3 to ona mówi, czyj to oddział.
-    const flaga = this.add.graphics();
-    flaga.fillStyle(C.ally, 1);
-    flaga.fillTriangle(-2, -KAFEL * 0.64, 17, -KAFEL * 0.56, -2, -KAFEL * 0.47);
-    flaga.lineStyle(2, C.white, 0.95);
-    flaga.lineBetween(-2, -KAFEL * 0.68, -2, -KAFEL * 0.3);
-    this.bohaterObj.add(flaga);
+    this.bohaterSprite = this.add.sprite(0, KAFEL * 0.4, 'bohater', 0).setOrigin(0.5, 1);
+    this.bohaterSprite.setScale((KAFEL * 1.15) / this.bohaterSprite.height);
+    this.bohaterObj.add(this.bohaterSprite);
+    this.bohaterObj.add(this.chorag(C.ally));
   }
 
   // ---------- prawa kolumna ----------
@@ -496,10 +404,12 @@ export class AdventureScene extends Phaser.Scene {
     ram.fillRoundedRect(wnetrzeX + 8, kartaY + 8, portretBok, portretBok, 6);
     ram.lineStyle(2, C.goldDeep, 1);
     ram.strokeRoundedRect(wnetrzeX + 8, kartaY + 8, portretBok, portretBok, 6);
+    // Portret to ta sama klatka co na mapie — bohater w panelu i bohater na
+    // planszy muszą być rozpoznawalnie tą samą postacią.
     const portret = this.add
-      .image(wnetrzeX + 8 + portretBok / 2, kartaY + 8 + portretBok / 2, `p-${b.sprite}`)
+      .image(wnetrzeX + 8 + portretBok / 2, kartaY + 6 + portretBok / 2, 'bohater', 0)
       .setDepth(Z.hud + 2);
-    portret.setScale((portretBok - 8) / portret.height);
+    portret.setScale((portretBok - 4) / portret.height);
 
     this.add
       .text(wnetrzeX + portretBok + 18, kartaY + 10, b.imie, display(15))
@@ -508,34 +418,27 @@ export class AdventureScene extends Phaser.Scene {
 
     // Trzy statystyki zamiast czterech z Heroes 3 — magii jeszcze nie ma,
     // więc czwarte pole byłoby pustym miejscem udającym mechanikę.
+    const statY = kartaY + 40;
     const staty: Array<[string, string]> = [
       [ICON.sword, String(b.atak)],
       [ICON.shield, String(b.obrona)],
       [ICON.boot, ''],
     ];
-    staty.forEach(([klucz], i) => {
-      const sx = wnetrzeX + portretBok + 24 + i * 42;
-      this.add.image(sx, kartaY + 40, klucz).setDisplaySize(17, 17).setDepth(Z.hud + 2);
+    staty.forEach(([klucz, wartosc], i) => {
+      const sx = wnetrzeX + portretBok + 24 + i * 44;
+      this.add.image(sx, statY, klucz).setDisplaySize(17, 17).setDepth(Z.hud + 2);
+      const t = this.add
+        .text(sx + 12, statY, wartosc, display(14, i === 2 ? H.gold : H.white))
+        .setOrigin(0, 0.5)
+        .setDepth(Z.hud + 2);
+      if (i === 2) this.ruchTekst = t;
     });
-    this.add
-      .text(wnetrzeX + portretBok + 36, kartaY + 40, String(b.atak), display(14))
-      .setOrigin(0, 0.5)
-      .setDepth(Z.hud + 2);
-    this.add
-      .text(wnetrzeX + portretBok + 78, kartaY + 40, String(b.obrona), display(14))
-      .setOrigin(0, 0.5)
-      .setDepth(Z.hud + 2);
-    this.ruchTekst = this.add
-      .text(wnetrzeX + portretBok + 120, kartaY + 40, '', display(14, H.gold))
-      .setOrigin(0, 0.5)
-      .setDepth(Z.hud + 2);
 
     // RZĄD ODDZIAŁÓW — sloty jak w Heroes 3: portret i liczba pod spodem.
     const slotBok = 40;
     const odstep = 4;
     const ileSlotow = 4;
-    const rzadX =
-      wnetrzeX + (wnetrzeW - (ileSlotow * slotBok + (ileSlotow - 1) * odstep)) / 2;
+    const rzadX = wnetrzeX + (wnetrzeW - (ileSlotow * slotBok + (ileSlotow - 1) * odstep)) / 2;
     const rzadY = kartaY + 74;
     for (let i = 0; i < ileSlotow; i++) {
       const sx = rzadX + i * (slotBok + odstep);
@@ -596,16 +499,21 @@ export class AdventureScene extends Phaser.Scene {
     g.lineStyle(2, C.goldDeep, 1);
     g.strokeRoundedRect(x0, y, szer, PASEK_H, 7);
 
-    const krok = (szer - 30) / SUROWCE.length;
+    const krok = (szer - 24) / SUROWCE.length;
     SUROWCE.forEach((s, i) => {
-      const sx = x0 + 18 + i * krok;
-      const kropka = this.add.graphics().setDepth(Z.hud + 1);
-      kropka.fillStyle(SUROWIEC_INFO[s].barwa, 1);
-      kropka.fillCircle(sx, y + PASEK_H / 2, 8);
-      kropka.lineStyle(2, C.shadow, 0.5);
-      kropka.strokeCircle(sx, y + PASEK_H / 2, 8);
+      const sx = x0 + 20 + i * krok;
+      const sy = y + PASEK_H / 2;
+      // Ikona surowca, nie kolorowa kropka: kropki trzeba się nauczyć,
+      // a pokeball i jagodę widać od razu.
+      const im = this.add.image(sx, sy, `m-${SUROWIEC_INFO[s].ikona}`).setDepth(Z.hud + 1);
+      im.setScale(Math.min(1, (PASEK_H - 10) / im.height));
       this.podpisy[s] = this.add
-        .text(sx + 15, y + PASEK_H / 2, '0', display(14))
+        .text(sx + 17, sy, '0', display(15))
+        .setOrigin(0, 0.5)
+        .setDepth(Z.hud + 1);
+      // Dochód dzienny obok liczby — bez tego nie widać, po co zajmować sad.
+      this.dochody[s] = this.add
+        .text(sx + 17, sy, '', body(10, H.goldLight))
         .setOrigin(0, 0.5)
         .setDepth(Z.hud + 1);
     });
@@ -623,7 +531,13 @@ export class AdventureScene extends Phaser.Scene {
   private odswiezPanel() {
     const b = this.stan.bohater;
     this.ruchTekst.setText(`${Math.round(b.ruch)}`);
-    for (const s of SUROWCE) this.podpisy[s].setText(String(this.stan.skarbiec[s]));
+    const wplyw = dochod(this.stan);
+    for (const s of SUROWCE) {
+      const t = this.podpisy[s];
+      t.setText(String(this.stan.skarbiec[s]));
+      const ile = wplyw[s] ?? 0;
+      this.dochody[s].setText(ile > 0 ? `+${ile}/dzień` : '').setX(t.x + t.width + 6);
+    }
     const d = data(this.stan.dzien);
     this.dataTekst.setText(`Tydzień ${d.tydzien}, dzień ${d.dzienTygodnia}`);
     this.rysujMinimape();
@@ -639,7 +553,7 @@ export class AdventureScene extends Phaser.Scene {
     g.clear();
     const barwy: Record<string, number> = {
       trawa: 0xa8c93a,
-      sciezka: 0xd7a463,
+      sciezka: 0xd0a468,
       piasek: 0xf6d98a,
       las: 0x3f7a3a,
       skaly: 0x8a8a92,
@@ -653,7 +567,8 @@ export class AdventureScene extends Phaser.Scene {
     }
     for (const o of this.stan.obiekty) {
       if (o.zebrany) continue;
-      g.fillStyle(o.rodzaj === 'potwor' ? C.foe : C.gold, 1);
+      const barwa = o.rodzaj === 'potwor' ? C.foe : o.nasz ? C.ally : C.gold;
+      g.fillStyle(barwa, 1);
       g.fillRect(mx + o.x * kw, my + o.y * kh, Math.ceil(kw), Math.ceil(kh));
     }
     g.fillStyle(C.white, 1);
@@ -671,14 +586,28 @@ export class AdventureScene extends Phaser.Scene {
     }
     const o = obiektNa(this.stan, x, y);
     if (o) {
-      const armia = (o.oddzialy ?? []).map((s) => `${s.ile} × ${s.nazwa}`).join(', ');
-      this.podpowiedz.setText(armia ? `${o.nazwa}\n${armia}` : o.nazwa);
+      this.podpowiedz.setText(this.opisObiektu(o));
       return;
     }
     const teren = TEREN_INFO[this.stan.teren[y][x]];
     this.podpowiedz.setText(
       teren.koszt === null ? `${teren.nazwa} — nie do przejścia` : `${teren.nazwa} — koszt ${teren.koszt}`
     );
+  }
+
+  private opisObiektu(o: Obiekt) {
+    if (o.rodzaj === 'potwor') {
+      const armia = (o.oddzialy ?? []).map((s) => `${s.ile} × ${s.nazwa}`).join(', ');
+      return `${o.nazwa}\n${armia}`;
+    }
+    if (o.rodzaj === 'kopalnia') {
+      const co = SUROWIEC_INFO[o.surowiec ?? 'pokeball'].dopelniacz;
+      return o.nasz
+        ? `${o.nazwa} — twoja\n+${o.ile} ${co} dziennie`
+        : `${o.nazwa}\nWejdź, żeby zająć: +${o.ile} ${co} dziennie`;
+    }
+    if (o.rodzaj === 'zamek') return `${o.nazwa}\nTwój zamek`;
+    return `${o.nazwa}\n+${o.ile} ${SUROWIEC_INFO[o.surowiec ?? 'pokeball'].dopelniacz}`;
   }
 
   private klikMapa(p: Phaser.Input.Pointer) {
@@ -725,6 +654,12 @@ export class AdventureScene extends Phaser.Scene {
     });
   }
 
+  /** W którą stronę odwrócić trenera. Przy skosie decyduje ruch w poziomie. */
+  private kierunekKroku(dx: number, dy: number): Kierunek {
+    if (dx !== 0) return dx > 0 ? 'prawo' : 'lewo';
+    return dy > 0 ? 'dol' : 'gora';
+  }
+
   private idz(kroki: Krok[]) {
     const ile = zasiegNaTure(this.stan.bohater, kroki);
     if (ile === 0) return;
@@ -736,12 +671,19 @@ export class AdventureScene extends Phaser.Scene {
       if (i >= ile) {
         this.zajety = false;
         this.trasaBiezaca = null;
+        this.bohaterSprite.stop();
+        this.bohaterSprite.setFrame(KIERUNEK_WIERSZ[this.kierunek] * 4);
         const o = obiektNa(this.stan, this.stan.bohater.x, this.stan.bohater.y);
         if (o) this.wejdzNa(o);
         this.odswiezPanel();
         return;
       }
       const k = kroki[i++];
+      const kier = this.kierunekKroku(k.x - this.stan.bohater.x, k.y - this.stan.bohater.y);
+      if (kier !== this.kierunek || !this.bohaterSprite.anims.isPlaying) {
+        this.kierunek = kier;
+        this.bohaterSprite.play(`chod-${kier}`);
+      }
       this.stan.bohater.ruch -= k.koszt;
       this.stan.bohater.x = k.x;
       this.stan.bohater.y = k.y;
@@ -751,8 +693,8 @@ export class AdventureScene extends Phaser.Scene {
         targets: this.bohaterObj,
         x,
         y,
-        duration: 150,
-        ease: E.soft,
+        duration: 170,
+        ease: 'Linear',
         onComplete: () => {
           this.odswiezPanel();
           dalej();
@@ -765,6 +707,7 @@ export class AdventureScene extends Phaser.Scene {
   private wejdzNa(o: Obiekt) {
     const wynik = odwiedz(this.stan, o);
     this.napisUlotny(wynik.opis);
+
     if (o.zebrany) {
       // Zebrany surowiec znika — zostawianie go przygaszonego wyglądało jak
       // usterka, a nie jak „już to masz".
@@ -773,43 +716,66 @@ export class AdventureScene extends Phaser.Scene {
         this.tweens.add({
           targets: kont,
           alpha: 0,
-          y: kont.y - 10,
+          y: kont.y - 12,
           duration: 380,
           onComplete: () => kont.destroy(),
         });
       }
     }
+
+    if (wynik.zajete) {
+      // Budynek ZOSTAJE — podnosi się na nim chorągiewka. To jest cała
+      // różnica między „zebrałem" a „zająłem" i musi ją być widać.
+      const kont = this.ikonyObiektow[o.id];
+      const flaga = kont?.getData('flaga') as Phaser.GameObjects.Graphics | undefined;
+      if (flaga) {
+        flaga.setVisible(true).setAlpha(0).setScale(0.6, 0.6);
+        this.tweens.add({
+          targets: flaga,
+          alpha: 1,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 420,
+          ease: E.out,
+        });
+      }
+    }
+
     this.odswiezPanel();
   }
 
-  private napisUlotny(tekst: string) {
+  private napisUlotny(tekst: string, dy = 0) {
     const { x, y } = this.naEkran(this.stan.bohater.x, this.stan.bohater.y);
     const t = this.add
-      .text(x, y - KAFEL * 0.7, tekst, {
+      .text(x, y - KAFEL * 0.7 + dy, tekst, {
         fontFamily: FONT,
         fontSize: '15px',
         fontStyle: 'bold',
         color: H.goldLight,
         stroke: H.shadow,
         strokeThickness: 4,
+        align: 'center',
       })
-      .setOrigin(0.5)
+      .setOrigin(0.5, 1)
       .setDepth(Z.effects);
     this.tweens.add({
       targets: t,
-      y: t.y - 28,
+      y: t.y - 30,
       alpha: 0,
-      duration: 1300,
+      duration: 1500,
       onComplete: () => t.destroy(),
     });
   }
 
   private koniecTury() {
     if (this.zajety) return;
-    nowaTura(this.stan);
+    const wplyw = nowaTura(this.stan);
     this.trasaBiezaca = null;
     this.warstwaTrasy.clear();
-    this.napisUlotny('Nowy dzień');
+    const wpisy = Object.entries(wplyw).map(
+      ([co, ile]) => `+${ile} ${SUROWIEC_INFO[co as keyof typeof SUROWIEC_INFO].dopelniacz}`
+    );
+    this.napisUlotny(['Nowy dzień', ...wpisy].join('\n'));
     this.odswiezPanel();
   }
 }

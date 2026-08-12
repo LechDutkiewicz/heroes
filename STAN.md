@@ -1,6 +1,6 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-08-12.
+Ostatnia aktualizacja: 2026-08-12 (po ujednoliceniu stylu mapy).
 
 Ten plik istnieje po to, żeby po przerwie nie trzeba było odtwarzać kontekstu
 z pamięci. Zapisuję tu, co jest skończone, co jest w połowie i czego świadomie
@@ -22,8 +22,19 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `npm run balans` | odsetek zwycięstw każdej pary frakcji na setkach bitew bez grafiki |
 | `node tools/capture.mjs` | komplet zrzutów, w tym paski czterech klatek dla animacji |
 | `npx tsx tools/probe-trasa.ts` | poprawność tras ruchu na ~128 tys. przypadków |
-| `npx tsx tools/probe-mapa.ts` | plansza przygody: kształt, mieszczenie się w oknie, dostępność obiektów |
+| `npx tsx tools/probe-mapa.ts` | plansza przygody: kształt, okno, dostępność obiektów, odcisk tła |
+| `node tools/probe-kopalnia.mjs` | czy budynek produkcyjny się ZAJMUJE, a nie zbiera |
 | `node tools/zrzut-mapa.mjs` | zrzut mapy przygody (osobno, bo `capture.mjs` zna tylko bitwę) |
+
+Grafiki mapy są generowane, nie wrzucane ręcznie. Po zmianie planszy albo
+palety trzeba puścić:
+
+| Skrypt | Co robi |
+|---|---|
+| `python3 tools/kafelki_autotile.py` | odczytuje z arkusza tablicę kafelków przejściowych |
+| `python3 tools/render_mapa.py` | składa i wygładza tło planszy (4 klatki wody) |
+| `python3 tools/prepare_mapa_obiekty.py` | wycina i wygładza drzewa, skały, zamki, bohatera |
+| `python3 tools/rysuj_obiekty_mapy.py` | rysuje surowce, budynki i ozdoby |
 | `node tools/probe-dzwiek.mjs` | ile dźwięków realnie pada w bitwie |
 | `node tools/probe-najechanie.mjs` | co widać po najechaniu na wroga w zasięgu |
 | `node tools/probe-lot.mjs` | wzniesienie, falowanie, przechył i cień w locie |
@@ -61,6 +72,17 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
 - **Mapa przygody — pierwsza plansza.** Układ przeniesiony z HotA, teren
   układa się sam z arkusza narożnikowego, drogi rysowane, woda animowana.
   Wejście: `?ekran=mapa`. Szczegóły niżej.
+- **Jeden styl na całym ekranie przygody.** Teren, drzewa, skały i bohater
+  przechodzą przez `tools/wygladzanie.py`, więc przestały być kanciastym
+  pixel artem obok gładkich stworków i HUD-u.
+- **Surowce pokemonowe**: pokeball (waluta), jagody, kamienie ewolucji,
+  odłamki. Zamiast drewna i złota z Heroes 3 — każdy z tych czterech znaczy
+  w bajce dokładnie to, do czego służy tutaj.
+- **Budynki produkcyjne się ZAJMUJE, nie zbiera.** Sad i kopalnia zostają na
+  mapie, dostają chorągiewkę i dają surowiec codziennie. Pasek surowców
+  pokazuje dochód dzienny, więc widać, po co je zajmować.
+- **Bohater jest trenerem**, nie stworkiem — z arkusza postaci z pakietu,
+  z animacją chodu w czterech kierunkach.
 
 ## W połowie
 
@@ -71,7 +93,6 @@ co z mapy robi Heroes 3:
 - **wejście na potwora nie zaczyna bitwy** — wypisuje tylko komunikat.
   Scena bitwy istnieje obok, ale nic ich nie łączy;
 - **do zamku nie da się wejść** — nie ma ekranu miasta ani rekrutacji;
-- **kopalnia nie ma chorągiewki** po przejęciu, więc nie widać, czyja jest;
 - **nie ma mgły wojny** ani przewijania — plansza mieści się na ekranie
   w całości i to ona wyznaczyła rozmiar 14 × 12;
 - **domyślnym ekranem jest wciąż bitwa.** Mapa siedzi pod `?ekran=mapa`,
@@ -127,6 +148,24 @@ scena kładzie wtedy teren, którego w rogach jest najwięcej.
 tryb `render` czyści bufor poleceń, więc z całej mapy zostawała sama rama.
 Działa dopiero `setRenderMode('all', true)`. Z typów to nie wynika; wyszło
 z porównania zrzutów z trzech trybów po kolei.
+
+**Wygładzanie musi objąć CAŁĄ złożoną mapę, nie pojedyncze kafelki.** Filtr
+przy brzegu kafelka nie wie, co leży obok, więc kafelki wygładzone osobno
+rozjeżdżają się na stykach. Dlatego tło planszy powstaje w `render_mapa.py`
+jako jeden obrazek, a nie w scenie z kafelków. Przy okazji drogi wskoczyły do
+tego samego obrazka — wcześniej były osobną warstwą wektorową i jako jedyne
+na ekranie miały idealnie gładkie brzegi tuż obok kanciastego terenu.
+
+Skoro tło jest generowane, `probe-mapa.ts` pilnuje odcisku rysunku planszy.
+Bez tego dałoby się zmienić `RYSUNEK` i oglądać stare tło: pola zmieniają
+koszty i przejezdność, a obrazek pokazuje poprzedni układ — rozjazd, który
+wygląda jak usterka silnika, a nie jak zapomniane przegenerowanie.
+
+**Filtr medianowy zjada cechy węższe niż kilka pikseli źródła.** Skrzynia
+traciła okucia, tartak bale. Dlatego grafiki rysowane u nas powstają od razu
+w docelowym rozmiarze, z nadpróbkowaniem, a wygładzanie dostają tylko rzeczy
+z pakietu. Klatki bohatera też trzeba wygładzać po jednej — cały arkusz naraz
+przeciągał kolor między klatkami i sylwetki się zlewały.
 
 **Rzeczy, które trzeba było zobaczyć, żeby wiedzieć, że są złe:** ścieżka
 szeroka na dwa pola zostawiała na skosach trójkąty trawy i wyglądała jak tory

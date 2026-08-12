@@ -1,114 +1,85 @@
 #!/usr/bin/env python3
-"""Wycina z arkusza sprite'y na mapę przygody: drzewa, głazy, kryształy, budynki.
+"""Wycina z pakietu i wygładza grafiki na mapę: drzewa, skały, zamki, bohatera.
 
-Dlaczego osobne pliki, a nie klatki arkusza
--------------------------------------------
-Arkusz jest siatką 16 × 16, a drzewo ma 16 × 48 i stoi w niej rozbite na trzy
-klatki. Rysowanie takiego drzewa z trzech klatek to trzy obiekty do ustawiania
-i trzy okazje, żeby coś się rozjechało o piksel. Wycięte sprite'y są jednym
-obrazkiem, który stawia się jednym `setOrigin` — i widać je w katalogu, więc
-da się sprawdzić, czy wycięcie jest tym, czym miało być.
+Wszystko, co pochodzi z pakietu, przechodzi przez `wygladzanie.wygladz`, żeby
+przestało być kanciastym pixel artem. Powód jest jeden i ten sam dla całego
+ekranu: stworki, HUD i plansza bitewna są gładkie, więc teren i przeszkody
+też muszą być — inaczej ekran wygląda na sklejony z dwóch gier.
 
-Granice bierzemy ze spójnych plam nieprzezroczystości, a nie z ręcznie
-wpisanych współrzędnych: przy ręcznym wpisywaniu pierwsze podejście do
-przeszkód bitewnych wycięło pół korony sąsiedniego drzewa i wyszło to dopiero
-na zrzucie.
+Granice wycięć są odczytane z powiększenia arkusza z siatką (drzewa i sale
+stykają się w arkuszu, więc szukanie spójnych plam skleja je w jedno).
 
     python3 tools/prepare_mapa_obiekty.py
 """
 
+import sys
 from pathlib import Path
 
-import numpy as np
 from PIL import Image
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from wygladzanie import przytnij, wygladz  # noqa: E402
+
 KORZEN = Path(__file__).resolve().parent.parent
-ARKUSZ = KORZEN / 'public' / 'mapa-tileset.png'
 KATALOG = KORZEN / 'public' / 'mapa'
+ARKUSZ = KORZEN / 'public' / 'mapa-tileset.png'
+POSTACIE = KORZEN / 'assets' / 'kit' / 'character overworld'
 
 S = 16
-im = Image.open(ARKUSZ).convert('RGBA')
-alfa = np.array(im)[:, :, 3] > 20
-
-
-def plamy(c0, r0, c1, r1):
-    """Spójne plamy nieprzezroczystości w podanym prostokącie kafelków.
-
-    Zwraca prostokąty w pikselach, uporządkowane od lewej. Sąsiedztwo ośmiu
-    pikseli, bo cienkie gałązki potrafią stykać się tylko po skosie.
-    """
-    x0, y0, x1, y1 = c0 * S, r0 * S, (c1 + 1) * S, (r1 + 1) * S
-    maska = alfa[y0:y1, x0:x1].copy()
-    h, w = maska.shape
-    widziane = np.zeros_like(maska)
-    wynik = []
-    for sy in range(h):
-        for sx in range(w):
-            if not maska[sy, sx] or widziane[sy, sx]:
-                continue
-            stos = [(sy, sx)]
-            widziane[sy, sx] = True
-            miny = maxy = sy
-            minx = maxx = sx
-            while stos:
-                y, x = stos.pop()
-                miny, maxy = min(miny, y), max(maxy, y)
-                minx, maxx = min(minx, x), max(maxx, x)
-                for dy in (-1, 0, 1):
-                    for dx in (-1, 0, 1):
-                        ny, nx = y + dy, x + dx
-                        if 0 <= ny < h and 0 <= nx < w and maska[ny, nx] and not widziane[ny, nx]:
-                            widziane[ny, nx] = True
-                            stos.append((ny, nx))
-            if (maxx - minx + 1) * (maxy - miny + 1) >= 40:
-                wynik.append((x0 + minx, y0 + miny, x0 + maxx + 1, y0 + maxy + 1))
-    wynik.sort(key=lambda b: (b[0], b[1]))
-    return wynik
-
-
-def zapisz(nazwa, prostokat):
-    KATALOG.mkdir(parents=True, exist_ok=True)
-    wyc = im.crop(prostokat)
-    wyc.save(KATALOG / f'{nazwa}.png')
-    print(f'  {nazwa}.png  {wyc.width} × {wyc.height}')
+arkusz = Image.open(ARKUSZ).convert('RGBA')
 
 
 def kafle(c0, r0, c1, r1):
     return (c0 * S, r0 * S, (c1 + 1) * S, (r1 + 1) * S)
 
 
-# Drzewa stykają się w arkuszu koronami, więc szukanie plam skleiło je w jedną
-# kanciapę 96 × 96. Tutaj prostokąty są wpisane — ale odczytane z powiększenia
-# arkusza z siatką, nie zgadnięte, i każde ma pod sobą wtopiony cień, dzięki
-# czemu stoją na trawie bez dorysowywania czegokolwiek.
-print('drzewa (rzędy 19–24):')
+def zapisz(nazwa, im):
+    KATALOG.mkdir(parents=True, exist_ok=True)
+    im.save(KATALOG / f'{nazwa}.png')
+    print(f'  {nazwa}.png  {im.width} × {im.height}')
+
+
+print('drzewa i zamki z arkusza:')
 for nazwa, r in {
     'sosna': kafle(0, 19, 1, 21),
     'sosna-mala': kafle(0, 22, 0, 23),
     'drzewo': kafle(1, 22, 2, 24),
-    'sosna-zima': kafle(2, 19, 3, 21),
-    'drzewo-zima': kafle(4, 22, 5, 24),
-}.items():
-    zapisz(nazwa, r)
-
-print('głazy (rząd 0):')
-for i, p in enumerate(plamy(12, 0, 17, 0)):
-    zapisz(f'glaz-{i + 1}', p)
-
-print('krzewy (rząd 0):')
-for i, c in enumerate(range(3, 7)):
-    zapisz(f'krzew-{i + 1}', kafle(c, 0, c, 0))
-
-print('kryształy (rzędy 22–24):')
-for i, p in enumerate(plamy(9, 22, 17, 24)):
-    zapisz(f'krysztal-{i + 1}', p)
-
-print('budynki:')
-# Sale (gymy) z prawej połowy arkusza — posłużą za zamki. Granice odczytane
-# z powiększenia z siatką: ośmiobok zaczyna się w kolumnie 30, a łuki wejścia
-# kończą w wierszu 7.
-for nazwa, r in {
     'zamek-las': kafle(30, 0, 36, 7),
-    'zamek-ogien': kafle(38, 0, 44, 7),
+    'zamek-ogien': kafle(38, 0, 43, 6),
 }.items():
-    zapisz(nazwa, r)
+    zapisz(nazwa, przytnij(wygladz(arkusz.crop(r))))
+
+print('skały (te same, co przeszkody na planszy bitewnej):')
+for nazwa, plik in {'skala': 'glaz.png', 'kopiec': 'kopiec.png'}.items():
+    # Te sprite'y są już w skali ekranu i mają wtopiony pas trawy z planszy
+    # bitewnej. Wygładzamy je bez powiększania — chodzi tylko o zmiękczenie
+    # schodków, nie o zmianę rozmiaru.
+    im = Image.open(KORZEN / 'public' / 'terrain' / 'obstacles' / plik).convert('RGBA')
+    zapisz(nazwa, przytnij(wygladz(im, skala=1)))
+
+# ---------- bohater ----------
+
+#: Arkusz postaci to siatka 4 × 4 klatek po 32 px: wiersze to kierunki
+#: (w dół, w lewo, w prawo, w górę), kolumny to klatki chodu.
+KLATKA = 32
+KIERUNKI = ['dol', 'lewo', 'prawo', 'gora']
+#: Który plik. `ow1` to chłopak w czapce z plecakiem — czyli trener, a nie
+#: stworek. Bohater grany przez Pokemona nie miał sensu: stworki są armią.
+POSTAC = 'ow1.png'
+
+print('bohater (trener):')
+zrodlo = Image.open(POSTACIE / POSTAC).convert('RGBA')
+# Każdą klatkę wygładzamy OSOBNO i dopiero potem składamy z powrotem w arkusz.
+# Wygładzanie całego arkusza naraz przeciągnęłoby kolor z klatki do klatki —
+# przy medianie o promieniu siedmiu pikseli sylwetki dosłownie by się zlały.
+skala = 3
+bok = KLATKA * skala
+arkusz_bohatera = Image.new('RGBA', (bok * 4, bok * 4))
+for wiersz in range(4):
+    for kol in range(4):
+        klatka = zrodlo.crop(
+            (kol * KLATKA, wiersz * KLATKA, (kol + 1) * KLATKA, (wiersz + 1) * KLATKA)
+        )
+        arkusz_bohatera.paste(wygladz(klatka, skala), (kol * bok, wiersz * bok))
+zapisz('bohater', arkusz_bohatera)
+print(f'  klatka {bok} × {bok}, wiersze: {", ".join(KIERUNKI)}')

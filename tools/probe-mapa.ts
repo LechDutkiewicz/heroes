@@ -16,6 +16,8 @@ import {
 } from '../src/data/mapa';
 import { pierwszaMapa } from '../src/data/mapa1';
 import { MAPA_H, MAPA_W, OKNO_H, OKNO_W } from '../src/visual/uklad';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
 
 
@@ -34,6 +36,29 @@ sprawdz('wszystkie wiersze równej długości', s.teren.every((w) => w.length ==
 console.log('\n=== układ mieści się w oknie gry ===');
 sprawdz('szerokość', MAPA_W <= OKNO_W, `${MAPA_W} ≤ ${OKNO_W}`);
 sprawdz('wysokość', MAPA_H <= OKNO_H, `${MAPA_H} ≤ ${OKNO_H}`);
+
+console.log('\n=== tło zgodne z rysunkiem planszy ===');
+// Tło jest generowane z `RYSUNEK` przez tools/render_mapa.py. Bez tej kontroli
+// łatwo zmienić planszę w kodzie i oglądać stare tło: pola zmieniają koszty
+// i przejezdność, a obrazek pokazuje poprzedni układ. Taki rozjazd wygląda
+// jak usterka silnika, a nie jak zapomniane przegenerowanie.
+{
+  const rysunek = s.teren
+    .map((w) => w.map((t) => ({ trawa: '.', sciezka: '=', piasek: ',', las: 'T', skaly: '#', woda: '~' })[t]).join(''))
+    .join('\n');
+  const teraz = createHash('sha256').update(rysunek, 'utf8').digest('hex').slice(0, 16);
+  let zapisany = '(brak pliku)';
+  try {
+    zapisany = JSON.parse(readFileSync('public/mapa/plansza-1.json', 'utf8')).odcisk;
+  } catch {
+    /* zostaje „brak pliku" */
+  }
+  sprawdz(
+    'odcisk planszy zgadza się z wygenerowanym tłem',
+    teraz === zapisany,
+    teraz === zapisany ? teraz : `kod ${teraz} ≠ tło ${zapisany} — uruchom: python3 tools/render_mapa.py`
+  );
+}
 
 console.log('\n=== obiekty ===');
 for (const o of s.obiekty) {

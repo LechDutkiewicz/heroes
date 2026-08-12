@@ -20,7 +20,10 @@ const page = await browser.newPage({ viewport: { width: 1000, height: 760 } });
 
 const bledy = [];
 page.on('pageerror', (e) => bledy.push(String(e)));
-page.on('response', (r) => r.status() >= 400 && bledy.push(`${r.status()} ${r.url()}`));
+page.on('requestfinished', async (r) => {
+  const res = await r.response();
+  if (res && res.status() >= 400) bledy.push(`${res.status()} ${r.url()}`);
+});
 page.on('console', (m) => m.type() === 'error' && bledy.push(m.text()));
 
 await page.goto(`${BASE}/?ekran=mapa`, { waitUntil: 'domcontentloaded' });

@@ -8,19 +8,32 @@
 
 /**
  * Surowce. W Heroes 3 jest ich siedem; tutaj cztery, bo gra jest dla
- * ośmiolatka, a każdy kolejny surowiec to jeden licznik więcej do pilnowania
- * i jedna rzecz mniej, którą widać na pasku. Cztery wystarczą, żeby wybór
- * „co kupić" w ogóle istniał.
+ * ośmiolatka, a każdy kolejny surowiec to jeden licznik więcej do pilnowania.
+ *
+ * Nie są to jednak drewno i złoto z Heroes 3, tylko rzeczy z bajki: pokeball
+ * zamiast złota (nim się łapie stworki, więc to naturalna waluta), jagody
+ * jako jedzenie, kamienie ewolucji do ulepszania oddziałów i odłamki na
+ * rozbudowę zamku. Każdy z tych czterech znaczy w świecie Pokemon dokładnie
+ * to, do czego służy tutaj — dzięki temu nie trzeba niczego tłumaczyć.
  */
-export type Surowiec = 'drewno' | 'kamien' | 'krysztal' | 'zloto';
+export type Surowiec = 'jagoda' | 'kamien' | 'odlamek' | 'pokeball';
 
-export const SUROWCE: Surowiec[] = ['drewno', 'kamien', 'krysztal', 'zloto'];
+export const SUROWCE: Surowiec[] = ['pokeball', 'jagoda', 'kamien', 'odlamek'];
 
-export const SUROWIEC_INFO: Record<Surowiec, { nazwa: string; barwa: number }> = {
-  drewno: { nazwa: 'Drewno', barwa: 0xb5762f },
-  kamien: { nazwa: 'Kamień', barwa: 0x9aa7b4 },
-  krysztal: { nazwa: 'Kryształ', barwa: 0x6fd3e8 },
-  zloto: { nazwa: 'Złoto', barwa: 0xffc93c },
+export const SUROWIEC_INFO: Record<
+  Surowiec,
+  { nazwa: string; dopelniacz: string; barwa: number; ikona: string }
+> = {
+  // `dopelniacz` służy do komunikatów w rodzaju „+5 jagód".
+  pokeball: { nazwa: 'Pokeballe', dopelniacz: 'pokeballi', barwa: 0xe4413c, ikona: 'pokeball' },
+  jagoda: { nazwa: 'Jagody', dopelniacz: 'jagód', barwa: 0xd94f5c, ikona: 'jagody' },
+  kamien: {
+    nazwa: 'Kamienie ewolucji',
+    dopelniacz: 'kamieni ewolucji',
+    barwa: 0x9660d2,
+    ikona: 'kamien-ewolucji',
+  },
+  odlamek: { nazwa: 'Odłamki', dopelniacz: 'odłamków', barwa: 0x56bee8, ikona: 'odlamki' },
 };
 
 export type Skarbiec = Record<Surowiec, number>;
@@ -58,8 +71,18 @@ export interface Obiekt {
   /** dla potwora: która frakcja go wystawia i co konkretnie stoi na drodze */
   frakcja?: string;
   oddzialy?: Oddzial[];
-  /** czy już podniesiony/pokonany */
+  /**
+   * Czy zniknął z mapy. Dotyczy rzeczy jednorazowych: stosu surowca, skrzyni,
+   * pokonanego potwora.
+   */
   zebrany?: boolean;
+  /**
+   * Czy budynek produkcyjny jest już nasz. To NIE to samo co `zebrany`:
+   * kopalni i sadu się nie podnosi — wchodzi się na nie, zajmuje i zostają
+   * na mapie, dając surowiec każdego dnia. Wcześniej sad znikał po wejściu
+   * jak stos jagód i cała mechanika była nieczytelna.
+   */
+  nasz?: boolean;
 }
 
 /** Oddział w armii — to samo, co slot w bitwie: jeden gatunek i jego liczba. */
@@ -77,8 +100,6 @@ export interface Bohater {
   ruch: number;
   ruchMax: number;
   imie: string;
-  /** sprite prowadzącego — na mapie widać właśnie jego */
-  sprite: string;
   atak: number;
   obrona: number;
   /** Armia. Karta bohatera pokazuje ją tak jak w Heroes 3: rząd slotów. */
@@ -205,36 +226,55 @@ export interface WynikWejscia {
   /** co się stało — scena zamienia to na napisy i animacje */
   opis: string;
   bitwaZ?: Obiekt;
+  /** budynek właśnie zajęty — scena zatyka na nim chorągiewkę */
+  zajete?: Obiekt;
 }
 
-/** Wejście na pole z obiektem: zbiera, przejmuje albo zaczyna bitwę. */
+/** Wejście na pole z obiektem: zbiera, zajmuje albo zaczyna bitwę. */
 export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
   if (o.rodzaj === 'potwor') return { opis: `${o.nazwa} zagradza drogę!`, bitwaZ: o };
 
   if (o.rodzaj === 'surowiec' || o.rodzaj === 'skrzynia') {
-    const co = o.surowiec ?? 'zloto';
+    const co = o.surowiec ?? 'pokeball';
     s.skarbiec[co] += o.ile ?? 0;
     o.zebrany = true;
-    return { opis: `+${o.ile} ${SUROWIEC_INFO[co].nazwa}` };
+    return { opis: `+${o.ile} ${SUROWIEC_INFO[co].dopelniacz}` };
   }
 
   if (o.rodzaj === 'kopalnia') {
-    o.zebrany = true;
-    return { opis: `${o.nazwa} jest twoja — będzie dawać surowiec co turę` };
+    // Zajęcie, nie zebranie: budynek zostaje na mapie i od jutra produkuje.
+    if (o.nasz) return { opis: `${o.nazwa} — już twoja` };
+    o.nasz = true;
+    const co = o.surowiec ?? 'pokeball';
+    return {
+      opis: `${o.nazwa} jest twoja!\n+${o.ile} ${SUROWIEC_INFO[co].dopelniacz} dziennie`,
+      zajete: o,
+    };
   }
 
   return { opis: `${o.nazwa}: tu stanie zamek` };
 }
 
-/** Nowa tura: odnawia ruch, dolicza dochód z przejętych kopalń. */
-export function nowaTura(s: StanMapy) {
-  s.dzien++;
-  s.bohater.ruch = s.bohater.ruchMax;
+/** Ile surowców wpłynie jutro z zajętych budynków. */
+export function dochod(s: StanMapy): Partial<Record<Surowiec, number>> {
+  const suma: Partial<Record<Surowiec, number>> = {};
   for (const o of s.obiekty) {
-    if (o.rodzaj === 'kopalnia' && o.zebrany && o.surowiec) {
-      s.skarbiec[o.surowiec] += o.ile ?? 1;
+    if (o.rodzaj === 'kopalnia' && o.nasz && o.surowiec) {
+      suma[o.surowiec] = (suma[o.surowiec] ?? 0) + (o.ile ?? 1);
     }
   }
+  return suma;
+}
+
+/** Nowa tura: odnawia ruch, dolicza dochód z zajętych budynków. */
+export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
+  s.dzien++;
+  s.bohater.ruch = s.bohater.ruchMax;
+  const wplyw = dochod(s);
+  for (const [co, ile] of Object.entries(wplyw)) {
+    s.skarbiec[co as Surowiec] += ile;
+  }
+  return wplyw;
 }
 
 /** Data w formacie z Heroes 3: tydzień i dzień tygodnia. */
