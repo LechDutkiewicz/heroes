@@ -56,9 +56,25 @@ const PAN_H = 596;
  * Powyżej jest niebo i dalekie wzgórza, więc nic tam nie może stać: budynek
  * z podstawą nad horyzontem wygląda, jakby wisiał w powietrzu.
  */
-const HORYZONT = 0.46;
+const HORYZONT = 0.26;
 /** Bryły rysujemy w 240 px; na ekranie skala z `zamki.ts` razy ten mnożnik. */
 const BRYLA = 1.0;
+
+/**
+ * Skąd świeci słońce. Ta sama strona, co na panoramie i w `rysuj_miasto.py`
+ * (prawa góra) — cień rzucony musi iść w LEWO W DÓŁ, inaczej bryła jest
+ * oświetlona z jednej strony, a cień pada z drugiej i całość rozjeżdża się
+ * bardziej, niż gdyby cienia w ogóle nie było.
+ */
+/**
+ * Cień rzucony jest WYPALONY w grafice (patrz `zCieniem` w rysuj_miasto.py),
+ * bo scena umie tylko obrócić kopię sprite'a wokół podstawy, a to daje drugą
+ * bryłę leżącą na zawiasie. Plik jest przez to szerszy od bryły o margines
+ * z lewej, więc środek budynku nie leży w środku obrazka.
+ */
+const MARGINES_CIENIA = 120;
+const SZEROKOSC_BRYLY = 240;
+const SRODEK_BRYLY = (MARGINES_CIENIA + SZEROKOSC_BRYLY / 2) / (MARGINES_CIENIA + SZEROKOSC_BRYLY);
 
 interface Kafel {
   budynek: Budynek;
@@ -93,6 +109,7 @@ export class TownScene extends Phaser.Scene {
     for (const f of FACTIONS) for (const u of f.units) this.load.image(`p-${u.sprite}`, `${b}sprites/${u.sprite}.png`);
     for (const f of ['bor', 'grota', 'zbocze']) {
       this.load.image(`t-tlo-${f}`, `${b}miasto/tlo-${f}.png`);
+      this.load.image(`t-znak-${f}`, `${b}miasto/znak-${f}.png`);
       for (const id of BUDYNKI_ID) this.load.image(`t-${f}-${id}`, `${b}miasto/${f}-${id}.png`);
     }
     for (const id of BUDYNKI_ID) this.load.image(`t-plan-${id}`, `${b}miasto/plan-${id}.png`);
@@ -179,14 +196,17 @@ export class TownScene extends Phaser.Scene {
     for (const b of [...widoczne].sort((a, c) => a.y - c.y)) {
       const stoi = postawione.includes(b.id);
       const klucz = stoi ? `t-${this.profil.frakcja}-${b.id}` : `t-plan-${b.id}`;
+      const skala = this.skalaBudynku(b);
+      const gleboko = Z.sky + 1 + Math.round(b.y * 40);
+
       const im = this.add
         .image(b.x * OKNO_W, this.naZiemi(b), klucz)
-        .setOrigin(0.5, 1)
-        .setScale(this.skalaBudynku(b))
+        .setOrigin(SRODEK_BRYLY, 1)
+        .setScale(skala)
         // Głębokości muszą zmieścić się PONIŻEJ `Z.hud`, inaczej budynki
         // przykrywają karty i paski. Pierwsza wersja mnożyła głębię przez 100
         // i wysoka bryła lądowała nad kartą budynku.
-        .setDepth(Z.sky + 1 + Math.round(b.y * 40));
+        .setDepth(gleboko);
       this.kafle.push({ budynek: b, obraz: im, postawiony: stoi });
       this.podepnijKliki(im, b);
       this.przywrocWyglad(b);
@@ -206,7 +226,7 @@ export class TownScene extends Phaser.Scene {
    * daje malowane tło, idzie na marne.
    */
   private skalaBudynku(b: Budynek) {
-    return b.skala * BRYLA * (0.72 + 0.45 * b.y);
+    return b.skala * BRYLA * (0.6 + 0.62 * b.y);
   }
 
   /**
@@ -216,7 +236,19 @@ export class TownScene extends Phaser.Scene {
    * widać, trafiało obok.
    */
   private podepnijKliki(im: Phaser.GameObjects.Image, b: Budynek) {
-    im.setInteractive({ useHandCursor: true, pixelPerfect: true, alphaTolerance: 24 });
+    // Trafiamy w PROSTOKĄT samej bryły, a nie w piksele.
+    //
+    // Trafianie po alfie wywróciło się dwa razy: najpierw przez cień rzucony
+    // wypalony w pliku (klikało się w cień), potem przez plac budowy, który
+    // z definicji jest półprzezroczysty — przy progu alfy w ogóle przestał być
+    // klikalny, a to jest jedyny sposób, żeby cokolwiek zbudować. Prostokąt
+    // bryły jest przewidywalny, hojny dla dziecięcego kliknięcia i nie zależy
+    // od tego, jak przezroczysty jest akurat rysunek.
+    im.setInteractive(
+      new Phaser.Geom.Rectangle(MARGINES_CIENIA, 0, SZEROKOSC_BRYLY, SZEROKOSC_BRYLY),
+      Phaser.Geom.Rectangle.Contains
+    );
+    if (im.input) im.input.cursor = 'pointer';
     const skala = this.skalaBudynku(b);
     im.on('pointerover', () => {
       this.tweens.add({ targets: im, scale: skala * 1.05, duration: T.pop, ease: 'Quad.easeOut' });
@@ -232,38 +264,43 @@ export class TownScene extends Phaser.Scene {
   }
 
   /**
-   * Iskierka nad zarysem, na który JUŻ STAĆ i który wolno postawić dziś.
-   * Bez niej trzeba klikać po kolei w każdy blady kształt i sprawdzać cenę —
-   * a to jest dokładnie ta praca, której ośmiolatek nie wykona.
+   * Drewniany znak z lampką przy placu, na który JUŻ STAĆ i który wolno
+   * postawić dziś. Bez niego trzeba klikać po kolei w każdy plac i sprawdzać
+   * cenę — czyli robić pracę, której ośmiolatek nie wykona.
+   *
+   * Wcześniej stała tu gwiazdka z HUD-u i była jedyną rzeczą na panoramie,
+   * która nie należała do świata; krytyk wytykał ją dwa razy z rzędu. Znak
+   * jest rysowany tą samą ręką co budynki i po prostu stoi na ziemi.
    */
   private rysujZachety() {
     for (const z of this.zachety) z.destroy();
     this.zachety = [];
     if (!this.zamek.nasz) return;
     const postawione = this.zamek.postawione ?? [];
-    const juzBudowano = this.zamek.budowanoDnia === this.stan.dzien;
-    if (juzBudowano) return;
+    if (this.zamek.budowanoDnia === this.stan.dzien) return;
 
     for (const k of this.kafle) {
       const b = k.budynek;
       if (k.postawiony || !moznaBudowac(b, postawione) || !stacNas(this.stan.skarbiec, b.koszt)) {
         continue;
       }
-      const y = k.obraz.getBounds().top - 14;
-      const gwiazda = this.add
-        .image(k.obraz.x, y, 'ic_gwiazda')
-        .setDepth(Z.hud - 1)
-        .setScale(0.42)
-        .setTint(C.gold);
+      const granice = k.obraz.getBounds();
+      const znak = this.add
+        .image(k.obraz.x + granice.width * 0.22, granice.bottom - 4, `t-znak-${this.profil.frakcja}`)
+        .setOrigin(0.5, 1)
+        .setScale(0.42 + 0.3 * b.y)
+        .setDepth(k.obraz.depth + 1);
+      // Lampka pulsuje, znak stoi. Ruszanie całym znakiem wyglądałoby, jakby
+      // ktoś nim machał — świeci się lampa, a nie słup.
       this.tweens.add({
-        targets: gwiazda,
-        y: y - 7,
-        duration: 700,
+        targets: znak,
+        alpha: { from: 0.78, to: 1 },
+        duration: 900,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
       });
-      this.zachety.push(gwiazda);
+      this.zachety.push(znak);
     }
   }
 

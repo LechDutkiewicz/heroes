@@ -48,9 +48,13 @@ async function klik(x, y) {
 }
 
 /**
- * Gdzie na ekranie widać daną bryłę. Pytamy o GRANICE RYSUNKU, a nie liczymy
- * położenia tym samym wzorem, co scena — sprawdzenie liczone wzorem sceny
- * przechodzi także wtedy, gdy wzór jest zły.
+ * Gdzie na ekranie widać daną bryłę — punkt, w który człowiek by kliknął.
+ *
+ * Uwaga na środek GRANIC rysunku: odkąd w pliku jest wypalony cień rzucony,
+ * obrazek jest szerszy od bryły i jego środek leży obok budynku, w przezroczystym
+ * marginesie. Sonda klikała tam i wszystkie sprawdzenia budowy poleciały —
+ * wyglądało to na zepsuty ekran, a zepsuty był celownik. Bierzemy więc punkt
+ * zaczepienia obrazka (`x` to środek samej bryły) i wysokość nad podstawą.
  */
 const gdzieBudynek = (id) =>
   page.evaluate((b) => {
@@ -58,7 +62,12 @@ const gdzieBudynek = (id) =>
     const k = t.kafle.find((x) => x.budynek.id === b);
     if (!k) return null;
     const g = k.obraz.getBounds();
-    return { x: g.centerX, y: g.centerY, tekstura: k.obraz.texture.key, stoi: k.postawiony };
+    return {
+      x: k.obraz.x,
+      y: g.bottom - g.height * 0.3,
+      tekstura: k.obraz.texture.key,
+      stoi: k.postawiony,
+    };
   }, id);
 
 const stanZamku = () =>

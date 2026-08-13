@@ -128,7 +128,7 @@ const SZKIELET: Szkielet[] = [
     rodzaj: 'siedlisko',
     poziom: 3,
     wymaga: ['fort', 'siedlisko2'],
-    x: 0.9,
+    x: 0.86,
     y: 0.62,
     skala: 0.76,
   },
@@ -150,7 +150,9 @@ const SZKIELET: Szkielet[] = [
     y: 0.06,
     skala: 1.0,
   },
-  { id: 'specjalny', rodzaj: 'specjalny', wymaga: ['ratusz2'], x: 0.95, y: 1.0, skala: 0.55 },
+  // Skrajne `x` trzymamy poniżej 0.9: przy 0.95 bryła wychodziła poza prawą
+  // krawędź okna i była ucięta ramą — krytyk wytknął to dwa razy z rzędu.
+  { id: 'specjalny', rodzaj: 'specjalny', wymaga: ['ratusz2'], x: 0.9, y: 1.0, skala: 0.55 },
 ];
 
 /**

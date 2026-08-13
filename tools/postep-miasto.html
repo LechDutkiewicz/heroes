@@ -1,0 +1,256 @@
+<title>Poprzeczka: Songs of Conquest</title>
+<style>
+  /* Paleta wzięta z trzech miast w grze: zieleń Boru, fiolet Groty, żar Zbocza.
+     Neutralne tony są lekko zzielenione — z tej samej rodziny co ekran, który
+     oceniamy, a nie z domyślnej szarości. */
+  :root {
+    --papier: #f5f6f1;
+    --karta: #ffffff;
+    --ramka: #dfe3da;
+    --atrament: #1d2a24;
+    --cichy: #5d6f65;
+    --bor: #3f8a3c;
+    --grota: #8b4bb0;
+    --zbocze: #c4551f;
+    --cien: 0 1px 2px rgba(29, 42, 36, 0.06), 0 8px 24px rgba(29, 42, 36, 0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --papier: #11170f;
+      --karta: #19211a;
+      --ramka: #2b382c;
+      --atrament: #e8f0e4;
+      --cichy: #9db09f;
+      --bor: #6cc264;
+      --grota: #b985d8;
+      --zbocze: #e88a4e;
+      --cien: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+  }
+  :root[data-theme='dark'] {
+    --papier: #11170f;
+    --karta: #19211a;
+    --ramka: #2b382c;
+    --atrament: #e8f0e4;
+    --cichy: #9db09f;
+    --bor: #6cc264;
+    --grota: #b985d8;
+    --zbocze: #e88a4e;
+    --cien: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0 20px 72px;
+    background: var(--papier);
+    color: var(--atrament);
+    /* Trebuchet to krój HUD-u w grze — strona mówi tym samym głosem, co ekran,
+       o którym opowiada. Werdykty krytyków idą szeryfową Georgią, bo to cudzy
+       głos, nie nasz. */
+    font: 15px/1.65 'Trebuchet MS', Verdana, sans-serif;
+  }
+  main { max-width: 780px; margin: 0 auto; }
+
+  header { padding: 48px 0 28px; }
+  h1 {
+    font-size: clamp(28px, 5vw, 40px);
+    line-height: 1.1;
+    margin: 0 0 10px;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  .lead { color: var(--cichy); margin: 0; max-width: 60ch; }
+  .lead b { color: var(--atrament); font-weight: bold; }
+
+  .pasek {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline;
+    background: var(--papier);
+    border-bottom: 1px solid var(--ramka);
+    padding: 12px 0;
+    margin-bottom: 28px;
+    font-size: 13px;
+    color: var(--cichy);
+  }
+  .pasek b { color: var(--atrament); font-variant-numeric: tabular-nums; }
+
+  .runda {
+    background: var(--karta);
+    border: 1px solid var(--ramka);
+    border-radius: 10px;
+    box-shadow: var(--cien);
+    padding: 20px 22px;
+    margin-bottom: 14px;
+  }
+  .naglowek { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+  .numer {
+    font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--cichy); font-variant-numeric: tabular-nums;
+  }
+  .naglowek h2 { font-size: 18px; margin: 0; letter-spacing: -0.01em; }
+  .werdykt {
+    margin-left: auto; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+  }
+  .przegrana { background: rgba(196, 85, 31, 0.12); color: var(--zbocze); }
+  .trwa { background: rgba(139, 75, 176, 0.12); color: var(--grota); }
+  .wygrana { background: rgba(63, 138, 60, 0.14); color: var(--bor); }
+
+  .cytat {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 15px;
+    border-left: 2px solid var(--ramka);
+    padding-left: 14px;
+    margin: 0 0 14px;
+    color: var(--atrament);
+  }
+  .cytat span {
+    display: block; font-family: 'Trebuchet MS', sans-serif; font-size: 11px;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--cichy); margin-bottom: 4px;
+  }
+  .odpowiedz { margin: 0; }
+  .odpowiedz > div { display: flex; gap: 10px; margin-bottom: 5px; }
+  .odpowiedz .znak { color: var(--bor); flex: none; }
+  ul.braki { margin: 10px 0 0; padding-left: 18px; color: var(--cichy); font-size: 14px; }
+
+  .nauka {
+    border: 1px dashed var(--ramka); border-radius: 10px;
+    padding: 16px 20px; margin: 22px 0 0; color: var(--cichy); font-size: 14px;
+  }
+  .nauka h3 { margin: 0 0 8px; font-size: 14px; color: var(--atrament); letter-spacing: 0.02em; }
+  .nauka p { margin: 0 0 8px; }
+  .nauka p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.88em;
+    background: rgba(93, 111, 101, 0.13); padding: 1px 5px; border-radius: 4px;
+  }
+  footer { margin-top: 32px; color: var(--cichy); font-size: 13px; }
+</style>
+
+<main>
+  <header>
+    <h1>Ekran miasta kontra Songs of Conquest</h1>
+    <p class="lead">
+      Pętla jakości dla ekranu zamku w naszej grze. Poprzeczką jest osada
+      z <b>Songs of Conquest</b> (Steam 867210), wycinek 960 × 596 w rozdzielczości
+      własnej. Co rundę: budujemy, składamy ślepe zestawienie bez podpisów
+      i wypuszczamy krytyka ze świeżym kontekstem. Pętla kończy się dopiero
+      wtedy, gdy krytyk ślepo wskaże <b>nasz</b> kadr.
+    </p>
+  </header>
+
+  <div class="pasek">
+    <span>runda <b>4</b></span>
+    <span>wygranych ślepo <b>0 / 3</b></span>
+    <span>sonda <code>probe-miasto</code> <b>16 / 16</b></span>
+    <span>stan <b>krytyk ocenia rundę 4</b></span>
+  </div>
+
+  <section class="runda">
+    <div class="naglowek">
+      <span class="numer">Runda 1</span>
+      <h2>Punkt wyjścia</h2>
+      <span class="werdykt przegrana">przegrana</span>
+    </div>
+    <p class="cytat">
+      <span>Największa różnica</span>
+      Każda bryła jest jedną płaską plamą koloru — ani zacienionej ściany po stronie
+      odwróconej od słońca, ani rozjaśnionej krawędzi od strony światła. Mimo eliptycznych
+      „placków" cienia pod spodem bryły nie mają objętości.
+    </p>
+    <div class="odpowiedz">
+      <div><span class="znak">→</span><span>Przebieg światła nakładany na wszystkie 33 bryły naraz: strona
+        od słońca jaśnieje, przeciwna ciemnieje, przy ziemi zapada się cień, na krawędzi
+        od światła pojawia się grzbiet.</span></div>
+      <div><span class="znak">→</span><span>Połacie dachów i kanty ścian przewrócone na prawą stronę,
+        zgodnie ze słońcem na panoramie.</span></div>
+    </div>
+  </section>
+
+  <section class="runda">
+    <div class="naglowek">
+      <span class="numer">Runda 2</span>
+      <h2>Cień rzucony i podłoże</h2>
+      <span class="werdykt przegrana">przegrana</span>
+    </div>
+    <p class="cytat">
+      <span>Największa różnica</span>
+      Podłoże to jedna gładka plama zieleni z paroma rozmytymi kropkami — bez kęp trawy,
+      przetarć, kamieni, śladów wydeptania przy ścieżce i bez zmiany waloru w głąb kadru.
+    </p>
+    <ul class="braki">
+      <li>Cienie nie odpowiadają geometrii ani jednemu kierunkowi światła.</li>
+      <li>Zero faktury materiału — mur, drewno i dach różni tylko odcień.</li>
+    </ul>
+    <div class="odpowiedz">
+      <div><span class="znak">→</span><span>Cień rzucony wypalony w grafice: sylwetka ścięta, spłaszczona,
+        rozmyta i zanikająca z odległością od podstawy. Symetryczna elipsa pod bryłą — usunięta,
+        bo kłóciła się z kierunkiem.</span></div>
+      <div><span class="znak">→</span><span>Podłoże dostało ziarno, miękkie plamy darni, kamienie
+        i kępy trawy rosnące gromadami.</span></div>
+    </div>
+  </section>
+
+  <section class="runda">
+    <div class="naglowek">
+      <span class="numer">Runda 3</span>
+      <h2>Roślinność i kompozycja</h2>
+      <span class="werdykt przegrana">przegrana</span>
+    </div>
+    <p class="cytat">
+      <span>Największa różnica</span>
+      Brak cienia rzuconego i modelunku bryły — obiekty stoją na jednolitym kolorze
+      bez zaciemnienia pod sobą, więc unoszą się, zamiast stać.
+    </p>
+    <div class="odpowiedz">
+      <div><span class="znak">→</span><span>Werdykt oglądany w skali docelowej pokazał, o co naprawdę
+        chodzi: modelunek i cień <em>były</em>, tylko za słabe, żeby je było widać. Wzmocnione.</span></div>
+      <div><span class="znak">→</span><span>Horyzont podniesiony z połowy kadru na jedną czwartą — niebo
+        przestało zabierać tyle miejsca, co całe miasto.</span></div>
+      <div><span class="znak">→</span><span>Drzewa, krzaki i głazy rysowane u nas, w tym samym świetle
+        co budynki, plus mgła na gąszczu przy horyzoncie.</span></div>
+    </div>
+  </section>
+
+  <section class="runda">
+    <div class="naglowek">
+      <span class="numer">Runda 4</span>
+      <h2>Materiał i plac budowy</h2>
+      <span class="werdykt trwa">krytyk ocenia</span>
+    </div>
+    <div class="odpowiedz">
+      <div><span class="znak">→</span><span>Deski na ścianach, gont na połaciach, spoiny w murze fortu —
+        rysowane w skali, w jakiej naprawdę je widać.</span></div>
+      <div><span class="znak">→</span><span>Biały kontur „budynku, którego nie ma" zastąpiony placem budowy:
+        wytyczony fundament, tyczki ze sznurem i przygaszone widmo bryły.</span></div>
+      <div><span class="znak">→</span><span>Gwiazdka z HUD-u zastąpiona drewnianym znakiem z lampką —
+        jedyny element, który nie należał do świata.</span></div>
+    </div>
+  </section>
+
+  <div class="nauka">
+    <h3>Co po drodze wyszło, a nie było widać z kodu</h3>
+    <p>
+      <b>Trafianie po alfie wywróciło się dwa razy.</b> Najpierw przez cień wypalony w pliku
+      (klikało się w cień), potem przez plac budowy, który z definicji jest półprzezroczysty —
+      przy progu alfy przestał być klikalny w ogóle. Cel kliknięcia to teraz prostokąt bryły.
+    </p>
+    <p>
+      <b>Sprite'y roślin z mapy przygody mają wtopiony placek trawy.</b> Postawione na panoramie
+      dawały pod każdym drzewem świecącą elipsę. Ta sama pułapka jest zapisana w STAN.md przy
+      mapie — i drugi raz kosztowała rundę.
+    </p>
+    <p>
+      <b>Rozmycie kolorowych plam wciąga czerń spoza kształtu.</b> Miękkie plamy darni robione jako
+      rozmyte elipsy RGBA dostawały ciemne obwódki i wyglądały jak smugi po gumce. Rozmywać trzeba
+      maskę, nie kolor.
+    </p>
+  </div>
+
+  <footer>
+    Zrzuty: <code>tools/shots/</code> · ślepe zestawienia: <code>tools/blind/</code> ·
+    poprzeczka: <code>tools/reference/soc/</code> · sonda: <code>node tools/probe-miasto.mjs</code>
+  </footer>
+</main>
