@@ -320,6 +320,46 @@ Format: kwadrat, minimum 512 × 512, tło magenta, ten sam dodatek co obiekty
 Po każdym etapie da się grać, więc nie ma momentu, w którym gra jest w połowie
 przemalowana i nie działa.
 
+## Czym to generować
+
+Nie ma jednego narzędzia, które robi wszystko dobrze. Nasz przebieg ma cztery
+twarde potrzeby i to one rozstrzygają, czym co robić:
+
+1. **przezroczystość albo czyste tło do wycięcia** — inaczej każdy sprite trzeba
+   odcinać ręcznie;
+2. **spójność między kilkunastoma obrazkami** — największe ryzyko całej tej drogi;
+3. **rozdzielczość 2048 px i więcej** — bo zmniejszamy, nigdy nie powiększamy;
+4. **posłuszeństwo wobec instrukcji** — kąt kamery, brak cienia, brak ziemi.
+
+**ChatGPT** jest najlepszy w punkcie 4 i w rozmowie. Naprawdę słucha zdania
+„bez cienia rzuconego, tło płaska magenta, dwadzieścia stopni z góry", i można
+mu powiedzieć „to samo, ale o piętro wyżej" bez pisania promptu od nowa. Słabszy
+jest w 1 i 3 (przezroczystość bywa udawana, rozdzielczość niższa) i średni w 2.
+Do KOTWICY STYLU i do wybierania wariantów `ratusz1` — idealny.
+
+**Freepik** nadrabia dokładnie tam, gdzie ChatGPT odpuszcza: daje modele klasy
+Flux (lepsze faktury), wybór rozdzielczości, referencję stylu, a do tego ma
+wbudowane usuwanie tła i powiększanie. Do PRODUKCJI kilkunastu sprite'ów jest
+lepszym wyborem — zwłaszcza że masz go pod ręką.
+
+**Czego szukać, jeśli kiedyś sięgniesz dalej.** Jedna funkcja zmienia w tym
+wszystkim najwięcej: **trenowanie własnego stylu na własnych obrazkach**
+(w różnych narzędziach nazywa się to stylem, LoRA albo modelem niestandardowym).
+Wrzucasz nasze 270 stworków i zatwierdzony `ratusz1`, a potem generujesz resztę
+JUŻ W TYM STYLU. To jest różnica między „piętnastoma ładnymi obrazkami"
+a „piętnastoma obrazkami z jednego świata" — czyli dokładnie ten problem,
+z którym walczymy od początku.
+
+**O bezszwowych teksturach się nie martw.** Jeśli twoje narzędzie nie ma
+przełącznika „seamless", generuj zwykłą teksturę — zamknięcie jej w kafelek
+zrobię skryptem (przesunięcie o pół obrazu i zlanie szwu). To jest kilkanaście
+linijek i jedna z niewielu rzeczy, które wychodzą lepiej programowi niż modelowi.
+
+**Trzy nawyki, które oszczędzają rundy:** generuj w największym dostępnym
+rozmiarze; jeden obrazek to jeden obiekt, nigdy arkusz z kilkoma; i zapisuj,
+jakim modelem i z jakimi ustawieniami powstał każdy plik — przy piętnastu
+obrazkach po tygodniu nikt tego nie pamięta.
+
 ## Uwaga o pochodzeniu
 
 Repo jest publiczne. Warto zapisać w `STAN.md`, jakim modelem i kiedy powstały
