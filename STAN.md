@@ -52,6 +52,11 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
 
 ## Skończone
 
+- **Wersja gry w rogu ekranu** (`src/wersja.ts`). Data commita i jego skrót,
+  wstrzykiwane przy budowaniu przez `vite.config.ts` — nie ma czego pamiętać
+  podbić. Ten sam podpis trafia do nagłówka dziennika, więc ze zgłoszenia
+  od razu wiadomo, w co gracz grał.
+
 - **Dziennik diagnostyczny do zgłaszania błędów** (`src/dev/dziennik.ts`).
   Klawisz **F8** składa raport: ziarno sesji, środowisko, migawka stanu
   aktywnej sceny i oś czasu ostatnich 400 zdarzeń — do skopiowania lub zapisu

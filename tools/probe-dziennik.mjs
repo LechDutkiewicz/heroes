@@ -35,6 +35,9 @@ await page.waitForTimeout(600);
 const ziarno = await page.evaluate(() => window.__dziennik?.ziarno());
 sprawdz('sesja ma ziarno', Number.isFinite(ziarno) && ziarno > 0, `ziarno=${ziarno}`);
 
+const podpis = await page.textContent('#wersja');
+sprawdz('podpis wersji widoczny w rogu', /\d{4}-\d{2}-\d{2} · [0-9a-f]{7}/.test(podpis ?? ''), podpis ?? '');
+
 const startSceny = await page.evaluate(() =>
   window.__dziennik.wpisy().some((w) => w.zrodlo === 'scena' && w.tekst.includes('adventure'))
 );
@@ -53,6 +56,7 @@ sprawdz('licznik błędów rośnie', (await page.evaluate(() => window.__dzienni
 const raport = await page.evaluate(() => window.__dziennik.raport());
 sprawdz('raport ma ziarno', raport.includes(`?seed=${ziarno}`));
 sprawdz('raport ma migawkę mapy', raport.includes('### Stan: mapa'));
+sprawdz('raport ma wersję gry', raport.includes(`- wersja gry: ${podpis}`));
 sprawdz('raport ma oś czasu', raport.includes('### Zdarzenia'));
 sprawdz('raport ma rozsądną długość', raport.length > 400, `${raport.length} znaków`);
 

@@ -3,6 +3,7 @@ import { BattleScene, SCENE_H } from './scenes/BattleScene';
 import { AdventureScene } from './scenes/AdventureScene';
 import { TownScene } from './scenes/TownScene';
 import { wlaczDziennik, wysiejZiarno } from './dev/dziennik';
+import { pokazWersje } from './wersja';
 
 // Który ekran otworzyć. Domyślnie bitwa, bo tak wchodzą wszystkie narzędzia
 // pomiarowe (zrzuty, test dymny, sondy) i nie chcę ich unieważniać, zanim
@@ -13,6 +14,10 @@ const ekran = new URLSearchParams(location.search).get('ekran');
 // (brakująca tekstura, nieudany WebGL) i żeby ziarno sesji było ustalone,
 // zanim cokolwiek z niego skorzysta — dzięki niemu zgłoszony błąd da się
 // powtórzyć adresem `?seed=…`.
+// Podpis wersji w rogu strony — żeby było widać, czy przeglądarka pokazuje
+// najnowsze wydanie, czy stare z pamięci podręcznej.
+pokazWersje();
+
 wlaczDziennik({
   kontekst: {
     sceny: () => game.scene.getScenes(true).map((s) => s.scene.key),

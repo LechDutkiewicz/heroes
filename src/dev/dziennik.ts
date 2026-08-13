@@ -22,6 +22,8 @@
  *    rozmiar okna) — raport ląduje w publicznym zgłoszeniu.
  */
 
+import { PODPIS_WERSJI, WERSJA } from '../wersja';
+
 /** Ile ostatnich zdarzeń pamiętamy. 400 to około dwóch pełnych bitew. */
 const POJEMNOSC = 400;
 
@@ -164,6 +166,7 @@ export function wlaczDziennik(opcje: { kontekst?: KontekstGry } = {}) {
   if (!Number.isFinite(ziarno)) ziarno = 1;
 
   zapisz('sesja', 'start', {
+    wersja: PODPIS_WERSJI,
     ziarno,
     adres: location.href,
     przegladarka: navigator.userAgent,
@@ -250,6 +253,7 @@ export function raport(): string {
   const linie: string[] = [];
   linie.push('## Dziennik gry');
   linie.push('');
+  linie.push(`- wersja gry: ${PODPIS_WERSJI} (gałąź ${WERSJA.galaz})`);
   linie.push(`- data: ${new Date().toISOString()}`);
   linie.push(`- ziarno sesji: \`${ziarno}\` (powtórz adresem \`?seed=${ziarno}\`)`);
   linie.push(`- adres: ${location.href}`);
@@ -307,7 +311,7 @@ function przelaczPodglad() {
   const gora = document.createElement('div');
   gora.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px';
   const tytul = document.createElement('strong');
-  tytul.textContent = `Dziennik gry — ziarno ${ziarno}, błędów: ${bledow}`;
+  tytul.textContent = `Dziennik gry — ${PODPIS_WERSJI}, ziarno ${ziarno}, błędów: ${bledow}`;
   tytul.style.cssText = 'flex:1;font:600 13px system-ui,sans-serif';
   gora.appendChild(tytul);
 
