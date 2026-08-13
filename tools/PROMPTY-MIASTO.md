@@ -233,12 +233,91 @@ sky. Dramatic but warm, not hellish.
 [DODATEK PANORAMOWY]
 ```
 
+
+---
+
+## Kotwica stylu: widok całego miasta
+
+Tego obrazu NIE wstawiamy do gry. Jest po to, żeby ustalić paletę, światło,
+materiał i nastrój raz, a potem podawać go modelowi jako referencję stylu przy
+każdym pojedynczym budynku. Największym ryzykiem tej drogi nie jest jakość
+jednego obrazka, tylko to, że dwanaście obrazków generowanych osobno wyjdzie
+z dwunastu różnych światów — a jeden wspólny punkt odniesienia załatwia to
+lepiej niż powtarzanie tego samego akapitu tekstu.
+
+Format: poziomy 16:10, co najmniej 2400 × 1500.
+
+```
+A wide establishing view of a small fantasy forest settlement belonging to
+creature trainers, seen from a low hill at midday. A timber gathering hall with
+a mossy shingle roof stands at the centre beside a trodden dirt path; around it,
+scattered across a sunlit meadow, stand a few small creature dwellings: a woven
+nest on a tree stump, a hollow fallen log with a round door, a clear turquoise
+pool ringed with mossy stones, a green dome woven from branches, and one ancient
+enormous tree with glowing windows in its bark. A log palisade gate guards the
+back of the settlement. Wooden fences, berry baskets, lanterns and small banners
+between the buildings. No creatures, no people.
+
+Style: stylized 2D game art for a children's fantasy strategy game, hand-painted
+look, soft cel shading with clear light and shadow planes, warm saturated palette,
+rounded friendly shapes, high detail on materials (wood grain, mossy stone, thatch,
+leaves), no outlines, no photorealism, no pixel art.
+Light: warm sunlight from the upper right, long soft shadows falling to the lower
+left, glowing warm windows.
+Composition: horizon high in the frame, only a narrow strip of sky at the top.
+Output: horizontal 16:10 image, at least 2400x1500, no text, no logo, no watermark,
+no user interface.
+```
+
+---
+
+## Benchmark: czym mierzyć kierunek
+
+Do promptu warto dołożyć punkt odniesienia, ale nie byle jaki i nie byle jak.
+
+**Najlepszy benchmark to nasza własna gra, podany OBRAZKIEM.** W `tools/wsad/`
+leży `referencja-stylu.png`: stworki, które już w grze są, ekran mapy przygody
+i obecny ekran miasta. Jeśli twój model przyjmuje obrazek referencyjny, podaj go
+razem z promptem i dopisz jedno zdanie:
+
+```
+Match the finish, palette and softness of the creatures in the reference image:
+smooth airbrushed shading, no hard outlines, saturated but not neon colours,
+rounded volumes, everything readable at small size.
+```
+
+To jest silniejsze niż jakikolwiek opis słowny, bo stworki są w grze od dawna
+i to one wyznaczają, co do niej pasuje. Budynek ma stanąć obok nich i nie
+wyglądać jak wklejka z innej gry.
+
+**Czego nie robić z benchmarkiem.** Nie proś modelu o „grafikę jak w Pokémonach"
+ani o żadną nazwę handlową w promptcie. Trzy powody, w kolejności ważności:
+model potrafi wtedy wygenerować rzeczy zbyt bliskie cudzym projektom, a repo
+jest publiczne; część modeli po prostu odmawia albo pogarsza wynik na nazwach
+własnych; a nazwa i tak nie mówi, o co nam chodzi — bo chodzi o wykończenie,
+nie o postacie.
+
+**Co powiedzieć zamiast nazwy.** To samo, tylko opisem — i to działa lepiej:
+
+```
+Reference direction: bright, friendly Japanese-style creature-collector RPG art;
+soft airbrushed shading with one clear light side and one shadow side; saturated
+candy palette with warm highlights; chunky rounded architecture with exaggerated
+proportions, thick beams and oversized roofs; clean silhouettes readable at 200
+pixels tall; charming and safe rather than gritty or dark.
+```
+
+Zdanie o **200 pikselach** jest tam nie dla ozdoby: budynek na naszym ekranie ma
+w rzeczywistości 150–250 px wysokości. Jeśli sylwetka nie czyta się w tej skali,
+cały detal idzie w gwizdek — a modele domyślnie robią obrazy, które wyglądają
+dobrze w powiększeniu i rozpadają się po zmniejszeniu.
+
 ---
 
 ## Co robić z gotowymi plikami
 
 1. Wrzuć je do `tools/wsad/` pod nazwami z tabeli (`ratusz1.png`, `fort.png`,
-   `tlo-bor.png`, `tlo-grota.png`, `tlo-zbocze.png` itd.).
+   `tlo-bor.png`, `tlo-grota.png`, `tlo-zbocze.png`, kotwica jako `miasto-kotwica.png`).
 2. Daj znać — puszczam przebieg: wycięcie magenty, przycięcie do sylwetki,
    wyrównanie światła między budynkami, wypalenie cienia rzuconego, wersje
    Groty i Zbocza, podmiana w panoramie, sonda i ślepe porównanie.
