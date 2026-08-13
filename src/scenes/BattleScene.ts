@@ -28,6 +28,7 @@ interface DaneZPrzygody {
 // Wszystkie zasady walki biorą się STĄD i tylko stąd. Scena ma je odgrywać,
 // nie powtarzać — druga kopia reguł rozjechałaby się z symulatorem balansu.
 import { initSfx, loadSfx, sfx, startMusic, stopMusic, toggleSfx } from '../audio/sfx';
+import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
 import {
   GUARD_REDUCTION,
   START_ROWS,
@@ -364,14 +365,14 @@ export class BattleScene extends Phaser.Scene {
    * strony, więc nawet lustrzane frakcje ustawią się inaczej.
    */
   private drawArmies() {
-    const pula = Phaser.Utils.Array.Shuffle([...FACTIONS]);
+    const pula = Phaser.Math.RND.shuffle([...FACTIONS]);
     this.playerFaction = pula[0];
     this.enemyFaction = pula[1];
   }
 
   /** Rzędy startowe w losowej kolejności — osobno dla każdej strony. */
   private startRows() {
-    return Phaser.Utils.Array.Shuffle([...START_ROWS]);
+    return Phaser.Math.RND.shuffle([...START_ROWS]);
   }
 
   init(dane?: DaneZPrzygody) {
@@ -401,7 +402,14 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create() {
-    this.terrain = Phaser.Utils.Array.GetRandom(TERRAINS);
+    sledzScene(this);
+    // Wszystko, co ustala KSZTAŁT bitwy (teren, frakcje, rzędy, przeszkody),
+    // idzie przez `Phaser.Math.RND` — generator z wysianym ziarnem sesji.
+    // `Phaser.Utils.Array.Shuffle` i `Phaser.Math.Between` sięgają po
+    // `Math.random`, więc bitwa nie dawała się powtórzyć nawet z ziarnem,
+    // a zgłoszenie błędu było wtedy tylko opowieścią. Efekty wizualne dalej
+    // mogą losować swobodnie — one na przebieg walki nie wpływają.
+    this.terrain = Phaser.Math.RND.pick(TERRAINS);
     this.drawArmies();
     this.applyHarnessParams();
     // Ikony muszą istnieć, zanim cokolwiek po nie sięgnie — rysują się do
@@ -464,6 +472,33 @@ export class BattleScene extends Phaser.Scene {
       });
     });
 
+    zapisz('bitwa', 'start', {
+      gracz: this.playerFaction.id,
+      wrog: this.enemyFaction.id,
+      teren: this.terrain.key,
+      zMapy: this.zPrzygody !== undefined,
+      oddzialy: this.units.map((u) => `${u.side}:${u.def.sprite}×${u.count}`),
+    });
+    // Migawka trafia do raportu w chwili jego składania, więc pokazuje stan
+    // z momentu zgłoszenia błędu, a nie sprzed bitwy.
+    migawkaStanu('bitwa', () =>
+      this.scene.isActive()
+        ? {
+            runda: this.battle.round,
+            koniec: this.gameOver,
+            kolejka: this.battle.roundQueue,
+            oddzialy: this.units.map((u) => ({
+              id: u.id,
+              strona: u.side,
+              kto: u.def.sprite,
+              ile: u.count,
+              hpPrzedniego: u.topHp,
+              pole: `${u.col},${u.row}`,
+            })),
+          }
+        : undefined
+    );
+
     startRound(this.battle);
     this.beginTurn();
   }
@@ -479,9 +514,9 @@ export class BattleScene extends Phaser.Scene {
     for (let row = 0; row < ROWS; row++) {
       for (let col = 2; col <= COLS - 3; col++) candidates.push({ col, row });
     }
-    Phaser.Utils.Array.Shuffle(candidates);
+    Phaser.Math.RND.shuffle(candidates);
 
-    const wanted = Phaser.Math.Between(OBSTACLES_MIN, OBSTACLES_MAX);
+    const wanted = Phaser.Math.RND.between(OBSTACLES_MIN, OBSTACLES_MAX);
     const placed: Cell[] = [];
     for (const cell of candidates) {
       if (placed.length >= wanted) break;
@@ -493,7 +528,7 @@ export class BattleScene extends Phaser.Scene {
 
     for (const cell of placed) {
       const { x, y } = this.cellToXY(cell.col, cell.row);
-      const kind = Phaser.Utils.Array.GetRandom(this.terrain.obstacles);
+      const kind = Phaser.Math.RND.pick(this.terrain.obstacles);
       // Podstawa ma stanąć na środku hexa, a korona wystawać ponad niego.
       // Drzewo trzyma się pnia u dołu, płaska kępa czy pagórek siedzą środkiem
       // na polu — stąd różne punkty zaczepienia.
@@ -1718,6 +1753,10 @@ export class BattleScene extends Phaser.Scene {
     if (playersLeft && enemiesLeft) return;
 
     this.gameOver = true;
+    zapisz('bitwa', playersLeft ? 'wygrana gracza' : 'wygrana wroga', {
+      runda: this.battle.round,
+      ocalali: this.units.map((u) => `${u.def.sprite}×${u.count}`),
+    });
     this.clearHighlights();
     this.setButtonsVisible(false);
     this.turnText.setText('');

@@ -29,6 +29,8 @@ const KLUCZ_ZAMKU = 'otwarty-zamek';
 const WIERSZ_H = 88;
 const LEWA_W = 560;
 
+import { sledzScene, zapisz } from '../dev/dziennik';
+
 export class TownScene extends Phaser.Scene {
   private stan!: StanMapy;
   private zamek!: Obiekt;
@@ -49,6 +51,7 @@ export class TownScene extends Phaser.Scene {
   }
 
   create() {
+    sledzScene(this);
     this.licznikiDostepne = [];
     this.przyciski = [];
     this.slotyArmii = [];
@@ -218,6 +221,12 @@ export class TownScene extends Phaser.Scene {
     }
     dostepne[tier] -= ile;
     this.stan.skarbiec.pokeball -= ile * koszt;
+    zapisz('zamek', 'werbunek', {
+      poziom: tier,
+      kto: u.sprite,
+      ile,
+      pokeballe: this.stan.skarbiec.pokeball,
+    });
     this.komunikat.setText(`Zwerbowano ${ile} × ${u.name}.`);
     this.odswiez();
   }

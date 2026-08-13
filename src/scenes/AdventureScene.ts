@@ -27,6 +27,7 @@ import { C, E, FONT, H, Z, body, display } from '../visual/theme';
 import { drawPanelBody, makeHudButton, mix, plate } from '../visual/hud';
 import { ICON, buildIcons } from '../visual/icons';
 import { GORA, KAFEL, MARGINES, PANEL_W, PASEK_H } from '../visual/uklad';
+import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
 
 /**
  * Mapa przygody.
@@ -72,7 +73,8 @@ const KLUCZ_WYNIKU = 'wynik-bitwy';
 
 const DOMYSLNA_PODPOWIEDZ =
   'Kliknij pole, żeby zobaczyć trasę. Kliknij drugi raz w to samo miejsce, żeby ruszyć.\n' +
-  'Mapę przesuwasz strzałkami, spacja wraca do bohatera.';
+  'Mapę przesuwasz strzałkami, spacja wraca do bohatera.\n' +
+  'F8 pokazuje dziennik — dołącz go, gdy zgłaszasz błąd.';
 
 export class AdventureScene extends Phaser.Scene {
   private stan!: StanMapy;
@@ -186,6 +188,7 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   create() {
+    sledzScene(this);
     // Phaser używa TEJ SAMEJ instancji sceny przy każdym `scene.start`, więc
     // pola klasy przeżywają przejście do bitwy i z powrotem. `zajety` zostawało
     // włączone po wyjściu do bitwy i po powrocie nie dało się już sterować
@@ -205,6 +208,20 @@ export class AdventureScene extends Phaser.Scene {
     this.trafienia = [];
 
     this.stan = this.wczytajStan();
+    // Stan mapy jest tym, czego brakuje najbardziej w zgłoszeniach typu
+    // „bohater utknął": pozycja, ruch, surowce i skład armii w jednym miejscu.
+    migawkaStanu('mapa', () =>
+      this.scene.isActive()
+        ? {
+            pole: `${this.stan.bohater.x},${this.stan.bohater.y}`,
+            ruch: this.stan.bohater.ruch,
+            armia: this.stan.bohater.armia.map((o) => `${o.sprite}×${o.ile}`),
+            skarbiec: this.stan.skarbiec,
+            zajety: this.zajety,
+            trasa: this.trasaBiezaca?.length ?? 0,
+          }
+        : undefined
+    );
     buildIcons(this);
     this.przygotujAnimacje();
 
@@ -1133,6 +1150,17 @@ export class AdventureScene extends Phaser.Scene {
 
   private wejdzNa(o: Obiekt) {
     const wynik = odwiedz(this.stan, o);
+    zapisz('mapa', `wejście na obiekt: ${o.nazwa}`, {
+      id: o.id,
+      rodzaj: o.rodzaj,
+      pole: `${o.x},${o.y}`,
+      skutek: {
+        bitwa: wynik.bitwaZ?.id,
+        wybor: wynik.wybor !== undefined,
+        zamek: wynik.zamek?.id,
+        zajete: wynik.zajete,
+      },
+    });
 
     if (wynik.bitwaZ) return this.zacznijBitwe(wynik.bitwaZ);
     if (wynik.wybor) return this.zapytajOSkrzynie(wynik.wybor);
@@ -1344,6 +1372,7 @@ export class AdventureScene extends Phaser.Scene {
     const wpisy = Object.entries(wplyw).map(
       ([co, ile]) => `+${ile} ${SUROWIEC_INFO[co as keyof typeof SUROWIEC_INFO].dopelniacz}`
     );
+    zapisz('mapa', 'koniec tury', { data: this.stan.dzien, dochod: wplyw });
     this.napisUlotny(['Nowy dzień', ...wpisy].join('\n'));
     this.odswiezWszystko();
   }
