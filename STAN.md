@@ -26,6 +26,7 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `node tools/probe-kopalnia.mjs` | czy budynek produkcyjny się ZAJMUJE, a nie zbiera |
 | `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia, artefakt, bitwa, zamek, powrót |
 | `node tools/probe-klik.mjs` | czy KLIKNIĘCIE prowadzi bohatera tam, gdzie się kliknęło |
+| `node tools/probe-zwis.mjs` | czy okno skrzyni naprawdę WIDAĆ i czy druga bitwa startuje |
 | `node tools/zrzut-mapa.mjs` | zrzut mapy przygody (osobno, bo `capture.mjs` zna tylko bitwę) |
 
 Grafiki mapy są generowane, nie wrzucane ręcznie. Po zmianie planszy albo
@@ -220,6 +221,28 @@ celem kliknięcia jest teraz OBIEKT, a nie geometria pola pod kursorem.
 **Kolejność w `create` decyduje o tym, co widać.** Rozliczenie bitwy szło po
 narysowaniu obiektów, więc pokonany strażnik znikał z zasad gry, ale zostawał
 na ekranie: nie blokował drogi, nie dało się go zaatakować, a sprite stał.
+
+## Znalezione przy dwóch zwisach zgłoszonych z rozgrywki
+
+**O tym, co jest na wierzchu, decyduje KAMERA, nie `depth`.** Okno skrzyni
+miało `depth = 200` i mimo to było niewidoczne: kamery rysują się w kolejności
+dodania, a kamera planszy powstaje po głównej, więc mapa zamalowywała okno
+w tej samej klatce. Gra wyglądała na zawieszoną — okno przyjmowało kliknięcia,
+tylko nikt go nie widział. Stąd trzecia kamera, dodawana na samym końcu;
+`naWierzchu()` jest jedyną drogą, żeby cokolwiek położyć nad mapą.
+
+**Sonda klikająca na ślepo nie sprawdza, czy coś widać.** `probe-przygoda.mjs`
+trafiała w przycisk po wyliczonych współrzędnych i miała komplet OK przy oknie
+niewidocznym dla gracza. `probe-zwis.mjs` pyta wprost, czy okno trafia do
+kamery rysowanej PO planszy.
+
+**Phaser używa TEJ SAMEJ instancji sceny przy każdym `scene.start`.** Wiedziała
+o tym `AdventureScene` (czyści pola w `create`), nie wiedziała `BattleScene`:
+stan walki powstawał raz, przy tworzeniu obiektu sceny. Druga bitwa startowała
+więc z oddziałami pierwszej w `battle.units`, a ich widoki umarły razem z tamtą
+sceną — `beginTurn` wywracał się na nieżyjącej teksturze napisu i gracz
+zostawał na mapie bez bitwy i bez sterowania. Jedna bitwa w sondzie tego nie
+złapie; trzeba rozegrać co najmniej dwie.
 
 ## Znalezione przy mapie 36 × 36
 

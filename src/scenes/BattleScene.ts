@@ -378,6 +378,25 @@ export class BattleScene extends Phaser.Scene {
     // `init` dostaje pusty obiekt także przy zwykłym starcie sceny, więc
     // o narzuconym składzie decyduje obecność armii, a nie samego obiektu.
     this.zPrzygody = dane && dane.gracz?.length ? dane : undefined;
+
+    // Phaser używa TEJ SAMEJ instancji sceny przy każdym `scene.start`, więc
+    // pola klasy przeżywają całą poprzednią bitwę. Stan walki powstawał raz,
+    // przy tworzeniu obiektu sceny, i nikt go potem nie czyścił: druga bitwa
+    // zaczynała się z oddziałami pierwszej w `battle.units`. Ich widoki były
+    // już skasowane razem z tamtą sceną, więc `beginTurn` wywracał się na
+    // nieżyjącej teksturze napisu i gra zostawała na mapie przygody — bez
+    // bitwy i bez sterowania. Stąd pełne zerowanie na wejściu.
+    this.battle = {
+      units: [],
+      obstacles: new Set<string>(),
+      roundQueue: [],
+      round: 1,
+      dealt: new Map(),
+    };
+    this.roster.clear();
+    this.nextId = 1;
+    this.preferredApproach = null;
+    this.busy = false;
     this.gameOver = false;
   }
 

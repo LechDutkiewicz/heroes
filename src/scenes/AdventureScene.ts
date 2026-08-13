@@ -87,6 +87,14 @@ export class AdventureScene extends Phaser.Scene {
    * i zlewała się z tłem — po jej rozjaśnieniu wyszło od razu.
    */
   private kamera!: Phaser.Cameras.Scene2D.Camera;
+  /**
+   * Kamera okien dialogowych. Musi istnieć osobno, bo kamery rysują się
+   * w kolejności dodania, a kamera planszy powstaje PO kamerze głównej —
+   * więc wszystko, co główna narysuje w obrębie ramy mapy, plansza natychmiast
+   * zamalowuje. Na tym poległo okno skrzyni: powstawało, przyjmowało
+   * kliknięcia, ale było niewidoczne pod mapą i gra wyglądała na zawieszoną.
+   */
+  private kameraOkien!: Phaser.Cameras.Scene2D.Camera;
   private plansza!: Phaser.GameObjects.Image;
   private naklejkiWody: Phaser.GameObjects.Image[] = [];
   private mgla!: Phaser.GameObjects.Image;
@@ -421,15 +429,25 @@ export class AdventureScene extends Phaser.Scene {
   private rozdzielKamery() {
     this.cameras.main.ignore(this.swiat);
     this.kamera.ignore(this.children.list.filter((o) => o !== this.swiat));
+
+    // Trzecia kamera, dodana NA SAMYM KOŃCU, więc rysująca po planszy. Nie
+    // widzi niczego, co już stoi na scenie — dostaje wyłącznie to, co później
+    // odda jej `naWierzchu`. Dzięki temu okno dialogowe naprawdę leży na
+    // wierzchu, zamiast chować się pod mapą.
+    this.kameraOkien = this.cameras.add(0, 0, this.scale.width, this.scale.height);
+    this.kameraOkien.ignore([...this.children.list]);
   }
 
   /**
-   * Chowa przed kamerą planszy to, co dorysowaliśmy do HUD-u po jej powstaniu.
-   * Bez tego okno skrzyni i napisy panelu pojawiają się także wewnątrz mapy,
-   * przesunięte o przewinięcie.
+   * Oddaje obiekty kamerze okien: znikają i z HUD-u, i z planszy, a rysuje je
+   * wyłącznie kamera nakładek. To jedyny sposób, żeby cokolwiek pojawiło się
+   * NAD mapą — sama głębokość nie wystarczy, bo o kolejności decyduje kamera,
+   * a nie `depth`.
    */
-  private tylkoHud(...obiekty: Phaser.GameObjects.GameObject[]) {
+  private naWierzchu(...obiekty: Phaser.GameObjects.GameObject[]) {
+    if (obiekty.length === 0) return;
     this.kamera?.ignore(obiekty);
+    this.cameras.main.ignore(obiekty);
   }
 
   private wariant(x: number, y: number, ile: number) {
@@ -1165,8 +1183,9 @@ export class AdventureScene extends Phaser.Scene {
     const wys = 176;
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
-    // Okno należy do HUD-u, nie do planszy — inaczej jechałoby razem z mapą.
-    const doHud: Phaser.GameObjects.GameObject[] = [];
+    // Okno nie należy ani do planszy (jechałoby razem z mapą), ani do HUD-u
+    // (plansza rysuje się po nim i by je zakryła) — idzie do kamery okien.
+    const doOkna: Phaser.GameObjects.GameObject[] = [];
 
     const zaslona = this.add
       .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.45)
@@ -1190,22 +1209,22 @@ export class AdventureScene extends Phaser.Scene {
         .setDepth(Z.overlay + 2),
     ];
 
-    doHud.push(zaslona, tlo, ...napisy);
-    this.tylkoHud(...doHud);
+    doOkna.push(zaslona, tlo, ...napisy);
+    this.naWierzchu(...doOkna);
 
     const zamknij = (co: 'pokeballe' | 'doswiadczenie') => {
       const opis = wezZeSkrzyni(this.stan, w, co);
       [zaslona, tlo, ...napisy].forEach((x) => x.destroy());
-      przyciski.forEach((p) => p.setVisible(false));
+      przyciski.forEach((p) => p.destroy());
       this.znikaj(w.obiekt);
       this.napisUlotny(opis);
       this.zajety = false;
       this.odswiezWszystko();
     };
 
-    // Przyciski powstają jako osobne obiekty sceny, więc kamera planszy też by
-    // je narysowała — w środku mapy i przesunięte o przewinięcie. Notujemy,
-    // co przybyło, i chowamy to przed nią.
+    // Przyciski powstają jako osobne obiekty sceny, więc trzeba je oddać
+    // kamerze okien tak samo jak tło. Notujemy, co przybyło na liście sceny,
+    // i przekazujemy dokładnie to.
     const przedPrzyciskami = this.children.list.length;
     const przyciski = [
       makeHudButton(this, {
@@ -1235,7 +1254,7 @@ export class AdventureScene extends Phaser.Scene {
         onClick: () => zamknij('doswiadczenie'),
       }),
     ];
-    this.tylkoHud(...this.children.list.slice(przedPrzyciskami));
+    this.naWierzchu(...this.children.list.slice(przedPrzyciskami));
     przyciski[0].setLabel(`${w.pokeballe} pokeballi`);
     przyciski[1].setLabel(`${w.doswiadczenie} dośw.`);
   }
