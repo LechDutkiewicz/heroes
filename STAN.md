@@ -26,6 +26,7 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `node tools/probe-kopalnia.mjs` | czy budynek produkcyjny się ZAJMUJE, a nie zbiera |
 | `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia, artefakt, bitwa, zamek, powrót |
 | `node tools/probe-klik.mjs` | czy KLIKNIĘCIE prowadzi bohatera tam, gdzie się kliknęło |
+| `node tools/probe-dziennik.mjs` | dziennik diagnostyczny: ziarno, łapanie wyjątków, raport, F8 |
 | `node tools/zrzut-mapa.mjs` | zrzut mapy przygody (osobno, bo `capture.mjs` zna tylko bitwę) |
 
 Grafiki mapy są generowane, nie wrzucane ręcznie. Po zmianie planszy albo
@@ -50,6 +51,14 @@ chodzić przed każdą serią zrzutów i potrafi paść w tle. Zawsze sprawdzaj
 oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
 
 ## Skończone
+
+- **Dziennik diagnostyczny do zgłaszania błędów** (`src/dev/dziennik.ts`).
+  Klawisz **F8** składa raport: ziarno sesji, środowisko, migawka stanu
+  aktywnej sceny i oś czasu ostatnich 400 zdarzeń — do skopiowania lub zapisu
+  do pliku. Łapane są wyjątki, odrzucone obietnice, błędy wczytywania plików
+  i wpisy z konsoli. Przy okazji: losowania ustalające kształt bitwy (teren,
+  frakcje, rzędy, przeszkody) przeszły z `Math.random` na `Phaser.Math.RND`,
+  więc `?seed=<ziarno>` z raportu odtwarza dokładnie tę samą bitwę.
 
 - **Cztery kawałki wizualne** (plansza, oddziały, animacje trafienia, HUD) —
   każdy wygrał ślepe porównanie z komercyjnym wzorcem. Zapis rund i werdyktów:
