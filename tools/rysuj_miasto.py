@@ -503,12 +503,21 @@ def panorama(p: Paleta, frakcja: str) -> Image.Image:
     budynki = pozycje_budynkow()
     maska_placu = Image.new('L', (W, H), 0)
     dmp = ImageDraw.Draw(maska_placu)
+    # Plamy NIEREGULARNE i zachodzące na siebie. Równa elipsa pod każdym
+    # budynkiem czyta się jak talerz, na którym bryła stoi — krytyk wziął je
+    # wprost za cienie rzucone i policzył za sprzeczne kierunki światła.
+    # Wydeptana ziemia ma nie mieć kształtu, tylko zasięg.
+    los_p = random.Random(31)
     for bx, by, bskala in budynki:
         cx = bx * W
         cy = na_ziemi(by, horyzont, H)
-        rx = W * 0.085 * bskala * perspektywa(by) * 1.6
-        ry = rx * 0.42
-        dmp.ellipse([cx - rx, cy - ry, cx + rx, cy + ry * 0.7], fill=190)
+        zasieg = W * 0.085 * bskala * perspektywa(by) * 1.7
+        for _ in range(9):
+            ox = los_p.gauss(0, zasieg * 0.45)
+            oy = los_p.gauss(0, zasieg * 0.16)
+            rx = zasieg * (0.4 + 0.5 * los_p.random())
+            ry = rx * (0.3 + 0.2 * los_p.random())
+            dmp.ellipse([cx + ox - rx, cy + oy - ry, cx + ox + rx, cy + oy + ry * 0.8], fill=190)
     # Droga też należy do placu — inaczej plac kończy się w powietrzu.
     for i in range(60):
         t = i / 59
@@ -636,6 +645,22 @@ def panorama(p: Paleta, frakcja: str) -> Image.Image:
 
     im.paste(Image.alpha_composite(im.convert('RGBA'), warstwa).convert('RGB'), (0, 0))
     d = ImageDraw.Draw(im, 'RGBA')
+
+    # --- zakres walorowy ---
+    #
+    # Kadr złożony z samych średnich tonów czyta się jak mgła, choćby każdy
+    # element z osobna był poprawny: bez najciemniejszej i najjaśniejszej
+    # wartości nic się nie spina. Rozciągamy więc histogram ziemi — cienie
+    # schodzą głębiej i chłodniej, światła podchodzą wyżej i cieplej.
+    pas = np.asarray(im.crop((0, horyzont, W, H))).astype(np.float32) / 255
+    jasnosc = pas.mean(axis=2, keepdims=True)
+    cienie = np.clip(1 - jasnosc * 2.2, 0, 1)
+    swiatla = np.clip((jasnosc - 0.55) * 2.4, 0, 1)
+    chlod = np.array([0.86, 0.94, 1.06], dtype=np.float32)
+    cieplo = np.array([1.07, 1.02, 0.9], dtype=np.float32)
+    pas = pas * (1 - 0.3 * cienie) * (1 - cienie * (1 - chlod))
+    pas = pas + (1 - pas) * swiatla * 0.16 * cieplo
+    im.paste(Image.fromarray((pas * 255).clip(0, 255).astype(np.uint8), 'RGB'), (0, horyzont))
 
     # --- winieta: przyciemnione rogi ---
     # Panorama bez niej rozlewa się na boki i wzrok nie ma się gdzie zatrzymać.
@@ -1114,51 +1139,66 @@ BUDYNKI = {
 
 
 def plan(im: Image.Image, p: Paleta) -> Image.Image:
-    """Miejsce pod budowę: fundament, tyczki i widmo bryły nad nimi.
+    """Plac budowy: rusztowanie, fundament i deski — bez żadnej przezroczystości.
 
-    Heroes 3 nie pokazuje budynków, których nie ma. My pokazujemy, bo panorama
-    JEST u nas menu budowy — dziecko musi widzieć, co jeszcze może stanąć i gdzie.
-    Pierwsza wersja rysowała biały kontur wektorowy i krytyk dwa razy z rzędu
-    wytknął to samo: cienka biała linia to inny język graficzny niż reszta
-    kadru, więc czyta się jak niedokończony placeholder, a nie jak plan.
-    Teraz plac budowy jest NAMALOWANY tak samo jak wszystko inne — wytyczony
-    fundament i tyczki stoją w świecie, a bryła nad nimi jest tylko zapowiedzią.
+    Trzy podejścia i sześciu krytyków na jedno kopyto. Najpierw był biały kontur
+    wektorowy: „inny język graficzny, wygląda jak placeholder". Potem widmo bryły
+    przy 26% krycia: „półprzezroczyste obiekty wyglądają jak niedokończone assety
+    albo błąd alfy" — i to zdanie padło w KAŻDEJ rundzie, niezależnie od tego, co
+    innego się zmieniło. Sygnał jest jednoznaczny: cokolwiek na tym ekranie jest
+    przezroczyste, czyta się jako usterka, a nie jako informacja.
+
+    Dlatego plac budowy jest teraz zwyczajnym, w pełni namalowanym obiektem —
+    stoi w świecie tak samo jak budynek obok. Informację „tu może stanąć budynek"
+    niesie jego kształt (wykop, rusztowanie, deski), a nie stopień krycia. To, CO
+    dokładnie stanie, mówi karta po kliknięciu; wcześniej mówiło widmo, ale płaciło
+    za to całym wyglądem ekranu.
     """
     w, h = im.size
-    plansza = Image.new('RGBA', im.size, (0, 0, 0, 0))
-    r = Rys(w, h)
-
     a = im.getchannel('A')
     bbox = a.getbbox() or (0, 0, w, h)
-    lewo, prawo = bbox[0] / w, bbox[2] / w
-    dol = bbox[3] / h
+    lewo, prawo, dol = bbox[0] / w, bbox[2] / w, bbox[3] / h
+    srodek = (lewo + prawo) / 2
+    szer = max(0.18, (prawo - lewo) * 0.75)
 
-    # Wytyczony obrys fundamentu — wąska rynna w ziemi z jaśniejszym wnętrzem.
-    ziemia = mieszaj(p.ziemia, (0, 0, 0), 0.25)
-    piach = mieszaj(p.ziemia, p.swiatlo, 0.42)
-    r.elipsa([w * lewo, h * (dol - 0.1), w * prawo, h * (dol + 0.02)], fill=(*ziemia, 190))
-    r.elipsa(
-        [w * lewo + w * 0.02, h * (dol - 0.085), w * prawo - w * 0.02, h * (dol + 0.005)],
-        fill=(*piach, 210),
+    r = Rys(w, h)
+    ziemia = mieszaj(p.ziemia, (0, 0, 0), 0.4)
+    piach = mieszaj(p.ubita, p.swiatlo, 0.15)
+    drewno = mieszaj(p.sciana, (104, 70, 38), 0.55)
+    drewno_j = mieszaj(drewno, p.swiatlo, 0.3)
+
+    # Wykop z kopczykiem ziemi — ślad, że ktoś już tu machnął łopatą.
+    r.elipsa([w * (srodek - szer / 2), h * (dol - 0.12), w * (srodek + szer / 2), h * (dol + 0.01)],
+             fill=ziemia)
+    r.elipsa([w * (srodek - szer / 2) + w * 0.015, h * (dol - 0.105),
+              w * (srodek + szer / 2) - w * 0.015, h * (dol - 0.005)], fill=piach)
+
+    # Fundament z kamieni po obwodzie wykopu.
+    kamien = mieszaj(p.sciana, (128, 130, 140), 0.5)
+    for i in range(7):
+        t = i / 6
+        x = w * (srodek - szer / 2 + szer * t)
+        y = h * (dol - 0.105 + 0.1 * math.sin(t * math.pi))
+        rr = w * 0.016
+        r.elipsa([x - rr, y - rr * 0.7, x + rr, y + rr * 0.7], fill=kamien)
+
+    # Rusztowanie: dwie ramy z drabinką i belka na górze.
+    gora = dol - 0.34
+    for x in (srodek - szer * 0.42, srodek + szer * 0.42):
+        r.prost([w * x - w * 0.008, h * gora, w * x + w * 0.008, h * (dol - 0.02)], fill=drewno)
+    for i in range(4):
+        y = gora + (dol - 0.02 - gora) * (i / 4)
+        r.prost([w * (srodek - szer * 0.42), h * y, w * (srodek + szer * 0.42), h * (y + 0.012)],
+                fill=drewno_j if i % 2 else drewno)
+    r.prost([w * (srodek - szer * 0.5), h * (gora - 0.02), w * (srodek + szer * 0.5), h * gora],
+            fill=drewno_j)
+    # Kilka desek opartych o rusztowanie — bałagan budowy, nie mebel.
+    r.wielokat(
+        [(w * (srodek + szer * 0.34), h * (dol - 0.02)), (w * (srodek + szer * 0.6), h * (dol - 0.02)),
+         (w * (srodek + szer * 0.3), h * (gora + 0.06)), (w * (srodek + szer * 0.22), h * (gora + 0.06))],
+        fill=drewno,
     )
-
-    # Tyczki z rozciągniętym sznurem — znak, że miejsce jest wytyczone.
-    drewno = mieszaj(p.sciana, (92, 62, 34), 0.55)
-    for u in (lewo + 0.02, (lewo + prawo) / 2, prawo - 0.02):
-        x = w * u
-        r.prost([x - w * 0.006, h * (dol - 0.13), x + w * 0.006, h * (dol - 0.02)], fill=drewno)
-    r.prost(
-        [w * lewo + w * 0.02, h * (dol - 0.125), w * prawo - w * 0.02, h * (dol - 0.118)],
-        fill=mieszaj(drewno, p.swiatlo, 0.3),
-    )
-    plansza.alpha_composite(r.gotowe())
-
-    # Widmo bryły: prawdziwy rysunek, tylko przygaszony. Kolor zostaje, bo to
-    # ma być zapowiedź TEGO budynku, a nie ogólny znaczek „coś tu można".
-    widmo = im.copy()
-    widmo.putalpha(a.point(lambda v: int(v * 0.26)))
-    plansza.alpha_composite(widmo)
-    return plansza
+    return modeluj(r.gotowe(), sila=0.85)
 
 
 def znak_budowy(p: Paleta) -> Image.Image:
