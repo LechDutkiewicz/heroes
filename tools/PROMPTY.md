@@ -1,367 +1,455 @@
-# Prompty na grafiki gry
+# Prompty na grafiki gry — gotowe do skopiowania
 
-Komplet do wygenerowania w modelu graficznym poza tym repo. Ty generujesz,
-wrzucasz pliki do `tools/wsad/`, ja resztę robię skryptem: wycinam tło,
-przycinam, wyrównuję światło, wypalam cień rzucony, składam kafelki, robię
-wersje frakcyjne i wpinam w grę.
+Każdy prompt niżej jest **kompletny**. Nie trzeba nic składać ani doklejać:
+zaznaczasz blok, kopiujesz, wklejasz do modelu, dołączasz obrazek referencyjny.
 
-Zastępuje `PROMPTY-MIASTO.md`, bo benchmark zmienił się dla CAŁEJ gry, nie
-tylko dla miasta.
+## Jak z tego korzystać — trzy kroki
 
----
+**Krok 1. Dołącz obrazek referencyjny.** Do KAŻDEGO promptu dołączaj
+`tools/wsad/referencja-stworki.png` — to są nasze stworki i nic poza nimi.
+(Wcześniejszy arkusz `referencja-stylu.png` zawierał także nasz stary ekran
+miasta, czyli dokładnie tę grafikę, której model ma NIE naśladować. Nie używaj
+go jako referencji.)
+
+**Krok 2. Zacznij od kotwicy.** Wygeneruj najpierw „widok całego miasta", potem
+`ratusz1.png`. Jak `ratusz1` będzie dobry, **od tego momentu dołączaj DWA
+obrazki referencyjne**: stworki i zatwierdzony `ratusz1`. To on trzyma resztę
+budynków w jednym świecie.
+
+**Krok 3. Zapisuj pliki pod nazwami z nagłówków** (`ratusz1.png`, `fort.png`,
+`teren-trawa.png`…) i wrzucaj do `tools/wsad/`. Nazwy nie są ozdobne — przebieg
+po stronie gry szuka dokładnie tych plików.
+
+Jeśli model nie umie zapisać przezroczystości, zostaw tło magenty — wytnę je
+skryptem. Jeśli umie, przezroczystość jest lepsza.
 
 ## Benchmark
 
-**Nastrój, paleta, kompozycja i gęstość: Pokémon Mystery Dungeon: Explorers of
-Sky.** Ciepło, nasycenie, przytulna ciasnota, popołudniowe światło, miasteczko,
-w którym wszędzie coś stoi. Kadry leżą w `tools/reference/pmd/` — dołączaj je
-do promptu, jeśli twój model przyjmuje obrazek referencyjny.
-
-**Technika: gładka, malowana, wygładzone krawędzie — NIE pixel art.** I to nie
-jest kwestia gustu: w projekcie leży 270 sprite'ów stworków, które są gładkimi
-renderami, i to one są najdroższym zasobem w grze. One wyznaczają technikę.
-Explorers of Sky jest pixelartowy z DS-a; postawienie naszych stworków w takim
-świecie zrobiłoby z nich naklejki. Bierzemy z tej gry to, czego nam brakuje
-(ciepło i gęstość), a nie to, czego mieć nie możemy (piksele).
-
-**Drugi punkt odniesienia to nasza własna gra**: `tools/wsad/referencja-stylu.png`
-zestawia stworki, mapę i ekran miasta. Nowa grafika ma stanąć obok tych stworków
-i nie wyglądać jak wklejka.
-
-Nazw handlowych w promptach świadomie nie ma — model potrafi na nich wygenerować
-rzeczy zbyt bliskie cudzym projektom, a repo jest publiczne. Zamiast nazwy jest
-opis wykończenia i to działa lepiej.
-
-Prompty są po angielsku, bo modele graficzne rozumieją go wyraźnie lepiej
-w opisach materiału i światła.
+Nastrój, paleta i gęstość: ciepłe, gęsto zastawione miasteczko w duchu Pokémon
+Mystery Dungeon (kadry w `tools/reference/pmd/`). Technika: gładka, malowana,
+wygładzone krawędzie — bo takie są nasze 270 stworków i to one wyznaczają styl
+całej gry.
 
 ---
 
-## BLOK STYLU (wklejać dosłownie do każdego promptu)
+# CZĘŚĆ I — MIASTO
+
+## Kotwica stylu (wygeneruj jako pierwszą)
+
+Ten obraz nie wchodzi do gry. Ustala paletę, światło i materiał raz, dla
+wszystkiego, co powstanie potem. Zapisz jako `miasto-kotwica.png`.
 
 ```
-Style: hand-painted 2D game art for a children's creature-collecting strategy game.
-Smooth anti-aliased painting, soft airbrushed shading with one clear light side and
-one shadow side, warm saturated storybook palette, rounded friendly chunky shapes
-with exaggerated proportions, thick beams and oversized roofs, cosy and inviting
-rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves,
-worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded
-comic look, no photorealism, no 3D render look.
-Mood reference: a warm, densely furnished Pokémon-Mystery-Dungeon-like town square
-at late afternoon — every corner has something small and hand-made in it.
-Readability: the silhouette must stay clear and recognisable when the image is scaled
-down to 200 pixels tall.
-```
+A wide establishing view of a small forest settlement belonging to creature trainers, seen from a low hill in the late afternoon. A timber gathering hall with a mossy shingle roof stands at the centre beside a trodden dirt path; scattered around it on a sunlit meadow stand a few creature dwellings: a woven nest on a tree stump, a hollow fallen log with a round door, a clear turquoise pool ringed with mossy stones, a green dome woven from branches, and one ancient enormous tree with glowing windows in its bark. A log palisade gate guards the back of the settlement. Wooden fences, berry baskets, hanging lanterns, drying laundry, crates and small banners fill the spaces between the buildings — the place is lived in and busy, with no empty ground anywhere. No creatures, no people.
 
-Do tego, jeśli podajesz obrazek referencyjny:
-
-```
-Match the finish, palette and softness of the creatures in the reference image:
-smooth airbrushed shading, no hard outlines, saturated but not neon colours,
-rounded volumes, everything readable at small size.
-```
-
----
-
-# CZĘŚĆ I — EKRAN MIASTA
-
-## Cztery rzeczy techniczne, które decydują o tym, czy się to wpnie
-
-**1. Jedno ujęcie na wszystkim.** Każdy budynek widziany tak samo: jakieś 20°
-z góry i 25° z boku w prawo, bez perspektywy zbieżnej. Panorama skleja bryły
-z różnych miejsc ekranu; jedna widziana z innego kąta rozwala całość.
-
-**2. Jedno światło i BEZ cienia rzuconego.** Słońce z prawej góry, ciepłe.
-Cienia na ziemi ani samej ziemi pod budynkiem NIE generujemy — cień dokłada
-skrypt, żeby wszystkie padały tak samo i dało się je poprawiać bez generowania
-czegokolwiek od nowa.
-
-**3. Tło do wycięcia.** Płaska magenta `#FF00FF`, bez gradientu i winiety, albo
-prawdziwa przezroczystość, jeśli twój model ją zapisuje.
-
-**4. Kotwica stylu.** Wygeneruj najpierw widok całego miasta (niżej), potem
-`ratusz1`, i te dwa obrazy podawaj jako referencję do wszystkich pozostałych.
-Jeden wspólny punkt odniesienia trzyma dwanaście obrazków w jednym świecie
-lepiej niż powtarzany akapit tekstu.
-
-## Kotwica stylu — widok całego miasta
-
-Nie wchodzi do gry. Ustala paletę, światło i materiał raz.
-Format: poziomy 16:10, minimum 2400 × 1500.
-
-```
-A wide establishing view of a small forest settlement belonging to creature trainers,
-seen from a low hill in the late afternoon. A timber gathering hall with a mossy
-shingle roof stands at the centre beside a trodden dirt path; scattered around it on
-a sunlit meadow stand a few creature dwellings: a woven nest on a tree stump, a hollow
-fallen log with a round door, a clear turquoise pool ringed with mossy stones, a green
-dome woven from branches, and one ancient enormous tree with glowing windows in its
-bark. A log palisade gate guards the back. Wooden fences, berry baskets, hanging
-lanterns, drying laundry, crates and small banners fill the spaces between buildings —
-the place is lived in and busy, with no empty ground anywhere. No creatures, no people.
 Light: warm low afternoon sun from the upper right, long soft shadows, glowing windows.
-Composition: horizon high in the frame, only a narrow strip of sky at the top.
-Output: horizontal 16:10 image, at least 2400x1500, no text, no logo, no watermark,
-no user interface.
-[BLOK STYLU]
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+This is a full painted background for a town screen. Horizon high in the frame, only a narrow strip of sky at the top; the lower three quarters is open ground where buildings will be placed later. Horizontal 16:10 image, at least 2400x1500. No text, no logo, no watermark, no user interface.
 ```
 
-## Jedenaście budynków — Bór Szmaragdowy
+## Dwanaście budynków
 
-Jeden komplet, w palecie Boru. Grotę i Zbocze zrobię przemalowaniem.
-Format każdego: kwadrat, minimum 2048 × 2048, jeden obiekt, tło magenta.
+Wszystkie w palecie Boru: ciepłe drewno `#B98A52`, zieleń liści `#4F9E4A`,
+złote okucia `#FFC93C`, kamień `#8E8A80`. Grotę i Zbocze zrobię przemalowaniem —
+nie generuj ich osobno.
 
-Paleta Boru: ciepłe drewno `#B98A52`, zieleń liści `#4F9E4A`,
-złote okucia `#FFC93C`, kamień `#8E8A80`.
 
-| Plik | Rola w grze |
-|---|---|
-| `ratusz1.png` `ratusz2.png` `ratusz3.png` | ratusz w trzech stopniach — dochód |
-| `fort.png` | fort — przyrost we wszystkich siedliskach |
-| `siedlisko1.png` … `siedlisko6.png` | sześć siedlisk, poziomy oddziałów 1–6 |
-| `specjalny.png` | budynek specjalny — daje jagody |
-| `plac.png` | plac budowy, wspólny dla wszystkich |
-
-Do każdego dopisz na końcu:
+### `ratusz1.png` — Polana Zbiorów — ratusz, stopień 1
 
 ```
-Single building only, seen from about 20 degrees above and 25 degrees to the right,
-no ground, no grass, no base, no cast shadow, flat solid magenta #FF00FF background.
-[BLOK STYLU]
+A small forest gathering hall for a village of creature trainers: a round timber-framed hut with a mossy shingle roof, a wide open porch, hanging baskets of berries, a carved wooden sign and warm light glowing from the windows. Humble and welcoming — the first building of a young settlement.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
 ```
 
-**ratusz1 — Polana Zbiorów.** `A small forest gathering hall: round timber-framed hut
-with a mossy shingle roof, wide open porch, hanging baskets of berries, a carved
-wooden sign, warm light glowing from the windows. Humble first building of a young
-settlement.`
+### `ratusz2.png` — Wielka Polana — ratusz, stopień 2
 
-**ratusz2 — Wielka Polana.** `The same gathering hall grown larger: two storeys,
-carved timber beams, a bigger mossy roof, an upper balcony with baskets and lanterns,
-a stone chimney with a wisp of smoke, a small bell under the gable. Clearly the same
-building as the smaller version, expanded.`
+```
+A forest gathering hall, larger and richer: two storeys of timber with carved beams, a big mossy shingle roof, an upper balcony hung with baskets and lanterns, a stone chimney with a wisp of smoke, a small bell under the gable. Clearly the same kind of building as a smaller village hall, just grown.
 
-**ratusz3 — Serce Boru.** `The grandest version of the same hall: three storeys of
-carved timber grown together with a living tree, roots wrapping the stone foundation,
-a golden bell tower crowned with leaves, banners, glowing lanterns, wide stone steps.`
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-**fort — Palisada.** `A defensive palisade gate: heavy log wall with sharpened tops,
-reinforced timber gate with iron bands, two watch platforms with conical thatched roofs
-and small banners, ivy creeping up the logs. Wide and low, clearly a wall not a house.`
+Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+```
 
-**siedlisko1 — Gniazdo Iskier.** `A large woven nest on a broad tree stump, home to
-small fire creatures: thick braided twigs, warm embers glowing between them, two large
-cream-coloured eggs inside, a few scorched branches.`
+### `ratusz3.png` — Serce Boru — ratusz, stopień 3
 
-**siedlisko2 — Suchy Konar.** `A hollow fallen log turned into a home: massive dry
-trunk lying on its side, round carved doorway with a wooden frame, small round windows,
-mushrooms and moss on the bark, a chimney pipe through the top.`
+```
+The grandest forest hall of a creature-trainer town: three storeys of carved timber grown together with a living tree, roots wrapping a stone foundation, a golden bell tower crowned with leaves, banners, glowing lanterns and wide stone steps. Majestic but still warm and hand-made.
 
-**siedlisko3 — Rosista Kotlina.** `A misty hollow pool where water creatures live:
-a small round pond of clear turquoise water ringed by wet mossy boulders, reeds and
-lily pads, thin mist over the surface, a little wooden jetty.`
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-**siedlisko4 — Strumień.** `A stream dwelling with a working water wheel: a rocky
-ledge with a small waterfall, a wooden mill wheel turning in the flow, a mossy timber
-hut built onto the rock, wet stones and splashing water. The wheel must read clearly
-as a wheel.`
+Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+```
 
-**siedlisko5 — Zielona Kopuła.** `A living green dome: a large rounded hut woven from
-bent branches and thick leaves, glowing amber windows set into the weave, a mossy
-entrance arch, flowering vines over the top, a small banner on a pole.`
+### `fort.png` — Palisada — fort
 
-**siedlisko6 — Prastare Drzewo.** `An ancient enormous tree that is itself a home:
-massive gnarled trunk with a carved arched doorway, glowing windows in the bark at
-several heights, thick spreading roots, a huge lush canopy, hanging lanterns and a rope
-ladder. The tallest and most impressive building in the town.`
+```
+A defensive palisade gate for a forest settlement: a heavy log wall with sharpened tops, a reinforced timber gate with iron bands, two watch platforms with conical thatched roofs and small banners, ivy creeping up the logs. Wide and low — clearly a wall, not a house.
 
-**specjalny — Krzew Jagodowy.** `A cultivated berry grove: a big lush berry bush heavy
-with red berries on a wooden trellis, woven baskets of picked berries at its foot,
-a small watering can.`
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-**plac — plac budowy.** `An empty building site: a shallow dug foundation pit with a
-low stone footing, wooden scaffolding poles lashed with rope, planks leaning against
-the frame, a bucket and a shovel, a small wooden sign on a post with a lit lantern.
-Clearly a place where something will be built, with nothing built yet.`
+Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+```
+
+### `siedlisko1.png` — Gniazdo Iskier — siedlisko 1
+
+```
+A large woven nest built on a broad tree stump, home to small fire creatures: thick braided twigs, warm embers glowing between them, two large cream-coloured eggs resting inside, a few scorched branches.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+```
+
+### `siedlisko2.png` — Suchy Konar — siedlisko 2
+
+```
+A hollow fallen log turned into a home: a massive dry tree trunk lying on its side, a round carved doorway with a wooden frame, small round windows, mushrooms and moss on the bark, a little chimney pipe poking through the top.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+```
+
+### `siedlisko3.png` — Rosista Kotlina — siedlisko 3
+
+```
+A misty hollow pool where water creatures live: a small round pond of clear turquoise water ringed by wet mossy boulders, reeds and lily pads, thin mist drifting over the surface, a little wooden jetty.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+```
+
+### `siedlisko4.png` — Strumień — siedlisko 4
+
+```
+A stream dwelling with a working water wheel: a rocky ledge with a small waterfall, a wooden mill wheel turning in the flow, a mossy timber hut built onto the rock, smooth wet stones and splashing water. The wheel must read clearly as a wheel.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+```
+
+### `siedlisko5.png` — Zielona Kopuła — siedlisko 5
+
+```
+A living green dome dwelling: a large rounded hut woven from bent branches and thick leaves, glowing amber windows set into the weave, a mossy entrance arch, flowering vines over the top, a small banner on a pole.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+```
+
+### `siedlisko6.png` — Prastare Drzewo — siedlisko 6
+
+```
+An ancient enormous tree that is itself a home: a massive gnarled trunk with a carved arched doorway, glowing windows in the bark at several heights, thick roots spreading outward, a huge lush canopy, hanging lanterns and a rope ladder. The tallest and most impressive building in the town.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+```
+
+### `specjalny.png` — Krzew Jagodowy — budynek specjalny
+
+```
+A cultivated berry grove: a big lush berry bush heavy with red berries growing on a simple wooden trellis, woven baskets full of picked berries at its foot, a small watering can. Tidy and farmed rather than wild.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+```
+
+### `plac.png` — Plac budowy — wspólny dla wszystkich budynków
+
+```
+An empty building site for a fantasy village: a shallow dug foundation pit with a low stone footing, wooden scaffolding poles lashed together with rope, a few planks leaning against the frame, a bucket and a shovel, and a small wooden sign on a post with a lit lantern. Clearly a place where something will be built, with nothing built yet.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+```
 
 ## Trzy panoramy tła
 
-Poziome 16:10, minimum 2400 × 1500. **Puste — bez budynków**, bo budynki
-wstawia gra. Zamiast dwóch ostatnich linijek BLOKU STYLU:
+**Puste — bez budynków.** Budynki wstawia gra, po jednym, w miarę rozbudowy.
+
+
+### `tlo-bor.png` — Bór Szmaragdowy
 
 ```
-This is a full painted background for a town screen. Horizon high in the frame, only
-a narrow strip of sky at the top, the lower three quarters is open ground where
-buildings will be placed later. Empty middle ground — no buildings, no houses,
-no towers, no characters. Output: horizontal 16:10, at least 2400x1500, no text,
-no logo, no watermark, no user interface.
+A sunlit forest clearing seen from a low hill in the late afternoon: a lush green meadow with trodden dirt paths winding through it, patches of wildflowers and grass tufts, scattered mossy boulders, a dense wall of deciduous forest along the horizon, warm sky with a few golden clouds.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+This is a full painted background for a town screen. Horizon high in the frame, only a narrow strip of sky at the top; the lower three quarters is open ground where buildings will be placed later. Empty middle ground — no buildings, no houses, no towers, no characters. Horizontal 16:10 image, at least 2400x1500. No text, no logo, no watermark, no user interface.
 ```
 
-**Bór Szmaragdowy.** `A sunlit forest clearing seen from a low hill in the late
-afternoon: lush green meadow with trodden dirt paths winding through it, patches of
-wildflowers and grass tufts, scattered mossy boulders, a dense wall of deciduous
-forest along the horizon, warm sky with a few golden clouds.`
+### `tlo-grota.png` — Grota Księżycowa
 
-**Grota Księżycowa.** `An underground cavern lit by moonlight through a hole in the
-ceiling: a broad floor of pale violet stone and dark sand beside a still black lake,
-glowing cyan crystals in clusters, luminous mushrooms, stalactites in the far dark,
-cool violet and deep blue with cyan light.`
+```
+An underground cavern lit by moonlight falling through a hole in the ceiling: a broad floor of pale violet stone and dark sand beside a still black lake, glowing cyan crystals growing in clusters, luminous mushrooms, stalactites hanging in the far dark. Cool violet and deep blue with cyan light — mysterious but not frightening.
 
-**Zbocze Popielne.** `A volcanic slope at dusk: a wide plain of grey ash and cracked
-basalt with warm orange embers glowing in the cracks, dark rocky ridges on the horizon,
-a distant volcano with a soft glow, drifting smoke, warm amber and rust against a deep
-orange sky.`
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+This is a full painted background for a town screen. Horizon high in the frame, only a narrow strip of sky at the top; the lower three quarters is open ground where buildings will be placed later. Empty middle ground — no buildings, no houses, no towers, no characters. Horizontal 16:10 image, at least 2400x1500. No text, no logo, no watermark, no user interface.
+```
+
+### `tlo-zbocze.png` — Zbocze Popielne
+
+```
+A volcanic slope at dusk: a wide plain of grey ash and cracked basalt with warm orange embers glowing in the cracks, dark rocky ridges on the horizon, a distant volcano with a soft glow, drifting smoke. Warm amber and rust against a deep orange sky — dramatic but warm, not hellish.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+This is a full painted background for a town screen. Horizon high in the frame, only a narrow strip of sky at the top; the lower three quarters is open ground where buildings will be placed later. Empty middle ground — no buildings, no houses, no towers, no characters. Horizontal 16:10 image, at least 2400x1500. No text, no logo, no watermark, no user interface.
+```
 
 ---
 
-# CZĘŚĆ II — EKRAN PRZYGODY
+# CZĘŚĆ II — MAPA PRZYGODY
 
-Tu rządzą inne prawa niż w mieście i to jest najważniejsza rzecz w tym
-rozdziale: **mapa jest kafelkowa**. Plansza ma 36 × 36 pól po 48 px, przewija
-się, a teren składa się sam z kafelków przejściowych. **Nie da się wygenerować
-jednego obrazu mapy i wstawić go do gry** — pola zmieniają koszt ruchu,
-przejezdność i mgłę wojny, a mapa jest generowana proceduralnie.
-
-Dlatego z modelu potrzebujemy DWÓCH rzeczy, a nie gotowej mapy:
-
-1. **sześć tekstur terenu** — z nich moje skrypty tną kafelki i składają
-   przejścia (kod autokafelkowania już istnieje i działa);
-2. **obiekty i ozdoby jako osobne sprite'y** — dokładnie tak jak budynki.
+Mapa jest **kafelkowa**: 36 × 36 pól po 48 px, przewijana, generowana
+proceduralnie, z mgłą wojny i kosztem ruchu na każdym polu. Dlatego nie da się
+wygenerować jednego obrazu mapy — potrzebne są tekstury i osobne obiekty,
+a resztę składa kod, który już działa.
 
 ## Sześć tekstur terenu
 
-Format: kwadrat, minimum 2048 × 2048, **bezszwowe** (kafelkujące się).
 
-Wspólny dodatek zamiast dwóch ostatnich linijek BLOKU STYLU:
-
-```
-This is a seamless tileable ground texture seen straight from above (top-down,
-90 degrees). It must tile perfectly: the left edge continues into the right edge and
-the top edge into the bottom edge, with no visible seam. Flat even ambient lighting
-with NO directional sunlight, NO cast shadows, NO vignette, NO objects sticking up,
-NO horizon, NO perspective. Output: square, at least 2048x2048, no text, no watermark.
-```
-
-| Plik | Prompt |
-|---|---|
-| `teren-trawa.png` | `Lush green meadow grass seen from directly above: many small painted grass blades and tufts, subtle patches of lighter and darker green, a few tiny wildflowers and clover leaves, no bare soil.` |
-| `teren-sciezka.png` | `A well-trodden dirt path seen from directly above: warm packed earth with fine gravel, faint cart ruts, a few small pebbles and scattered dry grass at the edges of the texture.` |
-| `teren-piasek.png` | `Warm pale sand seen from directly above: fine wind ripples, a few tiny shells and pebbles, subtle patches of coarser grain.` |
-| `teren-woda.png` | `Clear shallow water seen from directly above: soft turquoise to deep blue, gentle painted ripples and caustics, a few darker patches suggesting depth, no reflections of sky or objects.` |
-| `teren-las.png` | `A dense forest canopy seen from directly above: overlapping rounded treetops in several greens, dark gaps between crowns, a few autumn-tinted crowns for variation.` |
-| `teren-skaly.png` | `A rocky mountain surface seen from directly above: grey and warm-brown cracked stone slabs, moss in the cracks, scattered rubble and small boulders.` |
-
-## Obiekty na mapie
-
-Format: kwadrat, minimum 1024 × 1024, jeden obiekt, tło magenta.
-Ujęcie inne niż w mieście: mapa jest oglądana **bardziej z góry**.
-
-Wspólny dodatek:
+### `teren-trawa.png` — trawa
 
 ```
-Single object only, seen from about 45 degrees above (adventure-map view), no ground,
-no grass, no base, no cast shadow, flat solid magenta #FF00FF background. It must stay
-readable at 60 pixels tall.
-[BLOK STYLU]
+Lush green meadow grass seen from directly above: many small painted grass blades and tufts, subtle patches of lighter and darker green, a few tiny wildflowers and clover leaves, no bare soil.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+This is a seamless tileable ground texture seen straight from above (top-down, 90 degrees). It must tile perfectly: the left edge continues into the right edge and the top edge into the bottom edge, with no visible seam. Flat even ambient lighting with NO directional sunlight, NO cast shadows, NO vignette, NO objects sticking up, NO horizon, NO perspective. Square image, at least 2048x2048. No text, no watermark.
 ```
 
-| Plik | Prompt |
-|---|---|
-| `m-drzewo.png` | `A single broadleaf tree with a thick rounded canopy and a sturdy trunk, a few lighter leaf clusters catching the sun.` |
-| `m-sosna.png` | `A single conifer with layered dark green branches and a straight trunk.` |
-| `m-krzak.png` | `A low round bush with dense small leaves and a few red berries.` |
-| `m-skala.png` | `A cluster of grey boulders with mossy tops and cracked faces.` |
-| `m-kopalnia.png` | `A small mine entrance dug into a rocky mound: timber-framed opening, wooden support beams, a minecart with crystals, a lantern on a post.` |
-| `m-sad.png` | `A small orchard plot: two berry-laden trees, a low wooden fence, woven baskets and a wheelbarrow.` |
-| `m-skrzynia.png` | `A wooden treasure chest with iron bands and a big golden lock, slightly open with warm light spilling out.` |
-| `m-zamek.png` | `A small fortified town seen from a distance: a timber gate tower, a mossy hall roof behind it and a banner on a pole — the map marker for a whole settlement.` |
-| `m-obelisk.png` | `A weathered stone marker overgrown with vines, with a glowing carved symbol.` |
+### `teren-sciezka.png` — ścieżka
+
+```
+A well-trodden dirt path seen from directly above: warm packed earth with fine gravel, faint cart ruts, a few small pebbles and wisps of dry grass.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+This is a seamless tileable ground texture seen straight from above (top-down, 90 degrees). It must tile perfectly: the left edge continues into the right edge and the top edge into the bottom edge, with no visible seam. Flat even ambient lighting with NO directional sunlight, NO cast shadows, NO vignette, NO objects sticking up, NO horizon, NO perspective. Square image, at least 2048x2048. No text, no watermark.
+```
+
+### `teren-piasek.png` — piasek
+
+```
+Warm pale sand seen from directly above: fine wind ripples, a few tiny shells and pebbles, subtle patches of coarser grain.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+This is a seamless tileable ground texture seen straight from above (top-down, 90 degrees). It must tile perfectly: the left edge continues into the right edge and the top edge into the bottom edge, with no visible seam. Flat even ambient lighting with NO directional sunlight, NO cast shadows, NO vignette, NO objects sticking up, NO horizon, NO perspective. Square image, at least 2048x2048. No text, no watermark.
+```
+
+### `teren-woda.png` — woda
+
+```
+Clear shallow water seen from directly above: soft turquoise shading into deeper blue, gentle painted ripples and caustics, a few darker patches suggesting depth, no reflections of sky or objects.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+This is a seamless tileable ground texture seen straight from above (top-down, 90 degrees). It must tile perfectly: the left edge continues into the right edge and the top edge into the bottom edge, with no visible seam. Flat even ambient lighting with NO directional sunlight, NO cast shadows, NO vignette, NO objects sticking up, NO horizon, NO perspective. Square image, at least 2048x2048. No text, no watermark.
+```
+
+### `teren-las.png` — las
+
+```
+A dense forest canopy seen from directly above: overlapping rounded treetops in several shades of green, dark gaps between the crowns, a few autumn-tinted crowns for variation.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+This is a seamless tileable ground texture seen straight from above (top-down, 90 degrees). It must tile perfectly: the left edge continues into the right edge and the top edge into the bottom edge, with no visible seam. Flat even ambient lighting with NO directional sunlight, NO cast shadows, NO vignette, NO objects sticking up, NO horizon, NO perspective. Square image, at least 2048x2048. No text, no watermark.
+```
+
+### `teren-skaly.png` — skały
+
+```
+A rocky mountain surface seen from directly above: grey and warm-brown cracked stone slabs, moss growing in the cracks, scattered rubble and small boulders.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+This is a seamless tileable ground texture seen straight from above (top-down, 90 degrees). It must tile perfectly: the left edge continues into the right edge and the top edge into the bottom edge, with no visible seam. Flat even ambient lighting with NO directional sunlight, NO cast shadows, NO vignette, NO objects sticking up, NO horizon, NO perspective. Square image, at least 2048x2048. No text, no watermark.
+```
+
+## Dziewięć obiektów mapy
+
+
+### `m-drzewo.png` — drzewo liściaste
+
+```
+A single broadleaf tree with a thick rounded canopy and a sturdy trunk, a few lighter leaf clusters catching the sun.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+```
+
+### `m-sosna.png` — sosna
+
+```
+A single conifer with layered dark green branches and a straight trunk.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+```
+
+### `m-krzak.png` — krzak
+
+```
+A low round bush with dense small leaves and a few red berries.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+```
+
+### `m-skala.png` — skała
+
+```
+A cluster of grey boulders with mossy tops and cracked faces.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+```
+
+### `m-kopalnia.png` — kopalnia
+
+```
+A small mine entrance dug into a rocky mound: a timber-framed opening, wooden support beams, a minecart full of crystals, a lantern on a post.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+```
+
+### `m-sad.png` — sad
+
+```
+A small orchard plot: two berry-laden trees, a low wooden fence, woven baskets and a wheelbarrow.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+```
+
+### `m-skrzynia.png` — skrzynia
+
+```
+A wooden treasure chest with iron bands and a big golden lock, lid slightly open with warm light spilling out.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+```
+
+### `m-zamek.png` — zamek na mapie
+
+```
+A small fortified town seen from a distance: a timber gate tower, a mossy hall roof behind it and a banner on a pole — a map marker standing for a whole settlement.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+```
+
+### `m-obelisk.png` — obelisk
+
+```
+A weathered stone marker overgrown with vines, with a glowing carved symbol on its face.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+```
 
 ## Cztery surowce
 
-Format: kwadrat, minimum 512 × 512, tło magenta, ten sam dodatek co obiekty
-(czytelne przy 32 px zamiast 60).
 
-| Plik | Prompt |
-|---|---|
-| `s-pokeball.png` | `A small round red-and-white catching ball with a dark band and a pale button, glossy and clean — the currency of this world.` |
-| `s-jagody.png` | `A small pile of plump red berries with green leaves, glossy and appetising.` |
-| `s-kamien.png` | `A cut violet evolution crystal with clean facets and a soft inner glow.` |
-| `s-odlamki.png` | `A small cluster of pale blue crystal shards on a rocky base.` |
+### `s-pokeball.png` — pokeball — waluta
 
-## Czego NIE generować na mapę
+```
+A small round red-and-white catching ball with a dark band across the middle and a pale button, glossy and clean.
 
-- **bohatera i jego animacji chodu** — to jest arkusz z czterema kierunkami
-  i klatkami; model tego nie utrzyma w spójności między klatkami, a rozjazd
-  widać natychmiast w ruchu. Zostaje ten, którego mamy;
-- **stworków** — mamy 270 sprite'ów i to one są kotwicą stylu;
-- **mgły wojny, siatki pól, interfejsu** — to rysuje gra;
-- **cieni rzuconych** — dokłada skrypt, jednym kierunkiem dla całej mapy.
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 32 pixels tall. Square image, at least 512x512. No text, no watermark, no user interface, no characters.
+```
+
+### `s-jagody.png` — jagody
+
+```
+A small pile of plump red berries with green leaves, glossy and appetising.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 32 pixels tall. Square image, at least 512x512. No text, no watermark, no user interface, no characters.
+```
+
+### `s-kamien.png` — kamień ewolucji
+
+```
+A cut violet crystal with clean facets and a soft inner glow.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 32 pixels tall. Square image, at least 512x512. No text, no watermark, no user interface, no characters.
+```
+
+### `s-odlamki.png` — odłamki
+
+```
+A small cluster of pale blue crystal shards on a rocky base.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
+
+Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 32 pixels tall. Square image, at least 512x512. No text, no watermark, no user interface, no characters.
+```
 
 ---
 
-## Co robić z gotowymi plikami
+## Czego NIE generować
 
-1. Wrzuć je do `tools/wsad/` pod nazwami z tabel.
-2. Daj znać — puszczam przebieg: wycięcie tła, przycięcie do sylwetki,
-   wyrównanie światła, wypalenie cienia, wersje frakcyjne miasta, pocięcie
-   tekstur na kafelki i złożenie przejść, podmianę w grze, sondy
-   (`probe-miasto`, `probe-mapa`, `probe-klik`, `probe-przygoda`) i ślepe
-   porównanie z nowym benchmarkiem.
+- **bohatera** — to arkusz chodu w czterech kierunkach i model nie utrzyma
+  spójności między klatkami; rozjazd widać w ruchu natychmiast;
+- **stworków** — mamy 270 i to one są kotwicą stylu;
+- **cieni rzuconych, mgły wojny, siatki pól, interfejsu** — dokłada je gra.
 
-## Kolejność, którą polecam
+## Kolejność
 
-1. kotwica stylu (widok całego miasta),
-2. dwa–trzy warianty `ratusz1` — wybieramy razem, zanim pójdzie reszta,
-3. pozostałe budynki i plac budowy,
+1. kotwica stylu,
+2. dwa–trzy warianty `ratusz1.png` — pokaż mi, wybieramy razem,
+3. reszta budynków i plac budowy,
 4. trzy panoramy,
 5. sześć tekstur terenu,
 6. obiekty mapy i surowce.
 
-Po każdym etapie da się grać, więc nie ma momentu, w którym gra jest w połowie
-przemalowana i nie działa.
+Po każdym etapie gra działa, więc nie ma momentu, w którym jest w połowie
+przemalowana i nie da się w nią grać.
 
-## Czym to generować
+## Czym generować
 
-Nie ma jednego narzędzia, które robi wszystko dobrze. Nasz przebieg ma cztery
-twarde potrzeby i to one rozstrzygają, czym co robić:
+**ChatGPT** — do kotwicy i do wariantów ratusza: najlepiej słucha instrukcji
+o kącie kamery i braku cienia, i da się z nim rozmawiać („to samo, ale o piętro
+wyżej"). **Freepik** — do produkcji reszty: modele klasy Flux dają lepsze
+faktury, ma referencję stylu, wyższe rozdzielczości oraz wbudowane usuwanie tła
+i powiększanie. O bezszwowość tekstur się nie martw — jeśli narzędzie nie ma
+takiego przełącznika, zamknę je w kafelek skryptem.
 
-1. **przezroczystość albo czyste tło do wycięcia** — inaczej każdy sprite trzeba
-   odcinać ręcznie;
-2. **spójność między kilkunastoma obrazkami** — największe ryzyko całej tej drogi;
-3. **rozdzielczość 2048 px i więcej** — bo zmniejszamy, nigdy nie powiększamy;
-4. **posłuszeństwo wobec instrukcji** — kąt kamery, brak cienia, brak ziemi.
+Zapisuj przy każdym pliku, jakim modelem i z jakimi ustawieniami powstał.
+Przy trzydziestu obrazkach po tygodniu nikt tego nie pamięta, a przy poprawianiu
+jednego budynku to różnica między dopasowaniem a losowaniem od nowa.
 
-**ChatGPT** jest najlepszy w punkcie 4 i w rozmowie. Naprawdę słucha zdania
-„bez cienia rzuconego, tło płaska magenta, dwadzieścia stopni z góry", i można
-mu powiedzieć „to samo, ale o piętro wyżej" bez pisania promptu od nowa. Słabszy
-jest w 1 i 3 (przezroczystość bywa udawana, rozdzielczość niższa) i średni w 2.
-Do KOTWICY STYLU i do wybierania wariantów `ratusz1` — idealny.
-
-**Freepik** nadrabia dokładnie tam, gdzie ChatGPT odpuszcza: daje modele klasy
-Flux (lepsze faktury), wybór rozdzielczości, referencję stylu, a do tego ma
-wbudowane usuwanie tła i powiększanie. Do PRODUKCJI kilkunastu sprite'ów jest
-lepszym wyborem — zwłaszcza że masz go pod ręką.
-
-**Czego szukać, jeśli kiedyś sięgniesz dalej.** Jedna funkcja zmienia w tym
-wszystkim najwięcej: **trenowanie własnego stylu na własnych obrazkach**
-(w różnych narzędziach nazywa się to stylem, LoRA albo modelem niestandardowym).
-Wrzucasz nasze 270 stworków i zatwierdzony `ratusz1`, a potem generujesz resztę
-JUŻ W TYM STYLU. To jest różnica między „piętnastoma ładnymi obrazkami"
-a „piętnastoma obrazkami z jednego świata" — czyli dokładnie ten problem,
-z którym walczymy od początku.
-
-**O bezszwowych teksturach się nie martw.** Jeśli twoje narzędzie nie ma
-przełącznika „seamless", generuj zwykłą teksturę — zamknięcie jej w kafelek
-zrobię skryptem (przesunięcie o pół obrazu i zlanie szwu). To jest kilkanaście
-linijek i jedna z niewielu rzeczy, które wychodzą lepiej programowi niż modelowi.
-
-**Trzy nawyki, które oszczędzają rundy:** generuj w największym dostępnym
-rozmiarze; jeden obrazek to jeden obiekt, nigdy arkusz z kilkoma; i zapisuj,
-jakim modelem i z jakimi ustawieniami powstał każdy plik — przy piętnastu
-obrazkach po tygodniu nikt tego nie pamięta.
-
-## Uwaga o pochodzeniu
-
-Repo jest publiczne. Warto zapisać w `STAN.md`, jakim modelem i kiedy powstały
-grafiki — licencje na wyjście z modeli bywają różne i lepiej mieć to zapisane,
-niż odtwarzać po roku.
