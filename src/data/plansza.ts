@@ -2,6 +2,7 @@ import { PUNKTY, ROZSTAWIENIE, TEREN } from './plansza-teren';
 import { PRODUKCJA, STOS, SZANSA_ARTEFAKTU, ruchNaDzien } from './zasady-h3';
 import {
   ARTEFAKTY,
+  PRZYROST_ODDZIALU,
   odslon,
   type Obiekt,
   type Oddzial,
@@ -62,9 +63,12 @@ const NAZWY_BUDYNKU: Record<Surowiec, string> = {
 
 /**
  * Straże. Trzy poziomy siły, dobrane tak, żeby dziecko widziało po sprite'ie
- * i liczbie, czy to jest na teraz. Strażnik przełęczy jest osobno, bo pilnuje
- * jedynego przejścia na mapie i ma być wyraźnie trudniejszy od wszystkiego,
- * co gracz spotkał wcześniej.
+ * i liczbie, czy to jest na teraz.
+ *
+ * `straznik` to straż graniczna: stoi w jednym z dwóch przejść przez grzbiet
+ * i jest jedyną rzeczą dzielącą mapę na bezpieczne południe i groźną północ.
+ * Ma być wyraźnie trudniejsza od wszystkiego, co gracz spotkał wcześniej —
+ * inaczej podział mapy przestaje cokolwiek znaczyć.
  */
 const STRAZE: Record<string, { frakcja: string; tiery: number[]; mnoznik: number; stosy: number }> =
   {
@@ -101,6 +105,29 @@ function oddzialyStrazy(sila: string, losuj: () => number): Oddzial[] {
     frakcja: frakcja.id,
     tier,
   }));
+}
+
+/**
+ * Załoga broniąca zamku — po jednym stosie z każdego stojącego w nim gniazda.
+ *
+ * Liczebność to tygodniowy przyrost tego poziomu, czyli tyle, ile zamek
+ * naprawdę zdążyłby wystawić. Dzięki temu skład garnizonu wynika ze stanu
+ * miasta, a nie z osobnej tabelki, która rozjechałaby się przy pierwszej
+ * zmianie bilansu.
+ */
+function garnizonZamku(frakcja: string, poziomy: number[]): Oddzial[] {
+  const f = factionById(frakcja) ?? FACTIONS[0];
+  return poziomy.map((tier) => {
+    const u = f.units[tier];
+    return {
+      sprite: u.sprite,
+      nazwa: u.name,
+      // Siedem dni: pełny tydzień przyrostu z tego gniazda.
+      ile: PRZYROST_ODDZIALU[tier] * 7,
+      frakcja: f.id,
+      tier,
+    };
+  });
 }
 
 /** Losowa wielkość stosu w widełkach z Heroes 3. */
@@ -148,9 +175,15 @@ export function planszaPrzygody(): StanMapy {
         artefakt: artefakt ? ARTEFAKTY[Math.floor(losuj() * ARTEFAKTY.length)].id : undefined,
       });
     } else if (wpis.rodzaj === 'artefakt') {
-      // Im dalej od startu, tym lepsza klasa — bliskie artefakty są drobne.
-      const daleko = Math.max(Math.abs(wpis.x - PUNKTY.start.x), Math.abs(wpis.y - PUNKTY.start.y));
-      const klasa = daleko > 20 ? 'relikt' : daleko > 12 ? 'znaczny' : 'drobny';
+      // O klasie artefaktu decyduje STRONA GRZBIETU, a nie odległość od startu.
+      //
+      // Odległość działała, dopóki gracz startował pośrodku mapy. Na układzie
+      // z „Key to Victory" startuje w rogu, więc przeciwległy kraniec własnej,
+      // bezpiecznej doliny wychodził „dalej" niż kraina przeciwnika — i dostawał
+      // relikty, po które da się pojechać bez jednej bitwy. Za grzbietem leżą
+      // rzeczy, po które trzeba się wyprawić, i to one mają być warte wyprawy.
+      const klasa =
+        wpis.strefa === 'wroga' ? 'relikt' : wpis.strefa === 'pogranicze' ? 'znaczny' : 'drobny';
       const pula = ARTEFAKTY.filter((a) => a.klasa === klasa);
       const a = pula[Math.floor(losuj() * pula.length)];
       obiekty.push({ ...wspolne, rodzaj: 'artefakt', nazwa: a.nazwa, artefakt: a.id });
@@ -160,7 +193,9 @@ export function planszaPrzygody(): StanMapy {
       obiekty.push({
         ...wspolne,
         rodzaj: 'potwor',
-        nazwa: sila === 'straznik' ? 'Strażnik Przełęczy' : oddzialy[0].nazwa,
+        // Straże graniczne mają własne imiona z generatora — pilnują konkretnych
+        // przejść i gracz ma je odróżniać od zwykłego stada po drodze.
+        nazwa: wpis.nazwa ?? oddzialy[0].nazwa,
         frakcja: STRAZE[sila]?.frakcja,
         oddzialy,
       });
@@ -175,7 +210,15 @@ export function planszaPrzygody(): StanMapy {
     nazwa: 'Bór Szmaragdowy',
     nasz: true,
     frakcjaZamku: 'bor',
-    dostepne: [6, 4, 3, 2, 1, 0],
+    // Miasto startowe nie jest puste i nie jest gotowe. Ratusz daje dochód od
+    // pierwszego dnia (inaczej dzień 1 to zero pokeballi i nie ma czym zacząć),
+    // dwa siedliska dają co werbować — reszta drzewka jest do postawienia,
+    // bo to ona jest właściwą grą na ekranie miasta.
+    postawione: ['ratusz1', 'siedlisko1', 'siedlisko2'],
+    // Czekają TYLKO te poziomy, dla których miasto ma siedlisko. Wcześniej
+    // stało tu [6, 4, 3, 2, 1, 0] — cztery poziomy do kupienia z budynków,
+    // których nie ma.
+    dostepne: [6, 4, 0, 0, 0, 0],
   });
   obiekty.push({
     id: id++,
@@ -184,7 +227,21 @@ export function planszaPrzygody(): StanMapy {
     y: PUNKTY['zamek wroga'].y,
     nazwa: 'Grota Księżycowa',
     frakcjaZamku: 'grota',
-    dostepne: [6, 4, 3, 2, 1, 0],
+    // Zamek przeciwnika stoi rozbudowany dalej niż nasz. To nie jest kaprys:
+    // jak długo nikt nim nie gra, jego stan widać dopiero po zdobyciu — a wtedy
+    // ma być nagrodą, a nie pustym placem.
+    postawione: ['ratusz1', 'ratusz2', 'fort', 'siedlisko1', 'siedlisko2', 'siedlisko3'],
+    dostepne: [6, 4, 3, 0, 0, 0],
+    // Garnizon. Bez niego zamek nie miał jak się bronić i gra nie miała
+    // zakończenia — dziecko dochodziło przez pół planszy do celu i dostawało
+    // komunikat, że celu nie ma.
+    //
+    // Skład bierzemy z gniazd, które w tym zamku stoją, i po jednym pełnym
+    // przyroście tygodniowym z każdego. To jest najsilniejsza bitwa w grze
+    // i tak ma być: zdobycie miasta ma być końcem wyprawy, a nie kolejnym
+    // posterunkiem po drodze.
+    oddzialy: garnizonZamku('grota', [0, 1, 2]),
+
   });
 
   // Armia startowa: cztery najniższe oddziały Boru. Punkty ruchu liczymy
@@ -218,7 +275,10 @@ export function planszaPrzygody(): StanMapy {
       artefakty: [],
       doswiadczenie: 0,
     },
-    skarbiec: { pokeball: 15, jagoda: 6, kamien: 1, odlamek: 2 },
+    // Skarbiec startowy: tyle, żeby dało się w pierwszym tygodniu podjąć jedną
+    // decyzję (siedlisko albo garść oddziałów), a nie żeby było na wszystko.
+    // Przy 15 pokeballach dzień pierwszy był tylko klikaniem „dalej".
+    skarbiec: { pokeball: 40, jagoda: 6, kamien: 1, odlamek: 4 },
     dzien: 1,
     odkryte: TEREN.map(() => new Array(TEREN[0].length).fill(false)),
   };

@@ -68,6 +68,31 @@ export function ruchNaDzien(najwolniejszy: number): number {
 }
 
 // ---------------------------------------------------------------------------
+// SKALA WALUTY
+// ---------------------------------------------------------------------------
+
+/**
+ * [NASZE] JEDNA reguła przeliczania złota z Heroes 3 na pokeballe. Wszystko,
+ * co ma cenę — oddziały, skrzynie, stosy, kopalnie, ratusze — musi z niej
+ * wynikać, bo inaczej ekonomia się rozjeżdża.
+ *
+ * Wcześniej rozjeżdżała się dokładnie tak: dochód liczyliśmy jak złoto dzielone
+ * przez sto (kopalnia 1000 → 10 pokeballi), a oddziały wyceniliśmy „na oko",
+ * czyli jakby dzielić przez trzydzieści (60 złota → 2 pokeballe). Efekt: dzienny
+ * przyrost całego miasta kosztował 95 pokeballi, a cała mapa dawała 30. Gracz
+ * z KAŻDĄ kopalnią i tak nie miał na armię, nie mówiąc o rozbudowie.
+ *
+ * Dzielnik 50, a nie 100, bo przy stu najtańszy oddział kosztowałby 0,6
+ * pokeballa i po zaokrągleniu dwa pierwsze poziomy miałyby tę samą cenę —
+ * drabinka cen przestałaby cokolwiek znaczyć.
+ */
+export const ZLOTO_NA_POKEBALL = 50;
+
+/** Złoto z Heroes 3 → pokeballe, zawsze co najmniej jeden. */
+export const naPokeballe = (zloto: number) =>
+  Math.max(1, Math.round(zloto / ZLOTO_NA_POKEBALL));
+
+// ---------------------------------------------------------------------------
 // SKRZYNIA
 // ---------------------------------------------------------------------------
 
@@ -86,12 +111,12 @@ export const SKRZYNIE_H3 = [
 ] as const;
 
 /**
- * [NASZE] Te same trzy poziomy, przeliczone na naszą skalę. Pokeballi jest
- * kilkanaście, nie tysiące — oddział kosztuje kilka — więc dzielimy przez 100.
- * Proporcje między poziomami i sam wybór zostają nietknięte.
+ * [NASZE] Te same trzy poziomy, przeliczone przez `naPokeballe`. Proporcje
+ * między poziomami i sam wybór zostają nietknięte — zmienia się tylko to, że
+ * skrzynia liczy się tą samą miarą co oddziały, więc widać, ile armii kupuje.
  */
 export const SKRZYNIE = SKRZYNIE_H3.map((s) => ({
-  pokeballe: s.waluta / 100,
+  pokeballe: naPokeballe(s.waluta),
   doswiadczenie: s.doswiadczenie / 10,
 }));
 
@@ -118,7 +143,10 @@ export const STOS = {
   jagoda: [5, 10],
   odlamek: [3, 6],
   kamien: [1, 3],
-  pokeball: [5, 10],
+  // 500–1000 złota przez `naPokeballe`. Wcześniej stało tu [5, 10] — stos
+  // złota był wart tyle, co stos jagód, choć w Heroes 3 jest wart kilka razy
+  // więcej niż stos drewna.
+  pokeball: [10, 20],
 } as const;
 
 /**
@@ -126,14 +154,14 @@ export const STOS = {
  * rtęć i siarka po +1, kopalnia złota +1000 złota.
  *
  * [NASZE] To samo u nas: pospolity surowiec po 2 dziennie, rzadki po 1,
- * a „kopalnia złota" to obóz z pokeballami — 10 dziennie, bo nasza waluta jest
- * sto razy mniejsza.
+ * a „kopalnia złota" to obóz z pokeballami — 1000 złota przez `naPokeballe`,
+ * czyli 20 dziennie.
  */
 export const PRODUKCJA = {
   jagoda: 2,
   odlamek: 1,
   kamien: 1,
-  pokeball: 10,
+  pokeball: naPokeballe(1000),
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -161,3 +189,27 @@ export const PROMIEN_WIDZENIA = 5;
  */
 export const PROG_UCIECZKI = 2.5;
 export const PROG_DOLACZENIA = 5;
+
+// ---------------------------------------------------------------------------
+// ZAMEK
+// ---------------------------------------------------------------------------
+
+/**
+ * [H3] W mieście stawia się JEDEN budynek dziennie. To jest cała ekonomia
+ * Heroes 3 w jednym zdaniu: surowce zbierasz szybciej, niż możesz je wydać,
+ * więc liczy się kolejność, a nie tempo. Gracz, który ma na trzy budynki,
+ * i tak musi wybrać, który stanie dziś.
+ *
+ * [NASZE] To samo. Bez tej zasady ekran miasta zamienia się w listę zakupów:
+ * klika się wszystko, na co starczy, i drzewko rozwoju przestaje być wyborem.
+ */
+export const BUDYNKOW_NA_DZIEN = 1;
+
+/**
+ * [H3] Przyrost w siedliskach jest tygodniowy, a fort (i jego ulepszenia)
+ * podnosi go we wszystkich siedliskach naraz.
+ *
+ * [NASZE] Przyrost jest dzienny i mniejszy — tydzień to dla ośmiolatka bardzo
+ * długo, a nagroda musi być widoczna następnego dnia. Mnożnik fortu został.
+ */
+export const MNOZNIK_FORTU = 1.5;

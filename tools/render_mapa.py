@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
-"""Składa gotowe tło planszy przygody: teren, brzegi, drogi — wygładzone.
+"""Składa gotowe tło planszy przygody: teren, brzegi, drogi.
 
 Dlaczego to idzie do pliku, a nie do sceny
 ------------------------------------------
-Wcześniej scena składała mapę z kafelków w czasie gry. Działało, ale miało
-dwie wady, których nie dało się obejść w przeglądarce:
+Wcześniej scena składała mapę z kafelków w czasie gry. Miało to dwie wady,
+których nie dało się obejść w przeglądarce: teren był kanciasty obok gładkich
+stworków, a droga rysowana osobną warstwą wektorową była gładka tuż obok
+kanciastego terenu — najostrzejszy kontrast na całym ekranie. Teraz mapa
+powstaje tutaj, w jednym obrazku, a scena tylko go pokazuje.
 
-1. Kafelki trzeba było powiększać trzykrotnie „najbliższym sąsiadem", więc
-   teren był kanciasty, a stworki i HUD gładkie. Wygładzić da się dopiero
-   CAŁĄ złożoną mapę — wygładzanie pojedynczych kafelków rozjeżdża się na
-   ich stykach, bo filtr przy brzegu nie wie, co leży obok.
-2. Drogi rysowaliśmy osobną warstwą wektorową, więc były idealnie gładkie
-   tuż obok kanciastego terenu — najostrzejszy kontrast na całym ekranie.
-
-Teraz mapa powstaje tutaj: kafelki, brzegi i drogi lądują w jednym obrazku,
-który jest wygładzany jako całość. Scena tylko go pokazuje.
+Skąd bierze się teren
+---------------------
+Z tekstur modelu graficznego (`public/mapa/teren/`), malowanych od razu
+w skali ekranu i wycinanych miękkimi maskami — patrz `teren_malowanie.py`.
+Poprzednia wersja składała teren z arkusza 16-pikselowego i powiększała go
+trzykrotnie; przy teksturach 768 × 768 ta droga wyrzuciłaby cały detal,
+po który po nie sięgnęliśmy.
 
 Woda ma cztery klatki animacji, więc i plansza ma cztery klatki.
 
@@ -37,33 +38,48 @@ import numpy as np
 from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from wygladzanie import SKALA, wygladz  # noqa: E402
+from teren_malowanie import (  # noqa: E402
+    ZIARNO,
+    kafelkuj,
+    maska,
+    szum,
+    tekstura,
+    warianty,
+    zmieszaj,
+)
 
 KORZEN = Path(__file__).resolve().parent.parent
 KATALOG = KORZEN / 'public' / 'mapa'
 
-S = 16                      # bok kafelka w arkuszu
-KAFEL = S * SKALA           # bok pola na ekranie
-ARKUSZ_KOL = 52
-#: Ile razy nadpróbkowujemy drogę, zanim ją zmniejszymy. Rysowanie wprost
-#: w docelowej skali dawało schodkowe brzegi — czyli dokładnie to, co
-#: właśnie usuwamy z terenu.
+KAFEL = 48                  # bok pola na ekranie
+#: Ile razy nadpróbkowujemy maskę drogi, zanim ją zmniejszymy. Rysowanie
+#: wprost w docelowej skali dawało schodkowe brzegi.
 NAD = 4
 
-# Litera terenu na potrzeby autokafelkowania. Las, skały i ścieżka stoją
-# na trawie: las i skały dostaną sprite'y w scenie, droga jest tu dorysowana.
-LITERA = {'.': 'G', '=': 'G', ',': 'P', 'T': 'G', '#': 'G', '~': 'W'}
+# Warstwy terenu od spodu do wierzchu: (tekstura, znaki rysunku, wtapianie,
+# poszarpanie). Trawa jest podkładem pod wszystkim, więc nie ma tu maski.
+#
+# Las i skały ZOSTAJĄ w podkładzie, choć w scenie stoją na nich sprite'y drzew
+# i głazów: ściółka pod drzewem ma inny kolor niż łąka i bez tego kępa lasu
+# wygląda jak drzewa postawione na trawniku.
+WARSTWY = [
+    ('las', 'T', 0.55, 0.30),
+    ('skaly', '#', 0.45, 0.34),
+    ('piasek', ',', 0.55, 0.34),
+    ('woda', '~', 0.35, 0.22),
+]
 
-DROGA_BRZEG = (156, 116, 68)
-DROGA = (208, 166, 108)
-
-
-def wczytaj_sygnatury():
-    src = (KORZEN / 'src' / 'data' / 'kafelki.ts').read_text(encoding='utf-8')
-    return {
-        m.group(1): json.loads(m.group(2))
-        for m in re.finditer(r'^  (\w{4}): (\[[^\]]*\]),$', src, re.M)
-    }
+#: Przesunięcie tekstury wody w kolejnych klatkach, w pikselach.
+#:
+#: Pętla musi się DOMYKAĆ. Poprzednia wersja przesuwała teksturę wciąż w tę
+#: samą stronę — 0, 5, 10, 15 — i po czwartej klatce wracała skokiem o piętnaście
+#: pikseli do zera. Wyglądało to jak trzy klatki płynięcia i szarpnięcie,
+#: bo szarpnięcie było trzy razy większe od każdego kroku.
+#:
+#: Teraz punkty leżą na rombie: każdy krok ma tę samą długość, także ten
+#: z ostatniej klatki do pierwszej. Woda kołysze się w kółko zamiast płynąć
+#: donikąd i pętli nie da się zauważyć.
+PRAD = [(0, 0), (4, 4), (0, 8), (-4, 4)]
 
 
 def wczytaj_rysunek():
@@ -72,130 +88,166 @@ def wczytaj_rysunek():
     return re.findall(r"'([^']+)'", blok)
 
 
-SYGNATURY = wczytaj_sygnatury()
+def wczytaj_budowle():
+    """Gdzie stoją zamki i kopalnie — i jak szeroki grunt im się należy.
+
+    Zwraca `(x, y, szerokość, wysokość)` w polach, licząc od WEJŚCIA. Musi
+    zgadzać się z `BRYLA` w `src/data/mapa.ts`; tam decyduje o przejezdności,
+    tu o tym, ile ziemi jest wydeptane.
+    """
+    src = (KORZEN / 'src' / 'data' / 'plansza-teren.ts').read_text(encoding='utf-8')
+    lista = []
+    for m in re.finditer(r"'zamek (?:gracza|wroga)': \{ x: (\d+), y: (\d+) \}", src):
+        lista.append((int(m.group(1)), int(m.group(2)), 3, 2))
+    blok = re.search(r'export const ROZSTAWIENIE.*?\n\];', src, re.S).group(0)
+    for m in re.finditer(r"\{ x: (\d+), y: (\d+), rodzaj: 'kopalnia'", blok):
+        lista.append((int(m.group(1)), int(m.group(2)), 3, 1))
+    return lista
+
+
 RYSUNEK = wczytaj_rysunek()
 WYS, SZER = len(RYSUNEK), len(RYSUNEK[0])
-arkusz = Image.open(KORZEN / 'public' / 'mapa-tileset.png').convert('RGBA')
+W, H = SZER * KAFEL, WYS * KAFEL
 
 
-def kafelek(indeks):
-    c, r = indeks % ARKUSZ_KOL, indeks // ARKUSZ_KOL
-    return arkusz.crop((c * S, r * S, (c + 1) * S, (r + 1) * S))
+def pola(znaki: str) -> np.ndarray:
+    return np.array(
+        [[1.0 if c in znaki else 0.0 for c in wiersz] for wiersz in RYSUNEK], dtype=np.float32
+    )
 
 
-def litera(x, y):
-    x = max(0, min(SZER - 1, x))
-    y = max(0, min(WYS - 1, y))
-    return LITERA[RYSUNEK[y][x]]
+def maska_drogi() -> Image.Image:
+    """Droga jako gładka wstęga łącząca środki sąsiadujących pól ścieżki.
 
-
-def teren(klatka):
-    """Teren w skali arkusza, ułożony siatką przesuniętą o pół pola.
-
-    Arkusz jest narożnikowy: o kafelku decydują cztery rogi, więc kafelki
-    kładziemy na stykach pól, a nie na polach. Malujemy o rząd i kolumnę
-    więcej z każdej strony, żeby przy brzegu planszy nie brakowało połówek.
+    W Heroes 3 drogi są ciągłą wstęgą z rozwidleniami, a nie kwadratami pole
+    po polu — i tylko dlatego widać na pierwszy rzut oka, że tędy idzie się
+    taniej. Zwracamy samą maskę; teksturę ścieżki nakłada przez nią wywołujący.
     """
-    im = Image.new('RGBA', (SZER * S, WYS * S))
-    zapas = SYGNATURY['GGGG'][0]
-    for j in range(WYS + 1):
-        for i in range(SZER + 1):
-            sig = litera(i - 1, j - 1) + litera(i, j - 1) + litera(i - 1, j) + litera(i, j)
-            klatki = SYGNATURY.get(sig)
-            if klatki is None:
-                # Braki to wyłącznie układy „w szachownicę", których nie ma
-                # w żadnym arkuszu autokafelkowania. Kładziemy wtedy teren,
-                # którego w rogach jest najwięcej.
-                przewaga = max(set(sig), key=sig.count)
-                klatki = SYGNATURY.get(przewaga * 4, [zapas])
-            im.paste(kafelek(klatki[klatka % len(klatki)]), (i * S - S // 2, j * S - S // 2))
-    return im
-
-
-def drogi(rozmiar):
-    """Drogi jako gładka wstęga łącząca środki sąsiadujących pól ścieżki.
-
-    Arkusz nie ma kafelków drogi. W Heroes 3 drogi też są ciągłą wstęgą
-    z rozwidleniami, a nie kwadratami pole po polu — i tylko dlatego widać
-    na pierwszy rzut oka, że tędy idzie się taniej.
-    """
-    w, h = rozmiar
-    im = Image.new('RGBA', (w * NAD, h * NAD), (0, 0, 0, 0))
+    im = Image.new('L', (W * NAD, H * NAD), 0)
     d = ImageDraw.Draw(im)
     jest = lambda x, y: 0 <= x < SZER and 0 <= y < WYS and RYSUNEK[y][x] == '='
     srodek = lambda x, y: ((x * KAFEL + KAFEL / 2) * NAD, (y * KAFEL + KAFEL / 2) * NAD)
 
-    # Dwa przejścia: ciemniejszy brzeg i jaśniejsza nawierzchnia. Trzeciego,
-    # najjaśniejszego pasa pośrodku tu nie ma — na skosach łamał się w szewrony
-    # i cała droga zaczynała wyglądać jak tory kolejowe.
-    for barwa, grubosc in ((DROGA_BRZEG, 0.44), (DROGA, 0.32)):
-        g = grubosc * KAFEL * NAD
-        for y in range(WYS):
-            for x in range(SZER):
-                if not jest(x, y):
-                    continue
-                a = srodek(x, y)
-                # Tylko połowa kierunków — odcinek rysowany z obu końców
-                # byłby rysowany dwa razy.
-                for dx, dy in ((1, 0), (0, 1), (1, 1), (1, -1)):
-                    if jest(x + dx, y + dy):
-                        d.line([a, srodek(x + dx, y + dy)], fill=barwa, width=int(g))
-        # Kółka po odcinkach, nie przed: przy odwrotnej kolejności na
-        # zakrętach zostawały jasne trójkąty.
-        for y in range(WYS):
-            for x in range(SZER):
-                if jest(x, y):
-                    cx, cy = srodek(x, y)
-                    d.ellipse([cx - g / 2, cy - g / 2, cx + g / 2, cy + g / 2], fill=barwa)
-    # Ćwierć piksela rozmycia po zmniejszeniu: droga przestaje być naklejką
-    # na trawie i siada w niej tak jak brzeg wody.
-    return im.resize((w, h), Image.LANCZOS).filter(ImageFilter.GaussianBlur(0.6))
+    g = 0.46 * KAFEL * NAD
+    for y in range(WYS):
+        for x in range(SZER):
+            if not jest(x, y):
+                continue
+            a = srodek(x, y)
+            # Tylko połowa kierunków — odcinek rysowany z obu końców byłby
+            # rysowany dwa razy.
+            for dx, dy in ((1, 0), (0, 1), (1, 1), (1, -1)):
+                if jest(x + dx, y + dy):
+                    d.line([a, srodek(x + dx, y + dy)], fill=255, width=int(g))
+    # Kółka po odcinkach, nie przed: przy odwrotnej kolejności na zakrętach
+    # zostawały jasne trójkąty.
+    for y in range(WYS):
+        for x in range(SZER):
+            if jest(x, y):
+                cx, cy = srodek(x, y)
+                d.ellipse([cx - g / 2, cy - g / 2, cx + g / 2, cy + g / 2], fill=255)
+    return im.resize((W, H), Image.LANCZOS).filter(ImageFilter.GaussianBlur(KAFEL * 0.06))
 
 
-KATALOG.mkdir(parents=True, exist_ok=True)
-podklad = drogi((SZER * KAFEL, WYS * KAFEL))
-klatki = []
-for k in range(4):
-    plansza = wygladz(teren(k)).crop((0, 0, SZER * KAFEL, WYS * KAFEL))
-    plansza.alpha_composite(podklad)
-    klatki.append(plansza)
+def maska_gruntu() -> Image.Image:
+    """Wydeptana ziemia pod zamkami i kopalniami.
 
-# Klatka 0 idzie w całości; kolejne TYLKO jako to, co się od niej różni,
-# reszta przezroczysta. Scena kładzie je na wierzch.
-#
-# Przy planszy 36 × 36 pełna klatka to 1728 × 1728 pikseli, a różni się między
-# klatkami wyłącznie woda — kilka procent mapy. Pierwsze podejście wycinało
-# prostokąt otaczający różnice, ale woda jest i na północnym zachodzie, i na
-# południowym wschodzie, więc prostokąt objął prawie całą planszę i nic nie
-# oszczędził. Przezroczysta maska nie ma tego problemu: PNG ściska jednolitą
-# przezroczystość niemal do zera, niezależnie od tego, gdzie leży woda.
-baza = klatki[0]
-baza.save(KATALOG / 'plansza-0.png')
-print(f'  plansza-0.png  {baza.width} × {baza.height}  (pełna)')
+    Po co
+    -----
+    Sprite'y z modelu są wycięte do samej sylwetki, więc budynek stał na trawie
+    jak naklejka: nic go z tą trawą nie łączyło. W Heroes 3 grafiki miast mają
+    pod sobą kawałek gruntu i dopiero to je OSADZA — budynek nie unosi się nad
+    łąką, tylko stoi na wydeptanym placu, który sam się w nią wtapia.
 
-for k in range(1, 4):
-    rozne = (
-        ImageChops.difference(klatki[k].convert('RGB'), baza.convert('RGB'))
-        .convert('L')
-        .point(lambda v: 255 if v > 8 else 0)
+    Malujemy ten plac w TLE planszy, a nie w pliku sprite'a. Dzięki temu jest
+    naprawdę częścią terenu: nie przesuwa się względem niego, nie ma własnej
+    krawędzi i wychodzi tą samą teksturą co ścieżki, więc plac przy zamku
+    i droga do niego to jedno i to samo.
+    """
+    im = Image.new('L', (W * 2, H * 2), 0)
+    d = ImageDraw.Draw(im)
+    for x, y, szer, wys in wczytaj_budowle():
+        # Elipsa szersza niż bryła i wysunięta przed wejście: plac ma
+        # WYSTAWAĆ spod budynku, inaczej znów widać jego obrys.
+        # Bryła stoi w rzędach nad wejściem, więc plac ma objąć i ją, i samo
+        # wejście: od `y − wys` do `y`. Środek wypada w połowie tego pasma.
+        cx = (x + 0.5) * KAFEL * 2
+        cy = (y + 0.5 - wys / 2) * KAFEL * 2
+        rx = (szer / 2 + 0.55) * KAFEL * 2
+        ry = ((wys + 1) / 2 + 0.4) * KAFEL * 2
+        d.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=255)
+    im = im.resize((W, H), Image.LANCZOS)
+    tab = np.asarray(im, dtype=np.float32) / 255.0
+    # Rozmycie plus szum: brzeg placu ma być nierówny i przetarty, bo idealna
+    # elipsa czyta się jak druga naklejka, tylko brązowa.
+    # Dwie skale: grubsza wygina cały zarys, żeby plac przestał być elipsą,
+    # drobniejsza przeciera sam brzeg. Jedna skala daje albo elipsę
+    # z postrzępionym konturem, albo plamę bez kształtu.
+    tab += szum(W, H, max(2, int(KAFEL * 2.2)), ZIARNO + 900) * 0.58
+    tab += szum(W, H, max(2, int(KAFEL * 0.45)), ZIARNO + 901) * 0.22
+    tab = ((tab - 0.5) * 1.9 + 0.5).clip(0, 1)
+    return Image.fromarray((tab * 255).astype(np.uint8), 'L').filter(
+        ImageFilter.GaussianBlur(KAFEL * 0.09)
     )
-    # Piksele spoza maski trzeba WYZEROWAĆ, nie tylko przykryć przezroczystością.
-    # PNG zapisuje kolor także tam, gdzie alfa wynosi zero, więc sama maska nie
-    # zmniejszyła pliku ani o bajt — dopiero jednolite zero się ściska.
-    tab = np.asarray(klatki[k]).copy()
-    widoczne = np.asarray(rozne) > 0
-    tab[~widoczne] = 0
-    tab[:, :, 3] = np.where(widoczne, 255, 0)
-    Image.fromarray(tab, 'RGBA').save(KATALOG / f'plansza-{k}.png')
-    print(f'  plansza-{k}.png  naklejka, {widoczne.mean() * 100:.1f}% powierzchni')
 
-odcisk = hashlib.sha256('\n'.join(RYSUNEK).encode('utf-8')).hexdigest()[:16]
-(KATALOG / 'plansza.json').write_text(
-    json.dumps(
-        {'odcisk': odcisk, 'szer': SZER, 'wys': WYS, 'kafel': KAFEL},
-        indent=2,
+
+def klatka(k: int) -> Image.Image:
+    plansza = zmieszaj(warianty('trawa'), W, H, (0, 0), ZIARNO)
+    for n, (nazwa, znaki, wtapianie, poszarpanie) in enumerate(WARSTWY):
+        if not any(c in znaki for wiersz in RYSUNEK for c in wiersz):
+            continue
+        przesun = PRAD[k] if nazwa == 'woda' else (0, 0)
+        warstwa = zmieszaj(warianty(nazwa), W, H, przesun, ZIARNO + 50 + n)
+        # Każda warstwa dostaje własne ziarno, inaczej wszystkie granice
+        # falowałyby w tym samym rytmie i widać by było jeden wzór.
+        m = maska(pola(znaki), KAFEL, wtapianie, poszarpanie, ZIARNO + n)
+        plansza.paste(warstwa, (0, 0), m)
+    plansza = plansza.convert('RGBA')
+    sciezka = kafelkuj(tekstura('sciezka'), W, H).convert('RGBA')
+    # Place pod budowlami idą PRZED drogami: droga ma dobiegać do placu
+    # i się z nim zlewać, a nie kończyć na jego brzegu.
+    plansza.paste(sciezka, (0, 0), maska_gruntu())
+    plansza.paste(sciezka, (0, 0), maska_drogi())
+    return plansza
+
+
+if __name__ == '__main__':
+    KATALOG.mkdir(parents=True, exist_ok=True)
+    klatki = [klatka(k) for k in range(4)]
+
+    # Klatka 0 idzie w całości; kolejne TYLKO jako to, co się od niej różni,
+    # reszta przezroczysta. Scena kładzie je na wierzch.
+    #
+    # Przy planszy 36 × 36 pełna klatka to 1728 × 1728 pikseli, a różni się
+    # między klatkami wyłącznie woda — kilka procent mapy. Pierwsze podejście
+    # wycinało prostokąt otaczający różnice, ale woda jest i na północnym
+    # zachodzie, i na południowym wschodzie, więc prostokąt objął prawie całą
+    # planszę i nic nie oszczędził. Przezroczysta maska nie ma tego problemu:
+    # PNG ściska jednolitą przezroczystość niemal do zera.
+    baza = klatki[0]
+    baza.save(KATALOG / 'plansza-0.png')
+    print(f'  plansza-0.png  {baza.width} × {baza.height}  (pełna)')
+
+    for k in range(1, 4):
+        rozne = (
+            ImageChops.difference(klatki[k].convert('RGB'), baza.convert('RGB'))
+            .convert('L')
+            .point(lambda v: 255 if v > 8 else 0)
+        )
+        # Piksele spoza maski trzeba WYZEROWAĆ, nie tylko przykryć
+        # przezroczystością. PNG zapisuje kolor także tam, gdzie alfa wynosi
+        # zero, więc sama maska nie zmniejszyła pliku ani o bajt — dopiero
+        # jednolite zero się ściska.
+        tab = np.asarray(klatki[k]).copy()
+        widoczne = np.asarray(rozne) > 0
+        tab[~widoczne] = 0
+        tab[:, :, 3] = np.where(widoczne, 255, 0)
+        Image.fromarray(tab, 'RGBA').save(KATALOG / f'plansza-{k}.png')
+        print(f'  plansza-{k}.png  naklejka, {widoczne.mean() * 100:.1f}% powierzchni')
+
+    odcisk = hashlib.sha256('\n'.join(RYSUNEK).encode('utf-8')).hexdigest()[:16]
+    (KATALOG / 'plansza.json').write_text(
+        json.dumps({'odcisk': odcisk, 'szer': SZER, 'wys': WYS, 'kafel': KAFEL}, indent=2) + '\n',
+        encoding='utf-8',
     )
-    + '\n',
-    encoding='utf-8',
-)
-print(f'  odcisk terenu: {odcisk}')
+    print(f'  odcisk terenu: {odcisk}')

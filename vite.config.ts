@@ -28,6 +28,21 @@ export default defineConfig({
   // (GitHub Pages serwuje grę z /heroes/), i w korzeniu domeny (Netlify).
   base: './',
   define: {
+    /**
+     * Wersja budowania. Służy dwóm rzeczom naraz i dlatego jest jedna:
+     *
+     * 1. Podpisuje build w interfejsie — widać, co się właściwie ogląda.
+     * 2. Doklejamy jej `commit` do adresu każdej wczytywanej grafiki
+     *    (`src/visual/zasoby.ts`). Kod i style dostają od Vite nazwy z odciskiem
+     *    treści, ale pliki z `public/` nazw nie zmieniają: trawa to zawsze
+     *    `mapa/teren/teren-trawa.png`. Przeglądarka trzyma je w pamięci
+     *    podręcznej i po wypchnięciu nowej grafiki gracz dalej ogląda starą,
+     *    co wygląda dokładnie jak niewdrożona zmiana.
+     *
+     * Odcisk commita jest do tego lepszy niż znacznik czasu, którego używałem
+     * wcześniej: dwa buildy z tego samego kodu dają ten sam adres, więc
+     * przeglądarka nie pobiera od nowa niczego, co się nie zmieniło.
+     */
     __WERSJA__: JSON.stringify(wersjaZGita()),
   },
 });

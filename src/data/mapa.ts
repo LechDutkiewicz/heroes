@@ -1,4 +1,13 @@
-import { PROMIEN_WIDZENIA, SKRZYNIE } from './zasady-h3';
+import { PROMIEN_WIDZENIA, SKRZYNIE, naPokeballe } from './zasady-h3';
+import {
+  brakuje,
+  budynek,
+  daryZamku,
+  moznaBudowac,
+  przyrostZamku,
+  stacNas,
+  zaplac,
+} from './zamki';
 
 /**
  * Mapa przygody — dane i zasady, bez rysowania.
@@ -132,10 +141,42 @@ export interface Obiekt {
   dostepne?: number[];
   /** Z której frakcji rekrutuje ten zamek. */
   frakcjaZamku?: string;
+  /**
+   * Zamek: co już w nim stoi (identyfikatory z `zamki.ts`). To jest cała
+   * pamięć rozbudowy: dochód (ratusze), przyrost i to, które poziomy w ogóle
+   * przyrastają (siedliska, fort) liczą się z tej listy. Nie da się więc mieć
+   * siedliska, które daje oddziały, ale nie widać go na panoramie — ani
+   * ratusza, który stoi, a nie daje ani jednego pokeballa.
+   */
+  postawione?: string[];
+  /**
+   * Którego dnia postawiono tu ostatni budynek. Heroes 3 pozwala na jeden
+   * budynek dziennie i to jest powód, dla którego kolejność rozbudowy w ogóle
+   * jest wyborem.
+   */
+  budowanoDnia?: number;
 }
 
-/** Ile pokeballi kosztuje oddział danego poziomu i ile przybywa dziennie. */
-export const KOSZT_ODDZIALU = [2, 4, 7, 12, 20, 35];
+/**
+ * Ile pokeballi kosztuje oddział danego poziomu i ile przybywa dziennie.
+ *
+ * Ceny to koszty oddziałów z Heroes 3 (60, 100, 175, 315, 500, 1000 złota)
+ * przepuszczone przez `naPokeballe` — tę samą regułę, którą liczą się kopalnie,
+ * skrzynie i ratusze. Wcześniej stało tu [2, 4, 7, 12, 20, 35], wycenione poza
+ * jakąkolwiek skalą: dzienny przyrost całego miasta kosztował wtedy 95
+ * pokeballi przy 30 pokeballach dochodu z CAŁEJ mapy. Teraz przyrost kosztuje
+ * 51 przy 60 z samych kopalni i 100 z kopalniami plus trzeci ratusz — czyli
+ * armię da się wykupić i jeszcze zostaje na rozbudowę, o co w tym całym
+ * zbieraniu chodzi.
+ */
+export const KOSZT_ODDZIALU = [
+  naPokeballe(60),
+  naPokeballe(100),
+  naPokeballe(175),
+  naPokeballe(315),
+  naPokeballe(500),
+  naPokeballe(1000),
+];
 export const PRZYROST_ODDZIALU = [3, 2, 2, 1, 1, 1];
 
 /** Oddział w armii — to samo, co slot w bitwie: jeden gatunek i jego liczba. */
@@ -175,10 +216,52 @@ export interface Bohater {
  * niczego — dodatki zawsze liczą się z tego, co bohater aktualnie nosi, więc
  * nie da się ich policzyć dwa razy.
  */
+/**
+ * Co daje awans na poziom.
+ *
+ * Poziomy istniały wcześniej jako sama liczba w panelu i NIE DAWAŁY NICZEGO:
+ * `statystyki` doliczały wyłącznie artefakty. Doświadczenie było więc licznikiem
+ * bez znaczenia — a to jedyna nagroda za wygraną bitwę poza tym, co po niej
+ * zostaje na mapie.
+ *
+ * Zasada jest prosta na tyle, żeby dziecko ją zauważyło samo: co poziom
+ * na przemian atak i obrona, a co trzeci dodatkowo zapas ruchu. W Heroes 3
+ * przydział jest losowany z wag klasy bohatera, ale losowa nagroda, której
+ * nie da się przewidzieć, uczy tylko tego, że nagrody są losowe.
+ */
+export function bonusPoziomu(p: number) {
+  const awansow = Math.max(0, p - 1);
+  return {
+    atak: Math.ceil(awansow / 2),
+    obrona: Math.floor(awansow / 2),
+    ruch: Math.floor(awansow / 3) * 100,
+  };
+}
+
+/**
+ * Ile doświadczenia zebrano w bieżącym poziomie i ile trzeba na następny.
+ * Panel pokazuje to jako „X/Y do awansu" — bez tego nie widać ani tego, że
+ * awans w ogóle nadchodzi, ani jak blisko jest.
+ */
+export function postepPoziomu(doswiadczenie: number) {
+  let p = 1;
+  let prog = 100;
+  let dolny = 0;
+  let gorny = prog;
+  while (doswiadczenie >= gorny) {
+    p++;
+    dolny = gorny;
+    prog = Math.round(prog * 1.4);
+    gorny += prog;
+  }
+  return { poziom: p, wPoziomie: doswiadczenie - dolny, doAwansu: gorny - dolny };
+}
+
 export function statystyki(b: Bohater) {
-  let atak = b.atak;
-  let obrona = b.obrona;
-  let ruchMax = b.ruchMax;
+  const bonus = bonusPoziomu(poziom(b.doswiadczenie));
+  let atak = b.atak + bonus.atak;
+  let obrona = b.obrona + bonus.obrona;
+  let ruchMax = b.ruchMax + bonus.ruch;
   for (const id of b.artefakty) {
     const a = artefaktPoId(id);
     if (!a) continue;
@@ -216,6 +299,13 @@ export interface StanMapy {
    * mgła, która wraca.
    */
   odkryte: boolean[][];
+  /**
+   * Pola zajęte bryłami zamków i kopalni, policzone raz. Zamek ani kopalnia
+   * nigdy z mapy nie znikają, więc ten zbiór się nie zmienia — a liczenie go
+   * przy każdym pytaniu o koszt pola oznaczałoby przechodzenie wszystkich
+   * obiektów wewnątrz wyznaczania trasy.
+   */
+  bryly?: Set<string>;
 }
 
 /** Odsłania mgłę wokół bohatera. Zwraca, ile pól przybyło. */
@@ -248,6 +338,88 @@ export const obiektNa = (s: StanMapy, x: number, y: number) =>
   s.obiekty.find((o) => o.x === x && o.y === y && !o.zebrany);
 
 /**
+ * Bryły zajmujące więcej niż jedno pole — szerokość i wysokość w polach.
+ *
+ * W Heroes 3 zamek zajmuje kawał planszy, a wchodzi się do niego JEDNYM polem
+ * na dole; tak samo kopalnia ma budynek i hałdę, a bramę w jednym miejscu.
+ * To nie jest ozdoba: dzięki temu widać z daleka, że to coś dużego i ważnego,
+ * a mimo to wiadomo dokładnie, gdzie trzeba stanąć.
+ *
+ * Pole obiektu (`o.x`, `o.y`) jest WEJŚCIEM i leży pośrodku dolnego rzędu.
+ * Reszta bryły jest nieprzejezdna i po kliknięciu otwiera ekran miasta —
+ * czyli dokładnie ten podział, który w H3 pokazuje zmiana kursora.
+ *
+ * Szerokości są nieparzyste, żeby wejście wypadało dokładnie na środku.
+ */
+export const BRYLA: Partial<Record<RodzajObiektu, [number, number]>> = {
+  zamek: [3, 2],
+  kopalnia: [3, 1],
+};
+
+/**
+ * Pola zajęte przez bryłę obiektu, BEZ wejścia.
+ *
+ * Pole, które wypadłoby poza mapą, na nieprzejezdnym terenie albo na innym
+ * obiekcie, jest po prostu pomijane. To jest celowe: plansza była układana,
+ * gdy każdy obiekt zajmował jedno pole, a bryła nie ma prawa jej unieważnić —
+ * zamek przy skале dostanie węższy bok i tyle.
+ */
+export function polaBryly(s: StanMapy, o: Obiekt): Pole[] {
+  const rozmiar = BRYLA[o.rodzaj];
+  if (!rozmiar || o.zebrany) return [];
+  const [szer, wys] = rozmiar;
+  const pola: Pole[] = [];
+  // Bryła stoi ZA wejściem, nie na nim. Pierwsza wersja obejmowała rząd wejścia
+  // i budynek zasłaniał jedyne pole, w które da się wejść bohaterem: gracz
+  // widział wielki zamek, klikał w to, co widać, i zawsze otwierał tylko
+  // podgląd miasta. W Heroes 3 brama leży PRZED budowlą, na wolnej ziemi.
+  for (let dy = -wys; dy <= -1; dy++) {
+    for (let dx = -Math.floor(szer / 2); dx <= Math.floor(szer / 2); dx++) {
+      const x = o.x + dx;
+      const y = o.y + dy;
+      if (!wGranicach(s, x, y)) continue;
+      if (TEREN_INFO[s.teren[y][x]].koszt === null) continue;
+      if (obiektNa(s, x, y)) continue;
+      // Bryła nie zamurowuje wejścia sąsiada.
+      //
+      // Zamek wroga stoi dwa pola od kopalni i jego mury odcięły jej wszystkie
+      // dojścia — kopalnia stała się nieosiągalna, choć na ekranie wyglądała
+      // normalnie. Pole stykające się bokiem z cudzym wejściem zostaje więc
+      // wolne. Kosztuje to kawałek muru tam, gdzie budowle stoją ciasno,
+      // a chroni przed planszą, po której nie da się grać.
+      if (
+        s.obiekty.some(
+          (inny) =>
+            inny !== o &&
+            !inny.zebrany &&
+            Math.abs(inny.x - x) + Math.abs(inny.y - y) === 1
+        )
+      )
+        continue;
+      pola.push({ x, y });
+    }
+  }
+  return pola;
+}
+
+/** Obiekt, którego bryła (poza wejściem) przykrywa to pole. */
+export function brylaNa(s: StanMapy, x: number, y: number): Obiekt | undefined {
+  return s.obiekty.find(
+    (o) => !o.zebrany && polaBryly(s, o).some((p) => p.x === x && p.y === y)
+  );
+}
+
+/** Wszystkie pola pod bryłami, jako `"x,y"`. Liczone raz i zapamiętane. */
+export function polaZajete(s: StanMapy): Set<string> {
+  if (!s.bryly) {
+    s.bryly = new Set(
+      s.obiekty.flatMap((o) => polaBryly(s, o).map((p) => `${p.x},${p.y}`))
+    );
+  }
+  return s.bryly;
+}
+
+/**
  * Strefa kontroli potwora: pole, na którym stoi, i osiem pól wokół niego.
  *
  * Tak działa to w Heroes 3 i to jest cały powód, dla którego strażnicy coś
@@ -274,6 +446,8 @@ export function strzezoneProzez(s: StanMapy, x: number, y: number): Obiekt | und
  */
 export function kosztPola(s: StanMapy, x: number, y: number): number | null {
   if (!wGranicach(s, x, y)) return null;
+  // Mury zamku i budynek kopalni są nie do przejścia — wchodzi się wejściem.
+  if (polaZajete(s).has(`${x},${y}`)) return null;
   return TEREN_INFO[s.teren[y][x]].koszt;
 }
 
@@ -461,19 +635,41 @@ export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
   }
 
   if (o.rodzaj === 'zamek') {
-    if (!o.nasz) return { opis: `${o.nazwa}\nZamek przeciwnika — jeszcze nie do zdobycia` };
+    // Zamku broni garnizon. Dopóki stoi, wejście zaczyna bitwę — dokładnie tak
+    // jak w Heroes 3 i tak jak przy każdym innym strażniku na mapie.
+    //
+    // Wcześniej stało tu „jeszcze nie do zdobycia": gra nie miała żadnego
+    // zakończenia. Dziecko dochodziło przez pół planszy do celu i dostawało
+    // komunikat, że celu nie ma.
+    if (!o.nasz) {
+      if (o.oddzialy?.length) return { opis: `${o.nazwa}\nBroni się!`, bitwaZ: o };
+      o.nasz = true;
+      return { opis: `${o.nazwa} jest twoja!`, zamek: o, zajete: o };
+    }
     return { opis: o.nazwa, zamek: o };
   }
 
   return { opis: o.nazwa };
 }
 
-/** Ile surowców wpłynie jutro z zajętych budynków. */
+/**
+ * Ile surowców wpłynie jutro z zajętych budynków — z kopalń NA mapie
+ * i z tego, co postawione w naszych zamkach. Ratusz jest tu razem z kopalnią
+ * celowo: dla gracza to jedna liczba („ile mi jutro przybędzie"), a nie dwa
+ * osobne rachunki, których trzeba się domyślać. Panel czyta wyłącznie tę
+ * funkcję, więc rozdzielenie ich oznaczałoby pokazywanie nieprawdy.
+ */
 export function dochod(s: StanMapy): Partial<Record<Surowiec, number>> {
   const suma: Partial<Record<Surowiec, number>> = {};
   for (const o of s.obiekty) {
     if (o.rodzaj === 'kopalnia' && o.nasz && o.surowiec) {
       suma[o.surowiec] = (suma[o.surowiec] ?? 0) + (o.ile ?? 1);
+    }
+    if (o.rodzaj === 'zamek' && o.nasz) {
+      const dary = daryZamku(o.postawione ?? [], o.frakcjaZamku ?? 'bor');
+      for (const [co, ile] of Object.entries(dary)) {
+        suma[co as Surowiec] = (suma[co as Surowiec] ?? 0) + ile;
+      }
     }
   }
   return suma;
@@ -489,12 +685,73 @@ export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
   }
   // Przyrost w zamkach. Bez niego rekrutacja byłaby jednorazowa i cała
   // gospodarka kończyłaby się w pierwszym dniu.
+  //
+  // Przyrasta tylko to, co POSTAWIONE: siedlisko, którego nie ma, nie hoduje
+  // niczego, a fort podnosi przyrost we wszystkich naraz. Dopóki liczyło się
+  // to z samej tablicy `PRZYROST_ODDZIALU`, rozbudowa miasta nie zmieniała
+  // nic w armii i drzewko budynków było dekoracją.
   for (const o of s.obiekty) {
     if (o.rodzaj === 'zamek' && o.nasz && o.dostepne) {
-      o.dostepne = o.dostepne.map((ile, t) => Math.min(ile + PRZYROST_ODDZIALU[t], 99));
+      // Przyrost liczy się z POSTAWIONYCH siedlisk: poziom bez siedliska nie
+      // daje nic, a fort podnosi wszystkie naraz o połowę. Wcześniej przyrastały
+      // wszystkie sześć poziomów niezależnie od miasta, więc rozbudowa nie
+      // zmieniała niczego poza opisem.
+      const przyrost = przyrostZamku(o.postawione ?? [], PRZYROST_ODDZIALU);
+      o.dostepne = o.dostepne.map((ile, t) => Math.min(ile + przyrost[t], 99));
     }
   }
   return wplyw;
+}
+
+export interface WynikBudowy {
+  ok: boolean;
+  opis: string;
+}
+
+/**
+ * Postawienie budynku w zamku. Cała decyzja siedzi tutaj, a nie w scenie,
+ * bo to są zasady gry: jeden budynek dziennie, tylko po spełnieniu warunków
+ * i tylko za pełną cenę.
+ *
+ * Odmowa zawsze mówi DLACZEGO. Zablokowany przycisk bez powodu jest dla
+ * dziecka ślepym zaułkiem — nie wie, czy ma szukać surowca, czy postawić
+ * najpierw co innego, czy po prostu poczekać do jutra.
+ */
+export function zbuduj(s: StanMapy, zamek: Obiekt, id: string): WynikBudowy {
+  const frakcja = zamek.frakcjaZamku ?? 'bor';
+  const b = budynek(frakcja, id);
+  if (!b) return { ok: false, opis: 'Nie ma tu czego budować.' };
+
+  const postawione = (zamek.postawione ??= []);
+  if (postawione.includes(id)) return { ok: false, opis: `${b.nazwa} już stoi.` };
+  if (!moznaBudowac(b, postawione)) {
+    const brak = b.wymaga
+      .filter((w) => !postawione.includes(w))
+      .map((w) => budynek(frakcja, w)?.nazwa ?? w);
+    return { ok: false, opis: `Najpierw: ${brak.join(', ')}.` };
+  }
+  if (zamek.budowanoDnia === s.dzien) {
+    return { ok: false, opis: 'Dziś już tu budowano. Jeden budynek dziennie.' };
+  }
+  if (!stacNas(s.skarbiec, b.koszt)) {
+    const brak = brakuje(s.skarbiec, b.koszt)
+      .map((x) => `${x.ile} ${SUROWIEC_INFO[x.surowiec].dopelniacz}`)
+      .join(', ');
+    return { ok: false, opis: `Brakuje: ${brak}.` };
+  }
+
+  zaplac(s.skarbiec, b.koszt);
+  postawione.push(id);
+  zamek.budowanoDnia = s.dzien;
+
+  // Nowe siedlisko od razu ma kogo dać. W Heroes 3 wybudowane siedlisko
+  // dostaje tygodniowy przyrost natychmiast — bez tego dziecko stawia budynek
+  // i nic się nie zmienia, więc nie widzi związku między budową a armią.
+  if (b.rodzaj === 'siedlisko' && b.poziom !== undefined && zamek.dostepne) {
+    const przyrost = przyrostZamku(postawione, PRZYROST_ODDZIALU);
+    zamek.dostepne[b.poziom] += przyrost[b.poziom];
+  }
+  return { ok: true, opis: `${b.nazwa} — gotowe!` };
 }
 
 /** Data w formacie z Heroes 3: tydzień i dzień tygodnia. */

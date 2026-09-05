@@ -39,11 +39,18 @@ page.on('pageerror', (e) => {
   console.log('  BŁĄD JS —', String(e));
 });
 
-const scena = (nazwa) =>
+/**
+ * Czekanie na scenę. Limit jest hojny, bo ekran końca bitwy odlicza 2600 ms
+ * CZASU GRY, a nie zegara ściennego — na maszynie bez sprzętowego rysowania
+ * gra chodzi po kilka klatek na sekundę i te 2,6 s rozciąga się do
+ * kilkudziesięciu. Wcześniej stało tu `waitForTimeout(3600)` i sonda ogłaszała
+ * zepsuty powrót z bitwy tam, gdzie powrót po prostu jeszcze trwał.
+ */
+const scena = (nazwa, timeout = 120000) =>
   page.waitForFunction(
     (n) => window.__game?.scene.getScene(n)?.sys.settings.status === 5,
     nazwa,
-    { timeout: 30000 }
+    { timeout }
   );
 
 await page.goto(`${BASE}/?ekran=mapa`, { waitUntil: 'domcontentloaded' });
@@ -98,6 +105,35 @@ const okno = await page.evaluate(() => {
   };
 });
 sprawdz('skrzynia NIE daje nagrody od razu', okno.zebrana === false && okno.zajety === true);
+
+// Czy okno WIDAĆ. Tu przeszła obok nas usterka: kamera planszy powstaje po
+// głównej, więc rysowała się na wierzchu i zamalowywała okno w prostokącie
+// mapy. Okno istniało, przyciski przyjmowały kliknięcia, więc sonda była
+// zielona — a gracz widział zamrożoną grę, bo czekała na decyzję, której nie
+// dało się ani zobaczyć, ani podjąć.
+//
+// Nie porównujemy pikseli: woda animuje się co klatkę, więc różnica wychodzi
+// zawsze i taki test nie sprawdzałby niczego. Sprawdzamy niezmiennik, który
+// się złamał — okno musi rysować kamera idąca jako OSTATNIA, bo tylko jej
+// nikt już nie zamaluje. Phaser trzyma to w masce `cameraFilter`.
+const rysowanie = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const kamery = s.cameras.cameras;
+  const ostatnia = kamery[kamery.length - 1];
+  const okno = s.children.list.filter((o) => o.depth >= 200);
+  return {
+    ile: okno.length,
+    naWierzchu: okno.filter((o) => (o.cameraFilter & ostatnia.id) === 0).length,
+    zamalowane: okno.filter((o) =>
+      kamery.some((c) => c !== ostatnia && (o.cameraFilter & c.id) === 0)
+    ).length,
+  };
+});
+sprawdz(
+  'okno skrzyni rysuje kamera wierzchnia — nic go nie zamaluje',
+  rysowanie.ile > 0 && rysowanie.naWierzchu === rysowanie.ile && rysowanie.zamalowane === 0,
+  `${rysowanie.naWierzchu}/${rysowanie.ile} na wierzchu, ${rysowanie.zamalowane} pod spodem`
+);
 sprawdz(
   'skarbiec czeka na decyzję',
   JSON.stringify(okno.skarbiec) === JSON.stringify({
@@ -188,7 +224,6 @@ const koniec = await page.evaluate(() => {
 });
 sprawdz('bitwa uznaje zwycięstwo', koniec.zywiWrogowie === 0);
 sprawdz('bitwa odkłada wynik dla mapy', koniec.wynik !== null, JSON.stringify(koniec.wynik));
-await page.waitForTimeout(3600);
 await scena('adventure');
 const poBitwie = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
@@ -311,6 +346,119 @@ sprawdz(
   'pokonany strażnik NIE jest już rysowany na mapie',
   poZamku.sprytPokonanego === false && poZamku.potworZebrany === true
 );
+
+// --- straż pilnuje tego, co pilnuje ---
+//
+// Wejście wprost na pilnowaną kopalnię omijało strażnika i zajmowało ją za
+// darmo: straż sprawdzaliśmy TYLKO wtedy, gdy na polu nie było żadnego
+// obiektu. Cała różnica między kopalnią pilnowaną a niepilnowaną znikała,
+// a to jedyne, co na tej mapie chroni nagrody.
+console.log('\n=== straż przy kopalni ===');
+const pilnowana = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const k = s.stan.obiekty.find((o) => o.rodzaj === 'kopalnia' && !o.nasz);
+  if (!k) return null;
+  // Straż USTAWIA sonda, a nie plansza.
+  //
+  // Sprawdzamy zasadę („wejście na pilnowane pole zaczyna bitwę"), a nie to,
+  // czy akurat ten układ mapy kogoś przy kopalni postawił. Pierwsza wersja
+  // szukała pilnowanej kopalni na planszy i przestała cokolwiek sprawdzać,
+  // gdy układ mapy się zmienił — czyli test zależał od danych, na które nie
+  // ma wpływu. Przestawiamy więc dowolnego żywego potwora obok kopalni.
+  const straz = s.stan.obiekty.find((o) => o.rodzaj === 'potwor' && !o.zebrany);
+  if (!straz) return null;
+  straz.x = k.x + 1;
+  straz.y = k.y - 1;
+  s.stan.bohater.x = k.x;
+  s.stan.bohater.y = k.y + 2;
+  s.stan.bohater.ruch = 3000;
+  s.zajety = false;
+  window.__kopalnia = k.id;
+  s.idz([
+    { x: k.x, y: k.y + 1, koszt: 100 },
+    { x: k.x, y: k.y, koszt: 100 },
+  ]);
+  return k.nazwa;
+});
+if (!pilnowana) {
+  sprawdz('na mapie stoi pilnowana kopalnia', false, 'nie znaleziono żadnej');
+} else {
+  let doBoju = true;
+  try {
+    await scena('battle');
+  } catch {
+    doBoju = false;
+  }
+  const stan = await page.evaluate(() => {
+    const s = window.__game.scene.getScene('adventure');
+    const k = s.stan.obiekty.find((o) => o.id === window.__kopalnia);
+    return !!k.nasz;
+  });
+  sprawdz(`wejście na pilnowaną kopalnię (${pilnowana}) zaczyna bitwę`, doBoju);
+  sprawdz('kopalnia NIE jest zajęta przed wygraną', stan === false);
+
+  if (doBoju) {
+    await page.evaluate(() => window.__game.scene.getScene('battle').rozstrzygnijNatychmiast(true));
+    await scena('adventure');
+    // Bitwa toczy się, gdy bohater STOI JUŻ na kopalni, więc po wygranej musi
+    // ją zająć sam — inaczej trzeba by zejść z pola i wrócić na nie po raz
+    // drugi, co wygląda po prostu na usterkę.
+    await page.waitForTimeout(4000);
+    const po = await page.evaluate(() => {
+      const s = window.__game.scene.getScene('adventure');
+      const k = s.stan.obiekty.find((o) => o.id === window.__kopalnia);
+      return { nasza: !!k.nasz, poz: [s.stan.bohater.x, s.stan.bohater.y] };
+    });
+    sprawdz('po wygranej kopalnia jest zajęta bez wchodzenia na nią drugi raz', po.nasza);
+  }
+}
+
+// --- druga bitwa w tej samej sesji ---
+//
+// To nie jest powtórka poprzedniego testu. Phaser używa TEJ SAMEJ instancji
+// sceny przy każdym `scene.start`, więc pola z wartością nadaną przy deklaracji
+// ustawiają się raz, przy tworzeniu gry. Druga bitwa zaczynała się z oddziałami
+// pierwszej, których napisy i paski zniknęły razem z poprzednią sceną — i gra
+// stawała na martwej teksturze. Pierwsza bitwa nigdy tego nie pokaże, bo
+// zaczyna od pustych tablic; potrzebna jest właśnie DRUGA.
+console.log('\n=== druga bitwa w tej samej sesji ===');
+const drugi = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const p = s.stan.obiekty.find((o) => o.rodzaj === 'potwor' && !o.zebrany);
+  if (!p) return null;
+  s.stan.bohater.x = p.x;
+  s.stan.bohater.y = p.y - 1;
+  s.stan.bohater.ruch = 2000;
+  s.idz([{ x: p.x, y: p.y, koszt: 100 }]);
+  return p.nazwa;
+});
+if (drugi) {
+  let wstala = true;
+  try {
+    await scena('battle');
+  } catch {
+    wstala = false;
+  }
+  sprawdz('druga bitwa w ogóle się zaczyna', wstala, drugi);
+  if (wstala) {
+    const swiezo = await page.evaluate(() => {
+      const b = window.__game.scene.getScene('battle');
+      return {
+        oddzialy: b.units.length,
+        zywe: b.units.filter((u) => u.alive !== false).length,
+      };
+    });
+    // Gdyby stan poprzedniej bitwy nie został wyczyszczony, na planszy stałyby
+    // oddziały z obu — czyli wyraźnie więcej niż dwie armie po sześć.
+    sprawdz(
+      'druga bitwa nie dziedziczy oddziałów z pierwszej',
+      swiezo.oddzialy > 0 && swiezo.oddzialy <= 12,
+      `${swiezo.oddzialy} oddziałów`
+    );
+  }
+} else {
+  sprawdz('druga bitwa w ogóle się zaczyna', false, 'zabrakło potworów na mapie');
+}
 
 console.log(`\n${bledy === 0 ? 'Wszystko się zgadza.' : `Błędów: ${bledy}`}`);
 await browser.close();

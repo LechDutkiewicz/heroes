@@ -1,6 +1,6 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-08-12 (mapa 36 × 36, mgła, bitwa z mapy).
+Ostatnia aktualizacja: 2026-09-06 (scalenie: grafika z modelu, ekonomia na jednej skali, układ mapy).
 
 Ten plik istnieje po to, żeby po przerwie nie trzeba było odtwarzać kontekstu
 z pamięci. Zapisuję tu, co jest skończone, co jest w połowie i czego świadomie
@@ -23,9 +23,15 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `node tools/capture.mjs` | komplet zrzutów, w tym paski czterech klatek dla animacji |
 | `npx tsx tools/probe-trasa.ts` | poprawność tras ruchu na ~128 tys. przypadków |
 | `npx tsx tools/probe-mapa.ts` | plansza przygody: kształt, okno, dostępność obiektów, odcisk tła |
+| `npx tsx tools/probe-ekonomia.ts` | czy dochód z prawdziwej mapy starcza na armię I rozbudowę |
+| `node tools/probe-rozbudowa.mjs` | czy budynek da się KLIKNĄĆ i czy miasto potem daje więcej |
 | `node tools/probe-kopalnia.mjs` | czy budynek produkcyjny się ZAJMUJE, a nie zbiera |
 | `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia, artefakt, bitwa, zamek, powrót |
 | `node tools/probe-klik.mjs` | czy KLIKNIĘCIE prowadzi bohatera tam, gdzie się kliknęło |
+| `node tools/probe-miasto.mjs` | ekran miasta: klikanie w bryły, lista budowy, jeden budynek dziennie, przyrost |
+| `npx tsx tools/probe-zamki.ts` | drzewko budynków: przechodniość, ceny, czas rozbudowy |
+| `npx tsx tools/probe-ekonomia.ts` | dochód i koszty z PRAWDZIWEJ mapy: czy da się budować i werbować naraz |
+| `node tools/probe-rozbudowa.mjs` | rozbudowa miasta klikaniem, od początku do końca |
 | `node tools/probe-zwis.mjs` | czy okno skrzyni naprawdę WIDAĆ i czy druga bitwa startuje |
 | `node tools/probe-dziennik.mjs` | dziennik diagnostyczny: ziarno, łapanie wyjątków, raport, F8 |
 | `node tools/zrzut-mapa.mjs` | zrzut mapy przygody (osobno, bo `capture.mjs` zna tylko bitwę) |
@@ -40,6 +46,7 @@ palety trzeba puścić:
 | `python3 tools/render_mapa.py` | składa i wygładza tło planszy (4 klatki wody) |
 | `python3 tools/prepare_mapa_obiekty.py` | wycina i wygładza drzewa, skały, zamki, bohatera |
 | `python3 tools/rysuj_obiekty_mapy.py` | rysuje surowce, budynki i ozdoby |
+| `python3 tools/rysuj_miasto.py` | rysuje panoramy trzech miast i bryły jedenastu budynków |
 | `node tools/probe-dzwiek.mjs` | ile dźwięków realnie pada w bitwie |
 | `node tools/probe-najechanie.mjs` | co widać po najechaniu na wroga w zasięgu |
 | `node tools/probe-lot.mjs` | wzniesienie, falowanie, przechył i cień w locie |
@@ -87,9 +94,10 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
   o 12 px, zmniejszony do 0,60 i przygaszony do 0,30 alfy. Mierzy to
   `tools/probe-lot.mjs`.
 
-- **Mapa przygody — pierwsza plansza.** Układ przeniesiony z HotA, teren
-  układa się sam z arkusza narożnikowego, drogi rysowane, woda animowana.
-  Wejście: `?ekran=mapa`. Szczegóły niżej.
+- **Mapa przygody — układ „Key to Victory".** Plansza wzorowana na jednej
+  z popularniejszych map z Heroes 3 (Restoration of Erathia, 36 × 36, dwóch
+  graczy). Teren układa się sam z arkusza narożnikowego, drogi rysowane, woda
+  animowana. Wejście: `?ekran=mapa`. Szczegóły niżej.
 - **Jeden styl na całym ekranie przygody.** Teren, drzewa, skały i bohater
   przechodzą przez `tools/wygladzanie.py`, więc przestały być kanciastym
   pixel artem obok gładkich stworków i HUD-u.
@@ -115,23 +123,51 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
 - **Zamek z rekrutacją.** Sześć poziomów, zapas przyrasta codziennie, oddział
   tego samego gatunku dokleja się do istniejącego slotu. To domyka pętlę
   „zbierz — kup — wygraj".
+- **Ekran miasta jest malowaną panoramą, nie listą.** Budynki stoją
+  w krajobrazie, każdy klikalny, wielkość i głębia mówią o wadze. Trzy frakcje
+  mają te same sylwetki, a różnią się paletą i porą dnia — miasto rozpoznaje
+  się po kolorze, zanim przeczyta się nazwę. Grafiki generuje
+  `tools/rysuj_miasto.py`.
+- **Rozbudowa zamku działa.** Jedenaście budynków: trzy ratusze (dochód), fort
+  (przyrost we wszystkich siedliskach naraz), sześć siedlisk i budynek
+  specjalny dający rzadki surowiec. Warunki tworzą ścieżkę „ratusz → fort →
+  wyższe siedliska", a **jeden budynek dziennie** (zasada z Heroes 3) sprawia,
+  że liczy się kolejność, a nie tempo klikania.
+- **Rozbudowa naprawdę zmienia grę.** Niepostawione siedlisko nie hoduje
+  nikogo, fort podnosi przyrost o połowę, ratusz i budynek specjalny wpadają
+  do dziennego dochodu na pasku mapy. Wcześniej przyrost szedł z gołej tablicy
+  i drzewko budynków byłoby dekoracją.
+- **Zarysy zamiast pustych miejsc.** Budynek, którego nie ma, stoi na panoramie
+  jako blady kształt, a nad tym, na który już stać, unosi się gwiazdka. Heroes 3
+  nie pokazuje nic — u nas panorama JEST menu budowy, więc dziecko musi widzieć,
+  co może stanąć i gdzie.
 - **Strefy kontroli potworów** — strażnika nie da się ominąć bokiem.
+- **Rozbudowa miasta** w prawej kolumnie ekranu zamku: ratusze dają dochód,
+  fort podnosi przyrost we wszystkich siedliskach, siedliska otwierają kolejne
+  poziomy oddziałów. Sprawdza to `node tools/probe-rozbudowa.mjs`.
+- **Ekonomia policzona z jednej reguły** (`ZLOTO_NA_POKEBALL` w `zasady-h3.ts`):
+  wszystko, co ma cenę, jest złotem z Heroes 3 podzielonym przez 50. Pilnuje
+  tego `npx tsx tools/probe-ekonomia.ts`.
 - **Straż na mapie to zawsze jeden gatunek**, ewentualnie rozbity na kilka
   stosów. Mieszane armie są w Heroes 3 wyłącznie w budynkach.
 
 ## W połowie
 
-**Zamek jest, ale sam handel — bez rozbudowy.**
-
-- **nie ma rozbudowy budynków ani ulepszania oddziałów.** Kamienie ewolucji
-  i odłamki nie mają jeszcze na co iść; wydaje się tylko pokeballe;
+- **nie ma ulepszania oddziałów.** Kamienie ewolucji nie mają jeszcze na co
+  iść: wypadły z kosztów budynków przy porządkowaniu ekonomii, a ulepszeń
+  siedlisk jeszcze nie ma. Na nowej planszy leżą jako stosy po stronie wroga,
+  więc na razie się je tylko zbiera. Do rozstrzygnięcia: albo kamień wraca do
+  kosztów górnej połowy drzewka, albo czeka na ulepszenia oddziałów;
 - **do zamku przeciwnika nie da się wejść** — mówi to wprost, ale zdobycia
-  zamku nie ma;
+  zamku nie ma. Zamek wroga ma już własną rozbudowę w stanie gry (stoi w nim
+  sześć budynków), więc po zdobyciu byłoby co przejmować;
 - **przeciwnik nie gra** — jego zamek stoi, ale nikt nim nie rusza;
 - **potwory nie proponują dołączenia ani nie uciekają** — progi są policzone
   w `zasady-h3.ts`, ale nic ich jeszcze nie używa;
-- **nie ma mgły wojny** ani przewijania — plansza mieści się na ekranie
-  w całości i to ona wyznaczyła rozmiar 14 × 12;
+- **na mapie przygody zamek wygląda tak samo bez względu na rozbudowę.**
+  Panorama się zmienia, ikona na planszy nie;
+- **budynku obronnego nie widać w bitwie** — fort podnosi przyrost, ale murów
+  w walce o miasto nie ma, bo nie ma jeszcze walki o miasto;
 - **domyślnym ekranem jest wciąż bitwa.** Mapa siedzi pod `?ekran=mapa`,
   bo wszystkie narzędzia pomiarowe wchodzą na „/" i czekają na scenę
   `battle`. Przełączenie domyślnego ekranu to zmiana w `src/main.ts`
@@ -258,6 +294,52 @@ sceną — `beginTurn` wywracał się na nieżyjącej teksturze napisu i gracz
 zostawał na mapie bez bitwy i bez sterowania. Jedna bitwa w sondzie tego nie
 złapie; trzeba rozegrać co najmniej dwie.
 
+## Układ mapy — „Key to Victory"
+
+Plansza jest przeniesieniem mapy „Key to Victory" na to, co mamy. Z oryginału
+wzięte są rozmiar (36 × 36), strony (gracz na polu 32,33 na południowym
+wschodzie, przeciwnik na 20,15 na północy) i cała struktura: pasmo gór przez
+całą szerokość mapy z pilnowanymi przejściami. Południe to bezpieczna dolina
+z gospodarką, północ to kraina przeciwnika z nagrodami i silnymi strażami.
+
+Przejścia są dwa, jak w oryginale, gdzie drugą drogę na północ dają podziemia:
+
+| Przejście | Kolumny | Czym się różni |
+|---|---|---|
+| Przełęcz | x 12–14 | droga bita, krótko od głównego szlaku |
+| Nadmorska ścieżka | x 3–5 | piasek (125 punktów ruchu zamiast 70), w przeciwległym rogu mapy niż start — sam dojazd to kilka dni |
+
+**Czego z oryginału NIE ma i to widać.** Tytułowym kluczem są tam Strażnice
+Graniczne i Namioty Klucznika: strażnicy nie da się pokonać, tylko OTWORZYĆ,
+po znalezieniu namiotu gdzie indziej na mapie. Nie mamy ani jednego, ani
+drugiego, więc w przejściach stoją zwykłe potwory. Mapa mówi więc „zbierz
+armię", a nie „poszukaj klucza" — a to inna zagadka i inna gra. Spis rzeczy,
+których brakuje, jest na końcu `tools/generuj_mape.py`.
+
+**Rdzeń grzbietu jest zasklepiany po rozmyciu, i musi być.** Rozmycie granic
+w generatorze potrafi wybić w murze dziurę szeroką na jedno pole. Nie widać
+tego ani na obrazku, ani w kodzie — po prostu pewnego dnia da się wejść na
+północ bokiem, omijając straż, i mapa przestaje być tą mapą. Dlatego wiersze
+19–22 wracają po rozmyciu do stanu ze szkicu, przejścia są wycinane ręcznie,
+a `probe-mapa.ts` liczy, ile przejść naprawdę zostało (ma być dwa) i czy straż
+stoi W przejściu, a nie obok.
+
+**Odległość od startu przestała nadawać się na miarę trudności.** Przy starcie
+pośrodku mapy działała; przy starcie w ROGU przeciwległy kraniec własnej,
+bezpiecznej doliny wychodzi „dalej" niż zamek przeciwnika za grzbietem — i
+dostawał relikty oraz straże przewidziane dla krainy wroga. Teraz o tym, co
+gdzie stoi, decyduje STREFA (dom / pogranicze / wroga), wyznaczona przez
+grzbiet, a odległość wewnątrz doliny liczy się w polach, którymi naprawdę się
+chodzi (przeszukiwanie wszerz), a nie po przekątnej przez góry.
+
+**Drugie przejście przy zamku gracza wywraca cały zamysł.** Pierwsza wersja
+miała ścieżkę nadmorską przy wschodnim brzegu, trzynaście pól od startu.
+Wychodził z tego skrót KRÓTSZY od głównej drogi, przy którym dało się
+pierwszego dnia wjechać w najsilniejszą straż na mapie i przegrać pierwszą
+bitwę w grze, zanim się w ogóle było w swoim zamku. Drugie przejście musi
+leżeć w przeciwległym rogu mapy niż start — inaczej nie jest alternatywą,
+tylko obejściem.
+
 ## Znalezione przy mapie 36 × 36
 
 **`units` w scenie bitwy jest GETTEREM na tablicę symulacji.** Sonda kasowała
@@ -286,6 +368,49 @@ pierwszy dzień naprawdę pokazuje kilkanaście obiektów. Teraz sprawdzamy to,
 o co naprawdę chodzi: żeby było co robić i żeby nie dało się pierwszego dnia
 dojechać do zamku przeciwnika.
 
+## Znalezione przy ekranie miasta
+
+**Miejsce na panoramie to GŁĘBIA, nie wysokość na ekranie.** Pierwsza wersja
+brała `y` z `zamki.ts` wprost jako ułamek wysokości i połowa budynków lądowała
+nad horyzontem — wisiały w niebie nad wzgórzami. Teraz `y` znaczy „jak blisko
+patrzącego": scena przelicza je na punkt w pasie ziemi i na perspektywę (co
+dalej, to mniejsze). Dopiero z tym drugim panorama przestała wyglądać jak
+naklejki na tapecie.
+
+**Głębokości rysowania muszą zmieścić się PONIŻEJ `Z.hud`.** Bryły dostawały
+`Z.sky + y × 100`, czyli do 87 przy `Z.hud` równym 60 — i wysoki budynek
+przykrywał kartę, która właśnie go opisywała. Wygląda to jak usterka karty,
+a jest arytmetyką warstw.
+
+**`ImageDraw` bez trybu `'RGBA'` WPISUJE alfę, zamiast mieszać.** Półprzezroczysta
+kreska cienia wychodzi wtedy jaśniejszą plamą niż tło, a nie ciemniejszą.
+Zjadło to splot na krawędzi gniazda: zamiast wikliny wyszły jasne prostokąty.
+Rysunki z alfą wymagają `ImageDraw.Draw(im, 'RGBA')` — panorama tak ma, bryły nie.
+
+**Dwa jednakowe jajka nad krawędzią gniazda składają się w twarz.** Symetryczna
+para jasnych plam z ciemnym łukiem pod spodem czyta się jak oczy i uśmiech —
+i nie da się tego przewidzieć z kodu, widać dopiero na gotowym obrazku. To ta
+sama rodzina błędów, co ścieżka wyglądająca jak tory kolejowe przy mapie.
+Ratunek: różne wielkości i przesunięcie z osi.
+
+**Blady zarys potrzebuje CIEMNEJ otoczki pod jasnym konturem.** Sam biały
+kontur ginął na jasnej trawie Boru, a sam ciemny — na fiolecie Groty. Dwie
+obwódki naraz działają na obu paletach; to ta sama sztuczka, co kontur napisów
+w HUD-zie.
+
+**Trzy ratusze to jeden budynek, więc na panoramie może stać tylko jeden.**
+Rysowanie stopnia postawionego i zarysu następnego w tym samym punkcie dawało
+dwa domy w sobie. Rozbudowę otwiera się teraz kliknięciem w ten ratusz, który
+stoi — i to jest dokładnie zachowanie z Heroes 3.
+
+**Sonda ogłosiła zepsuty powrót z bitwy, a zepsuty był pomiar — po raz kolejny.**
+`probe-przygoda.mjs` czekała `waitForTimeout(3600)` na ekran końca, który
+odlicza 2600 ms CZASU GRY. Na maszynie bez sprzętowego rysowania gra chodzi
+po kilka klatek na sekundę i te 2,6 s rozciągają się do czterdziestu. Zegar
+sceny biegł, `delta` wyglądała normalnie (16,66 ms), a zdarzenie odmierzało
+67 ms na sekundę zegara ściennego — dopiero to pokazało, o co chodzi. Sonda
+czeka teraz na SCENĘ, nie na sekundy.
+
 ## Rzecz, o której warto pamiętać przy każdej następnej rundzie
 
 Trzy razy w tym projekcie zły POMIAR udawał złą pracę: skalowanie kadrów
@@ -300,3 +425,39 @@ z falowaniem, a potem zbierała siedem próbek na dwusekundowy przelot, bo każd
 odczyt szedł osobną podróżą do przeglądarki. Za każdym razem liczby mówiły
 „animacji nie ma", a animacja była. Dopiero rejestrator wewnątrz strony,
 próbkujący klatka po klatce, pokazał prawdę.
+
+## Ekonomia — co było zepsute i jak to teraz stoi
+
+Zgłoszenie brzmiało: „mam wszystkie kopalnie i nie mam za co kupić armii, nie
+mówiąc o rozbudowie". Było prawdziwe i miało trzy niezależne przyczyny.
+
+1. **Dwie różne skale walut w jednej grze.** Dochód liczyliśmy jak złoto
+   z Heroes 3 dzielone przez sto (kopalnia 1000 → 10 pokeballi), a ceny
+   oddziałów wpisaliśmy na oko, jakby dzielić przez trzydzieści (60 → 2).
+   Dzienny przyrost całego miasta kosztował **95 pokeballi**, a CAŁA mapa dawała
+   **30**. Teraz jest jedna reguła — `ZLOTO_NA_POKEBALL = 50` — i przechodzi
+   przez nią wszystko: oddziały, kopalnie, skrzynie, stosy, ratusze.
+2. **Drzewko budynków istniało tylko jako dane.** `zamki.ts` miało jedenaście
+   budynków, koszty i funkcje `dochodZamku` oraz `przyrostZamku` — i nic ich nie
+   wywoływało. Ratusz nie dawał ani jednego pokeballa, fort nie podnosił
+   przyrostu, a siedlisk nie dało się postawić, bo żaden ekran ich nie pokazywał.
+3. **Kamienia ewolucji nie dało się zdobyć.** Cztery budynki wymagały razem
+   ośmiu, a plansza ma jeden stos (1–3 sztuki) i zero kopalni kamienia. Miasta
+   nie dało się skończyć niezależnie od tego, jak dobrze się grało. Kamień
+   wypadł z kosztów budowy i czeka na ulepszenia oddziałów.
+
+Jak to stoi po zmianie (liczby z `probe-ekonomia`):
+
+| | pokeballe dziennie |
+|---|---|
+| przyrost całego miasta (z fortem) kosztuje | 95 |
+| mapa + startowe miasto daje | 70 |
+| mapa + rozbudowane miasto daje | 140 |
+
+Czyli: na początku dochód pokrywa większość przyrostu, ale nie wszystko — trzeba
+wybierać. Po rozbudowie starcza na armię i jeszcze zostaje. Pełne miasto staje
+w około 27 dni **przy codziennym wykupywaniu przyrostu**, a nie zamiast niego.
+
+Czego świadomie nie ruszyłem: ekran miasta jest listą, nie malowaną panoramą
+z Heroes 3. Panorama jest następnym krokiem — ale lista, w której da się
+budować, jest warta więcej niż obrazek, w którym nie da się nic.

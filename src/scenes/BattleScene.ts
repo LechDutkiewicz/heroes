@@ -69,6 +69,7 @@ import {
   pulse,
 } from '../visual/board';
 import { C, H, Z, body, display } from '../visual/theme';
+import { wersjonujZasoby } from '../visual/zasoby';
 import {
   ICON,
   MINI,
@@ -271,6 +272,33 @@ export class BattleScene extends Phaser.Scene {
 
   private nextId = 1;
 
+  /**
+   * Czyści stan poprzedniej bitwy. MUSI iść jako pierwsza rzecz w `create`.
+   *
+   * Phaser używa tej samej instancji sceny przy każdym `scene.start`, więc
+   * wartości nadane przy deklaracji pól ustawiają się RAZ, przy tworzeniu gry,
+   * a nie przy każdym wejściu do bitwy. Druga bitwa zaczynała się więc
+   * z oddziałami pierwszej — a ich napisy i paski były już zniszczone razem
+   * z poprzednią sceną. Pierwsze odświeżenie takiego oddziału sięgało po
+   * nieistniejącą teksturę i gra stawała: „Cannot read properties of null
+   * (reading 'glTexture')". Bez powrotu na mapę tego nie widać, bo pierwsza
+   * bitwa w sesji zawsze zaczyna od pustych tablic.
+   */
+  private zerujBitwe() {
+    this.battle = {
+      units: [],
+      obstacles: new Set<string>(),
+      roundQueue: [],
+      round: 1,
+      dealt: new Map(),
+    };
+    this.roster.clear();
+    this.nextId = 1;
+    this.busy = false;
+    this.gameOver = false;
+    this.preferredApproach = null;
+  }
+
   private highlightLayer!: Phaser.GameObjects.Container;
   /** Podgląd zasięgu oddziału, na który patrzy kursor — pod warstwą ruchu. */
   private previewLayer!: Phaser.GameObjects.Container;
@@ -319,6 +347,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   preload() {
+    wersjonujZasoby(this);
     for (const key of ALL_SPRITES) {
       this.load.image(key, `${import.meta.env.BASE_URL}sprites/${key}.png`);
     }
@@ -402,6 +431,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create() {
+    this.zerujBitwe();
     sledzScene(this);
     // Wszystko, co ustala KSZTAŁT bitwy (teren, frakcje, rzędy, przeszkody),
     // idzie przez `Phaser.Math.RND` — generator z wysianym ziarnem sesji.

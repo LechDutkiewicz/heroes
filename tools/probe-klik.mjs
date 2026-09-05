@@ -55,9 +55,24 @@ const naEkranie = (x, y) =>
     [x, y]
   );
 
+/**
+ * Odsuwa kursor na środek ramy mapy.
+ *
+ * Konieczne po KAŻDYM kliknięciu. Kursor przy krawędzi przewija mapę tak długo,
+ * jak tam stoi, więc współrzędne policzone chwilę wcześniej przestają pasować
+ * i sonda klika o pole obok — raz przechodziła, raz nie. To nie jest usterka
+ * gry, tylko pułapka mierzenia: pomiar i klik muszą się odbyć przy nieruchomym
+ * widoku.
+ */
+const odsunKursor = async () => {
+  await page.mouse.move(plotno.x + 340, plotno.y + 330);
+  await page.waitForTimeout(120);
+};
+
 const klik = async (x, y) => {
   const p = await naEkranie(x, y);
   await page.mouse.click(plotno.x + p.x, plotno.y + p.y);
+  await odsunKursor();
 };
 
 console.log('\n=== klik prowadzi tam, gdzie się kliknęło ===');
@@ -144,6 +159,7 @@ const wRysunek = async () => {
     };
   });
   await page.mouse.click(plotno.x + p.x, plotno.y + p.y);
+  await odsunKursor();
 };
 await wRysunek();
 await page.waitForTimeout(250);
@@ -170,7 +186,7 @@ sprawdz(
   `${surowiec.przed} → ${poSurowcu.teraz}`
 );
 
-console.log('\n=== klik w wysoki rysunek (zamek) celuje w jego pole ===');
+console.log('\n=== zamek: brama prowadzi bohatera ===');
 const zamek = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   const z = s.stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.nasz);
@@ -184,21 +200,22 @@ const zamek = await page.evaluate(() => {
   return { x: z.x, y: z.y, nazwa: z.nazwa };
 });
 await page.waitForTimeout(300);
-const naWierzcholek = async () => {
-  const p = await page.evaluate(() => {
-    const s = window.__game.scene.getScene('adventure');
-    const kont = s.ikonyObiektow[window.__cel.id];
-    const im = kont.list.find((o) => o.type === 'Image');
-    const b = im.getBounds();
-    // Celowo w GÓRNĄ część rysunku — tam, gdzie zamek wystaje ponad swoje pole.
-    return {
-      x: b.centerX - s.kamera.scrollX + s.mapaX,
-      y: b.top + b.height * 0.25 - s.kamera.scrollY + s.mapaY,
-    };
-  });
-  await page.mouse.click(plotno.x + p.x, plotno.y + p.y);
-};
-await naWierzcholek();
+// W Heroes 3 zamek zajmuje kilka pól: wejściem wchodzi się bohaterem, a klik
+// w resztę bryły otwiera ekran miasta. Oba zachowania są potrzebne naraz —
+// werbunek dokłada stworki do armii BOHATERA, więc bez wejścia nie da się
+// werbować, a bez otwierania z mapy każde dobudowanie kosztuje kilka tur marszu.
+//
+// Celujemy w ŚRODEK pola bramy, a nie w ułamek wysokości rysunku. Poprzednia
+// wersja mierzyła od górnej krawędzi sprite'a i przestała trafiać, gdy zamek
+// urósł — a to nie jest zmiana zachowania, tylko rozmiaru grafiki. Test ma
+// pytać o zasadę, nie o proporcje obrazka.
+const naBrame = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const c = s.naEkran(window.__cel.x, window.__cel.y);
+  return { x: c.x - s.kamera.scrollX + s.mapaX, y: c.y - s.kamera.scrollY + s.mapaY };
+});
+await page.mouse.click(plotno.x + naBrame.x, plotno.y + naBrame.y);
+await odsunKursor();
 await page.waitForTimeout(250);
 const trasaDoZamku = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
@@ -206,9 +223,63 @@ const trasaDoZamku = await page.evaluate(() => {
   return t && t.length ? t[t.length - 1] : null;
 });
 sprawdz(
-  `klik w wieżę zamku (${zamek.nazwa}) celuje w jego pole`,
+  `klik w bramę zamku (${zamek.nazwa}) wyznacza trasę do jego pola`,
   !!trasaDoZamku && trasaDoZamku.x === zamek.x && trasaDoZamku.y === zamek.y,
   trasaDoZamku ? `(${trasaDoZamku.x},${trasaDoZamku.y}) wobec (${zamek.x},${zamek.y})` : 'brak trasy'
+);
+sprawdz(
+  'klik w bramę NIE otwiera miasta',
+  !(await page.evaluate(() => window.__game.scene.isActive('zamek')))
+);
+
+console.log('\n=== zamek: mury ===');
+const wMury = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const z = window.__cel;
+  // Pole nad bramą to mur — należy do bryły zamku i jest nieprzejezdne.
+  const c = s.naEkran(z.x, z.y - 1);
+  return { x: c.x - s.kamera.scrollX + s.mapaX, y: c.y - s.kamera.scrollY + s.mapaY };
+});
+await page.mouse.click(plotno.x + wMury.x, plotno.y + wMury.y);
+await odsunKursor();
+await page.waitForTimeout(600);
+sprawdz(
+  'klik w mury zamku otwiera ekran miasta',
+  await page.evaluate(() => window.__game.scene.isActive('zamek'))
+);
+
+// Werbunek bez bohatera musi być zablokowany: inaczej oddziały kupione zdalnie
+// pojawiałyby się przy bohaterze na drugim końcu mapy. W Heroes 3 idą wtedy do
+// garnizonu, a garnizonu nie mamy.
+sprawdz(
+  'w mieście bez bohatera nie da się werbować',
+  await page.evaluate(() => {
+    const t = window.__game.scene.getScene('zamek');
+    return t.bohaterObecny === false;
+  })
+);
+
+await page.evaluate(() => window.__game.scene.getScene('zamek').scene.start('adventure'));
+await page.waitForFunction(() => window.__game.scene.isActive('adventure'));
+await page.waitForTimeout(500);
+
+// --- przewijanie kursorem przy krawędzi ---
+console.log('\n=== przewijanie kursorem przy krawędzi ===');
+const przewiniecie = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  s.przewin(-500, -500, false);
+  return s.przewX;
+});
+// Kursor przy lewej krawędzi ramy mapy — widok ma pojechać w prawo.
+await page.mouse.move(plotno.x + 12, plotno.y + 300);
+await page.waitForTimeout(700);
+const poPrzewinieciu = await page.evaluate(
+  () => window.__game.scene.getScene('adventure').przewX
+);
+sprawdz(
+  'kursor przy krawędzi przewija mapę bez ruszania bohaterem',
+  poPrzewinieciu > przewiniecie,
+  `${Math.round(przewiniecie)} → ${Math.round(poPrzewinieciu)}`
 );
 
 await page.locator('canvas').screenshot({ path: 'tools/shots/mapa-klik.png' });

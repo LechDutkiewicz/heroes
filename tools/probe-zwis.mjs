@@ -40,11 +40,18 @@ page.on('pageerror', (e) => {
   console.log('  BŁĄD JS —', String(e));
 });
 
+/**
+ * Czekanie na scenę. Limit jest hojny, bo ekran końca bitwy odlicza 2600 ms
+ * CZASU GRY, a nie zegara ściennego — bez sprzętowego rysowania gra chodzi po
+ * kilka klatek na sekundę i te 2,6 s rozciąga się do kilkudziesięciu. Przy
+ * limicie 20 s sonda ogłaszała zepsuty powrót z bitwy tam, gdzie powrót po
+ * prostu jeszcze trwał. Ta sama pułapka złapała już `probe-przygoda`.
+ */
 const scena = (nazwa) =>
   page.waitForFunction(
     (n) => window.__game?.scene.getScene(n)?.sys.settings.status === 5,
     nazwa,
-    { timeout: 20000 }
+    { timeout: 120000 }
   );
 
 async function klikNaPlotnie(page, x, y) {
