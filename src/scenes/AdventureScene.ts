@@ -267,10 +267,13 @@ export class AdventureScene extends Phaser.Scene {
     if (this.textures.exists('t-cien')) return;
     const bok = 256;
     const g = this.add.graphics();
-    const krokow = 48;
+    const krokow = 72;
     for (let i = krokow; i > 0; i--) {
       const t = i / krokow;
-      g.fillStyle(0x000000, 0.055 * (1 - t) * (1 - t));
+      // Trzecia potęga zamiast kwadratu: ogon schodzi do zera znacznie
+      // łagodniej, więc plama nie ma żadnej krawędzi, którą dałoby się
+      // wskazać palcem — a to po niej poznaje się namalowany cień.
+      g.fillStyle(0x000000, 0.03 * (1 - t) * (1 - t) * (1 - t));
       g.fillEllipse(bok / 2, bok / 4, bok * t, (bok / 2) * t);
     }
     g.generateTexture('t-cien', bok, bok / 2);
@@ -763,14 +766,28 @@ export class AdventureScene extends Phaser.Scene {
       // a cień kontaktowy nie ma żadnej. Mnożenie zamiast przykrywania, bo
       // czarna plama o krycia 0,3 rozjaśnia się do szarości i leży na trawie
       // jak folia, zamiast przyciemniać to, co pod nią.
+      //
+      // Poprzednia wersja była za mała i siedziała dokładnie pod podstawą,
+      // więc bryła zasłaniała ją niemal w całości — porównanie z włączonym
+      // i wyłączonym cieniem nie pokazywało ŻADNEJ różnicy. Cień, którego nie
+      // widać, nie osadza niczego. Teraz jest szerszy od budowli, wychodzi
+      // spod niej w lewo i w dół (słońce stoi w prawym górnym rogu) i widać
+      // go na tyle, żeby robił swoją robotę.
       const cien = this.add
-        .image(0, bryla ? -KAFEL * 0.52 : KAFEL * 0.4, 't-cien')
+        .image(
+          -KAFEL * (bryla ? 0.3 : 0.12),
+          bryla ? -KAFEL * 0.42 : KAFEL * 0.4,
+          't-cien'
+        )
+        // Szeroka i WYSOKA plama, nie pasek. Spłaszczona do jednej trzeciej
+        // wysokości czytała się jak ciemna kreska doklejona pod bryłą; cień
+        // widziany pod tym kątem jest owalny i sięga dalej, niż się wydaje.
         .setDisplaySize(
-          KAFEL * (bryla ? bryla[0] * 0.78 : 0.62),
-          KAFEL * (bryla ? 0.34 : 0.2)
+          KAFEL * (bryla ? bryla[0] * 1.15 : 0.9),
+          KAFEL * (bryla ? 1.0 : 0.42)
         )
         .setBlendMode(Phaser.BlendModes.MULTIPLY)
-        .setAlpha(0.8);
+        .setAlpha(0.7);
       kont.add(cien);
       // Budowle z bryłą stoją ZA polem wejścia, a nie na nim: podstawa siada na
       // górnej krawędzi tego pola, więc brama zostaje odsłonięta i widać, że
