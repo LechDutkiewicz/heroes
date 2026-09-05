@@ -574,7 +574,17 @@ export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
   }
 
   if (o.rodzaj === 'zamek') {
-    if (!o.nasz) return { opis: `${o.nazwa}\nZamek przeciwnika — jeszcze nie do zdobycia` };
+    // Zamku broni garnizon. Dopóki stoi, wejście zaczyna bitwę — dokładnie tak
+    // jak w Heroes 3 i tak jak przy każdym innym strażniku na mapie.
+    //
+    // Wcześniej stało tu „jeszcze nie do zdobycia": gra nie miała żadnego
+    // zakończenia. Dziecko dochodziło przez pół planszy do celu i dostawało
+    // komunikat, że celu nie ma.
+    if (!o.nasz) {
+      if (o.oddzialy?.length) return { opis: `${o.nazwa}\nBroni się!`, bitwaZ: o };
+      o.nasz = true;
+      return { opis: `${o.nazwa} jest twoja!`, zamek: o, zajete: o };
+    }
     return { opis: o.nazwa, zamek: o };
   }
 

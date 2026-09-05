@@ -1529,6 +1529,53 @@ export class AdventureScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Koniec gry: wszystkie zamki na mapie są nasze.
+   *
+   * Warunek jest ten sam co w Heroes 3 — zwycięża ten, kto ma wszystkie miasta.
+   * Sprawdzamy go po zdobyciu zamku, a nie co turę, bo tylko wtedy może się
+   * zmienić.
+   */
+  private sprawdzKoniec() {
+    const cudze = this.stan.obiekty.filter((o) => o.rodzaj === 'zamek' && !o.nasz);
+    if (cudze.length > 0) return;
+    this.zajety = true;
+
+    const cx = this.mapaX + this.oknoW / 2;
+    const cy = this.mapaY + this.oknoH / 2;
+    const zaslona = this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.6)
+      .setOrigin(0, 0)
+      .setDepth(Z.overlay);
+    const tlo = this.add.graphics().setDepth(Z.overlay + 1);
+    plate(tlo, cx - 250, cy - 110, 500, 220, 14, C.panel, C.gold, {
+      light: 0.24,
+      dark: 0.22,
+      gloss: 0.2,
+      edgeW: 3,
+    });
+    const napisy = [
+      this.add
+        .text(cx, cy - 62, 'Zwycięstwo!', display(30, H.gold))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 2),
+      this.add
+        .text(
+          cx,
+          cy - 6,
+          `Wszystkie miasta należą do ciebie.\nJanek zdobył je w ${data(this.stan.dzien).tydzien} tygodni.`,
+          { ...body(14, H.ink), align: 'center' }
+        )
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 2),
+      this.add
+        .text(cx, cy + 62, 'Odśwież stronę, żeby zagrać jeszcze raz.', body(12, H.inkSoft))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 2),
+    ];
+    this.naWierzchu(zaslona, tlo, ...napisy);
+  }
+
   /** Po powrocie z bitwy: zwycięstwo usuwa strażnika, porażka cofa do zamku. */
   private rozliczBitwe() {
     const wynik = this.registry.get(KLUCZ_WYNIKU) as
@@ -1541,9 +1588,25 @@ export class AdventureScene extends Phaser.Scene {
     if (wynik.armia) this.stan.bohater.armia = wynik.armia.filter((a) => a.ile > 0);
 
     if (wynik.wygrana) {
-      if (o) o.zebrany = true;
+      // Zamek się nie „zbiera" — zmienia właściciela. Oznaczenie go jako
+      // zebranego skasowałoby go z mapy razem z całym miastem, które właśnie
+      // się zdobyło.
+      if (o?.rodzaj === 'zamek') {
+        o.nasz = true;
+        o.oddzialy = [];
+      } else if (o) {
+        o.zebrany = true;
+      }
       this.stan.bohater.doswiadczenie += 80;
-      this.time.delayedCall(900, () => this.napisUlotny('Zwycięstwo!\n+80 doświadczenia'));
+      this.time.delayedCall(900, () =>
+        this.napisUlotny(
+          o?.rodzaj === 'zamek' ? `${o.nazwa} jest twoja!\n+80 doświadczenia` : 'Zwycięstwo!\n+80 doświadczenia'
+        )
+      );
+      // Zdobycie ostatniego cudzego zamku KOŃCZY grę. Bez tego wyprawa nie ma
+      // mety: dziecko przechodzi pół planszy, wygrywa najtrudniejszą bitwę
+      // w grze i nic się nie dzieje.
+      if (o?.rodzaj === 'zamek') this.time.delayedCall(1800, () => this.sprawdzKoniec());
     } else {
       // Przegrana nie kończy gry: bohater wraca do zamku i traci resztę dnia.
       // Dla ośmiolatka „przegrałeś, zacznij od nowa" to koniec zabawy.

@@ -2,6 +2,7 @@ import { PUNKTY, ROZSTAWIENIE, TEREN } from './plansza-teren';
 import { PRODUKCJA, STOS, SZANSA_ARTEFAKTU, ruchNaDzien } from './zasady-h3';
 import {
   ARTEFAKTY,
+  PRZYROST_ODDZIALU,
   odslon,
   type Obiekt,
   type Oddzial,
@@ -103,6 +104,29 @@ function oddzialyStrazy(sila: string, losuj: () => number): Oddzial[] {
   }));
 }
 
+/**
+ * Załoga broniąca zamku — po jednym stosie z każdego stojącego w nim gniazda.
+ *
+ * Liczebność to tygodniowy przyrost tego poziomu, czyli tyle, ile zamek
+ * naprawdę zdążyłby wystawić. Dzięki temu skład garnizonu wynika ze stanu
+ * miasta, a nie z osobnej tabelki, która rozjechałaby się przy pierwszej
+ * zmianie bilansu.
+ */
+function garnizonZamku(frakcja: string, poziomy: number[]): Oddzial[] {
+  const f = factionById(frakcja) ?? FACTIONS[0];
+  return poziomy.map((tier) => {
+    const u = f.units[tier];
+    return {
+      sprite: u.sprite,
+      nazwa: u.name,
+      // Siedem dni: pełny tydzień przyrostu z tego gniazda.
+      ile: PRZYROST_ODDZIALU[tier] * 7,
+      frakcja: f.id,
+      tier,
+    };
+  });
+}
+
 /** Losowa wielkość stosu w widełkach z Heroes 3. */
 function wielkoscStosu(co: Surowiec, losuj: () => number) {
   const [min, max] = STOS[co];
@@ -194,6 +218,15 @@ export function planszaPrzygody(): StanMapy {
     // ma być nagrodą, a nie pustym placem.
     postawione: ['ratusz1', 'ratusz2', 'fort', 'siedlisko1', 'siedlisko2', 'siedlisko3'],
     dostepne: [6, 4, 3, 0, 0, 0],
+    // Garnizon. Bez niego zamek nie miał jak się bronić i gra nie miała
+    // zakończenia — dziecko dochodziło przez pół planszy do celu i dostawało
+    // komunikat, że celu nie ma.
+    //
+    // Skład bierzemy z gniazd, które w tym zamku stoją, i po jednym pełnym
+    // przyroście tygodniowym z każdego. To jest najsilniejsza bitwa w grze
+    // i tak ma być: zdobycie miasta ma być końcem wyprawy, a nie kolejnym
+    // posterunkiem po drodze.
+    oddzialy: garnizonZamku('grota', [0, 1, 2]),
   });
 
   // Armia startowa: cztery najniższe oddziały Boru. Punkty ruchu liczymy
