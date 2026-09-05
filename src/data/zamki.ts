@@ -103,15 +103,15 @@ const SZKIELET: Szkielet[] = [
     y: 0.45,
     skala: 1.3,
   },
-  { id: 'fort', rodzaj: 'fort', wymaga: ['ratusz1'], x: 0.17, y: 0.16, skala: 1.15 },
-  { id: 'siedlisko1', rodzaj: 'siedlisko', poziom: 0, wymaga: [], x: 0.11, y: 0.78, skala: 0.62 },
+  { id: 'fort', rodzaj: 'fort', wymaga: ['ratusz1'], x: 0.22, y: 0.14, skala: 1.15 },
+  { id: 'siedlisko1', rodzaj: 'siedlisko', poziom: 0, wymaga: [], x: 0.09, y: 0.6, skala: 0.62 },
   {
     id: 'siedlisko2',
     rodzaj: 'siedlisko',
     poziom: 1,
     wymaga: ['siedlisko1'],
-    x: 0.32,
-    y: 0.96,
+    x: 0.3,
+    y: 0.82,
     skala: 0.66,
   },
   {
@@ -119,8 +119,8 @@ const SZKIELET: Szkielet[] = [
     rodzaj: 'siedlisko',
     poziom: 2,
     wymaga: ['siedlisko1'],
-    x: 0.74,
-    y: 0.86,
+    x: 0.66,
+    y: 0.8,
     skala: 0.7,
   },
   {
@@ -128,8 +128,8 @@ const SZKIELET: Szkielet[] = [
     rodzaj: 'siedlisko',
     poziom: 3,
     wymaga: ['fort', 'siedlisko2'],
-    x: 0.86,
-    y: 0.62,
+    x: 0.89,
+    y: 0.52,
     skala: 0.76,
   },
   {
@@ -137,8 +137,8 @@ const SZKIELET: Szkielet[] = [
     rodzaj: 'siedlisko',
     poziom: 4,
     wymaga: ['fort', 'siedlisko3'],
-    x: 0.78,
-    y: 0.3,
+    x: 0.83,
+    y: 0.2,
     skala: 0.85,
   },
   {
@@ -146,13 +146,13 @@ const SZKIELET: Szkielet[] = [
     rodzaj: 'siedlisko',
     poziom: 5,
     wymaga: ['ratusz2', 'siedlisko5'],
-    x: 0.33,
-    y: 0.06,
+    x: 0.36,
+    y: 0.04,
     skala: 1.0,
   },
   // Skrajne `x` trzymamy poniżej 0.9: przy 0.95 bryła wychodziła poza prawą
   // krawędź okna i była ucięta ramą — krytyk wytknął to dwa razy z rzędu.
-  { id: 'specjalny', rodzaj: 'specjalny', wymaga: ['ratusz2'], x: 0.9, y: 1.0, skala: 0.55 },
+  { id: 'specjalny', rodzaj: 'specjalny', wymaga: ['ratusz2'], x: 0.62, y: 1.0, skala: 0.55 },
 ];
 
 /**

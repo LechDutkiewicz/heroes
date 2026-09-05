@@ -205,6 +205,7 @@ export class AdventureScene extends Phaser.Scene {
 
     this.stan = this.wczytajStan();
     buildIcons(this);
+    this.zbudujCien();
     this.przygotujAnimacje();
 
     // Wynik bitwy rozliczamy PRZED zbudowaniem świata. Wcześniej szło to po
@@ -240,6 +241,28 @@ export class AdventureScene extends Phaser.Scene {
     // Strzałki przesuwają widok. Na planszy 36 × 36 samo podążanie za bohaterem
     // nie wystarczy — trzeba móc się rozejrzeć, zanim się ruszy.
     this.input.keyboard?.on('keydown', (e: KeyboardEvent) => this.klawisz(e));
+  }
+
+  /**
+   * Miękka plama cienia jako tekstura, rysowana raz na scenę.
+   *
+   * Elipsa z `fillEllipse` ma OSTRĄ krawędź, a cień kontaktowy nie ma żadnej —
+   * gaśnie stopniowo. Ostry brzeg czyta się jak kałuża albo dziura w trawie,
+   * a nie jak cień. Kilkadziesiąt elips o rosnącym promieniu i malejącym
+   * kryciu daje zejście do zera, którego nie widać.
+   */
+  private zbudujCien() {
+    if (this.textures.exists('t-cien')) return;
+    const bok = 256;
+    const g = this.add.graphics();
+    const krokow = 48;
+    for (let i = krokow; i > 0; i--) {
+      const t = i / krokow;
+      g.fillStyle(0x000000, 0.055 * (1 - t) * (1 - t));
+      g.fillEllipse(bok / 2, bok / 4, bok * t, (bok / 2) * t);
+    }
+    g.generateTexture('t-cien', bok, bok / 2);
+    g.destroy();
   }
 
   private przygotujAnimacje() {
@@ -649,17 +672,22 @@ export class AdventureScene extends Phaser.Scene {
       const { klucz, wys } = this.grafikaObiektu(o);
       const bryla = BRYLA[o.rodzaj];
 
-      // Cień kontaktowy siada tam, gdzie stoi podstawa — przy bryle jest to
-      // rząd nad polem wejścia, a nie samo wejście. Zostawiony na wejściu
-      // wyglądałby jak plama na wolnej ziemi przed budowlą.
-      const cien = this.add.graphics();
-      cien.fillStyle(C.shadow, 0.28);
-      cien.fillEllipse(
-        0,
-        bryla ? -KAFEL * 0.6 : KAFEL * 0.36,
-        KAFEL * (bryla ? bryla[0] * 0.66 : 0.54),
-        KAFEL * (bryla ? 0.3 : 0.17)
-      );
+      // Cień kontaktowy. Przy bryle siada na jej podstawie — czyli w rzędzie
+      // NAD polem wejścia, nie na samym wejściu; położony niżej odklejał się
+      // od budowli i cała rzecz zaczynała lewitować.
+      //
+      // Miękka tekstura, nie elipsa z `fillEllipse`: elipsa ma ostrą krawędź,
+      // a cień kontaktowy nie ma żadnej. Mnożenie zamiast przykrywania, bo
+      // czarna plama o krycia 0,3 rozjaśnia się do szarości i leży na trawie
+      // jak folia, zamiast przyciemniać to, co pod nią.
+      const cien = this.add
+        .image(0, bryla ? -KAFEL * 0.52 : KAFEL * 0.4, 't-cien')
+        .setDisplaySize(
+          KAFEL * (bryla ? bryla[0] * 0.78 : 0.62),
+          KAFEL * (bryla ? 0.34 : 0.2)
+        )
+        .setBlendMode(Phaser.BlendModes.MULTIPLY)
+        .setAlpha(0.8);
       kont.add(cien);
       // Budowle z bryłą stoją ZA polem wejścia, a nie na nim: podstawa siada na
       // górnej krawędzi tego pola, więc brama zostaje odsłonięta i widać, że
@@ -705,45 +733,10 @@ export class AdventureScene extends Phaser.Scene {
         kont.setData('flaga', f);
       }
 
-      // Strzałki wejścia — tak samo jak w Heroes 3, gdzie każde miasto
-      // i każda kopalnia ma je przy bramie. Bez nich bryła zajmuje kilka pól
-      // i nie widać, w które trzeba wejść bohaterem: całą resztę zasłania
-      // budynek i każde kliknięcie w niego otwiera tylko podgląd.
-      if (BRYLA[o.rodzaj]) kont.add(this.strzalkiWejscia());
-
       kont.setData('obiekt', o);
       this.ikonyObiektow[o.id] = kont;
       this.swiat.add(kont);
     }
-  }
-
-  /**
-   * Dwie żółte strzałki wskazujące bramę — dokładnie ten sam znak, którym
-   * Heroes 3 oznacza wejście do miasta i do kopalni.
-   *
-   * Rysowane na dole pola wejścia, czyli tam, gdzie trzeba kliknąć, żeby
-   * wprowadzić bohatera. Ciemny obrys jest konieczny: sam żółty ginie na
-   * placu z ubitej ziemi, a to jedyna wskazówka, jaką ma gracz.
-   */
-  private strzalkiWejscia() {
-    const g = this.add.graphics();
-    const y = KAFEL * 0.3;
-    for (const kier of [-1, 1]) {
-      const x = kier * KAFEL * 0.3;
-      const w = KAFEL * 0.14;
-      // Grot skierowany do ŚRODKA bramy: obie strzałki pokazują to samo pole,
-      // więc oko biegnie do miejsca kliknięcia, a nie od niego.
-      const punkty: Array<[number, number]> = [
-        [x + kier * w, y - w],
-        [x - kier * w, y],
-        [x + kier * w, y + w],
-      ];
-      g.lineStyle(3, C.shadow, 0.8);
-      g.strokeTriangle(...(punkty.flat() as [number, number, number, number, number, number]));
-      g.fillStyle(C.gold, 1);
-      g.fillTriangle(...(punkty.flat() as [number, number, number, number, number, number]));
-    }
-    return g;
   }
 
   private chorag(barwa: number) {

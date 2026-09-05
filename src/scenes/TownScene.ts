@@ -160,8 +160,10 @@ export class TownScene extends Phaser.Scene {
     this.zamek.postawione ??= [];
     buildIcons(this);
 
+    this.zbudujCien();
     this.rysujPanorame();
     this.rysujBudynki();
+    this.rysujPierwszyPlan();
     this.rysujPasekGorny();
     this.rysujPasekDolny();
     this.rysujKarte();
@@ -258,14 +260,44 @@ export class TownScene extends Phaser.Scene {
       // tracą trochę nasycenia i ciepła, bliskie zostają nietknięte.
       im.setTint(mix(0xffffff, MGLA_DALI, 0.34 * (1 - b.y)));
 
-      this.cienKontaktowy(im, gleboko - 1);
       this.zaroslaPrzyPodstawie(im, gleboko + 1);
+      // Cień idzie PONAD pasem trawy, nie pod bryłą. Położony niżej był przez
+      // ten pas częściowo zamalowywany i zostawała po nim twarda pozioma
+      // krawędź — widoczna kreska w poprzek łąki. Na wierzchu kładzie się
+      // równo na trawie i na dolnej krawędzi ściany, co zresztą jest prawdą:
+      // przy samej ziemi mur też jest ciemniejszy.
+      this.cienKontaktowy(im, gleboko + 2);
 
       this.kafle.push({ budynek: b, obraz: im, postawiony: stoi });
       this.podepnijKliki(im, b);
       this.przywrocWyglad(b);
     }
     this.rysujZachety();
+  }
+
+  /**
+   * Pierwszy plan panoramy narysowany PONAD budynkami.
+   *
+   * Na dole obrazu leżą wielkie głazy, kwiaty i kępy trawy, które kadrują
+   * scenę. Dopóki wszystko było jedną warstwą tła, budynek postawiony w tym
+   * pasie wchodził na głaz i było widać, że jest naklejony. Teraz ten sam pas
+   * panoramy idzie jeszcze raz, na samą górę: głaz zasłania budowlę dokładnie
+   * tak, jak zasłoniłby ją w prawdziwym krajobrazie.
+   *
+   * To jest zwykła sztuczka dwuipółwymiarowa — tło, warstwa gry, przedplan —
+   * i to ona daje głębię, której nie da żaden cień.
+   *
+   * Pas zaczyna się nieco poniżej najgłębszego miejsca, gdzie stoi budynek,
+   * więc nic, co klikalne, nie chowa się za nim całkowicie.
+   */
+  private rysujPierwszyPlan() {
+    const gora = this.naZiemi({ y: 1 } as Budynek) + 26;
+    const im = this.add
+      .image(0, GORA, `t-tlo-${this.profil.frakcja}`)
+      .setOrigin(0, 0)
+      // Ponad wszystkimi bryłami, ale pod paskami i kartą.
+      .setDepth(Z.hud - 1);
+    im.setCrop(0, gora - GORA, OKNO_W, GORA + PAN_H - gora);
   }
 
   /**
@@ -282,12 +314,40 @@ export class TownScene extends Phaser.Scene {
    */
   private cienKontaktowy(im: Phaser.GameObjects.Image, gleboko: number) {
     const szer = im.displayWidth * SZEROKOSC_BRYLY;
-    const g = this.add.graphics().setDepth(gleboko);
-    g.fillStyle(C.shadow, 0.2);
-    g.fillEllipse(im.x, im.y - szer * 0.02, szer * 1.06, szer * 0.26);
-    g.fillStyle(C.shadow, 0.34);
-    g.fillEllipse(im.x, im.y - szer * 0.03, szer * 0.76, szer * 0.15);
-    return g;
+    const cien = this.add
+      .image(im.x, im.y - szer * 0.03, 't-cien')
+      .setDisplaySize(szer * 1.15, szer * 0.34)
+      .setDepth(gleboko)
+      // Mnożenie, nie przykrywanie. Czarna plama z krycia 0,3 rozjaśnia się
+      // do szarości i leży NA trawie jak folia; mnożenie przyciemnia to, co
+      // pod spodem, zachowując jej fakturę i barwę — czyli robi to, co cień.
+      .setBlendMode(Phaser.BlendModes.MULTIPLY)
+      .setAlpha(0.85);
+    return cien;
+  }
+
+  /**
+   * Miękka plama cienia jako tekstura, rysowana raz na scenę.
+   *
+   * Pierwsza wersja rysowała elipsy przez `fillEllipse` i wyglądały brzydko
+   * z jednego powodu: elipsa ma OSTRĄ krawędź, a cień kontaktowy nie ma
+   * żadnej — gaśnie stopniowo. Ostry brzeg czyta się jak kałuża albo dziura
+   * w trawie. Kilkadziesiąt elips o rosnącym promieniu i malejącym kryciu daje
+   * zejście do zera, którego nie widać.
+   */
+  private zbudujCien() {
+    if (this.textures.exists('t-cien')) return;
+    const bok = 256;
+    const g = this.add.graphics();
+    const krokow = 48;
+    for (let i = krokow; i > 0; i--) {
+      const t = i / krokow;
+      // Kwadrat krycia: środek zostaje wyraźny, a ogon długi i ledwie widoczny.
+      g.fillStyle(0x000000, 0.055 * (1 - t) * (1 - t));
+      g.fillEllipse(bok / 2, bok / 4, bok * t, (bok / 2) * t);
+    }
+    g.generateTexture('t-cien', bok, bok / 2);
+    g.destroy();
   }
 
   /**
