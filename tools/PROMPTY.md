@@ -253,10 +253,46 @@ proceduralnie, z mgłą wojny i kosztem ruchu na każdym polu. Dlatego nie da si
 wygenerować jednego obrazu mapy — potrzebne są tekstury i osobne obiekty,
 a resztę składa kod, który już działa.
 
+## Referencje: mapa ma WŁASNĄ kotwicę
+
+**Do promptów z tej części NIE dołączaj `miasto-kotwica.png`.** Kotwica miasta
+niesie kamerę widoku miasta — patrzymy tam prawie z boku, lekko z góry. Mapa
+patrzy stromo w dół. Model wziąłby z załącznika perspektywę i dostalibyśmy
+drzewa widziane jak domy, a wtedy nic nie stanie na kafelkach prosto.
+
+Zamiast tego:
+
+| Co generujesz | Co dołączasz jako referencję |
+|---|---|
+| `mapa-kotwica.png` (pierwsza) | `referencja-stworki.png` |
+| sześć tekstur terenu | `referencja-stworki.png` + wcześniej zatwierdzona `teren-trawa.png` |
+| obiekty mapy i surowce | `referencja-stworki.png` + `mapa-kotwica.png` |
+
+Trawę generuj jako pierwszą z tekstur i potem podawaj ją do pozostałych pięciu —
+tak samo jak ratusz1 ciągnie za sobą ratusz2 i ratusz3. Sześć tekstur robionych
+niezależnie od siebie ma sześć różnych zieleni i sześć różnych ziaren, a stykają
+się ze sobą na każdym kafelku.
+
+## Kotwica mapy (wygeneruj jako pierwszą w tej części)
+
+Ten obraz też nie wchodzi do gry. Ustala kamerę, paletę i gęstość dla wszystkiego,
+co na mapie. Zapisz jako `mapa-kotwica.png`.
+
+```
+A wide view of a fantasy adventure map seen steeply from above, at about 45 degrees, like a tabletop diorama: a green meadow crossed by a winding trodden dirt path, clumps of broadleaf trees and conifers, mossy grey boulders, a shallow turquoise stream with a small wooden bridge, a patch of pale sand near the water, a rocky outcrop, and a small timber mine entrance with a lantern beside it. Everything sits on open ground with room between the objects. Warm afternoon light, gentle soft shadows on the ground under every object. No creatures, no people, no buildings other than the mine, no grid lines, no user interface.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes, rich material detail: grass blades, wet stone, bark, sand grain. No pixel art, no hard aliased edges, no black outlines, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image.
+
+Horizontal 16:10 image, at least 2400x1500. No text, no logo, no watermark, no user interface.
+```
+
 ## Sześć tekstur terenu
 
 
 ### `teren-trawa.png` — trawa
+
+**Tę generuj jako pierwszą z sześciu** i potem dołączaj ją do pozostałych pięciu
+jako referencję palety i ziarna.
 
 ```
 Lush green meadow grass seen from directly above: many small painted grass blades and tufts, subtle patches of lighter and darker green, a few tiny wildflowers and clover leaves, no bare soil.
