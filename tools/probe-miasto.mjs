@@ -114,8 +114,8 @@ sprawdz(
 const gniazdo = await gdzieBudynek('siedlisko1');
 const fort = await gdzieBudynek('fort');
 sprawdz(
-  'postawione siedlisko ma grafikę frakcji, a nieposta­wiony fort — zarys',
-  gniazdo?.tekstura?.startsWith('t-bor-') === true && fort?.tekstura === 't-plan-fort',
+  'postawione siedlisko ma własną grafikę, a niepostawiony fort — plac budowy',
+  gniazdo?.tekstura?.startsWith('t-bor-') === true && fort?.tekstura === 't-plac',
   `${gniazdo?.tekstura} / ${fort?.tekstura}`
 );
 sprawdz(

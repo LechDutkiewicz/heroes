@@ -13,21 +13,24 @@ swoje wyjście), a po każdym kroku **gra się uruchamia i da się w nią grać*
 35 plików, wszystkie z prawdziwą przezroczystością (alfa), sprite'y 1254 × 1254,
 tła i kotwice 1586 × 992.
 
-Plik wgrany jako `teren-piasek.png` był w rzeczywistości ŚCIEŻKĄ — ubita ziemia
+Komplet jest pełny — piasek dogenerowany osobno.
+
+Plik wgrany pierwotnie jako `teren-piasek.png` był w rzeczywistości ŚCIEŻKĄ — ubita ziemia
 z koleinami, żwirem i kępkami trawy. Przemianowany na `teren-sciezka.png`.
 Piasek (blady, drobny, z zafalowaniem od wiatru, bez trawy i bez kolein) trzeba
 wygenerować osobno; te dwa tereny łatwo pomylić w opisie, a w grze robią co
 innego: ścieżka jest tańsza od trawy, piasek droższy.
 
-Brakuje więc: `teren-piasek.png` oraz wariantów `teren-trawa-2/-3.png` (prośba
-o nie powstała po wygenerowaniu reszty).
+Brakuje jeszcze wariantów `teren-trawa-2/-3.png` (prośba o nie powstała po
+wygenerowaniu reszty) — potrzebne dopiero w kroku 5, żeby trawa nie powtarzała
+się widocznym wzorem.
 
 ## Kroki
 
-- [ ] **1. Wczytanie wsadu.** `tools/wsad_wczytaj.py`: przycięcie do sylwetki,
+- [x] **1. Wczytanie wsadu.** `tools/wsad_wczytaj.py`: przycięcie do sylwetki,
       zmniejszenie do rozmiarów docelowych, wypalenie cienia rzuconego,
       zapis do `public/miasto/` i `public/mapa/`. Bez dotykania kodu gry.
-- [ ] **2. Miasto na nowej grafice.** Podmiana panoramy i brył w `TownScene`:
+- [x] **2. Miasto na nowej grafice.** Podmiana panoramy i brył w `TownScene`:
       nowy horyzont i perspektywa pod kadr z kotwicy, koniec z marginesem
       na cień (nowe sprite'y go nie mają), sonda `probe-miasto` na zielono.
 - [ ] **3. Zrzut i ocena.** `zrzut-miasto.mjs`, ślepe porównanie, wpis na

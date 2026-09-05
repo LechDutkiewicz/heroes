@@ -56,9 +56,15 @@ const PAN_H = 596;
  * Powyżej jest niebo i dalekie wzgórza, więc nic tam nie może stać: budynek
  * z podstawą nad horyzontem wygląda, jakby wisiał w powietrzu.
  */
-const HORYZONT = 0.26;
-/** Bryły rysujemy w 240 px; na ekranie skala z `zamki.ts` razy ten mnożnik. */
-const BRYLA = 1.0;
+const HORYZONT = 0.3;
+/**
+ * Ile z rozmiaru pliku zostaje na ekranie. Bryły z modelu mają 380–680 px
+ * wysokości i RÓŻNIĄ SIĘ NIĄ CELOWO — ratusz trzeciego stopnia jest większy
+ * od gniazda nie dlatego, że tak każe liczba w `zamki.ts`, tylko dlatego,
+ * że tak został narysowany. Dlatego `skala` z danych nie mnoży się już przez
+ * nic: wielkość niesie sama grafika, a scena dokłada tylko perspektywę.
+ */
+const BRYLA = 0.5;
 
 /**
  * Skąd świeci słońce. Ta sama strona, co na panoramie i w `rysuj_miasto.py`
@@ -67,14 +73,13 @@ const BRYLA = 1.0;
  * bardziej, niż gdyby cienia w ogóle nie było.
  */
 /**
- * Cień rzucony jest WYPALONY w grafice (patrz `zCieniem` w rysuj_miasto.py),
+ * Cień rzucony jest WYPALONY w grafice (`zCieniem` w `tools/wsad_wczytaj.py`),
  * bo scena umie tylko obrócić kopię sprite'a wokół podstawy, a to daje drugą
  * bryłę leżącą na zawiasie. Plik jest przez to szerszy od bryły o margines
- * z lewej, więc środek budynku nie leży w środku obrazka.
+ * z lewej — 42% jej szerokości — więc środek budynku nie leży w środku obrazka.
  */
-const MARGINES_CIENIA = 120;
-const SZEROKOSC_BRYLY = 240;
-const SRODEK_BRYLY = (MARGINES_CIENIA + SZEROKOSC_BRYLY / 2) / (MARGINES_CIENIA + SZEROKOSC_BRYLY);
+const MARGINES_CIENIA = 0.42;
+const SRODEK_BRYLY = (MARGINES_CIENIA + 0.5) / (1 + MARGINES_CIENIA);
 
 interface Kafel {
   budynek: Budynek;
@@ -110,9 +115,16 @@ export class TownScene extends Phaser.Scene {
     for (const f of ['bor', 'grota', 'zbocze']) {
       this.load.image(`t-tlo-${f}`, `${b}miasto/tlo-${f}.png`);
       this.load.image(`t-znak-${f}`, `${b}miasto/znak-${f}.png`);
-      for (const id of BUDYNKI_ID) this.load.image(`t-${f}-${id}`, `${b}miasto/${f}-${id}.png`);
     }
-    for (const id of BUDYNKI_ID) this.load.image(`t-plan-${id}`, `${b}miasto/plan-${id}.png`);
+    // Bryły na razie tylko w komplecie Boru. Grota i Zbocze powstaną
+    // przemalowaniem tego kompletu (krok 4 w PRZEBIEG.md); do tego czasu
+    // wszystkie trzy miasta rysują te same budynki, różniąc się panoramą.
+    for (const id of BUDYNKI_ID) this.load.image(`t-bor-${id}`, `${b}miasto/bor-${id}.png`);
+    // Jeden plac budowy na wszystkie budynki. Wcześniej każdy miał własny
+    // zarys — widmo TEJ bryły — ale to była konieczność techniki rysowanej.
+    // Malowany plac z rusztowaniem mówi „tu coś stanie" sam z siebie,
+    // a CO stanie, mówi karta po kliknięciu.
+    this.load.image('t-plac', `${b}miasto/bor-plac.png`);
   }
 
   create() {
@@ -195,7 +207,7 @@ export class TownScene extends Phaser.Scene {
 
     for (const b of [...widoczne].sort((a, c) => a.y - c.y)) {
       const stoi = postawione.includes(b.id);
-      const klucz = stoi ? `t-${this.profil.frakcja}-${b.id}` : `t-plan-${b.id}`;
+      const klucz = stoi ? `t-bor-${b.id}` : 't-plac';
       const skala = this.skalaBudynku(b);
       const gleboko = Z.sky + 1 + Math.round(b.y * 40);
 
@@ -214,10 +226,15 @@ export class TownScene extends Phaser.Scene {
     this.rysujZachety();
   }
 
-  /** Podstawa bryły: głębia 0 to linia horyzontu, 1 to dolna krawędź panoramy. */
+  /**
+   * Podstawa bryły. Głębia 0 to linia drzew na horyzoncie, 1 to przód polany —
+   * ale NIE dolna krawędź obrazu: na dole panoramy leżą krzaki i głazy, które
+   * kadrują scenę, i budynek postawiony na nich wyglądałby, jakby stał przed
+   * nimi w powietrzu.
+   */
   private naZiemi(b: Budynek) {
     const pas = PAN_H * (1 - HORYZONT);
-    return GORA + PAN_H * HORYZONT + pas * (0.1 + 0.88 * b.y);
+    return GORA + PAN_H * HORYZONT + pas * (0.05 + 0.62 * b.y);
   }
 
   /**
@@ -226,7 +243,7 @@ export class TownScene extends Phaser.Scene {
    * daje malowane tło, idzie na marne.
    */
   private skalaBudynku(b: Budynek) {
-    return b.skala * BRYLA * (0.6 + 0.62 * b.y);
+    return BRYLA * (0.6 + 0.62 * b.y);
   }
 
   /**
@@ -236,18 +253,18 @@ export class TownScene extends Phaser.Scene {
    * widać, trafiało obok.
    */
   private podepnijKliki(im: Phaser.GameObjects.Image, b: Budynek) {
-    // Trafiamy w PROSTOKĄT samej bryły, a nie w piksele.
+    // Trafiamy w WIDOCZNE PIKSELE, z progiem powyżej cienia.
     //
-    // Trafianie po alfie wywróciło się dwa razy: najpierw przez cień rzucony
-    // wypalony w pliku (klikało się w cień), potem przez plac budowy, który
-    // z definicji jest półprzezroczysty — przy progu alfy w ogóle przestał być
-    // klikalny, a to jest jedyny sposób, żeby cokolwiek zbudować. Prostokąt
-    // bryły jest przewidywalny, hojny dla dziecięcego kliknięcia i nie zależy
-    // od tego, jak przezroczysty jest akurat rysunek.
-    im.setInteractive(
-      new Phaser.Geom.Rectangle(MARGINES_CIENIA, 0, SZEROKOSC_BRYLY, SZEROKOSC_BRYLY),
-      Phaser.Geom.Rectangle.Contains
-    );
+    // Historia tego jednego wiersza: najpierw był próg alfy i klikało się
+    // w cień; potem prostokąt, bo półprzezroczysty zarys placu budowy nie dawał
+    // się trafić po alfie; teraz wracamy do alfy, bo grafika z modelu jest
+    // NIEPRZEZROCZYSTA — także plac budowy — a prostokąt przestał wystarczać:
+    // bryły zachodzą na siebie i prostokąt tej z przodu przykrywał tę z tyłu,
+    // przez co kliknięcie w fort wybierało siedlisko stojące przed nim.
+    //
+    // Próg 150 leży powyżej najciemniejszego cienia rzuconego (maksymalnie 127),
+    // więc cień pozostaje nieklikalny, a każdy piksel samej bryły — klikalny.
+    im.setInteractive({ pixelPerfect: true, alphaTolerance: 150 });
     if (im.input) im.input.cursor = 'pointer';
     const skala = this.skalaBudynku(b);
     im.on('pointerover', () => {
