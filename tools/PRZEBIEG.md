@@ -49,8 +49,10 @@ się widocznym wzorem.
       dokładały drugą warstwę, w dodatku starą techniką. Zostaje krzak, bo ma
       bryłę i cień. `palma` była martwa. Sondy `probe-klik` i `probe-przygoda`
       na zielono.
-      **Zostaje do wygenerowania:** `bohater.png` — jedyny sprite na mapie
-      wciąż w starej technice, a stoi w samym środku uwagi gracza.
+      Bohater dorobiony: `tools/bohater_wczytaj.py` składa arkusz 4 × 4 z trzech
+      statycznych póz (lewy profil to odbicie prawego), a chód robi podskok
+      i ugięcie w kolejnych klatkach. Białe tło wycinane wypełnieniem od
+      krawędzi — próg na całym obrazku zjadłby białe części samej postaci.
 - [ ] **7. Sprzątanie.** Usunięcie `rysuj_miasto.py` i `render3d.py`, jeśli nic
       z nich nie zostaje; wpis do STAN.md o pochodzeniu grafik.
       Po kroku 5 osierocone są też: `src/data/kafelki.ts`,

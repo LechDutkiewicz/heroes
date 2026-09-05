@@ -22,6 +22,7 @@ import { C, H, T, Z, body, display } from '../visual/theme';
 import { drawPanelBody, makeHudButton, mix, plate } from '../visual/hud';
 import { ICON, buildIcons } from '../visual/icons';
 import { OKNO_H, OKNO_W } from '../visual/uklad';
+import { wersjonujZasoby } from '../visual/zasoby';
 
 /**
  * Ekran miasta.
@@ -126,6 +127,7 @@ export class TownScene extends Phaser.Scene {
   }
 
   preload() {
+    wersjonujZasoby(this);
     const b = import.meta.env.BASE_URL;
     for (const s of SUROWCE) this.load.image(`m-${SUROWIEC_INFO[s].ikona}`, `${b}mapa/${SUROWIEC_INFO[s].ikona}.png`);
     for (const f of FACTIONS) for (const u of f.units) this.load.image(`p-${u.sprite}`, `${b}sprites/${u.sprite}.png`);

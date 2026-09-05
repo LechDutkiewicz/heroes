@@ -55,9 +55,24 @@ const naEkranie = (x, y) =>
     [x, y]
   );
 
+/**
+ * Odsuwa kursor na środek ramy mapy.
+ *
+ * Konieczne po KAŻDYM kliknięciu. Kursor przy krawędzi przewija mapę tak długo,
+ * jak tam stoi, więc współrzędne policzone chwilę wcześniej przestają pasować
+ * i sonda klika o pole obok — raz przechodziła, raz nie. To nie jest usterka
+ * gry, tylko pułapka mierzenia: pomiar i klik muszą się odbyć przy nieruchomym
+ * widoku.
+ */
+const odsunKursor = async () => {
+  await page.mouse.move(plotno.x + 340, plotno.y + 330);
+  await page.waitForTimeout(120);
+};
+
 const klik = async (x, y) => {
   const p = await naEkranie(x, y);
   await page.mouse.click(plotno.x + p.x, plotno.y + p.y);
+  await odsunKursor();
 };
 
 console.log('\n=== klik prowadzi tam, gdzie się kliknęło ===');
@@ -144,6 +159,7 @@ const wRysunek = async () => {
     };
   });
   await page.mouse.click(plotno.x + p.x, plotno.y + p.y);
+  await odsunKursor();
 };
 await wRysunek();
 await page.waitForTimeout(250);
@@ -199,6 +215,7 @@ const naBrame = await page.evaluate(() => {
   return { x: c.x - s.kamera.scrollX + s.mapaX, y: c.y - s.kamera.scrollY + s.mapaY };
 });
 await page.mouse.click(plotno.x + naBrame.x, plotno.y + naBrame.y);
+await odsunKursor();
 await page.waitForTimeout(250);
 const trasaDoZamku = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
@@ -224,6 +241,7 @@ const wMury = await page.evaluate(() => {
   return { x: c.x - s.kamera.scrollX + s.mapaX, y: c.y - s.kamera.scrollY + s.mapaY };
 });
 await page.mouse.click(plotno.x + wMury.x, plotno.y + wMury.y);
+await odsunKursor();
 await page.waitForTimeout(600);
 sprawdz(
   'klik w mury zamku otwiera ekran miasta',

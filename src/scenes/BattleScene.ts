@@ -68,6 +68,7 @@ import {
   pulse,
 } from '../visual/board';
 import { C, H, Z, body, display } from '../visual/theme';
+import { wersjonujZasoby } from '../visual/zasoby';
 import {
   ICON,
   MINI,
@@ -345,6 +346,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   preload() {
+    wersjonujZasoby(this);
     for (const key of ALL_SPRITES) {
       this.load.image(key, `${import.meta.env.BASE_URL}sprites/${key}.png`);
     }

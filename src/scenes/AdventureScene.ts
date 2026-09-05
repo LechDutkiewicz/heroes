@@ -29,6 +29,7 @@ import { C, E, FONT, H, Z, body, display } from '../visual/theme';
 import { drawPanelBody, makeHudButton, mix, plate } from '../visual/hud';
 import { ICON, buildIcons } from '../visual/icons';
 import { GORA, KAFEL, MARGINES, PANEL_W, PASEK_H } from '../visual/uklad';
+import { wersjonujZasoby } from '../visual/zasoby';
 
 /**
  * Mapa przygody.
@@ -132,6 +133,7 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   preload() {
+    wersjonujZasoby(this);
     const b = import.meta.env.BASE_URL;
     for (let i = 0; i < KLATEK_PLANSZY; i++) {
       this.load.image(`plansza-${i}`, `${b}mapa/plansza-${i}.png`);
