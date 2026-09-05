@@ -105,6 +105,35 @@ const okno = await page.evaluate(() => {
   };
 });
 sprawdz('skrzynia NIE daje nagrody od razu', okno.zebrana === false && okno.zajety === true);
+
+// Czy okno WIDAĆ. Tu przeszła obok nas usterka: kamera planszy powstaje po
+// głównej, więc rysowała się na wierzchu i zamalowywała okno w prostokącie
+// mapy. Okno istniało, przyciski przyjmowały kliknięcia, więc sonda była
+// zielona — a gracz widział zamrożoną grę, bo czekała na decyzję, której nie
+// dało się ani zobaczyć, ani podjąć.
+//
+// Nie porównujemy pikseli: woda animuje się co klatkę, więc różnica wychodzi
+// zawsze i taki test nie sprawdzałby niczego. Sprawdzamy niezmiennik, który
+// się złamał — okno musi rysować kamera idąca jako OSTATNIA, bo tylko jej
+// nikt już nie zamaluje. Phaser trzyma to w masce `cameraFilter`.
+const rysowanie = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const kamery = s.cameras.cameras;
+  const ostatnia = kamery[kamery.length - 1];
+  const okno = s.children.list.filter((o) => o.depth >= 200);
+  return {
+    ile: okno.length,
+    naWierzchu: okno.filter((o) => (o.cameraFilter & ostatnia.id) === 0).length,
+    zamalowane: okno.filter((o) =>
+      kamery.some((c) => c !== ostatnia && (o.cameraFilter & c.id) === 0)
+    ).length,
+  };
+});
+sprawdz(
+  'okno skrzyni rysuje kamera wierzchnia — nic go nie zamaluje',
+  rysowanie.ile > 0 && rysowanie.naWierzchu === rysowanie.ile && rysowanie.zamalowane === 0,
+  `${rysowanie.naWierzchu}/${rysowanie.ile} na wierzchu, ${rysowanie.zamalowane} pod spodem`
+);
 sprawdz(
   'skarbiec czeka na decyzję',
   JSON.stringify(okno.skarbiec) === JSON.stringify({

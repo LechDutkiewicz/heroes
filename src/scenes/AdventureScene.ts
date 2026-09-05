@@ -87,6 +87,7 @@ export class AdventureScene extends Phaser.Scene {
    * i zlewała się z tłem — po jej rozjaśnieniu wyszło od razu.
    */
   private kamera!: Phaser.Cameras.Scene2D.Camera;
+  private kameraOkien!: Phaser.Cameras.Scene2D.Camera;
   private plansza!: Phaser.GameObjects.Image;
   private naklejkiWody: Phaser.GameObjects.Image[] = [];
   private mgla!: Phaser.GameObjects.Image;
@@ -421,14 +422,26 @@ export class AdventureScene extends Phaser.Scene {
   private rozdzielKamery() {
     this.cameras.main.ignore(this.swiat);
     this.kamera.ignore(this.children.list.filter((o) => o !== this.swiat));
+    // Trzecia kamera, wyłącznie na okna dialogowe. Kamery rysują się
+    // w kolejności dodania, a kamera planszy powstaje PO głównej, więc
+    // zamalowywała wszystko, co główna narysowała w prostokącie mapy —
+    // łącznie z oknem skrzyni. Okno było wtedy niewidzialne, a gra czekała
+    // na decyzję, której nie dało się podjąć: wyglądało to na zawieszenie.
+    // Ta kamera idzie jako ostatnia, więc jej nikt nie zamaluje.
+    this.kameraOkien = this.cameras.add(0, 0, this.scale.width, this.scale.height);
+    this.kameraOkien.ignore(this.children.list);
   }
 
   /**
-   * Chowa przed kamerą planszy to, co dorysowaliśmy do HUD-u po jej powstaniu.
-   * Bez tego okno skrzyni i napisy panelu pojawiają się także wewnątrz mapy,
-   * przesunięte o przewinięcie.
+   * To, co ma być NAD wszystkim — okna dialogowe. Zabieramy je obu wcześniejszym
+   * kamerom i zostawiamy tej ostatniej.
+   *
+   * Wcześniej stało tu `tylkoHud`, które zabierało obiekt tylko kamerze
+   * planszy. Chroniło przed rysowaniem okna wewnątrz mapy, ale nie przed
+   * zamalowaniem go przez tę kamerę — a to była właśnie usterka.
    */
-  private tylkoHud(...obiekty: Phaser.GameObjects.GameObject[]) {
+  private naWierzchu(...obiekty: Phaser.GameObjects.GameObject[]) {
+    this.cameras.main.ignore(obiekty);
     this.kamera?.ignore(obiekty);
   }
 
@@ -1191,7 +1204,7 @@ export class AdventureScene extends Phaser.Scene {
     ];
 
     doHud.push(zaslona, tlo, ...napisy);
-    this.tylkoHud(...doHud);
+    this.naWierzchu(...doHud);
 
     const zamknij = (co: 'pokeballe' | 'doswiadczenie') => {
       const opis = wezZeSkrzyni(this.stan, w, co);
@@ -1235,7 +1248,7 @@ export class AdventureScene extends Phaser.Scene {
         onClick: () => zamknij('doswiadczenie'),
       }),
     ];
-    this.tylkoHud(...this.children.list.slice(przedPrzyciskami));
+    this.naWierzchu(...this.children.list.slice(przedPrzyciskami));
     przyciski[0].setLabel(`${w.pokeballe} pokeballi`);
     przyciski[1].setLabel(`${w.doswiadczenie} dośw.`);
   }
