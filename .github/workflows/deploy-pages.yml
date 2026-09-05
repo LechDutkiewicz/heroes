@@ -5,6 +5,9 @@ on:
     branches:
       - main
       - claude/pokemon-heroes-3-game-57m7wm
+      # Gałąź, na której idzie przebudowa grafiki. Publikujemy z niej, żeby dało
+      # się testować na Pages każdą kolejną porcję zmian, a nie dopiero scalenie.
+      - claude/kontynuuj-zamki-jq9357
   workflow_dispatch:
 
 permissions:
