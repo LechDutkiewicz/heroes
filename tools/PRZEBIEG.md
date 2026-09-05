@@ -43,8 +43,14 @@ się widocznym wzorem.
       poszarpaną szumem maską (`teren_malowanie.py`). Ścieżka dostała własną
       teksturę zamiast dwóch kresek wektorowych. Sondy `probe-mapa`
       i `probe-przygoda` na zielono.
-- [ ] **6. Obiekty mapy.** Podmiana drzew, skał, kopalni, sadu, skrzyni,
-      zamku i czterech surowców; sondy `probe-klik` i `probe-przygoda`.
+- [x] **6. Obiekty mapy.** Wszystkie cztery sylwetki skalne idą teraz z wsadu
+      (`skala-2` i `kopiec-2` jako odbicia). Kępki trawy, kwiatki, kamyki
+      i pniak — usunięte: tekstura trawy ma to wmalowane, a te sprite'y
+      dokładały drugą warstwę, w dodatku starą techniką. Zostaje krzak, bo ma
+      bryłę i cień. `palma` była martwa. Sondy `probe-klik` i `probe-przygoda`
+      na zielono.
+      **Zostaje do wygenerowania:** `bohater.png` — jedyny sprite na mapie
+      wciąż w starej technice, a stoi w samym środku uwagi gracza.
 - [ ] **7. Sprzątanie.** Usunięcie `rysuj_miasto.py` i `render3d.py`, jeśli nic
       z nich nie zostaje; wpis do STAN.md o pochodzeniu grafik.
       Po kroku 5 osierocone są też: `src/data/kafelki.ts`,

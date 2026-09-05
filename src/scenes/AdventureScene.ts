@@ -135,17 +135,12 @@ export class AdventureScene extends Phaser.Scene {
       'drzewo',
       'sosna-b',
       'drzewo-b',
-      'palma',
       'skala',
       'skala-2',
       'kopiec',
       'kopiec-2',
       'krzak',
       'krzak-2',
-      'kepka',
-      'kwiaty',
-      'pniak',
-      'kamyki',
       'pokeball',
       'jagody',
       'kamien-ewolucji',
@@ -541,25 +536,21 @@ export class AdventureScene extends Phaser.Scene {
         if (this.stan.teren[y][x] !== 'trawa') continue;
         if (obiektNa(this.stan, x, y)) continue;
         const h = (x * 17 + y * 31 + x * y * 5) % 9;
-        if (h > 4) continue;
+        // Rzadziej niż wcześniej i tylko krzaki.
+        //
+        // Kępki trawy, kwiatki i kamyki stały tu jako osobne sprite'y, bo
+        // dawna tekstura trawy była gładką plamą koloru i sama z siebie nie
+        // mówiła nic. Tekstura z modelu ma to wszystko wmalowane, więc te
+        // sprite'y dokładały drugą warstwę kwiatków — w dodatku rysowanych
+        // inną techniką. Zostaje krzak: ma własną bryłę i cień, czyli daje
+        // to, czego płaska tekstura dać nie może.
+        if (h > 2) continue;
         const { x: ex, y: ey } = this.naEkran(x, y);
-        // Pięć rodzajów drobiazgów zamiast dwóch. Krzak i pniak są wyraźnie
-        // większe od kępki, więc pusta trawa dostaje nie tylko więcej, ale też
-        // różnej wielkości rzeczy — a to dopiero robi wrażenie zarośniętej.
-        const [klucz, wysokosc] = (
-          [
-            ['m-kepka', 0.22],
-            ['m-kwiaty', 0.22],
-            ['m-kamyki', 0.16],
-            ['m-pniak', 0.26],
-            ['m-krzak', 0.46],
-          ] as Array<[string, number]>
-        )[h];
         this.element(
-          klucz,
-          ex + ((h - 2) * KAFEL) / 6,
-          ey + KAFEL * (0.2 + (h % 3) * 0.07),
-          wysokosc,
+          ['m-krzak', 'm-krzak-2', 'm-krzak'][h],
+          ex + ((h - 1) * KAFEL) / 5,
+          ey + KAFEL * (0.2 + h * 0.07),
+          0.42 + h * 0.05,
           y - 0.5,
           x + y
         );

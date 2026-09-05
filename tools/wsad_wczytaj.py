@@ -135,7 +135,10 @@ OBIEKTY = {
     'm-drzewo': [('drzewo', 144), ('drzewo-b', 144)],
     'm-sosna': [('sosna', 144), ('sosna-b', 144), ('sosna-mala', 96)],
     'm-krzak': [('krzak', 84), ('krzak-2', 84)],
-    'm-skala': [('skala', 67), ('skala-2', 67), ('kopiec', 37)],
+    # `skala-2` i `kopiec-2` to odbicia, nie osobne rysunki: rytm skalnego
+    # grzbietu łamie odbicie i skala, a nie liczba plików. Cztery sylwetki
+    # z jednego źródła wystarczą, żeby nie było widać powtórzenia.
+    'm-skala': [('skala', 67), ('skala-2', 67, True), ('kopiec', 37), ('kopiec-2', 37, True)],
     'm-kopalnia': [('kopalnia', 57)],
     'm-sad': [('sad', 57)],
     'm-skrzynia': [('skrzynia', 38)],
@@ -152,9 +155,12 @@ TERENY = ['teren-trawa', 'teren-sciezka', 'teren-piasek', 'teren-woda', 'teren-l
 def mapa():
     for zrodlo, cele in OBIEKTY.items():
         im = wczytaj(zrodlo)
-        for nazwa, wys in cele:
-            dopasuj(im, wys).save(MAPA / f'{nazwa}.png')
-        print(f'  {zrodlo} → {", ".join(n for n, _ in cele)}')
+        for nazwa, wys, *odbij in cele:
+            wynik = dopasuj(im, wys)
+            if odbij and odbij[0]:
+                wynik = wynik.transpose(Image.FLIP_LEFT_RIGHT)
+            wynik.save(MAPA / f'{nazwa}.png')
+        print(f'  {zrodlo} → {", ".join(c[0] for c in cele)}')
 
     TEREN.mkdir(parents=True, exist_ok=True)
     for nazwa in TERENY:
