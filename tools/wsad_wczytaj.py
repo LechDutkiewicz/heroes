@@ -146,6 +146,13 @@ OBIEKTY = {
     # grzbietu łamie odbicie i skala, a nie liczba plików. Cztery sylwetki
     # z jednego źródła wystarczą, żeby nie było widać powtórzenia.
     'm-skala': [('skala', 67), ('skala-2', 67, True), ('kopiec', 37), ('kopiec-2', 37, True)],
+    # Trzy osobne bryły skalne (PROMPTY.md, część IV). Dopóki ich nie ma,
+    # kępy skalne składają się z odbić jednego głazu i pasmo gór się powtarza.
+    # Wpisy są pomijane, jeśli plik nie istnieje — potok ma działać na tym,
+    # co jest, a nie wywracać się na tym, czego jeszcze nie dostarczono.
+    'm-skala-ostra': [('skala-ostra', 84)],
+    'm-skala-plaska': [('skala-plaska', 46)],
+    'm-skala-zwal': [('skala-zwal', 62)],
     # Kopalnia i sad zajmują bryłę 3 × 1, więc na ekranie mają ponad sto
     # pikseli wysokości. Przy dawnych 57 px scena je POWIĘKSZAŁA i wychodziły
     # rozmyte obok ostrych drzew — pliki muszą być większe od tego, jak są
@@ -180,6 +187,9 @@ def warianty(nazwa: str):
 
 def mapa():
     for zrodlo, cele in OBIEKTY.items():
+        if not (WSAD / f'{zrodlo}.png').exists():
+            print(f'  {zrodlo} — brak pliku, pomijam')
+            continue
         im = wczytaj(zrodlo)
         for nazwa, wys, *odbij in cele:
             wynik = dopasuj(im, wys)

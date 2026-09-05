@@ -53,13 +53,25 @@ SKLAD = {
     # Skał musi być DUŻO i muszą na siebie zachodzić. Kilka osobnych głazów
     # w odstępach to nie jest zwał skalny, tylko kamienie na łące — a pasmo
     # górskie ma być przeszkodą, po której widać, że się jej nie przejdzie.
-    'skaly': ([['skala', 'skala-2', 'kopiec', 'kopiec-2'], ['kopiec', 'kopiec-2']],
+    'skaly': ([['skala', 'skala-2', 'kopiec', 'kopiec-2',
+                'skala-ostra', 'skala-plaska', 'skala-zwal'],
+               ['kopiec', 'kopiec-2', 'skala-plaska']],
               [(9, 12, 0.7, 1.55), (6, 9, 0.4, 0.75)]),
 }
 
 
 def wczytaj(nazwa: str) -> Image.Image:
     return Image.open(MAPA / f'{nazwa}.png').convert('RGBA')
+
+
+def istniejace(nazwy: list[str]) -> list[str]:
+    """Tylko te sylwetki, które naprawdę leżą na dysku.
+
+    Skład kęp wymienia także bryły skalne, których jeszcze nie dostarczono
+    (PROMPTY.md, część IV). Potok ma składać kępy z tego, co jest, i sam
+    wzbogacić się o nowe pliki, gdy się pojawią — bez zmiany kodu.
+    """
+    return [n for n in nazwy if (MAPA / f'{n}.png').exists()]
 
 
 def cien(bok: int) -> Image.Image:
@@ -89,7 +101,7 @@ def zbudujKepe(rodzaj: str, ziarno: int) -> Image.Image:
     plotno = Image.new('RGBA', (w, h), (0, 0, 0, 0))
 
     elementy = []
-    for lista, (minIle, maxIle, minWys, maxWys) in zip(pliki, warstwy):
+    for lista, (minIle, maxIle, minWys, maxWys) in zip(map(istniejace, pliki), warstwy):
         for _ in range(rng.randint(minIle, maxIle)):
             nazwa = rng.choice(lista)
             wys = rng.uniform(minWys, maxWys) * KAFEL
