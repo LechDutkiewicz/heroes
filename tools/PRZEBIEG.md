@@ -38,12 +38,19 @@ się widocznym wzorem.
 - [x] **4. Frakcje.** `tools/frakcje_przemaluj.py`: jasność z Boru na rampę
       barwną frakcji plus ułamek pierwotnej chromy. Grota chłodna i księżycowa,
       Zbocze popielate z ciepłymi światłami. `TownScene` bierze bryły z frakcji.
-- [ ] **5. Teren mapy.** Pocięcie tekstur na kafelki, złożenie przejść,
-      przegenerowanie tła planszy, sonda `probe-mapa`.
+- [x] **5. Teren mapy.** Koniec z arkuszem 16-pikselowym: `render_mapa.py`
+      maluje teren wprost z tekstur 768 × 768, a granice krain wycina miękką,
+      poszarpaną szumem maską (`teren_malowanie.py`). Ścieżka dostała własną
+      teksturę zamiast dwóch kresek wektorowych. Sondy `probe-mapa`
+      i `probe-przygoda` na zielono.
 - [ ] **6. Obiekty mapy.** Podmiana drzew, skał, kopalni, sadu, skrzyni,
       zamku i czterech surowców; sondy `probe-klik` i `probe-przygoda`.
 - [ ] **7. Sprzątanie.** Usunięcie `rysuj_miasto.py` i `render3d.py`, jeśli nic
       z nich nie zostaje; wpis do STAN.md o pochodzeniu grafik.
+      Po kroku 5 osierocone są też: `src/data/kafelki.ts`,
+      `public/mapa-tileset.png`, `tools/kafelki_autotile.py`,
+      `tools/slice_tileset.py`, `tools/prepare_terrain.py` — nic ich już
+      nie czyta.
 
 ## Czego NIE robić po drodze
 
