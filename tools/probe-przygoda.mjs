@@ -347,6 +347,72 @@ sprawdz(
   poZamku.sprytPokonanego === false && poZamku.potworZebrany === true
 );
 
+// --- straż pilnuje tego, co pilnuje ---
+//
+// Wejście wprost na pilnowaną kopalnię omijało strażnika i zajmowało ją za
+// darmo: straż sprawdzaliśmy TYLKO wtedy, gdy na polu nie było żadnego
+// obiektu. Cała różnica między kopalnią pilnowaną a niepilnowaną znikała,
+// a to jedyne, co na tej mapie chroni nagrody.
+console.log('\n=== straż przy kopalni ===');
+const pilnowana = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const k = s.stan.obiekty.find(
+    (o) =>
+      o.rodzaj === 'kopalnia' &&
+      !o.nasz &&
+      s.stan.obiekty.some(
+        (p) =>
+          p.rodzaj === 'potwor' &&
+          !p.zebrany &&
+          Math.abs(p.x - o.x) <= 1 &&
+          Math.abs(p.y - o.y) <= 1
+      )
+  );
+  if (!k) return null;
+  s.stan.bohater.x = k.x;
+  s.stan.bohater.y = k.y + 2;
+  s.stan.bohater.ruch = 3000;
+  s.zajety = false;
+  window.__kopalnia = k.id;
+  s.idz([
+    { x: k.x, y: k.y + 1, koszt: 100 },
+    { x: k.x, y: k.y, koszt: 100 },
+  ]);
+  return k.nazwa;
+});
+if (!pilnowana) {
+  sprawdz('na mapie stoi pilnowana kopalnia', false, 'nie znaleziono żadnej');
+} else {
+  let doBoju = true;
+  try {
+    await scena('battle');
+  } catch {
+    doBoju = false;
+  }
+  const stan = await page.evaluate(() => {
+    const s = window.__game.scene.getScene('adventure');
+    const k = s.stan.obiekty.find((o) => o.id === window.__kopalnia);
+    return !!k.nasz;
+  });
+  sprawdz(`wejście na pilnowaną kopalnię (${pilnowana}) zaczyna bitwę`, doBoju);
+  sprawdz('kopalnia NIE jest zajęta przed wygraną', stan === false);
+
+  if (doBoju) {
+    await page.evaluate(() => window.__game.scene.getScene('battle').rozstrzygnijNatychmiast(true));
+    await scena('adventure');
+    // Bitwa toczy się, gdy bohater STOI JUŻ na kopalni, więc po wygranej musi
+    // ją zająć sam — inaczej trzeba by zejść z pola i wrócić na nie po raz
+    // drugi, co wygląda po prostu na usterkę.
+    await page.waitForTimeout(4000);
+    const po = await page.evaluate(() => {
+      const s = window.__game.scene.getScene('adventure');
+      const k = s.stan.obiekty.find((o) => o.id === window.__kopalnia);
+      return { nasza: !!k.nasz, poz: [s.stan.bohater.x, s.stan.bohater.y] };
+    });
+    sprawdz('po wygranej kopalnia jest zajęta bez wchodzenia na nią drugi raz', po.nasza);
+  }
+}
+
 // --- druga bitwa w tej samej sesji ---
 //
 // To nie jest powtórka poprzedniego testu. Phaser używa TEJ SAMEJ instancji

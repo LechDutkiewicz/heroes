@@ -1435,14 +1435,17 @@ export class AdventureScene extends Phaser.Scene {
         this.bohaterSprite.stop();
         this.bohaterSprite.setFrame(KIERUNEK_WIERSZ[this.kierunek] * 4);
         const o = obiektNa(this.stan, this.stan.bohater.x, this.stan.bohater.y);
-        if (o) {
+        // Straż ma pierwszeństwo PRZED obiektem, na który się weszło.
+        //
+        // Wcześniej sprawdzaliśmy ją tylko wtedy, gdy na polu nie było nic —
+        // więc wejście wprost na pilnowaną kopalnię omijało strażnika
+        // i zajmowało ją za darmo. Cała różnica między kopalnią pilnowaną
+        // a niepilnowaną znikała, a to jedyne, co na tej mapie chroni nagrody.
+        const straz = strzezoneProzez(this.stan, this.stan.bohater.x, this.stan.bohater.y);
+        if (straz && straz !== o) {
+          this.zacznijBitwe(straz);
+        } else if (o) {
           this.wejdzNa(o);
-        } else {
-          // Wejście w strefę kontroli potwora — bez wchodzenia na jego pole —
-          // też zaczyna bitwę. Tak działa Heroes 3 i tylko dlatego strażnicy
-          // czegokolwiek pilnują.
-          const straz = strzezoneProzez(this.stan, this.stan.bohater.x, this.stan.bohater.y);
-          if (straz) this.zacznijBitwe(straz);
         }
         this.odswiezWszystko();
         return;
@@ -1705,6 +1708,15 @@ export class AdventureScene extends Phaser.Scene {
       // mety: dziecko przechodzi pół planszy, wygrywa najtrudniejszą bitwę
       // w grze i nic się nie dzieje.
       if (o?.rodzaj === 'zamek') this.time.delayedCall(1800, () => this.sprawdzKoniec());
+
+      // Bitwa ze strażą toczy się wtedy, gdy bohater STOI JUŻ na pilnowanym
+      // polu — wszedł na kopalnię, a strażnik zagrodził mu drogę. Po wygranej
+      // trzeba więc odwiedzić to, po co przyszedł; inaczej trzeba by zejść
+      // z pola i wrócić na nie po raz drugi, co wygląda po prostu na usterkę.
+      const podNogami = obiektNa(this.stan, this.stan.bohater.x, this.stan.bohater.y);
+      if (podNogami && podNogami !== o) {
+        this.time.delayedCall(1200, () => this.wejdzNa(podNogami));
+      }
     } else {
       // Przegrana nie kończy gry: bohater wraca do zamku i traci resztę dnia.
       // Dla ośmiolatka „przegrałeś, zacznij od nowa" to koniec zabawy.

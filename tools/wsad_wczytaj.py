@@ -24,6 +24,7 @@ się powtórzyć po urwanej sesji.
     python3 tools/wsad_wczytaj.py
 """
 
+from collections import deque
 from pathlib import Path
 
 import numpy as np
@@ -83,8 +84,48 @@ def zCieniem(im: Image.Image, sila: float = 1.0) -> Image.Image:
     return plotno
 
 
+def bezTla(im: Image.Image, prog: int = 232) -> Image.Image:
+    """Usuwa jednolite jasne tło, idąc wypełnieniem od KRAWĘDZI kadru.
+
+    Model raz oddaje prawdziwą przezroczystość, a raz białe tło — prompt prosi
+    o białe, bo tak jest pewniej. Progowanie całego obrazka odpada: zjadłoby
+    też jasne części samego przedmiotu (biały kamień, oświetloną ścianę).
+    Wypełnienie od brzegu zatrzymuje się na pierwszym ciemniejszym pikselu
+    i sylwetki nie tyka.
+    """
+    im = im.convert('RGBA')
+    tab = np.asarray(im).copy()
+    h, w = tab.shape[:2]
+    jasny = tab[:, :, :3].min(axis=2) >= prog
+    tlo = np.zeros((h, w), dtype=bool)
+    kolejka = deque()
+    for x in range(w):
+        for y in (0, h - 1):
+            if jasny[y, x] and not tlo[y, x]:
+                tlo[y, x] = True
+                kolejka.append((y, x))
+    for y in range(h):
+        for x in (0, w - 1):
+            if jasny[y, x] and not tlo[y, x]:
+                tlo[y, x] = True
+                kolejka.append((y, x))
+    while kolejka:
+        y, x = kolejka.popleft()
+        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            ny, nx = y + dy, x + dx
+            if 0 <= ny < h and 0 <= nx < w and jasny[ny, nx] and not tlo[ny, nx]:
+                tlo[ny, nx] = True
+                kolejka.append((ny, nx))
+    tab[tlo, 3] = 0
+    return Image.fromarray(tab, 'RGBA')
+
+
 def wczytaj(nazwa: str) -> Image.Image:
-    return przytnij(Image.open(WSAD / f'{nazwa}.png').convert('RGBA'))
+    im = Image.open(WSAD / f'{nazwa}.png').convert('RGBA')
+    # Plik bez ani jednego przezroczystego piksela to plik na białym tle.
+    if np.asarray(im)[:, :, 3].min() == 255:
+        im = bezTla(im)
+    return przytnij(im)
 
 
 # ---------------------------------------------------------------------------
