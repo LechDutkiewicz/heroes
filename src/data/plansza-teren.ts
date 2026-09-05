@@ -55,7 +55,9 @@ export const PUNKTY = {
 export const ROZSTAWIENIE: Array<{ x: number; y: number; rodzaj: string; surowiec?: string; sila?: string }> = [
   { x: 8, y: 7, rodzaj: 'surowiec', surowiec: 'jagoda' },
   { x: 0, y: 11, rodzaj: 'surowiec', surowiec: 'jagoda' },
-  { x: 0, y: 15, rodzaj: 'kopalnia', surowiec: 'jagoda' },
+  // Odsunięty od zachodniej krawędzi: sad zajmuje bryłę szeroką na trzy pola,
+  // a stojąc w kolumnie zerowej wystawał połową poza planszę.
+  { x: 1, y: 15, rodzaj: 'kopalnia', surowiec: 'jagoda' },
   { x: 9, y: 2, rodzaj: 'surowiec', surowiec: 'jagoda' },
   { x: 20, y: 10, rodzaj: 'surowiec', surowiec: 'jagoda' },
   { x: 6, y: 24, rodzaj: 'surowiec', surowiec: 'pokeball' },

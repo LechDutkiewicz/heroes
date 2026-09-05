@@ -139,8 +139,12 @@ OBIEKTY = {
     # grzbietu łamie odbicie i skala, a nie liczba plików. Cztery sylwetki
     # z jednego źródła wystarczą, żeby nie było widać powtórzenia.
     'm-skala': [('skala', 67), ('skala-2', 67, True), ('kopiec', 37), ('kopiec-2', 37, True)],
-    'm-kopalnia': [('kopalnia', 57)],
-    'm-sad': [('sad', 57)],
+    # Kopalnia i sad zajmują bryłę 3 × 1, więc na ekranie mają ponad sto
+    # pikseli wysokości. Przy dawnych 57 px scena je POWIĘKSZAŁA i wychodziły
+    # rozmyte obok ostrych drzew — pliki muszą być większe od tego, jak są
+    # rysowane, a nie mniejsze.
+    'm-kopalnia': [('kopalnia', 160)],
+    'm-sad': [('sad', 160)],
     'm-skrzynia': [('skrzynia', 38)],
     'm-zamek': [('zamek-las', 384), ('zamek-ogien', 336)],
     's-pokeball': [('pokeball', 29)],

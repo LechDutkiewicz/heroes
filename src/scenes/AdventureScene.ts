@@ -636,14 +636,36 @@ export class AdventureScene extends Phaser.Scene {
       if (o.zebrany) continue;
       const { x, y } = this.naEkran(o.x, o.y);
       const kont = this.add.container(x, y).setDepth(o.y + 0.5);
-
-      const cien = this.add.graphics();
-      cien.fillStyle(C.shadow, 0.28);
-      cien.fillEllipse(0, KAFEL * 0.36, KAFEL * 0.54, KAFEL * 0.17);
-      kont.add(cien);
+      // Bryła szeroka na trzy pola, stojąca przy krawędzi planszy, wystawałaby
+      // poza nią. Dosuwamy rysunek do środka — o najwyżej pół pola, czego nikt
+      // nie zauważy, a budowla przestaje być ucięta. Kliknięcia to nie rusza:
+      // liczą się z pól i z granic rysunku, więc jedno idzie za drugim.
+      const szerBryly = BRYLA[o.rodzaj]?.[0];
+      if (szerBryly) {
+        const polowa = (szerBryly * KAFEL) / 2;
+        kont.x = Phaser.Math.Clamp(x, polowa, this.mapaW - polowa);
+      }
 
       const { klucz, wys } = this.grafikaObiektu(o);
-      const im = this.add.image(0, KAFEL * 0.46, klucz).setOrigin(0.5, 1);
+      const bryla = BRYLA[o.rodzaj];
+
+      // Cień kontaktowy siada tam, gdzie stoi podstawa — przy bryle jest to
+      // rząd nad polem wejścia, a nie samo wejście. Zostawiony na wejściu
+      // wyglądałby jak plama na wolnej ziemi przed budowlą.
+      const cien = this.add.graphics();
+      cien.fillStyle(C.shadow, 0.28);
+      cien.fillEllipse(
+        0,
+        bryla ? -KAFEL * 0.6 : KAFEL * 0.36,
+        KAFEL * (bryla ? bryla[0] * 0.66 : 0.54),
+        KAFEL * (bryla ? 0.3 : 0.17)
+      );
+      kont.add(cien);
+      // Budowle z bryłą stoją ZA polem wejścia, a nie na nim: podstawa siada na
+      // górnej krawędzi tego pola, więc brama zostaje odsłonięta i widać, że
+      // jest po niej gdzie chodzić. Reszta obiektów stoi na swoim polu.
+      const podstawa = BRYLA[o.rodzaj] ? -KAFEL * 0.5 : KAFEL * 0.46;
+      const im = this.add.image(0, podstawa, klucz).setOrigin(0.5, 1);
       im.setScale(wys / im.height);
       kont.add(im);
 
@@ -675,6 +697,10 @@ export class AdventureScene extends Phaser.Scene {
       if (o.rodzaj === 'kopalnia' || o.rodzaj === 'zamek') {
         const f = this.chorag(o.rodzaj === 'zamek' && !o.nasz ? C.foe : C.ally);
         f.setVisible(!!o.nasz || o.rodzaj === 'zamek');
+        // Chorągiew ma stać na budowli, a nie na wolnym polu przed nią.
+        // Odkąd bryła przeniosła się o pole wyżej, flaga musi pójść za nią —
+        // inaczej wygląda, jakby ktoś wbił maszt na środku placu.
+        if (bryla) f.setY(-KAFEL * (0.5 + wys / KAFEL / 2));
         kont.add(f);
         kont.setData('flaga', f);
       }

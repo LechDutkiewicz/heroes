@@ -162,10 +162,12 @@ def maska_gruntu() -> Image.Image:
     for x, y, szer, wys in wczytaj_budowle():
         # Elipsa szersza niż bryła i wysunięta przed wejście: plac ma
         # WYSTAWAĆ spod budynku, inaczej znów widać jego obrys.
+        # Bryła stoi w rzędach nad wejściem, więc plac ma objąć i ją, i samo
+        # wejście: od `y − wys` do `y`. Środek wypada w połowie tego pasma.
         cx = (x + 0.5) * KAFEL * 2
-        cy = (y + 0.5 - (wys - 1) * 0.35) * KAFEL * 2
+        cy = (y + 0.5 - wys / 2) * KAFEL * 2
         rx = (szer / 2 + 0.55) * KAFEL * 2
-        ry = (wys / 2 + 0.55) * KAFEL * 2
+        ry = ((wys + 1) / 2 + 0.4) * KAFEL * 2
         d.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=255)
     im = im.resize((W, H), Image.LANCZOS)
     tab = np.asarray(im, dtype=np.float32) / 255.0

@@ -308,14 +308,33 @@ export function polaBryly(s: StanMapy, o: Obiekt): Pole[] {
   if (!rozmiar || o.zebrany) return [];
   const [szer, wys] = rozmiar;
   const pola: Pole[] = [];
-  for (let dy = -(wys - 1); dy <= 0; dy++) {
+  // Bryła stoi ZA wejściem, nie na nim. Pierwsza wersja obejmowała rząd wejścia
+  // i budynek zasłaniał jedyne pole, w które da się wejść bohaterem: gracz
+  // widział wielki zamek, klikał w to, co widać, i zawsze otwierał tylko
+  // podgląd miasta. W Heroes 3 brama leży PRZED budowlą, na wolnej ziemi.
+  for (let dy = -wys; dy <= -1; dy++) {
     for (let dx = -Math.floor(szer / 2); dx <= Math.floor(szer / 2); dx++) {
-      if (dx === 0 && dy === 0) continue;
       const x = o.x + dx;
       const y = o.y + dy;
       if (!wGranicach(s, x, y)) continue;
       if (TEREN_INFO[s.teren[y][x]].koszt === null) continue;
       if (obiektNa(s, x, y)) continue;
+      // Bryła nie zamurowuje wejścia sąsiada.
+      //
+      // Zamek wroga stoi dwa pola od kopalni i jego mury odcięły jej wszystkie
+      // dojścia — kopalnia stała się nieosiągalna, choć na ekranie wyglądała
+      // normalnie. Pole stykające się bokiem z cudzym wejściem zostaje więc
+      // wolne. Kosztuje to kawałek muru tam, gdzie budowle stoją ciasno,
+      // a chroni przed planszą, po której nie da się grać.
+      if (
+        s.obiekty.some(
+          (inny) =>
+            inny !== o &&
+            !inny.zebrany &&
+            Math.abs(inny.x - x) + Math.abs(inny.y - y) === 1
+        )
+      )
+        continue;
       pola.push({ x, y });
     }
   }
