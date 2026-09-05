@@ -81,6 +81,23 @@ const BRYLA = 0.5;
 const MARGINES_CIENIA = 0.42;
 const SRODEK_BRYLY = (MARGINES_CIENIA + 0.5) / (1 + MARGINES_CIENIA);
 
+/**
+ * Jaka część szerokości pliku to sama bryła. Reszta to margines na wypalony
+ * cień rzucony. Potrzebne do cienia kontaktowego — ten musi być szeroki jak
+ * BUDYNEK, a nie jak plik.
+ */
+const SZEROKOSC_BRYLY = 1 / (1 + MARGINES_CIENIA);
+
+/**
+ * Barwa mgły powietrznej — pobrana z nieba panoramy nad linią drzew.
+ *
+ * To, co dalej, jest jaśniejsze, mniej nasycone i chłodniejsze, bo patrzymy
+ * przez kilometr powietrza. Malarze nazywają to perspektywą powietrzną i to
+ * ona, a nie sama wielkość, mówi oku „to stoi z tyłu". Bez niej każdy budynek
+ * jest jednakowo dosadny i cała polana spłaszcza się do rzędu naklejek.
+ */
+const MGLA_DALI = 0xc9dcea;
+
 interface Kafel {
   budynek: Budynek;
   obraz: Phaser.GameObjects.Image;
@@ -236,11 +253,84 @@ export class TownScene extends Phaser.Scene {
         // przykrywają karty i paski. Pierwsza wersja mnożyła głębię przez 100
         // i wysoka bryła lądowała nad kartą budynku.
         .setDepth(gleboko);
+      // Perspektywa powietrzna. Tint mnoży, więc barwa mgły PRZYCIEMNIA —
+      // dlatego mieszamy ją z bielą i dopiero to nakładamy: dalekie bryły
+      // tracą trochę nasycenia i ciepła, bliskie zostają nietknięte.
+      im.setTint(mix(0xffffff, MGLA_DALI, 0.34 * (1 - b.y)));
+
+      this.cienKontaktowy(im, gleboko - 1);
+      this.zaroslaPrzyPodstawie(im, gleboko + 1);
+
       this.kafle.push({ budynek: b, obraz: im, postawiony: stoi });
       this.podepnijKliki(im, b);
       this.przywrocWyglad(b);
     }
     this.rysujZachety();
+  }
+
+  /**
+   * Cień kontaktowy — jedyna rzecz, która naprawdę stawia bryłę NA ziemi.
+   *
+   * Cień rzucony (ten wypalony w pliku) mówi tylko „coś tu świeci z boku".
+   * O dotknięciu podłoża decyduje co innego: ciasne, ciemne przyciemnienie
+   * dokładnie w linii styku, przechodzące w szeroką, ledwie widoczną poświatę.
+   * Bez niego budynek unosi się nad trawą, choćby cień rzucony był idealny —
+   * i to jest cała różnica między „naniesione na tło" a „stoi w krajobrazie".
+   *
+   * Dwie elipsy, nie jedna. Jedna szeroka i miękka daje kałużę, jedna wąska
+   * i ostra — podkładkę. Dopiero obie naraz czytają się jak cień.
+   */
+  private cienKontaktowy(im: Phaser.GameObjects.Image, gleboko: number) {
+    const szer = im.displayWidth * SZEROKOSC_BRYLY;
+    const g = this.add.graphics().setDepth(gleboko);
+    g.fillStyle(C.shadow, 0.2);
+    g.fillEllipse(im.x, im.y - szer * 0.02, szer * 1.06, szer * 0.26);
+    g.fillStyle(C.shadow, 0.34);
+    g.fillEllipse(im.x, im.y - szer * 0.03, szer * 0.76, szer * 0.15);
+    return g;
+  }
+
+  /**
+   * Zarośla zachodzące na dolną krawędź bryły — wycięte z SAMEJ PANORAMY.
+   *
+   * Budynek wycięty z tła ma nieprzerwany, czysty obrys od dołu, a w naturze
+   * nic takiego nie istnieje: przy każdej ścianie coś rośnie i zasłania jej
+   * podstawę. Przerwanie tej krawędzi robi dla osadzenia więcej niż jakikolwiek
+   * cień, bo oko przestaje widzieć granicę wycięcia.
+   *
+   * Pierwsza wersja rysowała źdźbła trawy z trójkątów. Wyszedł z tego rząd
+   * zielonych kolców: proceduralna trawa przegrywa z malowaną, bo nie ma jak
+   * podrobić jej faktury ani światła. Więc nie podrabiamy — bierzemy pas
+   * panoramy dokładnie z tego miejsca, w którym stoi budynek, i kładziemy go
+   * z powrotem na wierzch. To jest ta sama trawa, którą namalował model, więc
+   * pasuje idealnie z definicji.
+   *
+   * Krycie schodzi ku górze trzema pasami. Gradientu alfy Phaser na obrazku nie
+   * zrobi bez maski bitmapowej, a trzy pasy dają to samo za jedną trzecią
+   * kłopotu — przy paśmie wysokim na kilkanaście pikseli nikt nie zobaczy
+   * stopni.
+   */
+  private zaroslaPrzyPodstawie(im: Phaser.GameObjects.Image, gleboko: number) {
+    const szer = im.displayWidth * SZEROKOSC_BRYLY;
+    const pasmo = Math.max(6, szer * 0.13);
+    const lewo = im.x - szer * 0.56;
+    const szerokosc = szer * 1.12;
+    const warstwy: Phaser.GameObjects.Image[] = [];
+    const krycie = [0.45, 0.75, 1];
+    for (let i = 0; i < krycie.length; i++) {
+      const wysPasa = pasmo / krycie.length;
+      const y = im.y - pasmo + i * wysPasa;
+      const kopia = this.add
+        .image(0, GORA, `t-tlo-${this.profil.frakcja}`)
+        .setOrigin(0, 0)
+        .setDepth(gleboko)
+        .setAlpha(krycie[i]);
+      // Panorama jest rysowana jeden do jednego od (0, GORA), więc piksel
+      // ekranu (x, y) to piksel tekstury (x, y − GORA).
+      kopia.setCrop(lewo, y - GORA, szerokosc, wysPasa + 1);
+      warstwy.push(kopia);
+    }
+    return warstwy;
   }
 
   /**
@@ -283,15 +373,28 @@ export class TownScene extends Phaser.Scene {
     // więc cień pozostaje nieklikalny, a każdy piksel samej bryły — klikalny.
     im.setInteractive({ pixelPerfect: true, alphaTolerance: 150 });
     if (im.input) im.input.cursor = 'pointer';
-    const skala = this.skalaBudynku(b);
+    // Najechanie ROZŚWIETLA bryłę, a nie powiększa.
+    //
+    // Powiększanie było najgorszym możliwym sygnałem w tej scenie: przesuwało
+    // budynek względem gruntu, na którym stoi, więc za każdym razem dowodziło,
+    // że to osobna warstwa naklejona na tło. Kopia sprite'a w trybie dodawania
+    // niczego nie rusza — po prostu w budynek uderza więcej światła, co przy
+    // panoramie w złotej godzinie czyta się zupełnie naturalnie.
+    const blask = this.add
+      .image(im.x, im.y, im.texture.key)
+      .setOrigin(im.originX, im.originY)
+      .setScale(im.scaleX)
+      .setDepth(im.depth)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setAlpha(0);
     im.on('pointerover', () => {
-      this.tweens.add({ targets: im, scale: skala * 1.05, duration: T.pop, ease: 'Quad.easeOut' });
+      this.tweens.add({ targets: blask, alpha: 0.22, duration: T.pop, ease: 'Quad.easeOut' });
       // Zarys po najechaniu tylko jaśnieje. Doprowadzenie go do pełnej krycia
       // kłamałoby o stanie miasta: przez chwilę wyglądałby na postawiony.
       im.setAlpha(Math.min(1, im.alpha + 0.25));
     });
     im.on('pointerout', () => {
-      this.tweens.add({ targets: im, scale: skala, duration: T.pop });
+      this.tweens.add({ targets: blask, alpha: 0, duration: T.pop });
       this.przywrocWyglad(b);
     });
     im.on('pointerdown', () => this.pokazBudynek(b));
