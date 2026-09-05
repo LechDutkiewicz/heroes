@@ -5,28 +5,36 @@ zaznaczasz blok, kopiujesz, wklejasz do modelu, dołączasz obrazek referencyjny
 
 ## Jak z tego korzystać — trzy kroki
 
-**Krok 1. Dołącz obrazek referencyjny.** Do KAŻDEGO promptu dołączaj
-`tools/wsad/referencja-stworki.png` — to są nasze stworki i nic poza nimi.
-(Wcześniejszy arkusz `referencja-stylu.png` zawierał także nasz stary ekran
-miasta, czyli dokładnie tę grafikę, której model ma NIE naśladować. Nie używaj
-go jako referencji.)
+**Krok 1. Zacznij od kotwicy.** Wygeneruj „widok całego miasta" z pierwszego
+bloku, dołączając `tools/wsad/referencja-stworki.png` (nasze stworki i nic poza
+nimi). Zapisz jako `miasto-kotwica.png`.
 
-**Krok 2. Zacznij od kotwicy.** Wygeneruj najpierw „widok całego miasta", potem
-`ratusz1.png`. Jak `ratusz1` będzie dobry, **od tego momentu dołączaj DWA
-obrazki referencyjne**: stworki i zatwierdzony `ratusz1`. To on trzyma resztę
-budynków w jednym świecie.
+**Krok 2. Do WSZYSTKIEGO, co potem, dołączaj DWA obrazki referencyjne:**
+`referencja-stworki.png` i zatwierdzoną `miasto-kotwica.png`. Kotwica jest
+ważniejsza, niż wygląda — ustala nie tylko paletę, ale i KAMERĘ. Pierwsza próba
+pokazała dlaczego: chatka wyszła widziana wyraźnie bardziej z góry niż domy na
+panoramie, więc postawiona na tym tle unosiłaby się nad ziemią. Prompty mówią
+teraz modelowi wprost: ta sama kamera, co na referencji.
+
+Sześć naszych budynków (ratusz, palisada, gniazdo, kłoda, sadzawka, kopuła
+i prastare drzewo) JUŻ JEST na kotwicy. Ich prompty każą wyjąć ten sam budynek
+z referencji zamiast wymyślać nowy — to daje spójność, jakiej nie da żaden opis
+słowny.
 
 **Krok 3. Zapisuj pliki pod nazwami z nagłówków** (`ratusz1.png`, `fort.png`,
 `teren-trawa.png`…) i wrzucaj do `tools/wsad/`. Nazwy nie są ozdobne — przebieg
 po stronie gry szuka dokładnie tych plików.
 
-Jeśli model nie umie zapisać przezroczystości, zostaw tło magenty — wytnę je
-skryptem. Jeśli umie, przezroczystość jest lepsza.
+**Tło musi być magenta `#FF00FF`, nie białe.** To nie jest kaprys: budynki mają
+kremowe markizy, białe płótna i jasne okucia, więc wycinanie po bieli zjadłoby
+ich własne elementy. Magenty nie ma w żadnej naszej palecie, więc wycięcie jest
+bezstratne. Jeśli twoje narzędzie zapisuje PNG z prawdziwą przezroczystością,
+to też dobrze — wtedy tło jest bez znaczenia.
 
-**Czego NIE dołączać i czego nie dopisywać.** Do promptu idzie tylko zawartość
-bloku i `referencja-stworki.png`. Sekcje opisowe tego dokumentu („Benchmark",
-„Jak z tego korzystać", nagłówki) są komentarzem dla nas, nie tekstem dla modelu
-— wszystko, co model ma wiedzieć, jest już wpisane w każdy blok.
+**Czego NIE dołączać i czego nie dopisywać.** Do promptu idzie zawartość bloku
+i dwa obrazki referencyjne (stworki + kotwica) — nic więcej. Sekcje opisowe tego
+dokumentu („Benchmark", „Jak z tego korzystać", nagłówki) są komentarzem dla nas,
+nie tekstem dla modelu; wszystko, co model ma wiedzieć, jest już w bloku.
 
 Osobno: **nie dołączaj kadrów z `tools/reference/pmd/` jako referencji.** To jest
 pixel art z konsoli DS. Jako obrazek referencyjny model naśladowałby przede
@@ -51,7 +59,7 @@ Ten obraz nie wchodzi do gry. Ustala paletę, światło i materiał raz, dla
 wszystkiego, co powstanie potem. Zapisz jako `miasto-kotwica.png`.
 
 ```
-A wide establishing view of a small forest settlement belonging to creature trainers, seen from a low hill in the late afternoon. A timber gathering hall with a mossy shingle roof stands at the centre beside a trodden dirt path; scattered around it on a sunlit meadow stand a few creature dwellings: a woven nest on a tree stump, a hollow fallen log with a round door, a clear turquoise pool ringed with mossy stones, a green dome woven from branches, and one ancient enormous tree with glowing windows in its bark. A log palisade gate guards the back of the settlement. Wooden fences, berry baskets, hanging lanterns, drying laundry, crates and small banners fill the spaces between the buildings — the place is lived in and busy, with no empty ground anywhere. No creatures, no people.
+A wide establishing view of a small forest settlement belonging to creature trainers, seen from a low hill in the late afternoon. A timber gathering hall with a mossy shingle roof stands at the centre beside a trodden dirt path; scattered around it on a sunlit meadow stand a few creature dwellings: a woven nest on a tree stump, a hollow fallen log with a round door, a clear turquoise pool ringed with mossy stones, a green dome woven from branches, and one ancient enormous tree with glowing windows in its bark. A log palisade gate guards the back of the settlement. Wooden fences, berry baskets, hanging lanterns, drying laundry, crates and small banners with a simple stylised green leaf emblem (no Poke Ball symbols, no logos from other games) fill the spaces between the buildings — the place is lived in and busy, with no empty ground anywhere. No creatures, no people.
 
 Light: warm low afternoon sun from the upper right, long soft shadows, glowing windows.
 
@@ -70,11 +78,11 @@ nie generuj ich osobno.
 ### `ratusz1.png` — Polana Zbiorów — ratusz, stopień 1
 
 ```
-A small forest gathering hall for a village of creature trainers: a round timber-framed hut with a mossy shingle roof, a wide open porch, hanging baskets of berries, a carved wooden sign and warm light glowing from the windows. Humble and welcoming — the first building of a young settlement.
+A small forest gathering hall for a village of creature trainers: a round timber-framed hut with a mossy shingle roof, a wide open porch, hanging baskets of berries, a carved wooden sign and warm light glowing from the windows. Humble and welcoming — the first building of a young settlement. This building already appears in the attached town reference image — draw that same building, isolated, keeping its shape, materials, colours and camera angle.
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+Single building only. Use exactly the same viewing angle and camera height as the buildings in the attached town reference image — do not invent a new camera, do not look down more steeply. Orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform — NOT white, because the building itself contains cream and white cloth that would be cut away with a white background. Banners and flags carry a simple stylised green leaf emblem; no Poke Ball symbols, no logos from other games. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
 ```
 
 ### `ratusz2.png` — Wielka Polana — ratusz, stopień 2
@@ -84,7 +92,7 @@ A forest gathering hall, larger and richer: two storeys of timber with carved be
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+Single building only. Use exactly the same viewing angle and camera height as the buildings in the attached town reference image — do not invent a new camera, do not look down more steeply. Orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform — NOT white, because the building itself contains cream and white cloth that would be cut away with a white background. Banners and flags carry a simple stylised green leaf emblem; no Poke Ball symbols, no logos from other games. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
 ```
 
 ### `ratusz3.png` — Serce Boru — ratusz, stopień 3
@@ -94,47 +102,47 @@ The grandest forest hall of a creature-trainer town: three storeys of carved tim
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+Single building only. Use exactly the same viewing angle and camera height as the buildings in the attached town reference image — do not invent a new camera, do not look down more steeply. Orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform — NOT white, because the building itself contains cream and white cloth that would be cut away with a white background. Banners and flags carry a simple stylised green leaf emblem; no Poke Ball symbols, no logos from other games. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
 ```
 
 ### `fort.png` — Palisada — fort
 
 ```
-A defensive palisade gate for a forest settlement: a heavy log wall with sharpened tops, a reinforced timber gate with iron bands, two watch platforms with conical thatched roofs and small banners, ivy creeping up the logs. Wide and low — clearly a wall, not a house.
+A defensive palisade gate for a forest settlement: a heavy log wall with sharpened tops, a reinforced timber gate with iron bands, two watch platforms with conical thatched roofs and small banners, ivy creeping up the logs. Wide and low — clearly a wall, not a house. This building already appears in the attached town reference image — draw that same building, isolated, keeping its shape, materials, colours and camera angle.
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+Single building only. Use exactly the same viewing angle and camera height as the buildings in the attached town reference image — do not invent a new camera, do not look down more steeply. Orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform — NOT white, because the building itself contains cream and white cloth that would be cut away with a white background. Banners and flags carry a simple stylised green leaf emblem; no Poke Ball symbols, no logos from other games. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
 ```
 
 ### `siedlisko1.png` — Gniazdo Iskier — siedlisko 1
 
 ```
-A large woven nest built on a broad tree stump, home to small fire creatures: thick braided twigs, warm embers glowing between them, two large cream-coloured eggs resting inside, a few scorched branches.
+A large woven nest built on a broad tree stump, home to small fire creatures: thick braided twigs, warm embers glowing between them, two large cream-coloured eggs resting inside, a few scorched branches. This building already appears in the attached town reference image — draw that same building, isolated, keeping its shape, materials, colours and camera angle.
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+Single building only. Use exactly the same viewing angle and camera height as the buildings in the attached town reference image — do not invent a new camera, do not look down more steeply. Orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform — NOT white, because the building itself contains cream and white cloth that would be cut away with a white background. Banners and flags carry a simple stylised green leaf emblem; no Poke Ball symbols, no logos from other games. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
 ```
 
 ### `siedlisko2.png` — Suchy Konar — siedlisko 2
 
 ```
-A hollow fallen log turned into a home: a massive dry tree trunk lying on its side, a round carved doorway with a wooden frame, small round windows, mushrooms and moss on the bark, a little chimney pipe poking through the top.
+A hollow fallen log turned into a home: a massive dry tree trunk lying on its side, a round carved doorway with a wooden frame, small round windows, mushrooms and moss on the bark, a little chimney pipe poking through the top. This building already appears in the attached town reference image — draw that same building, isolated, keeping its shape, materials, colours and camera angle.
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+Single building only. Use exactly the same viewing angle and camera height as the buildings in the attached town reference image — do not invent a new camera, do not look down more steeply. Orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform — NOT white, because the building itself contains cream and white cloth that would be cut away with a white background. Banners and flags carry a simple stylised green leaf emblem; no Poke Ball symbols, no logos from other games. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
 ```
 
 ### `siedlisko3.png` — Rosista Kotlina — siedlisko 3
 
 ```
-A misty hollow pool where water creatures live: a small round pond of clear turquoise water ringed by wet mossy boulders, reeds and lily pads, thin mist drifting over the surface, a little wooden jetty.
+A misty hollow pool where water creatures live: a small round pond of clear turquoise water ringed by wet mossy boulders, reeds and lily pads, thin mist drifting over the surface, a little wooden jetty. This building already appears in the attached town reference image — draw that same building, isolated, keeping its shape, materials, colours and camera angle.
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+Single building only. Use exactly the same viewing angle and camera height as the buildings in the attached town reference image — do not invent a new camera, do not look down more steeply. Orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform — NOT white, because the building itself contains cream and white cloth that would be cut away with a white background. Banners and flags carry a simple stylised green leaf emblem; no Poke Ball symbols, no logos from other games. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
 ```
 
 ### `siedlisko4.png` — Strumień — siedlisko 4
@@ -144,27 +152,27 @@ A stream dwelling with a working water wheel: a rocky ledge with a small waterfa
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+Single building only. Use exactly the same viewing angle and camera height as the buildings in the attached town reference image — do not invent a new camera, do not look down more steeply. Orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform — NOT white, because the building itself contains cream and white cloth that would be cut away with a white background. Banners and flags carry a simple stylised green leaf emblem; no Poke Ball symbols, no logos from other games. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
 ```
 
 ### `siedlisko5.png` — Zielona Kopuła — siedlisko 5
 
 ```
-A living green dome dwelling: a large rounded hut woven from bent branches and thick leaves, glowing amber windows set into the weave, a mossy entrance arch, flowering vines over the top, a small banner on a pole.
+A living green dome dwelling: a large rounded hut woven from bent branches and thick leaves, glowing amber windows set into the weave, a mossy entrance arch, flowering vines over the top, a small banner on a pole. This building already appears in the attached town reference image — draw that same building, isolated, keeping its shape, materials, colours and camera angle.
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+Single building only. Use exactly the same viewing angle and camera height as the buildings in the attached town reference image — do not invent a new camera, do not look down more steeply. Orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform — NOT white, because the building itself contains cream and white cloth that would be cut away with a white background. Banners and flags carry a simple stylised green leaf emblem; no Poke Ball symbols, no logos from other games. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
 ```
 
 ### `siedlisko6.png` — Prastare Drzewo — siedlisko 6
 
 ```
-An ancient enormous tree that is itself a home: a massive gnarled trunk with a carved arched doorway, glowing windows in the bark at several heights, thick roots spreading outward, a huge lush canopy, hanging lanterns and a rope ladder. The tallest and most impressive building in the town.
+An ancient enormous tree that is itself a home: a massive gnarled trunk with a carved arched doorway, glowing windows in the bark at several heights, thick roots spreading outward, a huge lush canopy, hanging lanterns and a rope ladder. The tallest and most impressive building in the town. This building already appears in the attached town reference image — draw that same building, isolated, keeping its shape, materials, colours and camera angle.
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+Single building only. Use exactly the same viewing angle and camera height as the buildings in the attached town reference image — do not invent a new camera, do not look down more steeply. Orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform — NOT white, because the building itself contains cream and white cloth that would be cut away with a white background. Banners and flags carry a simple stylised green leaf emblem; no Poke Ball symbols, no logos from other games. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
 ```
 
 ### `specjalny.png` — Krzew Jagodowy — budynek specjalny
@@ -174,7 +182,7 @@ A cultivated berry grove: a big lush berry bush heavy with red berries growing o
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+Single building only. Use exactly the same viewing angle and camera height as the buildings in the attached town reference image — do not invent a new camera, do not look down more steeply. Orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform — NOT white, because the building itself contains cream and white cloth that would be cut away with a white background. Banners and flags carry a simple stylised green leaf emblem; no Poke Ball symbols, no logos from other games. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
 ```
 
 ### `plac.png` — Plac budowy — wspólny dla wszystkich budynków
@@ -184,7 +192,7 @@ An empty building site for a fantasy village: a shallow dug foundation pit with 
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single building only, seen from about 20 degrees above and 25 degrees to the right, orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
+Single building only. Use exactly the same viewing angle and camera height as the buildings in the attached town reference image — do not invent a new camera, do not look down more steeply. Orthographic, no lens distortion, centred with a small margin. Warm sunlight from the upper right. No ground, no grass, no base, no pedestal, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform — NOT white, because the building itself contains cream and white cloth that would be cut away with a white background. Banners and flags carry a simple stylised green leaf emblem; no Poke Ball symbols, no logos from other games. The silhouette must stay clear and recognisable when the image is scaled down to 200 pixels tall. Square image, at least 2048x2048. No text, no logo, no watermark, no user interface, no characters, no people.
 ```
 
 ## Trzy panoramy tła
@@ -304,7 +312,7 @@ A single broadleaf tree with a thick rounded canopy and a sturdy trunk, a few li
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+Single object only, seen from about 45 degrees above (adventure-map view) — the adventure map looks down more steeply than the town screen, so this one does NOT copy the town camera. Orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform, NOT white. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
 ```
 
 ### `m-sosna.png` — sosna
@@ -314,7 +322,7 @@ A single conifer with layered dark green branches and a straight trunk.
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+Single object only, seen from about 45 degrees above (adventure-map view) — the adventure map looks down more steeply than the town screen, so this one does NOT copy the town camera. Orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform, NOT white. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
 ```
 
 ### `m-krzak.png` — krzak
@@ -324,7 +332,7 @@ A low round bush with dense small leaves and a few red berries.
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+Single object only, seen from about 45 degrees above (adventure-map view) — the adventure map looks down more steeply than the town screen, so this one does NOT copy the town camera. Orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform, NOT white. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
 ```
 
 ### `m-skala.png` — skała
@@ -334,7 +342,7 @@ A cluster of grey boulders with mossy tops and cracked faces.
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+Single object only, seen from about 45 degrees above (adventure-map view) — the adventure map looks down more steeply than the town screen, so this one does NOT copy the town camera. Orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform, NOT white. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
 ```
 
 ### `m-kopalnia.png` — kopalnia
@@ -344,7 +352,7 @@ A small mine entrance dug into a rocky mound: a timber-framed opening, wooden su
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+Single object only, seen from about 45 degrees above (adventure-map view) — the adventure map looks down more steeply than the town screen, so this one does NOT copy the town camera. Orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform, NOT white. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
 ```
 
 ### `m-sad.png` — sad
@@ -354,7 +362,7 @@ A small orchard plot: two berry-laden trees, a low wooden fence, woven baskets a
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+Single object only, seen from about 45 degrees above (adventure-map view) — the adventure map looks down more steeply than the town screen, so this one does NOT copy the town camera. Orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform, NOT white. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
 ```
 
 ### `m-skrzynia.png` — skrzynia
@@ -364,7 +372,7 @@ A wooden treasure chest with iron bands and a big golden lock, lid slightly open
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+Single object only, seen from about 45 degrees above (adventure-map view) — the adventure map looks down more steeply than the town screen, so this one does NOT copy the town camera. Orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform, NOT white. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
 ```
 
 ### `m-zamek.png` — zamek na mapie
@@ -374,7 +382,7 @@ A small fortified town seen from a distance: a timber gate tower, a mossy hall r
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+Single object only, seen from about 45 degrees above (adventure-map view) — the adventure map looks down more steeply than the town screen, so this one does NOT copy the town camera. Orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform, NOT white. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
 ```
 
 ### `m-obelisk.png` — obelisk
@@ -384,7 +392,7 @@ A weathered stone marker overgrown with vines, with a glowing carved symbol on i
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
+Single object only, seen from about 45 degrees above (adventure-map view) — the adventure map looks down more steeply than the town screen, so this one does NOT copy the town camera. Orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform, NOT white. It must stay readable when scaled down to 60 pixels tall. Square image, at least 1024x1024. No text, no watermark, no user interface, no characters.
 ```
 
 ## Cztery surowce
@@ -397,7 +405,7 @@ A small round red-and-white catching ball with a dark band across the middle and
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 32 pixels tall. Square image, at least 512x512. No text, no watermark, no user interface, no characters.
+Single object only, seen from about 45 degrees above (adventure-map view) — the adventure map looks down more steeply than the town screen, so this one does NOT copy the town camera. Orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform, NOT white. It must stay readable when scaled down to 32 pixels tall. Square image, at least 512x512. No text, no watermark, no user interface, no characters.
 ```
 
 ### `s-jagody.png` — jagody
@@ -407,7 +415,7 @@ A small pile of plump red berries with green leaves, glossy and appetising.
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 32 pixels tall. Square image, at least 512x512. No text, no watermark, no user interface, no characters.
+Single object only, seen from about 45 degrees above (adventure-map view) — the adventure map looks down more steeply than the town screen, so this one does NOT copy the town camera. Orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform, NOT white. It must stay readable when scaled down to 32 pixels tall. Square image, at least 512x512. No text, no watermark, no user interface, no characters.
 ```
 
 ### `s-kamien.png` — kamień ewolucji
@@ -417,7 +425,7 @@ A cut violet crystal with clean facets and a soft inner glow.
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 32 pixels tall. Square image, at least 512x512. No text, no watermark, no user interface, no characters.
+Single object only, seen from about 45 degrees above (adventure-map view) — the adventure map looks down more steeply than the town screen, so this one does NOT copy the town camera. Orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform, NOT white. It must stay readable when scaled down to 32 pixels tall. Square image, at least 512x512. No text, no watermark, no user interface, no characters.
 ```
 
 ### `s-odlamki.png` — odłamki
@@ -427,7 +435,7 @@ A small cluster of pale blue crystal shards on a rocky base.
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
-Single object only, seen from about 45 degrees above (adventure-map view), orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. Flat solid magenta #FF00FF background, completely uniform. It must stay readable when scaled down to 32 pixels tall. Square image, at least 512x512. No text, no watermark, no user interface, no characters.
+Single object only, seen from about 45 degrees above (adventure-map view) — the adventure map looks down more steeply than the town screen, so this one does NOT copy the town camera. Orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. The background must be flat solid magenta #FF00FF, completely uniform, NOT white. It must stay readable when scaled down to 32 pixels tall. Square image, at least 512x512. No text, no watermark, no user interface, no characters.
 ```
 
 ---
