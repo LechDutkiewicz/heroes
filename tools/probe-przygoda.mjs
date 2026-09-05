@@ -347,6 +347,53 @@ sprawdz(
   poZamku.sprytPokonanego === false && poZamku.potworZebrany === true
 );
 
+// --- druga bitwa w tej samej sesji ---
+//
+// To nie jest powtórka poprzedniego testu. Phaser używa TEJ SAMEJ instancji
+// sceny przy każdym `scene.start`, więc pola z wartością nadaną przy deklaracji
+// ustawiają się raz, przy tworzeniu gry. Druga bitwa zaczynała się z oddziałami
+// pierwszej, których napisy i paski zniknęły razem z poprzednią sceną — i gra
+// stawała na martwej teksturze. Pierwsza bitwa nigdy tego nie pokaże, bo
+// zaczyna od pustych tablic; potrzebna jest właśnie DRUGA.
+console.log('\n=== druga bitwa w tej samej sesji ===');
+const drugi = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const p = s.stan.obiekty.find((o) => o.rodzaj === 'potwor' && !o.zebrany);
+  if (!p) return null;
+  s.stan.bohater.x = p.x;
+  s.stan.bohater.y = p.y - 1;
+  s.stan.bohater.ruch = 2000;
+  s.idz([{ x: p.x, y: p.y, koszt: 100 }]);
+  return p.nazwa;
+});
+if (drugi) {
+  let wstala = true;
+  try {
+    await scena('battle');
+  } catch {
+    wstala = false;
+  }
+  sprawdz('druga bitwa w ogóle się zaczyna', wstala, drugi);
+  if (wstala) {
+    const swiezo = await page.evaluate(() => {
+      const b = window.__game.scene.getScene('battle');
+      return {
+        oddzialy: b.units.length,
+        zywe: b.units.filter((u) => u.alive !== false).length,
+      };
+    });
+    // Gdyby stan poprzedniej bitwy nie został wyczyszczony, na planszy stałyby
+    // oddziały z obu — czyli wyraźnie więcej niż dwie armie po sześć.
+    sprawdz(
+      'druga bitwa nie dziedziczy oddziałów z pierwszej',
+      swiezo.oddzialy > 0 && swiezo.oddzialy <= 12,
+      `${swiezo.oddzialy} oddziałów`
+    );
+  }
+} else {
+  sprawdz('druga bitwa w ogóle się zaczyna', false, 'zabrakło potworów na mapie');
+}
+
 console.log(`\n${bledy === 0 ? 'Wszystko się zgadza.' : `Błędów: ${bledy}`}`);
 await browser.close();
 process.exit(bledy === 0 ? 0 : 1);
