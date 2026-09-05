@@ -23,6 +23,17 @@ po stronie gry szuka dokładnie tych plików.
 Jeśli model nie umie zapisać przezroczystości, zostaw tło magenty — wytnę je
 skryptem. Jeśli umie, przezroczystość jest lepsza.
 
+**Czego NIE dołączać i czego nie dopisywać.** Do promptu idzie tylko zawartość
+bloku i `referencja-stworki.png`. Sekcje opisowe tego dokumentu („Benchmark",
+„Jak z tego korzystać", nagłówki) są komentarzem dla nas, nie tekstem dla modelu
+— wszystko, co model ma wiedzieć, jest już wpisane w każdy blok.
+
+Osobno: **nie dołączaj kadrów z `tools/reference/pmd/` jako referencji.** To jest
+pixel art z konsoli DS. Jako obrazek referencyjny model naśladowałby przede
+wszystkim piksele, czyli dokładnie tę jedną rzecz, której z tamtej gry nie
+bierzemy. Te kadry służą NAM do oceniania nastroju i gęstości, a nie modelowi
+do naśladowania.
+
 ## Benchmark
 
 Nastrój, paleta i gęstość: ciepłe, gęsto zastawione miasteczko w duchu Pokémon
