@@ -618,11 +618,11 @@ export class AdventureScene extends Phaser.Scene {
     // nieprzejezdność.
     const bryla = BRYLA[o.rodzaj];
     if (o.rodzaj === 'zamek')
-      return { klucz: o.nasz ? 'm-zamek-las' : 'm-zamek-ogien', wys: KAFEL * (bryla ? 2.4 : 1.9) };
+      return { klucz: o.nasz ? 'm-zamek-las' : 'm-zamek-ogien', wys: KAFEL * (bryla ? 3.1 : 1.9) };
     if (o.rodzaj === 'kopalnia')
       return {
         klucz: o.surowiec === 'jagoda' ? 'm-sad' : 'm-kopalnia',
-        wys: KAFEL * (bryla ? 1.6 : 1.25),
+        wys: KAFEL * (bryla ? 2.2 : 1.25),
       };
     if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: KAFEL * 0.78 };
     if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: KAFEL * 0.72 };
@@ -679,10 +679,45 @@ export class AdventureScene extends Phaser.Scene {
         kont.setData('flaga', f);
       }
 
+      // Strzałki wejścia — tak samo jak w Heroes 3, gdzie każde miasto
+      // i każda kopalnia ma je przy bramie. Bez nich bryła zajmuje kilka pól
+      // i nie widać, w które trzeba wejść bohaterem: całą resztę zasłania
+      // budynek i każde kliknięcie w niego otwiera tylko podgląd.
+      if (BRYLA[o.rodzaj]) kont.add(this.strzalkiWejscia());
+
       kont.setData('obiekt', o);
       this.ikonyObiektow[o.id] = kont;
       this.swiat.add(kont);
     }
+  }
+
+  /**
+   * Dwie żółte strzałki wskazujące bramę — dokładnie ten sam znak, którym
+   * Heroes 3 oznacza wejście do miasta i do kopalni.
+   *
+   * Rysowane na dole pola wejścia, czyli tam, gdzie trzeba kliknąć, żeby
+   * wprowadzić bohatera. Ciemny obrys jest konieczny: sam żółty ginie na
+   * placu z ubitej ziemi, a to jedyna wskazówka, jaką ma gracz.
+   */
+  private strzalkiWejscia() {
+    const g = this.add.graphics();
+    const y = KAFEL * 0.3;
+    for (const kier of [-1, 1]) {
+      const x = kier * KAFEL * 0.3;
+      const w = KAFEL * 0.14;
+      // Grot skierowany do ŚRODKA bramy: obie strzałki pokazują to samo pole,
+      // więc oko biegnie do miejsca kliknięcia, a nie od niego.
+      const punkty: Array<[number, number]> = [
+        [x + kier * w, y - w],
+        [x - kier * w, y],
+        [x + kier * w, y + w],
+      ];
+      g.lineStyle(3, C.shadow, 0.8);
+      g.strokeTriangle(...(punkty.flat() as [number, number, number, number, number, number]));
+      g.fillStyle(C.gold, 1);
+      g.fillTriangle(...(punkty.flat() as [number, number, number, number, number, number]));
+    }
+    return g;
   }
 
   private chorag(barwa: number) {
