@@ -159,6 +159,23 @@ export class TownScene extends Phaser.Scene {
     return profilZamku(this.zamek.frakcjaZamku ?? 'bor');
   }
 
+  /**
+   * Czy bohater stoi w tym zamku.
+   *
+   * Do miasta da się wejść z panelu na mapie, nie ruszając bohatera — i tak
+   * jest w Heroes 3. Ale werbunek dokłada stworki do armii BOHATERA, więc
+   * werbowanie zdalnie oznaczałoby, że oddziały pojawiają się przy nim
+   * na drugim końcu mapy. W Heroes 3 idą wtedy do garnizonu zamku; garnizonu
+   * nie mamy, więc zamiast wymyślać nowy mechanizm, po prostu nie pozwalamy
+   * werbować bez bohatera. Budować można — to nic nie przenosi.
+   *
+   * Liczone z położenia, a nie z flagi przekazanej przy wejściu: flaga
+   * zdążyłaby się zestarzeć, a te dwie liczby są zawsze prawdziwe.
+   */
+  private get bohaterObecny() {
+    return this.stan.bohater.x === this.zamek.x && this.stan.bohater.y === this.zamek.y;
+  }
+
   // ---------- panorama ----------
 
   private rysujPanorame() {
@@ -502,8 +519,10 @@ export class TownScene extends Phaser.Scene {
       this.kartaStworek.setScale(Math.min(1, 72 / this.kartaStworek.height));
       this.pokazKoszt({ pokeball: KOSZT_ODDZIALU[b.poziom] }, ' za sztukę');
       const stac = this.stan.skarbiec.pokeball >= KOSZT_ODDZIALU[b.poziom];
-      this.kartaPrzycisk.setLabel(ile > 0 ? `Zwerbuj (${ile})` : 'Nikt nie czeka');
-      this.kartaPrzycisk.setEnabled(ile > 0 && stac);
+      this.kartaPrzycisk.setLabel(
+        !this.bohaterObecny ? 'Brak bohatera' : ile > 0 ? `Zwerbuj (${ile})` : 'Nikt nie czeka'
+      );
+      this.kartaPrzycisk.setEnabled(this.bohaterObecny && ile > 0 && stac);
       return;
     }
 
@@ -596,6 +615,10 @@ export class TownScene extends Phaser.Scene {
    * cztery osobne oddziały po jednym stworku, czyli armię bez sensu.
    */
   private kup(tier: number) {
+    if (!this.bohaterObecny) {
+      this.komunikat.setText('Nie ma tu komu ich oddać.\nPrzyprowadź bohatera do zamku.');
+      return;
+    }
     const dostepne = this.zamek.dostepne ?? [];
     const koszt = KOSZT_ODDZIALU[tier];
     if ((dostepne[tier] ?? 0) <= 0) {

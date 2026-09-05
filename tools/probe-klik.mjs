@@ -211,6 +211,66 @@ sprawdz(
   trasaDoZamku ? `(${trasaDoZamku.x},${trasaDoZamku.y}) wobec (${zamek.x},${zamek.y})` : 'brak trasy'
 );
 
+// --- mury zamku otwierają miasto, brama prowadzi bohatera ---
+//
+// W Heroes 3 zamek zajmuje kilka pól: wejściem wchodzi się bohaterem, a klik
+// w resztę bryły otwiera ekran miasta. Oba zachowania są potrzebne naraz —
+// werbunek dokłada stworki do armii BOHATERA, więc bez wejścia nie da się
+// werbować, a bez otwierania z mapy każde dobudowanie kosztuje kilka tur marszu.
+console.log('\n=== zamek: brama kontra mury ===');
+sprawdz(
+  'klik w bramę wyznacza trasę, nie otwiera miasta',
+  !!trasaDoZamku && !(await page.evaluate(() => window.__game.scene.isActive('zamek')))
+);
+
+const wMury = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const z = window.__cel;
+  // Pole nad bramą to mur — należy do bryły zamku i jest nieprzejezdne.
+  const c = s.naEkran(z.x, z.y - 1);
+  return { x: c.x - s.kamera.scrollX + s.mapaX, y: c.y - s.kamera.scrollY + s.mapaY };
+});
+await page.mouse.click(plotno.x + wMury.x, plotno.y + wMury.y);
+await page.waitForTimeout(600);
+sprawdz(
+  'klik w mury zamku otwiera ekran miasta',
+  await page.evaluate(() => window.__game.scene.isActive('zamek'))
+);
+
+// Werbunek bez bohatera musi być zablokowany: inaczej oddziały kupione zdalnie
+// pojawiałyby się przy bohaterze na drugim końcu mapy. W Heroes 3 idą wtedy do
+// garnizonu, a garnizonu nie mamy.
+sprawdz(
+  'w mieście bez bohatera nie da się werbować',
+  await page.evaluate(() => {
+    const t = window.__game.scene.getScene('zamek');
+    return t.bohaterObecny === false;
+  })
+);
+
+await page.evaluate(() => window.__game.scene.getScene('zamek').scene.start('adventure'));
+await page.waitForFunction(() => window.__game.scene.isActive('adventure'));
+await page.waitForTimeout(500);
+
+// --- przewijanie kursorem przy krawędzi ---
+console.log('\n=== przewijanie kursorem przy krawędzi ===');
+const przewiniecie = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  s.przewin(-500, -500, false);
+  return s.przewX;
+});
+// Kursor przy lewej krawędzi ramy mapy — widok ma pojechać w prawo.
+await page.mouse.move(plotno.x + 12, plotno.y + 300);
+await page.waitForTimeout(700);
+const poPrzewinieciu = await page.evaluate(
+  () => window.__game.scene.getScene('adventure').przewX
+);
+sprawdz(
+  'kursor przy krawędzi przewija mapę bez ruszania bohaterem',
+  poPrzewinieciu > przewiniecie,
+  `${Math.round(przewiniecie)} → ${Math.round(poPrzewinieciu)}`
+);
+
 await page.locator('canvas').screenshot({ path: 'tools/shots/mapa-klik.png' });
 console.log(`\n${bledy === 0 ? 'Wszystko się zgadza.' : `Błędów: ${bledy}`}`);
 await browser.close();

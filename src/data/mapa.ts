@@ -238,6 +238,13 @@ export interface StanMapy {
    * mgła, która wraca.
    */
   odkryte: boolean[][];
+  /**
+   * Pola zajęte bryłami zamków i kopalni, policzone raz. Zamek ani kopalnia
+   * nigdy z mapy nie znikają, więc ten zbiór się nie zmienia — a liczenie go
+   * przy każdym pytaniu o koszt pola oznaczałoby przechodzenie wszystkich
+   * obiektów wewnątrz wyznaczania trasy.
+   */
+  bryly?: Set<string>;
 }
 
 /** Odsłania mgłę wokół bohatera. Zwraca, ile pól przybyło. */
@@ -270,6 +277,69 @@ export const obiektNa = (s: StanMapy, x: number, y: number) =>
   s.obiekty.find((o) => o.x === x && o.y === y && !o.zebrany);
 
 /**
+ * Bryły zajmujące więcej niż jedno pole — szerokość i wysokość w polach.
+ *
+ * W Heroes 3 zamek zajmuje kawał planszy, a wchodzi się do niego JEDNYM polem
+ * na dole; tak samo kopalnia ma budynek i hałdę, a bramę w jednym miejscu.
+ * To nie jest ozdoba: dzięki temu widać z daleka, że to coś dużego i ważnego,
+ * a mimo to wiadomo dokładnie, gdzie trzeba stanąć.
+ *
+ * Pole obiektu (`o.x`, `o.y`) jest WEJŚCIEM i leży pośrodku dolnego rzędu.
+ * Reszta bryły jest nieprzejezdna i po kliknięciu otwiera ekran miasta —
+ * czyli dokładnie ten podział, który w H3 pokazuje zmiana kursora.
+ *
+ * Szerokości są nieparzyste, żeby wejście wypadało dokładnie na środku.
+ */
+export const BRYLA: Partial<Record<RodzajObiektu, [number, number]>> = {
+  zamek: [3, 2],
+  kopalnia: [3, 1],
+};
+
+/**
+ * Pola zajęte przez bryłę obiektu, BEZ wejścia.
+ *
+ * Pole, które wypadłoby poza mapą, na nieprzejezdnym terenie albo na innym
+ * obiekcie, jest po prostu pomijane. To jest celowe: plansza była układana,
+ * gdy każdy obiekt zajmował jedno pole, a bryła nie ma prawa jej unieważnić —
+ * zamek przy skале dostanie węższy bok i tyle.
+ */
+export function polaBryly(s: StanMapy, o: Obiekt): Pole[] {
+  const rozmiar = BRYLA[o.rodzaj];
+  if (!rozmiar || o.zebrany) return [];
+  const [szer, wys] = rozmiar;
+  const pola: Pole[] = [];
+  for (let dy = -(wys - 1); dy <= 0; dy++) {
+    for (let dx = -Math.floor(szer / 2); dx <= Math.floor(szer / 2); dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const x = o.x + dx;
+      const y = o.y + dy;
+      if (!wGranicach(s, x, y)) continue;
+      if (TEREN_INFO[s.teren[y][x]].koszt === null) continue;
+      if (obiektNa(s, x, y)) continue;
+      pola.push({ x, y });
+    }
+  }
+  return pola;
+}
+
+/** Obiekt, którego bryła (poza wejściem) przykrywa to pole. */
+export function brylaNa(s: StanMapy, x: number, y: number): Obiekt | undefined {
+  return s.obiekty.find(
+    (o) => !o.zebrany && polaBryly(s, o).some((p) => p.x === x && p.y === y)
+  );
+}
+
+/** Wszystkie pola pod bryłami, jako `"x,y"`. Liczone raz i zapamiętane. */
+export function polaZajete(s: StanMapy): Set<string> {
+  if (!s.bryly) {
+    s.bryly = new Set(
+      s.obiekty.flatMap((o) => polaBryly(s, o).map((p) => `${p.x},${p.y}`))
+    );
+  }
+  return s.bryly;
+}
+
+/**
  * Strefa kontroli potwora: pole, na którym stoi, i osiem pól wokół niego.
  *
  * Tak działa to w Heroes 3 i to jest cały powód, dla którego strażnicy coś
@@ -296,6 +366,8 @@ export function strzezoneProzez(s: StanMapy, x: number, y: number): Obiekt | und
  */
 export function kosztPola(s: StanMapy, x: number, y: number): number | null {
   if (!wGranicach(s, x, y)) return null;
+  // Mury zamku i budynek kopalni są nie do przejścia — wchodzi się wejściem.
+  if (polaZajete(s).has(`${x},${y}`)) return null;
   return TEREN_INFO[s.teren[y][x]].koszt;
 }
 

@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import {
+  BRYLA,
   SUROWCE,
   SUROWIEC_INFO,
   TEREN_INFO,
+  brylaNa,
   data,
   dochod,
   kosztPola,
@@ -47,6 +49,13 @@ import { GORA, KAFEL, MARGINES, PANEL_W, PASEK_H } from '../visual/uklad';
 /** Co ile milisekund plansza przechodzi na następną klatkę (animacja wody). */
 const WODA_MS = 550;
 const KLATEK_PLANSZY = 4;
+
+/**
+ * Prędkość przewijania kursorem przy krawędzi, w pikselach na sekundę.
+ * Dobrane tak, żeby przejechanie całej planszy zajmowało jakieś trzy sekundy:
+ * szybciej gubi się orientację, wolniej łatwiej sięgnąć po minimapę.
+ */
+const PREDKOSC_PRZEWIJANIA = 560;
 
 /** Arkusz bohatera: 4 kierunki (wiersze) × 4 klatki chodu (kolumny). */
 const BOHATER_KLATKA = 96;
@@ -113,6 +122,8 @@ export class AdventureScene extends Phaser.Scene {
   private trasaBiezaca: Krok[] | null = null;
   private zajety = false;
   private klatkaWody = 0;
+  /** Ostatnie położenie kursora — do przewijania przy krawędzi. */
+  private kursor: { x: number; y: number } | null = null;
   private przewX = 0;
   private przewY = 0;
 
@@ -219,7 +230,13 @@ export class AdventureScene extends Phaser.Scene {
     });
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => this.klikMapa(p));
-    this.input.on('pointermove', (p: Phaser.Input.Pointer) => this.ruchMyszy(p));
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      this.kursor = { x: p.x, y: p.y };
+      this.ruchMyszy(p);
+    });
+    // Kursor poza płótnem nie wysyła `pointermove`, więc bez tego mapa jechałaby
+    // dalej po wyjściu myszy za okno — aż do końca planszy.
+    this.input.on('gameout', () => (this.kursor = null));
     // Strzałki przesuwają widok. Na planszy 36 × 36 samo podążanie za bohaterem
     // nie wystarczy — trzeba móc się rozejrzeć, zanim się ruszy.
     this.input.keyboard?.on('keydown', (e: KeyboardEvent) => this.klawisz(e));
@@ -330,6 +347,42 @@ export class AdventureScene extends Phaser.Scene {
     if (ex < margines || ey < margines || ex > this.oknoW - margines || ey > this.oknoH - margines) {
       this.wysrodkujNaBohaterze();
     }
+  }
+
+  /**
+   * Przewijanie kursorem przy krawędzi ramy — jak w Heroes 3.
+   *
+   * Strzałki i minimapa już były, ale obie wymagają oderwania się od tego,
+   * co się właśnie ogląda. Przy planszy 36 × 36, z której widać jedną trzecią,
+   * zerknięcie „co jest kawałek dalej" to najczęstszy ruch w całej grze.
+   *
+   * Prędkość jest liczona z czasu klatki, a nie stała na klatkę: gra chodzi
+   * raz po 60, raz po 20 klatek na sekundę i bez tego mapa jechałaby trzy razy
+   * wolniej dokładnie wtedy, gdy jest najwięcej do narysowania.
+   */
+  update(_czas: number, delta: number) {
+    if (!this.kursor || this.zajety) return;
+    const { x, y } = this.kursor;
+    // Pas jest liczony od ramy mapy, nie od okna: po prawej stronie leży panel
+    // i przewijanie miało się włączać nad mapą, a nie nad portretem bohatera.
+    const pas = KAFEL * 0.75;
+    const lewo = this.mapaX;
+    const gora = this.mapaY;
+    const prawo = this.mapaX + this.oknoW;
+    const dol = this.mapaY + this.oknoH;
+    if (x < lewo - pas || x > prawo + pas || y < gora - pas || y > dol + pas) return;
+
+    const krok = (PREDKOSC_PRZEWIJANIA * delta) / 1000;
+    let dx = 0;
+    let dy = 0;
+    if (x < lewo + pas) dx = krok;
+    else if (x > prawo - pas) dx = -krok;
+    if (y < gora + pas) dy = krok;
+    else if (y > dol - pas) dy = -krok;
+    if (dx === 0 && dy === 0) return;
+    // Bez wygładzania: to ma być natychmiastowe i ciągłe. Tween co klatkę
+    // nakładałby się sam na siebie i mapa szarpałaby się zamiast płynąć.
+    this.przewin(this.przewX + dx, this.przewY + dy, false);
   }
 
   private klawisz(e: KeyboardEvent) {
@@ -559,10 +612,18 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   private grafikaObiektu(o: Obiekt): { klucz: string; wys: number } {
+    // Zamek i kopalnia zajmują kilka pól (patrz BRYLA), więc rozmiar bierzemy
+    // z szerokości bryły, a nie z wysokości rysunku: budynek ma wypełniać
+    // miejsce, które naprawdę blokuje, bo inaczej gracz nie wie, skąd
+    // nieprzejezdność.
+    const bryla = BRYLA[o.rodzaj];
     if (o.rodzaj === 'zamek')
-      return { klucz: o.nasz ? 'm-zamek-las' : 'm-zamek-ogien', wys: KAFEL * 1.9 };
+      return { klucz: o.nasz ? 'm-zamek-las' : 'm-zamek-ogien', wys: KAFEL * (bryla ? 2.4 : 1.9) };
     if (o.rodzaj === 'kopalnia')
-      return { klucz: o.surowiec === 'jagoda' ? 'm-sad' : 'm-kopalnia', wys: KAFEL * 1.25 };
+      return {
+        klucz: o.surowiec === 'jagoda' ? 'm-sad' : 'm-kopalnia',
+        wys: KAFEL * (bryla ? 1.6 : 1.25),
+      };
     if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: KAFEL * 0.78 };
     if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: KAFEL * 0.72 };
     if (o.rodzaj === 'potwor')
@@ -692,8 +753,11 @@ export class AdventureScene extends Phaser.Scene {
     const wnetrzeX = px + 16;
     const wnetrzeW = PANEL_W - 32;
 
-    const mmBok = wnetrzeW;
-    const mmX = wnetrzeX;
+    // Minimapa jest węższa od panelu, żeby pod nią zmieścił się pasek
+    // własności. Przy planszy 36 × 36 to nadal blisko pięć pikseli na pole —
+    // dość, żeby rozpoznać kształt lądu, a o to w minimapie chodzi.
+    const mmBok = 176;
+    const mmX = wnetrzeX + (wnetrzeW - mmBok) / 2;
     const mmY = py + 26;
     const ramka = this.add.graphics().setDepth(Z.hud);
     ramka.fillStyle(C.panelDeep, 1);
@@ -728,7 +792,7 @@ export class AdventureScene extends Phaser.Scene {
         );
       });
 
-    const kartaY = mmY + mmBok + 24;
+    const kartaY = this.rysujPasekWlasnosci(wnetrzeX, mmY + mmBok + 22, wnetrzeW) + 10;
     const kartaH = 152;
     const karta = this.add.graphics().setDepth(Z.hud);
     plate(karta, wnetrzeX, kartaY, wnetrzeW, kartaH, 9, C.panel, C.panelDeep, {
@@ -821,6 +885,63 @@ export class AdventureScene extends Phaser.Scene {
       onClick: () => this.koniecTury(),
     });
     przycisk.setLabel('Zakończ turę');
+  }
+
+  /**
+   * Pasek własności: bohaterowie i miasta, jak dwie kolumny portretów po
+   * prawej stronie ekranu przygody w Heroes 3.
+   *
+   * Miasto otwiera się STĄD, nie wchodząc tam bohaterem — to jest cały sens
+   * tej listy. Bez niej każde zajrzenie do zamku, żeby coś dobudować, kosztuje
+   * kilka tur marszu, a budowanie jest tym, co się robi codziennie.
+   *
+   * Bohaterowie pojawiają się dopiero, gdy jest ich więcej niż jeden: przy
+   * jednym lista powtarzałaby kartę, która i tak wisi niżej. Na razie nie ma
+   * w grze sposobu, żeby zdobyć drugiego, więc ten rząd nigdy się nie pokazuje
+   * — kod jest tu po to, żeby dodanie drugiego bohatera nie wymagało wracania
+   * do układu panelu.
+   *
+   * Zwraca dolną krawędź, bo to od niej zaczyna się karta bohatera.
+   */
+  private rysujPasekWlasnosci(x: number, y: number, szer: number): number {
+    const miasta = this.stan.obiekty.filter((o) => o.rodzaj === 'zamek' && o.nasz);
+    const bohaterowie = [this.stan.bohater];
+    const wpisy: Array<{ klucz: string; klik: () => void; podpis: string }> = [
+      ...(bohaterowie.length > 1
+        ? bohaterowie.map((b) => ({
+            klucz: 'bohater',
+            klik: () => this.wysrodkujNa(b.x, b.y),
+            podpis: b.imie,
+          }))
+        : []),
+      ...miasta.map((m) => ({
+        klucz: 'm-zamek-las',
+        klik: () => this.pokazZamek(m),
+        podpis: m.nazwa,
+      })),
+    ];
+    if (wpisy.length === 0) return y;
+
+    const bok = 40;
+    const odstep = 6;
+    const rzadX = x + (szer - (wpisy.length * bok + (wpisy.length - 1) * odstep)) / 2;
+    for (const [i, w] of wpisy.entries()) {
+      const sx = rzadX + i * (bok + odstep);
+      const g = this.add.graphics().setDepth(Z.hud);
+      g.fillStyle(mix(C.panel, C.panelDeep, 0.3), 1);
+      g.fillRoundedRect(sx, y, bok, bok, 5);
+      g.lineStyle(2, C.goldDeep, 1);
+      g.strokeRoundedRect(sx, y, bok, bok, 5);
+      const im = this.add.image(sx + bok / 2, y + bok / 2, w.klucz).setDepth(Z.hud + 1);
+      im.setScale(Math.min((bok - 8) / im.width, (bok - 6) / im.height));
+      this.add
+        .zone(sx, y, bok, bok)
+        .setOrigin(0, 0)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', w.klik)
+        .on('pointerover', () => this.podpowiedz.setText(`${w.podpis}\nKliknij, żeby wejść.`));
+    }
+    return y + bok;
   }
 
   private rysujPasekSurowcow() {
@@ -954,6 +1075,14 @@ export class AdventureScene extends Phaser.Scene {
       this.podpowiedz.setText('Nieznany teren — trzeba tam podejść.');
       return;
     }
+    // Kursor musi powiedzieć, które kliknięcie dostaniesz — na bryle zamku
+    // inne niż na jego polu. Bez tego podział jest niewidzialny.
+    const zamek = this.zamekPodKursorem(p);
+    this.input.setDefaultCursor(zamek ? 'pointer' : 'default');
+    if (zamek) {
+      this.podpowiedz.setText(`${zamek.nazwa}\nKliknij, żeby wejść do miasta.`);
+      return;
+    }
     const o = this.obiektPodKursorem(p) ?? obiektNa(this.stan, x, y);
     if (o) {
       this.podpowiedz.setText(this.opisObiektu(o));
@@ -998,8 +1127,39 @@ export class AdventureScene extends Phaser.Scene {
 
   private klikMapa(p: Phaser.Input.Pointer) {
     if (this.zajety || !this.wRamie(p.x, p.y)) return;
+    const zamek = this.zamekPodKursorem(p);
+    if (zamek) return this.pokazZamek(zamek);
     const cel = this.obiektPodKursorem(p) ?? this.zEkranu(p.x, p.y);
     this.celujW(cel.x, cel.y);
+  }
+
+  /**
+   * Czy kursor stoi na BRYLE własnego zamku — czyli czy kliknięcie ma otworzyć
+   * miasto, zamiast prowadzić tam bohatera.
+   *
+   * Tak to działa w Heroes 3: zamek zajmuje kilka pól, wejście na dole
+   * prowadzi bohatera, a reszta bryły otwiera ekran miasta i kursor się przy
+   * tym zmienia. Nasz zamek stoi na jednym polu, ale ma wysoki rysunek — więc
+   * ta sama zasada wychodzi tu jako podział „pole kontra wieża nad polem".
+   *
+   * Rozróżnienie musi zostać, bo obie rzeczy są potrzebne: werbunek dokłada
+   * stworki do armii BOHATERA, więc żeby werbować, trzeba go tam naprawdę
+   * przyprowadzić.
+   */
+  private zamekPodKursorem(p: Phaser.Input.Pointer): Obiekt | undefined {
+    const pole = this.zEkranu(p.x, p.y);
+    // Najpierw mury: pole bryły jest nieprzejezdne, więc nie ma tam czego
+    // pokazywać poza wejściem do środka.
+    const mur = brylaNa(this.stan, pole.x, pole.y);
+    if (mur?.rodzaj === 'zamek' && mur.nasz) return mur;
+    const o = this.obiektPodKursorem(p);
+    if (!o || o.rodzaj !== 'zamek' || !o.nasz) return undefined;
+    // Bohater stojący w bramie: całe pole otwiera miasto, bo nie ma go już
+    // dokąd prowadzić.
+    if (this.stan.bohater.x === o.x && this.stan.bohater.y === o.y) return o;
+    // Rysunek zamku wystaje ponad bramę. Klik w bramę prowadzi tam bohatera
+    // (bez tego nie da się werbować), klik w to, co nad nią — otwiera miasto.
+    return pole.x === o.x && pole.y === o.y ? undefined : o;
   }
 
   /**

@@ -151,6 +151,21 @@ OBIEKTY = {
 
 TERENY = ['teren-trawa', 'teren-sciezka', 'teren-piasek', 'teren-woda', 'teren-las', 'teren-skaly']
 
+#: Warianty tego samego terenu — druga i trzecia trawa, drugie skały i tak dalej.
+#: Nazwy z wsadu bywają pisane raz z łącznikiem, raz bez („teren-trawa2" obok
+#: „teren-trawa-2"), więc szukamy obu zamiast poprawiać plik po każdej dostawie.
+WARIANTY = [2, 3, 4]
+
+
+def warianty(nazwa: str):
+    """Ścieżki wariantów danego terenu, w kolejności numerów, tylko istniejące."""
+    for n in WARIANTY:
+        for wzor in (f'{nazwa}{n}', f'{nazwa}-{n}'):
+            p = WSAD / f'{wzor}.png'
+            if p.exists():
+                yield n, p
+                break
+
 
 def mapa():
     for zrodlo, cele in OBIEKTY.items():
@@ -164,11 +179,12 @@ def mapa():
 
     TEREN.mkdir(parents=True, exist_ok=True)
     for nazwa in TERENY:
-        im = Image.open(WSAD / f'{nazwa}.png').convert('RGB')
-        # Tekstury zostają duże: kafelki i przejścia tnie z nich dopiero krok 5,
-        # a im więcej materiału, tym mniej widać powtórzenie.
-        im.resize((768, 768), Image.LANCZOS).save(TEREN / f'{nazwa}.png')
-        print(f'  teren/{nazwa}.png  768 × 768')
+        # Tekstury zostają duże: im więcej materiału, tym mniej widać powtórzenie.
+        zrodla = [(1, WSAD / f'{nazwa}.png'), *warianty(nazwa)]
+        for n, sciezka in zrodla:
+            cel = f'{nazwa}.png' if n == 1 else f'{nazwa}-{n}.png'
+            Image.open(sciezka).convert('RGB').resize((768, 768), Image.LANCZOS).save(TEREN / cel)
+            print(f'  teren/{cel}  768 × 768')
 
 
 if __name__ == '__main__':

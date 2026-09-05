@@ -38,7 +38,7 @@ import numpy as np
 from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from teren_malowanie import ZIARNO, kafelkuj, maska, tekstura  # noqa: E402
+from teren_malowanie import ZIARNO, kafelkuj, maska, tekstura, warianty, zmieszaj  # noqa: E402
 
 KORZEN = Path(__file__).resolve().parent.parent
 KATALOG = KORZEN / 'public' / 'mapa'
@@ -118,12 +118,12 @@ def maska_drogi() -> Image.Image:
 
 
 def klatka(k: int) -> Image.Image:
-    plansza = kafelkuj(tekstura('trawa'), W, H)
+    plansza = zmieszaj(warianty('trawa'), W, H, (0, 0), ZIARNO)
     for n, (nazwa, znaki, wtapianie, poszarpanie) in enumerate(WARSTWY):
         if not any(c in znaki for wiersz in RYSUNEK for c in wiersz):
             continue
         przesun = PRAD[k] if nazwa == 'woda' else (0, 0)
-        warstwa = kafelkuj(tekstura(nazwa), W, H, przesun)
+        warstwa = zmieszaj(warianty(nazwa), W, H, przesun, ZIARNO + 50 + n)
         # Każda warstwa dostaje własne ziarno, inaczej wszystkie granice
         # falowałyby w tym samym rytmie i widać by było jeden wzór.
         m = maska(pola(znaki), KAFEL, wtapianie, poszarpanie, ZIARNO + n)
