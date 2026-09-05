@@ -122,6 +122,7 @@ export class TownScene extends Phaser.Scene {
   private kartaPrzycisk!: ReturnType<typeof makeHudButton>;
   private kartaStworek!: Phaser.GameObjects.Image;
   private zachety: Phaser.GameObjects.Image[] = [];
+  private przyciskBudowy!: ReturnType<typeof makeHudButton>;
   private wybrany?: Budynek;
   private komunikat!: Phaser.GameObjects.Text;
   private dataTekst!: Phaser.GameObjects.Text;
@@ -143,11 +144,6 @@ export class TownScene extends Phaser.Scene {
       // różnić ma je klimat, a jedno źródło trzyma spójną kreskę.
       for (const id of BUDYNKI_ID) this.load.image(`t-${f}-${id}`, `${b}miasto/${f}-${id}.png`);
     }
-    // Jeden plac budowy na wszystkie budynki. Wcześniej każdy miał własny
-    // zarys — widmo TEJ bryły — ale to była konieczność techniki rysowanej.
-    // Malowany plac z rusztowaniem mówi „tu coś stanie" sam z siebie,
-    // a CO stanie, mówi karta po kliknięciu.
-    this.load.image('t-plac', `${b}miasto/bor-plac.png`);
   }
 
   create() {
@@ -248,8 +244,14 @@ export class TownScene extends Phaser.Scene {
     );
 
     for (const b of [...widoczne].sort((a, c) => a.y - c.y)) {
-      const stoi = postawione.includes(b.id);
-      const klucz = stoi ? `t-${this.profil.frakcja}-${b.id}` : 't-plac';
+      // Rysujemy WYŁĄCZNIE to, co stoi. Wcześniej w każdym wolnym miejscu
+      // sterczał blady zarys placu budowy i miasto pierwszego dnia było pełne
+      // rusztowań zamiast puste. W Heroes 3 miasto wypełnia się w miarę
+      // rozbudowy — i to jest połowa satysfakcji z budowania. Czego jeszcze
+      // brakuje, mówi lista budowy (przycisk „Buduj").
+      if (!postawione.includes(b.id)) continue;
+      const stoi = true;
+      const klucz = `t-${this.profil.frakcja}-${b.id}`;
       const skala = this.skalaBudynku(b);
       const gleboko = Z.sky + 1 + Math.round(b.y * 40);
 
@@ -278,7 +280,6 @@ export class TownScene extends Phaser.Scene {
       this.podepnijKliki(im, b);
       this.przywrocWyglad(b);
     }
-    this.rysujZachety();
   }
 
   /**
@@ -592,6 +593,27 @@ export class TownScene extends Phaser.Scene {
       .setDepth(Z.hud + 1)
       .setWordWrapWidth(340);
 
+    // Budowa ma własny przycisk, zawsze w tym samym miejscu.
+    //
+    // Wcześniej stawiało się budynki, klikając w blade zarysy rozstawione po
+    // panoramie. Wyglądało to jak plac budowy w każdym wolnym miejscu — miasto
+    // pierwszego dnia było pełne rusztowań zamiast puste. W Heroes 3 miasto
+    // wypełnia się w miarę rozbudowy, a listę budowy otwiera ratusz; tak jest
+    // i tutaj, tylko lista dostaje jeszcze własny przycisk, żeby nie trzeba
+    // było zgadywać, że ratusz jest klikalny.
+    this.przyciskBudowy = makeHudButton(this, {
+      x: OKNO_W - 296,
+      y: y + h / 2,
+      w: 156,
+      h: 38,
+      icon: ICON.star,
+      tone: C.gold,
+      toneDeep: C.goldDeep,
+      onClick: () => this.pokazListeBudowy(),
+      depth: Z.hud + 2,
+    });
+    this.przyciskBudowy.setLabel('Buduj');
+
     const wyjscie = makeHudButton(this, {
       x: OKNO_W - 100,
       y: y + h / 2,
@@ -655,15 +677,11 @@ export class TownScene extends Phaser.Scene {
    * trzeba by rysować zarys drugiego ratusza w tym samym punkcie panoramy.
    */
   private pokazBudynek(b: Budynek) {
-    let cel = b;
-    if (b.rodzaj === 'ratusz' && (this.zamek.postawione ?? []).includes(b.id)) {
-      const nastepny = ['ratusz1', 'ratusz2', 'ratusz3'].find(
-        (r) => !(this.zamek.postawione ?? []).includes(r)
-      );
-      const bud = nastepny && this.profil.budynki.find((x) => x.id === nastepny);
-      if (bud) cel = bud;
-    }
-    this.wybrany = cel;
+    // Ratusz otwiera listę budowy — tak jak w Heroes 3, gdzie to on jest
+    // wejściem do rozbudowy całego miasta. Karta „już stoi" nie mówiłaby tu
+    // nic, a ratusz jest jedynym budynkiem, który stoi zawsze.
+    if (b.rodzaj === 'ratusz') return this.pokazListeBudowy();
+    this.wybrany = b;
     this.karta.setVisible(true);
     this.kartaPrzycisk.setVisible(true);
     this.odswiezKarte();
@@ -729,6 +747,173 @@ export class TownScene extends Phaser.Scene {
     this.kartaPrzycisk.setEnabled(
       mozna && !juzBudowano && stacNas(this.stan.skarbiec, b.koszt) && !!this.zamek.nasz
     );
+  }
+
+  /**
+   * Lista budowy — jedyne miejsce, w którym stawia się budynki.
+   *
+   * W Heroes 3 miasto na starcie jest niemal puste i wypełnia się w miarę
+   * rozbudowy, a co postawić, wybiera się z listy w ratuszu. My mieliśmy
+   * odwrotnie: wszystkie przyszłe budynki sterczały na panoramie jako blade
+   * zarysy, więc pierwszego dnia miasto wyglądało na plac budowy i zniknęła
+   * satysfakcja z tego, że coś przybywa.
+   *
+   * Miejsce, w którym NIE idziemy za wzorcem: Heroes 3 pokazuje na liście
+   * tylko to, co da się postawić natychmiast. My pokazujemy całe drzewko,
+   * z warunkiem wypisanym przy zablokowanych. Ośmiolatek musi widzieć, że
+   * gdzieś dalej jest Prastare Drzewo — inaczej nie ma po co oszczędzać.
+   */
+  private pokazListeBudowy() {
+    const postawione = this.zamek.postawione ?? [];
+    // Trzy ratusze to jeden budynek w trzech stopniach: na liście ma być
+    // najbliższy stopień, a nie trzy wiersze, z których dwa są bez sensu.
+    const najblizszyRatusz =
+      ['ratusz1', 'ratusz2', 'ratusz3'].find((r) => !postawione.includes(r)) ?? 'ratusz3';
+    const wiersze = this.profil.budynki.filter(
+      (b) => !b.id.startsWith('ratusz') || b.id === najblizszyRatusz
+    );
+
+    const szer = 660;
+    const wysWiersza = 52;
+    // 62 na tytuł u góry, 64 na przycisk u dołu — bez tego zapasu
+    // „Zamknij" nachodził na ostatni wiersz.
+    const wys = 62 + wiersze.length * wysWiersza + 64;
+    const cx = OKNO_W / 2;
+    const cy = OKNO_H / 2;
+    const lewo = cx - szer / 2;
+    const gora = cy - wys / 2;
+    const doZamkniecia: Phaser.GameObjects.GameObject[] = [];
+
+    const zaslona = this.add
+      .rectangle(0, 0, OKNO_W, OKNO_H, C.shadow, 0.55)
+      .setOrigin(0, 0)
+      .setDepth(Z.overlay)
+      .setInteractive();
+    const tlo = this.add.graphics().setDepth(Z.overlay + 1);
+    plate(tlo, lewo, gora, szer, wys, 12, C.panel, C.gold, {
+      light: 0.22,
+      dark: 0.2,
+      gloss: 0.16,
+      edgeW: 3,
+    });
+    doZamkniecia.push(zaslona, tlo);
+    doZamkniecia.push(
+      this.add
+        .text(cx, gora + 26, 'Co zbudować?', display(20, H.gold))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 2)
+    );
+
+    const juzBudowano = this.zamek.budowanoDnia === this.stan.dzien;
+    const zamknij = () => {
+      doZamkniecia.forEach((x) => x.destroy());
+      this.karta.setVisible(false);
+      this.kartaPrzycisk.setVisible(false);
+      this.wybrany = undefined;
+    };
+
+    for (const [i, b] of wiersze.entries()) {
+      const y = gora + 62 + i * wysWiersza;
+      const stoi = postawione.includes(b.id);
+      const mozna = moznaBudowac(b, postawione);
+      const stac = stacNas(this.stan.skarbiec, b.koszt);
+      const dostepny = !stoi && mozna && stac && !juzBudowano && !!this.zamek.nasz;
+
+      const rzad = this.add.graphics().setDepth(Z.overlay + 2);
+      rzad.fillStyle(mix(C.panel, C.panelDeep, i % 2 ? 0.24 : 0.12), 1);
+      rzad.fillRoundedRect(lewo + 14, y, szer - 28, wysWiersza - 6, 7);
+      if (dostepny) {
+        rzad.lineStyle(2, C.gold, 0.9);
+        rzad.strokeRoundedRect(lewo + 14, y, szer - 28, wysWiersza - 6, 7);
+      }
+      doZamkniecia.push(rzad);
+
+      const barwa = stoi ? H.inkSoft : dostepny ? H.white : H.inkSoft;
+      doZamkniecia.push(
+        this.add
+          .text(lewo + 28, y + 8, b.nazwa, display(14, barwa))
+          .setDepth(Z.overlay + 3),
+        this.add
+          .text(lewo + 28, y + 27, this.wiersz(b, stoi, mozna, stac, juzBudowano), body(11, H.inkSoft))
+          .setDepth(Z.overlay + 3)
+      );
+
+      // Cena po prawej, ikonami — czytelna, zanim dziecko przeczyta nazwy.
+      if (!stoi) {
+        let x = lewo + szer - 40;
+        for (const [co, ile] of Object.entries(b.koszt).reverse()) {
+          const s = co as Surowiec;
+          doZamkniecia.push(
+            this.add
+              .text(x, y + wysWiersza / 2 - 3, String(ile), display(13, H.white))
+              .setOrigin(1, 0.5)
+              .setDepth(Z.overlay + 3),
+            this.add
+              .image(x - 22, y + wysWiersza / 2 - 3, `m-${SUROWIEC_INFO[s].ikona}`)
+              .setDisplaySize(18, 18)
+              .setOrigin(0.5)
+              .setDepth(Z.overlay + 3)
+          );
+          x -= 62;
+        }
+      }
+
+      if (!dostepny) continue;
+      const strefa = this.add
+        .zone(lewo + 14, y, szer - 28, wysWiersza - 6)
+        .setOrigin(0, 0)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(Z.overlay + 4)
+        .on('pointerdown', () => {
+          zamknij();
+          this.buduj(b);
+        });
+      doZamkniecia.push(strefa);
+    }
+
+    const zamknijPrzycisk = makeHudButton(this, {
+      x: cx,
+      y: gora + wys - 30,
+      w: 200,
+      h: 38,
+      icon: ICON.boot,
+      tone: C.ally,
+      toneDeep: C.allyDeep,
+      depth: Z.overlay + 4,
+      onClick: () => {
+        zamknijPrzycisk.setVisible(false);
+        zamknij();
+      },
+    });
+    zamknijPrzycisk.setLabel('Zamknij');
+    // `makeHudButton` wiesza przycisk na scenie samodzielnie i wciągnięcie go
+    // do listy niszczonych rozjeżdża jego strefę kliknięcia — chowamy go więc
+    // ręcznie, razem z resztą okna.
+    zaslona.on('pointerdown', () => {
+      zamknijPrzycisk.setVisible(false);
+      zamknij();
+    });
+  }
+
+  /** Jednowierszowy stan budynku na liście budowy. */
+  private wiersz(
+    b: Budynek,
+    stoi: boolean,
+    mozna: boolean,
+    stac: boolean,
+    juzBudowano: boolean
+  ): string {
+    if (stoi) return 'Już stoi.';
+    if (!mozna) {
+      const brak = b.wymaga
+        .filter((w) => !(this.zamek.postawione ?? []).includes(w))
+        .map((w) => this.profil.budynki.find((x) => x.id === w)?.nazwa ?? w);
+      return `Najpierw: ${brak.join(', ')}.`;
+    }
+    const efekt = this.dzialanie(b, false).split('\n').slice(1).join(' ');
+    if (juzBudowano) return `Dziś już tu budowano. ${efekt}`;
+    if (!stac) return `Za mało surowców. ${efekt}`;
+    return efekt;
   }
 
   /**

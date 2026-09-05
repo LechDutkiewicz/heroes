@@ -102,52 +102,55 @@ await page.evaluate(() => {
 await page.waitForTimeout(1500);
 await scena('zamek');
 
-// --- panorama ---
+// --- panorama pokazuje TYLKO to, co stoi ---
 console.log('\n=== panorama ===');
 const start = await stanZamku();
 sprawdz(
-  'na panoramie stoi tyle brył, ile jest budynków bez powtórzonych ratuszy',
-  start.kafle === 9,
-  `${start.kafle}`
+  'na panoramie stoi tyle brył, ile budynków postawiono',
+  start.kafle === start.postawione.filter((x) => !x.startsWith('ratusz')).length + 1,
+  `${start.kafle} brył, postawione: ${start.postawione.join(', ')}`
+);
+sprawdz(
+  'niepostawiony budynek NIE jest rysowany',
+  (await gdzieBudynek('fort')) === null,
+  'fort'
 );
 
 const gniazdo = await gdzieBudynek('siedlisko1');
-const fort = await gdzieBudynek('fort');
 sprawdz(
-  'postawione siedlisko ma własną grafikę, a niepostawiony fort — plac budowy',
-  gniazdo?.tekstura?.startsWith('t-bor-') === true && fort?.tekstura === 't-plac',
-  `${gniazdo?.tekstura} / ${fort?.tekstura}`
-);
-sprawdz(
-  'bryły nie leżą jedna na drugiej ani poza panoramą',
-  !!fort && fort.y > 44 && fort.y < 640 && !!gniazdo && Math.abs(fort.x - gniazdo.x) > 40,
-  `fort ${Math.round(fort?.x)},${Math.round(fort?.y)}`
+  'postawione siedlisko ma własną grafikę frakcji',
+  gniazdo?.tekstura?.startsWith('t-bor-') === true,
+  String(gniazdo?.tekstura)
 );
 
-// --- klikanie w bryłę otwiera kartę TEGO budynku ---
-console.log('\n=== karta budynku ===');
-await klik(fort.x, fort.y);
-await page.waitForTimeout(300);
-const poKliku = await stanZamku();
-sprawdz('kliknięcie w bryłę otwiera kartę', poKliku.karta === true);
-sprawdz('karta pokazuje budynek, w który kliknięto', poKliku.wybrany === 'fort', String(poKliku.wybrany));
-
-// --- budowa ---
-console.log('\n=== budowa ===');
-// Dosypujemy surowców przez skarbiec gracza, nie przez ominięcie zasady:
-// sprawdzamy budowanie, a nie to, czy da się mieć dużo pokeballi.
+// --- lista budowy ---
+//
+// Budowanie przeniosło się z panoramy do listy: w Heroes 3 miasto na starcie
+// jest puste i wypełnia się w miarę rozbudowy, a co postawić, wybiera się
+// z listy w ratuszu. Sonda musi więc klikać w wiersz listy, a nie w zarys.
+console.log('\n=== lista budowy ===');
 await page.evaluate(() => {
   const t = window.__game.scene.getScene('zamek');
   Object.assign(t.stan.skarbiec, { pokeball: 300, jagoda: 40, kamien: 10, odlamek: 40 });
   t.odswiez();
 });
-// Przycisk karty klikamy MYSZĄ, w miejscu, w którym scena go trzyma —
-// wołanie `dzialaj()` z kodu ominęłoby to, czy przycisk w ogóle da się trafić.
-const przycisk = await page.evaluate(() => {
-  const t = window.__game.scene.getScene('zamek');
-  return { x: t.karta.x + 150, y: t.karta.y + 166 };
-});
-await klik(przycisk.x, przycisk.y);
+
+/** Gdzie na ekranie leży wiersz danego budynku na otwartej liście. */
+const gdzieWiersz = (id) =>
+  page.evaluate((b) => {
+    const t = window.__game.scene.getScene('zamek');
+    const wiersz = t.children.list.find(
+      (o) => o.type === 'Text' && o.text === (t.profil.budynki.find((x) => x.id === b)?.nazwa ?? '')
+    );
+    return wiersz ? { x: wiersz.x + 120, y: wiersz.y + 14 } : null;
+  }, id);
+
+await klik(960 - 296, 663);
+await page.waitForTimeout(400);
+const wierszFortu = await gdzieWiersz('fort');
+sprawdz('przycisk „Buduj" otwiera listę z wierszem fortu', !!wierszFortu);
+
+await klik(wierszFortu.x, wierszFortu.y);
 await page.waitForTimeout(500);
 const poBudowie = await stanZamku();
 sprawdz('fort stanął', poBudowie.postawione.includes('fort'), poBudowie.postawione.join(', '));
@@ -158,7 +161,7 @@ sprawdz(
 );
 const fortPo = await gdzieBudynek('fort');
 sprawdz(
-  'zarys zamienił się w bryłę',
+  'fort pojawił się na panoramie dopiero po postawieniu',
   fortPo?.tekstura === 't-bor-fort' && fortPo.stoi === true,
   String(fortPo?.tekstura)
 );
@@ -266,35 +269,34 @@ sprawdz(
 sprawdz('werbunek kosztuje', kupno.po.kasa < kupno.przed.kasa, `${kupno.przed.kasa} → ${kupno.po.kasa}`);
 
 // --- rozbudowa ratusza podmienia bryłę, a nie dokłada drugiej ---
+//
+// Ratusz jest teraz wejściem do listy budowy — tak jak w Heroes 3, gdzie to on
+// otwiera rozbudowę całego miasta. Klikamy więc w jego bryłę i sprawdzamy, czy
+// lista się otworzyła, a potem stawiamy z niej drugi stopień.
 console.log('\n=== rozbudowa ratusza ===');
-const ratusz = await page.evaluate(() => {
+await page.evaluate(() => {
   const t = window.__game.scene.getScene('zamek');
   t.zamek.budowanoDnia = null;
   Object.assign(t.stan.skarbiec, { pokeball: 300, jagoda: 40, kamien: 10, odlamek: 40 });
-  const przedIle = t.kafle.filter((k) => k.budynek.rodzaj === 'ratusz').length;
-  const stary = t.kafle.find((k) => k.budynek.rodzaj === 'ratusz').budynek.id;
-  t.pokazBudynek(t.profil.budynki.find((x) => x.id === stary));
-  const cel = t.wybrany.id;
-  t.dzialaj();
+  t.odswiez();
+});
+const bryłaRatusza = await gdzieBudynek('ratusz1');
+await klik(bryłaRatusza.x, bryłaRatusza.y);
+await page.waitForTimeout(400);
+const wierszRatusza = await gdzieWiersz('ratusz2');
+sprawdz('klik w ratusz otwiera listę budowy', !!wierszRatusza);
+
+await klik(wierszRatusza.x, wierszRatusza.y);
+await page.waitForTimeout(500);
+const poRozbudowie = await page.evaluate(() => {
+  const t = window.__game.scene.getScene('zamek');
   const ratusze = t.kafle.filter((k) => k.budynek.rodzaj === 'ratusz');
-  return {
-    przedIle,
-    cel,
-    stary,
-    poIle: ratusze.length,
-    poId: ratusze[0]?.budynek.id,
-    postawione: [...t.zamek.postawione],
-  };
+  return { ile: ratusze.length, id: ratusze[0]?.budynek.id, postawione: [...t.zamek.postawione] };
 });
 sprawdz(
-  'kliknięcie w stojący ratusz proponuje jego następny stopień',
-  ratusz.cel === 'ratusz2' && ratusz.stary === 'ratusz1',
-  `${ratusz.stary} → ${ratusz.cel}`
-);
-sprawdz(
   'po rozbudowie na panoramie stoi JEDEN ratusz, ten wyższy',
-  ratusz.poIle === 1 && ratusz.poId === 'ratusz2',
-  `${ratusz.poIle} × ${ratusz.poId}`
+  poRozbudowie.ile === 1 && poRozbudowie.id === 'ratusz2',
+  `${poRozbudowie.ile} × ${poRozbudowie.id}`
 );
 
 await page.locator('canvas').screenshot({ path: 'tools/shots/miasto.png' });
