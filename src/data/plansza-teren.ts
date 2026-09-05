@@ -75,6 +75,17 @@ export const ROZSTAWIENIE: Array<{ x: number; y: number; rodzaj: string; surowie
   { x: 31, y: 4, rodzaj: 'surowiec', surowiec: 'odlamek' },
   { x: 35, y: 24, rodzaj: 'surowiec', surowiec: 'odlamek' },
   { x: 14, y: 34, rodzaj: 'surowiec', surowiec: 'kamien' },
+  // Kamieniołom ewolucji — jedyne stałe źródło najrzadszego surowca.
+  //
+  // Bez niego kamień dawał wyłącznie budynek specjalny Zbocza (1 dziennie)
+  // i pojedyncze znaleziska, a startujemy w Borze, którego budynek specjalny
+  // daje jagody. Osiem sztuk potrzebnych na pełne drzewko budowy było więc
+  // praktycznie nie do zdobycia i połowa budynków pozostawała poza zasięgiem.
+  //
+  // Stoi daleko na południu i pilnuje go silna straż: rzadki surowiec ma
+  // JEDNĄ kopalnię i ma być za nią co zapłacić — tak jest w Heroes 3.
+  { x: 11, y: 33, rodzaj: 'kopalnia', surowiec: 'kamien' },
+  { x: 12, y: 32, rodzaj: 'potwor', sila: 'silny' },
   { x: 27, y: 13, rodzaj: 'kopalnia', surowiec: 'pokeball' },
   { x: 31, y: 26, rodzaj: 'kopalnia', surowiec: 'pokeball' },
   { x: 16, y: 28, rodzaj: 'skrzynia' },

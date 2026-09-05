@@ -35,6 +35,7 @@ from PIL import Image
 
 KORZEN = Path(__file__).resolve().parent.parent
 MIASTO = KORZEN / 'public' / 'miasto'
+MAPA = KORZEN / 'public' / 'mapa'
 
 BUDYNKI = [
     'ratusz1', 'ratusz2', 'ratusz3', 'fort',
@@ -80,11 +81,36 @@ def przemaluj(im: Image.Image, stopnie) -> Image.Image:
     return Image.fromarray(out.astype(np.uint8), 'RGBA')
 
 
+#: Rampy kopalni. Kopalnia, kamieniołom i obóz łowców to na mapie jeden
+#: rysunek, więc gracz nie wiedział, co zajmuje, dopóki nie najechał kursorem.
+#: Przemalowanie na barwę surowca rozróżnia je z odległości, a w grze o zasoby
+#: to jest informacja, którą trzeba widzieć jednym spojrzeniem.
+RAMPY_KOPALNI = {
+    # Pokeballe: ciepłe drewno obozu łowców — zostaje najbliżej oryginału.
+    'pokeball': [(46, 32, 26), (128, 88, 62), (250, 214, 168)],
+    # Odłamki: chłodny błękit kryształu.
+    'odlamek': [(28, 38, 56), (74, 108, 146), (198, 228, 250)],
+    # Kamień ewolucji: fiolet, ten sam, co ikona surowca.
+    'kamien': [(40, 28, 54), (104, 74, 140), (226, 206, 248)],
+}
+
+
+def kopalnie():
+    """Kopalnia w barwach surowca, który daje."""
+    zrodlo = MAPA / 'kopalnia.png'
+    if not zrodlo.exists():
+        return
+    im = Image.open(zrodlo)
+    for surowiec, stopnie in RAMPY_KOPALNI.items():
+        przemaluj(im, stopnie).save(MAPA / f'kopalnia-{surowiec}.png')
+    print(f'  kopalnie: {len(RAMPY_KOPALNI)}')
+
+
 if __name__ == '__main__':
     for frakcja, stopnie in RAMPY.items():
         for id_ in BUDYNKI:
             zrodlo = MIASTO / f'bor-{id_}.png'
             przemaluj(Image.open(zrodlo), stopnie).save(MIASTO / f'{frakcja}-{id_}.png')
         print(f'  {frakcja}: {len(BUDYNKI)} brył')
-    # Plac (pusta działka) zostaje wspólny — to kawałek ziemi, nie budynek.
+    kopalnie()
     print('Gotowe.')

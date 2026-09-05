@@ -159,7 +159,9 @@ export class AdventureScene extends Phaser.Scene {
       'kamien-ewolucji',
       'odlamki',
       'sad',
-      'kopalnia',
+      'kopalnia-pokeball',
+      'kopalnia-odlamek',
+      'kopalnia-kamien',
       'skrzynia',
       'zamek-las',
       'zamek-ogien',
@@ -646,7 +648,11 @@ export class AdventureScene extends Phaser.Scene {
       return { klucz: o.nasz ? 'm-zamek-las' : 'm-zamek-ogien', wys: KAFEL * (bryla ? 3.1 : 1.9) };
     if (o.rodzaj === 'kopalnia')
       return {
-        klucz: o.surowiec === 'jagoda' ? 'm-sad' : 'm-kopalnia',
+        // Kopalnia, kamieniołom i obóz łowców to jeden rysunek przemalowany
+        // na barwę surowca. Bez tego gracz nie wiedział, co zajmuje, dopóki
+        // nie najechał kursorem — a w grze o zasoby to informacja, którą
+        // trzeba widzieć jednym spojrzeniem, z drugiego końca ekranu.
+        klucz: o.surowiec === 'jagoda' ? 'm-sad' : `m-kopalnia-${o.surowiec ?? 'pokeball'}`,
         wys: KAFEL * (bryla ? 2.2 : 1.25),
       };
     if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: KAFEL * 0.78 };
