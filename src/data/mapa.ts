@@ -197,10 +197,52 @@ export interface Bohater {
  * niczego — dodatki zawsze liczą się z tego, co bohater aktualnie nosi, więc
  * nie da się ich policzyć dwa razy.
  */
+/**
+ * Co daje awans na poziom.
+ *
+ * Poziomy istniały wcześniej jako sama liczba w panelu i NIE DAWAŁY NICZEGO:
+ * `statystyki` doliczały wyłącznie artefakty. Doświadczenie było więc licznikiem
+ * bez znaczenia — a to jedyna nagroda za wygraną bitwę poza tym, co po niej
+ * zostaje na mapie.
+ *
+ * Zasada jest prosta na tyle, żeby dziecko ją zauważyło samo: co poziom
+ * na przemian atak i obrona, a co trzeci dodatkowo zapas ruchu. W Heroes 3
+ * przydział jest losowany z wag klasy bohatera, ale losowa nagroda, której
+ * nie da się przewidzieć, uczy tylko tego, że nagrody są losowe.
+ */
+export function bonusPoziomu(p: number) {
+  const awansow = Math.max(0, p - 1);
+  return {
+    atak: Math.ceil(awansow / 2),
+    obrona: Math.floor(awansow / 2),
+    ruch: Math.floor(awansow / 3) * 100,
+  };
+}
+
+/**
+ * Ile doświadczenia zebrano w bieżącym poziomie i ile trzeba na następny.
+ * Panel pokazuje to jako „X/Y do awansu" — bez tego nie widać ani tego, że
+ * awans w ogóle nadchodzi, ani jak blisko jest.
+ */
+export function postepPoziomu(doswiadczenie: number) {
+  let p = 1;
+  let prog = 100;
+  let dolny = 0;
+  let gorny = prog;
+  while (doswiadczenie >= gorny) {
+    p++;
+    dolny = gorny;
+    prog = Math.round(prog * 1.4);
+    gorny += prog;
+  }
+  return { poziom: p, wPoziomie: doswiadczenie - dolny, doAwansu: gorny - dolny };
+}
+
 export function statystyki(b: Bohater) {
-  let atak = b.atak;
-  let obrona = b.obrona;
-  let ruchMax = b.ruchMax;
+  const bonus = bonusPoziomu(poziom(b.doswiadczenie));
+  let atak = b.atak + bonus.atak;
+  let obrona = b.obrona + bonus.obrona;
+  let ruchMax = b.ruchMax + bonus.ruch;
   for (const id of b.artefakty) {
     const a = artefaktPoId(id);
     if (!a) continue;

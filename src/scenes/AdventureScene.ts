@@ -12,7 +12,9 @@ import {
   obiektNa,
   odslon,
   odwiedz,
+  bonusPoziomu,
   poziom,
+  postepPoziomu,
   strzezoneProzez,
   statystyki,
   trasa,
@@ -906,7 +908,10 @@ export class AdventureScene extends Phaser.Scene {
     this.bohaterSprite = this.add.sprite(0, KAFEL * 0.4, 'bohater', 0).setOrigin(0.5, 1);
     this.bohaterSprite.setScale((KAFEL * 1.15) / this.bohaterSprite.height);
     this.bohaterObj.add(this.bohaterSprite);
-    this.bohaterObj.add(this.chorag(C.ally));
+    // Chorągiewka OBOK głowy, nie na niej. Domyślne położenie `chorag`
+    // wypadało dokładnie na wysokości twarzy sprite'a i wyglądało, jakby
+    // bohater miał wetknięty maszt w oko.
+    this.bohaterObj.add(this.chorag(C.ally).setPosition(KAFEL * 0.26, -KAFEL * 0.36));
     this.swiat.add(this.bohaterObj);
   }
 
@@ -1182,8 +1187,12 @@ export class AdventureScene extends Phaser.Scene {
     this.statTeksty[0].setText(String(st.atak));
     this.statTeksty[1].setText(String(st.obrona));
     this.ruchTekst.setText(String(Math.round(b.ruch)));
+    // Sam numer poziomu nie mówił nic: ani tego, że awans nadchodzi, ani jak
+    // blisko jest, ani co da. Licznik do awansu robi z doświadczenia widoczny
+    // pasek postępu, a co awans daje — mówi komunikat w chwili awansu.
+    const p = postepPoziomu(b.doswiadczenie);
     this.poziomTekst.setText(
-      `poziom ${poziom(b.doswiadczenie)}` +
+      `poziom ${p.poziom}  ·  ${p.wPoziomie}/${p.doAwansu} do awansu` +
         (b.artefakty.length ? `  ·  artefakty: ${b.artefakty.length}` : '')
     );
     b.armia.forEach((od, i) => {
@@ -1698,7 +1707,23 @@ export class AdventureScene extends Phaser.Scene {
       } else if (o) {
         o.zebrany = true;
       }
+      const poziomPrzed = poziom(this.stan.bohater.doswiadczenie);
       this.stan.bohater.doswiadczenie += 80;
+      const poziomPo = poziom(this.stan.bohater.doswiadczenie);
+      if (poziomPo > poziomPrzed) {
+        // Awans musi być WIDOCZNY i musi mówić, co dał. Liczba w panelu, która
+        // po cichu rośnie, nie jest nagrodą — nagrodą jest wiedza, że bohater
+        // stał się silniejszy i o ile.
+        const przed = bonusPoziomu(poziomPrzed);
+        const po = bonusPoziomu(poziomPo);
+        const zyski: string[] = [];
+        if (po.atak > przed.atak) zyski.push(`+${po.atak - przed.atak} atak`);
+        if (po.obrona > przed.obrona) zyski.push(`+${po.obrona - przed.obrona} obrona`);
+        if (po.ruch > przed.ruch) zyski.push(`+${po.ruch - przed.ruch} ruchu`);
+        this.time.delayedCall(2100, () =>
+          this.napisUlotny(`Awans na poziom ${poziomPo}!\n${zyski.join(', ')}`)
+        );
+      }
       this.time.delayedCall(900, () =>
         this.napisUlotny(
           o?.rodzaj === 'zamek' ? `${o.nazwa} jest twoja!\n+80 doświadczenia` : 'Zwycięstwo!\n+80 doświadczenia'

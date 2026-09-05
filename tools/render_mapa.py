@@ -69,10 +69,17 @@ WARSTWY = [
     ('woda', '~', 0.35, 0.22),
 ]
 
-#: Przesunięcie tekstury wody w kolejnych klatkach, w pikselach. Woda ma
-#: PŁYNĄĆ, a nie migać: kilka pikseli na klatkę czyta się jak leniwy prąd,
-#: kilkanaście — jak przeskok obrazu.
-PRAD = [(0, 0), (5, 3), (10, 6), (15, 9)]
+#: Przesunięcie tekstury wody w kolejnych klatkach, w pikselach.
+#:
+#: Pętla musi się DOMYKAĆ. Poprzednia wersja przesuwała teksturę wciąż w tę
+#: samą stronę — 0, 5, 10, 15 — i po czwartej klatce wracała skokiem o piętnaście
+#: pikseli do zera. Wyglądało to jak trzy klatki płynięcia i szarpnięcie,
+#: bo szarpnięcie było trzy razy większe od każdego kroku.
+#:
+#: Teraz punkty leżą na rombie: każdy krok ma tę samą długość, także ten
+#: z ostatniej klatki do pierwszej. Woda kołysze się w kółko zamiast płynąć
+#: donikąd i pętli nie da się zauważyć.
+PRAD = [(0, 0), (4, 4), (0, 8), (-4, 4)]
 
 
 def wczytaj_rysunek():
