@@ -678,6 +678,63 @@ z boku na bok przy zawracaniu, poproszę o osobny lewy profil.
 
 ---
 
+---
+
+# CZĘŚĆ IV — SKAŁY, KTÓRYCH NIE DA SIĘ ZROBIĆ KODEM
+
+Pasmo górskie na mapie wygląda jak tapeta i **nie jest to kwestia kodu**.
+Wszystkie cztery „sylwetki" skał, którymi dysponuje gra — `skala`, `skala-2`,
+`kopiec`, `kopiec-2` — to **jeden i ten sam plik** `m-skala.png`, tylko odbity
+i zmniejszony. Można to maskować rozrzutem, wielkością i jasnością (i to
+robimy), ale jeden głaz powtórzony sto razy zostaje jednym głazem.
+
+To jedyne miejsce w grze, gdzie brakuje materiału. Drzewa mamy dwa gatunki
+w dwóch wariantach każdy i las czyta się dobrze; skały mamy jedne.
+
+Potrzebne są **trzy różne bryły skalne**, nie warianty jednej. Generuj po kolei
+i dołączaj poprzednie jako referencje, tak jak przy bohaterze.
+
+### `m-skala-ostra.png` — ostry, pionowy występ
+
+Referencje: `referencja-stworki.png` + `mapa-kotwica.png`.
+
+```
+A tall jagged rock outcrop seen from about 45 degrees above (adventure-map view): angular grey stone with sharp broken edges and vertical cracks, clearly taller than it is wide, with a little moss in the crevices and a few small stones at its foot.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes, rich material detail: wet stone, moss, gravel. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image.
+
+Single object only. Orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. The background must be pure white #FFFFFF, absolutely uniform, with no gradient and no shadow falling on it, and the object must not touch any edge of the image. It must stay readable when scaled down to 64 pixels tall. Square image, at least 1024x1024. No text, no watermark, no characters.
+```
+
+### `m-skala-plaska.png` — niski, szeroki próg
+
+Referencje: `referencja-stworki.png` + `m-skala-ostra.png`.
+
+```
+A low wide slab of rock in exactly the same painting style, palette and stone colour as the attached rock: a flat weathered ledge much wider than it is tall, with rounded worn edges, layered strata visible on the side, moss on the top surface and grass tufts at its base. It must read as clearly DIFFERENT in shape from the attached rock — flat and broad where that one is tall and sharp.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rich material detail: wet stone, moss, gravel. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look.
+
+Single object only. Orthographic. Warm sunlight from the upper right. No ground, no grass base, no cast shadow. The background must be pure white #FFFFFF, absolutely uniform, and the object must not touch any edge of the image. Square image, at least 1024x1024. No text, no watermark, no characters.
+```
+
+### `m-skala-zwal.png` — sterta głazów
+
+Referencje: `referencja-stworki.png` + obie poprzednie.
+
+```
+A heap of tumbled boulders in exactly the same painting style, palette and stone colour as the attached rocks: five or six rounded boulders of different sizes piled and leaning against each other, gravel and smaller stones spilling around the bottom, moss where they touch. It must read as clearly DIFFERENT in shape from both attached rocks — a loose pile where those are single solid forms.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rich material detail: wet stone, moss, gravel. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look.
+
+Single object only. Orthographic. Warm sunlight from the upper right. No ground, no grass base, no cast shadow. The background must be pure white #FFFFFF, absolutely uniform, and the object must not touch any edge of the image. Square image, at least 1024x1024. No text, no watermark, no characters.
+```
+
+Po wgraniu tych trzech przegeneruję kępy skalne i pasmo przestanie się
+powtarzać — kod jest na to gotowy, brakuje wyłącznie materiału.
+
+---
+
 ## Czego NIE generować
 
 - **stworków** — mamy 270 i to one są kotwicą stylu;

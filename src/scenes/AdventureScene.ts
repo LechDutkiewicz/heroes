@@ -159,6 +159,14 @@ export class AdventureScene extends Phaser.Scene {
       'kamien-ewolucji',
       'odlamki',
       'sad',
+      'kepa-las-1',
+      'kepa-las-2',
+      'kepa-las-3',
+      'kepa-las-4',
+      'kepa-skaly-1',
+      'kepa-skaly-2',
+      'kepa-skaly-3',
+      'kepa-skaly-4',
       'kopalnia-pokeball',
       'kopalnia-odlamek',
       'kopalnia-kamien',
@@ -520,8 +528,25 @@ export class AdventureScene extends Phaser.Scene {
     this.kamera?.ignore(obiekty);
   }
 
+  /**
+   * Liczba „losowa", ale zawsze ta sama dla danego pola.
+   *
+   * Poprzednia wersja liczyła `(x * 7 + y * 13) % ile` i to był cały powód,
+   * dla którego pasmo gór wyglądało jak tapeta: wyrażenie liniowe modulo N
+   * daje REGULARNĄ KRATĘ. Krok o jedno pole w bok zawsze zmieniał wariant
+   * o tyle samo, więc te same cztery sylwetki układały się w powtarzalne
+   * ukośne pasy — widać je było natychmiast, choć każdy pojedynczy element
+   * był inny.
+   *
+   * Mieszanie bitowe (wariant hasha Wanga) rozbija tę zależność: sąsiednie
+   * pola dostają wartości bez żadnego wzoru, a wynik nadal jest powtarzalny,
+   * bo zależy wyłącznie od współrzędnych.
+   */
   private wariant(x: number, y: number, ile: number) {
-    return (x * 7 + y * 13) % ile;
+    let h = (x * 0x1f1f1f1f) ^ (y * 0x85ebca6b);
+    h = Math.imul(h ^ (h >>> 16), 0x2545f491);
+    h = Math.imul(h ^ (h >>> 13), 0x27d4eb2f);
+    return ((h ^ (h >>> 16)) >>> 0) % ile;
   }
 
   /**
@@ -550,18 +575,70 @@ export class AdventureScene extends Phaser.Scene {
     return im;
   }
 
+  /**
+   * Las i skały jako KĘPY, a nie jako jeden element na pole.
+   *
+   * Poprzednia wersja stawiała drzewo albo skałę na każdym polu z osobna
+   * i przy paśmie gór wychodziła z tego tapeta: te same sylwetki w regularnym
+   * rytmie, każda w swoim kwadracie. W Heroes 3 las i góry są obiektami
+   * WIELOPOLOWYMI — kawałek lasu, zwał skalny — i dlatego czytają się jak
+   * teren, a nie jak rząd doniczek.
+   *
+   * Zwarte obszary pokrywamy więc gotowymi kępami 3 × 2 (`tools/kepy.py`),
+   * a pojedynczych sprite'ów używamy dopiero do tego, co zostanie na
+   * brzegach. Kępa jest o pole szersza od swojego obrysu, żeby zachodziła na
+   * sąsiednią i nie było widać, gdzie jedna się kończy.
+   */
   private rysujPrzeszkody() {
+    const zajete = new Set<string>();
+    const takiSam = (x: number, y: number, t: string) =>
+      x >= 0 &&
+      y >= 0 &&
+      x < this.stan.szer &&
+      y < this.stan.wys &&
+      this.stan.teren[y][x] === t &&
+      !zajete.has(`${x},${y}`);
+
+    // Najpierw kępy — od góry, żeby dalsze rzędy szły pod bliższe.
     for (let y = 0; y < this.stan.wys; y++) {
       for (let x = 0; x < this.stan.szer; x++) {
         const t = this.stan.teren[y][x];
         if (t !== 'las' && t !== 'skaly') continue;
+        if (zajete.has(`${x},${y}`)) continue;
+        let miesciSie = true;
+        for (let dy = 0; dy < 2 && miesciSie; dy++)
+          for (let dx = 0; dx < 3; dx++)
+            if (!takiSam(x + dx, y + dy, t)) {
+              miesciSie = false;
+              break;
+            }
+        if (!miesciSie) continue;
+
+        for (let dy = 0; dy < 2; dy++)
+          for (let dx = 0; dx < 3; dx++) zajete.add(`${x + dx},${y + dy}`);
+
+        const { x: ex, y: ey } = this.naEkran(x, y);
+        const nr = this.wariant(x, y, 4) + 1;
+        const im = this.add
+          .image(ex + KAFEL, ey + KAFEL * 1.5, `m-kepa-${t}-${nr}`)
+          .setOrigin(0.5, 1)
+          .setFlipX(this.wariant(y, x, 2) === 1)
+          // Głębia z DOLNEGO rzędu kępy: to on decyduje, co ją zasłoni.
+          .setDepth(y + 1);
+        this.swiat.add(im);
+      }
+    }
+
+    // Reszta: pojedyncze sylwetki na polach, na których kępa się nie zmieściła.
+    for (let y = 0; y < this.stan.wys; y++) {
+      for (let x = 0; x < this.stan.szer; x++) {
+        const t = this.stan.teren[y][x];
+        if (t !== 'las' && t !== 'skaly') continue;
+        if (zajete.has(`${x},${y}`)) continue;
         const { x: ex, y: ey } = this.naEkran(x, y);
         const z = this.wariant(x, y, 6);
 
         if (t === 'las') {
-          // Las to nie sad: na jednym polu stoi drzewo główne i podszyt.
-          // Przy jednym drzewie na pole widać kratę, w której rosną, i cały
-          // obszar przestaje wyglądać na las.
           const glowne = ['m-sosna', 'm-drzewo', 'm-sosna-b', 'm-drzewo-b'][
             this.wariant(x, y, 4)
           ];
@@ -585,8 +662,6 @@ export class AdventureScene extends Phaser.Scene {
             );
           }
         } else {
-          // Skały: duża bryła z tyłu i mniejsza z przodu, obie z czterech
-          // sylwetek. Rytm łamie odbicie i skala, nie liczba plików.
           const duza = ['m-skala', 'm-skala-2', 'm-kopiec', 'm-kopiec-2'][this.wariant(x, y, 4)];
           this.element(
             duza,
