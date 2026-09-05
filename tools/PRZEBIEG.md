@@ -11,8 +11,16 @@ swoje wyjście), a po każdym kroku **gra się uruchamia i da się w nią grać*
 ## Stan wsadu
 
 35 plików, wszystkie z prawdziwą przezroczystością (alfa), sprite'y 1254 × 1254,
-tła i kotwice 1586 × 992. Brakuje `teren-sciezka.png` oraz wariantów
-`teren-trawa-2/-3.png` (prośba o nie powstała po wygenerowaniu reszty).
+tła i kotwice 1586 × 992.
+
+Plik wgrany jako `teren-piasek.png` był w rzeczywistości ŚCIEŻKĄ — ubita ziemia
+z koleinami, żwirem i kępkami trawy. Przemianowany na `teren-sciezka.png`.
+Piasek (blady, drobny, z zafalowaniem od wiatru, bez trawy i bez kolein) trzeba
+wygenerować osobno; te dwa tereny łatwo pomylić w opisie, a w grze robią co
+innego: ścieżka jest tańsza od trawy, piasek droższy.
+
+Brakuje więc: `teren-piasek.png` oraz wariantów `teren-trawa-2/-3.png` (prośba
+o nie powstała po wygenerowaniu reszty).
 
 ## Kroki
 
