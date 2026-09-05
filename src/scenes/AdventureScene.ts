@@ -45,9 +45,17 @@ import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
  * Zasady siedzą w `src/data/mapa.ts` i `src/data/zasady-h3.ts`; scena je pokazuje.
  */
 
-/** Co ile milisekund plansza przechodzi na następną klatkę (animacja wody). */
-const WODA_MS = 550;
-const KLATEK_PLANSZY = 4;
+/**
+ * Co ile milisekund plansza przechodzi na następną klatkę (animacja wody).
+ *
+ * Klatek jest teraz osiem, nie cztery — `tools/render_mapa.py` dokłada do
+ * czterech prawdziwych klatek arkusza płynną fazę głębi, kaustyk i skier
+ * (patrz `tools/woda.py`), więc podwojenie liczby klatek planszy przy tym
+ * samym czasie pętli (8 × 275 ≈ 4 × 550) daje dwa razy gęstszą animację
+ * zamiast szybszej.
+ */
+const WODA_MS = 275;
+const KLATEK_PLANSZY = 8;
 
 /** Arkusz bohatera: 4 kierunki (wiersze) × 4 klatki chodu (kolumny). */
 const BOHATER_KLATKA = 96;

@@ -16,7 +16,10 @@ dwie wady, których nie dało się obejść w przeglądarce:
 Teraz mapa powstaje tutaj: kafelki, brzegi i drogi lądują w jednym obrazku,
 który jest wygładzany jako całość. Scena tylko go pokazuje.
 
-Woda ma cztery klatki animacji, więc i plansza ma cztery klatki.
+Arkusz ma cztery klatki wody, ale plansza ma ich osiem: `woda.wzbogac`
+dokłada głębię, kaustyki i skry jako funkcję ciągłej fazy, więc podwojenie
+liczby klatek planszy przy tych samych czterech klatkach arkusza daje
+płynniejszą pętlę zamiast powtarzać co drugą klatkę.
 
 Kontrola zgodności
 ------------------
@@ -38,6 +41,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from wygladzanie import SKALA, wygladz  # noqa: E402
+from woda import wzbogac  # noqa: E402
 
 KORZEN = Path(__file__).resolve().parent.parent
 KATALOG = KORZEN / 'public' / 'mapa'
@@ -152,13 +156,20 @@ def drogi(rozmiar):
     return im.resize((w, h), Image.LANCZOS).filter(ImageFilter.GaussianBlur(0.6))
 
 
+#: Klatek planszy jest dwa razy więcej niż klatek wody w arkuszu (patrz
+#: wyżej) — `teren()` i tak zawija się modulo 4 przy wyborze kafelka.
+KLATEK_PLANSZY = 8
+
 KATALOG.mkdir(parents=True, exist_ok=True)
 podklad = drogi((SZER * KAFEL, WYS * KAFEL))
 klatki = []
-for k in range(4):
+for k in range(KLATEK_PLANSZY):
     plansza = wygladz(teren(k)).crop((0, 0, SZER * KAFEL, WYS * KAFEL))
     plansza.alpha_composite(podklad)
-    klatki.append(plansza)
+    # Woda dostaje głębię, kaustyki i skry PO wygładzeniu, nie przed —
+    # mediana z `wygladz` ma promień kilku pikseli i zjadała drobne skry,
+    # zanim zdążyły dojechać do finalnego obrazka.
+    klatki.append(wzbogac(plansza, k, KLATEK_PLANSZY))
 
 # Klatka 0 idzie w całości; kolejne TYLKO jako to, co się od niej różni,
 # reszta przezroczysta. Scena kładzie je na wierzch.
@@ -173,7 +184,7 @@ baza = klatki[0]
 baza.save(KATALOG / 'plansza-0.png')
 print(f'  plansza-0.png  {baza.width} × {baza.height}  (pełna)')
 
-for k in range(1, 4):
+for k in range(1, KLATEK_PLANSZY):
     rozne = (
         ImageChops.difference(klatki[k].convert('RGB'), baza.convert('RGB'))
         .convert('L')
