@@ -90,6 +90,24 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
 - **Mapa przygody — pierwsza plansza.** Układ przeniesiony z HotA, teren
   układa się sam z arkusza narożnikowego, drogi rysowane, woda animowana.
   Wejście: `?ekran=mapa`. Szczegóły niżej.
+- **Przeszkody na mapie jako gotowe bloki, nie pojedyncze pola.** Las i skały
+  wypełnia teraz `rozlozBloki` (`src/data/bloki-przeszkod.ts`): zachłanne
+  pakowanie od największego odcisku (3 × 2) do najmniejszego (1 × 1), z ręcznie
+  ułożonych, wieloplowych kompozycji — jak w Heroes 3, gdzie przeszkoda to
+  gotowy, wieloplowy obiekt z ustalonego zestawu, a nie osobno losowany sprite
+  na każdym polu. Pierwsza wersja bloków 2×2/3×2 trzymała elementy z dala od
+  krawędzi odcisku (żeby sąsiedzi nie kolidowali) i przez to duże bloki
+  wyglądały jak małe kępki otoczone pustą trawą w regularnej siatce — poprawka:
+  każda komórka odcisku dostaje własny element, gęstość jak w dawnym rysunku
+  pole-po-polu. `AdventureScene.rysujPrzeszkody` tylko odtwarza gotowe
+  rozmieszczenie; `element()` bez zmian.
+  Cztery istniejące sprite'y skał to w praktyce jedna sylwetka (zaokrąglona
+  bryła z jednym czubkiem, przemalowana i odbita) — w gęstym bloku 3×2 to się
+  widzi jako powtórzenie. Prompty na pięć nowych sylwetek (iglica, płyta,
+  omszały głaz, rumowisko, wariant pęknięty) są w `assets/prompty-skaly.md`
+  razem z instrukcją, gdzie dopiąć nowe pliki (`GLAZY` w `bloki-przeszkod.ts`
+  — od tego miejsca biorą udział w blokach bez zmian w silniku rozkładania).
+
 - **Jeden styl na całym ekranie przygody.** Teren, drzewa, skały i bohater
   przechodzą przez `tools/wygladzanie.py`, więc przestały być kanciastym
   pixel artem obok gładkich stworków i HUD-u.

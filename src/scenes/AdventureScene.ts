@@ -23,6 +23,7 @@ import {
   type WyborSkrzyni,
 } from '../data/mapa';
 import { planszaPrzygody } from '../data/plansza';
+import { rozlozBloki } from '../data/bloki-przeszkod';
 import { C, E, FONT, H, Z, body, display } from '../visual/theme';
 import { drawPanelBody, makeHudButton, mix, plate } from '../visual/hud';
 import { ICON, buildIcons } from '../visual/icons';
@@ -467,10 +468,6 @@ export class AdventureScene extends Phaser.Scene {
     this.cameras.main.ignore(obiekty);
   }
 
-  private wariant(x: number, y: number, ile: number) {
-    return (x * 7 + y * 13) % ile;
-  }
-
   /**
    * Stawia jeden element terenu i od razu go różnicuje.
    *
@@ -497,61 +494,28 @@ export class AdventureScene extends Phaser.Scene {
     return im;
   }
 
+  /**
+   * Las i skały jako gotowe, wieloplowe bloki (patrz `bloki-przeszkod.ts`)
+   * zamiast osobno losowanego sprite'a na każdym polu. Sam obszar `las`/`skaly`
+   * nadal wyznacza teren i przejezdność w `mapa.ts` — bloki wyłącznie
+   * WYPEŁNIAJĄ go rysunkiem, tak jak w Heroes 3 przeszkoda nie zmienia reguł
+   * pola, tylko kładzie się na nim gotowym obiektem z ustalonego zestawu.
+   */
   private rysujPrzeszkody() {
-    for (let y = 0; y < this.stan.wys; y++) {
-      for (let x = 0; x < this.stan.szer; x++) {
-        const t = this.stan.teren[y][x];
-        if (t !== 'las' && t !== 'skaly') continue;
-        const { x: ex, y: ey } = this.naEkran(x, y);
-        const z = this.wariant(x, y, 6);
-
-        if (t === 'las') {
-          // Las to nie sad: na jednym polu stoi drzewo główne i podszyt.
-          // Przy jednym drzewie na pole widać kratę, w której rosną, i cały
-          // obszar przestaje wyglądać na las.
-          const glowne = ['m-sosna', 'm-drzewo', 'm-sosna-b', 'm-drzewo-b'][
-            this.wariant(x, y, 4)
-          ];
-          this.element(
-            glowne,
-            ex + ((this.wariant(x, y, 5) - 2) / 2) * KAFEL * 0.16,
-            ey + KAFEL * (0.3 + this.wariant(y, x, 3) * 0.04),
-            1.3 + this.wariant(x + 1, y, 4) * 0.07,
-            y,
-            z
+    for (const typ of ['las', 'skaly'] as const) {
+      for (const { x, y, blok } of rozlozBloki(this.stan, typ)) {
+        const bazaX = x * KAFEL;
+        const bazaY = y * KAFEL;
+        for (const el of blok.elementy) {
+          const im = this.element(
+            el.klucz,
+            bazaX + el.dx * KAFEL,
+            bazaY + el.dy * KAFEL,
+            el.wysokosc,
+            y + Math.floor(el.dy) + (el.glebia ?? 0),
+            0
           );
-          if (this.wariant(x + 2, y + 1, 3) !== 0) {
-            const podszyt = ['m-sosna-mala', 'm-krzak', 'm-krzak-2'][this.wariant(y, x, 3)];
-            this.element(
-              podszyt,
-              ex + ((this.wariant(y, x, 4) - 1.5) / 1.5) * KAFEL * 0.3,
-              ey + KAFEL * 0.42,
-              0.5 + this.wariant(x, y + 3, 3) * 0.08,
-              y - 0.2,
-              z + 1
-            );
-          }
-        } else {
-          // Skały: duża bryła z tyłu i mniejsza z przodu, obie z czterech
-          // sylwetek. Rytm łamie odbicie i skala, nie liczba plików.
-          const duza = ['m-skala', 'm-skala-2', 'm-kopiec', 'm-kopiec-2'][this.wariant(x, y, 4)];
-          this.element(
-            duza,
-            ex + ((this.wariant(x, y + 2, 5) - 2) / 2) * KAFEL * 0.14,
-            ey + KAFEL * (0.34 + this.wariant(y, x + 3, 3) * 0.05),
-            0.82 + this.wariant(x + y, y, 4) * 0.09,
-            y,
-            z
-          );
-          const mala = ['m-kopiec', 'm-skala', 'm-kopiec-2'][this.wariant(y, x, 3)];
-          this.element(
-            mala,
-            ex + KAFEL * (0.16 + this.wariant(x, y, 3) * 0.06),
-            ey + KAFEL * 0.46,
-            0.44 + this.wariant(y + 1, x, 3) * 0.06,
-            y + 0.3,
-            z + 1
-          );
+          if (el.odbicie) im.setFlipX(!im.flipX);
         }
       }
     }
