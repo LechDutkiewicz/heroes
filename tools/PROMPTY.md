@@ -294,8 +294,19 @@ Horizontal 16:10 image, at least 2400x1500. No text, no logo, no watermark, no u
 **Tę generuj jako pierwszą z sześciu** i potem dołączaj ją do pozostałych pięciu
 jako referencję palety i ziarna.
 
+**Zrób ją w trzech wariantach** (`teren-trawa.png`, `teren-trawa-2.png`,
+`teren-trawa-3.png`), każdy z tym samym promptem. Powód jest czysto praktyczny:
+jedna tekstura powtórzona na planszy 36 × 36 daje 1296 identycznych kwadratów,
+a oko wyłapuje powtórzenie natychmiast — po czymś charakterystycznym, na przykład
+po kępce żółtych kwiatów wracającej co kilka pól. Przy trzech wariantach
+mieszanych losowo wzór znika.
+
+Z tego samego powodu w prompcie jest teraz prośba o **mniej rzucających się
+w oczy akcentów**: gęste kwiaty ładnie wyglądają na jednym kafelku i zdradzają
+kafelkowanie na całej planszy.
+
 ```
-Lush green meadow grass seen from directly above: many small painted grass blades and tufts, subtle patches of lighter and darker green, a few tiny wildflowers and clover leaves, no bare soil.
+Lush green meadow grass seen from directly above: many small painted grass blades and tufts, subtle patches of lighter and darker green, occasional clover leaves, no bare soil. Keep the texture even and calm — only a very few tiny pale flowers, spread apart and never in clusters. Distinctive landmarks such as flower clumps must be rare, because this texture is repeated over a thousand times across the map and any eye-catching detail reveals the repetition.
 
 Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes with exaggerated proportions, thick beams and oversized roofs, cosy and inviting rather than gritty. Rich material detail: wood grain, mossy stone, thatch, leaves, worn paint. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image: smooth airbrushed shading, no hard outlines, saturated but not neon colours, rounded volumes.
 
