@@ -35,7 +35,9 @@ się widocznym wzorem.
       na cień (nowe sprite'y go nie mają), sonda `probe-miasto` na zielono.
 - [ ] **3. Zrzut i ocena.** `zrzut-miasto.mjs`, ślepe porównanie, wpis na
       stronie postępu.
-- [ ] **4. Frakcje.** Przemalowanie kompletu Boru na Grotę i Zbocze.
+- [x] **4. Frakcje.** `tools/frakcje_przemaluj.py`: jasność z Boru na rampę
+      barwną frakcji plus ułamek pierwotnej chromy. Grota chłodna i księżycowa,
+      Zbocze popielate z ciepłymi światłami. `TownScene` bierze bryły z frakcji.
 - [ ] **5. Teren mapy.** Pocięcie tekstur na kafelki, złożenie przejść,
       przegenerowanie tła planszy, sonda `probe-mapa`.
 - [ ] **6. Obiekty mapy.** Podmiana drzew, skał, kopalni, sadu, skrzyni,

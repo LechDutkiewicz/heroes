@@ -115,11 +115,11 @@ export class TownScene extends Phaser.Scene {
     for (const f of ['bor', 'grota', 'zbocze']) {
       this.load.image(`t-tlo-${f}`, `${b}miasto/tlo-${f}.png`);
       this.load.image(`t-znak-${f}`, `${b}miasto/znak-${f}.png`);
+      // Bryły Groty i Zbocza to przemalowany komplet Boru
+      // (`tools/frakcje_przemaluj.py`): ratusz jest ratuszem w każdym mieście,
+      // różnić ma je klimat, a jedno źródło trzyma spójną kreskę.
+      for (const id of BUDYNKI_ID) this.load.image(`t-${f}-${id}`, `${b}miasto/${f}-${id}.png`);
     }
-    // Bryły na razie tylko w komplecie Boru. Grota i Zbocze powstaną
-    // przemalowaniem tego kompletu (krok 4 w PRZEBIEG.md); do tego czasu
-    // wszystkie trzy miasta rysują te same budynki, różniąc się panoramą.
-    for (const id of BUDYNKI_ID) this.load.image(`t-bor-${id}`, `${b}miasto/bor-${id}.png`);
     // Jeden plac budowy na wszystkie budynki. Wcześniej każdy miał własny
     // zarys — widmo TEJ bryły — ale to była konieczność techniki rysowanej.
     // Malowany plac z rusztowaniem mówi „tu coś stanie" sam z siebie,
@@ -207,7 +207,7 @@ export class TownScene extends Phaser.Scene {
 
     for (const b of [...widoczne].sort((a, c) => a.y - c.y)) {
       const stoi = postawione.includes(b.id);
-      const klucz = stoi ? `t-bor-${b.id}` : 't-plac';
+      const klucz = stoi ? `t-${this.profil.frakcja}-${b.id}` : 't-plac';
       const skala = this.skalaBudynku(b);
       const gleboko = Z.sky + 1 + Math.round(b.y * 40);
 
