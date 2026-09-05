@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import {
   KOSZT_ODDZIALU,
+  PRZYROST_ODDZIALU,
   SUROWCE,
   SUROWIEC_INFO,
   data,
@@ -12,11 +13,14 @@ import {
   type Surowiec,
 } from '../data/mapa';
 import {
+  dochodZamku,
   moznaBudowac,
   profilZamku,
+  przyrostZamku,
   stacNas,
   type Budynek,
 } from '../data/zamki';
+import { MNOZNIK_FORTU } from '../data/zasady-h3';
 import { FACTIONS, factionById } from '../data/factions';
 import { C, H, T, Z, body, display } from '../visual/theme';
 import { drawPanelBody, makeHudButton, mix, plate } from '../visual/hud';
@@ -677,8 +681,14 @@ export class TownScene extends Phaser.Scene {
       // w nim czeka i za ile.
       const u = this.frakcja.units[b.poziom];
       const ile = this.zamek.dostepne?.[b.poziom] ?? 0;
+      // Ile przybywa dziennie musi tu być, bo to jedyne miejsce, gdzie widać,
+      // czy fort się opłacił i czy warto czekać dzień dłużej z werbunkiem.
+      const dziennie = przyrostZamku(
+        this.zamek.postawione ?? [],
+        PRZYROST_ODDZIALU
+      )[b.poziom];
       this.kartaOpis.setText(
-        `${u.name}\nczeka: ${ile}\natak ${u.atk} · życie ${u.hp}`
+        `${u.name}\nczeka: ${ile} · przybywa ${dziennie} dziennie\natak ${u.atk} · życie ${u.hp}`
       );
       this.kartaStworek.setTexture(`p-${u.sprite}`).setVisible(true);
       this.kartaStworek.setScale(Math.min(1, 72 / this.kartaStworek.height));
@@ -693,7 +703,7 @@ export class TownScene extends Phaser.Scene {
 
     this.kartaStworek.setVisible(false);
     if (stoi) {
-      this.kartaOpis.setText(`${b.opis}\n\nJuż stoi.`);
+      this.kartaOpis.setText(`${this.dzialanie(b, true)}\n\nJuż stoi.`);
       this.pokazKoszt({});
       this.kartaPrzycisk.setLabel('Gotowe');
       this.kartaPrzycisk.setEnabled(false);
@@ -705,12 +715,13 @@ export class TownScene extends Phaser.Scene {
       .filter((w) => !postawione.includes(w))
       .map((w) => this.profil.budynki.find((x) => x.id === w)?.nazwa ?? w);
     const juzBudowano = this.zamek.budowanoDnia === this.stan.dzien;
+    const co = this.dzialanie(b, false);
     this.kartaOpis.setText(
       mozna
         ? juzBudowano
-          ? `${b.opis}\n\nDziś już tu budowano.`
-          : b.opis
-        : `${b.opis}\n\nNajpierw: ${brakWarunku.join(', ')}.`
+          ? `${co}\n\nDziś już tu budowano.`
+          : co
+        : `${co}\n\nNajpierw: ${brakWarunku.join(', ')}.`
     );
     this.pokazKoszt(b.koszt);
     const rozbudowa = b.rodzaj === 'ratusz' && b.id !== 'ratusz1';
@@ -718,6 +729,61 @@ export class TownScene extends Phaser.Scene {
     this.kartaPrzycisk.setEnabled(
       mozna && !juzBudowano && stacNas(this.stan.skarbiec, b.koszt) && !!this.zamek.nasz
     );
+  }
+
+  /**
+   * Co ten budynek NAPRAWDĘ robi — liczbami, nie hasłem.
+   *
+   * Karta pokazywała wyłącznie zdanie z klimatem: „Cały las pracuje na twój
+   * obóz". Ładne, ale gracz nie wiedział, czy dostaje sześć pokeballi, czy
+   * dwadzieścia sześć, ani czy rozbudowa ratusza w ogóle się opłaca. Przy
+   * jednym budynku dziennie i ograniczonych surowcach to jest ta jedyna
+   * informacja, na podstawie której podejmuje się decyzję.
+   *
+   * Liczby biorą się z tych samych funkcji, które prowadzą grę, a nie
+   * z osobnego opisu — inaczej po pierwszej zmianie bilansu karta zaczyna
+   * kłamać i nikt tego nie zauważy.
+   */
+  private dzialanie(b: Budynek, stoi: boolean): string {
+    const postawione = this.zamek.postawione ?? [];
+    const wiersze = [b.opis];
+
+    if (b.rodzaj === 'ratusz' && b.dochod !== undefined) {
+      const teraz = dochodZamku(postawione, this.profil.frakcja);
+      wiersze.push(
+        stoi || teraz === 0
+          ? `Daje ${b.dochod} pokeballi dziennie.`
+          : `Teraz ${teraz} pokeballi dziennie, po rozbudowie ${b.dochod}.`
+      );
+    }
+
+    if (b.rodzaj === 'fort') {
+      // Pokazujemy sumę dzienną z GNIAZD, KTÓRE STOJĄ, bo tylko ona jest
+      // prawdziwa dla tego miasta. Sam mnożnik nic nie mówi ośmiolatkowi.
+      const suma = (lista: string[]) =>
+        przyrostZamku(lista, PRZYROST_ODDZIALU).reduce((a, x) => a + x, 0);
+      const bez = suma(postawione.filter((x) => x !== 'fort'));
+      const z = suma([...postawione.filter((x) => x !== 'fort'), 'fort']);
+      wiersze.push(
+        `Przyrost we wszystkich gniazdach ×${MNOZNIK_FORTU.toLocaleString('pl')}.`,
+        stoi
+          ? `Dzięki niemu przybywa ${z} stworków dziennie zamiast ${bez}.`
+          : `Byłoby ${z} stworków dziennie zamiast ${bez}.`
+      );
+    }
+
+    if (b.rodzaj === 'siedlisko' && b.poziom !== undefined) {
+      const u = this.frakcja.units[b.poziom];
+      const ile = przyrostZamku([...postawione, b.id], PRZYROST_ODDZIALU)[b.poziom];
+      wiersze.push(`Otwiera werbunek: ${u.name}.`, `Przybywa ${ile} dziennie.`);
+    }
+
+    if (b.rodzaj === 'specjalny') {
+      const { surowiec, ile } = this.profil.dar;
+      wiersze.push(`Dokłada ${ile} ${SUROWIEC_INFO[surowiec].dopelniacz} dziennie.`);
+    }
+
+    return wiersze.join('\n');
   }
 
   /** Cena jako ikony z liczbami — czytelna, zanim dziecko przeczyta nazwy. */
