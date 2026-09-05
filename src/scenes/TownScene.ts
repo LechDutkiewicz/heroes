@@ -78,20 +78,19 @@ const BRYLA = 0.5;
  * bardziej, niż gdyby cienia w ogóle nie było.
  */
 /**
- * Cień rzucony jest WYPALONY w grafice (`zCieniem` w `tools/wsad_wczytaj.py`),
- * bo scena umie tylko obrócić kopię sprite'a wokół podstawy, a to daje drugą
- * bryłę leżącą na zawiasie. Plik jest przez to szerszy od bryły o margines
- * z lewej — 42% jej szerokości — więc środek budynku nie leży w środku obrazka.
+ * Pliki brył zawierają SAMĄ bryłę, bez marginesu na cień.
+ *
+ * Wcześniej cień rzucony był wypalony w grafice: ścięty w lewo i spłaszczony,
+ * przez co plik był szerszy od budynku o 42% i środek bryły nie leżał
+ * w środku obrazka. Gorzej — na ekranie ten cień czytał się jako osobna
+ * ciemna plama leżąca obok budynku, czyli robił dokładnie to, czemu miał
+ * zapobiegać. Cień rysuje teraz scena, miękko i wprost pod podstawą.
+ *
+ * Stałe zostają, bo cała geometria sceny jest przez nie wyrażona — tylko ich
+ * wartości zeszły do neutralnych.
  */
-const MARGINES_CIENIA = 0.42;
-const SRODEK_BRYLY = (MARGINES_CIENIA + 0.5) / (1 + MARGINES_CIENIA);
-
-/**
- * Jaka część szerokości pliku to sama bryła. Reszta to margines na wypalony
- * cień rzucony. Potrzebne do cienia kontaktowego — ten musi być szeroki jak
- * BUDYNEK, a nie jak plik.
- */
-const SZEROKOSC_BRYLY = 1 / (1 + MARGINES_CIENIA);
+const SRODEK_BRYLY = 0.5;
+const SZEROKOSC_BRYLY = 1;
 
 /**
  * Barwa mgły powietrznej — pobrana z nieba panoramy nad linią drzew.
@@ -322,8 +321,11 @@ export class TownScene extends Phaser.Scene {
   private cienKontaktowy(im: Phaser.GameObjects.Image, gleboko: number) {
     const szer = im.displayWidth * SZEROKOSC_BRYLY;
     const cien = this.add
-      .image(im.x, im.y - szer * 0.03, 't-cien')
-      .setDisplaySize(szer * 1.15, szer * 0.34)
+      // Odsunięty o włos w lewo: słońce stoi po prawej, tak jak na panoramie.
+      // To ma być cień, który wychodzi spod budynku, a nie leży obok niego —
+      // dlatego przesunięcie jest małe, ledwie kilka procent szerokości.
+      .image(im.x - szer * 0.07, im.y - szer * 0.02, 't-cien')
+      .setDisplaySize(szer * 1.2, szer * 0.36)
       .setDepth(gleboko)
       // Mnożenie, nie przykrywanie. Czarna plama z krycia 0,3 rozjaśnia się
       // do szarości i leży NA trawie jak folia; mnożenie przyciemnia to, co
@@ -773,8 +775,8 @@ export class TownScene extends Phaser.Scene {
       (b) => !b.id.startsWith('ratusz') || b.id === najblizszyRatusz
     );
 
-    const szer = 660;
-    const wysWiersza = 52;
+    const szer = 700;
+    const wysWiersza = 62;
     // 62 na tytuł u góry, 64 na przycisk u dołu — bez tego zapasu
     // „Zamknij" nachodził na ostatni wiersz.
     const wys = 62 + wiersze.length * wysWiersza + 64;
@@ -829,12 +831,32 @@ export class TownScene extends Phaser.Scene {
       doZamkniecia.push(rzad);
 
       const barwa = stoi ? H.inkSoft : dostepny ? H.white : H.inkSoft;
+      // Miniatura budynku. W Heroes 3 lista budowy pokazuje rysunek każdej
+      // budowli i to on, a nie nazwa, mówi dziecku, co właśnie kupuje —
+      // „Rosista Kotlina" nic nie znaczy, dopóki nie zobaczy się kotliny.
+      // Bierzemy tę samą grafikę, która stanie na panoramie, więc nie ma jak
+      // się rozjechać z tym, co potem widać w mieście.
+      const bok = wysWiersza - 16;
+      const ramka = this.add.graphics().setDepth(Z.overlay + 3);
+      ramka.fillStyle(mix(C.panel, C.panelDeep, 0.4), 1);
+      ramka.fillRoundedRect(lewo + 24, y + 4, bok, bok, 5);
+      ramka.lineStyle(1.5, C.panelDeep, 0.8);
+      ramka.strokeRoundedRect(lewo + 24, y + 4, bok, bok, 5);
+      const mini = this.add
+        .image(lewo + 24 + bok / 2, y + 4 + bok / 2, `t-${this.profil.frakcja}-${b.id}`)
+        .setDepth(Z.overlay + 4);
+      mini.setScale(Math.min((bok - 6) / mini.width, (bok - 6) / mini.height));
+      // Postawione są wyszarzone — od razu widać, co jest już załatwione.
+      if (stoi) mini.setTint(0x8a8a8a);
+      doZamkniecia.push(ramka, mini);
+
+      const tekstX = lewo + 24 + bok + 14;
       doZamkniecia.push(
         this.add
-          .text(lewo + 28, y + 8, b.nazwa, display(14, barwa))
+          .text(tekstX, y + 10, b.nazwa, display(14, barwa))
           .setDepth(Z.overlay + 3),
         this.add
-          .text(lewo + 28, y + 27, this.wiersz(b, stoi, mozna, stac, juzBudowano), body(11, H.inkSoft))
+          .text(tekstX, y + 30, this.wiersz(b, stoi, mozna, stac, juzBudowano), body(11, H.inkSoft))
           .setDepth(Z.overlay + 3)
       );
 
@@ -1015,11 +1037,18 @@ export class TownScene extends Phaser.Scene {
     this.rysujBudynki();
     const k = this.kafle.find((x) => x.budynek.id === b.id) ?? this.kafle.find((x) => x.budynek.rodzaj === b.rodzaj);
     if (k) {
+      // Rozjaśnienie, nie podskok.
+      //
+      // Poprzednia wersja wjeżdżała skalą z odbiciem (`Back.easeOut`) i przez
+      // te trzysta milisekund budynek jechał WZGLĘDEM gruntu, na którym stoi —
+      // czyli po raz kolejny udowadniał, że jest osobną warstwą naklejoną na
+      // tło. Wyjście z przezroczystości nic nie rusza: budowla po prostu się
+      // pojawia tam, gdzie stoi.
       this.tweens.add({
         targets: k.obraz,
-        scale: { from: this.skalaBudynku(k.budynek) * 0.82, to: this.skalaBudynku(k.budynek) },
-        duration: 320,
-        ease: 'Back.easeOut',
+        alpha: { from: 0, to: 1 },
+        duration: 420,
+        ease: 'Quad.easeOut',
       });
     }
     this.odswiez();

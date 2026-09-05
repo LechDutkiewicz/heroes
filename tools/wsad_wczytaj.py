@@ -105,7 +105,14 @@ PANORAMY = {'tlo-bor': 'bor', 'tlo-grota': 'grota', 'tlo-zbocze': 'zbocze'}
 def miasto():
     MIASTO.mkdir(parents=True, exist_ok=True)
     for nazwa, wys in BUDYNKI.items():
-        im = zCieniem(dopasuj(wczytaj(nazwa), wys))
+        # BEZ wypalonego cienia rzuconego.
+        #
+        # Cień szedł w lewo, ścięty i spłaszczony, i na ekranie czytał się jako
+        # osobna ciemna plama leżąca obok budynku — dokładnie to, co miał
+        # zwalczać. Scena rysuje teraz własny cień kontaktowy, miękki i wprost
+        # pod podstawą, a ten jeden naprawdę osadza bryłę. Dwa cienie naraz to
+        # o jeden za dużo, więc zostaje ten lepszy.
+        im = dopasuj(wczytaj(nazwa), wys)
         im.save(MIASTO / f'bor-{nazwa}.png')
         print(f'  bor-{nazwa}.png  {im.width} × {im.height}')
 
