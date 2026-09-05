@@ -1,4 +1,5 @@
-import { PROMIEN_WIDZENIA, SKRZYNIE } from './zasady-h3';
+import { PROMIEN_WIDZENIA, SKRZYNIE, naPokeballe } from './zasady-h3';
+import { dochodZamku, przyrostZamku, surowceZamku } from './zamki';
 
 /**
  * Mapa przygody — dane i zasady, bez rysowania.
@@ -132,10 +133,35 @@ export interface Obiekt {
   dostepne?: number[];
   /** Z której frakcji rekrutuje ten zamek. */
   frakcjaZamku?: string;
+  /**
+   * Zamek: identyfikatory postawionych budynków z `zamki.ts`. To one decydują
+   * o dochodzie (ratusze) i o tym, które poziomy oddziałów w ogóle przyrastają
+   * (siedliska, fort). Drzewko budynków istniało wcześniej tylko jako dane —
+   * nic go nie czytało, więc ratusz nie dawał ani jednego pokeballa.
+   */
+  postawione?: string[];
 }
 
-/** Ile pokeballi kosztuje oddział danego poziomu i ile przybywa dziennie. */
-export const KOSZT_ODDZIALU = [2, 4, 7, 12, 20, 35];
+/**
+ * Ile pokeballi kosztuje oddział danego poziomu i ile przybywa dziennie.
+ *
+ * Ceny to koszty oddziałów z Heroes 3 (60, 100, 175, 315, 500, 1000 złota)
+ * przepuszczone przez `naPokeballe` — tę samą regułę, którą liczą się kopalnie,
+ * skrzynie i ratusze. Wcześniej stało tu [2, 4, 7, 12, 20, 35], wycenione poza
+ * jakąkolwiek skalą: dzienny przyrost całego miasta kosztował wtedy 95
+ * pokeballi przy 30 pokeballach dochodu z CAŁEJ mapy. Teraz przyrost kosztuje
+ * 51 przy 60 z samych kopalni i 100 z kopalniami plus trzeci ratusz — czyli
+ * armię da się wykupić i jeszcze zostaje na rozbudowę, o co w tym całym
+ * zbieraniu chodzi.
+ */
+export const KOSZT_ODDZIALU = [
+  naPokeballe(60),
+  naPokeballe(100),
+  naPokeballe(175),
+  naPokeballe(315),
+  naPokeballe(500),
+  naPokeballe(1000),
+];
 export const PRZYROST_ODDZIALU = [3, 2, 2, 1, 1, 1];
 
 /** Oddział w armii — to samo, co slot w bitwie: jeden gatunek i jego liczba. */
@@ -468,12 +494,28 @@ export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
   return { opis: o.nazwa };
 }
 
-/** Ile surowców wpłynie jutro z zajętych budynków. */
+/**
+ * Ile surowców wpłynie jutro — z zajętych kopalni ORAZ z ratuszy w naszych
+ * zamkach. Ratusz jest tu, a nie osobno, bo panel „jutro wpłynie" na mapie
+ * czyta tę jedną funkcję i inaczej pokazywałby graczowi nieprawdę.
+ */
 export function dochod(s: StanMapy): Partial<Record<Surowiec, number>> {
   const suma: Partial<Record<Surowiec, number>> = {};
   for (const o of s.obiekty) {
     if (o.rodzaj === 'kopalnia' && o.nasz && o.surowiec) {
       suma[o.surowiec] = (suma[o.surowiec] ?? 0) + (o.ile ?? 1);
+    }
+    if (o.rodzaj === 'zamek' && o.nasz) {
+      const postawione = o.postawione ?? [];
+      const frakcja = o.frakcjaZamku ?? 'bor';
+      const z = dochodZamku(postawione, frakcja);
+      if (z > 0) suma.pokeball = (suma.pokeball ?? 0) + z;
+      for (const [co, ile] of Object.entries(surowceZamku(postawione, frakcja)) as [
+        Surowiec,
+        number,
+      ][]) {
+        suma[co] = (suma[co] ?? 0) + ile;
+      }
     }
   }
   return suma;
@@ -491,7 +533,12 @@ export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
   // gospodarka kończyłaby się w pierwszym dniu.
   for (const o of s.obiekty) {
     if (o.rodzaj === 'zamek' && o.nasz && o.dostepne) {
-      o.dostepne = o.dostepne.map((ile, t) => Math.min(ile + PRZYROST_ODDZIALU[t], 99));
+      // Przyrost liczy się z POSTAWIONYCH siedlisk: poziom bez siedliska nie
+      // daje nic, a fort podnosi wszystkie naraz o połowę. Wcześniej przyrastały
+      // wszystkie sześć poziomów niezależnie od miasta, więc rozbudowa nie
+      // zmieniała niczego poza opisem.
+      const przyrost = przyrostZamku(o.postawione ?? [], PRZYROST_ODDZIALU);
+      o.dostepne = o.dostepne.map((ile, t) => Math.min(ile + przyrost[t], 99));
     }
   }
   return wplyw;

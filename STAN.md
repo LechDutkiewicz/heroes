@@ -1,6 +1,6 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-08-12 (mapa 36 × 36, mgła, bitwa z mapy).
+Ostatnia aktualizacja: 2026-09-05 (ekonomia na jednej skali, rozbudowa miasta).
 
 Ten plik istnieje po to, żeby po przerwie nie trzeba było odtwarzać kontekstu
 z pamięci. Zapisuję tu, co jest skończone, co jest w połowie i czego świadomie
@@ -23,6 +23,8 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `node tools/capture.mjs` | komplet zrzutów, w tym paski czterech klatek dla animacji |
 | `npx tsx tools/probe-trasa.ts` | poprawność tras ruchu na ~128 tys. przypadków |
 | `npx tsx tools/probe-mapa.ts` | plansza przygody: kształt, okno, dostępność obiektów, odcisk tła |
+| `npx tsx tools/probe-ekonomia.ts` | czy dochód z prawdziwej mapy starcza na armię I rozbudowę |
+| `node tools/probe-rozbudowa.mjs` | czy budynek da się KLIKNĄĆ i czy miasto potem daje więcej |
 | `node tools/probe-kopalnia.mjs` | czy budynek produkcyjny się ZAJMUJE, a nie zbiera |
 | `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia, artefakt, bitwa, zamek, powrót |
 | `node tools/probe-klik.mjs` | czy KLIKNIĘCIE prowadzi bohatera tam, gdzie się kliknęło |
@@ -116,15 +118,20 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
   tego samego gatunku dokleja się do istniejącego slotu. To domyka pętlę
   „zbierz — kup — wygraj".
 - **Strefy kontroli potworów** — strażnika nie da się ominąć bokiem.
+- **Rozbudowa miasta** w prawej kolumnie ekranu zamku: ratusze dają dochód,
+  fort podnosi przyrost we wszystkich siedliskach, siedliska otwierają kolejne
+  poziomy oddziałów. Sprawdza to `node tools/probe-rozbudowa.mjs`.
+- **Ekonomia policzona z jednej reguły** (`ZLOTO_NA_POKEBALL` w `zasady-h3.ts`):
+  wszystko, co ma cenę, jest złotem z Heroes 3 podzielonym przez 50. Pilnuje
+  tego `npx tsx tools/probe-ekonomia.ts`.
 - **Straż na mapie to zawsze jeden gatunek**, ewentualnie rozbity na kilka
   stosów. Mieszane armie są w Heroes 3 wyłącznie w budynkach.
 
 ## W połowie
 
-**Zamek jest, ale sam handel — bez rozbudowy.**
-
-- **nie ma rozbudowy budynków ani ulepszania oddziałów.** Kamienie ewolucji
-  i odłamki nie mają jeszcze na co iść; wydaje się tylko pokeballe;
+- **nie ma ulepszania oddziałów.** Kamienie ewolucji nie mają jeszcze na co
+  iść — świadomie wypadły z kosztów budynków (patrz niżej), więc na razie się
+  je tylko zbiera;
 - **do zamku przeciwnika nie da się wejść** — mówi to wprost, ale zdobycia
   zamku nie ma;
 - **przeciwnik nie gra** — jego zamek stoi, ale nikt nim nie rusza;
@@ -300,3 +307,39 @@ z falowaniem, a potem zbierała siedem próbek na dwusekundowy przelot, bo każd
 odczyt szedł osobną podróżą do przeglądarki. Za każdym razem liczby mówiły
 „animacji nie ma", a animacja była. Dopiero rejestrator wewnątrz strony,
 próbkujący klatka po klatce, pokazał prawdę.
+
+## Ekonomia — co było zepsute i jak to teraz stoi
+
+Zgłoszenie brzmiało: „mam wszystkie kopalnie i nie mam za co kupić armii, nie
+mówiąc o rozbudowie". Było prawdziwe i miało trzy niezależne przyczyny.
+
+1. **Dwie różne skale walut w jednej grze.** Dochód liczyliśmy jak złoto
+   z Heroes 3 dzielone przez sto (kopalnia 1000 → 10 pokeballi), a ceny
+   oddziałów wpisaliśmy na oko, jakby dzielić przez trzydzieści (60 → 2).
+   Dzienny przyrost całego miasta kosztował **95 pokeballi**, a CAŁA mapa dawała
+   **30**. Teraz jest jedna reguła — `ZLOTO_NA_POKEBALL = 50` — i przechodzi
+   przez nią wszystko: oddziały, kopalnie, skrzynie, stosy, ratusze.
+2. **Drzewko budynków istniało tylko jako dane.** `zamki.ts` miało jedenaście
+   budynków, koszty i funkcje `dochodZamku` oraz `przyrostZamku` — i nic ich nie
+   wywoływało. Ratusz nie dawał ani jednego pokeballa, fort nie podnosił
+   przyrostu, a siedlisk nie dało się postawić, bo żaden ekran ich nie pokazywał.
+3. **Kamienia ewolucji nie dało się zdobyć.** Cztery budynki wymagały razem
+   ośmiu, a plansza ma jeden stos (1–3 sztuki) i zero kopalni kamienia. Miasta
+   nie dało się skończyć niezależnie od tego, jak dobrze się grało. Kamień
+   wypadł z kosztów budowy i czeka na ulepszenia oddziałów.
+
+Jak to stoi po zmianie (liczby z `probe-ekonomia`):
+
+| | pokeballe dziennie |
+|---|---|
+| przyrost całego miasta (z fortem) kosztuje | 95 |
+| mapa + startowe miasto daje | 70 |
+| mapa + rozbudowane miasto daje | 140 |
+
+Czyli: na początku dochód pokrywa większość przyrostu, ale nie wszystko — trzeba
+wybierać. Po rozbudowie starcza na armię i jeszcze zostaje. Pełne miasto staje
+w około 27 dni **przy codziennym wykupywaniu przyrostu**, a nie zamiast niego.
+
+Czego świadomie nie ruszyłem: ekran miasta jest listą, nie malowaną panoramą
+z Heroes 3. Panorama jest następnym krokiem — ale lista, w której da się
+budować, jest warta więcej niż obrazek, w którym nie da się nic.

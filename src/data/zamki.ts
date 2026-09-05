@@ -1,4 +1,5 @@
 import type { Skarbiec, Surowiec } from './mapa';
+import { naPokeballe } from './zasady-h3';
 
 /**
  * Zamki: budynki, ich koszty, warunki i ekonomia.
@@ -34,6 +35,12 @@ export interface Budynek {
   poziom?: number;
   /** Dla ratusza: ile pokeballi dziennie dokłada. */
   dochod?: number;
+  /**
+   * Dla budynku specjalnego: jakie surowce dokłada każdego dnia.
+   * Bez tego „Krzew Jagodowy" i „Żyła Odłamków" robiły dokładnie to, co obiecuje
+   * ich opis — czyli nic — a kamień ewolucji nie miał na mapie ŻADNEGO źródła.
+   */
+  produkuje?: Partial<Skarbiec>;
   /** Gdzie stoi na panoramie miasta — ułamek szerokości i wysokości. */
   x: number;
   y: number;
@@ -67,6 +74,7 @@ interface Szkielet {
   rodzaj: RodzajBudynku;
   poziom?: number;
   dochod?: number;
+  produkuje?: Partial<Skarbiec>;
   wymaga: string[];
   x: number;
   y: number;
@@ -74,9 +82,13 @@ interface Szkielet {
 }
 
 const SZKIELET: Szkielet[] = [
-  { id: 'ratusz1', rodzaj: 'ratusz', dochod: 6, wymaga: [], x: 0.5, y: 0.52, skala: 1.0 },
-  { id: 'ratusz2', rodzaj: 'ratusz', dochod: 14, wymaga: ['ratusz1'], x: 0.5, y: 0.52, skala: 1.15 },
-  { id: 'ratusz3', rodzaj: 'ratusz', dochod: 26, wymaga: ['ratusz2', 'fort'], x: 0.5, y: 0.52, skala: 1.3 },
+  // Trzy ratusze to trzy ratusze z Heroes 3: wiejski (500 złota dziennie),
+  // miejski (2000) i kapitol (4000), przeliczone tą samą regułą co wszystko
+  // inne. Liczby 6 / 14 / 26 stały tu wcześniej bez żadnego przelicznika —
+  // i tak nikt ich nie czytał, bo dochód z zamku w ogóle nie wpływał do skarbca.
+  { id: 'ratusz1', rodzaj: 'ratusz', dochod: naPokeballe(500), wymaga: [], x: 0.5, y: 0.52, skala: 1.0 },
+  { id: 'ratusz2', rodzaj: 'ratusz', dochod: naPokeballe(2000), wymaga: ['ratusz1'], x: 0.5, y: 0.52, skala: 1.15 },
+  { id: 'ratusz3', rodzaj: 'ratusz', dochod: naPokeballe(4000), wymaga: ['ratusz2', 'fort'], x: 0.5, y: 0.52, skala: 1.3 },
   { id: 'fort', rodzaj: 'fort', wymaga: ['ratusz1'], x: 0.22, y: 0.44, skala: 1.1 },
   { id: 'siedlisko1', rodzaj: 'siedlisko', poziom: 0, wymaga: [], x: 0.13, y: 0.72, skala: 0.6 },
   { id: 'siedlisko2', rodzaj: 'siedlisko', poziom: 1, wymaga: ['siedlisko1'], x: 0.3, y: 0.78, skala: 0.62 },
@@ -99,19 +111,44 @@ const PROFILE: Record<string, { siedliskaNiskie: number; siedliskaWysokie: numbe
     zbocze: { siedliskaNiskie: 1.3, siedliskaWysokie: 0.8, ratusz: 1.1 },
   };
 
-/** Ceny bazowe. Pokeballe niosą główny ciężar; odłamki są bramką na później. */
+/**
+ * Ceny bazowe. Pokeballe niosą główny ciężar; odłamki są bramką na później.
+ *
+ * KAMIENIA EWOLUCJI TU NIE MA i to jest celowe. Wcześniej cztery budynki
+ * wymagały razem ośmiu kamieni, a cała plansza 36 × 36 ma jeden stos kamieni
+ * (1–3 sztuki) i ANI JEDNEJ kopalni kamienia. Miasta po prostu nie dało się
+ * skończyć — nie przez cenę, tylko przez brak surowca w świecie. Kamień
+ * zostaje tym, czym mówi jego nazwa: zbiera się go na przyszłe ulepszanie
+ * oddziałów, a nie na mury.
+ */
 const CENY: Record<string, Partial<Skarbiec>> = {
+  // Ratusze są drogie CELOWO: w Heroes 3 kolejny ratusz kosztuje mniej więcej
+  // pięć dni własnego dochodu i dokładnie dlatego jest decyzją, a nie
+  // formalnością. Przy dawnych 45 pokeballach zwracał się w półtora dnia,
+  // więc nie było czego rozważać.
   ratusz1: { pokeball: 20 },
-  ratusz2: { pokeball: 45, odlamek: 3 },
-  ratusz3: { pokeball: 90, odlamek: 8, kamien: 2 },
+  ratusz2: { pokeball: 100, odlamek: 3 },
+  ratusz3: { pokeball: 200, odlamek: 10 },
   fort: { pokeball: 35, odlamek: 5 },
   siedlisko1: { pokeball: 12 },
   siedlisko2: { pokeball: 20, jagoda: 4 },
   siedlisko3: { pokeball: 32, jagoda: 6 },
   siedlisko4: { pokeball: 50, odlamek: 4 },
-  siedlisko5: { pokeball: 75, odlamek: 7, kamien: 1 },
-  siedlisko6: { pokeball: 120, odlamek: 12, kamien: 3 },
-  specjalny: { pokeball: 60, kamien: 2 },
+  siedlisko5: { pokeball: 75, odlamek: 8 },
+  siedlisko6: { pokeball: 120, odlamek: 15 },
+  specjalny: { pokeball: 60, odlamek: 3 },
+};
+
+/**
+ * Co dziennie dokłada budynek specjalny. Różni się między frakcjami, bo to
+ * jedyne miejsce, w którym miasta dają COŚ INNEGO, a nie tylko drożej lub
+ * taniej to samo. Każda dostaje odłamki — surowiec, którym płaci się za całą
+ * górną połowę drzewka — żeby żadna nie miała budynku-ozdoby.
+ */
+const PRODUKCJA_SPECJALNEGO: Record<string, Partial<Skarbiec>> = {
+  bor: { odlamek: 1, jagoda: 2 },
+  grota: { odlamek: 2 },
+  zbocze: { odlamek: 1, kamien: 1 },
 };
 
 function skalujKoszt(id: string, profil: (typeof PROFILE)[string]): Partial<Skarbiec> {
@@ -148,7 +185,7 @@ const NAZWY: Record<string, Record<string, [string, string]>> = {
     siedlisko4: ['Strumień', 'Torrenary płyną z prądem.'],
     siedlisko5: ['Zielona Kopuła', 'Verdiko rosną w cieniu koron.'],
     siedlisko6: ['Prastare Drzewo', 'Silvena budzi się raz na jakiś czas.'],
-    specjalny: ['Krzew Jagodowy', 'Dokłada jagody każdego dnia.'],
+    specjalny: ['Krzew Jagodowy', 'Codziennie dokłada jagody i odłamek.'],
   },
   grota: {
     ratusz1: ['Składnica', 'Pokeballe wypłukane z podziemnej rzeki.'],
@@ -161,7 +198,7 @@ const NAZWY: Record<string, Record<string, [string, string]>> = {
     siedlisko4: ['Grzybowe Pole', 'Sporiny rosną powoli i twardo.'],
     siedlisko5: ['Podziemne Jezioro', 'Aquatory nie znoszą światła.'],
     siedlisko6: ['Krater', 'Vulkarony budzą się w gorącu.'],
-    specjalny: ['Żyła Odłamków', 'Dokłada odłamki każdego dnia.'],
+    specjalny: ['Żyła Odłamków', 'Codziennie dokłada dwa odłamki.'],
   },
   zbocze: {
     ratusz1: ['Obozowisko', 'Pokeballe wygrzebane z popiołu.'],
@@ -174,7 +211,7 @@ const NAZWY: Record<string, Record<string, [string, string]>> = {
     siedlisko4: ['Żarowisko', 'Cyndery nie gasną.'],
     siedlisko5: ['Osuwisko', 'Lawiny czekają na pierwszy ruch.'],
     siedlisko6: ['Komin Wulkanu', 'Sadziny schodzą tylko na wojnę.'],
-    specjalny: ['Piec Ewolucji', 'Dokłada kamień ewolucji co kilka dni.'],
+    specjalny: ['Piec Ewolucji', 'Codziennie dokłada odłamek i kamień ewolucji.'],
   },
 };
 
@@ -219,6 +256,10 @@ function zbudujProfil(frakcja: string, nazwaMiasta: string): ProfilZamku {
       wymaga: s.wymaga,
       poziom: s.poziom,
       dochod: s.dochod,
+      produkuje:
+        s.rodzaj === 'specjalny'
+          ? (PRODUKCJA_SPECJALNEGO[frakcja] ?? PRODUKCJA_SPECJALNEGO.bor)
+          : undefined,
       x: s.x,
       y: s.y,
       skala: s.skala,
@@ -259,6 +300,22 @@ export function przyrostZamku(postawione: string[], bazowy: number[]) {
     const jest = postawione.includes(`siedlisko${poziom + 1}`);
     return jest ? Math.max(1, Math.round(ile * mnoznik)) : 0;
   });
+}
+
+/**
+ * Dzienny wpływ RZADKICH surowców z zamku — dziś tylko z budynku specjalnego.
+ * Osobno od `dochodZamku`, bo tamten liczy jedną liczbę (pokeballe) i wchodzi
+ * w zupełnie inne miejsce interfejsu.
+ */
+export function surowceZamku(postawione: string[], frakcja: string): Partial<Skarbiec> {
+  const wynik: Partial<Skarbiec> = {};
+  for (const b of profilZamku(frakcja).budynki) {
+    if (!b.produkuje || !postawione.includes(b.id)) continue;
+    for (const [co, ile] of Object.entries(b.produkuje) as [Surowiec, number][]) {
+      wynik[co] = (wynik[co] ?? 0) + ile;
+    }
+  }
+  return wynik;
 }
 
 /** Dzienny dochód w pokeballach z ratuszy (liczy się najlepszy postawiony). */

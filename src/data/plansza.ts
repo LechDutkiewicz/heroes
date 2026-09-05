@@ -175,7 +175,16 @@ export function planszaPrzygody(): StanMapy {
     nazwa: 'Bór Szmaragdowy',
     nasz: true,
     frakcjaZamku: 'bor',
-    dostepne: [6, 4, 3, 2, 1, 0],
+    // Czekają tylko te poziomy, dla których miasto ma siedlisko. Wcześniej
+    // stało tu [6, 4, 3, 2, 1, 0] — cztery poziomy do kupienia z budynków,
+    // których nie ma. Teraz pusty wiersz na ekranie miasta jest zaproszeniem
+    // do rozbudowy, a nie usterką.
+    dostepne: [6, 4, 0, 0, 0, 0],
+    // Miasto startowe nie jest puste i nie jest gotowe. Ratusz daje pierwszy
+    // dochód od pierwszego dnia (inaczej dzień 1 to zero pokeballi i nie ma
+    // czym zacząć), dwa siedliska dają co werbować — reszta drzewka jest do
+    // postawienia, bo to ona jest właściwą grą na ekranie miasta.
+    postawione: ['ratusz1', 'siedlisko1', 'siedlisko2'],
   });
   obiekty.push({
     id: id++,
@@ -184,7 +193,8 @@ export function planszaPrzygody(): StanMapy {
     y: PUNKTY['zamek wroga'].y,
     nazwa: 'Grota Księżycowa',
     frakcjaZamku: 'grota',
-    dostepne: [6, 4, 3, 2, 1, 0],
+    dostepne: [6, 4, 0, 0, 0, 0],
+    postawione: ['ratusz1', 'siedlisko1', 'siedlisko2'],
   });
 
   // Armia startowa: cztery najniższe oddziały Boru. Punkty ruchu liczymy
@@ -218,7 +228,10 @@ export function planszaPrzygody(): StanMapy {
       artefakty: [],
       doswiadczenie: 0,
     },
-    skarbiec: { pokeball: 15, jagoda: 6, kamien: 1, odlamek: 2 },
+    // Skarbiec startowy: tyle, żeby dało się w pierwszym tygodniu podjąć jedną
+    // decyzję (siedlisko albo garść oddziałów), a nie żeby było na wszystko.
+    // Przy 15 pokeballach dzień pierwszy był tylko klikaniem „dalej".
+    skarbiec: { pokeball: 40, jagoda: 6, kamien: 1, odlamek: 4 },
     dzien: 1,
     odkryte: TEREN.map(() => new Array(TEREN[0].length).fill(false)),
   };
