@@ -735,9 +735,53 @@ export class AdventureScene extends Phaser.Scene {
         kont.setData('flaga', f);
       }
 
+      if (bryla) this.zaroslaPrzyPodstawie(o, im, kont);
+
       kont.setData('obiekt', o);
       this.ikonyObiektow[o.id] = kont;
       this.swiat.add(kont);
+    }
+  }
+
+  /**
+   * Zarośla zachodzące na dolną krawędź budowli — wycięte z TŁA PLANSZY.
+   *
+   * Budowla wycięta do sylwetki ma nieprzerwany, ostry obrys od dołu i przez
+   * to unosi się nad ziemią, choćby cień był idealny. W naturze przy każdej
+   * ścianie coś rośnie i zasłania jej podstawę; przerwanie tej krawędzi robi
+   * dla osadzenia więcej niż cień, bo oko przestaje widzieć granicę wycięcia.
+   *
+   * Ta sama sztuczka co na ekranie miasta i z tego samego powodu: proceduralna
+   * trawa przegrywa z malowaną, więc nie podrabiamy jej, tylko bierzemy pas
+   * tła dokładnie stamtąd, gdzie stoi budowla, i kładziemy z powrotem na wierzch.
+   * To jest ta sama trawa, po której chodzi bohater.
+   *
+   * Krycie schodzi ku górze trzema pasami — gradientu alfy na obrazku nie da
+   * się zrobić bez maski bitmapowej, a przy paśmie wysokim na kilkanaście
+   * pikseli nikt nie zobaczy stopni.
+   */
+  private zaroslaPrzyPodstawie(
+    o: Obiekt,
+    im: Phaser.GameObjects.Image,
+    kont: Phaser.GameObjects.Container
+  ) {
+    const podstawa = kont.y + im.y;
+    const lewo = kont.x - im.displayWidth / 2;
+    const pasmo = KAFEL * 0.34;
+    const krycie = [0.4, 0.72, 1];
+    for (let i = 0; i < krycie.length; i++) {
+      const wysPasa = pasmo / krycie.length;
+      const y = podstawa - pasmo + i * wysPasa;
+      const kopia = this.add
+        .image(0, 0, 'plansza-0')
+        .setOrigin(0, 0)
+        // Nad tą budowlą, ale pod wszystkim, co stoi w następnych rzędach.
+        .setDepth(o.y + 0.7)
+        .setAlpha(krycie[i]);
+      // Tło planszy leży w świecie jeden do jednego od (0,0), więc piksel
+      // świata jest wprost pikselem tekstury.
+      kopia.setCrop(lewo, y, im.displayWidth, wysPasa + 1);
+      this.swiat.add(kopia);
     }
   }
 
