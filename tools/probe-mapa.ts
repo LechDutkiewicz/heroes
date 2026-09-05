@@ -113,8 +113,60 @@ sprawdz(
   'zamek przeciwnika NIE jest osiągalny pierwszego dnia',
   !wZasiegu.includes(wrogiZamek)
 );
-const straznik = s.obiekty.find((o) => o.nazwa === 'Strażnik Przełęczy')!;
-sprawdz('strażnik przełęczy stoi poza zasięgiem pierwszego dnia', !wZasiegu.includes(straznik));
+const straze = s.obiekty.filter((o) => o.nazwa.startsWith('Strażnik '));
+sprawdz('obie straże graniczne stoją na mapie', straze.length === 2, straze.map((o) => o.nazwa).join(', '));
+for (const g of straze) {
+  sprawdz(`${g.nazwa} stoi poza zasięgiem pierwszego dnia`, !wZasiegu.includes(g));
+}
+
+console.log('\n=== grzbiet dzieli mapę na dwie połowy ===');
+// Cały układ „Key to Victory" stoi na tym, że na północ prowadzą DOKŁADNIE dwa
+// przejścia i oba są pilnowane. Rozmycie granic w generatorze potrafi wybić
+// w grzbiecie trzecią dziurę szeroką na pole — nie widać tego ani na obrazku,
+// ani w kodzie, a mapa cicho przestaje być tą mapą: da się wejść bokiem.
+{
+  const RDZEN = [19, 22];
+  const przejezdne = (x: number, y: number) => TEREN_INFO[s.teren[y][x]].koszt !== null;
+  const kolumny: number[] = [];
+  for (let x = 0; x < s.szer; x++) {
+    let wolna = true;
+    for (let y = RDZEN[0]; y <= RDZEN[1]; y++) if (!przejezdne(x, y)) wolna = false;
+    if (wolna) kolumny.push(x);
+  }
+  // Sklejamy sąsiadujące kolumny w jedno przejście.
+  const grupy = kolumny.reduce<number[][]>((a, x) => {
+    if (a.length && x === a[a.length - 1][a[a.length - 1].length - 1] + 1) a[a.length - 1].push(x);
+    else a.push([x]);
+    return a;
+  }, []);
+  sprawdz(
+    'przez grzbiet prowadzą dokładnie dwa przejścia',
+    grupy.length === 2,
+    grupy.map((g) => `x ${g[0]}–${g[g.length - 1]}`).join(', ')
+  );
+  // Straż stoi W przejściu, nie obok niego — inaczej da się ją minąć.
+  for (const g of straze) {
+    sprawdz(
+      `${g.nazwa} stoi w przejściu`,
+      g.y >= RDZEN[0] && g.y <= RDZEN[1] && grupy.some((k) => k.includes(g.x)),
+      `(${g.x},${g.y})`
+    );
+  }
+}
+
+console.log('\n=== gospodarka jest po stronie gracza ===');
+// W oryginale pierwsza połowa gry to rozbudowa w bezpiecznej połowie mapy.
+// Jeżeli kopalnie rozejdą się po całej planszy, mapa traci ten podział i staje
+// się zwykłą przechadzką z jednym potworem pośrodku.
+{
+  const kopalnie = s.obiekty.filter((o) => o.rodzaj === 'kopalnia');
+  const wDomu = kopalnie.filter((o) => o.y > 22).length;
+  sprawdz(
+    'większość kopalń leży w dolinie gracza',
+    wDomu * 2 > kopalnie.length,
+    `${wDomu} z ${kopalnie.length}`
+  );
+}
 
 console.log('\n=== mgła wojny ===');
 const odkrytych = s.odkryte.flat().filter(Boolean).length;

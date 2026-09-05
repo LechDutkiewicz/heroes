@@ -356,19 +356,19 @@ sprawdz(
 console.log('\n=== straż przy kopalni ===');
 const pilnowana = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
-  const k = s.stan.obiekty.find(
-    (o) =>
-      o.rodzaj === 'kopalnia' &&
-      !o.nasz &&
-      s.stan.obiekty.some(
-        (p) =>
-          p.rodzaj === 'potwor' &&
-          !p.zebrany &&
-          Math.abs(p.x - o.x) <= 1 &&
-          Math.abs(p.y - o.y) <= 1
-      )
-  );
+  const k = s.stan.obiekty.find((o) => o.rodzaj === 'kopalnia' && !o.nasz);
   if (!k) return null;
+  // Straż USTAWIA sonda, a nie plansza.
+  //
+  // Sprawdzamy zasadę („wejście na pilnowane pole zaczyna bitwę"), a nie to,
+  // czy akurat ten układ mapy kogoś przy kopalni postawił. Pierwsza wersja
+  // szukała pilnowanej kopalni na planszy i przestała cokolwiek sprawdzać,
+  // gdy układ mapy się zmienił — czyli test zależał od danych, na które nie
+  // ma wpływu. Przestawiamy więc dowolnego żywego potwora obok kopalni.
+  const straz = s.stan.obiekty.find((o) => o.rodzaj === 'potwor' && !o.zebrany);
+  if (!straz) return null;
+  straz.x = k.x + 1;
+  straz.y = k.y - 1;
   s.stan.bohater.x = k.x;
   s.stan.bohater.y = k.y + 2;
   s.stan.bohater.ruch = 3000;

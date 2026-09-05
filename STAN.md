@@ -94,9 +94,10 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
   o 12 px, zmniejszony do 0,60 i przygaszony do 0,30 alfy. Mierzy to
   `tools/probe-lot.mjs`.
 
-- **Mapa przygody — pierwsza plansza.** Układ przeniesiony z HotA, teren
-  układa się sam z arkusza narożnikowego, drogi rysowane, woda animowana.
-  Wejście: `?ekran=mapa`. Szczegóły niżej.
+- **Mapa przygody — układ „Key to Victory".** Plansza wzorowana na jednej
+  z popularniejszych map z Heroes 3 (Restoration of Erathia, 36 × 36, dwóch
+  graczy). Teren układa się sam z arkusza narożnikowego, drogi rysowane, woda
+  animowana. Wejście: `?ekran=mapa`. Szczegóły niżej.
 - **Jeden styl na całym ekranie przygody.** Teren, drzewa, skały i bohater
   przechodzą przez `tools/wygladzanie.py`, więc przestały być kanciastym
   pixel artem obok gładkich stworków i HUD-u.
@@ -154,8 +155,8 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
 
 - **nie ma ulepszania oddziałów.** Kamienie ewolucji nie mają jeszcze na co
   iść: wypadły z kosztów budynków przy porządkowaniu ekonomii, a ulepszeń
-  siedlisk jeszcze nie ma. Na mapie stoi za to kamieniołom, więc surowiec ma
-  źródło i nie ma ujścia — to jest do rozstrzygnięcia: albo kamień wraca do
+  siedlisk jeszcze nie ma. Na nowej planszy leżą jako stosy po stronie wroga,
+  więc na razie się je tylko zbiera. Do rozstrzygnięcia: albo kamień wraca do
   kosztów górnej połowy drzewka, albo czeka na ulepszenia oddziałów;
 - **do zamku przeciwnika nie da się wejść** — mówi to wprost, ale zdobycia
   zamku nie ma. Zamek wroga ma już własną rozbudowę w stanie gry (stoi w nim
@@ -292,6 +293,52 @@ więc z oddziałami pierwszej w `battle.units`, a ich widoki umarły razem z tam
 sceną — `beginTurn` wywracał się na nieżyjącej teksturze napisu i gracz
 zostawał na mapie bez bitwy i bez sterowania. Jedna bitwa w sondzie tego nie
 złapie; trzeba rozegrać co najmniej dwie.
+
+## Układ mapy — „Key to Victory"
+
+Plansza jest przeniesieniem mapy „Key to Victory" na to, co mamy. Z oryginału
+wzięte są rozmiar (36 × 36), strony (gracz na polu 32,33 na południowym
+wschodzie, przeciwnik na 20,15 na północy) i cała struktura: pasmo gór przez
+całą szerokość mapy z pilnowanymi przejściami. Południe to bezpieczna dolina
+z gospodarką, północ to kraina przeciwnika z nagrodami i silnymi strażami.
+
+Przejścia są dwa, jak w oryginale, gdzie drugą drogę na północ dają podziemia:
+
+| Przejście | Kolumny | Czym się różni |
+|---|---|---|
+| Przełęcz | x 12–14 | droga bita, krótko od głównego szlaku |
+| Nadmorska ścieżka | x 3–5 | piasek (125 punktów ruchu zamiast 70), w przeciwległym rogu mapy niż start — sam dojazd to kilka dni |
+
+**Czego z oryginału NIE ma i to widać.** Tytułowym kluczem są tam Strażnice
+Graniczne i Namioty Klucznika: strażnicy nie da się pokonać, tylko OTWORZYĆ,
+po znalezieniu namiotu gdzie indziej na mapie. Nie mamy ani jednego, ani
+drugiego, więc w przejściach stoją zwykłe potwory. Mapa mówi więc „zbierz
+armię", a nie „poszukaj klucza" — a to inna zagadka i inna gra. Spis rzeczy,
+których brakuje, jest na końcu `tools/generuj_mape.py`.
+
+**Rdzeń grzbietu jest zasklepiany po rozmyciu, i musi być.** Rozmycie granic
+w generatorze potrafi wybić w murze dziurę szeroką na jedno pole. Nie widać
+tego ani na obrazku, ani w kodzie — po prostu pewnego dnia da się wejść na
+północ bokiem, omijając straż, i mapa przestaje być tą mapą. Dlatego wiersze
+19–22 wracają po rozmyciu do stanu ze szkicu, przejścia są wycinane ręcznie,
+a `probe-mapa.ts` liczy, ile przejść naprawdę zostało (ma być dwa) i czy straż
+stoi W przejściu, a nie obok.
+
+**Odległość od startu przestała nadawać się na miarę trudności.** Przy starcie
+pośrodku mapy działała; przy starcie w ROGU przeciwległy kraniec własnej,
+bezpiecznej doliny wychodzi „dalej" niż zamek przeciwnika za grzbietem — i
+dostawał relikty oraz straże przewidziane dla krainy wroga. Teraz o tym, co
+gdzie stoi, decyduje STREFA (dom / pogranicze / wroga), wyznaczona przez
+grzbiet, a odległość wewnątrz doliny liczy się w polach, którymi naprawdę się
+chodzi (przeszukiwanie wszerz), a nie po przekątnej przez góry.
+
+**Drugie przejście przy zamku gracza wywraca cały zamysł.** Pierwsza wersja
+miała ścieżkę nadmorską przy wschodnim brzegu, trzynaście pól od startu.
+Wychodził z tego skrót KRÓTSZY od głównej drogi, przy którym dało się
+pierwszego dnia wjechać w najsilniejszą straż na mapie i przegrać pierwszą
+bitwę w grze, zanim się w ogóle było w swoim zamku. Drugie przejście musi
+leżeć w przeciwległym rogu mapy niż start — inaczej nie jest alternatywą,
+tylko obejściem.
 
 ## Znalezione przy mapie 36 × 36
 

@@ -63,9 +63,12 @@ const NAZWY_BUDYNKU: Record<Surowiec, string> = {
 
 /**
  * Straże. Trzy poziomy siły, dobrane tak, żeby dziecko widziało po sprite'ie
- * i liczbie, czy to jest na teraz. Strażnik przełęczy jest osobno, bo pilnuje
- * jedynego przejścia na mapie i ma być wyraźnie trudniejszy od wszystkiego,
- * co gracz spotkał wcześniej.
+ * i liczbie, czy to jest na teraz.
+ *
+ * `straznik` to straż graniczna: stoi w jednym z dwóch przejść przez grzbiet
+ * i jest jedyną rzeczą dzielącą mapę na bezpieczne południe i groźną północ.
+ * Ma być wyraźnie trudniejsza od wszystkiego, co gracz spotkał wcześniej —
+ * inaczej podział mapy przestaje cokolwiek znaczyć.
  */
 const STRAZE: Record<string, { frakcja: string; tiery: number[]; mnoznik: number; stosy: number }> =
   {
@@ -172,9 +175,15 @@ export function planszaPrzygody(): StanMapy {
         artefakt: artefakt ? ARTEFAKTY[Math.floor(losuj() * ARTEFAKTY.length)].id : undefined,
       });
     } else if (wpis.rodzaj === 'artefakt') {
-      // Im dalej od startu, tym lepsza klasa — bliskie artefakty są drobne.
-      const daleko = Math.max(Math.abs(wpis.x - PUNKTY.start.x), Math.abs(wpis.y - PUNKTY.start.y));
-      const klasa = daleko > 20 ? 'relikt' : daleko > 12 ? 'znaczny' : 'drobny';
+      // O klasie artefaktu decyduje STRONA GRZBIETU, a nie odległość od startu.
+      //
+      // Odległość działała, dopóki gracz startował pośrodku mapy. Na układzie
+      // z „Key to Victory" startuje w rogu, więc przeciwległy kraniec własnej,
+      // bezpiecznej doliny wychodził „dalej" niż kraina przeciwnika — i dostawał
+      // relikty, po które da się pojechać bez jednej bitwy. Za grzbietem leżą
+      // rzeczy, po które trzeba się wyprawić, i to one mają być warte wyprawy.
+      const klasa =
+        wpis.strefa === 'wroga' ? 'relikt' : wpis.strefa === 'pogranicze' ? 'znaczny' : 'drobny';
       const pula = ARTEFAKTY.filter((a) => a.klasa === klasa);
       const a = pula[Math.floor(losuj() * pula.length)];
       obiekty.push({ ...wspolne, rodzaj: 'artefakt', nazwa: a.nazwa, artefakt: a.id });
@@ -184,7 +193,9 @@ export function planszaPrzygody(): StanMapy {
       obiekty.push({
         ...wspolne,
         rodzaj: 'potwor',
-        nazwa: sila === 'straznik' ? 'Strażnik Przełęczy' : oddzialy[0].nazwa,
+        // Straże graniczne mają własne imiona z generatora — pilnują konkretnych
+        // przejść i gracz ma je odróżniać od zwykłego stada po drodze.
+        nazwa: wpis.nazwa ?? oddzialy[0].nazwa,
         frakcja: STRAZE[sila]?.frakcja,
         oddzialy,
       });
