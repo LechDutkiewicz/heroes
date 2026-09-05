@@ -5,6 +5,11 @@
 // albo cena, na którą nigdy nie starczy dochodu. Jedno i drugie objawia się
 // dopiero po godzinie gry, kiedy dziecko utknie.
 //
+// UWAGA: symulacja na dole liczy dochód ZMYŚLONY („+4 pokeballe dziennie"),
+// żeby sprawdzić samo drzewko w oderwaniu od planszy. To za mało, żeby wyłapać
+// rozjechaną ekonomię — od tego jest `tools/probe-ekonomia.ts`, który liczy
+// dochód i koszty z prawdziwej mapy.
+//
 //   npx tsx tools/probe-zamki.ts
 
 import {

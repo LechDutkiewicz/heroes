@@ -32,6 +32,7 @@ import { drawPanelBody, makeHudButton, mix, plate } from '../visual/hud';
 import { ICON, buildIcons } from '../visual/icons';
 import { GORA, KAFEL, MARGINES, PANEL_W, PASEK_H } from '../visual/uklad';
 import { wersjonujZasoby } from '../visual/zasoby';
+import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
 
 /**
  * Mapa przygody.
@@ -84,7 +85,8 @@ const KLUCZ_WYNIKU = 'wynik-bitwy';
 
 const DOMYSLNA_PODPOWIEDZ =
   'Kliknij pole, żeby zobaczyć trasę. Kliknij drugi raz w to samo miejsce, żeby ruszyć.\n' +
-  'Mapę przesuwasz strzałkami, spacja wraca do bohatera.';
+  'Mapę przesuwasz strzałkami, spacja wraca do bohatera.\n' +
+  'F8 pokazuje dziennik — dołącz go, gdy zgłaszasz błąd.';
 
 export class AdventureScene extends Phaser.Scene {
   private stan!: StanMapy;
@@ -99,6 +101,13 @@ export class AdventureScene extends Phaser.Scene {
    * i zlewała się z tłem — po jej rozjaśnieniu wyszło od razu.
    */
   private kamera!: Phaser.Cameras.Scene2D.Camera;
+  /**
+   * Kamera okien dialogowych. Musi istnieć osobno, bo kamery rysują się
+   * w kolejności dodania, a kamera planszy powstaje PO kamerze głównej —
+   * więc wszystko, co główna narysuje w obrębie ramy mapy, plansza natychmiast
+   * zamalowuje. Na tym poległo okno skrzyni: powstawało, przyjmowało
+   * kliknięcia, ale było niewidoczne pod mapą i gra wyglądała na zawieszoną.
+   */
   private kameraOkien!: Phaser.Cameras.Scene2D.Camera;
   private plansza!: Phaser.GameObjects.Image;
   private naklejkiWody: Phaser.GameObjects.Image[] = [];
@@ -199,6 +208,7 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   create() {
+    sledzScene(this);
     // Phaser używa TEJ SAMEJ instancji sceny przy każdym `scene.start`, więc
     // pola klasy przeżywają przejście do bitwy i z powrotem. `zajety` zostawało
     // włączone po wyjściu do bitwy i po powrocie nie dało się już sterować
@@ -218,6 +228,20 @@ export class AdventureScene extends Phaser.Scene {
     this.trafienia = [];
 
     this.stan = this.wczytajStan();
+    // Stan mapy jest tym, czego brakuje najbardziej w zgłoszeniach typu
+    // „bohater utknął": pozycja, ruch, surowce i skład armii w jednym miejscu.
+    migawkaStanu('mapa', () =>
+      this.scene.isActive()
+        ? {
+            pole: `${this.stan.bohater.x},${this.stan.bohater.y}`,
+            ruch: this.stan.bohater.ruch,
+            armia: this.stan.bohater.armia.map((o) => `${o.sprite}×${o.ile}`),
+            skarbiec: this.stan.skarbiec,
+            zajety: this.zajety,
+            trasa: this.trasaBiezaca?.length ?? 0,
+          }
+        : undefined
+    );
     buildIcons(this);
     this.zbudujCien();
     this.przygotujAnimacje();
@@ -510,27 +534,31 @@ export class AdventureScene extends Phaser.Scene {
   private rozdzielKamery() {
     this.cameras.main.ignore(this.swiat);
     this.kamera.ignore(this.children.list.filter((o) => o !== this.swiat));
-    // Trzecia kamera, wyłącznie na okna dialogowe. Kamery rysują się
-    // w kolejności dodania, a kamera planszy powstaje PO głównej, więc
-    // zamalowywała wszystko, co główna narysowała w prostokącie mapy —
-    // łącznie z oknem skrzyni. Okno było wtedy niewidzialne, a gra czekała
-    // na decyzję, której nie dało się podjąć: wyglądało to na zawieszenie.
-    // Ta kamera idzie jako ostatnia, więc jej nikt nie zamaluje.
+    // Trzecia kamera, dodana NA SAMYM KOŃCU, więc rysująca PO planszy.
+    // Kamery rysują się w kolejności dodania, a kamera planszy powstaje po
+    // głównej — więc zamalowywała wszystko, co główna narysowała w prostokącie
+    // mapy, łącznie z oknem skrzyni. Okno było wtedy niewidzialne, a gra
+    // czekała na decyzję, której nie dało się podjąć: wyglądało to na
+    // zawieszenie. Kopia listy, bo `ignore` przyjmuje ją przez referencję.
     this.kameraOkien = this.cameras.add(0, 0, this.scale.width, this.scale.height);
-    this.kameraOkien.ignore(this.children.list);
+    this.kameraOkien.ignore([...this.children.list]);
   }
 
   /**
-   * To, co ma być NAD wszystkim — okna dialogowe. Zabieramy je obu wcześniejszym
-   * kamerom i zostawiamy tej ostatniej.
+   * Oddaje obiekty kamerze okien: znikają i z HUD-u, i z planszy, a rysuje je
+   * wyłącznie kamera nakładek. To jedyny sposób, żeby cokolwiek pojawiło się
+   * NAD mapą — sama głębokość nie wystarczy, bo o kolejności decyduje kamera,
+   * a nie `depth`.
    *
    * Wcześniej stało tu `tylkoHud`, które zabierało obiekt tylko kamerze
    * planszy. Chroniło przed rysowaniem okna wewnątrz mapy, ale nie przed
    * zamalowaniem go przez tę kamerę — a to była właśnie usterka.
    */
   private naWierzchu(...obiekty: Phaser.GameObjects.GameObject[]) {
+    if (obiekty.length === 0) return;
     this.cameras.main.ignore(obiekty);
     this.kamera?.ignore(obiekty);
+    this.cameras.main.ignore(obiekty);
   }
 
   /**
@@ -1489,6 +1517,17 @@ export class AdventureScene extends Phaser.Scene {
 
   private wejdzNa(o: Obiekt) {
     const wynik = odwiedz(this.stan, o);
+    zapisz('mapa', `wejście na obiekt: ${o.nazwa}`, {
+      id: o.id,
+      rodzaj: o.rodzaj,
+      pole: `${o.x},${o.y}`,
+      skutek: {
+        bitwa: wynik.bitwaZ?.id,
+        wybor: wynik.wybor !== undefined,
+        zamek: wynik.zamek?.id,
+        zajete: wynik.zajete,
+      },
+    });
 
     if (wynik.bitwaZ) return this.zacznijBitwe(wynik.bitwaZ);
     if (wynik.wybor) return this.zapytajOSkrzynie(wynik.wybor);
@@ -1539,8 +1578,9 @@ export class AdventureScene extends Phaser.Scene {
     const wys = 176;
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
-    // Okno należy do HUD-u, nie do planszy — inaczej jechałoby razem z mapą.
-    const doHud: Phaser.GameObjects.GameObject[] = [];
+    // Okno nie należy ani do planszy (jechałoby razem z mapą), ani do HUD-u
+    // (plansza rysuje się po nim i by je zakryła) — idzie do kamery okien.
+    const doOkna: Phaser.GameObjects.GameObject[] = [];
 
     const zaslona = this.add
       .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.45)
@@ -1564,22 +1604,22 @@ export class AdventureScene extends Phaser.Scene {
         .setDepth(Z.overlay + 2),
     ];
 
-    doHud.push(zaslona, tlo, ...napisy);
-    this.naWierzchu(...doHud);
+    doOkna.push(zaslona, tlo, ...napisy);
+    this.naWierzchu(...doOkna);
 
     const zamknij = (co: 'pokeballe' | 'doswiadczenie') => {
       const opis = wezZeSkrzyni(this.stan, w, co);
       [zaslona, tlo, ...napisy].forEach((x) => x.destroy());
-      przyciski.forEach((p) => p.setVisible(false));
+      przyciski.forEach((p) => p.destroy());
       this.znikaj(w.obiekt);
       this.napisUlotny(opis);
       this.zajety = false;
       this.odswiezWszystko();
     };
 
-    // Przyciski powstają jako osobne obiekty sceny, więc kamera planszy też by
-    // je narysowała — w środku mapy i przesunięte o przewinięcie. Notujemy,
-    // co przybyło, i chowamy to przed nią.
+    // Przyciski powstają jako osobne obiekty sceny, więc trzeba je oddać
+    // kamerze okien tak samo jak tło. Notujemy, co przybyło na liście sceny,
+    // i przekazujemy dokładnie to.
     const przedPrzyciskami = this.children.list.length;
     const przyciski = [
       makeHudButton(this, {
@@ -1787,6 +1827,7 @@ export class AdventureScene extends Phaser.Scene {
     const wpisy = Object.entries(wplyw).map(
       ([co, ile]) => `+${ile} ${SUROWIEC_INFO[co as keyof typeof SUROWIEC_INFO].dopelniacz}`
     );
+    zapisz('mapa', 'koniec tury', { data: this.stan.dzien, dochod: wplyw });
     this.napisUlotny(['Nowy dzień', ...wpisy].join('\n'));
     this.odswiezWszystko();
   }

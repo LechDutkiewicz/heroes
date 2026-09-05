@@ -985,9 +985,14 @@ export class TownScene extends Phaser.Scene {
       wiersze.push(`Otwiera werbunek: ${u.name}.`, `Przybywa ${ile} dziennie.`);
     }
 
-    if (b.rodzaj === 'specjalny') {
-      const { surowiec, ile } = this.profil.dar;
-      wiersze.push(`Dokłada ${ile} ${SUROWIEC_INFO[surowiec].dopelniacz} dziennie.`);
+    if (b.produkuje) {
+      // Czyta się wprost z budynku, a nie z profilu frakcji: budynek specjalny
+      // Boru daje dwa różne surowce naraz, więc jedna para „surowiec, ile"
+      // by go nie opisała.
+      const co = (Object.entries(b.produkuje) as [Surowiec, number][])
+        .map(([s, ile]) => `${ile} ${SUROWIEC_INFO[s].dopelniacz}`)
+        .join(' i ');
+      wiersze.push(`Dokłada ${co} dziennie.`);
     }
 
     return wiersze.join('\n');

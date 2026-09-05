@@ -1,4 +1,4 @@
-import { PROMIEN_WIDZENIA, SKRZYNIE } from './zasady-h3';
+import { PROMIEN_WIDZENIA, SKRZYNIE, naPokeballe } from './zasady-h3';
 import {
   brakuje,
   budynek,
@@ -143,9 +143,10 @@ export interface Obiekt {
   frakcjaZamku?: string;
   /**
    * Zamek: co już w nim stoi (identyfikatory z `zamki.ts`). To jest cała
-   * pamięć rozbudowy — reszta (dochód, przyrost, co wolno zwerbować) liczy
-   * się z tej listy, więc nie da się mieć siedliska, które daje oddziały,
-   * ale nie widać go na panoramie.
+   * pamięć rozbudowy: dochód (ratusze), przyrost i to, które poziomy w ogóle
+   * przyrastają (siedliska, fort) liczą się z tej listy. Nie da się więc mieć
+   * siedliska, które daje oddziały, ale nie widać go na panoramie — ani
+   * ratusza, który stoi, a nie daje ani jednego pokeballa.
    */
   postawione?: string[];
   /**
@@ -156,8 +157,26 @@ export interface Obiekt {
   budowanoDnia?: number;
 }
 
-/** Ile pokeballi kosztuje oddział danego poziomu i ile przybywa dziennie. */
-export const KOSZT_ODDZIALU = [2, 4, 7, 12, 20, 35];
+/**
+ * Ile pokeballi kosztuje oddział danego poziomu i ile przybywa dziennie.
+ *
+ * Ceny to koszty oddziałów z Heroes 3 (60, 100, 175, 315, 500, 1000 złota)
+ * przepuszczone przez `naPokeballe` — tę samą regułę, którą liczą się kopalnie,
+ * skrzynie i ratusze. Wcześniej stało tu [2, 4, 7, 12, 20, 35], wycenione poza
+ * jakąkolwiek skalą: dzienny przyrost całego miasta kosztował wtedy 95
+ * pokeballi przy 30 pokeballach dochodu z CAŁEJ mapy. Teraz przyrost kosztuje
+ * 51 przy 60 z samych kopalni i 100 z kopalniami plus trzeci ratusz — czyli
+ * armię da się wykupić i jeszcze zostaje na rozbudowę, o co w tym całym
+ * zbieraniu chodzi.
+ */
+export const KOSZT_ODDZIALU = [
+  naPokeballe(60),
+  naPokeballe(100),
+  naPokeballe(175),
+  naPokeballe(315),
+  naPokeballe(500),
+  naPokeballe(1000),
+];
 export const PRZYROST_ODDZIALU = [3, 2, 2, 1, 1, 1];
 
 /** Oddział w armii — to samo, co slot w bitwie: jeden gatunek i jego liczba. */
@@ -637,7 +656,8 @@ export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
  * Ile surowców wpłynie jutro z zajętych budynków — z kopalń NA mapie
  * i z tego, co postawione w naszych zamkach. Ratusz jest tu razem z kopalnią
  * celowo: dla gracza to jedna liczba („ile mi jutro przybędzie"), a nie dwa
- * osobne rachunki, których trzeba się domyślać.
+ * osobne rachunki, których trzeba się domyślać. Panel czyta wyłącznie tę
+ * funkcję, więc rozdzielenie ich oznaczałoby pokazywanie nieprawdy.
  */
 export function dochod(s: StanMapy): Partial<Record<Surowiec, number>> {
   const suma: Partial<Record<Surowiec, number>> = {};
@@ -672,6 +692,10 @@ export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
   // nic w armii i drzewko budynków było dekoracją.
   for (const o of s.obiekty) {
     if (o.rodzaj === 'zamek' && o.nasz && o.dostepne) {
+      // Przyrost liczy się z POSTAWIONYCH siedlisk: poziom bez siedliska nie
+      // daje nic, a fort podnosi wszystkie naraz o połowę. Wcześniej przyrastały
+      // wszystkie sześć poziomów niezależnie od miasta, więc rozbudowa nie
+      // zmieniała niczego poza opisem.
       const przyrost = przyrostZamku(o.postawione ?? [], PRZYROST_ODDZIALU);
       o.dostepne = o.dostepne.map((ile, t) => Math.min(ile + przyrost[t], 99));
     }

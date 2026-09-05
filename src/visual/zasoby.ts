@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
-
-declare const __WERSJA__: string;
+import { WERSJA } from '../wersja';
 
 /**
  * Znacznik budowania doklejany do adresów wczytywanych plików.
@@ -19,6 +18,11 @@ declare const __WERSJA__: string;
  * pamiętać. Phaser zgłasza zdarzenie przy DODAWANIU pliku do kolejki, a adres
  * przelicza dopiero przy pobieraniu — jest więc jedno miejsce, w którym da się
  * dopisać znacznik wszystkim naraz i nie da się o nim zapomnieć.
+ *
+ * Znacznikiem jest ODCISK COMMITA, ten sam, którym podpisuje się build.
+ * Wcześniej był to znacznik czasu budowania, co działało, ale unieważniało
+ * pamięć podręczną także wtedy, gdy nic się nie zmieniło. Odcisk commita
+ * zmienia się dokładnie wtedy, gdy zmienia się zawartość.
  */
 export function wersjonujZasoby(scena: Phaser.Scene) {
   scena.load.on(
@@ -27,7 +31,7 @@ export function wersjonujZasoby(scena: Phaser.Scene) {
       // Pliki podane jako gotowe dane (base64, obiekt JSON) nie mają adresu.
       if (typeof plik.url !== 'string' || plik.url.startsWith('data:')) return;
       if (plik.url.includes('?')) return;
-      plik.url = `${plik.url}?v=${__WERSJA__}`;
+      plik.url = `${plik.url}?v=${WERSJA.commit}`;
     }
   );
 }

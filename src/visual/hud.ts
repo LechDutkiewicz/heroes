@@ -677,6 +677,8 @@ export interface HudButton {
   setLabel(text: string): void;
   setEnabled(enabled: boolean): void;
   setVisible(visible: boolean): void;
+  /** Usuwa przycisk ze sceny. Potrzebne przyciskom okien, które się zamykają. */
+  destroy(): void;
 }
 
 /**
@@ -778,6 +780,12 @@ export function makeHudButton(
     },
     setVisible(v) {
       container.setVisible(v);
+    },
+    destroy() {
+      // Tweeny trzymają referencję do kontenera i po jego skasowaniu sięgałyby
+      // w pustkę — najpierw więc gasimy je, potem kasujemy przycisk.
+      scene.tweens.killTweensOf(container);
+      container.destroy();
     },
   };
 }

@@ -1,6 +1,6 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-08-12 (ekran miasta: panorama i rozbudowa).
+Ostatnia aktualizacja: 2026-09-06 (scalenie: grafika z modelu, ekonomia na jednej skali, układ mapy).
 
 Ten plik istnieje po to, żeby po przerwie nie trzeba było odtwarzać kontekstu
 z pamięci. Zapisuję tu, co jest skończone, co jest w połowie i czego świadomie
@@ -23,11 +23,17 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `node tools/capture.mjs` | komplet zrzutów, w tym paski czterech klatek dla animacji |
 | `npx tsx tools/probe-trasa.ts` | poprawność tras ruchu na ~128 tys. przypadków |
 | `npx tsx tools/probe-mapa.ts` | plansza przygody: kształt, okno, dostępność obiektów, odcisk tła |
+| `npx tsx tools/probe-ekonomia.ts` | czy dochód z prawdziwej mapy starcza na armię I rozbudowę |
+| `node tools/probe-rozbudowa.mjs` | czy budynek da się KLIKNĄĆ i czy miasto potem daje więcej |
 | `node tools/probe-kopalnia.mjs` | czy budynek produkcyjny się ZAJMUJE, a nie zbiera |
 | `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia, artefakt, bitwa, zamek, powrót |
 | `node tools/probe-klik.mjs` | czy KLIKNIĘCIE prowadzi bohatera tam, gdzie się kliknęło |
-| `node tools/probe-miasto.mjs` | ekran miasta: klikanie w bryły, budowa, jeden budynek dziennie, przyrost |
+| `node tools/probe-miasto.mjs` | ekran miasta: klikanie w bryły, lista budowy, jeden budynek dziennie, przyrost |
 | `npx tsx tools/probe-zamki.ts` | drzewko budynków: przechodniość, ceny, czas rozbudowy |
+| `npx tsx tools/probe-ekonomia.ts` | dochód i koszty z PRAWDZIWEJ mapy: czy da się budować i werbować naraz |
+| `node tools/probe-rozbudowa.mjs` | rozbudowa miasta klikaniem, od początku do końca |
+| `node tools/probe-zwis.mjs` | czy okno skrzyni naprawdę WIDAĆ i czy druga bitwa startuje |
+| `node tools/probe-dziennik.mjs` | dziennik diagnostyczny: ziarno, łapanie wyjątków, raport, F8 |
 | `node tools/zrzut-mapa.mjs` | zrzut mapy przygody (osobno, bo `capture.mjs` zna tylko bitwę) |
 
 Grafiki mapy są generowane, nie wrzucane ręcznie. Po zmianie planszy albo
@@ -53,6 +59,19 @@ chodzić przed każdą serią zrzutów i potrafi paść w tle. Zawsze sprawdzaj
 oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
 
 ## Skończone
+
+- **Wersja gry w rogu ekranu** (`src/wersja.ts`). Data commita i jego skrót,
+  wstrzykiwane przy budowaniu przez `vite.config.ts` — nie ma czego pamiętać
+  podbić. Ten sam podpis trafia do nagłówka dziennika, więc ze zgłoszenia
+  od razu wiadomo, w co gracz grał.
+
+- **Dziennik diagnostyczny do zgłaszania błędów** (`src/dev/dziennik.ts`).
+  Klawisz **F8** składa raport: ziarno sesji, środowisko, migawka stanu
+  aktywnej sceny i oś czasu ostatnich 400 zdarzeń — do skopiowania lub zapisu
+  do pliku. Łapane są wyjątki, odrzucone obietnice, błędy wczytywania plików
+  i wpisy z konsoli. Przy okazji: losowania ustalające kształt bitwy (teren,
+  frakcje, rzędy, przeszkody) przeszły z `Math.random` na `Phaser.Math.RND`,
+  więc `?seed=<ziarno>` z raportu odtwarza dokładnie tę samą bitwę.
 
 - **Cztery kawałki wizualne** (plansza, oddziały, animacje trafienia, HUD) —
   każdy wygrał ślepe porównanie z komercyjnym wzorcem. Zapis rund i werdyktów:
@@ -122,16 +141,22 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
   nie pokazuje nic — u nas panorama JEST menu budowy, więc dziecko musi widzieć,
   co może stanąć i gdzie.
 - **Strefy kontroli potworów** — strażnika nie da się ominąć bokiem.
+- **Rozbudowa miasta** w prawej kolumnie ekranu zamku: ratusze dają dochód,
+  fort podnosi przyrost we wszystkich siedliskach, siedliska otwierają kolejne
+  poziomy oddziałów. Sprawdza to `node tools/probe-rozbudowa.mjs`.
+- **Ekonomia policzona z jednej reguły** (`ZLOTO_NA_POKEBALL` w `zasady-h3.ts`):
+  wszystko, co ma cenę, jest złotem z Heroes 3 podzielonym przez 50. Pilnuje
+  tego `npx tsx tools/probe-ekonomia.ts`.
 - **Straż na mapie to zawsze jeden gatunek**, ewentualnie rozbity na kilka
   stosów. Mieszane armie są w Heroes 3 wyłącznie w budynkach.
 
 ## W połowie
 
-**Miasto się rozbudowuje, ale wojna o nie jeszcze nie istnieje.**
-
-- **nie ma ulepszania oddziałów.** Kamienie ewolucji idą dziś tylko na
-  najdroższe budynki; w Heroes 3 to od ulepszeń siedlisk zależy siła armii
-  i tego u nas brakuje;
+- **nie ma ulepszania oddziałów.** Kamienie ewolucji nie mają jeszcze na co
+  iść: wypadły z kosztów budynków przy porządkowaniu ekonomii, a ulepszeń
+  siedlisk jeszcze nie ma. Na mapie stoi za to kamieniołom, więc surowiec ma
+  źródło i nie ma ujścia — to jest do rozstrzygnięcia: albo kamień wraca do
+  kosztów górnej połowy drzewka, albo czeka na ulepszenia oddziałów;
 - **do zamku przeciwnika nie da się wejść** — mówi to wprost, ale zdobycia
   zamku nie ma. Zamek wroga ma już własną rozbudowę w stanie gry (stoi w nim
   sześć budynków), więc po zdobyciu byłoby co przejmować;
@@ -246,6 +271,28 @@ celem kliknięcia jest teraz OBIEKT, a nie geometria pola pod kursorem.
 narysowaniu obiektów, więc pokonany strażnik znikał z zasad gry, ale zostawał
 na ekranie: nie blokował drogi, nie dało się go zaatakować, a sprite stał.
 
+## Znalezione przy dwóch zwisach zgłoszonych z rozgrywki
+
+**O tym, co jest na wierzchu, decyduje KAMERA, nie `depth`.** Okno skrzyni
+miało `depth = 200` i mimo to było niewidoczne: kamery rysują się w kolejności
+dodania, a kamera planszy powstaje po głównej, więc mapa zamalowywała okno
+w tej samej klatce. Gra wyglądała na zawieszoną — okno przyjmowało kliknięcia,
+tylko nikt go nie widział. Stąd trzecia kamera, dodawana na samym końcu;
+`naWierzchu()` jest jedyną drogą, żeby cokolwiek położyć nad mapą.
+
+**Sonda klikająca na ślepo nie sprawdza, czy coś widać.** `probe-przygoda.mjs`
+trafiała w przycisk po wyliczonych współrzędnych i miała komplet OK przy oknie
+niewidocznym dla gracza. `probe-zwis.mjs` pyta wprost, czy okno trafia do
+kamery rysowanej PO planszy.
+
+**Phaser używa TEJ SAMEJ instancji sceny przy każdym `scene.start`.** Wiedziała
+o tym `AdventureScene` (czyści pola w `create`), nie wiedziała `BattleScene`:
+stan walki powstawał raz, przy tworzeniu obiektu sceny. Druga bitwa startowała
+więc z oddziałami pierwszej w `battle.units`, a ich widoki umarły razem z tamtą
+sceną — `beginTurn` wywracał się na nieżyjącej teksturze napisu i gracz
+zostawał na mapie bez bitwy i bez sterowania. Jedna bitwa w sondzie tego nie
+złapie; trzeba rozegrać co najmniej dwie.
+
 ## Znalezione przy mapie 36 × 36
 
 **`units` w scenie bitwy jest GETTEREM na tablicę symulacji.** Sonda kasowała
@@ -331,3 +378,39 @@ z falowaniem, a potem zbierała siedem próbek na dwusekundowy przelot, bo każd
 odczyt szedł osobną podróżą do przeglądarki. Za każdym razem liczby mówiły
 „animacji nie ma", a animacja była. Dopiero rejestrator wewnątrz strony,
 próbkujący klatka po klatce, pokazał prawdę.
+
+## Ekonomia — co było zepsute i jak to teraz stoi
+
+Zgłoszenie brzmiało: „mam wszystkie kopalnie i nie mam za co kupić armii, nie
+mówiąc o rozbudowie". Było prawdziwe i miało trzy niezależne przyczyny.
+
+1. **Dwie różne skale walut w jednej grze.** Dochód liczyliśmy jak złoto
+   z Heroes 3 dzielone przez sto (kopalnia 1000 → 10 pokeballi), a ceny
+   oddziałów wpisaliśmy na oko, jakby dzielić przez trzydzieści (60 → 2).
+   Dzienny przyrost całego miasta kosztował **95 pokeballi**, a CAŁA mapa dawała
+   **30**. Teraz jest jedna reguła — `ZLOTO_NA_POKEBALL = 50` — i przechodzi
+   przez nią wszystko: oddziały, kopalnie, skrzynie, stosy, ratusze.
+2. **Drzewko budynków istniało tylko jako dane.** `zamki.ts` miało jedenaście
+   budynków, koszty i funkcje `dochodZamku` oraz `przyrostZamku` — i nic ich nie
+   wywoływało. Ratusz nie dawał ani jednego pokeballa, fort nie podnosił
+   przyrostu, a siedlisk nie dało się postawić, bo żaden ekran ich nie pokazywał.
+3. **Kamienia ewolucji nie dało się zdobyć.** Cztery budynki wymagały razem
+   ośmiu, a plansza ma jeden stos (1–3 sztuki) i zero kopalni kamienia. Miasta
+   nie dało się skończyć niezależnie od tego, jak dobrze się grało. Kamień
+   wypadł z kosztów budowy i czeka na ulepszenia oddziałów.
+
+Jak to stoi po zmianie (liczby z `probe-ekonomia`):
+
+| | pokeballe dziennie |
+|---|---|
+| przyrost całego miasta (z fortem) kosztuje | 95 |
+| mapa + startowe miasto daje | 70 |
+| mapa + rozbudowane miasto daje | 140 |
+
+Czyli: na początku dochód pokrywa większość przyrostu, ale nie wszystko — trzeba
+wybierać. Po rozbudowie starcza na armię i jeszcze zostaje. Pełne miasto staje
+w około 27 dni **przy codziennym wykupywaniu przyrostu**, a nie zamiast niego.
+
+Czego świadomie nie ruszyłem: ekran miasta jest listą, nie malowaną panoramą
+z Heroes 3. Panorama jest następnym krokiem — ale lista, w której da się
+budować, jest warta więcej niż obrazek, w którym nie da się nic.
