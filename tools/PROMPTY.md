@@ -501,10 +501,189 @@ Single object only, seen from about 45 degrees above (adventure-map view) — th
 
 ---
 
+# CZĘŚĆ III — WARIANTY TERENU I BOHATER
+
+To jest dogrywka po pierwszym przejściu: teren i miasto już są w grze, więc
+tutaj chodzi wyłącznie o to, co po obejrzeniu na ekranie okazało się za mało.
+
+## Ile wariantów którego terenu
+
+Policzone na naszej planszy 36 × 36, więc to nie jest zgadywanka:
+
+| teren | udział planszy | ile wariantów | brakuje |
+|---|---|---|---|
+| trawa | 58,3% | 3 | 2 |
+| skały | 18,6% | 2 | 1 |
+| las | 10,6% | 2 | 1 |
+| woda | 4,9% | 1 | — |
+| piasek | 4,1% | 1 | — |
+| ścieżka | 3,5% | 1 | — |
+
+Wody, piasku i ścieżki **nie generuj po raz drugi**. Woda animuje się co klatkę,
+więc powtórzenia i tak nie widać, a piasek i ścieżka zajmują wąskie płaty
+i pojedyncze wstęgi — jeden kafelek na taką powierzchnię nie zdąży się powtórzyć
+w kadrze. Cała robota jest w trawie, bo trawy jest więcej niż całej reszty razem.
+
+## Zasada dla wszystkich wariantów
+
+**To ma być ta sama tekstura w innym miejscu łąki, a nie inna łąka.**
+
+Warianty nie będą kładzione kafelek po kafelku — mieszam je łagodnym przejściem
+po dużych obszarach, żeby nie było widać, gdzie kończy się jeden, a zaczyna
+drugi. To działa tylko wtedy, gdy mają **tę samą jasność, tę samą zieleń i to
+samo ziarno**. Wariant o odcień ciemniejszy albo o włos bardziej żółty zrobi na
+planszy widoczną łatę — czyli dokładnie to, co warianty mają usunąć.
+
+Dlatego do każdego wariantu **dołącz jako referencję zatwierdzony oryginał**
+(`teren-trawa.png` do wariantów trawy, `teren-skaly.png` do skał, `teren-las.png`
+do lasu) razem z `referencja-stworki.png`. Różnić ma się **układ**, nie paleta.
+
+Jeśli narzędzie ma suwak siły referencji, ustaw go wysoko: chcemy niemal
+kopię z przetasowaną zawartością.
+
+---
+
+### `teren-trawa-2.png` — trawa, wariant 2
+
+Referencje: `referencja-stworki.png` + `teren-trawa.png`.
+
+```
+Lush green meadow grass seen from directly above, in exactly the same painting style, palette, brightness and blade size as the attached grass texture — this is the same meadow photographed a few steps further along, not a different meadow. Rearrange the content: put the slightly darker and slightly lighter green patches in different places, change where the clover leaves sit, and vary the direction the grass blades lean. Keep the texture even and calm — only a very few tiny pale flowers, spread apart and never in clusters. Distinctive landmarks such as flower clumps must be rare, because this texture is repeated hundreds of times across the map and any eye-catching detail reveals the repetition. Do not make it darker, lighter, yellower or bluer than the reference.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image.
+
+This is a seamless tileable ground texture seen straight from above (top-down, 90 degrees). It must tile perfectly: the left edge continues into the right edge and the top edge into the bottom edge, with no visible seam. Flat even ambient lighting with NO directional sunlight, NO cast shadows, NO vignette, NO objects sticking up, NO horizon, NO perspective. Square image, at least 2048x2048. No text, no watermark.
+```
+
+### `teren-trawa-3.png` — trawa, wariant 3
+
+Referencje: `referencja-stworki.png` + `teren-trawa.png` + `teren-trawa-2.png`.
+
+Ten sam prompt co wyżej, z jednym zdaniem dołożonym na początku, żeby model nie
+powtórzył wariantu drugiego:
+
+```
+Lush green meadow grass seen from directly above, in exactly the same painting style, palette, brightness and blade size as the attached grass textures — this is the same meadow photographed a few steps further along, not a different meadow. It must differ from BOTH attached grass textures: a third arrangement, not a copy of either. Rearrange the content: put the slightly darker and slightly lighter green patches in different places, change where the clover leaves sit, and vary the direction the grass blades lean. Keep the texture even and calm — only a very few tiny pale flowers, spread apart and never in clusters. Distinctive landmarks such as flower clumps must be rare, because this texture is repeated hundreds of times across the map and any eye-catching detail reveals the repetition. Do not make it darker, lighter, yellower or bluer than the references.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image.
+
+This is a seamless tileable ground texture seen straight from above (top-down, 90 degrees). It must tile perfectly: the left edge continues into the right edge and the top edge into the bottom edge, with no visible seam. Flat even ambient lighting with NO directional sunlight, NO cast shadows, NO vignette, NO objects sticking up, NO horizon, NO perspective. Square image, at least 2048x2048. No text, no watermark.
+```
+
+### `teren-skaly-2.png` — skały, wariant 2
+
+Referencje: `referencja-stworki.png` + `teren-skaly.png`.
+
+Skał jest na planszy prawie jedna piąta i tworzą długi grzbiet z północy na
+południe — czyli najdłuższy ciągły pas jednego terenu w całej grze. Tam
+powtórzenie widać najbardziej.
+
+```
+A rocky mountain surface seen from directly above, in exactly the same painting style, palette, brightness and stone size as the attached rock texture — the same ridge a few steps further along, not a different mountain. Rearrange the content: different arrangement of the grey boulders and cracks, moss and small green tufts growing in different crevices, gravel gathered in different hollows. Keep the same proportion of stone to moss. Do not make it darker, lighter, browner or bluer than the reference.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes, rich material detail: wet stone, moss, gravel. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image.
+
+This is a seamless tileable ground texture seen straight from above (top-down, 90 degrees). It must tile perfectly: the left edge continues into the right edge and the top edge into the bottom edge, with no visible seam. Flat even ambient lighting with NO directional sunlight, NO cast shadows, NO vignette, NO objects sticking up, NO horizon, NO perspective. Square image, at least 2048x2048. No text, no watermark.
+```
+
+### `teren-las-2.png` — las, wariant 2
+
+Referencje: `referencja-stworki.png` + `teren-las.png`.
+
+Uwaga: to jest **ściółka**, po której chodzi się pod drzewami, a nie korony
+widziane z góry. Drzewa stawia na niej gra, jako osobne sprite'y z cieniem.
+Gdyby tu były korony, wyszłyby drzewa rosnące na drzewach.
+
+```
+A shaded forest floor seen from directly above, in exactly the same painting style, palette, brightness and detail size as the attached forest floor texture — the same woodland a few steps further along, not a different forest. Rearrange the content: fallen leaves, twigs, moss patches, exposed roots and small ferns in different places. Keep the same proportion of leaf litter to moss. This is the GROUND under the trees, not tree canopy seen from above. Do not make it darker, lighter, redder or bluer than the reference.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes, rich material detail: moss, bark, damp leaves. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image.
+
+This is a seamless tileable ground texture seen straight from above (top-down, 90 degrees). It must tile perfectly: the left edge continues into the right edge and the top edge into the bottom edge, with no visible seam. Flat even ambient lighting with NO directional sunlight, NO cast shadows, NO vignette, NO objects sticking up, NO horizon, NO perspective. Square image, at least 2048x2048. No text, no watermark.
+```
+
+---
+
+## Bohater
+
+Bohater jest teraz **jedynym sprite'em na mapie w starej technice** — cała
+reszta poszła z modelu, a on stoi w samym środku uwagi gracza i odstaje
+najbardziej ze wszystkiego na ekranie.
+
+**Wcześniej pisałem tu, żeby go nie generować, i to trzeba sprostować.** Powód
+był słuszny: bohater to arkusz chodu, cztery kierunki po cztery klatki, a model
+nie utrzyma spójności przez szesnaście rysunków — postać w trakcie chodu zmienia
+kapelusz i długość rękawa, i widać to natychmiast.
+
+Ale to nie znaczy, że nie da się go zrobić. Znaczy, że **nie prosimy modelu
+o klatki chodu**. Prosimy o **cztery statyczne pozy**, po jednej na kierunek,
+a ruch dokładam w kodzie: lekkie podskakiwanie i ugięcie przy każdym kroku. Na
+sprite'ie wysokim na 48 px czyta się to jak chód, a postać nie zmienia się
+między klatkami, bo klatka jest jedna. To jest zamiana szesnastu okazji do
+rozjazdu na cztery.
+
+Zapisz jako `bohater-dol.png`, `bohater-gora.png`, `bohater-lewo.png`,
+`bohater-prawo.png`. Arkusz złożę skryptem.
+
+**Generuj po kolei i podawaj poprzednie jako referencje** — najpierw `dol`
+(widać twarz, więc tu ustalamy, kim on jest), potem do każdej kolejnej dołączaj
+wszystkie już zatwierdzone. Bez tego dostaniemy czterech różnych chłopców.
+
+### `bohater-dol.png` — przód (generuj jako pierwszą)
+
+Referencje: `referencja-stworki.png` + `mapa-kotwica.png`.
+
+```
+A friendly young boy explorer standing and facing the viewer, seen from about 45 degrees above (adventure-map view). He wears a red and white cap, a short blue jacket over a white shirt, brown shorts and sturdy walking boots, and carries a small satchel on one hip. Cheerful open face, big friendly eyes, rounded chunky proportions with a slightly large head, like a children's game mascot. Standing still, arms relaxed at his sides, both feet on the ground.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look. Match the finish, palette and softness of the creatures in the attached reference image.
+
+Single character only. Orthographic. Warm sunlight from the upper right. No ground, no grass, no base, no cast shadow. The background must be pure white #FFFFFF, absolutely uniform, with no gradient and no shadow falling on it, and the character must not touch any edge of the image. He must stay readable when scaled down to 48 pixels tall — so no thin details, no small text on his clothes, no fine straps. Square image, at least 1024x1024. No text, no watermark, no user interface, no creatures.
+```
+
+### `bohater-gora.png` — tył
+
+Referencje: `referencja-stworki.png` + `bohater-dol.png`.
+
+```
+The exact same boy explorer as in the attached image, same cap, same jacket, same shorts, same boots, same satchel, same colours and same proportions — but seen from behind, walking away from the viewer, from about 45 degrees above. His face is not visible. Standing still, arms relaxed at his sides, both feet on the ground.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look.
+
+Single character only. Orthographic. Warm sunlight from the upper right. Draw him at exactly the same size and standing at exactly the same height in the frame as in the attached image. No ground, no grass, no base, no cast shadow. The background must be pure white #FFFFFF, absolutely uniform, with no gradient and no shadow falling on it, and the character must not touch any edge of the image. Square image, at least 1024x1024. No text, no watermark, no user interface, no creatures.
+```
+
+### `bohater-prawo.png` — profil w prawo
+
+Referencje: `referencja-stworki.png` + `bohater-dol.png` + `bohater-gora.png`.
+
+```
+The exact same boy explorer as in the attached images, same cap, same jacket, same shorts, same boots, same satchel, same colours and same proportions — but seen in profile facing to the RIGHT of the frame, from about 45 degrees above. Standing still, arms relaxed at his sides, both feet on the ground.
+
+Style: hand-painted 2D game art for a children's creature-collecting strategy game. Smooth anti-aliased painting, soft airbrushed shading with one clear light side and one shadow side, warm saturated storybook palette, rounded friendly chunky shapes. No pixel art, no hard aliased edges, no black outlines, no cel-shaded comic look, no photorealism, no 3D render look.
+
+Single character only. Orthographic. Warm sunlight from the upper right. Draw him at exactly the same size and standing at exactly the same height in the frame as in the attached images. No ground, no grass, no base, no cast shadow. The background must be pure white #FFFFFF, absolutely uniform, with no gradient and no shadow falling on it, and the character must not touch any edge of the image. Square image, at least 1024x1024. No text, no watermark, no user interface, no creatures.
+```
+
+### `bohater-lewo.png` — profil w lewo
+
+**Tego nie generuj.** Odbiję `bohater-prawo.png` skryptem. Postać jest prawie
+symetryczna, więc odbicie daje idealną zgodność za darmo — a wygenerowany
+osobno lewy profil miałby inny nos i inaczej zawiązany but, i przy zmianie
+kierunku widać by było przeskok.
+
+Jedyny powód, dla którego mogłoby to nie wystarczyć, to wyraźnie niesymetryczny
+element — torba na jednym biodrze. Jeśli po odbiciu torba będzie skakać
+z boku na bok przy zawracaniu, poproszę o osobny lewy profil.
+
+---
+
 ## Czego NIE generować
 
-- **bohatera** — to arkusz chodu w czterech kierunkach i model nie utrzyma
-  spójności między klatkami; rozjazd widać w ruchu natychmiast;
+- **stworków** — mamy 270 i to one są kotwicą stylu;
+- **cieni rzuconych, mgły wojny, siatki pól, interfejsu** — dokłada je gra;
+- **wariantów wody, piasku i ścieżki** — patrz tabela w części III;
+- **klatek chodu bohatera** — cztery statyczne pozy wystarczą, resztę robi kod.
 - **stworków** — mamy 270 i to one są kotwicą stylu;
 - **cieni rzuconych, mgły wojny, siatki pól, interfejsu** — dokłada je gra.
 
@@ -515,7 +694,9 @@ Single object only, seen from about 45 degrees above (adventure-map view) — th
 3. reszta budynków i plac budowy,
 4. trzy panoramy,
 5. sześć tekstur terenu,
-6. obiekty mapy i surowce.
+6. obiekty mapy i surowce,
+7. **warianty terenu** — dwie trawy, jedne skały, jeden las (część III),
+8. **bohater** — cztery pozy, po kolei, z referencjami (część III).
 
 Po każdym etapie gra działa, więc nie ma momentu, w którym jest w połowie
 przemalowana i nie da się w nią grać.
