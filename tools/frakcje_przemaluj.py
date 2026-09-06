@@ -96,14 +96,23 @@ RAMPY_KOPALNI = {
 
 
 def kopalnie():
+    # ZOSTAWIONE JAKO ZAPASOWE. Kopalnie mają teraz własne rysunki z wsadu
+    # (`wsad_wczytaj.py`), więc przemalowanie jednej bryły na trzy barwy jest
+    # potrzebne tylko wtedy, gdy tamtych plików nie ma — na przykład przy
+    # generowaniu grafik od zera na czystym klonie.
     """Kopalnia w barwach surowca, który daje."""
     zrodlo = MAPA / 'kopalnia.png'
     if not zrodlo.exists():
         return
     im = Image.open(zrodlo)
+    ile = 0
     for surowiec, stopnie in RAMPY_KOPALNI.items():
-        przemaluj(im, stopnie).save(MAPA / f'kopalnia-{surowiec}.png')
-    print(f'  kopalnie: {len(RAMPY_KOPALNI)}')
+        cel = MAPA / f'kopalnia-{surowiec}.png'
+        if cel.exists():
+            continue
+        przemaluj(im, stopnie).save(cel)
+        ile += 1
+    print(f'  kopalnie: {ile} (reszta z wsadu)')
 
 
 if __name__ == '__main__':

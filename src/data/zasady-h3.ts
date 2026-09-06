@@ -213,3 +213,76 @@ export const BUDYNKOW_NA_DZIEN = 1;
  * długo, a nagroda musi być widoczna następnego dnia. Mnożnik fortu został.
  */
 export const MNOZNIK_FORTU = 1.5;
+
+// ---------------------------------------------------------------------------
+// BUDOWLE MAPY PRZYGODY
+// ---------------------------------------------------------------------------
+
+/**
+ * [H3] Budowle odwiedzane — Mercenary Camp, Marletto Tower, Tree of Knowledge,
+ * Arena, Redwood Observatory, Stables, Windmill i cała reszta drobiazgów.
+ * To one zamieniają wędrówkę w decyzję: nadłóż drogi, dostań liczbę na stałe.
+ *
+ * [NASZE] Wartości bonusów są takie same jak w Heroes 3 (+1 atak, +1 obrona,
+ * +2 w arenie), bo są to małe liczby na małych statystykach i przenoszą się
+ * wprost. Skalowane są tylko rzeczy liczone w złocie i w punktach ruchu.
+ */
+
+/** [H3] Obóz najemników i kamienna wieża: +1 do jednej statystyki, raz. */
+export const BUDOWLA_STATYSTYKA = 1;
+
+/** [H3] Arena: wybór między +2 ataku a +2 obrony. Wybór jest tu mechaniką. */
+export const ARENA_BONUS = 2;
+
+/**
+ * [H3] Drzewo Wiedzy daje jeden pełny poziom bohatera (albo 2000 złota za nic).
+ *
+ * [NASZE] Nasz odpowiednik „poziomu" to 100 doświadczenia na pierwszym progu,
+ * więc drzewo daje tyle, ile brakuje do następnego poziomu — liczone przy
+ * odwiedzeniu, żeby na wyższych poziomach nie było darmowym awansem.
+ */
+export const DRZEWO_WIEDZY_MIN = 100;
+
+/** [H3] Redwood Observatory odsłania mgłę w promieniu 20 pól na mapie 72 × 72. */
+export const OBSERWATORIUM_PROMIEN = 10;
+
+/**
+ * [H3] Stajnia daje +400 punktów ruchu na tydzień. [NASZE] Tydzień to u nas
+ * bardzo długo (dzienny przyrost, dzienny dochód), więc bonus trwa trzy dni,
+ * a stajni można użyć ponownie po tygodniu.
+ */
+export const STAJNIA_BONUS = 400;
+export const STAJNIA_DNI = 3;
+export const STAJNIA_ODNOWA = 7;
+
+/**
+ * [H3] Wiatrak daje 3–6 jednostek losowego surowca innego niż drewno, raz na
+ * tydzień. [NASZE] To samo, z naszych czterech surowców — bez pokeballi, bo
+ * pokeballe sypią się i tak zewsząd, a wiatrak ma dawać to, czego brakuje.
+ */
+export const WIATRAK_ILE = [3, 6] as const;
+export const WIATRAK_ODNOWA = 7;
+
+/** [H3] Ognisko: 400–600 złota i tyle samo (w setkach) jednego surowca. */
+export const OGNISKO_POKEBALLE = naPokeballe(500);
+export const OGNISKO_SUROWIEC = 5;
+
+/** [H3] Chatka skrzata (Lean-To): 1–4 jednostki jednego surowca, jednorazowo. */
+export const CHATKA_ILE = [1, 4] as const;
+
+/** [H3] Wóz (Wagon): albo artefakt, albo 2–5 jednostek surowca. */
+export const WOZ_ILE = [2, 5] as const;
+
+/**
+ * [H3] Hill Fort ulepsza oddziały na miejscu, taniej niż w mieście.
+ *
+ * [NASZE] Nie mamy ulepszonych wersji stworków, więc Ośrodek Ewolucji robi to,
+ * co w świecie Pokemon robi kamień ewolucji: zamienia oddział w oddział
+ * poziom wyżej z tej samej frakcji. Liczebność spada w proporcji poziomów
+ * (tak jak w drzewku frakcji), a płaci się kamieniami ewolucji — pierwsze
+ * zastosowanie tego surowca poza rozbudową zamku.
+ */
+export const EWOLUCJA_KOSZT = 2;
+
+/** [NASZE] Gniazdo na mapie hoduje tyle samo, co siedlisko tego poziomu w mieście. */
+export const GNIAZDO_TIER = 1;

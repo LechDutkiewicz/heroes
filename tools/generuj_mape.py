@@ -446,12 +446,38 @@ def rozstaw(mapa, kroki, rng):
     dodaj(4, 'dom', (10, 30), lambda p: ('potwor', 'slaby'))
     dodaj(2, 'dom', (12, 30), lambda p: ('artefakt', None))
 
+    # --- budowle odwiedzane w dolinie ---
+    # W Heroes 3 to one wypełniają przestrzeń między kopalniami i dają powód,
+    # żeby nadłożyć drogi. Po tej stronie grzbietu stoją same rzeczy dobre
+    # od pierwszego dnia: drobne nagrody, ruch i statystyki.
+    dodaj(1, 'dom', (2, 8), lambda p: ('budynek', 'ognisko'))
+    dodaj(1, 'dom', (4, 12), lambda p: ('budynek', 'chatka'))
+    dodaj(1, 'dom', (6, 16), lambda p: ('budynek', 'wiatrak'))
+    dodaj(1, 'dom', (5, 14), lambda p: ('budynek', 'zrodlo'))
+    dodaj(1, 'dom', (8, 20), lambda p: ('budynek', 'oboz-treningowy'))
+    dodaj(1, 'dom', (10, 24), lambda p: ('budynek', 'ranczo'))
+    dodaj(1, 'dom', (12, 26), lambda p: ('budynek', 'gniazdo'))
+    dodaj(1, 'dom', (14, 30), lambda p: ('budynek', 'drzewo-wiedzy'))
+    dodaj(1, 'dom', (12, 30), lambda p: ('budynek', 'woz'))
+
     # --- kraina przeciwnika: nagrody warte przejścia grzbietu ---
     dodaj(4, 'wroga', (0, 999), lambda p: ('surowiec', rng.choice(['odlamek', 'kamien', 'pokeball'])))
     dodaj(2, 'wroga', (0, 999), lambda p: ('kopalnia', rng.choice(['kamien', 'pokeball'])))
     dodaj(3, 'wroga', (0, 999), lambda p: ('skrzynia', None))
     dodaj(5, 'wroga', (0, 999), lambda p: ('potwor', 'silny'))
     dodaj(2, 'wroga', (0, 999), lambda p: ('artefakt', None))
+
+    # --- budowle za grzbietem: to, po co się tam w ogóle jedzie ---
+    # Mocne i trwałe: arena, wieża, ośrodek ewolucji. Oba portale stoją PO TEJ
+    # SAMEJ stronie pasma — para przez grzbiet obchodziłaby strażników przełęczy
+    # i unieważniała cały układ mapy.
+    dodaj(1, 'wroga', (0, 999), lambda p: ('budynek', 'wieza-obserwacyjna'))
+    dodaj(1, 'wroga', (0, 999), lambda p: ('budynek', 'arena'))
+    dodaj(1, 'wroga', (0, 999), lambda p: ('budynek', 'kamienna-wieza'))
+    dodaj(1, 'wroga', (0, 999), lambda p: ('budynek', 'osrodek-ewolucji'))
+    dodaj(1, 'wroga', (0, 999), lambda p: ('budynek', 'wiatrak'))
+    dodaj(1, 'wroga', (0, 999), lambda p: ('budynek', 'ognisko'))
+    dodaj(2, 'wroga', (0, 999), lambda p: ('budynek', 'portal'))
     return obiekty
 
 
@@ -517,6 +543,7 @@ export const ROZSTAWIENIE: Array<{
   surowiec?: string;
   sila?: string;
   nazwa?: string;
+  budynek?: string;
 }> = [
 '''
 for wpis in obiekty:
@@ -526,6 +553,8 @@ for wpis in obiekty:
     pola = [f'x: {x}', f'y: {y}', f"rodzaj: '{rodzaj}'", f"strefa: '{strefa(y)}'"]
     if rodzaj == 'potwor':
         pola.append(f"sila: '{co}'")
+    elif rodzaj == 'budynek':
+        pola.append(f"budynek: '{co}'")
     elif co:
         pola.append(f"surowiec: '{co}'")
     if nazwa:

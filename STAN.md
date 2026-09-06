@@ -26,6 +26,7 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `npx tsx tools/probe-ekonomia.ts` | czy dochód z prawdziwej mapy starcza na armię I rozbudowę |
 | `node tools/probe-rozbudowa.mjs` | czy budynek da się KLIKNĄĆ i czy miasto potem daje więcej |
 | `node tools/probe-kopalnia.mjs` | czy budynek produkcyjny się ZAJMUJE, a nie zbiera |
+| `npx tsx tools/probe-budowle.ts` | czy każda budowla odwiedzana coś daje, i to raz |
 | `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia, artefakt, bitwa, zamek, powrót |
 | `node tools/probe-klik.mjs` | czy KLIKNIĘCIE prowadzi bohatera tam, gdzie się kliknęło |
 | `node tools/probe-miasto.mjs` | ekran miasta: klikanie w bryły, lista budowy, jeden budynek dziennie, przyrost |
@@ -117,6 +118,19 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
   bijesz się jego armią, po wygranej znika, ocalałe oddziały wracają
   z liczebnością z końca bitwy. Stan mapy siedzi w rejestrze gry, więc
   surowce, kopalnie, artefakty i mgła przeżywają przejście.
+- **Czternaście budowli odwiedzanych na mapie** — to, co w Heroes 3 stoi
+  między kopalniami i daje powód, żeby nadłożyć drogi. Obóz treningowy
+  i kamienna wieża dają +1 do statystyki, arena pyta o wybór, drzewo wiedzy
+  o awans, wieża obserwacyjna odsłania mgłę wokół SIEBIE, ranczo dokłada ruch
+  na trzy dni, źródło odnawia go raz dziennie, portal przenosi do bliźniaka,
+  gniazdo hoduje oddziały do zamku, ośrodek ewolucji ulepsza oddział za
+  kamienie ewolucji (pierwsze zastosowanie tego surowca poza rozbudową),
+  a wiatrak, ognisko, chatka i wóz sypią drobiazgiem. Wszystkie siedzą pod
+  jednym rodzajem obiektu (`BUDOWLE` w `src/data/mapa.ts`) i różnią się
+  wpisem w tablicy, nie gałęzią w kodzie.
+- **Cztery kopalnie zamiast jednej przemalowanej.** Wytwórnia pokeballi,
+  kopalnia kamieni ewolucji, huta odłamków i sad mają własne bryły z wsadu —
+  widać z drugiego końca ekranu, co się zajmuje.
 - **Skrzynia jest pytaniem, nie nagrodą** — pokeballe albo doświadczenie,
   trzy warianty jak w Heroes 3, rzadko artefakt.
 - **Artefakty** dodają na stałe atak, obronę albo punkty ruchu.

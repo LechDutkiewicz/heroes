@@ -8,6 +8,17 @@ przygody", która w Heroes 3 daje mapie sens zwiedzania, nie istnieje.
 Ten plik jest listą zakupów: co warto dodać, dlaczego akurat to, i gotowy prompt
 na obrazek. Prompty są po angielsku, bo generatory obrazów tak działają lepiej.
 
+## Stan: wszystkie 17 grafik jest w grze
+
+Obrazki z tych promptów leżą w `tools/wsad/` i wchodzą do gry przez
+`tools/wsad_wczytaj.py` (słownik `BUDOWLE` i wpisy kopalń w `OBIEKTY`).
+Mechaniki siedzą w `BUDOWLE` w `src/data/mapa.ts`, rozstawienie robi
+`tools/generuj_mape.py`, a sprawdza to `npx tsx tools/probe-budowle.ts`.
+
+Rozmiary plików w tabelach niżej są historyczne — o docelowej wysokości
+decyduje teraz `wsad_wczytaj.py`, a o wysokości NA EKRANIE pole `wys`
+w `BUDOWLE`. Prompty zostają, bo to z nich generuje się grafiki od nowa.
+
 ## Jak używać promptów
 
 1. Wklej **blok stylu** (niżej), a pod nim prompt konkretnego budynku.

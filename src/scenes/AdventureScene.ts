@@ -1,10 +1,12 @@
 import Phaser from 'phaser';
 import {
-  BRYLA,
+  BUDOWLE,
   SUROWCE,
   SUROWIEC_INFO,
   TEREN_INFO,
   brylaNa,
+  brylaObiektu,
+  budowlaPoId,
   data,
   dochod,
   kosztPola,
@@ -12,6 +14,7 @@ import {
   obiektNa,
   odslon,
   odwiedz,
+  odpowiedzNaPytanie,
   bonusPoziomu,
   poziom,
   postepPoziomu,
@@ -23,6 +26,7 @@ import {
   type Krok,
   type Obiekt,
   type Oddzial,
+  type Pytanie,
   type StanMapy,
   type WyborSkrzyni,
 } from '../data/mapa';
@@ -181,6 +185,9 @@ export class AdventureScene extends Phaser.Scene {
       'kopalnia-pokeball',
       'kopalnia-odlamek',
       'kopalnia-kamien',
+      // Budowle odwiedzane — nazwy plików biorą się z jednego miejsca
+      // (`BUDOWLE`), więc dodanie budowli nie wymaga dopisywania jej tutaj.
+      ...Object.values(BUDOWLE).map((b) => b.plik),
       'skrzynia',
       'zamek-las',
       'zamek-ogien',
@@ -751,7 +758,11 @@ export class AdventureScene extends Phaser.Scene {
     // z szerokości bryły, a nie z wysokości rysunku: budynek ma wypełniać
     // miejsce, które naprawdę blokuje, bo inaczej gracz nie wie, skąd
     // nieprzejezdność.
-    const bryla = BRYLA[o.rodzaj];
+    const bryla = brylaObiektu(o);
+    if (o.rodzaj === 'budynek') {
+      const b = budowlaPoId(o.budynek);
+      return { klucz: `m-${b?.plik ?? 'skrzynia'}`, wys: KAFEL * (b?.wys ?? 1) };
+    }
     if (o.rodzaj === 'zamek')
       return { klucz: o.nasz ? 'm-zamek-las' : 'm-zamek-ogien', wys: KAFEL * (bryla ? 3.1 : 1.9) };
     if (o.rodzaj === 'kopalnia')
@@ -779,14 +790,14 @@ export class AdventureScene extends Phaser.Scene {
       // poza nią. Dosuwamy rysunek do środka — o najwyżej pół pola, czego nikt
       // nie zauważy, a budowla przestaje być ucięta. Kliknięcia to nie rusza:
       // liczą się z pól i z granic rysunku, więc jedno idzie za drugim.
-      const szerBryly = BRYLA[o.rodzaj]?.[0];
+      const szerBryly = brylaObiektu(o)?.[0];
       if (szerBryly) {
         const polowa = (szerBryly * KAFEL) / 2;
         kont.x = Phaser.Math.Clamp(x, polowa, this.mapaW - polowa);
       }
 
       const { klucz, wys } = this.grafikaObiektu(o);
-      const bryla = BRYLA[o.rodzaj];
+      const bryla = brylaObiektu(o);
 
       // Cień kontaktowy. Przy bryle siada na jej podstawie — czyli w rzędzie
       // NAD polem wejścia, nie na samym wejściu; położony niżej odklejał się
@@ -822,7 +833,7 @@ export class AdventureScene extends Phaser.Scene {
       // Budowle z bryłą stoją ZA polem wejścia, a nie na nim: podstawa siada na
       // górnej krawędzi tego pola, więc brama zostaje odsłonięta i widać, że
       // jest po niej gdzie chodzić. Reszta obiektów stoi na swoim polu.
-      const podstawa = BRYLA[o.rodzaj] ? -KAFEL * 0.5 : KAFEL * 0.46;
+      const podstawa = bryla ? -KAFEL * 0.5 : KAFEL * 0.46;
       const im = this.add.image(0, podstawa, klucz).setOrigin(0.5, 1);
       im.setScale(wys / im.height);
       kont.add(im);
@@ -852,7 +863,11 @@ export class AdventureScene extends Phaser.Scene {
       }
 
       if (o.rodzaj === 'potwor') kont.add(this.chorag(C.foe));
-      if (o.rodzaj === 'kopalnia' || o.rodzaj === 'zamek') {
+      const doZajecia =
+        o.rodzaj === 'kopalnia' ||
+        o.rodzaj === 'zamek' ||
+        budowlaPoId(o.budynek)?.efekt.typ === 'gniazdo';
+      if (doZajecia) {
         const f = this.chorag(o.rodzaj === 'zamek' && !o.nasz ? C.foe : C.ally);
         f.setVisible(!!o.nasz || o.rodzaj === 'zamek');
         // Chorągiew ma stać na budowli, a nie na wolnym polu przed nią.
@@ -1350,6 +1365,20 @@ export class AdventureScene extends Phaser.Scene {
         : `${o.nazwa}\nWejdź, żeby zająć: +${o.ile} ${co} dziennie`;
     }
     if (o.rodzaj === 'zamek') return `${o.nazwa}\n${o.nasz ? 'Twój zamek' : 'Zamek przeciwnika'}`;
+    if (o.rodzaj === 'budynek') {
+      const b = budowlaPoId(o.budynek);
+      if (!b) return o.nazwa;
+      // Budowla, z której już korzystaliśmy, ma to mówić przed wejściem,
+      // a nie po. Nadłożenie drogi po nic to dla ośmiolatka stracona tura.
+      if (o.uzyteDnia !== undefined && b.odnowa !== 0) {
+        const zostalo = b.odnowa === undefined ? null : b.odnowa - (this.stan.dzien - o.uzyteDnia);
+        if (zostalo === null) return `${b.nazwa}\nTu już byliśmy`;
+        if (zostalo > 0)
+          return `${b.nazwa}\nZnów będzie czynne za ${zostalo} ${zostalo === 1 ? 'dzień' : 'dni'}`;
+      }
+      if (b.efekt.typ === 'gniazdo' && o.nasz) return `${b.nazwa} — twoje\n${b.opis}`;
+      return `${b.nazwa}\n${b.opis}`;
+    }
     if (o.rodzaj === 'skrzynia') return 'Skrzynia\nW środku pokeballe albo doświadczenie.';
     if (o.rodzaj === 'artefakt') return `${o.nazwa}\nArtefakt — wzmacnia bohatera na stałe.`;
     return `${o.nazwa}\n+${o.ile} ${SUROWIEC_INFO[o.surowiec ?? 'pokeball'].dopelniacz}`;
@@ -1531,9 +1560,14 @@ export class AdventureScene extends Phaser.Scene {
 
     if (wynik.bitwaZ) return this.zacznijBitwe(wynik.bitwaZ);
     if (wynik.wybor) return this.zapytajOSkrzynie(wynik.wybor);
+    if (wynik.pytanie) return this.zapytajOBudowle(wynik.pytanie);
     if (wynik.zamek) return this.pokazZamek(wynik.zamek);
 
+    // Wieża obserwacyjna odsłania mgłę bez ruchu bohatera, więc trzeba ją
+    // przemalować tutaj — pętla ruchu robi to tylko po każdym kroku.
+    if (wynik.odkryto) this.malujMgle();
     if (wynik.opis) this.napisUlotny(wynik.opis);
+    if (wynik.przenies) this.przeniesBohatera(wynik.przenies.x, wynik.przenies.y);
     if (o.zebrany) this.znikaj(o);
     if (wynik.zajete) this.podnies(o);
     this.odswiezWszystko();
@@ -1652,6 +1686,90 @@ export class AdventureScene extends Phaser.Scene {
     this.naWierzchu(...this.children.list.slice(przedPrzyciskami));
     przyciski[0].setLabel(`${w.pokeballe} pokeballi`);
     przyciski[1].setLabel(`${w.doswiadczenie} dośw.`);
+  }
+
+  /**
+   * Przeniesienie przez portal. To NIE jest ruch: nie kosztuje punktów, nie da
+   * się go przerwać i nie przechodzi przez pola po drodze — więc omija całą
+   * pętlę `idz`. Mgła musi się odsłonić po drugiej stronie od razu, inaczej
+   * bohater ląduje w czarnej plamie i wygląda to jak usterka.
+   */
+  private przeniesBohatera(x: number, y: number) {
+    this.stan.bohater.x = x;
+    this.stan.bohater.y = y;
+    const { x: ex, y: ey } = this.naEkran(x, y);
+    this.bohaterObj.setPosition(ex, ey).setDepth(y + 0.8);
+    if (odslon(this.stan) > 0) this.malujMgle();
+    this.wysrodkujNa(x, y, true);
+    this.odswiezWszystko();
+  }
+
+  /**
+   * Okno z pytaniem. Ta sama konstrukcja co przy skrzyni — bo to jest ta sama
+   * rzecz: przyciemniony ekran, tabliczka i po jednym przycisku na odpowiedź.
+   * Skrzynia zostaje przy własnym oknie, bo pokazuje dwie konkretne nagrody,
+   * a nie listę wyborów.
+   */
+  private zapytajOBudowle(p: Pytanie) {
+    this.zajety = true;
+    const szer = 380;
+    const wys = 176;
+    const cx = this.mapaX + this.oknoW / 2;
+    const cy = this.mapaY + this.oknoH / 2;
+
+    const zaslona = this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.45)
+      .setOrigin(0, 0)
+      .setDepth(Z.overlay);
+    const tlo = this.add.graphics().setDepth(Z.overlay + 1);
+    plate(tlo, cx - szer / 2, cy - wys / 2, szer, wys, 12, C.panel, C.gold, {
+      light: 0.24,
+      dark: 0.22,
+      gloss: 0.2,
+      edgeW: 3,
+    });
+    const napisy = [
+      this.add
+        .text(cx, cy - wys / 2 + 24, p.tytul, display(20, H.gold))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 2),
+      this.add
+        .text(cx, cy - wys / 2 + 56, p.tresc, body(13, H.ink))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 2),
+    ];
+    this.naWierzchu(zaslona, tlo, ...napisy);
+
+    const zamknij = (klucz: string) => {
+      const opis = odpowiedzNaPytanie(this.stan, p, klucz);
+      [zaslona, tlo, ...napisy].forEach((x) => x.destroy());
+      przyciski.forEach((b) => b.destroy());
+      if (p.obiekt.zebrany) this.znikaj(p.obiekt);
+      if (opis) this.napisUlotny(opis);
+      this.zajety = false;
+      this.odswiezWszystko();
+    };
+
+    // Przyciski powstają jako osobne obiekty sceny i trzeba je oddać kamerze
+    // okien tak samo jak tło — inaczej okno wygląda na puste, bo jedyne, co
+    // się w nim klika, chowa się pod przyciemnieniem.
+    const przedPrzyciskami = this.children.list.length;
+    const odstep = 172;
+    const przyciski = p.opcje.map((opcja, i) =>
+      makeHudButton(this, {
+        x: cx + (i - (p.opcje.length - 1) / 2) * odstep,
+        y: cy + 36,
+        w: 160,
+        h: 42,
+        icon: i === 0 ? ICON.star : ICON.banner,
+        tone: i === 0 ? C.gold : C.ally,
+        toneDeep: i === 0 ? C.goldDeep : C.panelDeep,
+        depth: Z.overlay + 3,
+        onClick: () => zamknij(opcja.klucz),
+      })
+    );
+    this.naWierzchu(...this.children.list.slice(przedPrzyciskami));
+    przyciski.forEach((b, i) => b.setLabel(p.opcje[i].etykieta));
   }
 
   private pokazZamek(o: Obiekt) {

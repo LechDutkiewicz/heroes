@@ -1,7 +1,17 @@
 import { PUNKTY, ROZSTAWIENIE, TEREN } from './plansza-teren';
-import { PRODUKCJA, STOS, SZANSA_ARTEFAKTU, ruchNaDzien } from './zasady-h3';
+import {
+  CHATKA_ILE,
+  OGNISKO_SUROWIEC,
+  PRODUKCJA,
+  STOS,
+  SZANSA_ARTEFAKTU,
+  WIATRAK_ILE,
+  WOZ_ILE,
+  ruchNaDzien,
+} from './zasady-h3';
 import {
   ARTEFAKTY,
+  BUDOWLE,
   PRZYROST_ODDZIALU,
   odslon,
   type Obiekt,
@@ -130,6 +140,44 @@ function garnizonZamku(frakcja: string, poziomy: number[]): Oddzial[] {
   });
 }
 
+/**
+ * Zawartość drobnych budowli: wiatraka, ogniska, chatki i wozu.
+ *
+ * Losujemy TERAZ, przy składaniu planszy, a nie przy wejściu — tak samo jak
+ * zawartość skrzyni i z tego samego powodu: inaczej dałoby się zapisać grę
+ * przed wiatrakiem i losować do skutku. Wiatrak daje więc co tydzień ten sam
+ * surowiec, co jest zresztą bliższe Heroes 3 niż nowa loteria co siedem dni.
+ *
+ * Pokeballe są wyłączone z losowania: sypią się z każdej skrzyni i z każdej
+ * kopalni, a te budowle mają dawać to, czego brakuje.
+ */
+const SUROWCE_DROBNE: Surowiec[] = ['jagoda', 'kamien', 'odlamek'];
+
+function zawartoscBudowli(
+  id: string,
+  strefa: string,
+  losuj: () => number
+): { surowiec?: Surowiec; ile?: number; artefakt?: string } {
+  const co = SUROWCE_DROBNE[Math.floor(losuj() * SUROWCE_DROBNE.length)];
+  const widelki = (w: readonly [number, number]) =>
+    w[0] + Math.floor(losuj() * (w[1] - w[0] + 1));
+
+  if (id === 'wiatrak') return { surowiec: co, ile: widelki(WIATRAK_ILE) };
+  if (id === 'ognisko') return { surowiec: co, ile: OGNISKO_SUROWIEC };
+  if (id === 'chatka') return { surowiec: co, ile: widelki(CHATKA_ILE) };
+  if (id === 'woz') {
+    // Wóz kupca: raz na dwa razy artefakt, raz na dwa — ładunek surowca.
+    // W Heroes 3 jest dokładnie tak i to jest cały powód, żeby do niego zajechać.
+    if (losuj() < 0.5) {
+      const klasa = strefa === 'wroga' ? 'znaczny' : 'drobny';
+      const pula = ARTEFAKTY.filter((a) => a.klasa === klasa);
+      return { artefakt: pula[Math.floor(losuj() * pula.length)].id };
+    }
+    return { surowiec: co, ile: widelki(WOZ_ILE) };
+  }
+  return {};
+}
+
 /** Losowa wielkość stosu w widełkach z Heroes 3. */
 function wielkoscStosu(co: Surowiec, losuj: () => number) {
   const [min, max] = STOS[co];
@@ -187,6 +235,17 @@ export function planszaPrzygody(): StanMapy {
       const pula = ARTEFAKTY.filter((a) => a.klasa === klasa);
       const a = pula[Math.floor(losuj() * pula.length)];
       obiekty.push({ ...wspolne, rodzaj: 'artefakt', nazwa: a.nazwa, artefakt: a.id });
+    } else if (wpis.rodzaj === 'budynek') {
+      const b = BUDOWLE[wpis.budynek ?? ''];
+      if (b) {
+        obiekty.push({
+          ...wspolne,
+          rodzaj: 'budynek',
+          budynek: wpis.budynek,
+          nazwa: b.nazwa,
+          ...zawartoscBudowli(wpis.budynek ?? '', wpis.strefa, losuj),
+        });
+      }
     } else if (wpis.rodzaj === 'potwor') {
       const sila = wpis.sila ?? 'slaby';
       const oddzialy = oddzialyStrazy(sila, losuj);
@@ -200,6 +259,15 @@ export function planszaPrzygody(): StanMapy {
         oddzialy,
       });
     }
+  }
+
+  // Portale chodzą parami: pierwszy z drugim, trzeci z czwartym. Portal bez
+  // pary nie prowadziłby donikąd, więc nieparzysty zostaje bez połączenia
+  // i zwyczajnie nic nie robi — zamiast wywracać grę.
+  const portale = obiekty.filter((o) => o.budynek === 'portal');
+  for (let i = 0; i + 1 < portale.length; i += 2) {
+    portale[i].para = portale[i + 1].id;
+    portale[i + 1].para = portale[i].id;
   }
 
   obiekty.push({

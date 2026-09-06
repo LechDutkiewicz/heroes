@@ -194,6 +194,16 @@ OBIEKTY = {
     'm-skala-ostra': [('skala-ostra', 84)],
     'm-skala-plaska': [('skala-plaska', 46)],
     'm-skala-zwal': [('skala-zwal', 62)],
+    # Kopalnie surowców: własny rysunek dla każdego z czterech surowców.
+    #
+    # Wcześniej wszystkie trzy (poza sadem) były jednym rysunkiem przemalowanym
+    # na barwę surowca w `frakcje_przemaluj.py`. Przemalowanie mówi, ŻE to co
+    # innego, ale nie mówi CO: wytwórnia pokeballi i huta odłamków różniły się
+    # wyłącznie odcieniem. Teraz każda ma swoją bryłę i widać ją z drugiego
+    # końca ekranu — a to jest w grze o surowce informacja pierwszej potrzeby.
+    'wytwornia-pokeballi': [('kopalnia-pokeball', 160)],
+    'kopalnia-kamieni': [('kopalnia-kamien', 160)],
+    'huta-odlamkow': [('kopalnia-odlamek', 160)],
     # Kopalnia i sad zajmują bryłę 3 × 1, więc na ekranie mają ponad sto
     # pikseli wysokości. Przy dawnych 57 px scena je POWIĘKSZAŁA i wychodziły
     # rozmyte obok ostrych drzew — pliki muszą być większe od tego, jak są
@@ -206,6 +216,27 @@ OBIEKTY = {
     's-jagody': [('jagody', 31)],
     's-kamien': [('kamien-ewolucji', 29)],
     's-odlamki': [('odlamki', 30)],
+}
+
+#: Budowle odwiedzane. Wysokość w pliku to wysokość na ekranie (`BUDOWLE.wys`
+#: w polach × 48 px) razy dwa — ten sam zapas na zmniejszanie, co przy bryłach
+#: miasta. Sprite powiększany przez scenę jest rozmyty obok ostrych drzew,
+#: więc plik musi być większy od tego, jak się go rysuje, a nie mniejszy.
+BUDOWLE = {
+    'oboz-treningowy': 154,
+    'kamienna-wieza': 192,
+    'arena': 144,
+    'drzewo-wiedzy': 230,
+    'wieza-obserwacyjna': 250,
+    'ranczo': 144,
+    'zrodlo': 106,
+    'portal': 173,
+    'gniazdo': 134,
+    'osrodek-ewolucji': 182,
+    'wiatrak': 211,
+    'ognisko': 86,
+    'chatka': 115,
+    'woz': 125,
 }
 
 TERENY = ['teren-trawa', 'teren-sciezka', 'teren-piasek', 'teren-woda', 'teren-las', 'teren-skaly']
@@ -238,6 +269,15 @@ def mapa():
                 wynik = wynik.transpose(Image.FLIP_LEFT_RIGHT)
             wynik.save(MAPA / f'{nazwa}.png')
         print(f'  {zrodlo} → {", ".join(c[0] for c in cele)}')
+
+    for nazwa, wys in BUDOWLE.items():
+        zrodlo = WSAD / f'{nazwa}.png'
+        if not zrodlo.exists():
+            print(f'  {nazwa} — brak pliku, pomijam')
+            continue
+        im = dopasuj(wczytaj(nazwa), wys)
+        im.save(MAPA / f'{nazwa}.png')
+        print(f'  {nazwa}.png  {im.width} × {im.height}')
 
     TEREN.mkdir(parents=True, exist_ok=True)
     for nazwa in TERENY:
