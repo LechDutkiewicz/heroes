@@ -75,6 +75,36 @@ const klik = async (x, y) => {
   await odsunKursor();
 };
 
+// --- przeliczenie ekran ↔ pole zgadza się z tym, co NAPRAWDĘ narysowano ---
+//
+// To jest asercja, której brakowało i dlatego usterka przeżyła kilka rund
+// poprawek. Reszta sondy liczyła położenie pola tym samym wzorem, którego
+// używa `zEkranu` — więc sprawdzała wzór sam ze sobą i przechodziła nawet
+// wtedy, gdy plansza była rysowana gdzie indziej. Tak właśnie było: kontener
+// świata stał przesunięty o (8, 44) względem kamery, czyli o prawie całe pole
+// w pionie, i klik trafiał rząd niżej.
+//
+// Punkt odniesienia bierzemy więc z NARYSOWANEJ planszy, a nie ze wzoru.
+console.log('\n=== ekran ↔ pole zgadza się z rysunkiem ===');
+const zgodnosc = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  // Lewy górny róg tła planszy tak, jak leży na scenie.
+  const rog = s.plansza.getBounds();
+  const zle = [];
+  for (const [px, py] of [[3, 3], [12, 20], [30, 31], [17, 8]]) {
+    const ex = rog.x + px * 48 + 24 - s.kamera.scrollX + s.kamera.x;
+    const ey = rog.y + py * 48 + 24 - s.kamera.scrollY + s.kamera.y;
+    const pole = s.zEkranu(ex, ey);
+    if (pole.x !== px || pole.y !== py) zle.push(`${px},${py} → ${pole.x},${pole.y}`);
+  }
+  return zle;
+});
+sprawdz(
+  'środek narysowanego pola wraca jako to samo pole',
+  zgodnosc.length === 0,
+  zgodnosc.join('; ')
+);
+
 console.log('\n=== klik prowadzi tam, gdzie się kliknęło ===');
 
 // Cel wybieramy blisko bohatera i na pustym, przejezdnym polu.

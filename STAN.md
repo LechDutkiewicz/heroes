@@ -520,3 +520,54 @@ Trzy rzeczy, które kosztowały najwięcej dochodzenia:
 `plansza-1..3.png` zostały usunięte — nikt ich już nie wczytuje. Namalowana
 `plansza-0.png` ma wodę wypaloną w obrazie i służy jako zapas: gdy shadera nie
 da się utworzyć, gracz widzi nieruchomy staw zamiast dziury w mapie.
+
+## Klik trafiał rząd niżej — i dlaczego sondy tego nie łapały
+
+Zgłoszenie: kliknięcie w bramę zamku prowadziło bohatera na pole wyraźnie
+niżej. Przyczyna nie miała nic wspólnego z zamkiem.
+
+Kontener świata stał na `(mapaX, mapaY)`, czyli `(8, 44)`, a kamera planszy ma
+tam SWÓJ początek. Przesunięcie liczyło się więc dwa razy: plansza była
+rysowana o 44 piksele niżej, niż sądziła kamera. `zEkranu` — jedyne miejsce,
+w którym ekran przelicza się na pole — o tym przesunięciu nie wiedziało,
+a 44 piksele to prawie całe pole (48), więc niemal każde kliknięcie lądowało
+rząd niżej. Przy okazji u góry ramy zostawał czterdziestoczteropikselowy pas
+pustki, a dolny rząd planszy był ucięty.
+
+Kontener stoi teraz na `(0, 0)` i cały układ jest jeden: współrzędne sceny to
+wprost współrzędne planszy, a za położenie na ekranie odpowiada wyłącznie
+kamera.
+
+**Dlaczego przeszło przez sondy.** `probe-klik` liczył położenie pola tym samym
+wzorem, którego używa `zEkranu` — sprawdzał więc wzór sam ze sobą i przechodził
+niezależnie od tego, gdzie naprawdę jest narysowana plansza. Doszła asercja,
+która bierze punkt odniesienia z NARYSOWANEGO tła (`plansza.getBounds()`)
+i żąda, żeby środek pola wracał jako to samo pole. Przy przywróceniu starego
+przesunięcia wypisuje wprost `3,3 → 3,4` — czyli dokładnie objaw ze zgłoszenia.
+
+Po drodze wyszła druga rzecz, tym razem prawdziwa: `obiektPodKursorem`
+sprawdzał PROSTOKĄT rysunku. Prostokąt wieży obserwacyjnej jest w dwóch
+trzecich pustym niebem, więc wysoka budowla zabierała kliknięcia wszystkiemu,
+co stało za nią. Teraz liczy się piksel: kanał alfa tekstury jest czytany raz
+i trzymany w pamięci.
+
+## Budowle „naklejone na mapę" — właściwa przyczyna
+
+To wracało kilka razy i za każdym razem poprawka celowała w to samo,
+nieistniejące miejsce. `zamek-las.png` ma pod murami **28 pikseli
+przezroczystego marginesu** (`kopalnia-pokeball.png` dwa, `wiatrak.png` zero).
+Cały kod osadzania — cień kontaktowy, grunt podchodzący na spód, zarośla —
+mierzył od dolnej krawędzi PLIKU. Przy zamku to jedenaście pikseli poniżej
+murów: cień leżał w powietrzu, grunt zakrywał pustkę.
+
+Margines jest teraz mierzony z alfy (`pustkaPodRysunkiem`), a nie wpisany
+w tabelę — tabela rozjeżdża się przy pierwszej wymianie grafiki, a wymieniamy
+je często. Od tej jednej wartości liczy się wszystko, więc nie da się już tego
+rozjechać osobno dla cienia i osobno dla gruntu.
+
+Do tego sam sposób osadzania: zamiast trzech pasów gruntu o skokowym kryciu
+(trzy widoczne stopnie) jest gładka krzywa, a NA NIEJ szesnaście kolumn
+podchodzących na różną wysokość. To jest sedno: sprite jest ucięty POZIOMO,
+więc gładkie przejście tylko przesuwa tę samą prostą wyżej — dopiero nierówna
+linia gruntu ją likwiduje. Kilka krzaków przy podstawie, z pominięciem bramy,
+dokłada resztę.

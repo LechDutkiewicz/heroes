@@ -133,6 +133,11 @@ export class AdventureScene extends Phaser.Scene {
   private ramkaWidoku!: Phaser.GameObjects.Graphics;
   private slotyArmii: Phaser.GameObjects.Container[] = [];
 
+  /** Zmierzone marginesy tekstur — liczone raz, bo to czytanie całego obrazka. */
+  private marginesy = new Map<string, number>();
+  /** Kanały alfa tekstur — do marginesów i do trafiania kliknięciem. */
+  private alfy = new Map<string, { w: number; h: number; dane: Uint8Array } | null>();
+
   private trasaBiezaca: Krok[] | null = null;
   private zajety = false;
   /** Ostatnie położenie kursora — do przewijania przy krawędzi. */
@@ -229,6 +234,8 @@ export class AdventureScene extends Phaser.Scene {
     this.dochody = {};
     this.ikonyObiektow = {};
     this.trafienia = [];
+    this.marginesy.clear();
+    this.alfy.clear();
 
     this.stan = this.wczytajStan();
     // Stan mapy jest tym, czego brakuje najbardziej w zgłoszeniach typu
@@ -485,7 +492,7 @@ export class AdventureScene extends Phaser.Scene {
     rama.lineStyle(2, C.gold, 1);
     rama.strokeRoundedRect(this.mapaX - 3, this.mapaY - 3, this.oknoW + 6, this.oknoH + 6, 7);
 
-    this.swiat = this.add.container(this.mapaX, this.mapaY).setDepth(Z.board);
+    this.swiat = this.add.container(0, 0).setDepth(Z.board);
     // Maska przycina świat do ramy. Bez niej mapa wychodzi na panel i na pasek
     // surowców — kontener sam z siebie niczego nie obcina.
     // Kształt maski musi być zwykłym obiektem sceny, tylko niewidocznym.
@@ -570,6 +577,103 @@ export class AdventureScene extends Phaser.Scene {
    * pola dostają wartości bez żadnego wzoru, a wynik nadal jest powtarzalny,
    * bo zależy wyłącznie od współrzędnych.
    */
+  /**
+   * Ile pikseli PRZEZROCZYSTEGO marginesu ma tekstura pod swoim rysunkiem.
+   *
+   * Po co to w ogóle istnieje
+   * -------------------------
+   * Sprite budowli nie kończy się tam, gdzie kończy się plik. `zamek-las.png`
+   * ma pod murami dwadzieścia osiem pikseli pustki, `kopalnia-pokeball.png`
+   * dwa, `wiatrak.png` zero. Cały kod osadzania budowli w terenie — cień
+   * kontaktowy, grunt podchodzący na spód, zarośla — celował dotąd w dolną
+   * krawędź PLIKU. Przy zamku znaczyło to jedenaście pikseli poniżej murów:
+   * cień leżał w powietrzu, grunt zakrywał pustkę, a budowla wyglądała, jakby
+   * była naklejona na mapę. Właśnie to było zgłaszane, i to kilka razy pod
+   * rząd, bo każda kolejna poprawka celowała w to samo, nieistniejące miejsce.
+   *
+   * Liczymy z alfy, a nie z tabeli w kodzie: tabela rozjeżdża się przy
+   * pierwszej wymianie grafiki, a wymieniamy je często. Wynik zapamiętujemy,
+   * bo to jedno czytanie całego obrazka.
+   */
+  private pustkaPodRysunkiem(klucz: string, wysNaEkranie: number): number {
+    let margines = this.marginesy.get(klucz);
+    if (margines === undefined) {
+      margines = this.zmierzMargines(klucz);
+      this.marginesy.set(klucz, margines);
+    }
+    // Tekstura jest skalowana do zadanej wysokości, więc margines też.
+    const zrodlo = this.textures.get(klucz)?.getSourceImage() as { height?: number } | undefined;
+    const h = zrodlo?.height ?? 0;
+    return h > 0 ? (margines * wysNaEkranie) / h : 0;
+  }
+
+  /**
+   * Kanał alfa tekstury, wczytany raz i trzymany w pamięci.
+   *
+   * Służy dwóm rzeczom naraz — i dlatego jest liczony w jednym miejscu:
+   * marginesowi pod rysunkiem oraz trafianiu kliknięciem w sam rysunek,
+   * a nie w jego prostokąt.
+   */
+  private alfa(klucz: string): { w: number; h: number; dane: Uint8Array } | null {
+    const znane = this.alfy.get(klucz);
+    if (znane !== undefined) return znane;
+
+    let wynik: { w: number; h: number; dane: Uint8Array } | null = null;
+    const zrodlo = this.textures.get(klucz)?.getSourceImage() as
+      | HTMLImageElement
+      | HTMLCanvasElement
+      | undefined;
+    if (zrodlo?.width) {
+      const p = document.createElement('canvas');
+      p.width = zrodlo.width;
+      p.height = zrodlo.height;
+      const ctx = p.getContext('2d', { willReadFrequently: true });
+      if (ctx) {
+        ctx.drawImage(zrodlo, 0, 0);
+        const dane = ctx.getImageData(0, 0, p.width, p.height).data;
+        const kanal = new Uint8Array(p.width * p.height);
+        for (let i = 0; i < kanal.length; i++) kanal[i] = dane[i * 4 + 3];
+        wynik = { w: p.width, h: p.height, dane: kanal };
+      }
+    }
+    this.alfy.set(klucz, wynik);
+    return wynik;
+  }
+
+  /** Sam pomiar w pikselach tekstury. */
+  private zmierzMargines(klucz: string): number {
+    const a = this.alfa(klucz);
+    if (!a) return 0;
+    // Od dołu w górę, do pierwszego wiersza, w którym cokolwiek widać.
+    // Próg ósemki, a nie zera: wygładzone krawędzie zostawiają ogon alfy
+    // rzędu jedynek, który dla oka jest niewidoczny, a zerowałby cały efekt.
+    for (let y = a.h - 1; y >= 0; y--) {
+      for (let x = 0; x < a.w; x++) {
+        if (a.dane[y * a.w + x] > 8) return a.h - 1 - y;
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * Czy punkt świata trafia w WIDOCZNY piksel rysunku, a nie tylko w jego
+   * prostokąt.
+   *
+   * Prostokąt wiatraka to w dwóch trzecich puste niebo. Dopóki liczył się sam
+   * prostokąt, wysoka budowla zabierała kliknięcia wszystkiemu, co stało za
+   * nią — łącznie z portalem dwa rzędy dalej, w który nie dało się wejść,
+   * mimo że było go doskonale widać.
+   */
+  private wRysunku(im: Phaser.GameObjects.Image, wx: number, wy: number): boolean {
+    const b = im.getBounds();
+    const a = this.alfa(im.texture.key);
+    if (!a || b.width <= 0 || b.height <= 0) return true;
+    const u = Math.floor(((wx - b.x) / b.width) * a.w);
+    const v = Math.floor(((wy - b.y) / b.height) * a.h);
+    if (u < 0 || v < 0 || u >= a.w || v >= a.h) return false;
+    return a.dane[v * a.w + u] > 8;
+  }
+
   private wariant(x: number, y: number, ile: number) {
     let h = (x * 0x1f1f1f1f) ^ (y * 0x85ebca6b);
     h = Math.imul(h ^ (h >>> 16), 0x2545f491);
@@ -802,12 +906,13 @@ export class AdventureScene extends Phaser.Scene {
       // widać, nie osadza niczego. Teraz jest szerszy od budowli, wychodzi
       // spod niej w lewo i w dół (słońce stoi w prawym górnym rogu) i widać
       // go na tyle, żeby robił swoją robotę.
+      // Prawdziwy spód rysunku, a nie dolna krawędź pliku — patrz
+      // `marginesPodRysunkiem`. Wszystko, co osadza budowlę w terenie, liczy
+      // się od tej jednej wartości, więc nie da się już tego rozjechać
+      // osobno dla cienia i osobno dla gruntu.
+      const spod = (bryla ? -KAFEL * 0.5 : KAFEL * 0.46) - this.pustkaPodRysunkiem(klucz, wys);
       const cien = this.add
-        .image(
-          -KAFEL * (bryla ? 0.3 : 0.12),
-          bryla ? -KAFEL * 0.42 : KAFEL * 0.4,
-          't-cien'
-        )
+        .image(-KAFEL * (bryla ? 0.3 : 0.12), spod + KAFEL * (bryla ? 0.08 : 0.02), 't-cien')
         // Szeroka i WYSOKA plama, nie pasek. Spłaszczona do jednej trzeciej
         // wysokości czytała się jak ciemna kreska doklejona pod bryłą; cień
         // widziany pod tym kątem jest owalny i sięga dalej, niż się wydaje.
@@ -816,13 +921,14 @@ export class AdventureScene extends Phaser.Scene {
           KAFEL * (bryla ? 1.0 : 0.42)
         )
         .setBlendMode(Phaser.BlendModes.MULTIPLY)
-        .setAlpha(0.7);
+        .setAlpha(bryla ? 0.85 : 0.7);
       kont.add(cien);
       // Budowle z bryłą stoją ZA polem wejścia, a nie na nim: podstawa siada na
       // górnej krawędzi tego pola, więc brama zostaje odsłonięta i widać, że
       // jest po niej gdzie chodzić. Reszta obiektów stoi na swoim polu.
-      const podstawa = bryla ? -KAFEL * 0.5 : KAFEL * 0.46;
-      const im = this.add.image(0, podstawa, klucz).setOrigin(0.5, 1);
+      const im = this.add
+        .image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, klucz)
+        .setOrigin(0.5, 1);
       im.setScale(wys / im.height);
       kont.add(im);
 
@@ -866,7 +972,7 @@ export class AdventureScene extends Phaser.Scene {
         kont.setData('flaga', f);
       }
 
-      if (bryla) this.zaroslaPrzyPodstawie(o, im, kont);
+      if (bryla) this.zaroslaPrzyPodstawie(o, im, kont, spod);
 
       kont.setData('obiekt', o);
       this.ikonyObiektow[o.id] = kont;
@@ -894,25 +1000,77 @@ export class AdventureScene extends Phaser.Scene {
   private zaroslaPrzyPodstawie(
     o: Obiekt,
     im: Phaser.GameObjects.Image,
-    kont: Phaser.GameObjects.Container
+    kont: Phaser.GameObjects.Container,
+    spod: number
   ) {
-    const podstawa = kont.y + im.y;
-    const lewo = kont.x - im.displayWidth / 2;
-    const pasmo = KAFEL * 0.34;
-    const krycie = [0.4, 0.72, 1];
-    for (let i = 0; i < krycie.length; i++) {
-      const wysPasa = pasmo / krycie.length;
+    const podstawa = kont.y + spod;
+    const szer = im.displayWidth;
+    const lewo = kont.x - szer / 2;
+
+    // 1. Grunt podchodzi na spód rysunku.
+    //
+    // Wcześniej były trzy pasy o kryciu 0,4 / 0,72 / 1 — czyli trzy widoczne
+    // stopnie zamiast przejścia. Teraz krycie rośnie po krzywej i pasów jest
+    // tyle, że każdy ma dwa piksele: oko nie ma czego złapać jako krawędzi.
+    const pasmo = KAFEL * 0.3;
+    const pasow = 10;
+    for (let i = 0; i < pasow; i++) {
+      const t = (i + 1) / pasow;
+      const wysPasa = pasmo / pasow;
       const y = podstawa - pasmo + i * wysPasa;
       const kopia = this.add
         .image(0, 0, 'plansza-0')
         .setOrigin(0, 0)
         // Nad tą budowlą, ale pod wszystkim, co stoi w następnych rzędach.
         .setDepth(o.y + 0.7)
-        .setAlpha(krycie[i]);
+        // Kwadrat, a nie prosta: przy prostej grunt zaczyna się widocznie już
+        // w połowie pasma i budowla wygląda, jakby zapadła się w ziemię.
+        .setAlpha(t * t);
       // Tło planszy leży w świecie jeden do jednego od (0,0), więc piksel
       // świata jest wprost pikselem tekstury.
-      kopia.setCrop(lewo, y, im.displayWidth, wysPasa + 1);
+      kopia.setCrop(lewo, y, szer, wysPasa + 1);
       this.swiat.add(kopia);
+    }
+
+    // 2. Ziemia podchodzi NIERÓWNO — każda kolumna na inną wysokość.
+    //
+    // Sam gładki przemiał z punktu pierwszego nie wystarczy i widać to było na
+    // zgłoszonym zrzucie: sprite jest ucięty POZIOMO, więc miękkie przejście
+    // przesuwa tę samą prostą wyżej, zamiast ją zlikwidować. Dopiero gdy
+    // grunt zakrywa spód budowli raz wyżej, raz niżej, linii nie da się już
+    // obrysować linijką — a to jest cała różnica między „stoi w ziemi"
+    // a „leży na niej".
+    const kolumn = 16;
+    for (let i = 0; i < kolumn; i++) {
+      const wysokosc = pasmo * (0.2 + (this.wariant(o.x * 71 + i, o.y * 53, 100) / 100) * 1.1);
+      const kopia = this.add
+        .image(0, 0, 'plansza-0')
+        .setOrigin(0, 0)
+        .setDepth(o.y + 0.71);
+      kopia.setCrop(lewo + (szer * i) / kolumn, podstawa - wysokosc, szer / kolumn + 1, wysokosc);
+      this.swiat.add(kopia);
+    }
+
+    // 3. Kilka krzaków przy samej podstawie.
+    //
+    // Rzadko i z dużym rozrzutem wysokości: gęsty równy rządek czyta się jak
+    // żywopłot posadzony przez ogrodnika, a nie jak zarośla, które same tam
+    // wyrosły. Środek zostaje pusty, bo tam jest brama — krzak przed wejściem
+    // wygląda na przeszkodę, a właśnie tamtędy się do miasta wchodzi.
+    const ile = 7;
+    for (let i = 0; i < ile; i++) {
+      const u = (i + 0.5) / ile;
+      if (Math.abs(u - 0.5) < 0.12) continue;
+      const los = this.wariant(o.x * 31 + i, o.y * 17 + i * 7, 1000) / 1000;
+      if (los < 0.25) continue;
+      const kx = lewo + szer * u + (los - 0.5) * KAFEL * 0.3;
+      const krzak = this.add
+        .image(kx, podstawa + (los - 0.4) * KAFEL * 0.2, los < 0.6 ? 'm-krzak' : 'm-krzak-2')
+        .setOrigin(0.5, 1)
+        .setDepth(o.y + 0.75)
+        .setFlipX(los > 0.5);
+      krzak.setScale((KAFEL * (0.3 + los * 0.4)) / krzak.height);
+      this.swiat.add(krzak);
     }
   }
 
@@ -1425,6 +1583,7 @@ export class AdventureScene extends Phaser.Scene {
     for (const { o, im } of this.trafienia) {
       if (o.zebrany || !im.active) continue;
       if (!im.getBounds().contains(swiatowy.x, swiatowy.y)) continue;
+      if (!this.wRysunku(im, swiatowy.x, swiatowy.y)) continue;
       if (!najlepszy || o.y > najlepszy.y) najlepszy = o;
     }
     return najlepszy;

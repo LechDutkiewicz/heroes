@@ -219,12 +219,28 @@ const wejdzNaBudowle = async (id) => {
   }, id);
   if (!cel) return null;
   await page.waitForTimeout(400);
+  // Klikamy w WIDOCZNY kawałek budowli, a nie w środek jej pola.
+  //
+  // Środek pola bywa zasłonięty: wieża obserwacyjna stojąca dwa rzędy bliżej
+  // jest wysoka i jej rysunek zachodzi na pole portalu. Kliknięcie w takie
+  // miejsce celuje — słusznie — w wieżę, bo to ją tam widać. Sonda ma
+  // sprawdzać portal, więc szuka punktu, w którym gra rozpoznaje portal:
+  // idzie po rysunku od dołu do góry i bierze pierwsze trafienie.
   const p = await page.evaluate((c) => {
     const s = window.__game.scene.getScene('adventure');
-    return {
-      x: 8 + c.x * 48 + 24 - (s.kamera?.scrollX ?? 0),
-      y: 44 + c.y * 48 + 24 - (s.kamera?.scrollY ?? 0),
-    };
+    const naEkran = (wx, wy) => ({
+      x: wx - s.kamera.scrollX + s.kamera.x,
+      y: wy - s.kamera.scrollY + s.kamera.y,
+    });
+    const t = s.trafienia.find((z) => z.o.x === c.x && z.o.y === c.y);
+    if (t) {
+      const b = t.im.getBounds();
+      for (let f = 0.9; f >= 0.1; f -= 0.05) {
+        const e = naEkran(b.centerX, b.y + b.height * f);
+        if (s.obiektPodKursorem(e) === t.o) return e;
+      }
+    }
+    return naEkran(c.x * 48 + 24, c.y * 48 + 24);
   }, cel);
   await klikNaPlotnie(page, p.x, p.y);
   await page.waitForTimeout(250);
