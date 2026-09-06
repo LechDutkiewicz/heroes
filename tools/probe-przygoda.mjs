@@ -297,7 +297,7 @@ const doZamku = await page.evaluate(() => {
   s.stan.skarbiec.pokeball = 40;
   s.zajety = false;
   window.__zamek = z.id;
-  const przed = s.stan.bohater.armia.reduce((a, o) => a + o.ile, 0);
+  const przed = s.stan.bohater.armia.reduce((a, o) => a + (o ? o.ile : 0), 0);
   s.idz([{ x: z.x, y: z.y, koszt: 100 }]);
   return { nazwa: z.nazwa, przed };
 });
@@ -309,7 +309,7 @@ const werbunek = await page.evaluate(() => {
   const t = window.__game.scene.getScene('zamek');
   const przed = {
     pokeballe: t.stan.skarbiec.pokeball,
-    armia: t.stan.bohater.armia.reduce((a, o) => a + o.ile, 0),
+    armia: t.stan.bohater.armia.reduce((a, o) => a + (o ? o.ile : 0), 0),
     dostepne: [...(t.zamek.dostepne ?? [])],
   };
   t.kup(0);
@@ -317,7 +317,7 @@ const werbunek = await page.evaluate(() => {
     przed,
     po: {
       pokeballe: t.stan.skarbiec.pokeball,
-      armia: t.stan.bohater.armia.reduce((a, o) => a + o.ile, 0),
+      armia: t.stan.bohater.armia.reduce((a, o) => a + (o ? o.ile : 0), 0),
       dostepne: [...(t.zamek.dostepne ?? [])],
     },
   };
@@ -333,7 +333,7 @@ const poZamku = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   const potwor = s.stan.obiekty.find((o) => o.id === window.__potwor);
   return {
-    armia: s.stan.bohater.armia.reduce((a, o) => a + o.ile, 0),
+    armia: s.stan.bohater.armia.reduce((a, o) => a + (o ? o.ile : 0), 0),
     zajety: s.zajety,
     // Pokonany strażnik NIE ma prawa dalej stać na mapie.
     sprytPokonanego: !!s.ikonyObiektow[window.__potwor],

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BattleScene, SCENE_H } from './scenes/BattleScene';
 import { AdventureScene } from './scenes/AdventureScene';
 import { TownScene } from './scenes/TownScene';
+import { HeroScene } from './scenes/HeroScene';
 import { wlaczDziennik, wysiejZiarno } from './dev/dziennik';
 import { pokazWersje } from './wersja';
 
@@ -35,8 +36,8 @@ const game = new Phaser.Game({
   backgroundColor: '#0d1023',
   scene:
     ekran === 'mapa'
-      ? [AdventureScene, BattleScene, TownScene]
-      : [BattleScene, AdventureScene, TownScene],
+      ? [AdventureScene, BattleScene, TownScene, HeroScene]
+      : [BattleScene, AdventureScene, TownScene, HeroScene],
 });
 
 // Most dla narzędzia do zrzutów (tools/capture.mjs). Pozwala ustawić bitwę

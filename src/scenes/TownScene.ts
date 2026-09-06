@@ -22,6 +22,7 @@ import {
 } from '../data/zamki';
 import { MNOZNIK_FORTU } from '../data/zasady-h3';
 import { FACTIONS, factionById } from '../data/factions';
+import { dolacz } from '../data/armia';
 import { C, H, T, Z, body, display } from '../visual/theme';
 import { drawPanelBody, makeHudButton, mix, plate } from '../visual/hud';
 import { ICON, buildIcons } from '../visual/icons';
@@ -1086,18 +1087,19 @@ export class TownScene extends Phaser.Scene {
     const ile = Math.min(stac, dostepne[tier]);
 
     const u = this.frakcja.units[tier];
-    const istniejacy = this.stan.bohater.armia.find((a) => a.sprite === u.sprite);
-    if (istniejacy) {
-      istniejacy.ile += ile;
-    } else {
-      const nowy: Oddzial = {
-        sprite: u.sprite,
-        nazwa: u.name,
-        ile,
-        frakcja: this.frakcja.id,
-        tier,
-      };
-      this.stan.bohater.armia.push(nowy);
+    // Werbunek dokłada do istniejącego stosu albo do pierwszej dziury.
+    // Odmowa przy siedmiu zajętych slotach musi być WIDOCZNA: cicho zgubiony
+    // zakup wygląda jak zniknięte pokeballe.
+    const nowy: Oddzial = {
+      sprite: u.sprite,
+      nazwa: u.name,
+      ile,
+      frakcja: this.frakcja.id,
+      tier,
+    };
+    if (!dolacz(this.stan.bohater.armia, nowy)) {
+      this.komunikat.setText('Wszystkie sloty armii zajęte — nie ma gdzie ich postawić.');
+      return;
     }
     dostepne[tier] -= ile;
     this.stan.skarbiec.pokeball -= ile * koszt;

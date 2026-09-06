@@ -24,6 +24,7 @@ import {
   zaplac,
 } from './zamki';
 import { factionById } from './factions';
+import type { Armia } from './armia';
 
 /**
  * Mapa przygody — dane i zasady, bez rysowania.
@@ -393,8 +394,12 @@ export interface Bohater {
   imie: string;
   atak: number;
   obrona: number;
-  /** Armia. Karta bohatera pokazuje ją tak jak w Heroes 3: rząd slotów. */
-  armia: Oddzial[];
+  /**
+   * Armia jako rząd slotów stałej długości, z dziurami — patrz `armia.ts`.
+   * Slot jest MIEJSCEM, nie pozycją na liście: układ, który gracz ustawi
+   * na ekranie bohatera, ma przeżyć zamknięcie okna.
+   */
+  armia: Armia;
   /** Zebrane artefakty (identyfikatory z `ARTEFAKTY`). */
   artefakty: string[];
   doswiadczenie: number;
@@ -844,7 +849,7 @@ export function wezZeSkrzyni(s: StanMapy, w: WyborSkrzyni, co: 'pokeballe' | 'do
 export function doUlepszenia(b: Bohater) {
   for (let i = 0; i < b.armia.length; i++) {
     const o = b.armia[i];
-    if (o.tier >= 5) continue;
+    if (!o || o.tier >= 5) continue;
     const f = factionById(o.frakcja);
     if (!f) continue;
     const z = f.units[o.tier];
