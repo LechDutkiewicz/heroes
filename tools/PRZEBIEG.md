@@ -60,6 +60,17 @@ się widocznym wzorem.
       rozstawia je `generuj_mape.py` ze strefą dom/wroga, a sprawdza
       `npx tsx tools/probe-budowle.ts`. Prompty, z których powstały grafiki,
       leżą w `tools/PROMPTY-BUDYNKI.md`.
+- [x] **6b. Tło z wsadu.** Trzy usterki, przez które budowle nie wtapiały się
+      w teren, wszystkie po stronie `wsad_wczytaj.py`:
+      (1) osiem plików miało NAMALOWANĄ szachownicę przezroczystości i lądowało
+      na mapie jako szary prostokąt — `bezSzachownicy` wycina ją wypełnieniem
+      od krawędzi i zjada obwódkę;
+      (2) reszta miała woal z pikseli o alfie 1–15 w kształcie kadru z modelu,
+      który PRZYCIEMNIAŁ trawę dokoła — ścina go `bezWoalu`;
+      (3) zmniejszanie mieszało barwy z przezroczystymi (czarnymi) pikselami
+      i robiło brudny kontur — `dopasuj` mnoży teraz barwę przez alfę przed
+      zmniejszeniem i dzieli po nim.
+      `ostrzezOTle` krzyczy przy generowaniu, gdy któraś wróci.
 - [ ] **7. Sprzątanie.** Usunięcie `rysuj_miasto.py` i `render3d.py`, jeśli nic
       z nich nie zostaje; wpis do STAN.md o pochodzeniu grafik.
       Po kroku 5 osierocone są też: `src/data/kafelki.ts`,
