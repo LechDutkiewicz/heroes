@@ -44,7 +44,7 @@ palety trzeba puścić:
 |---|---|
 | `python3 tools/kafelki_autotile.py` | odczytuje z arkusza tablicę kafelków przejściowych |
 | `python3 tools/generuj_mape.py` | składa planszę 36 × 36 ze szkicu krain i rozstawia obiekty |
-| `python3 tools/render_mapa.py` | składa i wygładza tło planszy (4 klatki wody) |
+| `python3 tools/render_mapa.py` | składa tło planszy i dane dla shadera wody |
 | `python3 tools/prepare_mapa_obiekty.py` | wycina i wygładza drzewa, skały, zamki, bohatera |
 | `python3 tools/rysuj_obiekty_mapy.py` | rysuje surowce, budynki i ozdoby |
 | `python3 tools/rysuj_miasto.py` | rysuje panoramy trzech miast i bryły jedenastu budynków |
@@ -475,3 +475,48 @@ w około 27 dni **przy codziennym wykupywaniu przyrostu**, a nie zamiast niego.
 Czego świadomie nie ruszyłem: ekran miasta jest listą, nie malowaną panoramą
 z Heroes 3. Panorama jest następnym krokiem — ale lista, w której da się
 budować, jest warta więcej niż obrazek, w którym nie da się nic.
+
+## Woda na mapie przygody
+
+Zgłoszenie brzmiało: „fajnie, że dodałeś animację wody, ale loop nie wygląda
+jak płynny loop". I nie mógł wyglądać — animacja miała **cztery klatki
+przełączane co 550 ms**, czyli niecałe dwie klatki na sekundę. Przy takim
+tempie oko widzi przeskoki niezależnie od tego, jak dobrze klatki do siebie
+pasują. Poprzednie podejście (ustawienie przesunięć tekstury na rombie, żeby
+pętla się domykała) usunęło szarpnięcie przy zapętleniu, ale nie mogło usunąć
+skokowości samego ruchu.
+
+Woda jest teraz **liczona shaderem przy każdym rysowaniu**. Kosztuje jedną
+dodatkową operację rysowania na klatkę, a daje ruch ciągły.
+
+Co jest gdzie:
+
+* `tools/woda_dane.py` — dwa pliki danych, oba powstają razem z planszą
+  w `python3 tools/render_mapa.py`:
+  * `woda-maska.png` — R: ile tu wody, G: odległość od brzegu, B: głębia.
+    Maska jest DOKŁADNIE tą, którą namalowano planszę; policzona drugi raz
+    rozjechałaby się i na styku zostałby rąbek.
+  * `woda-zmarszczki.png` — bezszwowy szum w trzech oktawach (kanały R/G/B).
+    Generowany, a nie rysowany modelem: musi kafelkować się bez szwu, a tego
+    modele graficzne nie utrzymują. **To jest odpowiedź na pytanie, czy
+    potrzeba nowych tekstur wody — nie potrzeba.**
+* `src/visual/woda.ts` — shader. Kwadrat leży na całej planszy i przepisuje ją
+  piksel w piksel, zmieniając tylko wodę; dzięki temu nie ma mieszania
+  przezroczystości na brzegu.
+
+Trzy rzeczy, które kosztowały najwięcej dochodzenia:
+
+1. **Współrzędne.** Kwadrat siedzi w kontenerze świata, przesuwanym kamerą
+   i przyciętym maską; wbudowane współrzędne tekstury kwadratu tego nie
+   odwzorowują. Liczymy je z `gl_FragCoord` i położenia kamery.
+2. **Odbicie w pionie.** Phaser wgrywa obrazy do karty odwrócone, więc plansza
+   czytana wprost dawała lustrzane odbicie mapy — woda z południa wychodziła
+   na północy.
+3. **Ile wolno zamalować.** Namalowana woda ma własne kaustyki i mocny kolor.
+   Pierwsza wersja mieszała barwę głębi na tyle mocno, że jezioro robiło się
+   szare i wypadało z palety mapy. Shader dokłada więc głównie RUCH: załamanie
+   światła, iskry na grzbietach i pianę przy brzegu, a barwę tylko muska.
+
+`plansza-1..3.png` zostały usunięte — nikt ich już nie wczytuje. Namalowana
+`plansza-0.png` ma wodę wypaloną w obrazie i służy jako zapas: gdy shadera nie
+da się utworzyć, gracz widzi nieruchomy staw zamiast dziury w mapie.

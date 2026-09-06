@@ -35,9 +35,10 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageChops, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import woda_dane  # noqa: E402
 from teren_malowanie import (  # noqa: E402
     ZIARNO,
     kafelkuj,
@@ -68,19 +69,6 @@ WARSTWY = [
     ('piasek', ',', 0.55, 0.34),
     ('woda', '~', 0.35, 0.22),
 ]
-
-#: Przesunięcie tekstury wody w kolejnych klatkach, w pikselach.
-#:
-#: Pętla musi się DOMYKAĆ. Poprzednia wersja przesuwała teksturę wciąż w tę
-#: samą stronę — 0, 5, 10, 15 — i po czwartej klatce wracała skokiem o piętnaście
-#: pikseli do zera. Wyglądało to jak trzy klatki płynięcia i szarpnięcie,
-#: bo szarpnięcie było trzy razy większe od każdego kroku.
-#:
-#: Teraz punkty leżą na rombie: każdy krok ma tę samą długość, także ten
-#: z ostatniej klatki do pierwszej. Woda kołysze się w kółko zamiast płynąć
-#: donikąd i pętli nie da się zauważyć.
-PRAD = [(0, 0), (4, 4), (0, 8), (-4, 4)]
-
 
 def wczytaj_rysunek():
     src = (KORZEN / 'src' / 'data' / 'plansza-teren.ts').read_text(encoding='utf-8')
@@ -191,59 +179,53 @@ def maska_gruntu() -> Image.Image:
     )
 
 
-def klatka(k: int) -> Image.Image:
+def klatka() -> tuple[Image.Image, Image.Image]:
+    """Plansza i maska wody.
+
+    Maska wraca razem z planszą, bo shader wody musi dostać DOKŁADNIE tę,
+    którą tu namalowano. Policzona drugi raz — choćby tym samym wzorem —
+    rozjechałaby się przy najmniejszej zmianie parametrów i na styku wody
+    z lądem zostałby rąbek nienamalowanej wody albo nieruchomej tafli.
+    """
     plansza = zmieszaj(warianty('trawa'), W, H, (0, 0), ZIARNO)
+    maskaWody = Image.new('L', (W, H), 0)
     for n, (nazwa, znaki, wtapianie, poszarpanie) in enumerate(WARSTWY):
         if not any(c in znaki for wiersz in RYSUNEK for c in wiersz):
             continue
-        przesun = PRAD[k] if nazwa == 'woda' else (0, 0)
-        warstwa = zmieszaj(warianty(nazwa), W, H, przesun, ZIARNO + 50 + n)
+        warstwa = zmieszaj(warianty(nazwa), W, H, (0, 0), ZIARNO + 50 + n)
         # Każda warstwa dostaje własne ziarno, inaczej wszystkie granice
         # falowałyby w tym samym rytmie i widać by było jeden wzór.
         m = maska(pola(znaki), KAFEL, wtapianie, poszarpanie, ZIARNO + n)
         plansza.paste(warstwa, (0, 0), m)
+        if nazwa == 'woda':
+            maskaWody = m
     plansza = plansza.convert('RGBA')
     sciezka = kafelkuj(tekstura('sciezka'), W, H).convert('RGBA')
     # Place pod budowlami idą PRZED drogami: droga ma dobiegać do placu
     # i się z nim zlewać, a nie kończyć na jego brzegu.
     plansza.paste(sciezka, (0, 0), maska_gruntu())
     plansza.paste(sciezka, (0, 0), maska_drogi())
-    return plansza
+    return plansza, maskaWody
 
 
 if __name__ == '__main__':
     KATALOG.mkdir(parents=True, exist_ok=True)
-    klatki = [klatka(k) for k in range(4)]
+    baza, maskaWody = klatka()
 
-    # Klatka 0 idzie w całości; kolejne TYLKO jako to, co się od niej różni,
-    # reszta przezroczysta. Scena kładzie je na wierzch.
-    #
-    # Przy planszy 36 × 36 pełna klatka to 1728 × 1728 pikseli, a różni się
-    # między klatkami wyłącznie woda — kilka procent mapy. Pierwsze podejście
-    # wycinało prostokąt otaczający różnice, ale woda jest i na północnym
-    # zachodzie, i na południowym wschodzie, więc prostokąt objął prawie całą
-    # planszę i nic nie oszczędził. Przezroczysta maska nie ma tego problemu:
-    # PNG ściska jednolitą przezroczystość niemal do zera.
-    baza = klatki[0]
+    # Woda zostaje NAMALOWANA na planszy, choć rusza nią shader. To jest
+    # zapasowa wersja obrazu: gdy karta nie da rady z shaderem, gracz zobaczy
+    # nieruchomy staw zamiast dziury w mapie.
     baza.save(KATALOG / 'plansza-0.png')
-    print(f'  plansza-0.png  {baza.width} × {baza.height}  (pełna)')
+    print(f'  plansza-0.png  {baza.width} × {baza.height}')
 
+    # Klatki 1–3 były poprzednią animacją: cztery gotowe obrazy przełączane
+    # co pół sekundy. Zostają usunięte, żeby nie leżały w `public` jako
+    # kilkaset kilobajtów, których nikt już nie wczytuje.
     for k in range(1, 4):
-        rozne = (
-            ImageChops.difference(klatki[k].convert('RGB'), baza.convert('RGB'))
-            .convert('L')
-            .point(lambda v: 255 if v > 8 else 0)
-        )
-        # Piksele spoza maski trzeba WYZEROWAĆ, nie tylko przykryć
-        # przezroczystością. PNG zapisuje kolor także tam, gdzie alfa wynosi
-        # zero, więc sama maska nie zmniejszyła pliku ani o bajt — dopiero
-        # jednolite zero się ściska.
-        tab = np.asarray(klatki[k]).copy()
-        widoczne = np.asarray(rozne) > 0
-        tab[~widoczne] = 0
-        tab[:, :, 3] = np.where(widoczne, 255, 0)
-        Image.fromarray(tab, 'RGBA').save(KATALOG / f'plansza-{k}.png')
-        print(f'  plansza-{k}.png  naklejka, {widoczne.mean() * 100:.1f}% powierzchni')
+        (KATALOG / f'plansza-{k}.png').unlink(missing_ok=True)
+
+    woda_dane.zmarszczki()
+    woda_dane.maska(RYSUNEK, KAFEL, maskaWody)
 
     odcisk = hashlib.sha256('\n'.join(RYSUNEK).encode('utf-8')).hexdigest()[:16]
     (KATALOG / 'plansza.json').write_text(

@@ -35,6 +35,7 @@ import { C, E, FONT, H, Z, body, display } from '../visual/theme';
 import { drawPanelBody, makeHudButton, mix, plate } from '../visual/hud';
 import { ICON, buildIcons } from '../visual/icons';
 import { GORA, KAFEL, MARGINES, PANEL_W, PASEK_H } from '../visual/uklad';
+import { dodajWode } from '../visual/woda';
 import { wersjonujZasoby } from '../visual/zasoby';
 import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
 
@@ -53,10 +54,6 @@ import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
  *
  * Zasady siedzą w `src/data/mapa.ts` i `src/data/zasady-h3.ts`; scena je pokazuje.
  */
-
-/** Co ile milisekund plansza przechodzi na następną klatkę (animacja wody). */
-const WODA_MS = 550;
-const KLATEK_PLANSZY = 4;
 
 /**
  * Prędkość przewijania kursorem przy krawędzi, w pikselach na sekundę.
@@ -114,7 +111,8 @@ export class AdventureScene extends Phaser.Scene {
    */
   private kameraOkien!: Phaser.Cameras.Scene2D.Camera;
   private plansza!: Phaser.GameObjects.Image;
-  private naklejkiWody: Phaser.GameObjects.Image[] = [];
+  /** Kwadrat shadera z animowaną wodą; `null`, gdy karta go nie uciągnie. */
+  private woda: Phaser.GameObjects.Shader | null = null;
   private mgla!: Phaser.GameObjects.Image;
   private warstwaTrasy!: Phaser.GameObjects.Graphics;
   private bohaterObj!: Phaser.GameObjects.Container;
@@ -137,7 +135,6 @@ export class AdventureScene extends Phaser.Scene {
 
   private trasaBiezaca: Krok[] | null = null;
   private zajety = false;
-  private klatkaWody = 0;
   /** Ostatnie położenie kursora — do przewijania przy krawędzi. */
   private kursor: { x: number; y: number } | null = null;
   private przewX = 0;
@@ -150,9 +147,9 @@ export class AdventureScene extends Phaser.Scene {
   preload() {
     wersjonujZasoby(this);
     const b = import.meta.env.BASE_URL;
-    for (let i = 0; i < KLATEK_PLANSZY; i++) {
-      this.load.image(`plansza-${i}`, `${b}mapa/plansza-${i}.png`);
-    }
+    this.load.image('plansza-0', `${b}mapa/plansza-0.png`);
+    this.load.image('woda-maska', `${b}mapa/woda-maska.png`);
+    this.load.image('woda-zmarszczki', `${b}mapa/woda-zmarszczki.png`);
     this.load.spritesheet('bohater', `${b}mapa/bohater.png`, {
       frameWidth: BOHATER_KLATKA,
       frameHeight: BOHATER_KLATKA,
@@ -223,10 +220,9 @@ export class AdventureScene extends Phaser.Scene {
     this.zajety = false;
     this.trasaBiezaca = null;
     this.kierunek = 'dol';
-    this.klatkaWody = 0;
+    this.woda = null;
     this.przewX = 0;
     this.przewY = 0;
-    this.naklejkiWody = [];
     this.slotyArmii = [];
     this.statTeksty = [];
     this.podpisy = {};
@@ -265,15 +261,6 @@ export class AdventureScene extends Phaser.Scene {
     this.rozdzielKamery();
     this.odswiezWszystko();
     this.wysrodkujNaBohaterze(false);
-
-    this.time.addEvent({
-      delay: WODA_MS,
-      loop: true,
-      callback: () => {
-        this.klatkaWody = (this.klatkaWody + 1) % KLATEK_PLANSZY;
-        this.naklejkiWody.forEach((n, i) => n.setVisible(i + 1 === this.klatkaWody));
-      },
-    });
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => this.klikMapa(p));
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
@@ -512,12 +499,13 @@ export class AdventureScene extends Phaser.Scene {
 
     this.plansza = this.add.image(0, 0, 'plansza-0').setOrigin(0, 0).setDepth(-1);
     this.swiat.add(this.plansza);
-    // Klatki 1–3 to naklejki z samą wodą, leżące na klatce zerowej. Cztery
-    // pełne klatki byłyby czterema teksturami 1728 × 1728 w pamięci karty.
-    for (let i = 1; i < KLATEK_PLANSZY; i++) {
-      const n = this.add.image(0, 0, `plansza-${i}`).setOrigin(0, 0).setVisible(false).setDepth(-0.5);
-      this.naklejkiWody.push(n);
-      this.swiat.add(n);
+    // Woda leży NAD planszą i przepisuje ją w całości, więc namalowana plansza
+    // zostaje widoczna tylko wtedy, gdy shader się nie utworzył. Jest w ten
+    // sposób zapasem, a nie martwym obrazkiem pod spodem.
+    this.woda = dodajWode(this, this.mapaW, this.mapaH, () => this.kamera);
+    if (this.woda) {
+      this.woda.setDepth(-0.5);
+      this.swiat.add(this.woda);
     }
 
     this.rysujPrzeszkody();
