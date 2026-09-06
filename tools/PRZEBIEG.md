@@ -53,6 +53,13 @@ się widocznym wzorem.
       statycznych póz (lewy profil to odbicie prawego), a chód robi podskok
       i ugięcie w kolejnych klatkach. Białe tło wycinane wypełnieniem od
       krawędzi — próg na całym obrazku zjadłby białe części samej postaci.
+- [x] **6a. Budowle odwiedzane.** Siedemnaście brył z wsadu weszło do gry:
+      trzy kopalnie surowców (koniec z jedną przemalowaną na trzy barwy)
+      i czternaście budowli odwiedzanych — od obozu treningowego po wóz
+      kupca. Mechaniki opisuje jedna tablica (`BUDOWLE` w `src/data/mapa.ts`),
+      rozstawia je `generuj_mape.py` ze strefą dom/wroga, a sprawdza
+      `npx tsx tools/probe-budowle.ts`. Prompty, z których powstały grafiki,
+      leżą w `tools/PROMPTY-BUDYNKI.md`.
 - [ ] **7. Sprzątanie.** Usunięcie `rysuj_miasto.py` i `render3d.py`, jeśli nic
       z nich nie zostaje; wpis do STAN.md o pochodzeniu grafik.
       Po kroku 5 osierocone są też: `src/data/kafelki.ts`,

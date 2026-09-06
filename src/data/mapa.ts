@@ -1,4 +1,19 @@
-import { PROMIEN_WIDZENIA, SKRZYNIE, naPokeballe } from './zasady-h3';
+import {
+  ARENA_BONUS,
+  BUDOWLA_STATYSTYKA,
+  DRZEWO_WIEDZY_MIN,
+  EWOLUCJA_KOSZT,
+  GNIAZDO_TIER,
+  OBSERWATORIUM_PROMIEN,
+  OGNISKO_POKEBALLE,
+  PROMIEN_WIDZENIA,
+  SKRZYNIE,
+  STAJNIA_BONUS,
+  STAJNIA_DNI,
+  STAJNIA_ODNOWA,
+  WIATRAK_ODNOWA,
+  naPokeballe,
+} from './zasady-h3';
 import {
   brakuje,
   budynek,
@@ -8,6 +23,7 @@ import {
   stacNas,
   zaplac,
 } from './zamki';
+import { factionById } from './factions';
 
 /**
  * Mapa przygody — dane i zasady, bez rysowania.
@@ -74,7 +90,8 @@ export type RodzajObiektu =
   | 'zamek'
   | 'potwor'
   | 'skrzynia'
-  | 'artefakt';
+  | 'artefakt'
+  | 'budynek';
 
 /**
  * Artefakty. W Heroes 3 dzielą się na klasy o rosnącej sile; u nas trzy klasy
@@ -104,6 +121,166 @@ export const ARTEFAKTY: Artefakt[] = [
 ];
 
 export const artefaktPoId = (id: string) => ARTEFAKTY.find((a) => a.id === id);
+
+/**
+ * Budowle odwiedzane — to, co w Heroes 3 stoi między kopalniami i daje powód,
+ * żeby nadłożyć drogi.
+ *
+ * Wszystkie siedzą pod jednym rodzajem obiektu (`budynek`) i różnią się
+ * wyłącznie wpisem w tej tablicy. Osobny rodzaj dla każdej z nich oznaczałby
+ * czternaście gałęzi w `odwiedz`, czternaście wpisów w `BRYLA` i czternaście
+ * miejsc do poprawienia przy każdej zmianie — a różnią się dokładnie trzema
+ * rzeczami: rysunkiem, opisem i efektem.
+ *
+ * `odnowa` mówi, po ilu dniach można skorzystać ponownie:
+ *   brak  — raz na zawsze (obóz treningowy, arena, drzewo wiedzy);
+ *   0     — bez ograniczeń (portal, ośrodek ewolucji);
+ *   n     — co n dni (źródło co dzień, wiatrak i stajnia co tydzień).
+ * `znika` to drobiazgi jednorazowe, które po zabraniu schodzą z mapy.
+ */
+export type EfektBudowli =
+  | { typ: 'staty'; atak?: number; obrona?: number }
+  | { typ: 'arena' }
+  | { typ: 'doswiadczenie' }
+  | { typ: 'odslona' }
+  | { typ: 'stajnia' }
+  | { typ: 'zrodlo' }
+  | { typ: 'portal' }
+  | { typ: 'gniazdo' }
+  | { typ: 'ewolucja' }
+  | { typ: 'surowce' };
+
+export interface Budowla {
+  nazwa: string;
+  /** jedno zdanie: co to daje. Scena pokazuje to po najechaniu. */
+  opis: string;
+  /** nazwa pliku w `public/mapa` (bez rozszerzenia) */
+  plik: string;
+  /** wysokość rysunku w polach */
+  wys: number;
+  /** ile pól zajmuje bryła (szerokość × wysokość), jeśli więcej niż jedno */
+  bryla?: [number, number];
+  efekt: EfektBudowli;
+  odnowa?: number;
+  znika?: boolean;
+  /** ile pokeballi dokłada oprócz surowca (ognisko) */
+  pokeballe?: number;
+}
+
+export const BUDOWLE: Record<string, Budowla> = {
+  'oboz-treningowy': {
+    nazwa: 'Obóz Treningowy',
+    opis: `+${BUDOWLA_STATYSTYKA} do ataku, raz na zawsze`,
+    plik: 'oboz-treningowy',
+    wys: 1.6,
+    efekt: { typ: 'staty', atak: BUDOWLA_STATYSTYKA },
+  },
+  'kamienna-wieza': {
+    nazwa: 'Kamienna Wieża',
+    opis: `+${BUDOWLA_STATYSTYKA} do obrony, raz na zawsze`,
+    plik: 'kamienna-wieza',
+    wys: 2.0,
+    efekt: { typ: 'staty', obrona: BUDOWLA_STATYSTYKA },
+  },
+  arena: {
+    nazwa: 'Arena',
+    opis: `Wybór: +${ARENA_BONUS} ataku albo +${ARENA_BONUS} obrony`,
+    plik: 'arena',
+    wys: 1.5,
+    bryla: [3, 1],
+    efekt: { typ: 'arena' },
+  },
+  'drzewo-wiedzy': {
+    nazwa: 'Drzewo Wiedzy',
+    opis: 'Doświadczenie na cały następny poziom',
+    plik: 'drzewo-wiedzy',
+    wys: 2.4,
+    efekt: { typ: 'doswiadczenie' },
+  },
+  'wieza-obserwacyjna': {
+    nazwa: 'Wieża Obserwacyjna',
+    opis: `Odsłania mapę na ${OBSERWATORIUM_PROMIEN} pól wokół`,
+    plik: 'wieza-obserwacyjna',
+    wys: 2.6,
+    efekt: { typ: 'odslona' },
+  },
+  ranczo: {
+    nazwa: 'Ranczo Ponyt',
+    opis: `+${STAJNIA_BONUS} ruchu przez ${STAJNIA_DNI} dni`,
+    plik: 'ranczo',
+    wys: 1.5,
+    bryla: [3, 1],
+    efekt: { typ: 'stajnia' },
+    odnowa: STAJNIA_ODNOWA,
+  },
+  zrodlo: {
+    nazwa: 'Źródło Mocy',
+    opis: 'Odnawia punkty ruchu — raz dziennie',
+    plik: 'zrodlo',
+    wys: 1.1,
+    efekt: { typ: 'zrodlo' },
+    odnowa: 1,
+  },
+  portal: {
+    nazwa: 'Portal',
+    opis: 'Przenosi do bliźniaczego portalu',
+    plik: 'portal',
+    wys: 1.8,
+    efekt: { typ: 'portal' },
+    odnowa: 0,
+  },
+  gniazdo: {
+    nazwa: 'Gniazdo',
+    opis: 'Zajęte hoduje oddziały dla twojego zamku',
+    plik: 'gniazdo',
+    wys: 1.4,
+    efekt: { typ: 'gniazdo' },
+  },
+  'osrodek-ewolucji': {
+    nazwa: 'Ośrodek Ewolucji',
+    opis: `Ulepsza oddział o poziom za ${EWOLUCJA_KOSZT} kamienie ewolucji`,
+    plik: 'osrodek-ewolucji',
+    wys: 1.9,
+    bryla: [3, 1],
+    efekt: { typ: 'ewolucja' },
+    odnowa: 0,
+  },
+  wiatrak: {
+    nazwa: 'Wiatrak',
+    opis: 'Garść surowca — raz na tydzień',
+    plik: 'wiatrak',
+    wys: 2.2,
+    efekt: { typ: 'surowce' },
+    odnowa: WIATRAK_ODNOWA,
+  },
+  ognisko: {
+    nazwa: 'Ognisko',
+    opis: 'Pokeballe i surowiec po wędrowcach',
+    plik: 'ognisko',
+    wys: 0.9,
+    efekt: { typ: 'surowce' },
+    znika: true,
+    pokeballe: OGNISKO_POKEBALLE,
+  },
+  chatka: {
+    nazwa: 'Chatka Skrzata',
+    opis: 'Garść surowca ze schowka',
+    plik: 'chatka',
+    wys: 1.2,
+    efekt: { typ: 'surowce' },
+    znika: true,
+  },
+  woz: {
+    nazwa: 'Wóz Kupca',
+    opis: 'Porzucony ładunek: surowce albo artefakt',
+    plik: 'woz',
+    wys: 1.3,
+    efekt: { typ: 'surowce' },
+    znika: true,
+  },
+};
+
+export const budowlaPoId = (id: string | undefined) => (id ? BUDOWLE[id] : undefined);
 
 export interface Obiekt {
   id: number;
@@ -155,6 +332,19 @@ export interface Obiekt {
    * jest wyborem.
    */
   budowanoDnia?: number;
+  /**
+   * Budowla odwiedzana: identyfikator z `BUDOWLE`. Wszystkie czternaście
+   * siedzi pod jednym rodzajem obiektu i różni się właśnie tym polem.
+   */
+  budynek?: string;
+  /**
+   * Którego dnia budowla była użyta ostatni raz. Z tego liczy się `odnowa`:
+   * źródło działa raz dziennie, wiatrak i ranczo raz na tydzień, a budowla
+   * bez `odnowy` — raz na zawsze.
+   */
+  uzyteDnia?: number;
+  /** Portal: numer bliźniaczego portalu, do którego przenosi. */
+  para?: number;
 }
 
 /**
@@ -208,6 +398,12 @@ export interface Bohater {
   /** Zebrane artefakty (identyfikatory z `ARTEFAKTY`). */
   artefakty: string[];
   doswiadczenie: number;
+  /**
+   * Do którego dnia włącznie trwa dodatek do ruchu z ranczo. Trzymamy datę
+   * końca, a nie licznik dni: licznik trzeba by zmniejszać co turę i każde
+   * pominięcie tury (bitwa, wczytanie stanu) rozjeżdżałoby go z kalendarzem.
+   */
+  bonusRuchuDo?: number;
 }
 
 /**
@@ -272,6 +468,18 @@ export function statystyki(b: Bohater) {
   return { atak, obrona, ruchMax };
 }
 
+/**
+ * Zapas ruchu na dziś: maksimum bohatera plus dodatek z ranczo, jeśli jeszcze
+ * trwa. Jedno miejsce, bo liczą to trzy: nowa tura, źródło mocy i panel.
+ */
+export function ruchNaDzis(s: StanMapy): number {
+  const bonus =
+    s.bohater.bonusRuchuDo !== undefined && s.dzien <= s.bohater.bonusRuchuDo
+      ? STAJNIA_BONUS
+      : 0;
+  return statystyki(s.bohater).ruchMax + bonus;
+}
+
 /** Poziom bohatera z doświadczenia. Progi rosną, jak w Heroes 3. */
 export function poziom(doswiadczenie: number) {
   let p = 1;
@@ -308,10 +516,13 @@ export interface StanMapy {
   bryly?: Set<string>;
 }
 
-/** Odsłania mgłę wokół bohatera. Zwraca, ile pól przybyło. */
-export function odslon(s: StanMapy, promien = PROMIEN_WIDZENIA): number {
+/**
+ * Odsłania mgłę wokół bohatera — albo wokół dowolnego pola, bo wieża
+ * obserwacyjna odsłania okolicę WIEŻY, a nie tego, kto na nią wszedł.
+ */
+export function odslon(s: StanMapy, promien = PROMIEN_WIDZENIA, srodek?: Pole): number {
   let nowe = 0;
-  const { x, y } = s.bohater;
+  const { x, y } = srodek ?? s.bohater;
   for (let dy = -promien; dy <= promien; dy++) {
     for (let dx = -promien; dx <= promien; dx++) {
       // Koło, nie kwadrat — inaczej odsłonięty obszar ma widoczne rogi
@@ -357,6 +568,17 @@ export const BRYLA: Partial<Record<RodzajObiektu, [number, number]>> = {
 };
 
 /**
+ * Bryła konkretnego obiektu. Rodzaj wystarczał, dopóki wszystkie budowle
+ * jednego rodzaju były tej samej wielkości — a budowle odwiedzane nie są:
+ * arena i ośrodek ewolucji zajmują trzy pola, ognisko i chatka jedno.
+ * Wielkość siedzi więc przy budowli, a nie przy rodzaju.
+ */
+export function brylaObiektu(o: Obiekt): [number, number] | undefined {
+  if (o.rodzaj === 'budynek') return budowlaPoId(o.budynek)?.bryla;
+  return BRYLA[o.rodzaj];
+}
+
+/**
  * Pola zajęte przez bryłę obiektu, BEZ wejścia.
  *
  * Pole, które wypadłoby poza mapą, na nieprzejezdnym terenie albo na innym
@@ -365,7 +587,7 @@ export const BRYLA: Partial<Record<RodzajObiektu, [number, number]>> = {
  * zamek przy skале dostanie węższy bok i tyle.
  */
 export function polaBryly(s: StanMapy, o: Obiekt): Pole[] {
-  const rozmiar = BRYLA[o.rodzaj];
+  const rozmiar = brylaObiektu(o);
   if (!rozmiar || o.zebrany) return [];
   const [szer, wys] = rozmiar;
   const pola: Pole[] = [];
@@ -570,6 +792,28 @@ export interface WynikWejscia {
    * doda — to jest cała mechanika skrzyni w Heroes 3 i bez pytania znika.
    */
   wybor?: WyborSkrzyni;
+  /**
+   * Budowla stawia pytanie: arena pyta o statystykę, ośrodek ewolucji o zgodę
+   * na ulepszenie. Skrzynia ma własne `wybor`, bo jej okno pokazuje dwie
+   * konkretne nagrody, a nie listę odpowiedzi.
+   */
+  pytanie?: Pytanie;
+  /** Portal: dokąd przenosi. Scena przestawia bohatera i odsłania mgłę. */
+  przenies?: Pole;
+  /** Coś odsłoniło mgłę poza ruchem bohatera — scena musi ją przerysować. */
+  odkryto?: boolean;
+}
+
+/**
+ * Pytanie budowli. Ta sama konstrukcja obsługuje arenę (dwie statystyki)
+ * i ośrodek ewolucji (ulepszać czy nie), bo z punktu widzenia sceny to jedno
+ * i to samo: okno, kilka przycisków, jedna odpowiedź.
+ */
+export interface Pytanie {
+  obiekt: Obiekt;
+  tytul: string;
+  tresc: string;
+  opcje: Array<{ klucz: string; etykieta: string }>;
 }
 
 export interface WyborSkrzyni {
@@ -589,8 +833,195 @@ export function wezZeSkrzyni(s: StanMapy, w: WyborSkrzyni, co: 'pokeballe' | 'do
   return `+${w.doswiadczenie} doświadczenia`;
 }
 
+/**
+ * Oddział, który da się ulepszyć w Ośrodku Ewolucji, i to, co z niego wyjdzie.
+ *
+ * Bierzemy PIERWSZY oddział, który ma dokąd awansować — nie najsilniejszy
+ * i nie wybrany z listy. Wybór oddziału to trzecie okno z rzędu na jednym
+ * polu, a różnica między awansem drobnicy a awansem czempiona jest dla
+ * ośmiolatka niewidoczna; liczba w karcie armii rośnie tak czy inaczej.
+ */
+export function doUlepszenia(b: Bohater) {
+  for (let i = 0; i < b.armia.length; i++) {
+    const o = b.armia[i];
+    if (o.tier >= 5) continue;
+    const f = factionById(o.frakcja);
+    if (!f) continue;
+    const z = f.units[o.tier];
+    const na = f.units[o.tier + 1];
+    // Liczebność spada w proporcji, w jakiej stoją te poziomy w drzewku
+    // frakcji — inaczej ulepszenie byłoby czystym zyskiem i nie byłoby czego
+    // rozważać. Nigdy poniżej jednego: oddział nie może zniknąć w nagrodę.
+    const ile = Math.max(1, Math.round((o.ile * na.count) / z.count));
+    return { indeks: i, oddzial: o, na, ile };
+  }
+  return undefined;
+}
+
+/** Rozstrzygnięcie pytania budowli (arena, ośrodek ewolucji). */
+export function odpowiedzNaPytanie(s: StanMapy, p: Pytanie, klucz: string): string {
+  const o = p.obiekt;
+  const b = budowlaPoId(o.budynek);
+  if (klucz === 'nie') return 'Może innym razem';
+
+  if (b?.efekt.typ === 'arena') {
+    o.uzyteDnia = s.dzien;
+    if (klucz === 'atak') {
+      s.bohater.atak += ARENA_BONUS;
+      return `+${ARENA_BONUS} do ataku`;
+    }
+    s.bohater.obrona += ARENA_BONUS;
+    return `+${ARENA_BONUS} do obrony`;
+  }
+
+  if (b?.efekt.typ === 'ewolucja') {
+    const u = doUlepszenia(s.bohater);
+    if (!u) return 'Nie ma czego ulepszać';
+    if (s.skarbiec.kamien < EWOLUCJA_KOSZT) return 'Za mało kamieni ewolucji';
+    s.skarbiec.kamien -= EWOLUCJA_KOSZT;
+    const stara = u.oddzial.nazwa;
+    s.bohater.armia[u.indeks] = {
+      sprite: u.na.sprite,
+      nazwa: u.na.name,
+      ile: u.ile,
+      frakcja: u.oddzial.frakcja,
+      tier: u.oddzial.tier + 1,
+    };
+    return `${stara} ewoluuje!\n${u.ile} × ${u.na.name}`;
+  }
+
+  return '';
+}
+
+/**
+ * Wejście na budowlę odwiedzaną. Cała czternastka idzie tędy: co budowla robi,
+ * mówi jej wpis w `BUDOWLE`, a nie kolejna gałąź w `odwiedz`.
+ */
+function odwiedzBudowle(s: StanMapy, o: Obiekt): WynikWejscia {
+  const b = budowlaPoId(o.budynek);
+  if (!b) return { opis: o.nazwa };
+
+  // Czy już z niej korzystaliśmy. `odnowa` równa 0 znaczy „zawsze wolno"
+  // (portal, ośrodek ewolucji), brak `odnowy` — „raz na zawsze".
+  if (o.uzyteDnia !== undefined && b.odnowa !== 0) {
+    if (b.odnowa === undefined) return { opis: `${b.nazwa}\nTu już byliśmy` };
+    const zostalo = b.odnowa - (s.dzien - o.uzyteDnia);
+    if (zostalo > 0)
+      return { opis: `${b.nazwa}\nWróć za ${zostalo} ${zostalo === 1 ? 'dzień' : 'dni'}` };
+  }
+
+  const e = b.efekt;
+
+  if (e.typ === 'staty') {
+    o.uzyteDnia = s.dzien;
+    s.bohater.atak += e.atak ?? 0;
+    s.bohater.obrona += e.obrona ?? 0;
+    const co = e.atak ? `+${e.atak} do ataku` : `+${e.obrona} do obrony`;
+    return { opis: `${b.nazwa}\n${co}` };
+  }
+
+  if (e.typ === 'arena')
+    return {
+      opis: '',
+      pytanie: {
+        obiekt: o,
+        tytul: b.nazwa,
+        tresc: 'Czego chcesz się nauczyć?',
+        opcje: [
+          { klucz: 'atak', etykieta: `+${ARENA_BONUS} ataku` },
+          { klucz: 'obrona', etykieta: `+${ARENA_BONUS} obrony` },
+        ],
+      },
+    };
+
+  if (e.typ === 'doswiadczenie') {
+    o.uzyteDnia = s.dzien;
+    // Tyle, ile brakuje do następnego poziomu — czyli awans od ręki, ale nie
+    // za darmo na wysokim poziomie, gdzie brakować może dużo więcej.
+    const p = postepPoziomu(s.bohater.doswiadczenie);
+    const ile = Math.max(DRZEWO_WIEDZY_MIN, p.doAwansu - p.wPoziomie);
+    s.bohater.doswiadczenie += ile;
+    return { opis: `${b.nazwa}\n+${ile} doświadczenia` };
+  }
+
+  if (e.typ === 'odslona') {
+    o.uzyteDnia = s.dzien;
+    const nowe = odslon(s, OBSERWATORIUM_PROMIEN, { x: o.x, y: o.y });
+    return { opis: `${b.nazwa}\nWidać stąd całą okolicę`, odkryto: nowe > 0 };
+  }
+
+  if (e.typ === 'stajnia') {
+    o.uzyteDnia = s.dzien;
+    // Dzień odwiedzin liczy się jako pierwszy z trzech — inaczej „przez trzy
+    // dni" znaczyłoby cztery: dziś i trzy następne.
+    s.bohater.bonusRuchuDo = s.dzien + STAJNIA_DNI - 1;
+    s.bohater.ruch += STAJNIA_BONUS;
+    return { opis: `${b.nazwa}\n+${STAJNIA_BONUS} ruchu przez ${STAJNIA_DNI} dni` };
+  }
+
+  if (e.typ === 'zrodlo') {
+    o.uzyteDnia = s.dzien;
+    s.bohater.ruch = ruchNaDzis(s);
+    return { opis: `${b.nazwa}\nSiły wróciły — pełen zapas ruchu` };
+  }
+
+  if (e.typ === 'portal') {
+    const drugi = s.obiekty.find((i) => i.id === o.para);
+    if (!drugi) return { opis: `${b.nazwa}\nNic się nie dzieje` };
+    return { opis: `${b.nazwa}\nPrzeskok!`, przenies: { x: drugi.x, y: drugi.y } };
+  }
+
+  if (e.typ === 'gniazdo') {
+    if (o.nasz) return { opis: `${b.nazwa} — już twoje` };
+    o.nasz = true;
+    return { opis: `${b.nazwa} jest twoje!\nOddziały czekają w zamku`, zajete: o };
+  }
+
+  if (e.typ === 'ewolucja') {
+    const u = doUlepszenia(s.bohater);
+    if (!u) return { opis: `${b.nazwa}\nNie ma czego ulepszać` };
+    if (s.skarbiec.kamien < EWOLUCJA_KOSZT)
+      return { opis: `${b.nazwa}\nPotrzeba ${EWOLUCJA_KOSZT} kamieni ewolucji` };
+    return {
+      opis: '',
+      pytanie: {
+        obiekt: o,
+        tytul: b.nazwa,
+        tresc: `${u.oddzial.nazwa} → ${u.na.name} (${u.ile})`,
+        opcje: [
+          { klucz: 'tak', etykieta: `Za ${EWOLUCJA_KOSZT} kamienie` },
+          { klucz: 'nie', etykieta: 'Nie teraz' },
+        ],
+      },
+    };
+  }
+
+  // Drobiazgi: wóz z artefaktem, ognisko z pokeballami, reszta z surowcem.
+  o.uzyteDnia = s.dzien;
+  if (o.artefakt) {
+    o.zebrany = true;
+    const a = artefaktPoId(o.artefakt);
+    if (a) s.bohater.artefakty.push(a.id);
+    return { opis: a ? `${b.nazwa}\nZnaleziono: ${a.nazwa}` : b.nazwa };
+  }
+  const co = o.surowiec ?? 'pokeball';
+  const czesci: string[] = [];
+  if (o.ile) {
+    s.skarbiec[co] += o.ile;
+    czesci.push(`+${o.ile} ${SUROWIEC_INFO[co].dopelniacz}`);
+  }
+  if (b.pokeballe) {
+    s.skarbiec.pokeball += b.pokeballe;
+    czesci.push(`+${b.pokeballe} pokeballi`);
+  }
+  if (b.znika) o.zebrany = true;
+  return { opis: `${b.nazwa}\n${czesci.join(', ')}` };
+}
+
 /** Wejście na pole z obiektem: zbiera, zajmuje albo zaczyna bitwę. */
 export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
+  if (o.rodzaj === 'budynek') return odwiedzBudowle(s, o);
+
   if (o.rodzaj === 'potwor') return { opis: `${o.nazwa} zagradza drogę!`, bitwaZ: o };
 
   if (o.rodzaj === 'surowiec') {
@@ -678,7 +1109,7 @@ export function dochod(s: StanMapy): Partial<Record<Surowiec, number>> {
 /** Nowa tura: odnawia ruch, dolicza dochód z zajętych budynków. */
 export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
   s.dzien++;
-  s.bohater.ruch = statystyki(s.bohater).ruchMax;
+  s.bohater.ruch = ruchNaDzis(s);
   const wplyw = dochod(s);
   for (const [co, ile] of Object.entries(wplyw)) {
     s.skarbiec[co as Surowiec] += ile;
@@ -698,6 +1129,21 @@ export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
       // zmieniała niczego poza opisem.
       const przyrost = przyrostZamku(o.postawione ?? [], PRZYROST_ODDZIALU);
       o.dostepne = o.dostepne.map((ile, t) => Math.min(ile + przyrost[t], 99));
+    }
+  }
+  // Zajęte gniazda hodują do NASZEGO zamku, bo rekrutuje się w mieście.
+  //
+  // W Heroes 3 werbuje się wprost w siedlisku na mapie, ale to znaczyłoby
+  // trzeci ekran werbunku (mapa, miasto, gniazdo) na tę samą czynność.
+  // Gniazdo daje więc to samo, co siedlisko tego poziomu w mieście — tyle że
+  // trzeba po nie pojechać i utrzymać je po swojej stronie mapy.
+  const nasz = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.nasz);
+  if (nasz?.dostepne) {
+    for (const o of s.obiekty) {
+      if (o.rodzaj !== 'budynek' || !o.nasz) continue;
+      if (budowlaPoId(o.budynek)?.efekt.typ !== 'gniazdo') continue;
+      const t = GNIAZDO_TIER;
+      nasz.dostepne[t] = Math.min(nasz.dostepne[t] + PRZYROST_ODDZIALU[t], 99);
     }
   }
   return wplyw;

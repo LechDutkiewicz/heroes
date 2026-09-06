@@ -195,6 +195,104 @@ for (const nr of [1, 2, 3]) {
   sprawdz(`po bitwie ${nr} da się sterować`, po === false);
 }
 
+// ---------------------------------------------------------------------------
+// 3. Okno budowli (arena) i przeskok portalem
+// ---------------------------------------------------------------------------
+//
+// Okno areny jest zbudowane tak samo jak okno skrzyni, a to znaczy, że może
+// wpaść w tę samą pułapkę z kolejnością kamer. Portal jest jeszcze gorszym
+// kandydatem na zwis: przestawia bohatera POZA pętlą ruchu, więc gdyby scena
+// nie odświeżyła mgły i kamery, gracz zostałby w czarnej plamie bez sterowania.
+console.log('\n=== budowle: okno areny i przeskok portalem ===');
+
+const wejdzNaBudowle = async (id) => {
+  const cel = await page.evaluate((budynek) => {
+    const s = window.__game.scene.getScene('adventure');
+    const o = s.stan.obiekty.find((x) => x.budynek === budynek && !x.zebrany);
+    if (!o) return null;
+    s.stan.bohater.x = o.x;
+    s.stan.bohater.y = o.y + 1;
+    s.stan.bohater.ruch = 3000;
+    s.stan.odkryte.forEach((w, y) => w.forEach((_, x) => (s.stan.odkryte[y][x] = true)));
+    s.wysrodkujNaBohaterze(false);
+    return { x: o.x, y: o.y };
+  }, id);
+  if (!cel) return null;
+  await page.waitForTimeout(400);
+  const p = await page.evaluate((c) => {
+    const s = window.__game.scene.getScene('adventure');
+    return {
+      x: 8 + c.x * 48 + 24 - (s.kamera?.scrollX ?? 0),
+      y: 44 + c.y * 48 + 24 - (s.kamera?.scrollY ?? 0),
+    };
+  }, cel);
+  await klikNaPlotnie(page, p.x, p.y);
+  await page.waitForTimeout(250);
+  await klikNaPlotnie(page, p.x, p.y);
+  await page.waitForTimeout(1600);
+  return cel;
+};
+
+await wejdzNaBudowle('arena');
+const oknoAreny = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const kamery = s.cameras.cameras;
+  const iMapy = kamery.indexOf(s.kamera);
+  const okno = s.children.list.filter((o) => o.depth >= 200);
+  const widzi = (kam) => okno.length > 0 && okno.every((o) => (kam.id & o.cameraFilter) === 0);
+  return {
+    czesci: okno.length,
+    zajety: s.zajety,
+    naWierzchu: kamery.some((k, i) => i > iMapy && widzi(k)),
+    obrona: s.stan.bohater.obrona,
+  };
+});
+sprawdz('wejście na arenę otwiera okno wyboru', oknoAreny.czesci > 0 && oknoAreny.zajety === true, `${oknoAreny.czesci} części`);
+sprawdz('okno areny widać nad planszą', oknoAreny.naWierzchu === true);
+
+// PRAWY przycisk (cx + 86): druga opcja, czyli obrona. Okno areny ma tę samą
+// siatkę co okno skrzyni, więc te same współrzędne trafiają w ten sam przycisk.
+await klikNaPlotnie(page, 8 + 336 + 86, 44 + 288 + 36);
+await page.waitForTimeout(700);
+const poArenie = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  return {
+    zajety: s.zajety,
+    obrona: s.stan.bohater.obrona,
+    resztki: s.children.list.filter((o) => o.depth >= 200).length,
+  };
+});
+sprawdz(
+  'wybór w arenie działa i oddaje sterowanie',
+  poArenie.zajety === false && poArenie.obrona > oknoAreny.obrona,
+  `obrona ${oknoAreny.obrona} → ${poArenie.obrona}`
+);
+sprawdz('po arenie nic z okna nie zostaje', poArenie.resztki === 0, `${poArenie.resztki} obiektów`);
+
+const przedPortalem = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const p = s.stan.obiekty.filter((o) => o.budynek === 'portal');
+  return { ile: p.length, cel: p[0] ? { x: p[0].x, y: p[0].y, para: p[0].para } : null };
+});
+if (przedPortalem.ile >= 2) {
+  await wejdzNaBudowle('portal');
+  const poPortalu = await page.evaluate(() => {
+    const s = window.__game.scene.getScene('adventure');
+    const drugi = s.stan.obiekty.find((o) => o.id === s.stan.obiekty.find((x) => x.budynek === 'portal').para);
+    return {
+      bohater: { x: s.stan.bohater.x, y: s.stan.bohater.y },
+      drugi: { x: drugi.x, y: drugi.y },
+      zajety: s.zajety,
+    };
+  });
+  sprawdz(
+    'portal przenosi bohatera na bliźniaka',
+    poPortalu.bohater.x === poPortalu.drugi.x && poPortalu.bohater.y === poPortalu.drugi.y,
+    `${poPortalu.bohater.x},${poPortalu.bohater.y}`
+  );
+  sprawdz('po przeskoku da się dalej sterować', poPortalu.zajety === false);
+}
+
 console.log(`\n${bledy === 0 ? 'Wszystko się zgadza.' : `Błędów: ${bledy}`}`);
 await browser.close();
 process.exit(bledy === 0 ? 0 : 1);
