@@ -67,6 +67,25 @@ się widocznym wzorem.
       `tools/slice_tileset.py`, `tools/prepare_terrain.py` — nic ich już
       nie czyta.
 
+## Pułapka wsadu: szachownica wypalona w piksele
+
+Osiem plików (`arena`, `chatka`, `gniazdo`, `ognisko`, `ranczo`, `wiatrak`,
+`woz`, `zrodlo`) przyszło z modelu z **narysowaną szachownicą przezroczystości**
+— modelowi pokazano widok z edytora i odrysował go razem z szarą kratą. Krata ma
+dwie szarości, około 125 i 195, więc próg 232 w `bezTla` jej nie widział i sprite
+trafiał do gry jako nieprzezroczysty szary prostokąt na trawie.
+
+Rozpoznaje ją **niebarwność**, nie jasność: krata ma nasycenie poniżej 8, a bryły
+z wsadu medianę 67–149. Ale sama niebarwność nie może być regułą domyślną, bo
+kamienie też są szare i jasne — wypełnienie zjadło pół głazu w `skala-plaska`.
+Dlatego najpierw idzie reguła biała, a szara wchodzi tylko wtedy, gdy tamta nie
+znalazła tła (mniej niż 5% kadru).
+
+**Sam potok tego nie łapał.** Grafiki przeszły przez wczytanie, wszystkie sondy
+i deploy, bo żadne sprawdzenie nie patrzyło na sam obrazek — sondy pytają
+o położenia i liczby, nie o piksele. Teraz `zapisz()` odmawia zapisania sprite'a
+bez ani jednego przezroczystego piksela, więc błąd wywala się tam, gdzie powstaje.
+
 ## Czego NIE robić po drodze
 
 - nie ruszać sprite'ów stworków — 270 plików, to one wyznaczają styl;
