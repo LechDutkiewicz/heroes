@@ -19,6 +19,13 @@ const BASE = arg('--url', 'http://localhost:4173');
 const OUT = arg('--out', 'tools/shots/bohater.png');
 const STAN = arg('--stan', 'pelny');
 const OKNO = process.argv.includes('--okno');
+/**
+ * Skala zrzutu. Do oglądania wystarczy 1, ale do ślepego porównania z grą
+ * renderowaną w 1080p trzeba 2: kadry idą w rozdzielczości własnej, bez
+ * skalowania, więc przy skali 1 nasz detal byłby o połowę drobniejszy od
+ * wzorcowego i krytyk oceniałby rozdzielczość, a nie rzemiosło.
+ */
+const SKALA = Number(arg('--skala', '1'));
 
 /**
  * Trzy stany pokazowe. „Pełny" jest tym, z którego robimy porównania: ekran
@@ -32,7 +39,10 @@ const STANY = {
 };
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const page = await browser.newPage({ viewport: { width: 960, height: 694 } });
+const page = await browser.newPage({
+  viewport: { width: 960, height: 694 },
+  deviceScaleFactor: SKALA,
+});
 page.on('pageerror', (e) => console.log('BŁĄD JS —', String(e)));
 
 const scena = (n) =>
