@@ -113,7 +113,7 @@ console.log('--- podział ---');
 {
   const a = armia(od('a', 1));
   sprawdz('jeden stworek nie ma się jak podzielić', maksPodzialu(a, 0, 1) === 0);
-  sprawdz('zamiar dla jednego stworka to przeniesienie', zamiar(a, 0, 1, 'brak').rodzaj === 'przenies');
+  sprawdz('zamiar dla jednego stworka to przeniesienie', zamiar(a, 0, 1, 'okno').rodzaj === 'przenies');
 }
 
 console.log('--- skróty (Shift, Ctrl) ---');
@@ -133,6 +133,7 @@ console.log('--- skróty (Shift, Ctrl) ---');
   const a = armia(od('a', 1));
   sprawdz('Shift na jednym stworku nic nie daje', ileNaSkrot(a, 0, 1, 'polowa') === 0);
   sprawdz('zamiar ze skrótem przy jednym: nic', zamiar(a, 0, 1, 'jeden').rodzaj === 'nic');
+  sprawdz('jeden stworek przenosi się bez klawisza', zamiar(a, 0, 1, 'brak').rodzaj === 'przenies');
 }
 {
   const a = armia(od('a', 2));
@@ -142,7 +143,10 @@ console.log('--- skróty (Shift, Ctrl) ---');
 console.log('--- zamiar (co scena ma pokazać przed puszczeniem) ---');
 {
   const a = armia(od('a', 10), od('a', 3), od('b', 5));
-  sprawdz('pusty cel → okno podziału', zamiar(a, 0, 4, 'brak').rodzaj === 'okno');
+  // Zwykłe przeciągnięcie na puste miejsce PRZENOSI. Okno z liczbą jest pod
+  // Altem — przełożenie oddziału robi się dużo częściej niż podział.
+  sprawdz('pusty cel bez klawisza → przeniesienie', zamiar(a, 0, 4, 'brak').rodzaj === 'przenies');
+  sprawdz('pusty cel z Altem → okno podziału', zamiar(a, 0, 4, 'okno').rodzaj === 'okno');
   sprawdz('ten sam gatunek → scalenie', zamiar(a, 0, 1, 'brak').rodzaj === 'scal');
   sprawdz('inny gatunek → zamiana', zamiar(a, 0, 2, 'brak').rodzaj === 'zamien');
   const skrot = zamiar(a, 0, 4, 'polowa');
@@ -176,9 +180,17 @@ console.log('--- werbunek i normalizacja ---');
 console.log('--- próba losowa: 40 000 ruchów ---');
 {
   let ziarno = 12345;
+  // Bierzemy STARSZE bity, nie reszty z dzielenia całego stanu.
+  //
+  // Młodsze bity generatora liniowego cyklują z okresem równym podstawie:
+  // przy `ziarno % 4` losowanie skrótu wychodziło prawie stałe i w 40 000
+  // ruchach wypadło 27 podziałów zamiast tysięcy. Sonda przechodziła dalej
+  // na zielono, bo mierzyła to, co i tak się działo — wyszło dopiero wtedy,
+  // gdy próg „podziały się działy" przestał być spełniony. Reszta z dzielenia
+  // przez 7 działała, bo 7 nie jest potęgą dwójki.
   const los = (n: number) => {
     ziarno = (ziarno * 1103515245 + 12345) & 0x7fffffff;
-    return ziarno % n;
+    return ((ziarno >>> 15) & 0xffff) % n;
   };
 
   const gatunki = ['a', 'b', 'c', 'd'];
@@ -196,7 +208,7 @@ console.log('--- próba losowa: 40 000 ruchów ---');
   for (let k = 0; k < 40000; k++) {
     const z = los(SLOTY_ARMII);
     const doc = los(SLOTY_ARMII);
-    const skrot = (['brak', 'polowa', 'jeden'] as const)[los(3)];
+    const skrot = (['brak', 'polowa', 'jeden', 'okno'] as const)[los(4)];
     const co = zamiar(a, z, doc, skrot);
     const przed = lacznie(a);
 

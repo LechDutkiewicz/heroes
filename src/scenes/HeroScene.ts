@@ -56,8 +56,15 @@ import {
   ileNaSkrot,
   znormalizuj,
   zywe,
+  type Skrot,
 } from '../data/armia';
 import { planszaPrzygody } from '../data/plansza';
+import {
+  MAKS_UMIEJETNOSCI,
+  POZIOMY,
+  opisWartosci,
+  posiadane,
+} from '../data/umiejetnosci';
 import { C, E, H, T, Z, body, display } from '../visual/theme';
 import { makeHudButton, mix, plate } from '../visual/hud';
 import { ICON, buildIcons, icon } from '../visual/icons';
@@ -87,8 +94,6 @@ const TRESC_H = 388;
 const SLOT_BOK = 92;
 const SLOT_ODSTEP = 12;
 const ARMIA_Y = TRESC_Y + TRESC_H + 32;
-
-type Skrot = 'brak' | 'polowa' | 'jeden';
 
 /** Kolejność klas — karta pokazuje domyślnie najmocniejszy noszony artefakt. */
 const WAGA_KLASY = { drobny: 1, znaczny: 2, relikt: 3 } as const;
@@ -643,30 +648,36 @@ export class HeroScene extends Phaser.Scene {
   private rysujUmiejetnosci() {
     this.pole(UMIEJ.x, TRESC_Y, UMIEJ.w, TRESC_H, 'UMIEJĘTNOŚCI');
 
+    const mam = posiadane(this.stan.bohater);
     const bok = (UMIEJ.w - 3 * 14) / 2;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < MAKS_UMIEJETNOSCI; i++) {
       const gx = UMIEJ.x + 14 + (i % 2) * (bok + 14);
       const gy = TRESC_Y + 46 + Math.floor(i / 2) * (bok + 16);
+      const wpis = mam[i];
       const g = this.add.graphics().setDepth(Z.hud + 2);
-      // Gniazdo puste ma być ZAPROJEKTOWANYM kształtem, nie przerywaną kreską
-      // wokół pustego pola. Przerywany obrys mówi „tu nic nie ma"; wnęka
-      // z okuciami i wygaszonym medalionem mówi „tu coś stanie" — a to jest
-      // różnica między brakiem a przygotowanym miejscem.
+      // Gniazdo jest tym samym kształtem zajęte i puste — zmienia się tylko
+      // to, co w nim stoi. Inaczej zdobycie umiejętności wyglądałoby jak
+      // podmiana całej karty, a nie jak wypełnienie przygotowanego miejsca.
       wneka(g, gx, gy, bok, bok, 10);
       faktura(g, gx + 4, gy + 4, bok - 8, bok - 8, 0.03);
       const cx = gx + bok / 2;
       const cy = gy + bok / 2 - 8;
 
-      // Medalion w środku: ten sam pierścień co przy portrecie, tylko mniejszy
-      // i przygaszony — gniazdo zapowiada kształt, który je kiedyś wypełni.
-      // Romb fazowany: cztery ściany, każda z własną jasnością zgodną z jednym
-      // źródłem światła z góry-lewej. Dwa koncentryczne kółka z rombem
-      // w środku, które tu wcześniej stały, krytyk nazwał wprost „bez fazy
-      // i bez kierunku światła" — bo nim były.
-      const med = this.add.graphics().setDepth(Z.hud + 2).setAlpha(0.62);
+      const med = this.add.graphics().setDepth(Z.hud + 2).setAlpha(wpis ? 1 : 0.5);
       pierscien(med, cx, cy, 25, 6);
+      // Romb fazowany: cztery ściany, każda z własną jasnością zgodną z jednym
+      // źródłem światła z góry-lewej. Poziom umiejętności czyta się z liczby
+      // ścian w pełnym złocie — mistrzowska świeci cała.
       const rr = 14;
-      const sciana = (x1: number, y1: number, x2: number, y2: number, barwa: number, a: number) => {
+      const jasnosc = wpis ? wpis.poziom : 0;
+      const sciana = (
+        x1: number,
+        y1: number,
+        x2: number,
+        y2: number,
+        barwa: number,
+        a: number
+      ) => {
         med.fillStyle(barwa, a);
         med.beginPath();
         med.moveTo(cx, cy);
@@ -675,10 +686,10 @@ export class HeroScene extends Phaser.Scene {
         med.closePath();
         med.fillPath();
       };
-      sciana(cx, cy - rr, cx - rr, cy, C.goldLight, 0.95); // górna lewa — pełne światło
-      sciana(cx, cy - rr, cx + rr, cy, C.gold, 0.8); // górna prawa
-      sciana(cx, cy + rr, cx - rr, cy, C.goldDeep, 0.8); // dolna lewa
-      sciana(cx, cy + rr, cx + rr, cy, C.shadow, 0.45); // dolna prawa — cień
+      sciana(cx, cy - rr, cx - rr, cy, C.goldLight, 0.95);
+      sciana(cx, cy - rr, cx + rr, cy, jasnosc >= 2 ? C.goldLight : C.gold, 0.85);
+      sciana(cx, cy + rr, cx - rr, cy, jasnosc >= 3 ? C.gold : C.goldDeep, 0.85);
+      sciana(cx, cy + rr, cx + rr, cy, jasnosc >= 3 ? C.goldDeep : C.shadow, 0.5);
       med.lineStyle(1.5, C.shadow, 0.6);
       med.beginPath();
       med.moveTo(cx, cy - rr);
@@ -688,11 +699,12 @@ export class HeroScene extends Phaser.Scene {
       med.closePath();
       med.strokePath();
 
-      const ozdoby = this.add.graphics().setDepth(Z.hud + 2).setAlpha(0.55);
+      const ozdoby = this.add.graphics().setDepth(Z.hud + 2).setAlpha(wpis ? 0.85 : 0.55);
       naroznik(ozdoby, gx + 4, gy + 4, 1, 1, 13);
       naroznik(ozdoby, gx + bok - 4, gy + 4, -1, 1, 13);
       naroznik(ozdoby, gx + 4, gy + bok - 4, 1, -1, 13);
       naroznik(ozdoby, gx + bok - 4, gy + bok - 4, -1, -1, 13);
+
       const sy2 = gy + bok - 46;
       g.lineStyle(1.5, C.shadow, 0.5);
       g.beginPath();
@@ -704,34 +716,65 @@ export class HeroScene extends Phaser.Scene {
       g.moveTo(gx + 20, sy2 + 1.5);
       g.lineTo(gx + bok - 20, sy2 + 1.5);
       g.strokePath();
-      // Numer gniazda w oczku na przecięciu separatora — ten sam zabieg, co
-      // liczba poziomu w obręczy portretu, więc ekran mówi jednym językiem.
       g.fillStyle(mix(C.panelDeep, C.shadow, 0.45), 1);
       g.fillCircle(cx, sy2, 11);
       g.lineStyle(2, C.goldDeep, 0.9);
       g.strokeCircle(cx, sy2, 11);
       this.add
-        .text(cx, sy2, String(i + 1), { ...body(11, H.goldLight), fontStyle: 'bold' })
-        .setOrigin(0.5)
-        .setDepth(Z.hud + 3)
-        .setAlpha(0.8);
-
-      this.add
-        .text(cx, gy + bok - 26, 'MIEJSCE NA UMIEJĘTNOŚĆ', {
-          ...body(8.5, H.goldLight),
-          align: 'center',
+        .text(cx, sy2, wpis ? String(wpis.poziom) : String(i + 1), {
+          ...body(11, H.goldLight),
           fontStyle: 'bold',
         })
         .setOrigin(0.5)
         .setDepth(Z.hud + 3)
-        .setAlpha(0.75);
+        .setAlpha(wpis ? 1 : 0.8);
+
+      if (wpis) {
+        this.add
+          .text(cx, gy + bok - 36, wpis.u.nazwa.toUpperCase(), {
+            ...body(10, H.goldLight),
+            fontStyle: 'bold',
+            letterSpacing: 1,
+          })
+          .setOrigin(0.5)
+          .setDepth(Z.hud + 3);
+        this.add
+          .text(cx, gy + bok - 20, `${POZIOMY[wpis.poziom - 1]}   ${opisWartosci(wpis.u, wpis.poziom)}`, {
+            ...body(9, '#cfe6f2'),
+            align: 'center',
+          })
+          .setOrigin(0.5)
+          .setDepth(Z.hud + 3)
+          .setWordWrapWidth(bok - 20);
+        this.add
+          .zone(gx, gy, bok, bok)
+          .setOrigin(0, 0)
+          .setDepth(Z.hud + 4)
+          .setInteractive()
+          .on('pointerover', () =>
+            this.powiedz(`${wpis.u.nazwa} (${POZIOMY[wpis.poziom - 1]}) — ${wpis.u.opis}`)
+          )
+          .on('pointerout', () => this.powiedz());
+      } else {
+        this.add
+          .text(cx, gy + bok - 26, 'MIEJSCE NA UMIEJĘTNOŚĆ', {
+            ...body(8.5, H.goldLight),
+            align: 'center',
+            fontStyle: 'bold',
+          })
+          .setOrigin(0.5)
+          .setDepth(Z.hud + 3)
+          .setAlpha(0.75);
+      }
     }
 
     this.add
       .text(
         UMIEJ.x + UMIEJ.w / 2,
         TRESC_Y + TRESC_H - 34,
-        'Umiejętności wchodzą do gry później.\nMiejsce na nie jest już przygotowane.',
+        mam.length
+          ? `${mam.length} z ${MAKS_UMIEJETNOSCI} gniazd — kolejne wybierasz przy awansie.`
+          : 'Umiejętność wybiera się przy awansie na nowy poziom.\nMiejsce na cztery jest już przygotowane.',
         { ...body(11, '#cfe6f2'), align: 'center' }
       )
       .setOrigin(0.5)
@@ -847,6 +890,7 @@ export class HeroScene extends Phaser.Scene {
     const e = p.event as MouseEvent | undefined;
     if (e?.shiftKey) return 'polowa';
     if (e?.ctrlKey || e?.metaKey) return 'jeden';
+    if (e?.altKey) return 'okno';
     return 'brak';
   }
 
@@ -1183,7 +1227,7 @@ export class HeroScene extends Phaser.Scene {
       return;
     }
     if (!o) {
-      this.powiedz(`Slot ${i + 1} — pusty. Przeciągnij tu oddział, żeby go rozdzielić.`);
+      this.powiedz(`Slot ${i + 1} — pusty. Przeciągnij tu oddział, żeby go przenieść.`);
       return;
     }
     this.powiedz(`${o.ile} × ${o.nazwa}   ·   poziom ${o.tier + 1}`);
@@ -1192,8 +1236,8 @@ export class HeroScene extends Phaser.Scene {
   private powiedz(tekst?: string) {
     this.podpowiedz?.setText(
       tekst ??
-        'Przeciągnij oddział na inny slot, żeby go przenieść, połączyć albo zamienić. ' +
-          'Na puste miejsce — żeby podzielić: Shift dzieli na pół, Ctrl odkłada jednego.'
+        'Przeciągnij oddział na inny slot: puste miejsce przenosi, ten sam gatunek łączy, ' +
+          'obcy zamienia. Podział: Shift = połowa, Ctrl = jeden, Alt = okno z liczbą.'
     );
   }
 

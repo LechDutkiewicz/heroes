@@ -141,8 +141,26 @@ const OY = (694 - OH) / 2;
 const PRZYCISK = (i) => ({ x: OX + 62 + i * 128, y: OY + 152 });
 const PODZIEL = { x: OX + OW * 0.68, y: OY + 196 };
 
+// Zwykłe przeciągnięcie na puste miejsce PRZENOSI cały stos. Okno z liczbą
+// siedzi pod Altem — przekładanie oddziału robi się dużo częściej niż podział.
 await przeciagnij(0, 5);
-sprawdz('przeciągnięcie stosu na pusty slot otwiera okno podziału', await oknoOtwarte());
+let a = await armia();
+sprawdz('zwykłe przeciągnięcie na pusty slot nie otwiera okna', !(await oknoOtwarte()));
+sprawdz(
+  'zwykłe przeciągnięcie PRZENOSI cały stos',
+  a[0] === null && a[5]?.ile === 20,
+  JSON.stringify([a[0], a[5]])
+);
+sprawdz('przeniesienie niczego nie gubi', suma(a) === 35, `${suma(a)}`);
+
+await ustaw([
+  [0, 0, 20],
+  [1, 1, 9],
+  [2, 2, 6],
+]);
+await page.waitForTimeout(400);
+await przeciagnij(0, 5, 'Alt');
+sprawdz('Alt otwiera okno podziału', await oknoOtwarte());
 
 // „Wszystko" plus „Podziel": maksimum na pusty slot to n-1, więc w źródle
 // zostanie dokładnie jeden — bohater nigdy nie zostaje z pustym stosem.
@@ -151,7 +169,7 @@ await page.mouse.click(wszystko.x, wszystko.y);
 await page.waitForTimeout(150);
 await page.mouse.click(PODZIEL.x, PODZIEL.y);
 await page.waitForTimeout(350);
-let a = await armia();
+a = await armia();
 sprawdz('okno zamyka się po potwierdzeniu', !(await oknoOtwarte()));
 sprawdz(
   'okno podziału przelewa wszystko oprócz jednego',

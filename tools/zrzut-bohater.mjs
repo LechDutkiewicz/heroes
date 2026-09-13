@@ -33,9 +33,19 @@ const SKALA = Number(arg('--skala', '1'));
  * rzemiosła jest ocenianiem tła.
  */
 const STANY = {
-  pelny: { artefakty: ['opaska', 'pazur', 'buty', 'mistrz'], dosw: 900, sloty: 6 },
-  pusty: { artefakty: [], dosw: 0, sloty: 1 },
-  'po-bitwie': { artefakty: ['kamizelka'], dosw: 260, sloty: 3 },
+  pelny: {
+    artefakty: ['opaska', 'pazur', 'buty', 'mistrz'],
+    dosw: 900,
+    sloty: 6,
+    umiejetnosci: { zwiad: 2, lucznictwo: 3, gospodarnosc: 1 },
+  },
+  pusty: { artefakty: [], dosw: 0, sloty: 1, umiejetnosci: {} },
+  'po-bitwie': {
+    artefakty: ['kamizelka'],
+    dosw: 260,
+    sloty: 3,
+    umiejetnosci: { uzdrowiciel: 1 },
+  },
 };
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
@@ -62,6 +72,7 @@ await page.evaluate((s) => {
   const b = stan.bohater;
   b.artefakty = s.artefakty;
   b.doswiadczenie = s.dosw;
+  b.umiejetnosci = { ...s.umiejetnosci };
   // Armia rozłożona z dziurą w środku: bez pustego slotu między zajętymi nie
   // widać, że sloty są MIEJSCAMI, a to jest cała treść tego ekranu.
   const wzor = b.armia.filter(Boolean);

@@ -25,6 +25,7 @@ import {
 } from './zamki';
 import { factionById } from './factions';
 import type { Armia } from './armia';
+import { efekt } from './umiejetnosci';
 
 /**
  * Mapa przygody — dane i zasady, bez rysowania.
@@ -404,6 +405,13 @@ export interface Bohater {
   artefakty: string[];
   doswiadczenie: number;
   /**
+   * Drugorzędne umiejętności: identyfikator z `UMIEJETNOSCI` → poziom 1-3.
+   * Trzymamy jako mapę, a nie listę, bo jedyne pytanie, jakie zadają zasady
+   * gry, brzmi „na jakim poziomie mam X" — lista wymagałaby szukania przy
+   * każdym pytaniu, a pytań jest osiem na turę.
+   */
+  umiejetnosci?: Record<string, number>;
+  /**
    * Do którego dnia włącznie trwa dodatek do ruchu z ranczo. Trzymamy datę
    * końca, a nie licznik dni: licznik trzeba by zmniejszać co turę i każde
    * pominięcie tury (bitwa, wczytanie stanu) rozjeżdżałoby go z kalendarzem.
@@ -482,7 +490,10 @@ export function ruchNaDzis(s: StanMapy): number {
     s.bohater.bonusRuchuDo !== undefined && s.dzien <= s.bohater.bonusRuchuDo
       ? STAJNIA_BONUS
       : 0;
-  return statystyki(s.bohater).ruchMax + bonus;
+  // Zwiad podbija CAŁY zapas, razem z dodatkiem z ranczo — inaczej gracz
+  // z mistrzowskim Zwiadem miałby w dniu po ranczu mniejszy procentowy zysk
+  // niż zwykle i wyglądałoby to na usterkę.
+  return Math.round((statystyki(s.bohater).ruchMax + bonus) * (1 + efekt(s.bohater, 'ruch')));
 }
 
 /** Poziom bohatera z doświadczenia. Progi rosną, jak w Heroes 3. */
@@ -528,6 +539,10 @@ export interface StanMapy {
 export function odslon(s: StanMapy, promien = PROMIEN_WIDZENIA, srodek?: Pole): number {
   let nowe = 0;
   const { x, y } = srodek ?? s.bohater;
+  // Tropiciel poszerza wzrok BOHATERA, nie wieży: odsłanianie z podanym
+  // środkiem to zawsze budowla, która widzi tyle, ile widzi, bez względu na
+  // to, kto koło niej przechodził.
+  if (!srodek) promien += efekt(s.bohater, 'mgla');
   for (let dy = -promien; dy <= promien; dy++) {
     for (let dx = -promien; dx <= promien; dx++) {
       // Koło, nie kwadrat — inaczej odsłonięty obszar ma widoczne rogi
@@ -1108,6 +1123,11 @@ export function dochod(s: StanMapy): Partial<Record<Surowiec, number>> {
       }
     }
   }
+  // Gospodarność wchodzi TUTAJ, a nie w `nowaTura`, bo pasek na mapie czyta
+  // dochód z tej funkcji. Doliczona osobno przy naliczaniu dawałaby co dzień
+  // więcej pokeballi, niż pasek obiecuje — a to wygląda jak błąd rachunku.
+  const gospodarnosc = efekt(s.bohater, 'dochod');
+  if (gospodarnosc > 0) suma.pokeball = (suma.pokeball ?? 0) + gospodarnosc;
   return suma;
 }
 

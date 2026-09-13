@@ -61,6 +61,15 @@ export interface Battle {
    * pasażerów na gapę.
    */
   dealt: Map<string, number>;
+  /**
+   * Co do walki wnosi bohater gracza: dodatki z drugorzędnych umiejętności.
+   *
+   * Symulacja nie zna bohatera i nie powinna — to zasady MAPY. Dostaje więc
+   * gotowe trzy liczby, a nie referencję do postaci: dzięki temu `balance.ts`
+   * i `strojenie.ts` dalej liczą czystą siłę frakcji, po prostu nie podając
+   * tego pola.
+   */
+  bonusGracza?: { wrecz: number; strzal: number; pancerz: number };
 }
 
 export const cellKey = (col: number, row: number) => `${col},${row}`;
@@ -226,7 +235,8 @@ export function damageOf(b: Battle, attacker: SimUnit, target: SimUnit) {
   const penalty = pinned || tooFar ? HALF_DAMAGE : 1;
   const guard = target.defending ? GUARD_REDUCTION : 1;
   const base = stackAtk(attacker.def, attacker);
-  const value = Math.max(1, Math.round(base * typeMult * penalty * guard));
+  const bonus = bonusUmiejetnosci(b, attacker, target);
+  const value = Math.max(1, Math.round(base * typeMult * penalty * guard * bonus));
   return {
     value,
     base,
@@ -235,8 +245,32 @@ export function damageOf(b: Battle, attacker: SimUnit, target: SimUnit) {
     pinned,
     tooFar,
     guarded: target.defending,
+    bonus,
     kills: applyDamage(target.def, target, value).killed,
   };
+}
+
+/**
+ * Mnożnik z drugorzędnych umiejętności bohatera gracza.
+ *
+ * Osobno, a nie w środku `damageOf`, bo to jedyne miejsce, w którym symulacja
+ * bitwy w ogóle wie o bohaterze — i musi być widać, że działa tylko w JEDNĄ
+ * stronę: Napastnik i Łucznictwo podbijają ciosy gracza, Pancerz obniża ciosy
+ * w gracza. Wróg nie ma bohatera, więc nie ma tu symetrii do zachowania.
+ *
+ * Strzał, którego strzelec nie może oddać (przyszpilony, za daleko), liczy się
+ * jako cios wręcz — inaczej Łucznictwo podbijałoby uderzenie kolbą.
+ */
+function bonusUmiejetnosci(b: Battle, attacker: SimUnit, target: SimUnit) {
+  const m = b.bonusGracza;
+  if (!m) return 1;
+  let mnoznik = 1;
+  if (attacker.side === 'player') {
+    const strzela = attacker.def.shooter && !hasAdjacentEnemy(b, attacker);
+    mnoznik *= 1 + (strzela ? m.strzal : m.wrecz);
+  }
+  if (target.side === 'player') mnoznik *= 1 - m.pancerz;
+  return mnoznik;
 }
 
 /** Nalicza jedno trafienie. Zwraca liczbę poległych. */

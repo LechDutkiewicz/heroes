@@ -29,6 +29,10 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `npx tsx tools/probe-budowle.ts` | czy każda budowla odwiedzana coś daje, i to raz |
 | `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia, artefakt, bitwa, zamek, powrót |
 | `node tools/probe-klik.mjs` | czy KLIKNIĘCIE prowadzi bohatera tam, gdzie się kliknęło |
+| `npx tsx tools/probe-armia.ts` | arytmetyka slotów armii: 40 tys. losowych ruchów z niezmiennikami |
+| `npx tsx tools/probe-umiejetnosci.ts` | czy każda z ośmiu umiejętności NAPRAWDĘ zmienia zasady gry |
+| `node tools/probe-bohater.mjs` | ekran bohatera prawdziwą myszą: przenieś, zamień, scal, podziel |
+| `node tools/probe-awans.mjs` | czy wygrana z awansem pokazuje okno wyboru i czy wybór działa |
 | `node tools/probe-miasto.mjs` | ekran miasta: klikanie w bryły, lista budowy, jeden budynek dziennie, przyrost |
 | `npx tsx tools/probe-zamki.ts` | drzewko budynków: przechodniość, ceny, czas rozbudowy |
 | `npx tsx tools/probe-ekonomia.ts` | dochód i koszty z PRAWDZIWEJ mapy: czy da się budować i werbować naraz |
@@ -60,6 +64,22 @@ chodzić przed każdą serią zrzutów i potrafi paść w tle. Zawsze sprawdzaj
 oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
 
 ## Skończone
+
+- **Ekran bohatera i drugorzędne umiejętności.** Kliknięcie w bohatera na
+  mapie otwiera osobny ekran: statystyki z rozbiciem „ile z siebie, ile ze
+  sprzętu", artefakty z kartą opisu, armia w siedmiu slotach i cztery gniazda
+  umiejętności. Armia przestała być gęstą listą — slot jest MIEJSCEM, a układ
+  przeżywa bitwę i powrót na mapę (`src/data/armia.ts`). Przeciągnięcie na
+  puste miejsce przenosi, na ten sam gatunek łączy, na obcy zamienia; podział
+  robi Shift (połowa), Ctrl (jeden) i Alt (okno z liczbą).
+  Osiem umiejętności (`src/data/umiejetnosci.ts`), każda z trzema poziomami
+  i każda podpięta pod prawdziwą zasadę gry: Zwiad do punktów ruchu, Tropiciel
+  do mgły, Napastnik / Łucznictwo / Pancerz do obrażeń w bitwie, Gospodarność
+  do dochodu, Nauka do doświadczenia, Uzdrowiciel do strat po wygranej.
+  Awans zatrzymuje mapę i pokazuje DWIE karty do wyboru, jak w Heroes 3 —
+  cztery gniazda na osiem umiejętności, więc po zapełnieniu awans może już
+  tylko ulepszać. Sprawdzają to `probe-armia`, `probe-umiejetnosci`,
+  `probe-bohater` i `probe-awans`.
 
 - **Wersja gry w rogu ekranu** (`src/wersja.ts`). Data commita i jego skrót,
   wstrzykiwane przy budowaniu przez `vite.config.ts` — nie ma czego pamiętać
