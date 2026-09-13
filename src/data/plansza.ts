@@ -21,6 +21,7 @@ import {
   type Teren,
 } from './mapa';
 import { FACTIONS, factionById } from './factions';
+import { znormalizuj } from './armia';
 
 /**
  * Plansza przygody — teren z generatora plus obiekty z liczbami z Heroes 3.
@@ -316,13 +317,15 @@ export function planszaPrzygody(): StanMapy {
   // z szybkości najwolniejszego, dokładnie jak w Heroes 3 — dzięki temu
   // dobór armii naprawdę wpływa na to, jak daleko się dojdzie.
   const bor = factionById('bor') ?? FACTIONS[0];
-  const armia: Oddzial[] = bor.units.slice(0, 4).map((u, i) => ({
-    sprite: u.sprite,
-    nazwa: u.name,
-    ile: [20, 9, 6, 4][i],
-    frakcja: bor.id,
-    tier: i,
-  }));
+  const armia = znormalizuj(
+    bor.units.slice(0, 4).map((u, i) => ({
+      sprite: u.sprite,
+      nazwa: u.name,
+      ile: [20, 9, 6, 4][i],
+      frakcja: bor.id,
+      tier: i,
+    }))
+  );
   const najwolniejszy = Math.min(...bor.units.slice(0, 4).map((u) => u.move));
   const ruchMax = ruchNaDzien(najwolniejszy);
 

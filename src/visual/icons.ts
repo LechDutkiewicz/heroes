@@ -48,16 +48,16 @@ export const TYPE_ICON = {
  * Rysujemy w kwadracie 64x64 i zmniejszamy dopiero przy użyciu. Rysowanie od
  * razu w docelowych kilkunastu pikselach dałoby poszarpane kształty.
  */
-const S = 64;
+export const S = 64;
 /** O ile procent kształt konturu jest większy od właściwego. */
 const OUTLINE = 1.16;
 
-type Pen = Phaser.GameObjects.Graphics;
+export type Pen = Phaser.GameObjects.Graphics;
 /** Kształt ikony: same wypełnienia, bez obrysów — te dokłada `sticker`. */
-type Shape = (g: Pen) => void;
+export type Shape = (g: Pen) => void;
 
 /** Wielokąt z płaskiej listy [x, y, x, y, ...] w skali 0-64. */
-function poly(g: Pen, pts: number[]) {
+export function poly(g: Pen, pts: number[]) {
   g.beginPath();
   g.moveTo(pts[0], pts[1]);
   for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]);
@@ -71,7 +71,7 @@ function poly(g: Pen, pts: number[]) {
  * daje kształt wywrócony na drugą stronę — tak poległy pierwsze wersje
  * skrzydła i liścia.
  */
-function arcPts(cx: number, cy: number, r: number, from: number, to: number, steps = 14) {
+export function arcPts(cx: number, cy: number, r: number, from: number, to: number, steps = 14) {
   const pts: number[] = [];
   for (let i = 0; i <= steps; i++) {
     const a = Phaser.Math.DegToRad(from + ((to - from) * i) / steps);
@@ -81,7 +81,7 @@ function arcPts(cx: number, cy: number, r: number, from: number, to: number, ste
 }
 
 /** Wycinek pierścienia: łuk zewnętrzny plus wewnętrzny wracający z powrotem. */
-function ring(
+export function ring(
   cx: number,
   cy: number,
   rOut: number,
@@ -95,7 +95,7 @@ function ring(
 }
 
 /** Gruba kreska jako wypełniony kształt — żeby kontur objął ją tak jak resztę. */
-function bar(g: Pen, x1: number, y1: number, x2: number, y2: number, w: number) {
+export function bar(g: Pen, x1: number, y1: number, x2: number, y2: number, w: number) {
   const a = Math.atan2(y2 - y1, x2 - x1);
   const dx = (Math.sin(a) * w) / 2;
   const dy = (Math.cos(a) * w) / 2;
@@ -107,7 +107,7 @@ function bar(g: Pen, x1: number, y1: number, x2: number, y2: number, w: number) 
  * w barwie właściwej. Skalujemy względem środka kafla, więc kontur wychodzi
  * równomiernie ze wszystkich stron.
  */
-function sticker(g: Pen, fill: number, shape: Shape) {
+export function sticker(g: Pen, fill: number, shape: Shape) {
   g.save();
   g.translateCanvas(S / 2, S / 2);
   g.scaleCanvas(OUTLINE, OUTLINE);
@@ -121,7 +121,7 @@ function sticker(g: Pen, fill: number, shape: Shape) {
 }
 
 /** Błyk u góry — ten sam kierunek światła na każdej ikonie. */
-function gloss(g: Pen, x: number, y: number, rx: number, ry: number, a = 0.42) {
+export function gloss(g: Pen, x: number, y: number, rx: number, ry: number, a = 0.42) {
   g.fillStyle(C.white, a);
   g.fillEllipse(x, y, rx, ry);
 }

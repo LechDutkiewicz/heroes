@@ -698,7 +698,12 @@ export function makeHudButton(
     y: number;
     w: number;
     h: number;
-    icon: IconKey;
+    /**
+     * Ikona w kapsułce. Opcjonalna, bo przyciski okna podziału („Połowa",
+     * „Wszystko") niosą liczbę, nie czynność — dorabianie im ikony na siłę
+     * dałoby trzy różne znaki znaczące to samo.
+     */
+    icon?: IconKey;
     tone: number;
     toneDeep: number;
     onClick: () => void;
@@ -723,13 +728,19 @@ export function makeHudButton(
   const hover = skin(mix(opts.tone, C.white, 0.22), opts.toneDeep, 0.4, 0);
   const off = skin(mix(opts.tone, C.inkSoft, 0.72), mix(opts.toneDeep, C.shadow, 0.4), 0.08, 0.15);
 
-  const mark = icon(scene, opts.icon, -w / 2 + 8 + (h - 14) / 2, 0, h - 14);
+  const mark = opts.icon
+    ? icon(scene, opts.icon, -w / 2 + 8 + (h - 14) / 2, 0, h - 14)
+    : undefined;
   const label = scene.add
-    .text(6, 0, '', { ...display(15), strokeThickness: 3.5 })
+    .text(opts.icon ? 6 : 0, 0, '', { ...display(15), strokeThickness: 3.5 })
     .setOrigin(0.5);
 
   const zone = scene.add.zone(0, 0, w, h).setInteractive({ useHandCursor: true });
-  const container = scene.add.container(opts.x, opts.y, [normal, hover, off, mark, label, zone]);
+  const container = scene.add.container(
+    opts.x,
+    opts.y,
+    [normal, hover, off, mark, label, zone].filter(Boolean) as Phaser.GameObjects.GameObject[]
+  );
   container.setDepth(opts.depth ?? 62);
 
   let enabled = true;
@@ -739,7 +750,7 @@ export function makeHudButton(
     normal.setVisible(enabled && !over);
     hover.setVisible(enabled && over);
     off.setVisible(!enabled);
-    mark.setAlpha(enabled ? 1 : 0.5);
+    mark?.setAlpha(enabled ? 1 : 0.5);
     label.setAlpha(enabled ? 1 : 0.6);
     gradientText(label, enabled ? H.white : H.panelEdge, enabled ? H.panelEdge : H.inkSoft);
   };

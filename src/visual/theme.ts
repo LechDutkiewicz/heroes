@@ -61,7 +61,7 @@ export const FONT = 'Trebuchet MS, Verdana, sans-serif';
  * Napis „bajkowy": biel z grubym ciemnym konturem i cieniem pod spodem.
  * Czyta się na każdym tle, także na jasnej trawie i na śniegu.
  */
-export function display(size: number, color: string = H.white, stroke = C.shadow) {
+export function display(size: number, color: string = H.white, stroke: number = C.shadow) {
   return {
     fontFamily: FONT,
     fontSize: `${size}px`,

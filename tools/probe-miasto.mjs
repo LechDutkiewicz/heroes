@@ -247,7 +247,7 @@ const kupno = await page.evaluate(() => {
   const b = t.profil.budynki.find((x) => x.id === 'siedlisko2');
   t.pokazBudynek(b);
   const przed = {
-    armia: t.stan.bohater.armia.reduce((a, o) => a + o.ile, 0),
+    armia: t.stan.bohater.armia.reduce((a, o) => a + (o ? o.ile : 0), 0),
     zapas: t.zamek.dostepne[1],
     kasa: t.stan.skarbiec.pokeball,
   };
@@ -255,7 +255,7 @@ const kupno = await page.evaluate(() => {
   return {
     przed,
     po: {
-      armia: t.stan.bohater.armia.reduce((a, o) => a + o.ile, 0),
+      armia: t.stan.bohater.armia.reduce((a, o) => a + (o ? o.ile : 0), 0),
       zapas: t.zamek.dostepne[1],
       kasa: t.stan.skarbiec.pokeball,
     },

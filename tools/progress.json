@@ -1,5 +1,5 @@
 {
- "updated": "2026-08-09 14:16",
+ "updated": "2026-09-13 (ekran bohatera, runda 4)",
  "pieces": [
   {
    "name": "Plansza: siatka, teren, rama",
@@ -153,6 +153,192 @@
      "blind": "hud-r3",
      "gap": "Nasze pasma tworzą jeden system — każdy wiersz to ta sama kapsułka z konturem, gradientem i wewnętrznym rozjaśnieniem, a etykieta i wartość mają jasną hierarchię, więc tekst siedzi NA paśmie. Przyciski mają ciało i czytają się jako klikalne. Rytm domknięty: dwie kolumny równej wysokości, dwa pełnoszerokie wiersze pod spodem jako osobna strefa. Wzorzec rozjeżdża się na cztery moduły o niezgodnych wysokościach i sześć pasteli bez akcentu.",
      "note": "Ciekawe rozwiązanie brązowienia znaku żywiołu: brąz to ciemna pomarańcza o niskiej chromie, więc KAŻDE stonowanie ciepłej barwy chłodną bazą albo przyciemnieniem daje brąz. Builder rozdzielił drogi — ciepłe znaki najpierw odsuwa od własnej szarości, dopiero potem ściemnia do tej samej wagi optycznej co zimne. Typografię rozwiązał odwrotnie niż wzorzec: biała otoczka zamiast ciemnego konturu, bo pasma są jasne i czarny obrys zrobiłby jarmark."
+    }
+   ]
+  },
+  {
+   "name": "Ekran bohatera: sloty armii",
+   "status": "done",
+   "note": "WYGRANY w rundzie 1. Krytyk wybrał nasz kadr na ślepo i wytknął wzorcowi, że gniazdo nie ma własnego tła ani obrysu, a liczebność to gołe cyfry na ornamencie.",
+   "shots": [
+    "tools/shots/bohater-r1.png"
+   ],
+   "rounds": [
+    {
+     "win": true,
+     "blind": "bohater-sloty-r1",
+     "gap": "Wzorzec: gniazdo to płaska tarcza bez wypełnienia, sylwetka leży wprost na tle mapy, a „50/50\" to gołe cyfry rozlane po krawędzi. U nas zamknięty kafel z gradientem, obrysem i cieniem, a liczebność w osobnej złotej kapsułce przybitej do dolnej krawędzi.",
+     "note": "Jedyny kawałek wygrany w pierwszym podejściu. Kapsułka z liczbą zachodząca na krawędź gniazda okazała się tym, co zdecydowało."
+    }
+   ]
+  },
+  {
+   "name": "Ekran bohatera: rama i nagłówek",
+   "status": "wip",
+   "note": "Trzy rundy, trzy przegrane — ale luka zmieniła treść: z „nie ma żadnej krawędzi\" na „belka potrzebuje profilu i ząbkowania\". Runda 2 miała złe kadrowanie (cień rzucony leżał poza wycinkiem) i została powtórzona.",
+   "shots": [
+    "tools/shots/bohater-2x.png"
+   ],
+   "rounds": [
+    {
+     "win": false,
+     "blind": "bohater-rama-r1",
+     "gap": "Rama to jeden płaski prostokąt: pojedynczy obrys stałej grubości, jednolite wypełnienie, zero cienia pod belką. Wzorzec ma krawędź trójwarstwową, okucia narożników i teksturę kamienia.",
+     "note": "Werdykt trafny. Wniosek szerszy niż ten jeden kawałek — patrz `src/visual/rama.ts`."
+    },
+    {
+     "win": false,
+     "blind": "bohater-rama-r2",
+     "gap": "Nadal płaski profil, brak cienia rzuconego na tło.",
+     "note": "WERDYKT WĄTPLIWY — kadr zaczynał się 6 px od krawędzi ramy, więc cień rzucony i tło w ogóle nie weszły do porównania. Powtórzone w rundzie 3 z zapasem."
+    },
+    {
+     "win": false,
+     "blind": "bohater-rama-r3",
+     "gap": "Belka nagłówka to kolorowy prostokąt z obrysem, nie bryła: brak jasnej fazy od góry i ciemnego spodu, brak ząbkowanego podcięcia i faktury. Lewe górne okucie czyta się jako niedokończony żółty prostokąt nachodzący na ramę.",
+     "note": "Do zrobienia: gzyms z podcięciem, okucie wpuszczone w obrys zamiast nachodzące."
+    },
+    {
+     "win": false,
+     "blind": "bohater-rama-r4",
+     "gap": "Ząbkowanie jest rzędem identycznych kwadracików o jednej wartości tonalnej, a nie rzeźbą; okucia to kółka na kątowniku. Wzorzec ma ząbki o zmiennym walorze i materiał z fakturą.",
+     "note": "Gzyms i ząbkowanie weszły i widać je, ale każdy ząbek ma to samo światło. Wzorzec różnicuje walor ząbek po ząbku."
+    }
+   ]
+  },
+  {
+   "name": "Ekran bohatera: kolumna statystyk",
+   "status": "wip",
+   "note": "Trzy rundy. Dwie ostatnie luki mówią to samo i to jest właściwa diagnoza: jeden preset materiału obsługuje pięć różnych ról informacyjnych.",
+   "shots": [
+    "tools/shots/bohater-2x.png"
+   ],
+   "rounds": [
+    {
+     "win": false,
+     "blind": "bohater-statystyki-r1",
+     "gap": "Wartości to białe cyfry z grubym konturem wrzucone luzem na jasne kapsuły; „+250\" koliduje z „1813\". Obręcz portretu płaska, bez metalu.",
+     "note": "Odstęp bonusu od wartości podniesiony z 8 na 16 px, obręcz przeszła na `pierscien()`."
+    },
+    {
+     "win": false,
+     "blind": "bohater-statystyki-r2",
+     "gap": "Nagłówek, wiersze statystyk i lista sprzętu zbudowane z identycznego klocka — nic nie jest ważniejsze od niczego.",
+     "note": "Lista modyfikatorów dostała własny, ciemniejszy materiał w naprzemiennych pasach; wiersze statystyk zwężone, wartość podniesiona do 19 px."
+    },
+    {
+     "win": false,
+     "blind": "bohater-statystyki-r3",
+     "gap": "Ten sam błyszczący materiał z żółtym obrysem powtarza się w nagłówku, obręczy, plakietce poziomu i trzech wierszach statystyk — pięć ról, jeden preset.",
+     "note": "Do zrobienia: rozdzielić materiały. Portret metal, statystyki cienki pasek ikon, modyfikatory spokojne wiersze o niskim kontraście."
+    },
+    {
+     "win": false,
+     "blind": "bohater-statystyki-r4",
+     "gap": "Portret nie siedzi W obręczy: sprite leży na płaskim kole, bez cienia wewnętrznego i bez fazowania krawędzi otworu.",
+     "note": "Trzy materiały (metal, kamień, pergamin) krytyk odnotował jako to, co ma wzorzec — czyli rozdzielenie zadziałało. Zostało wgłębienie pod samym portretem."
+    }
+   ]
+  },
+  {
+   "name": "Ekran bohatera: artefakty",
+   "status": "wip",
+   "note": "Trzy rundy. Krytyk rundy 3 dał instrukcję wykonalną co do piksela i została wykonana: rzadkość zeszła z halo pod ikoną na obrys samego gniazda, poświata zamknięta wewnątrz krawędzi.",
+   "shots": [
+    "tools/shots/bohater-2x.png"
+   ],
+   "rounds": [
+    {
+     "win": false,
+     "blind": "bohater-artefakty-r1",
+     "gap": "Gniazda to płaskie kafle, a rzadkość i stan „mam/nie mam\" niesie tylko kolor wypełnienia. Wzorzec rysuje pojemnik i osobno rzecz w nim.",
+     "note": "Gniazdo przeszło na `wneka()`."
+    },
+    {
+     "win": false,
+     "blind": "bohater-artefakty-r2",
+     "gap": "Nadal jedno płaskie pole niosące trzy komunikaty naraz: pusty/zajęty, rzadkość i sam przedmiot.",
+     "note": "Przedmiot zmienił kształt na okrągły medalion — kontrast krągłości wobec kwadratowego gniazda zamiast kontrastu koloru."
+    },
+    {
+     "win": false,
+     "blind": "bohater-artefakty-r3",
+     "gap": "Poświata rzadkości rozlewa się poza obrys płytki i wygląda na podklejoną. Kolor rzadkości ma być na obrysie gniazda 2 px, a poświata zamknięta w jego krawędzi.",
+     "note": "Wykonane dosłownie: dwa obrysy w barwie klasy na krawędzi gniazda, poświata jako pierścienie wpisane w prostokąt wnęki."
+    },
+    {
+     "win": false,
+     "blind": "bohater-artefakty-r4",
+     "gap": "Przedmioty to wektorowe sylwetki, wzorzec ma malowane miniatury. Brak cienia rzucanego przez przedmiot w głąb gniazda.",
+     "note": "Gniazdo i rzadkość przestały być zarzutem — luka przeniosła się na SAME PRZEDMIOTY. Tego nie da się dorysować prymitywami; to jest robota dla wsadu graficznego, jak przy budynkach miasta."
+    }
+   ]
+  },
+  {
+   "name": "Ekran bohatera: pole umiejętności (puste)",
+   "status": "wip",
+   "note": "Kawałek celowo pusty — mechaniki nie ma, oceniane jest samo gniazdo. Runda 3 złapała realną usterkę: fazka wokół wnęki szła od góry, czyli robiła wypukłość zamiast dziury.",
+   "shots": [
+    "tools/shots/bohater-2x.png"
+   ],
+   "rounds": [
+    {
+     "win": false,
+     "blind": "bohater-umiejetnosci-r1",
+     "gap": "Puste gniazdo to jasny prostokąt z przerywanym obrysem 1 px i rombem w środku. Brak ramy, fazowania, wpuszczenia i faktury.",
+     "note": "Przerywany obrys zastąpiony wnęką z medalionem i okuciami."
+    },
+    {
+     "win": false,
+     "blind": "bohater-umiejetnosci-r2",
+     "gap": "Płaska płytka z czterema identycznymi śrubkami doklejonymi w rogach — bez wewnętrznego cienia od góry i bez rozbłysku u dołu medalion leży NA gnieździe, nie w nim.",
+     "note": "Cień wewnętrzny wnęki wzmocniony z 0,3 na 0,5 i pogłębiony."
+    },
+    {
+     "win": false,
+     "blind": "bohater-umiejetnosci-r3",
+     "gap": "Gniazdo ma miękki cień NA ZEWNĄTRZ, więc wystaje zamiast się zapadać; medalion to dwa koncentryczne kółka bez fazy i bez kierunku światła.",
+     "note": "Usterka prawdziwa i naprawiona: jasna fazka szła nad górną krawędzią wnęki, czyli dokładnie tam, gdzie robi wypukłość. Teraz nad otworem jest cień, a rozświetla się dolna warga."
+    },
+    {
+     "win": false,
+     "blind": "bohater-umiejetnosci-r4",
+     "gap": "Cztery okucia w rogach to ten sam kształt obrócony, każdy z tym samym refleksem — przy jednym źródle światła róg lewy górny i prawy dolny nie mogą świecić tak samo.",
+     "note": "Fazowany romb z jednym kierunkiem światła wszedł i został uznany. Została niespójność samych okuć: obracam kształt razem ze światłem."
+    }
+   ]
+  },
+  {
+   "name": "Ekran bohatera: okno podziału stosu",
+   "status": "wip",
+   "note": "Dwie oceny, obie przegrane, przy czym pierwsza była na złym kadrze.",
+   "shots": [
+    "tools/shots/bohater-okno-2x.png"
+   ],
+   "rounds": [
+    {
+     "win": false,
+     "blind": "bohater-okno-r1",
+     "gap": "Brak materialnej ramy i odcięcia od tła: zero cienia rzuconego, zero przyciemnienia sceny, tło prześwituje tuż przy krawędzi.",
+     "note": "Przyciemnienie podniesione z 0,55 na 0,72, doszedł `cienPod()`, listwa tytułu i okucia."
+    },
+    {
+     "win": false,
+     "blind": "bohater-okno-r2",
+     "gap": "Brak przyciemnienia i cienia rzuconego.",
+     "note": "WERDYKT UNIEWAŻNIONY — moja wina. Wycinek obejmował samo okno, więc przyciemnione tło i cień leżały poza kadrem i krytyk opisywał kadrowanie, nie pracę. Powtórzone jako r3 z marginesem 100 px."
+    },
+    {
+     "win": false,
+     "blind": "bohater-okno-r3",
+     "gap": "Okucia to płaskie żółte kwadraciki bez rysunku, rama bez profilu, przyciski w stylu domyślnego CSS.",
+     "note": "Do zrobienia: okucia z rysunkiem zamiast blaszek, profil ramy, przyciski z materiałem innym niż tło okna."
+    },
+    {
+     "win": false,
+     "blind": "bohater-okno-r4",
+     "gap": "Tło nadal nie czyta się jako przyciemnione, a przyciski to cztery identyczne kapsułki bez hierarchii poza barwą.",
+     "note": "Przyciemnienie jest i wynosi 0,78 — ale nasz ekran pod spodem jest jasny, więc nawet mocno przygaszony zostaje jaśniejszy niż nocna mapa wzorca. To różnica palety, nie techniki."
     }
    ]
   }

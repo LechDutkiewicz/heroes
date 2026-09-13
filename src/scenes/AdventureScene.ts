@@ -31,6 +31,7 @@ import {
   type WyborSkrzyni,
 } from '../data/mapa';
 import { planszaPrzygody } from '../data/plansza';
+import { SLOTY_ARMII, znormalizuj, zywe } from '../data/armia';
 import { C, E, FONT, H, Z, body, display } from '../visual/theme';
 import { drawPanelBody, makeHudButton, mix, plate } from '../visual/hud';
 import { ICON, buildIcons } from '../visual/icons';
@@ -198,7 +199,7 @@ export class AdventureScene extends Phaser.Scene {
     }
     const stan = this.wczytajStan();
     const potrzebne = new Set<string>();
-    for (const o of stan.bohater.armia) potrzebne.add(o.sprite);
+    for (const o of zywe(stan.bohater.armia)) potrzebne.add(o.sprite);
     for (const ob of stan.obiekty) for (const o of ob.oddzialy ?? []) potrzebne.add(o.sprite);
     for (const s of potrzebne) this.load.image(`p-${s}`, `${b}sprites/${s}.png`);
   }
@@ -245,7 +246,7 @@ export class AdventureScene extends Phaser.Scene {
         ? {
             pole: `${this.stan.bohater.x},${this.stan.bohater.y}`,
             ruch: this.stan.bohater.ruch,
-            armia: this.stan.bohater.armia.map((o) => `${o.sprite}×${o.ile}`),
+            armia: zywe(this.stan.bohater.armia).map((o) => `${o.sprite}×${o.ile}`),
             skarbiec: this.stan.skarbiec,
             zajety: this.zajety,
             trasa: this.trasaBiezaca?.length ?? 0,
@@ -1185,7 +1186,7 @@ export class AdventureScene extends Phaser.Scene {
       });
 
     const kartaY = this.rysujPasekWlasnosci(wnetrzeX, mmY + mmBok + 22, wnetrzeW) + 10;
-    const kartaH = 152;
+    const kartaH = 210;
     const karta = this.add.graphics().setDepth(Z.hud);
     plate(karta, wnetrzeX, kartaY, wnetrzeW, kartaH, 9, C.panel, C.panelDeep, {
       light: 0.2,
@@ -1226,30 +1227,42 @@ export class AdventureScene extends Phaser.Scene {
     });
     this.ruchTekst = this.statTeksty[2];
 
+    // Siedem slotów, jak u bohatera w Heroes 3 — w dwóch rzędach, bo w kolumnie
+    // szerokiej na 218 px siedem kwadratów zeszłoby do 29 px i licznik przestałby
+    // być czytelny. Rysunek i licznik powstają ZAWSZE, także dla pustego slotu,
+    // i są tylko chowane: ekran bohatera przekłada oddziały między slotami, więc
+    // panel musi umieć pokazać każdą zawartość każdego slotu bez przebudowy.
     const slotBok = 40;
-    const odstep = 4;
-    const rzadX = wnetrzeX + (wnetrzeW - (4 * slotBok + 3 * odstep)) / 2;
-    const rzadY = kartaY + 78;
-    for (let i = 0; i < 4; i++) {
-      const sx = rzadX + i * (slotBok + odstep);
-      const g = this.add.graphics();
-      g.fillStyle(mix(C.panel, C.panelDeep, 0.3), 1);
-      g.fillRoundedRect(0, 0, slotBok, slotBok + 12, 5);
-      g.lineStyle(1.5, C.panelDeep, 0.7);
-      g.strokeRoundedRect(0, 0, slotBok, slotBok + 12, 5);
-      const slot = this.add.container(sx, rzadY, [g]).setDepth(Z.hud + 1);
-      const od = b.armia[i];
-      if (od) {
-        const im = this.add.image(slotBok / 2, slotBok / 2 - 1, `p-${od.sprite}`);
-        im.setScale((slotBok - 6) / im.height);
-        const licznik = this.add
-          .text(slotBok / 2, slotBok + 4, String(od.ile), display(12))
-          .setOrigin(0.5);
-        slot.add([im, licznik]);
-        slot.setData('licznik', licznik);
+    const odstep = 6;
+    const rzedy = [4, 3];
+    let numer = 0;
+    rzedy.forEach((ile, r) => {
+      const rzadX = wnetrzeX + (wnetrzeW - (ile * slotBok + (ile - 1) * odstep)) / 2;
+      const rzadY = kartaY + 78 + r * (slotBok + 18);
+      for (let i = 0; i < ile; i++) {
+        const sx = rzadX + i * (slotBok + odstep);
+        const g = this.add.graphics();
+        g.fillStyle(mix(C.panel, C.panelDeep, 0.3), 1);
+        g.fillRoundedRect(0, 0, slotBok, slotBok + 12, 5);
+        g.lineStyle(1.5, C.panelDeep, 0.7);
+        g.strokeRoundedRect(0, 0, slotBok, slotBok + 12, 5);
+        const im = this.add.image(slotBok / 2, slotBok / 2 - 1, 'bohater').setVisible(false);
+        const licznik = this.add.text(slotBok / 2, slotBok + 4, '', display(12)).setOrigin(0.5);
+        const slot = this.add.container(sx, rzadY, [g, im, licznik]).setDepth(Z.hud + 1);
+        slot.setData('licznik', licznik).setData('rysunek', im);
+        this.slotyArmii.push(slot);
+        numer++;
       }
-      this.slotyArmii.push(slot);
-    }
+    });
+
+    // Karta bohatera jest KLIKALNA — stąd wchodzi się na ekran bohatera.
+    // Bez tego jedyną drogą byłoby kliknięcie w sylwetkę na mapie, a ta
+    // potrafi stać za krawędzią widoku.
+    this.add
+      .zone(wnetrzeX, kartaY, wnetrzeW, kartaH)
+      .setOrigin(0, 0)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.otworzBohatera());
 
     const podY = kartaY + kartaH + 10;
     const podH = py + ph - 56 - podY;
@@ -1384,10 +1397,21 @@ export class AdventureScene extends Phaser.Scene {
       `poziom ${p.poziom}  ·  ${p.wPoziomie}/${p.doAwansu} do awansu` +
         (b.artefakty.length ? `  ·  artefakty: ${b.artefakty.length}` : '')
     );
-    b.armia.forEach((od, i) => {
-      const licznik = this.slotyArmii[i]?.getData('licznik') as Phaser.GameObjects.Text | undefined;
-      licznik?.setText(String(od.ile));
-    });
+    for (let i = 0; i < SLOTY_ARMII; i++) {
+      const slot = this.slotyArmii[i];
+      if (!slot) continue;
+      const od = b.armia[i];
+      const im = slot.getData('rysunek') as Phaser.GameObjects.Image;
+      const licznik = slot.getData('licznik') as Phaser.GameObjects.Text;
+      if (od) {
+        im.setTexture(`p-${od.sprite}`).setVisible(true);
+        im.setScale(34 / im.height);
+        licznik.setText(String(od.ile));
+      } else {
+        im.setVisible(false);
+        licznik.setText('');
+      }
+    }
 
     const wplyw = dochod(this.stan);
     for (const s of SUROWCE) {
@@ -1540,6 +1564,13 @@ export class AdventureScene extends Phaser.Scene {
     const zamek = this.zamekPodKursorem(p);
     if (zamek) return this.pokazZamek(zamek);
     const cel = this.obiektPodKursorem(p) ?? this.zEkranu(p.x, p.y);
+    // Klik w pole, na którym stoi bohater, otwiera jego ekran — jak w Heroes 3,
+    // gdzie kliknięcie w aktywnego bohatera na planszy pokazuje kartę postaci.
+    // Wcześniej prowadziło to donikąd: trasa do własnego pola jest pusta,
+    // więc kliknięcie po prostu nic nie robiło.
+    if (cel.x === this.stan.bohater.x && cel.y === this.stan.bohater.y) {
+      return this.otworzBohatera();
+    }
     this.celujW(cel.x, cel.y);
   }
 
@@ -1919,6 +1950,21 @@ export class AdventureScene extends Phaser.Scene {
     przyciski.forEach((b, i) => b.setLabel(p.opcje[i].etykieta));
   }
 
+  /**
+   * Ekran bohatera. Wchodzi się tu kliknięciem w kartę w panelu ALBO w samą
+   * sylwetkę na mapie — tak samo jak w Heroes 3, gdzie działa i portret,
+   * i podwójne kliknięcie w bohatera na planszy.
+   *
+   * Stan idzie do rejestru gry, nie w parametrze sceny: ekran bohatera
+   * PRZESTAWIA armię, a nie tylko ją pokazuje, więc musi pisać po tym samym
+   * obiekcie, do którego mapa wróci.
+   */
+  private otworzBohatera() {
+    if (this.zajety) return;
+    this.registry.set(KLUCZ_STANU, this.stan);
+    this.scene.start('bohater');
+  }
+
   private pokazZamek(o: Obiekt) {
     this.registry.set(KLUCZ_STANU, this.stan);
     this.registry.set('otwarty-zamek', o.id);
@@ -1936,7 +1982,7 @@ export class AdventureScene extends Phaser.Scene {
     this.registry.set(KLUCZ_STANU, this.stan);
     this.time.delayedCall(750, () => {
       this.scene.start('battle', {
-        gracz: this.stan.bohater.armia,
+        gracz: zywe(this.stan.bohater.armia),
         wrog: o.oddzialy ?? [],
         oObiekt: o.id,
         powrot: 'adventure',
@@ -2000,7 +2046,13 @@ export class AdventureScene extends Phaser.Scene {
     this.registry.remove(KLUCZ_WYNIKU);
     const o = this.stan.obiekty.find((x) => x.id === wynik.oObiekt);
 
-    if (wynik.armia) this.stan.bohater.armia = wynik.armia.filter((a) => a.ile > 0);
+    if (wynik.armia) {
+      // Bitwa oddaje gęstą listę ocalałych, bez pamięci o slotach. Wracamy
+      // do slotów przez `znormalizuj`, a nie przez przypisanie wprost —
+      // inaczej armia po pierwszej bitwie przestaje mieć siedem miejsc
+      // i ekran bohatera dostaje tablicę o innej długości niż rysuje.
+      this.stan.bohater.armia = znormalizuj(wynik.armia);
+    }
 
     if (wynik.wygrana) {
       // Zamek się nie „zbiera" — zmienia właściciela. Oznaczenie go jako
