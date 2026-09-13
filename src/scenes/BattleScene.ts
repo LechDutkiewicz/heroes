@@ -10,8 +10,28 @@ import {
 import { ALL_SPRITES, FACTIONS, factionById, type Faction } from '../data/factions';
 import { hexDistance, type Cell } from '../data/hex';
 
+/**
+ * Rzędy, w których staje armia z mapy — w kolejności, nie losowo.
+ *
+ * `START_ROWS` pomija środkowy rząd, żeby przy sześciu oddziałach linia miała
+ * prześwit pośrodku, jak w Heroes 3. Siedem stosów już się tam nie mieści,
+ * więc dopiero wtedy sięgamy po środek: bez tego siódmy oddział wchodził
+ * (przez `i % rzedy.length`) na to samo pole co pierwszy i dwa stosy stały
+ * jeden na drugim.
+ */
+function rzedyDlaSkladu(ile: number): number[] {
+  if (ile > START_ROWS.length) return [0, 1, 2, 3, 4, 5, 6].slice(0, ile);
+  return START_ROWS.slice(0, ile);
+}
+
 /** Oddział przekazany z mapy przygody: liczebność plus wskazanie definicji. */
 interface OddzialZMapy {
+  /**
+   * Numer slotu u bohatera. Bez niego bitwa nie ma jak oddać armii na te same
+   * miejsca, a ustawienie, które gracz świadomie ułożył, przepada po każdej
+   * walce.
+   */
+  slot?: number;
   sprite: string;
   nazwa: string;
   ile: number;
@@ -295,6 +315,7 @@ export class BattleScene extends Phaser.Scene {
       dealt: new Map(),
     };
     this.roster.clear();
+    this.slotyZMapy.clear();
     this.nextId = 1;
     this.busy = false;
     this.gameOver = false;
@@ -336,6 +357,8 @@ export class BattleScene extends Phaser.Scene {
    * musi zostać nietknięta.
    */
   private zPrzygody?: DaneZPrzygody;
+  /** Który oddział na planszy odpowiada któremu wpisowi w armii z mapy. */
+  private slotyZMapy = new Map<number, number>();
 
   /** Krajobraz tej bitwy — losowany raz, przy tworzeniu sceny. */
   private terrain = TERRAINS[0];
@@ -430,6 +453,7 @@ export class BattleScene extends Phaser.Scene {
     };
     this.battle.bonusGracza = this.zPrzygody?.bonusGracza;
     this.roster.clear();
+    this.slotyZMapy.clear();
     this.nextId = 1;
     this.preferredApproach = null;
     this.busy = false;
@@ -490,7 +514,11 @@ export class BattleScene extends Phaser.Scene {
     const rzedyGracza = this.startRows();
     const rzedyWroga = this.startRows();
     if (this.zPrzygody) {
-      this.wystawZPrzygody(rzedyGracza, rzedyWroga);
+      // Bitwa z mapy NIE losuje rzędów: oddziały stają w kolejności slotów
+      // u bohatera, z góry na dół. Losowanie jest dla bitwy pokazowej, gdzie
+      // nie ma żadnego układu do uszanowania — tutaj gracz świadomie ustawia
+      // armię na swoim ekranie i chce ją zobaczyć tak samo na polu walki.
+      this.wystawZPrzygody();
     } else {
       this.playerFaction.units.forEach((def, i) => this.spawnUnit(def, 'player', 0, rzedyGracza[i]));
       this.enemyFaction.units.forEach((def, i) =>
@@ -786,17 +814,24 @@ export class BattleScene extends Phaser.Scene {
    * statystyk z definicji frakcji — dzięki temu bitwa nie musi znać się na
    * oddziałach, a mapa nie musi przechowywać ich statystyk.
    */
-  private wystawZPrzygody(rzedyGracza: number[], rzedyWroga: number[]) {
-    const wystaw = (sklad: OddzialZMapy[], side: Side, col: number, rzedy: number[]) => {
+  private wystawZPrzygody() {
+    const wystaw = (sklad: OddzialZMapy[], side: Side, col: number) => {
+      const rzedy = rzedyDlaSkladu(sklad.length);
       sklad.forEach((o, i) => {
         const frakcja = factionById(o.frakcja);
         const def = frakcja?.units[o.tier];
         if (!def) return;
-        this.spawnUnit({ ...def, count: o.ile }, side, col, rzedy[i % rzedy.length]);
+        const unit = this.spawnUnit({ ...def, count: o.ile }, side, col, rzedy[i]);
+        // Zapamiętujemy, KTÓRY oddział na planszy odpowiada któremu wpisowi
+        // w armii bohatera. Szukanie go potem po `sprite` wyglądało na
+        // wystarczające i nie było: po podziale stosu dwa sloty mają ten sam
+        // gatunek, więc oba dostawały liczebność TEGO SAMEGO oddziału
+        // z planszy — jeden stos wracał z bitwy podwojony.
+        if (side === 'player') this.slotyZMapy.set(i, unit.id);
       });
     };
-    wystaw(this.zPrzygody!.gracz, 'player', 0, rzedyGracza);
-    wystaw(this.zPrzygody!.wrog, 'enemy', COLS - 1, rzedyWroga);
+    wystaw(this.zPrzygody!.gracz, 'player', 0);
+    wystaw(this.zPrzygody!.wrog, 'enemy', COLS - 1);
     // Nazwy stron w ekranie końca biorą się z frakcji, więc dopasowujemy je
     // do tego, kto naprawdę stanął do walki.
     const frakcjaGracza = factionById(this.zPrzygody!.gracz[0]?.frakcja ?? '');
@@ -1744,10 +1779,12 @@ export class BattleScene extends Phaser.Scene {
    * silniejszych strażników.
    */
   private wrocDoPrzygody(wygrana: boolean) {
-    const ocalali = this.zPrzygody!.gracz.map((o) => {
-      const zywy = this.units.find(
-        (u) => u.side === 'player' && u.def.sprite === o.sprite
-      );
+    // Ocalałych dopasowujemy po IDENTYFIKATORZE oddziału, nie po gatunku:
+    // dwa sloty z tym samym gatunkiem (po podziale stosu) to normalny układ,
+    // a szukanie po `sprite` dawało obu liczebność pierwszego z brzegu.
+    const ocalali = this.zPrzygody!.gracz.map((o, i) => {
+      const id = this.slotyZMapy.get(i);
+      const zywy = id !== undefined ? this.units.find((u) => u.id === id) : undefined;
       return { ...o, ile: zywy ? zywy.count : 0 };
     });
     this.registry.set('wynik-bitwy', {

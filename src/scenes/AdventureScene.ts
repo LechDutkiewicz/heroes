@@ -31,7 +31,7 @@ import {
   type WyborSkrzyni,
 } from '../data/mapa';
 import { planszaPrzygody } from '../data/plansza';
-import { SLOTY_ARMII, znormalizuj, zywe } from '../data/armia';
+import { SLOTY_ARMII, dolacz, pustaArmia, zywe } from '../data/armia';
 import {
   efekt,
   ofertaAwansu,
@@ -92,7 +92,7 @@ const MGLA_ALFA = 0.88;
 
 /** Klucze, pod którymi stan przeżywa przejście do bitwy i z powrotem. */
 const KLUCZ_STANU = 'stan-mapy';
-/** Skład armii sprzed bitwy — z niego Uzdrowiciel liczy straty. */
+/** Skład armii sprzed bitwy (slot → liczebność) — z niego Uzdrowiciel liczy straty. */
 const KLUCZ_PRZED_BITWA = 'armia-przed-bitwa';
 const KLUCZ_WYNIKU = 'wynik-bitwy';
 
@@ -2015,18 +2015,21 @@ export class AdventureScene extends Phaser.Scene {
   private uzdrowiciel(): number {
     const odsetek = efekt(this.stan.bohater, 'leczenie');
     const przed = this.registry.get(KLUCZ_PRZED_BITWA) as
-      | Array<{ sprite: string; ile: number }>
+      | Array<{ slot: number; ile: number }>
       | undefined;
     this.registry.remove(KLUCZ_PRZED_BITWA);
     if (odsetek <= 0 || !przed) return 0;
 
+    // Po SLOCIE, nie po gatunku: dwa sloty tego samego gatunku (rozdzielony
+    // stos) to zwykły układ, a szukanie po `sprite` leczyło pierwszy z brzegu
+    // dwa razy i nie leczyło drugiego.
     let wrocilo = 0;
     for (const wpis of przed) {
-      const slot = this.stan.bohater.armia.find((x) => x?.sprite === wpis.sprite);
-      if (!slot || slot.ile >= wpis.ile) continue;
-      const straty = wpis.ile - slot.ile;
+      const stos = this.stan.bohater.armia[wpis.slot];
+      if (!stos || stos.ile >= wpis.ile) continue;
+      const straty = wpis.ile - stos.ile;
       const wraca = Math.floor(straty * odsetek);
-      slot.ile += wraca;
+      stos.ile += wraca;
       wrocilo += wraca;
     }
     return wrocilo;
@@ -2241,13 +2244,21 @@ export class AdventureScene extends Phaser.Scene {
     // ocalałych.
     this.registry.set(
       KLUCZ_PRZED_BITWA,
-      zywe(this.stan.bohater.armia).map((od) => ({ sprite: od.sprite, ile: od.ile }))
+      this.stan.bohater.armia
+        .map((od, slot) => (od && od.ile > 0 ? { slot, ile: od.ile } : null))
+        .filter(Boolean)
     );
     this.napisUlotny(`${o.nazwa}\nDo boju!`);
     this.registry.set(KLUCZ_STANU, this.stan);
     this.time.delayedCall(750, () => {
       this.scene.start('battle', {
-        gracz: zywe(this.stan.bohater.armia),
+        // Każdy stos jedzie do bitwy ZE SWOIM numerem slotu. Bez tego wynik
+        // wraca jako gęsta lista i układ, który gracz ułożył na ekranie
+        // bohatera, rozsypuje się po każdej walce — dziury się zasklepiają,
+        // a oddziały zjeżdżają w lewo.
+        gracz: this.stan.bohater.armia
+          .map((o, i) => (o && o.ile > 0 ? { ...o, slot: i } : null))
+          .filter((o): o is NonNullable<typeof o> => !!o),
         wrog: o.oddzialy ?? [],
         oObiekt: o.id,
         powrot: 'adventure',
@@ -2313,18 +2324,26 @@ export class AdventureScene extends Phaser.Scene {
   /** Po powrocie z bitwy: zwycięstwo usuwa strażnika, porażka cofa do zamku. */
   private rozliczBitwe() {
     const wynik = this.registry.get(KLUCZ_WYNIKU) as
-      | { oObiekt: number; wygrana: boolean; armia?: Oddzial[] }
+      | { oObiekt: number; wygrana: boolean; armia?: Array<Oddzial & { slot?: number }> }
       | undefined;
     if (!wynik) return;
     this.registry.remove(KLUCZ_WYNIKU);
     const o = this.stan.obiekty.find((x) => x.id === wynik.oObiekt);
 
     if (wynik.armia) {
-      // Bitwa oddaje gęstą listę ocalałych, bez pamięci o slotach. Wracamy
-      // do slotów przez `znormalizuj`, a nie przez przypisanie wprost —
-      // inaczej armia po pierwszej bitwie przestaje mieć siedem miejsc
-      // i ekran bohatera dostaje tablicę o innej długości niż rysuje.
-      this.stan.bohater.armia = znormalizuj(wynik.armia);
+      // Ocalali wracają NA SWOJE MIEJSCA. Bitwa oddaje listę w tej samej
+      // kolejności, w jakiej ją dostała, a każdy wpis niesie numer slotu —
+      // więc dziury między stosami zostają tam, gdzie gracz je zostawił.
+      // Wcześniej szło to przez `znormalizuj`, która upycha listę od zera,
+      // i armia sama się przesuwała po każdej wygranej.
+      const nowa = pustaArmia();
+      for (const od of wynik.armia) {
+        if (!od || od.ile <= 0) continue;
+        const slot = typeof od.slot === 'number' && od.slot >= 0 && od.slot < SLOTY_ARMII ? od.slot : -1;
+        if (slot >= 0 && !nowa[slot]) nowa[slot] = { ...od };
+        else dolacz(nowa, od);
+      }
+      this.stan.bohater.armia = nowa;
     }
 
     if (wynik.wygrana) {
