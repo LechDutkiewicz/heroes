@@ -412,6 +412,16 @@ export interface Bohater {
    */
   umiejetnosci?: Record<string, number>;
   /**
+   * Poziom, za który gracz ODEBRAŁ już nagrodę (wybrał umiejętność).
+   *
+   * Osobno od `poziom(doswiadczenie)`, bo poziom wylicza się z doświadczenia
+   * natychmiast, a okno wyboru pokazuje się dopiero, gdy da się je pokazać.
+   * Bez tego licznika awans widziała tylko bitwa: skrzynia i drzewo wiedzy
+   * też dają doświadczenie i po cichu podnosiły poziom, a wybór umiejętności
+   * przepadał.
+   */
+  poziomOdebrany?: number;
+  /**
    * Do którego dnia włącznie trwa dodatek do ruchu z ranczo. Trzymamy datę
    * końca, a nie licznik dni: licznik trzeba by zmniejszać co turę i każde
    * pominięcie tury (bitwa, wczytanie stanu) rozjeżdżałoby go z kalendarzem.

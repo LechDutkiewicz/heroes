@@ -21,6 +21,47 @@ const sprawdz = (co, ok, szczegol = '') => {
   console.log(`  ${ok ? 'OK  ' : 'ŹLE '} ${co}${szczegol ? ` — ${szczegol}` : ''}`);
 };
 
+
+/**
+ * Zamyka okno awansu, jeśli akurat stoi otwarte.
+ *
+ * Od czasu, gdy awans daje WYBÓR umiejętności, każde źródło doświadczenia
+ * (skrzynia, drzewo wiedzy, wygrana bitwa) może zatrzymać grę oknem. Sonda
+ * gra rolę gracza, więc musi na to okno kliknąć — inaczej zgłasza „gra nie
+ * wraca do sterowania" przy grze, która działa dokładnie tak, jak ma działać.
+ */
+const zamknijAwans = async (page) => {
+  // Okno potrafi wejść z opóźnieniem (po bitwie czeka na napis o zwycięstwie),
+  // więc najpierw dajemy mu chwilę. Pierwsza wersja tej funkcji poddawała się
+  // natychmiast, gdy okna jeszcze nie było, i sonda dalej zgłaszała „gra nie
+  // wraca do sterowania".
+  for (let proba = 0; proba < 10; proba++) {
+    const punkt = await page.evaluate(() => {
+      const s = window.__game.scene.getScene('adventure');
+      const c = s.children.list.find(
+        (o) =>
+          o.type === 'Container' &&
+          o.list?.some((x) => x.type === 'Text' && /Naucz się|Ulepsz|Dalej/.test(x.text))
+      );
+      return c ? { x: c.x, y: c.y } : null;
+    });
+    if (!punkt) {
+      const zablokowana = await page.evaluate(
+        () => window.__game.scene.getScene('adventure').zajety === true
+      );
+      if (!zablokowana) return proba > 0;
+      await page.waitForTimeout(400);
+      continue;
+    }
+    // Przez `klikNaPlotnie`, nie przez `page.mouse.click` wprost: okno
+    // przeglądarki ma tu 1000 × 760, a płótno gry 960 × 694, więc współrzędne
+    // sceny są przesunięte względem strony. Pierwsza wersja klikała obok
+    // przycisku i sonda dalej zgłaszała zablokowaną grę.
+    await klikNaPlotnie(page, punkt.x, punkt.y);
+    await page.waitForTimeout(600);
+  }
+  return true;
+};
 /**
  * Klik w punkt PŁÓTNA, nie strony. Pierwsza wersja liczyła współrzędne od
  * lewego górnego rogu okna przeglądarki i chybiała, bo płótno ma wokół siebie
@@ -147,6 +188,7 @@ sprawdz(
 // Klikamy „doświadczenie" — prawy przycisk w oknie skrzyni.
 await klikNaPlotnie(page, 8 + 336 + 86, 44 + 288 + 36);
 await page.waitForTimeout(500);
+await zamknijAwans(page);
 const poWyborze = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   return {
@@ -225,6 +267,8 @@ const koniec = await page.evaluate(() => {
 sprawdz('bitwa uznaje zwycięstwo', koniec.zywiWrogowie === 0);
 sprawdz('bitwa odkłada wynik dla mapy', koniec.wynik !== null, JSON.stringify(koniec.wynik));
 await scena('adventure');
+await page.waitForTimeout(3200);
+await zamknijAwans(page);
 const poBitwie = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   const o = s.stan.obiekty.find((x) => x.id === window.__potwor);
@@ -329,6 +373,7 @@ sprawdz('zapas w zamku maleje', werbunek.po.dostepne[0] < werbunek.przed.dostepn
 await page.locator('canvas').screenshot({ path: 'tools/shots/zamek.png' });
 await page.evaluate(() => window.__game.scene.getScene('zamek').scene.start('adventure'));
 await scena('adventure');
+await zamknijAwans(page);
 const poZamku = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   const potwor = s.stan.obiekty.find((o) => o.id === window.__potwor);

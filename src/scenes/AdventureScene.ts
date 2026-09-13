@@ -218,7 +218,15 @@ export class AdventureScene extends Phaser.Scene {
    */
   private wczytajStan(): StanMapy {
     const zapisany = this.registry.get(KLUCZ_STANU) as StanMapy | undefined;
-    if (zapisany) return zapisany;
+    if (zapisany) {
+      // Stan sprzed wprowadzenia licznika: zaczynamy od poziomu, na którym
+      // bohater już jest, żeby wejście na mapę nie wysypało serii okien
+      // za awanse, które dawno się wydarzyły.
+      if (zapisany.bohater.poziomOdebrany === undefined) {
+        zapisany.bohater.poziomOdebrany = poziom(zapisany.bohater.doswiadczenie);
+      }
+      return zapisany;
+    }
     const nowy = planszaPrzygody();
     this.registry.set(KLUCZ_STANU, nowy);
     return nowy;
@@ -1253,6 +1261,26 @@ export class AdventureScene extends Phaser.Scene {
 
   // ---------- odświeżanie ----------
 
+  /**
+   * Czy bohater ma nieodebrany awans — i jeśli tak, otwiera okno wyboru.
+   *
+   * Wołane z `odswiezWszystko`, czyli po KAŻDEJ zmianie stanu gry, a nie
+   * tylko po bitwie. To był błąd pierwszej wersji: okno odpalała wyłącznie
+   * `rozliczBitwe`, więc doświadczenie ze skrzyni i z drzewa wiedzy podnosiło
+   * poziom po cichu — statystyki rosły, a umiejętności nie było skąd wziąć.
+   *
+   * Nagrody odbiera się po jednej: przy skoku o dwa poziomy naraz okno
+   * pokazuje się dwa razy, bo dwa awanse to dwie decyzje.
+   */
+  private sprawdzAwans() {
+    if (this.zajety) return;
+    const b = this.stan.bohater;
+    const teraz = poziom(b.doswiadczenie);
+    const odebrany = b.poziomOdebrany ?? 1;
+    if (teraz <= odebrany) return;
+    this.oknoAwansu(odebrany, odebrany + 1);
+  }
+
   private odswiezWszystko() {
     const b = this.stan.bohater;
     const st = statystyki(b);
@@ -1304,6 +1332,10 @@ export class AdventureScene extends Phaser.Scene {
     const d = data(this.stan.dzien);
     this.dataTekst.setText(`Tydzień ${d.tydzien}, dzień ${d.dzienTygodnia}`);
     this.rysujMinimape();
+    // Nieodebrany awans na samym końcu odświeżania — po tym, jak panel
+    // pokazał już nowe liczby. Okno ma być ostatnią rzeczą, którą gracz
+    // zobaczy, a nie pierwszą.
+    this.sprawdzAwans();
   }
 
   private rysujMinimape() {
@@ -1945,8 +1977,11 @@ export class AdventureScene extends Phaser.Scene {
     const zamknij = (opis?: string) => {
       czesci.forEach((x) => x.destroy());
       przyciski.forEach((b) => b.destroy());
+      this.stan.bohater.poziomOdebrany = poziomPo;
       this.zajety = false;
       if (opis) this.napisUlotny(opis);
+      // `odswiezWszystko` sam sprawdzi, czy czeka jeszcze jeden awans —
+      // przy skoku o dwa poziomy naraz okno pokaże się drugi raz.
       this.odswiezWszystko();
     };
 
@@ -2106,10 +2141,16 @@ export class AdventureScene extends Phaser.Scene {
         // Drugorzędne umiejętności wchodzą do walki jako trzy liczby, a nie
         // jako bohater: symulacja bitwy nie zna postaci i nie powinna, żeby
         // `balance.ts` dalej mierzył czystą siłę frakcji.
+        // Razem z atakiem i obroną bohatera: to jedyne miejsce, w którym te
+        // dwie liczby wchodzą do walki. Wcześniej rosły w panelu i nie robiły
+        // nic — arena je podnosiła, artefakty je podnosiły, a bitwa o nich
+        // nie wiedziała.
         bonusGracza: {
           wrecz: efekt(this.stan.bohater, 'wrecz'),
           strzal: efekt(this.stan.bohater, 'strzal'),
           pancerz: efekt(this.stan.bohater, 'pancerz'),
+          atak: statystyki(this.stan.bohater).atak,
+          obrona: statystyki(this.stan.bohater).obrona,
         },
       });
     });
@@ -2214,11 +2255,11 @@ export class AdventureScene extends Phaser.Scene {
         )
       );
       // Awans ma być ZDARZENIEM, nie liczbą, która po cichu urosła w panelu.
-      // Ulotny napis nad mapą tego nie załatwiał: znikał po dwóch sekundach
-      // i nie dawało się go przeczytać, jeśli akurat patrzyło się gdzie indziej.
-      // Teraz awans zatrzymuje grę i każe podjąć decyzję.
+      // Okno otwiera `sprawdzAwans`, a nie to miejsce: doświadczenie wpada do
+      // gry także ze skrzyń i z drzewa wiedzy, więc wykrywanie awansu musi
+      // siedzieć w jednym miejscu dla wszystkich źródeł naraz.
       if (poziomPo > poziomPrzed) {
-        this.time.delayedCall(2100, () => this.oknoAwansu(poziomPrzed, poziomPo));
+        this.time.delayedCall(2100, () => this.sprawdzAwans());
       }
       // Zdobycie ostatniego cudzego zamku KOŃCZY grę. Bez tego wyprawa nie ma
       // mety: dziecko przechodzi pół planszy, wygrywa najtrudniejszą bitwę

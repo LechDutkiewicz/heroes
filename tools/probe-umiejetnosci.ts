@@ -27,7 +27,13 @@ import {
   przyznaj,
   umiejetnoscPoId,
 } from '../src/data/umiejetnosci';
-import { createBattle, damageOf, type Battle } from '../src/data/battle';
+import {
+  ATAK_BOHATERA_ZA_PUNKT,
+  OBRONA_BOHATERA_ZA_PUNKT,
+  createBattle,
+  damageOf,
+  type Battle,
+} from '../src/data/battle';
 import { FACTIONS } from '../src/data/factions';
 
 let bledy = 0;
@@ -129,19 +135,19 @@ console.log('--- umiejętności bojowe w symulacji bitwy ---');
   };
 
   const bez = paraWrecz(bitwa());
-  const zNapastnikiem = paraWrecz(bitwa({ wrecz: 0.3, strzal: 0, pancerz: 0 }));
+  const zNapastnikiem = paraWrecz(bitwa({ wrecz: 0.3, strzal: 0, pancerz: 0, atak: 0, obrona: 0 }));
   sprawdz('Napastnik podnosi obrażenia wręcz', zNapastnikiem > bez, `${bez} → ${zNapastnikiem}`);
 
   const wNas = paraDoNas(bitwa());
-  const wNasZPancerzem = paraDoNas(bitwa({ wrecz: 0, strzal: 0, pancerz: 0.22 }));
+  const wNasZPancerzem = paraDoNas(bitwa({ wrecz: 0, strzal: 0, pancerz: 0.22, atak: 0, obrona: 0 }));
   sprawdz('Pancerz obniża obrażenia otrzymywane', wNasZPancerzem < wNas, `${wNas} → ${wNasZPancerzem}`);
 
   // Napastnik nie może pomagać wrogowi — bonus działa w jedną stronę.
-  const wNasZNapastnikiem = paraDoNas(bitwa({ wrecz: 0.3, strzal: 0, pancerz: 0 }));
+  const wNasZNapastnikiem = paraDoNas(bitwa({ wrecz: 0.3, strzal: 0, pancerz: 0, atak: 0, obrona: 0 }));
   sprawdz('Napastnik nie wzmacnia wroga', wNasZNapastnikiem === wNas, `${wNas} vs ${wNasZNapastnikiem}`);
 
   // Łucznictwo dotyczy strzelca, Napastnik go nie dotyczy.
-  const b1 = bitwa({ wrecz: 0, strzal: 0.4, pancerz: 0 });
+  const b1 = bitwa({ wrecz: 0, strzal: 0.4, pancerz: 0, atak: 0, obrona: 0 });
   const strzelec = b1.units.find((u) => u.side === 'player' && u.def.shooter);
   if (strzelec) {
     const cel = b1.units.find((u) => u.side === 'enemy')!;
@@ -159,8 +165,63 @@ console.log('--- umiejętności bojowe w symulacji bitwy ---');
   // Bitwa bez podanego bonusu musi liczyć dokładnie tak jak przed zmianą —
   // inaczej `balance.ts` mierzyłby co innego niż frakcje.
   const czysta = bitwa();
-  const zZerami = bitwa({ wrecz: 0, strzal: 0, pancerz: 0 });
+  const zZerami = bitwa({ wrecz: 0, strzal: 0, pancerz: 0, atak: 0, obrona: 0 });
   sprawdz('brak bonusu nie zmienia rachunku', paraWrecz(czysta) === paraWrecz(zZerami));
+}
+
+console.log('--- atak i obrona bohatera w walce ---');
+{
+  const bitwa = (bonus?: Battle['bonusGracza']) => {
+    const b = createBattle(FACTIONS[0], FACTIONS[1], [], () => 0.5);
+    b.bonusGracza = bonus;
+    return b;
+  };
+  const zera = { wrecz: 0, strzal: 0, pancerz: 0, atak: 0, obrona: 0 };
+  const nasz = (b: Battle) => {
+    const atak = b.units.find((u) => u.side === 'player' && !u.def.shooter)!;
+    const cel = b.units.find((u) => u.side === 'enemy')!;
+    return damageOf(b, atak, cel).value;
+  };
+  const wNas = (b: Battle) => {
+    const atak = b.units.find((u) => u.side === 'enemy' && !u.def.shooter)!;
+    const cel = b.units.find((u) => u.side === 'player')!;
+    return damageOf(b, atak, cel).value;
+  };
+
+  const bezStatystyk = nasz(bitwa(zera));
+  const zAtakiem = nasz(bitwa({ ...zera, atak: 10 }));
+  sprawdz('atak bohatera podnosi obrażenia jego oddziałów', zAtakiem > bezStatystyk, `${bezStatystyk} → ${zAtakiem}`);
+  // Porównujemy z tolerancją jednego punktu, bo `damageOf` zaokrągla RAZ, na
+  // końcu całego iloczynu, a sonda mnoży już zaokrągloną wartość bazową.
+  // Pierwsza wersja żądała równości i zgłaszała 34 zamiast 35 — błąd był
+  // w oczekiwaniu, nie w grze.
+  const oczekiwany = Math.max(1, Math.round(bezStatystyk * (1 + 10 * ATAK_BOHATERA_ZA_PUNKT)));
+  sprawdz(
+    'atak działa po 5% za punkt',
+    Math.abs(zAtakiem - oczekiwany) <= 1,
+    `${zAtakiem} vs ${oczekiwany}`
+  );
+
+  const wNasBez = wNas(bitwa(zera));
+  const wNasZObrona = wNas(bitwa({ ...zera, obrona: 10 }));
+  sprawdz('obrona bohatera obniża obrażenia w jego oddziały', wNasZObrona < wNasBez, `${wNasBez} → ${wNasZObrona}`);
+  const oczekiwanaObrona = Math.max(1, Math.round(wNasBez * (1 - 10 * OBRONA_BOHATERA_ZA_PUNKT)));
+  sprawdz(
+    'obrona działa po 2,5% za punkt',
+    Math.abs(wNasZObrona - oczekiwanaObrona) <= 1,
+    `${wNasZObrona} vs ${oczekiwanaObrona}`
+  );
+
+  // Atak bohatera nie może działać w drugą stronę: strażnik nie ma bohatera.
+  sprawdz('atak bohatera nie wzmacnia wroga', wNas(bitwa({ ...zera, atak: 10 })) === wNasBez);
+  sprawdz('obrona bohatera nie osłania wroga', nasz(bitwa({ ...zera, obrona: 10 })) === bezStatystyk);
+
+  // Sufity z Heroes 3: atak nie przekracza +300%, obrona nie schodzi niżej
+  // niż −70%. Bez nich sto punktów ataku dawałoby stukrotne obrażenia.
+  const ogromnyAtak = nasz(bitwa({ ...zera, atak: 500 }));
+  sprawdz('atak ma sufit', ogromnyAtak <= Math.round(bezStatystyk * 4) + 1, `${ogromnyAtak} przy bazie ${bezStatystyk}`);
+  const ogromnaObrona = wNas(bitwa({ ...zera, obrona: 500 }));
+  sprawdz('obrona ma podłogę', ogromnaObrona >= Math.round(wNasBez * 0.3) - 1, `${ogromnaObrona} przy bazie ${wNasBez}`);
 }
 
 console.log('--- oferta przy awansie ---');

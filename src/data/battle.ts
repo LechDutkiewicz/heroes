@@ -69,7 +69,15 @@ export interface Battle {
    * i `strojenie.ts` dalej liczą czystą siłę frakcji, po prostu nie podając
    * tego pola.
    */
-  bonusGracza?: { wrecz: number; strzal: number; pancerz: number };
+  bonusGracza?: {
+    wrecz: number;
+    strzal: number;
+    pancerz: number;
+    /** Atak bohatera — podbija ciosy WSZYSTKICH jego oddziałów. */
+    atak: number;
+    /** Obrona bohatera — obniża ciosy wymierzone w jego oddziały. */
+    obrona: number;
+  };
 }
 
 export const cellKey = (col: number, row: number) => `${col},${row}`;
@@ -227,6 +235,23 @@ export function attackPlan(
   return best ? { from: best.from } : null;
 }
 
+/**
+ * Ile daje jeden punkt ataku i obrony BOHATERA.
+ *
+ * Liczby z Heroes 3: tam każdy punkt przewagi ataku nad obroną przeciwnika
+ * podnosi obrażenia o 5%, a każdy punkt obrony obniża otrzymywane o 2,5%,
+ * z sufitami odpowiednio +300% i −70%. U nas strażnik nie ma bohatera, więc
+ * porównywać nie ma z czym — liczymy wprost od statystyki naszego.
+ *
+ * To jest CAŁE znaczenie ataku i obrony bohatera w walce. Zanim tu weszły,
+ * obie liczby rosły w panelu i nie robiły nic: arena je podnosiła, artefakty
+ * je podnosiły, a bitwa o nich nie wiedziała.
+ */
+export const ATAK_BOHATERA_ZA_PUNKT = 0.05;
+export const ATAK_BOHATERA_MAKS = 3;
+export const OBRONA_BOHATERA_ZA_PUNKT = 0.025;
+export const OBRONA_BOHATERA_MAKS = 0.7;
+
 export function damageOf(b: Battle, attacker: SimUnit, target: SimUnit) {
   const typeMult = typeMultiplier(attacker.def.type, target.def.type);
   const pinned = attacker.def.shooter && hasAdjacentEnemy(b, attacker);
@@ -268,8 +293,12 @@ function bonusUmiejetnosci(b: Battle, attacker: SimUnit, target: SimUnit) {
   if (attacker.side === 'player') {
     const strzela = attacker.def.shooter && !hasAdjacentEnemy(b, attacker);
     mnoznik *= 1 + (strzela ? m.strzal : m.wrecz);
+    mnoznik *= 1 + Math.min(ATAK_BOHATERA_MAKS, ATAK_BOHATERA_ZA_PUNKT * Math.max(0, m.atak));
   }
-  if (target.side === 'player') mnoznik *= 1 - m.pancerz;
+  if (target.side === 'player') {
+    mnoznik *= 1 - m.pancerz;
+    mnoznik *= 1 - Math.min(OBRONA_BOHATERA_MAKS, OBRONA_BOHATERA_ZA_PUNKT * Math.max(0, m.obrona));
+  }
   return mnoznik;
 }
 

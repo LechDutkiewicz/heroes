@@ -60,6 +60,12 @@ import {
 } from '../data/armia';
 import { planszaPrzygody } from '../data/plansza';
 import {
+  ATAK_BOHATERA_MAKS,
+  ATAK_BOHATERA_ZA_PUNKT,
+  OBRONA_BOHATERA_MAKS,
+  OBRONA_BOHATERA_ZA_PUNKT,
+} from '../data/battle';
+import {
   MAKS_UMIEJETNOSCI,
   POZIOMY,
   opisWartosci,
@@ -125,6 +131,7 @@ export class HeroScene extends Phaser.Scene {
   private kartaNazwa!: Phaser.GameObjects.Text;
   private kartaKlasa!: Phaser.GameObjects.Text;
   private kartaOpis!: Phaser.GameObjects.Text;
+  private wplywNaBitwe!: Phaser.GameObjects.Text;
 
   /** Slot, z którego trwa przeciąganie, i lecąca za kursorem sylwetka. */
   private ciagniety: number | null = null;
@@ -406,10 +413,13 @@ export class HeroScene extends Phaser.Scene {
       [ICON.shield, 'Obrona'],
       [ICON.boot, 'Ruch'],
     ];
-    const tabY = TRESC_Y + 183;
+    const tabY = TRESC_Y + 176;
     const wiersz = 34;
     const tab = this.add.graphics().setDepth(Z.hud + 2);
-    wneka(tab, dx, tabY, dw, wiersz * 3 + 8, 8, mix(C.panelDeep, C.shadow, 0.34), 1);
+    // Tabliczka ma miejsce na trzy wiersze PLUS stopkę z tym, co atak
+    // i obrona robią w bitwie — bez niej ta informacja nie miała się gdzie
+    // podziać i wychodziła poza kolumnę.
+    wneka(tab, dx, tabY, dw, wiersz * 3 + 30, 8, mix(C.panelDeep, C.shadow, 0.34), 1);
 
     wiersze.forEach(([ikona, nazwa], i) => {
       const wy = tabY + 21 + i * wiersz;
@@ -454,10 +464,29 @@ export class HeroScene extends Phaser.Scene {
         .setDepth(Z.hud + 3);
     });
 
+    // Co atak i obrona bohatera robią W BITWIE — wprost, liczbą.
+    //
+    // Obie liczby rosły w panelu, arena je podnosiła, artefakty je podnosiły,
+    // a nigdzie nie było napisane, po co. Bez tego wiersza gracz musiałby
+    // zgadywać, czy „+1 do ataku" cokolwiek znaczy.
+    tab.lineStyle(1, C.shadow, 0.55);
+    tab.beginPath();
+    tab.moveTo(dx + 10, tabY + wiersz * 3 + 9);
+    tab.lineTo(dx + dw - 10, tabY + wiersz * 3 + 9);
+    tab.strokePath();
+    this.wplywNaBitwe = this.add
+      .text(dx + dw / 2, tabY + wiersz * 3 + 20, '', {
+        ...body(9, '#7ce89a'),
+        align: 'center',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+      .setDepth(Z.hud + 3);
+
     // Trzeci materiał: pergamin. Jasny, ciepły, bez połysku — celowo najdalej
     // od metalu obręczy i od kamienia tabliczki statystyk.
-    const my = TRESC_Y + 296;
-    const mh = TRESC_H - 308;
+    const my = TRESC_Y + 308;
+    const mh = TRESC_H - 320;
     const mg = this.add.graphics().setDepth(Z.hud + 2);
     const pergamin = mix(C.panel, C.gold, 0.14);
     mg.fillStyle(C.shadow, 0.35);
@@ -1323,6 +1352,16 @@ export class HeroScene extends Phaser.Scene {
     // Lista ma ograniczoną wysokość: piąty wiersz wyszedłby poza kolumnę
     // i położył się na pasie armii. Nadmiar zbieramy w jedną linijkę.
     const widoczne = linie.length > 3 ? [...linie.slice(0, 2), `…i jeszcze ${linie.length - 2}`] : linie;
+    // Ten sam wzór co w `battle.ts` — gdyby rozjechał się z tamtym, panel
+    // obiecywałby co innego, niż liczy bitwa.
+    const zysk = Math.round(
+      Math.min(ATAK_BOHATERA_MAKS, ATAK_BOHATERA_ZA_PUNKT * Math.max(0, s.atak)) * 100
+    );
+    const oslona = Math.round(
+      Math.min(OBRONA_BOHATERA_MAKS, OBRONA_BOHATERA_ZA_PUNKT * Math.max(0, s.obrona)) * 100
+    );
+    this.wplywNaBitwe.setText(`w bitwie:  +${zysk}% obrażeń  ·  −${oslona}% otrzymywanych`);
+
     this.modyfikatory.setText(
       widoczne.length ? widoczne.join('\n') : 'Nic — na razie liczysz na siebie.'
     );
