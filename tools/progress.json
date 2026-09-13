@@ -1,5 +1,5 @@
 {
- "updated": "2026-09-07 (ekran bohatera, runda 3)",
+ "updated": "2026-09-13 (ekran bohatera, runda 4)",
  "pieces": [
   {
    "name": "Plansza: siatka, teren, rama",
@@ -197,6 +197,12 @@
      "blind": "bohater-rama-r3",
      "gap": "Belka nagłówka to kolorowy prostokąt z obrysem, nie bryła: brak jasnej fazy od góry i ciemnego spodu, brak ząbkowanego podcięcia i faktury. Lewe górne okucie czyta się jako niedokończony żółty prostokąt nachodzący na ramę.",
      "note": "Do zrobienia: gzyms z podcięciem, okucie wpuszczone w obrys zamiast nachodzące."
+    },
+    {
+     "win": false,
+     "blind": "bohater-rama-r4",
+     "gap": "Ząbkowanie jest rzędem identycznych kwadracików o jednej wartości tonalnej, a nie rzeźbą; okucia to kółka na kątowniku. Wzorzec ma ząbki o zmiennym walorze i materiał z fakturą.",
+     "note": "Gzyms i ząbkowanie weszły i widać je, ale każdy ząbek ma to samo światło. Wzorzec różnicuje walor ząbek po ząbku."
     }
    ]
   },
@@ -225,6 +231,12 @@
      "blind": "bohater-statystyki-r3",
      "gap": "Ten sam błyszczący materiał z żółtym obrysem powtarza się w nagłówku, obręczy, plakietce poziomu i trzech wierszach statystyk — pięć ról, jeden preset.",
      "note": "Do zrobienia: rozdzielić materiały. Portret metal, statystyki cienki pasek ikon, modyfikatory spokojne wiersze o niskim kontraście."
+    },
+    {
+     "win": false,
+     "blind": "bohater-statystyki-r4",
+     "gap": "Portret nie siedzi W obręczy: sprite leży na płaskim kole, bez cienia wewnętrznego i bez fazowania krawędzi otworu.",
+     "note": "Trzy materiały (metal, kamień, pergamin) krytyk odnotował jako to, co ma wzorzec — czyli rozdzielenie zadziałało. Zostało wgłębienie pod samym portretem."
     }
    ]
   },
@@ -253,6 +265,12 @@
      "blind": "bohater-artefakty-r3",
      "gap": "Poświata rzadkości rozlewa się poza obrys płytki i wygląda na podklejoną. Kolor rzadkości ma być na obrysie gniazda 2 px, a poświata zamknięta w jego krawędzi.",
      "note": "Wykonane dosłownie: dwa obrysy w barwie klasy na krawędzi gniazda, poświata jako pierścienie wpisane w prostokąt wnęki."
+    },
+    {
+     "win": false,
+     "blind": "bohater-artefakty-r4",
+     "gap": "Przedmioty to wektorowe sylwetki, wzorzec ma malowane miniatury. Brak cienia rzucanego przez przedmiot w głąb gniazda.",
+     "note": "Gniazdo i rzadkość przestały być zarzutem — luka przeniosła się na SAME PRZEDMIOTY. Tego nie da się dorysować prymitywami; to jest robota dla wsadu graficznego, jak przy budynkach miasta."
     }
    ]
   },
@@ -281,6 +299,12 @@
      "blind": "bohater-umiejetnosci-r3",
      "gap": "Gniazdo ma miękki cień NA ZEWNĄTRZ, więc wystaje zamiast się zapadać; medalion to dwa koncentryczne kółka bez fazy i bez kierunku światła.",
      "note": "Usterka prawdziwa i naprawiona: jasna fazka szła nad górną krawędzią wnęki, czyli dokładnie tam, gdzie robi wypukłość. Teraz nad otworem jest cień, a rozświetla się dolna warga."
+    },
+    {
+     "win": false,
+     "blind": "bohater-umiejetnosci-r4",
+     "gap": "Cztery okucia w rogach to ten sam kształt obrócony, każdy z tym samym refleksem — przy jednym źródle światła róg lewy górny i prawy dolny nie mogą świecić tak samo.",
+     "note": "Fazowany romb z jednym kierunkiem światła wszedł i został uznany. Została niespójność samych okuć: obracam kształt razem ze światłem."
     }
    ]
   },
@@ -309,6 +333,12 @@
      "blind": "bohater-okno-r3",
      "gap": "Okucia to płaskie żółte kwadraciki bez rysunku, rama bez profilu, przyciski w stylu domyślnego CSS.",
      "note": "Do zrobienia: okucia z rysunkiem zamiast blaszek, profil ramy, przyciski z materiałem innym niż tło okna."
+    },
+    {
+     "win": false,
+     "blind": "bohater-okno-r4",
+     "gap": "Tło nadal nie czyta się jako przyciemnione, a przyciski to cztery identyczne kapsułki bez hierarchii poza barwą.",
+     "note": "Przyciemnienie jest i wynosi 0,78 — ale nasz ekran pod spodem jest jasny, więc nawet mocno przygaszony zostaje jaśniejszy niż nocna mapa wzorca. To różnica palety, nie techniki."
     }
    ]
   }

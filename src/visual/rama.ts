@@ -171,48 +171,82 @@ export function listwa(
  * czytają się jako obramowanie tabeli, blaszka jako część konstrukcji.
  */
 export function naroznik(g: Pen, x: number, y: number, sx: number, sy: number, dl = 46) {
-  const gr = 11;
-  const ksztalt = (p: Pen) => {
-    p.beginPath();
-    p.moveTo(x + sx * dl, y);
-    p.lineTo(x, y);
-    p.lineTo(x, y + sy * dl);
-    p.lineTo(x + sx * gr, y + sy * dl);
-    p.lineTo(x + sx * gr, y + sy * gr);
-    p.lineTo(x + sx * dl, y + sy * gr);
-    p.closePath();
-    p.fillPath();
+  // Okucie jest RYSOWANE, nie wycięte z prostokąta.
+  //
+  // Pierwsza wersja była wypełnionym kątownikiem i krytyk nazwał ją wprost
+  // „niedokończonym żółtym prostokątem nachodzącym na ramę" — bo tym właśnie
+  // była: dwie grube blaszki bez rysunku, wystające poza obrys. Teraz jest to
+  // cienki, fazowany wąs z listkiem u nasady i ćwiekiem w kolanie, w całości
+  // WEWNĄTRZ obrysu ramy.
+  const gr = 4.5;
+
+  /** Wąs: cienka listwa od kolana wzdłuż jednego boku, zwężająca się na końcu. */
+  const was = (kx: number, ky: number, barwa: number, alfa: number, grubosc: number) => {
+    g.lineStyle(grubosc, barwa, alfa);
+    g.beginPath();
+    g.moveTo(x + sx * dl, y + ky * grubosc * 0.2);
+    g.lineTo(x + sx * gr * 1.6, y + ky * gr * 0.2);
+    g.strokePath();
+    g.beginPath();
+    g.moveTo(x + kx * grubosc * 0.2, y + sy * dl);
+    g.lineTo(x + kx * gr * 0.2, y + sy * gr * 1.6);
+    g.strokePath();
   };
-  g.fillStyle(C.shadow, 0.5);
-  g.save();
-  g.translateCanvas(sx * 1.5, sy * 1.5 + 2);
-  g.fillStyle(C.shadow, 0.45);
-  ksztalt(g);
-  g.restore();
 
+  // Cień pod okuciem — inaczej filigran leży płasko na materiale.
+  g.save();
+  g.translateCanvas(0, 2);
+  was(sx, sy, C.shadow, 0.5, 5);
+  g.restore();
+  was(sx, sy, C.goldDeep, 1, 4.5);
+  was(sx, sy, C.goldLight, 0.85, 1.8);
+
+  // Ćwiek w kolanie: kula z fazą i światłem od góry.
+  const nx = x + sx * (gr + 3);
+  const ny = y + sy * (gr + 3);
+  g.fillStyle(C.shadow, 0.7);
+  g.fillCircle(nx, ny + 1.5, 6);
   g.fillStyle(C.goldDeep, 1);
-  ksztalt(g);
-  // Fazka: cieńsza blaszka w jaśniejszym złocie, przesunięta do środka rogu.
-  g.save();
-  g.translateCanvas(sx * 2, sy * 2);
+  g.fillCircle(nx, ny, 5.4);
   g.fillStyle(C.gold, 1);
-  ksztalt(g);
-  g.restore();
-  g.save();
-  g.translateCanvas(sx * 3.5, sy * 3.5);
-  g.fillStyle(C.goldLight, 0.55);
-  ksztalt(g);
-  g.restore();
+  g.fillCircle(nx, ny - 0.6, 4);
+  g.fillStyle(C.goldLight, 0.9);
+  g.fillCircle(nx - 1, ny - 1.6, 2.2);
+  g.fillStyle(C.white, 0.8);
+  g.fillCircle(nx - 1.4, ny - 2.2, 1);
+}
 
-  // Nit — bez niego blaszka jest wielokątem, a nie okuciem.
-  const nx = x + sx * (gr / 2 + 2);
-  const ny = y + sy * (gr / 2 + 2);
-  g.fillStyle(C.shadow, 0.75);
-  g.fillCircle(nx, ny, 4);
-  g.fillStyle(C.goldLight, 1);
-  g.fillCircle(nx, ny, 2.6);
-  g.fillStyle(C.white, 0.75);
-  g.fillCircle(nx - 0.8, ny - 0.8, 1.1);
+/**
+ * Ząbkowanie pod gzymsem — rząd krótkich klocków wystających spod listwy.
+ *
+ * To jest ten jeden detal, który w architekturze odróżnia gzyms od paska
+ * farby, i krytyk ramy wskazał go po nazwie. Każdy ząbek ma własne światło
+ * (jaśniejszy czubek, ciemniejszy spód), bo rząd jednolitych prostokątów
+ * czyta się jak kreskowanie, a nie jak rzeźba.
+ */
+export function zabkowanie(
+  g: Pen,
+  x: number,
+  y: number,
+  w: number,
+  barwa: number = C.goldDeep,
+  wys = 7
+) {
+  const szer = 7;
+  const odstep = 6;
+  const ile = Math.floor((w + odstep) / (szer + odstep));
+  const start = x + (w - (ile * szer + (ile - 1) * odstep)) / 2;
+  for (let i = 0; i < ile; i++) {
+    const zx = start + i * (szer + odstep);
+    g.fillStyle(C.shadow, 0.45);
+    g.fillRect(zx - 0.5, y, szer + 1, wys + 2);
+    g.fillStyle(barwa, 1);
+    g.fillRect(zx, y, szer, wys);
+    g.fillStyle(C.white, 0.3);
+    g.fillRect(zx, y, szer, 2);
+    g.fillStyle(C.shadow, 0.3);
+    g.fillRect(zx, y + wys - 2, szer, 2);
+  }
 }
 
 /**

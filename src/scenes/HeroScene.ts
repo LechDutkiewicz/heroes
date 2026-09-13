@@ -62,7 +62,7 @@ import { C, E, H, T, Z, body, display } from '../visual/theme';
 import { makeHudButton, mix, plate } from '../visual/hud';
 import { ICON, buildIcons, icon } from '../visual/icons';
 import { BARWA_KLASY, OBRYS_KLASY, buildArtefakty, kluczArtefaktu } from '../visual/artefakty';
-import { cienPod, faktura, listwa, naroznik, pierscien, wneka } from '../visual/rama';
+import { cienPod, faktura, listwa, naroznik, pierscien, wneka, zabkowanie } from '../visual/rama';
 import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
 
 const KLUCZ_STANU = 'stan-mapy';
@@ -241,12 +241,22 @@ export class HeroScene extends Phaser.Scene {
     g.fillRoundedRect(nx + 12, ny + NAGLOWEK_H + 4, nw - 24, 8, 5);
     listwa(g, nx, ny, nw, NAGLOWEK_H, 12, C.panelDeep, C.gold);
     faktura(g, nx + 3, ny + 3, nw - 6, NAGLOWEK_H - 6, 0.045);
+    // Gzyms: warga wystająca spod belki plus rząd ząbków. To ten jeden detal,
+    // który odróżnia gzyms od paska farby — belka bez niego kończy się
+    // kreską i cała rama czyta się jako obrys, a nie jako konstrukcja.
+    g.fillStyle(C.goldDeep, 1);
+    g.fillRoundedRect(nx - 4, ny + NAGLOWEK_H - 5, nw + 8, 9, 3);
+    g.fillStyle(C.gold, 1);
+    g.fillRoundedRect(nx - 4, ny + NAGLOWEK_H - 5, nw + 8, 5, 3);
+    g.fillStyle(C.goldLight, 0.6);
+    g.fillRect(nx - 2, ny + NAGLOWEK_H - 4, nw + 4, 2);
+    zabkowanie(g, nx + 24, ny + NAGLOWEK_H - 16, nw - 48, C.goldDeep, 9);
 
     // Cztery okucia w rogach ramy.
-    naroznik(g, RAMA.x + 5, RAMA.y + 5, 1, 1);
-    naroznik(g, RAMA.x + RAMA.w - 5, RAMA.y + 5, -1, 1);
-    naroznik(g, RAMA.x + 5, RAMA.y + RAMA.h - 5, 1, -1);
-    naroznik(g, RAMA.x + RAMA.w - 5, RAMA.y + RAMA.h - 5, -1, -1);
+    naroznik(g, RAMA.x + 13, RAMA.y + 13, 1, 1, 52);
+    naroznik(g, RAMA.x + RAMA.w - 13, RAMA.y + 13, -1, 1, 52);
+    naroznik(g, RAMA.x + 13, RAMA.y + RAMA.h - 13, 1, -1, 52);
+    naroznik(g, RAMA.x + RAMA.w - 13, RAMA.y + RAMA.h - 13, -1, -1, 52);
 
     // Klamra w osi belki: medalion, który spina nagłówek z ramą. We wzorcu
     // to samo miejsce trzyma godło — u nas gwiazdka, ta sama, którą gra
@@ -378,62 +388,104 @@ export class HeroScene extends Phaser.Scene {
     // coś ją podbija — dodatek na zielono. Rozbicie „ile z siebie, ile ze
     // sprzętu" jest tu całym sensem ekranu: bez niego nie widać, po co się
     // zbiera artefakty.
+    // Trzy statystyki w JEDNEJ tabliczce z grawerowanymi przegrodami, a nie
+    // w trzech osobnych kapsułkach.
+    //
+    // Dwaj krytycy niezależnie napisali to samo: „ten sam preset obsługuje
+    // pięć różnych ról, więc oko nie ma gdzie usiąść". Kolumna ma teraz trzy
+    // RÓŻNE materiały: obręcz portretu to metal, statystyki to ciemny kamień
+    // z rytem, a lista sprzętu niżej — jasny pergamin. Rola poznaje się po
+    // materiale, zanim przeczyta się choć jedno słowo.
     const wiersze: Array<[string, string]> = [
       [ICON.sword, 'Atak'],
       [ICON.shield, 'Obrona'],
       [ICON.boot, 'Ruch'],
     ];
+    const tabY = TRESC_Y + 183;
+    const wiersz = 34;
+    const tab = this.add.graphics().setDepth(Z.hud + 2);
+    wneka(tab, dx, tabY, dw, wiersz * 3 + 8, 8, mix(C.panelDeep, C.shadow, 0.34), 1);
+
     wiersze.forEach(([ikona, nazwa], i) => {
-      const wy = TRESC_Y + 198 + i * 38;
-      const g = this.add.graphics().setDepth(Z.hud + 2);
-      wneka(g, dx, wy - 15, dw, 30, 7, mix(C.panelDeep, C.shadow, 0.18), 0.7);
-      // Ikona w okrągłej plakietce — jak we wzorcu, gdzie każda statystyka ma
-      // własny znak w oczku, a nie ikonę leżącą luzem na pasku.
-      g.fillStyle(C.shadow, 0.5);
-      g.fillCircle(dx + 20, wy + 1, 13);
-      g.fillStyle(mix(C.panel, C.panelDeep, 0.35), 1);
-      g.fillCircle(dx + 20, wy, 12);
-      g.lineStyle(1.5, C.goldDeep, 0.7);
-      g.strokeCircle(dx + 20, wy, 12);
-      icon(this, ikona as never, dx + 20, wy, 18).setDepth(Z.hud + 3);
+      const wy = tabY + 21 + i * wiersz;
+      // Przegroda to RYT: ciemna kreska z jasną tuż pod nią. Pojedyncza linia
+      // wygląda jak obramowanie tabeli, dwie — jak rowek wycięty w materiale.
+      if (i > 0) {
+        tab.lineStyle(1, C.shadow, 0.55);
+        tab.beginPath();
+        tab.moveTo(dx + 10, wy - wiersz / 2);
+        tab.lineTo(dx + dw - 10, wy - wiersz / 2);
+        tab.strokePath();
+        tab.lineStyle(1, C.white, 0.12);
+        tab.beginPath();
+        tab.moveTo(dx + 10, wy - wiersz / 2 + 1.5);
+        tab.lineTo(dx + dw - 10, wy - wiersz / 2 + 1.5);
+        tab.strokePath();
+      }
+      // Ikona w oczku z metalu — ten sam materiał co obręcz portretu, więc
+      // kolumna ma dwa nawroty złota zamiast złota wszędzie.
+      tab.fillStyle(C.shadow, 0.6);
+      tab.fillCircle(dx + 21, wy + 1.5, 12.5);
+      tab.fillStyle(C.goldDeep, 1);
+      tab.fillCircle(dx + 21, wy, 12);
+      tab.fillStyle(mix(C.panelDeep, C.shadow, 0.2), 1);
+      tab.fillCircle(dx + 21, wy, 9.5);
+      icon(this, ikona as never, dx + 21, wy, 15).setDepth(Z.hud + 3);
       this.add
-        .text(dx + 40, wy, nazwa.toUpperCase(), { ...body(10.5, '#bcdcea'), fontStyle: 'bold', letterSpacing: 1 })
+        .text(dx + 40, wy, nazwa.toUpperCase(), {
+          ...body(10, '#9dc3d6'),
+          fontStyle: 'bold',
+          letterSpacing: 1.2,
+        })
         .setOrigin(0, 0.5)
         .setDepth(Z.hud + 3);
       this.statDodatki[i] = this.add
-        .text(dx + dw - 12, wy, '', { ...body(11, '#7ce89a'), fontStyle: 'bold' })
+        .text(dx + dw - 14, wy, '', { ...body(10.5, '#7ce89a'), fontStyle: 'bold' })
         .setOrigin(1, 0.5)
         .setDepth(Z.hud + 3);
       this.statTeksty[i] = this.add
-        .text(dx + dw - 12, wy, '', display(19, H.goldLight))
+        .text(dx + dw - 14, wy, '', display(20, H.goldLight))
         .setOrigin(1, 0.5)
         .setDepth(Z.hud + 3);
     });
 
-    this.add
-      .text(LEWA.x + LEWA.w / 2, TRESC_Y + 300, 'CO DAJE SPRZĘT', {
-        ...body(11, H.inkSoft),
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5)
-      .setDepth(Z.hud + 3);
-    // Lista modyfikatorów dostaje WŁASNY materiał: ciemniejszy od wierszy
-    // statystyk i w naprzemiennych pasach. Bez tego cała kolumna była
-    // zbudowana z jednego klocka w jednej wadze i oko nie miało gdzie usiąść.
+    // Trzeci materiał: pergamin. Jasny, ciepły, bez połysku — celowo najdalej
+    // od metalu obręczy i od kamienia tabliczki statystyk.
+    const my = TRESC_Y + 296;
+    const mh = TRESC_H - 308;
     const mg = this.add.graphics().setDepth(Z.hud + 2);
-    const my = TRESC_Y + 310;
-    const mh = TRESC_H - 322;
-    wneka(mg, dx, my, dw, mh, 8, mix(C.shadow, C.panelDeep, 0.22), 1);
-    for (let i = 0; i < 4; i++) {
-      if (i % 2 === 1) continue;
-      mg.fillStyle(C.white, 0.05);
-      mg.fillRect(dx + 3, my + 6 + i * 15, dw - 6, 14);
+    const pergamin = mix(C.panel, C.gold, 0.14);
+    mg.fillStyle(C.shadow, 0.35);
+    mg.fillRoundedRect(dx - 1, my + 3, dw + 2, mh, 6);
+    mg.fillStyle(mix(pergamin, C.goldDeep, 0.25), 1);
+    mg.fillRoundedRect(dx - 2, my - 2, dw + 4, mh + 4, 7);
+    mg.fillStyle(pergamin, 1);
+    mg.fillRoundedRect(dx, my, dw, mh, 5);
+    // Plamy starego papieru zamiast gradientu — pergamin ma być nierówny.
+    for (let i = 0; i < 7; i++) {
+      mg.fillStyle(C.goldDeep, 0.05);
+      mg.fillEllipse(dx + 18 + ((i * 37) % (dw - 30)), my + 12 + ((i * 23) % (mh - 16)), 34, 18);
     }
+    // Nagłówek wpisany W pergamin, oddzielony rytą kreską — nie osobna belka.
+    this.add
+      .text(dx + 10, my + 11, 'CO DAJE SPRZĘT', {
+        ...body(10, '#8a6a2a'),
+        fontStyle: 'bold',
+        letterSpacing: 1.2,
+      })
+      .setOrigin(0, 0.5)
+      .setDepth(Z.hud + 3);
+    mg.lineStyle(1, C.goldDeep, 0.45);
+    mg.beginPath();
+    mg.moveTo(dx + 10, my + 21);
+    mg.lineTo(dx + dw - 10, my + 21);
+    mg.strokePath();
+
     this.modyfikatory = this.add
-      .text(LEWA.x + 24, TRESC_Y + 318, '', { ...body(10.5, '#e8f6fd'), lineSpacing: 3 })
+      .text(dx + 10, my + 28, '', { ...body(10.5, '#3d3016'), lineSpacing: 3 })
       .setOrigin(0, 0)
       .setDepth(Z.hud + 3)
-      .setWordWrapWidth(LEWA.w - 48);
+      .setWordWrapWidth(dw - 20);
   }
 
   // ---------- artefakty ----------
@@ -607,32 +659,65 @@ export class HeroScene extends Phaser.Scene {
 
       // Medalion w środku: ten sam pierścień co przy portrecie, tylko mniejszy
       // i przygaszony — gniazdo zapowiada kształt, który je kiedyś wypełni.
-      const med = this.add.graphics().setDepth(Z.hud + 2).setAlpha(0.5);
+      // Romb fazowany: cztery ściany, każda z własną jasnością zgodną z jednym
+      // źródłem światła z góry-lewej. Dwa koncentryczne kółka z rombem
+      // w środku, które tu wcześniej stały, krytyk nazwał wprost „bez fazy
+      // i bez kierunku światła" — bo nim były.
+      const med = this.add.graphics().setDepth(Z.hud + 2).setAlpha(0.62);
       pierscien(med, cx, cy, 25, 6);
-      med.fillStyle(C.panelDeep, 0.85);
+      const rr = 14;
+      const sciana = (x1: number, y1: number, x2: number, y2: number, barwa: number, a: number) => {
+        med.fillStyle(barwa, a);
+        med.beginPath();
+        med.moveTo(cx, cy);
+        med.lineTo(x1, y1);
+        med.lineTo(x2, y2);
+        med.closePath();
+        med.fillPath();
+      };
+      sciana(cx, cy - rr, cx - rr, cy, C.goldLight, 0.95); // górna lewa — pełne światło
+      sciana(cx, cy - rr, cx + rr, cy, C.gold, 0.8); // górna prawa
+      sciana(cx, cy + rr, cx - rr, cy, C.goldDeep, 0.8); // dolna lewa
+      sciana(cx, cy + rr, cx + rr, cy, C.shadow, 0.45); // dolna prawa — cień
+      med.lineStyle(1.5, C.shadow, 0.6);
       med.beginPath();
-      med.moveTo(cx, cy - 12);
-      med.lineTo(cx + 12, cy);
-      med.lineTo(cx, cy + 12);
-      med.lineTo(cx - 12, cy);
+      med.moveTo(cx, cy - rr);
+      med.lineTo(cx + rr, cy);
+      med.lineTo(cx, cy + rr);
+      med.lineTo(cx - rr, cy);
       med.closePath();
-      med.fillPath();
+      med.strokePath();
 
-      // Okucia w rogach gniazda i kreska-separator nad podpisem — ten sam
-      // język, którym opisana jest cała rama.
       const ozdoby = this.add.graphics().setDepth(Z.hud + 2).setAlpha(0.55);
       naroznik(ozdoby, gx + 4, gy + 4, 1, 1, 13);
       naroznik(ozdoby, gx + bok - 4, gy + 4, -1, 1, 13);
       naroznik(ozdoby, gx + 4, gy + bok - 4, 1, -1, 13);
       naroznik(ozdoby, gx + bok - 4, gy + bok - 4, -1, -1, 13);
+      const sy2 = gy + bok - 46;
+      g.lineStyle(1.5, C.shadow, 0.5);
+      g.beginPath();
+      g.moveTo(gx + 20, sy2);
+      g.lineTo(gx + bok - 20, sy2);
+      g.strokePath();
       g.lineStyle(1.5, C.gold, 0.3);
       g.beginPath();
-      g.moveTo(gx + 20, gy + bok - 46);
-      g.lineTo(gx + bok - 20, gy + bok - 46);
+      g.moveTo(gx + 20, sy2 + 1.5);
+      g.lineTo(gx + bok - 20, sy2 + 1.5);
       g.strokePath();
+      // Numer gniazda w oczku na przecięciu separatora — ten sam zabieg, co
+      // liczba poziomu w obręczy portretu, więc ekran mówi jednym językiem.
+      g.fillStyle(mix(C.panelDeep, C.shadow, 0.45), 1);
+      g.fillCircle(cx, sy2, 11);
+      g.lineStyle(2, C.goldDeep, 0.9);
+      g.strokeCircle(cx, sy2, 11);
+      this.add
+        .text(cx, sy2, String(i + 1), { ...body(11, H.goldLight), fontStyle: 'bold' })
+        .setOrigin(0.5)
+        .setDepth(Z.hud + 3)
+        .setAlpha(0.8);
 
       this.add
-        .text(cx, gy + bok - 32, 'MIEJSCE NA UMIEJĘTNOŚĆ', {
+        .text(cx, gy + bok - 26, 'MIEJSCE NA UMIEJĘTNOŚĆ', {
           ...body(8.5, H.goldLight),
           align: 'center',
           fontStyle: 'bold',
@@ -903,29 +988,41 @@ export class HeroScene extends Phaser.Scene {
     // przy krawędzi okna i okno czytało się jak arkusz naklejony na zrzut,
     // a nie jak coś, co się nad ekranem uniosło.
     const zaslona = this.add
-      .rectangle(0, 0, EKRAN_W, EKRAN_H, 0x04101a, 0.72)
+      .rectangle(0, 0, EKRAN_W, EKRAN_H, 0x04101a, 0.78)
       .setOrigin(0, 0)
       .setDepth(Z.overlay)
       .setInteractive();
+    // Okno jest z INNEGO materiału niż ekran pod spodem: ciemny kamień
+    // zamiast jasnego panelu. Jasne okno na jasnym ekranie różniło się od tła
+    // tylko obrysem i krytyk słusznie napisał, że „pływa na niczym" — przy
+    // zamianie wartości okno odcina się samo, jeszcze zanim zadziała cień.
+    const korpus = mix(C.panelDeep, C.shadow, 0.45);
     const g = this.add.graphics().setDepth(Z.overlay + 1);
-    cienPod(g, ox, oy, ow, oh, 14, 0.85);
-    plate(g, ox, oy, ow, oh, 14, C.panel, C.panelDeep, {
-      light: 0.2,
-      dark: 0.2,
-      gloss: 0.16,
+    cienPod(g, ox, oy, ow, oh, 14, 1);
+    plate(g, ox, oy, ow, oh, 14, korpus, C.goldDeep, {
+      light: 0.1,
+      dark: 0.16,
+      gloss: 0.05,
       drop: 0,
       edgeW: 3,
     });
-    faktura(g, ox + 4, oy + 4, ow - 8, oh - 8, 0.04);
-    g.lineStyle(2, C.gold, 0.4);
-    g.strokeRoundedRect(ox + 6, oy + 6, ow - 12, oh - 12, 10);
-    g.fillStyle(C.shadow, 0.2);
-    g.fillRoundedRect(ox + 10, oy + 34, ow - 20, 9, 5);
-    listwa(g, ox + 6, oy + 6, ow - 12, 32, 10, C.panelDeep, C.gold);
-    naroznik(g, ox + 3, oy + 3, 1, 1, 26);
-    naroznik(g, ox + ow - 3, oy + 3, -1, 1, 26);
-    naroznik(g, ox + 3, oy + oh - 3, 1, -1, 26);
-    naroznik(g, ox + ow - 3, oy + oh - 3, -1, -1, 26);
+    faktura(g, ox + 4, oy + 4, ow - 8, oh - 8, 0.05);
+    g.lineStyle(2, C.gold, 0.5);
+    g.strokeRoundedRect(ox + 7, oy + 7, ow - 14, oh - 14, 10);
+    g.fillStyle(C.shadow, 0.35);
+    g.fillRoundedRect(ox + 10, oy + 36, ow - 20, 10, 5);
+    listwa(g, ox + 6, oy + 6, ow - 12, 34, 10, mix(C.panelDeep, C.shadow, 0.2), C.gold);
+    // Gzyms i ząbkowanie jak przy ramie ekranu — okno ma być z tej samej
+    // stolarki co reszta, a nie z innej gry.
+    g.fillStyle(C.goldDeep, 1);
+    g.fillRoundedRect(ox + 2, oy + 36, ow - 4, 7, 3);
+    g.fillStyle(C.gold, 1);
+    g.fillRoundedRect(ox + 2, oy + 36, ow - 4, 4, 3);
+    zabkowanie(g, ox + 30, oy + 44, ow - 60, C.goldDeep, 6);
+    naroznik(g, ox + 14, oy + 14, 1, 1, 22);
+    naroznik(g, ox + ow - 14, oy + 14, -1, 1, 22);
+    naroznik(g, ox + 14, oy + oh - 14, 1, -1, 22);
+    naroznik(g, ox + ow - 14, oy + oh - 14, -1, -1, 22);
 
     const czesci: Phaser.GameObjects.GameObject[] = [zaslona, g];
     const dodaj = <X extends Phaser.GameObjects.GameObject>(o: X) => {
@@ -935,7 +1032,7 @@ export class HeroScene extends Phaser.Scene {
 
     dodaj(
       this.add
-        .text(ox + ow / 2, oy + 22, `PODZIEL: ${zrodlo.nazwa}`, {
+        .text(ox + ow / 2, oy + 21, `PODZIEL: ${zrodlo.nazwa}`, {
           ...body(13, H.goldLight),
           fontStyle: 'bold',
         })
@@ -947,34 +1044,34 @@ export class HeroScene extends Phaser.Scene {
     // okna — suwak z jedną liczbą kazałby dziecku odejmować w pamięci.
     const wg = this.add.graphics().setDepth(Z.overlay + 1);
     for (const cx of [ox + ow * 0.28, ox + ow * 0.72]) {
-      wneka(wg, cx - 58, oy + 68, 116, 48, 9, mix(C.panelDeep, C.shadow, 0.3), 0.9);
+      wneka(wg, cx - 58, oy + 74, 116, 48, 9, mix(C.panelDeep, C.shadow, 0.3), 0.9);
     }
     dodaj(wg);
     const lewy = dodaj(
       this.add
-        .text(ox + ow * 0.28, oy + 92, '', display(30, H.white))
+        .text(ox + ow * 0.28, oy + 98, '', display(30, H.white))
         .setOrigin(0.5)
         .setDepth(Z.overlay + 2)
     ) as Phaser.GameObjects.Text;
     const prawy = dodaj(
       this.add
-        .text(ox + ow * 0.72, oy + 92, '', display(30, H.gold))
+        .text(ox + ow * 0.72, oy + 98, '', display(30, H.gold))
         .setOrigin(0.5)
         .setDepth(Z.overlay + 2)
     ) as Phaser.GameObjects.Text;
     dodaj(
       this.add
-        .text(ox + ow * 0.28, oy + 124, `zostaje w slocie ${z + 1}`, body(10, H.inkSoft))
+        .text(ox + ow * 0.28, oy + 130, `zostaje w slocie ${z + 1}`, body(10, '#9dc3d6'))
         .setOrigin(0.5)
         .setDepth(Z.overlay + 2)
     );
     dodaj(
       this.add
-        .text(ox + ow * 0.72, oy + 124, `idzie do slotu ${doc + 1}`, body(10, H.inkSoft))
+        .text(ox + ow * 0.72, oy + 130, `idzie do slotu ${doc + 1}`, body(10, '#9dc3d6'))
         .setOrigin(0.5)
         .setDepth(Z.overlay + 2)
     );
-    dodaj(this.add.text(ox + ow / 2, oy + 92, '→', display(24, H.inkSoft)).setOrigin(0.5).setDepth(Z.overlay + 2));
+    dodaj(this.add.text(ox + ow / 2, oy + 98, '→', display(24, H.goldLight)).setOrigin(0.5).setDepth(Z.overlay + 2));
 
     const odswiezOkno = () => {
       lewy.setText(String(zrodlo.ile - ile));
@@ -984,7 +1081,7 @@ export class HeroScene extends Phaser.Scene {
     const strzalka = (x: number, kier: number, etykieta: string) =>
       dodaj(
         this.add
-          .text(x, oy + 56, etykieta, display(18, H.goldLight))
+          .text(x, oy + 62, etykieta, display(18, H.goldLight))
           .setOrigin(0.5)
           .setDepth(Z.overlay + 3)
           .setInteractive({ useHandCursor: true })
@@ -1008,8 +1105,8 @@ export class HeroScene extends Phaser.Scene {
         y: oy + 152,
         w: 118,
         h: 30,
-        tone: mix(C.panel, C.panelDeep, 0.4),
-        toneDeep: C.panelDeep,
+        tone: mix(C.panel, C.panelDeep, 0.32),
+        toneDeep: C.goldDeep,
         depth: Z.overlay + 3,
         onClick: () => {
           ile = Phaser.Math.Clamp(wartosc, 1, maks);
@@ -1054,7 +1151,7 @@ export class HeroScene extends Phaser.Scene {
       w: 140,
       h: 36,
       tone: mix(C.panel, C.panelDeep, 0.45),
-      toneDeep: C.panelDeep,
+      toneDeep: C.goldDeep,
       depth: Z.overlay + 3,
       onClick: zamknijOkno,
     });
@@ -1181,7 +1278,7 @@ export class HeroScene extends Phaser.Scene {
     }
     // Lista ma ograniczoną wysokość: piąty wiersz wyszedłby poza kolumnę
     // i położył się na pasie armii. Nadmiar zbieramy w jedną linijkę.
-    const widoczne = linie.length > 4 ? [...linie.slice(0, 3), `…i jeszcze ${linie.length - 3}`] : linie;
+    const widoczne = linie.length > 3 ? [...linie.slice(0, 2), `…i jeszcze ${linie.length - 2}`] : linie;
     this.modyfikatory.setText(
       widoczne.length ? widoczne.join('\n') : 'Nic — na razie liczysz na siebie.'
     );
