@@ -77,6 +77,9 @@ oglądasz nieaktualne obrazki i wyciągasz z nich fałszywe wnioski.
   i każda podpięta pod prawdziwą zasadę gry: Zwiad do punktów ruchu, Tropiciel
   do mgły, Napastnik / Łucznictwo / Pancerz do obrażeń w bitwie, Gospodarność
   do dochodu, Nauka do doświadczenia, Uzdrowiciel do strat po wygranej.
+  Atak i obrona bohatera działają w walce po 5% i 2,5% za punkt (liczby
+  z Heroes 3, z sufitami +300% i −70%) — wcześniej rosły w panelu i nie robiły
+  nic. Ekran bohatera mówi to wprost, liczbą, pod tabliczką statystyk.
   Awans zatrzymuje mapę i pokazuje DWIE karty do wyboru, jak w Heroes 3 —
   cztery gniazda na osiem umiejętności, więc po zapełnieniu awans może już
   tylko ulepszać. Sprawdzają to `probe-armia`, `probe-umiejetnosci`,

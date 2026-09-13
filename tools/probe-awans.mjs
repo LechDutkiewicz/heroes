@@ -152,6 +152,75 @@ sprawdz(
   `pustych gniazd: ${naEkranie.pustych} (ma być 3 z 4)`
 );
 
+// ---------- awans z doświadczenia SPOZA bitwy ----------
+//
+// To był zgłoszony błąd: okno wyboru odpalała wyłącznie `rozliczBitwe`,
+// więc doświadczenie ze skrzyni i z drzewa wiedzy podnosiło poziom po cichu.
+// Statystyki rosły, a umiejętności nie było skąd wziąć. Sprawdzamy to
+// doświadczeniem dodanym do stanu i ZWYKŁĄ akcją gracza (koniec tury), a nie
+// wołaniem okna wprost — inaczej sonda sprawdzałaby samo okno, nie drogę
+// do niego.
+await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  s.registry.set('stan-mapy', s.stan);
+  s.scene.start('adventure');
+});
+await scena('adventure');
+await page.waitForTimeout(900);
+
+const poSkrzyni = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const b = s.stan.bohater;
+  const przed = Object.keys(b.umiejetnosci ?? {}).length;
+  // Tyle, ile daje hojna skrzynia — byle przeskoczyć próg następnego poziomu.
+  b.doswiadczenie += 5000;
+  s.zajety = false;
+  s.koniecTury();
+  return { przed };
+});
+await page.waitForTimeout(1200);
+const oknoZeSkrzyni = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const teksty = s.children.list.filter((o) => o.type === 'Text' && o.text);
+  return {
+    naglowek: teksty.find((t) => t.text.startsWith('AWANS NA POZIOM'))?.text ?? null,
+    zajety: s.zajety,
+  };
+});
+sprawdz(
+  'awans z doświadczenia SPOZA bitwy też otwiera okno wyboru',
+  !!oknoZeSkrzyni.naglowek,
+  oknoZeSkrzyni.naglowek ?? 'okna nie ma'
+);
+
+// Skok o kilka poziomów naraz to kilka decyzji, nie jedna.
+const punkt2 = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const c = s.children.list.find(
+    (o) => o.type === 'Container' && o.list?.some((x) => x.type === 'Text' && /Naucz się|Ulepsz/.test(x.text))
+  );
+  return c ? { x: c.x, y: c.y } : null;
+});
+if (punkt2) {
+  await page.mouse.click(punkt2.x, punkt2.y);
+  await page.waitForTimeout(900);
+}
+const poDrugim = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  const teksty = s.children.list.filter((o) => o.type === 'Text' && o.text);
+  return {
+    kolejneOkno: !!teksty.find((t) => t.text.startsWith('AWANS NA POZIOM')),
+    poziomOdebrany: s.stan.bohater.poziomOdebrany,
+    umiejetnosci: Object.keys(s.stan.bohater.umiejetnosci ?? {}).length,
+  };
+});
+sprawdz(
+  'skok o kilka poziomów daje kilka decyzji pod rząd',
+  poDrugim.kolejneOkno === true,
+  `poziom odebrany: ${poDrugim.poziomOdebrany}`
+);
+sprawdz('każda decyzja coś przyznaje', poDrugim.umiejetnosci > poSkrzyni.przed, `${poSkrzyni.przed} → ${poDrugim.umiejetnosci}`);
+
 sprawdz('bez błędów JS', bledyJs.length === 0, bledyJs.slice(0, 2).join(' | '));
 
 await browser.close();

@@ -45,7 +45,7 @@ interface DaneZPrzygody {
   oObiekt: number;
   powrot?: string;
   /** Dodatki z drugorzędnych umiejętności bohatera — patrz `umiejetnosci.ts`. */
-  bonusGracza?: { wrecz: number; strzal: number; pancerz: number };
+  bonusGracza?: { wrecz: number; strzal: number; pancerz: number; atak: number; obrona: number };
 }
 // Wszystkie zasady walki biorą się STĄD i tylko stąd. Scena ma je odgrywać,
 // nie powtarzać — druga kopia reguł rozjechałaby się z symulatorem balansu.
