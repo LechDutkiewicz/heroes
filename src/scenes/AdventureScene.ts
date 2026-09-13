@@ -32,8 +32,17 @@ import {
 } from '../data/mapa';
 import { planszaPrzygody } from '../data/plansza';
 import { SLOTY_ARMII, znormalizuj, zywe } from '../data/armia';
+import {
+  efekt,
+  ofertaAwansu,
+  opisWartosci,
+  POZIOMY,
+  przyznaj,
+  umiejetnoscPoId,
+} from '../data/umiejetnosci';
 import { C, E, FONT, H, Z, body, display } from '../visual/theme';
 import { drawPanelBody, makeHudButton, mix, plate } from '../visual/hud';
+import { cienPod, listwa, naroznik, wneka } from '../visual/rama';
 import { ICON, buildIcons } from '../visual/icons';
 import { GORA, KAFEL, MARGINES, PANEL_W, PASEK_H } from '../visual/uklad';
 import { dodajWode } from '../visual/woda';
@@ -83,12 +92,14 @@ const MGLA_ALFA = 0.88;
 
 /** Klucze, pod którymi stan przeżywa przejście do bitwy i z powrotem. */
 const KLUCZ_STANU = 'stan-mapy';
+/** Skład armii sprzed bitwy — z niego Uzdrowiciel liczy straty. */
+const KLUCZ_PRZED_BITWA = 'armia-przed-bitwa';
 const KLUCZ_WYNIKU = 'wynik-bitwy';
 
 const DOMYSLNA_PODPOWIEDZ =
-  'Kliknij pole, żeby zobaczyć trasę. Kliknij drugi raz w to samo miejsce, żeby ruszyć.\n' +
-  'Mapę przesuwasz strzałkami, spacja wraca do bohatera.\n' +
-  'F8 pokazuje dziennik — dołącz go, gdy zgłaszasz błąd.';
+  'Klik w pole pokazuje trasę, drugi klik w to samo miejsce — rusza.\n' +
+  'Strzałki przesuwają mapę, spacja wraca do bohatera.\n' +
+  'Klik w bohatera otwiera jego ekran. F8 — dziennik do zgłoszenia błędu.';
 
 export class AdventureScene extends Phaser.Scene {
   private stan!: StanMapy;
@@ -128,6 +139,7 @@ export class AdventureScene extends Phaser.Scene {
   private ruchTekst!: Phaser.GameObjects.Text;
   private statTeksty: Phaser.GameObjects.Text[] = [];
   private poziomTekst!: Phaser.GameObjects.Text;
+  private doswPasek!: Phaser.GameObjects.Graphics;
   private dataTekst!: Phaser.GameObjects.Text;
   private podpowiedz!: Phaser.GameObjects.Text;
   private minimapa!: Phaser.GameObjects.Graphics;
@@ -1028,7 +1040,7 @@ export class AdventureScene extends Phaser.Scene {
       });
 
     const kartaY = this.rysujPasekWlasnosci(wnetrzeX, mmY + mmBok + 22, wnetrzeW) + 10;
-    const kartaH = 210;
+    const kartaH = 142;
     const karta = this.add.graphics().setDepth(Z.hud);
     plate(karta, wnetrzeX, kartaY, wnetrzeW, kartaH, 9, C.panel, C.panelDeep, {
       light: 0.2,
@@ -1054,11 +1066,25 @@ export class AdventureScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setDepth(Z.hud + 2);
     this.poziomTekst = this.add
-      .text(wnetrzeX + portretBok + 18, kartaY + 27, '', body(11, H.inkSoft))
+      .text(wnetrzeX + portretBok + 18, kartaY + 25, '', body(11, H.inkSoft))
       .setOrigin(0, 0)
       .setDepth(Z.hud + 2);
 
-    const statY = kartaY + 50;
+    // Pasek do awansu. Sama liczba „190/384" mówi, ILE brakuje, ale nie mówi,
+    // czy to blisko — a to jest jedyne pytanie, które gracz sobie przy niej
+    // zadaje. Pasek odpowiada na nie bez czytania.
+    const pdX = wnetrzeX + portretBok + 18;
+    const pdW = wnetrzeW - portretBok - 26;
+    const pdY = kartaY + 40;
+    const rowek = this.add.graphics().setDepth(Z.hud + 1);
+    rowek.fillStyle(C.hpTrack, 1);
+    rowek.fillRoundedRect(pdX, pdY, pdW, 8, 4);
+    rowek.lineStyle(1.5, C.shadow, 0.5);
+    rowek.strokeRoundedRect(pdX, pdY, pdW, 8, 4);
+    this.doswPasek = this.add.graphics().setDepth(Z.hud + 2);
+    this.doswPasek.setData('x', pdX).setData('y', pdY).setData('w', pdW);
+
+    const statY = kartaY + 60;
     [ICON.sword, ICON.shield, ICON.boot].forEach((klucz, i) => {
       const sx = wnetrzeX + portretBok + 24 + i * 46;
       this.add.image(sx, statY, klucz).setDisplaySize(17, 17).setDepth(Z.hud + 2);
@@ -1069,33 +1095,35 @@ export class AdventureScene extends Phaser.Scene {
     });
     this.ruchTekst = this.statTeksty[2];
 
-    // Siedem slotów, jak u bohatera w Heroes 3 — w dwóch rzędach, bo w kolumnie
-    // szerokiej na 218 px siedem kwadratów zeszłoby do 29 px i licznik przestałby
-    // być czytelny. Rysunek i licznik powstają ZAWSZE, także dla pustego slotu,
-    // i są tylko chowane: ekran bohatera przekłada oddziały między slotami, więc
-    // panel musi umieć pokazać każdą zawartość każdego slotu bez przebudowy.
-    const slotBok = 40;
-    const odstep = 6;
-    const rzedy = [4, 3];
-    let numer = 0;
-    rzedy.forEach((ile, r) => {
-      const rzadX = wnetrzeX + (wnetrzeW - (ile * slotBok + (ile - 1) * odstep)) / 2;
-      const rzadY = kartaY + 78 + r * (slotBok + 18);
-      for (let i = 0; i < ile; i++) {
-        const sx = rzadX + i * (slotBok + odstep);
-        const g = this.add.graphics();
-        g.fillStyle(mix(C.panel, C.panelDeep, 0.3), 1);
-        g.fillRoundedRect(0, 0, slotBok, slotBok + 12, 5);
-        g.lineStyle(1.5, C.panelDeep, 0.7);
-        g.strokeRoundedRect(0, 0, slotBok, slotBok + 12, 5);
-        const im = this.add.image(slotBok / 2, slotBok / 2 - 1, 'bohater').setVisible(false);
-        const licznik = this.add.text(slotBok / 2, slotBok + 4, '', display(12)).setOrigin(0.5);
-        const slot = this.add.container(sx, rzadY, [g, im, licznik]).setDepth(Z.hud + 1);
-        slot.setData('licznik', licznik).setData('rysunek', im);
-        this.slotyArmii.push(slot);
-        numer++;
-      }
-    });
+    // Siedem slotów w JEDNYM rzędzie.
+    //
+    // Były w dwóch, bo przy boku 40 px siedem się nie mieści — ale dwa rzędy
+    // urosły kartę o 58 px i pole podpowiedzi pod nią zrobiło się tak niskie,
+    // że tekst wychodził spod przycisku „Zakończ turę". Panel na mapie ma
+    // pokazywać SKŁAD, a nie służyć do zarządzania: od tego jest ekran
+    // bohatera, gdzie sloty są dwa i pół raza większe. Bok 28 px wystarczy,
+    // żeby rozpoznać sylwetkę i odczytać liczbę.
+    //
+    // Rysunek i licznik powstają ZAWSZE, także dla pustego slotu, i są tylko
+    // chowane: ekran bohatera przekłada oddziały między slotami, więc panel
+    // musi umieć pokazać każdą zawartość każdego slotu bez przebudowy.
+    const slotBok = 28;
+    const odstep = 3;
+    const rzadX = wnetrzeX + (wnetrzeW - (SLOTY_ARMII * slotBok + (SLOTY_ARMII - 1) * odstep)) / 2;
+    const rzadY = kartaY + 86;
+    for (let i = 0; i < SLOTY_ARMII; i++) {
+      const sx = rzadX + i * (slotBok + odstep);
+      const g = this.add.graphics();
+      g.fillStyle(mix(C.panel, C.panelDeep, 0.3), 1);
+      g.fillRoundedRect(0, 0, slotBok, slotBok + 12, 4);
+      g.lineStyle(1.5, C.panelDeep, 0.7);
+      g.strokeRoundedRect(0, 0, slotBok, slotBok + 12, 4);
+      const im = this.add.image(slotBok / 2, slotBok / 2 - 1, 'bohater').setVisible(false);
+      const licznik = this.add.text(slotBok / 2, slotBok + 4, '', display(10)).setOrigin(0.5);
+      const slot = this.add.container(sx, rzadY, [g, im, licznik]).setDepth(Z.hud + 1);
+      slot.setData('licznik', licznik).setData('rysunek', im);
+      this.slotyArmii.push(slot);
+    }
 
     // Karta bohatera jest KLIKALNA — stąd wchodzi się na ekran bohatera.
     // Bez tego jedyną drogą byłoby kliknięcie w sylwetkę na mapie, a ta
@@ -1116,7 +1144,7 @@ export class AdventureScene extends Phaser.Scene {
       edgeW: 2,
     });
     this.podpowiedz = this.add
-      .text(wnetrzeX + 10, podY + 10, DOMYSLNA_PODPOWIEDZ, body(11, H.ink))
+      .text(wnetrzeX + 10, podY + 9, DOMYSLNA_PODPOWIEDZ, { ...body(10, H.ink), lineSpacing: 3 })
       .setOrigin(0, 0)
       .setDepth(Z.hud + 2)
       .setWordWrapWidth(wnetrzeW - 20);
@@ -1237,8 +1265,19 @@ export class AdventureScene extends Phaser.Scene {
     const p = postepPoziomu(b.doswiadczenie);
     this.poziomTekst.setText(
       `poziom ${p.poziom}  ·  ${p.wPoziomie}/${p.doAwansu} do awansu` +
-        (b.artefakty.length ? `  ·  artefakty: ${b.artefakty.length}` : '')
+        (b.artefakty.length ? `  ·  art. ${b.artefakty.length}` : '')
     );
+    const pdX = this.doswPasek.getData('x') as number;
+    const pdY = this.doswPasek.getData('y') as number;
+    const pdW = this.doswPasek.getData('w') as number;
+    this.doswPasek.clear();
+    const ulamek = Phaser.Math.Clamp(p.wPoziomie / p.doAwansu, 0, 1);
+    if (ulamek > 0.01) {
+      this.doswPasek.fillStyle(C.gold, 1);
+      this.doswPasek.fillRoundedRect(pdX + 1, pdY + 1, Math.max(4, (pdW - 2) * ulamek), 6, 3);
+      this.doswPasek.fillStyle(C.white, 0.35);
+      this.doswPasek.fillRoundedRect(pdX + 1, pdY + 1.5, Math.max(4, (pdW - 2) * ulamek), 2.5, 1.5);
+    }
     for (let i = 0; i < SLOTY_ARMII; i++) {
       const slot = this.slotyArmii[i];
       if (!slot) continue;
@@ -1247,7 +1286,7 @@ export class AdventureScene extends Phaser.Scene {
       const licznik = slot.getData('licznik') as Phaser.GameObjects.Text;
       if (od) {
         im.setTexture(`p-${od.sprite}`).setVisible(true);
-        im.setScale(34 / im.height);
+        im.setScale(24 / im.height);
         licznik.setText(String(od.ile));
       } else {
         im.setVisible(false);
@@ -1806,6 +1845,225 @@ export class AdventureScene extends Phaser.Scene {
     this.scene.start('bohater');
   }
 
+  /**
+   * Uzdrowiciel: część poległych wraca po wygranej bitwie.
+   *
+   * Liczymy ze SKŁADU SPRZED BITWY, bo wynik bitwy zna wyłącznie ocalałych —
+   * a „ilu zginęło" to jedyna liczba, z której ta umiejętność może korzystać.
+   * Wracają tylko do stosów, które PRZEŻYŁY: wskrzeszanie wybitego do zera
+   * oddziału byłoby cofaniem bitwy, a nie leczeniem rannych.
+   */
+  private uzdrowiciel(): number {
+    const odsetek = efekt(this.stan.bohater, 'leczenie');
+    const przed = this.registry.get(KLUCZ_PRZED_BITWA) as
+      | Array<{ sprite: string; ile: number }>
+      | undefined;
+    this.registry.remove(KLUCZ_PRZED_BITWA);
+    if (odsetek <= 0 || !przed) return 0;
+
+    let wrocilo = 0;
+    for (const wpis of przed) {
+      const slot = this.stan.bohater.armia.find((x) => x?.sprite === wpis.sprite);
+      if (!slot || slot.ile >= wpis.ile) continue;
+      const straty = wpis.ile - slot.ile;
+      const wraca = Math.floor(straty * odsetek);
+      slot.ile += wraca;
+      wrocilo += wraca;
+    }
+    return wrocilo;
+  }
+
+  /**
+   * Okno awansu: co dał poziom i JAKĄ UMIEJĘTNOŚĆ wybierasz.
+   *
+   * Dwie karty, jak w Heroes 3. To jest jedyny moment w grze, w którym gracz
+   * podejmuje decyzję o tym, kim jest jego bohater — przyrost ataku i obrony
+   * dostaje tak czy inaczej, więc gdyby awans był tylko nim, nie byłoby czego
+   * ogłaszać. Okno zatrzymuje grę, bo nagroda, którą da się przegapić, nie
+   * jest nagrodą.
+   */
+  private oknoAwansu(poziomPrzed: number, poziomPo: number) {
+    this.zajety = true;
+    const przed = bonusPoziomu(poziomPrzed);
+    const po = bonusPoziomu(poziomPo);
+    const zyski: string[] = [];
+    if (po.atak > przed.atak) zyski.push(`+${po.atak - przed.atak} atak`);
+    if (po.obrona > przed.obrona) zyski.push(`+${po.obrona - przed.obrona} obrona`);
+    if (po.ruch > przed.ruch) zyski.push(`+${po.ruch - przed.ruch} ruchu`);
+
+    const oferty = ofertaAwansu(this.stan.bohater, (n) => Phaser.Math.RND.between(0, n - 1));
+
+    const szer = 560;
+    const wys = oferty.length ? 330 : 190;
+    const cx = MARGINES + this.oknoW / 2;
+    const cy = GORA + this.oknoH / 2;
+    const zaslona = this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, 0x04101a, 0.72)
+      .setOrigin(0, 0)
+      .setDepth(Z.overlay)
+      .setInteractive();
+    const tlo = this.add.graphics().setDepth(Z.overlay + 1);
+    cienPod(tlo, cx - szer / 2, cy - wys / 2, szer, wys, 16, 1);
+    plate(tlo, cx - szer / 2, cy - wys / 2, szer, wys, 16, C.panel, C.goldDeep, {
+      light: 0.2,
+      dark: 0.2,
+      gloss: 0.14,
+      drop: 0,
+      edgeW: 3,
+    });
+    listwa(tlo, cx - szer / 2 + 8, cy - wys / 2 + 8, szer - 16, 38, 10, C.panelDeep, C.gold);
+    naroznik(tlo, cx - szer / 2 + 14, cy - wys / 2 + 14, 1, 1, 24);
+    naroznik(tlo, cx + szer / 2 - 14, cy - wys / 2 + 14, -1, 1, 24);
+    naroznik(tlo, cx - szer / 2 + 14, cy + wys / 2 - 14, 1, -1, 24);
+    naroznik(tlo, cx + szer / 2 - 14, cy + wys / 2 - 14, -1, -1, 24);
+
+    const czesci: Phaser.GameObjects.GameObject[] = [zaslona, tlo];
+    const dodaj = <X extends Phaser.GameObjects.GameObject>(x: X) => {
+      czesci.push(x);
+      return x;
+    };
+    dodaj(
+      this.add
+        .text(cx, cy - wys / 2 + 27, `AWANS NA POZIOM ${poziomPo}`, {
+          ...display(19, H.goldLight),
+          letterSpacing: 1.5,
+        })
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 2)
+    );
+    dodaj(
+      this.add
+        .text(cx, cy - wys / 2 + 60, zyski.join('   ·   ') || 'Statystyki bez zmian', body(13, H.ink))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 2)
+    );
+
+    const przyciski: ReturnType<typeof makeHudButton>[] = [];
+    const zamknij = (opis?: string) => {
+      czesci.forEach((x) => x.destroy());
+      przyciski.forEach((b) => b.destroy());
+      this.zajety = false;
+      if (opis) this.napisUlotny(opis);
+      this.odswiezWszystko();
+    };
+
+    if (!oferty.length) {
+      // Cztery gniazda pełne, wszystko mistrzowskie — nie ma czego proponować.
+      // Mówimy to wprost, zamiast pokazywać puste okno wyboru.
+      dodaj(
+        this.add
+          .text(cx, cy + 10, 'Wszystkie umiejętności na mistrzowskim poziomie.', body(12, H.inkSoft))
+          .setOrigin(0.5)
+          .setDepth(Z.overlay + 2)
+      );
+      const ok = makeHudButton(this, {
+        x: cx,
+        y: cy + wys / 2 - 34,
+        w: 180,
+        h: 40,
+        icon: ICON.star,
+        tone: C.gold,
+        toneDeep: C.goldDeep,
+        depth: Z.overlay + 3,
+        onClick: () => zamknij(),
+      });
+      ok.setLabel('Dalej');
+      przyciski.push(ok);
+      this.naWierzchu(...this.children.list.slice(this.children.list.length - 40));
+      return;
+    }
+
+    dodaj(
+      this.add
+        .text(cx, cy - wys / 2 + 84, 'WYBIERZ UMIEJĘTNOŚĆ', {
+          ...body(11, H.inkSoft),
+          fontStyle: 'bold',
+          letterSpacing: 1.2,
+        })
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 2)
+    );
+
+    const kartaW = 236;
+    const kartaH = 150;
+    const kartaY = cy - wys / 2 + 104;
+    oferty.forEach((oferta, i) => {
+      const u = umiejetnoscPoId(oferta.id)!;
+      const kx = cx + (i - (oferty.length - 1) / 2) * (kartaW + 20) - kartaW / 2;
+      const g = dodaj(this.add.graphics().setDepth(Z.overlay + 2)) as Phaser.GameObjects.Graphics;
+      wneka(g, kx, kartaY, kartaW, kartaH, 10, mix(C.panelDeep, C.shadow, 0.3), 1);
+      // Nowa umiejętność dostaje złotą wstążkę, ulepszenie — niebieską.
+      // Gracz ma widzieć różnicę „dokładam coś" kontra „podbijam coś",
+      // zanim przeczyta obie karty.
+      listwa(
+        g,
+        kx + 8,
+        kartaY + 8,
+        kartaW - 16,
+        24,
+        7,
+        oferta.nowa ? C.goldDeep : C.allyDeep,
+        oferta.nowa ? C.gold : C.ally
+      );
+      dodaj(
+        this.add
+          .text(kx + kartaW / 2, kartaY + 20, oferta.nowa ? 'NOWA' : 'ULEPSZENIE', {
+            ...body(10, H.white),
+            fontStyle: 'bold',
+            letterSpacing: 1.2,
+          })
+          .setOrigin(0.5)
+          .setDepth(Z.overlay + 3)
+      );
+      dodaj(
+        this.add
+          .text(kx + kartaW / 2, kartaY + 52, u.nazwa, display(17, H.goldLight))
+          .setOrigin(0.5)
+          .setDepth(Z.overlay + 3)
+      );
+      dodaj(
+        this.add
+          .text(kx + kartaW / 2, kartaY + 74, POZIOMY[oferta.poziom - 1], body(11, '#9dc3d6'))
+          .setOrigin(0.5)
+          .setDepth(Z.overlay + 3)
+      );
+      dodaj(
+        this.add
+          .text(kx + kartaW / 2, kartaY + 96, opisWartosci(u, oferta.poziom), display(18, H.gold))
+          .setOrigin(0.5)
+          .setDepth(Z.overlay + 3)
+      );
+      dodaj(
+        this.add
+          .text(kx + kartaW / 2, kartaY + 124, u.opis, {
+            ...body(10.5, '#dff2fb'),
+            align: 'center',
+          })
+          .setOrigin(0.5)
+          .setDepth(Z.overlay + 3)
+          .setWordWrapWidth(kartaW - 24)
+      );
+
+      const b = makeHudButton(this, {
+        x: kx + kartaW / 2,
+        y: cy + wys / 2 - 32,
+        w: kartaW - 20,
+        h: 38,
+        icon: oferta.nowa ? ICON.star : ICON.banner,
+        tone: oferta.nowa ? C.gold : C.ally,
+        toneDeep: oferta.nowa ? C.goldDeep : C.allyDeep,
+        depth: Z.overlay + 3,
+        onClick: () => zamknij(przyznaj(this.stan.bohater, oferta)),
+      });
+      b.setLabel(oferta.nowa ? 'Naucz się' : 'Ulepsz');
+      przyciski.push(b);
+    });
+
+    // Okno musi trafić do kamery rysowanej PO planszy — inaczej mapa
+    // zamalowuje je w tej samej klatce i gra wygląda na zawieszoną.
+    this.naWierzchu(...czesci);
+  }
+
   private pokazZamek(o: Obiekt) {
     this.registry.set(KLUCZ_STANU, this.stan);
     this.registry.set('otwarty-zamek', o.id);
@@ -1819,6 +2077,13 @@ export class AdventureScene extends Phaser.Scene {
    */
   private zacznijBitwe(o: Obiekt) {
     this.zajety = true;
+    // Skład PRZED bitwą: Uzdrowiciel liczy straty, a te znamy tylko przez
+    // porównanie z tym, co ruszyło do boju. Wynik bitwy zna wyłącznie
+    // ocalałych.
+    this.registry.set(
+      KLUCZ_PRZED_BITWA,
+      zywe(this.stan.bohater.armia).map((od) => ({ sprite: od.sprite, ile: od.ile }))
+    );
     this.napisUlotny(`${o.nazwa}\nDo boju!`);
     this.registry.set(KLUCZ_STANU, this.stan);
     this.time.delayedCall(750, () => {
@@ -1827,6 +2092,14 @@ export class AdventureScene extends Phaser.Scene {
         wrog: o.oddzialy ?? [],
         oObiekt: o.id,
         powrot: 'adventure',
+        // Drugorzędne umiejętności wchodzą do walki jako trzy liczby, a nie
+        // jako bohater: symulacja bitwy nie zna postaci i nie powinna, żeby
+        // `balance.ts` dalej mierzył czystą siłę frakcji.
+        bonusGracza: {
+          wrecz: efekt(this.stan.bohater, 'wrecz'),
+          strzal: efekt(this.stan.bohater, 'strzal'),
+          pancerz: efekt(this.stan.bohater, 'pancerz'),
+        },
       });
     });
   }
@@ -1905,28 +2178,29 @@ export class AdventureScene extends Phaser.Scene {
       } else if (o) {
         o.zebrany = true;
       }
+      const wyleczeni = this.uzdrowiciel();
+      const nagroda = Math.round(80 * (1 + efekt(this.stan.bohater, 'nauka')));
       const poziomPrzed = poziom(this.stan.bohater.doswiadczenie);
-      this.stan.bohater.doswiadczenie += 80;
+      this.stan.bohater.doswiadczenie += nagroda;
       const poziomPo = poziom(this.stan.bohater.doswiadczenie);
-      if (poziomPo > poziomPrzed) {
-        // Awans musi być WIDOCZNY i musi mówić, co dał. Liczba w panelu, która
-        // po cichu rośnie, nie jest nagrodą — nagrodą jest wiedza, że bohater
-        // stał się silniejszy i o ile.
-        const przed = bonusPoziomu(poziomPrzed);
-        const po = bonusPoziomu(poziomPo);
-        const zyski: string[] = [];
-        if (po.atak > przed.atak) zyski.push(`+${po.atak - przed.atak} atak`);
-        if (po.obrona > przed.obrona) zyski.push(`+${po.obrona - przed.obrona} obrona`);
-        if (po.ruch > przed.ruch) zyski.push(`+${po.ruch - przed.ruch} ruchu`);
-        this.time.delayedCall(2100, () =>
-          this.napisUlotny(`Awans na poziom ${poziomPo}!\n${zyski.join(', ')}`)
-        );
-      }
       this.time.delayedCall(900, () =>
         this.napisUlotny(
-          o?.rodzaj === 'zamek' ? `${o.nazwa} jest twoja!\n+80 doświadczenia` : 'Zwycięstwo!\n+80 doświadczenia'
+          [
+            o?.rodzaj === 'zamek' ? `${o.nazwa} jest twoja!` : 'Zwycięstwo!',
+            `+${nagroda} doświadczenia`,
+            wyleczeni ? `Uzdrowiciel: wraca ${wyleczeni} stworków` : '',
+          ]
+            .filter(Boolean)
+            .join('\n')
         )
       );
+      // Awans ma być ZDARZENIEM, nie liczbą, która po cichu urosła w panelu.
+      // Ulotny napis nad mapą tego nie załatwiał: znikał po dwóch sekundach
+      // i nie dawało się go przeczytać, jeśli akurat patrzyło się gdzie indziej.
+      // Teraz awans zatrzymuje grę i każe podjąć decyzję.
+      if (poziomPo > poziomPrzed) {
+        this.time.delayedCall(2100, () => this.oknoAwansu(poziomPrzed, poziomPo));
+      }
       // Zdobycie ostatniego cudzego zamku KOŃCZY grę. Bez tego wyprawa nie ma
       // mety: dziecko przechodzi pół planszy, wygrywa najtrudniejszą bitwę
       // w grze i nic się nie dzieje.

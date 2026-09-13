@@ -103,6 +103,14 @@ export function dolacz(a: Armia, o: Oddzial): boolean {
  */
 export const ostatniStos = (a: Armia): boolean => zajete(a) <= 1;
 
+/**
+ * Co gracz trzyma na klawiaturze przy upuszczeniu stosu.
+ *
+ * `okno` (Alt) jest tu osobno, a nie jako brak skrótu, od czasu, gdy zwykłe
+ * przeciągnięcie na puste miejsce zaczęło po prostu przenosić.
+ */
+export type Skrot = 'brak' | 'polowa' | 'jeden' | 'okno';
+
 export type Wynik =
   | { ok: true; opis: string }
   | { ok: false; powod: string };
@@ -227,20 +235,29 @@ export function zamiar(
   a: Armia,
   z: number,
   doc: number,
-  skrot: 'brak' | 'polowa' | 'jeden'
+  skrot: Skrot
 ): { rodzaj: 'przenies' | 'scal' | 'zamien' | 'podziel' | 'okno' | 'nic'; ile?: number } {
   if (!wSlocie(a, z) || !wSlocie(a, doc) || z === doc || !a[z]) return { rodzaj: 'nic' };
   const zrodlo = a[z]!;
   const cel = a[doc];
 
-  if (skrot !== 'brak') {
+  if (skrot === 'polowa' || skrot === 'jeden') {
     const ile = ileNaSkrot(a, z, doc, skrot);
     return ile > 0 ? { rodzaj: 'podziel', ile } : { rodzaj: 'nic' };
   }
-  if (!cel) {
+  if (skrot === 'okno') {
     // Jeden stworek nie ma się jak podzielić — okno z suwakiem od 1 do 0
     // byłoby kpiną, więc taki stos po prostu się przenosi.
-    return zrodlo.ile > 1 ? { rodzaj: 'okno' } : { rodzaj: 'przenies' };
+    return maksPodzialu(a, z, doc) >= 1 ? { rodzaj: 'okno' } : { rodzaj: 'przenies' };
   }
+  // Puste miejsce: zwykłe przeciągnięcie PRZENOSI cały stos.
+  //
+  // Heroes 3 otwiera w tym miejscu okno z suwakiem i tak było tu na początku —
+  // ale wyszło z grania, że to jest zły domyślny wybór: przełożenie oddziału
+  // na inny slot robi się kilka razy częściej niż podział, a okno kazało przy
+  // każdym takim przełożeniu zatwierdzać liczbę, której nikt nie chciał
+  // zmieniać. Podział ma trzy własne drogi (Shift, Ctrl, Alt), więc nic nie
+  // znika — zmienia się tylko to, co jest pod ręką bez klawisza.
+  if (!cel) return { rodzaj: 'przenies' };
   return cel.sprite === zrodlo.sprite ? { rodzaj: 'scal' } : { rodzaj: 'zamien' };
 }

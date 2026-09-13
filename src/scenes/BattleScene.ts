@@ -24,6 +24,8 @@ interface DaneZPrzygody {
   wrog: OddzialZMapy[];
   oObiekt: number;
   powrot?: string;
+  /** Dodatki z drugorzędnych umiejętności bohatera — patrz `umiejetnosci.ts`. */
+  bonusGracza?: { wrecz: number; strzal: number; pancerz: number };
 }
 // Wszystkie zasady walki biorą się STĄD i tylko stąd. Scena ma je odgrywać,
 // nie powtarzać — druga kopia reguł rozjechałaby się z symulatorem balansu.
@@ -408,6 +410,9 @@ export class BattleScene extends Phaser.Scene {
     // `init` dostaje pusty obiekt także przy zwykłym starcie sceny, więc
     // o narzuconym składzie decyduje obecność armii, a nie samego obiektu.
     this.zPrzygody = dane && dane.gracz?.length ? dane : undefined;
+    // Bonusy bohatera przypinamy do stanu walki od razu w `init`, a nie przy
+    // wystawianiu oddziałów: `zerujBitwe` podmienia cały obiekt i ustawione
+    // wcześniej pole by przepadło.
 
     // Phaser używa TEJ SAMEJ instancji sceny przy każdym `scene.start`, więc
     // pola klasy przeżywają całą poprzednią bitwę. Stan walki powstawał raz,
@@ -423,6 +428,7 @@ export class BattleScene extends Phaser.Scene {
       round: 1,
       dealt: new Map(),
     };
+    this.battle.bonusGracza = this.zPrzygody?.bonusGracza;
     this.roster.clear();
     this.nextId = 1;
     this.preferredApproach = null;
@@ -432,6 +438,10 @@ export class BattleScene extends Phaser.Scene {
 
   create() {
     this.zerujBitwe();
+    // Po `zerujBitwe` — nie przed: ta metoda podmienia cały obiekt stanu walki,
+    // więc bonus ustawiony w `init` przepadał i umiejętności bojowe nie
+    // działały ani razu. Wyszło dopiero z sondy, bo w oknie nic tego nie widać.
+    this.battle.bonusGracza = this.zPrzygody?.bonusGracza;
     sledzScene(this);
     // Wszystko, co ustala KSZTAŁT bitwy (teren, frakcje, rzędy, przeszkody),
     // idzie przez `Phaser.Math.RND` — generator z wysianym ziarnem sesji.
