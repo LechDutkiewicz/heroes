@@ -73,19 +73,32 @@ const NAZWY_BUDYNKU: Record<Surowiec, string> = {
 };
 
 /**
- * Straże. Trzy poziomy siły, dobrane tak, żeby dziecko widziało po sprite'ie
+ * Straże. Pięć stopni siły, dobranych tak, żeby dziecko widziało po sprite'ie
  * i liczbie, czy to jest na teraz.
  *
- * `straznik` to straż graniczna: stoi w jednym z dwóch przejść przez grzbiet
- * i jest jedyną rzeczą dzielącą mapę na bezpieczne południe i groźną północ.
- * Ma być wyraźnie trudniejsza od wszystkiego, co gracz spotkał wcześniej —
- * inaczej podział mapy przestaje cokolwiek znaczyć.
+ * Stopni jest pięć, a nie trzy, bo plansza ma trzy pasy i dwa grzbiety.
+ * Przy trzech stopniach pas sporny dostawał albo straże z doliny (czyli był
+ * darmowy), albo straże z krainy wroga (czyli był nie do ruszenia przez pół
+ * gry) — a to on ma być środkiem gry. Krzywa idzie więc tak:
+ *
+ * | Stopień | Gdzie stoi | Kiedy da się pokonać |
+ * |---|---|---|
+ * | `slaby` | dolina gracza | pierwszy tydzień, armią startową |
+ * | `sredni` | pas sporny, przy kopalniach i skrzyniach | drugi tydzień |
+ * | `silny` | kraina wroga, przy reliktach | trzeci tydzień |
+ * | `straznik` | przejścia przez grzbiet POŁUDNIOWY | brama do pasa spornego |
+ * | `wodz` | przejścia przez grzbiet PÓŁNOCNY | brama do krainy wroga |
+ *
+ * Obie straże graniczne są wyraźnie trudniejsze od wszystkiego, co stoi po
+ * ich stronie mapy — inaczej podział na pasy przestaje cokolwiek znaczyć.
  */
 const STRAZE: Record<string, { frakcja: string; tiery: number[]; mnoznik: number; stosy: number }> =
   {
     slaby: { frakcja: 'grota', tiery: [0, 1], mnoznik: 0.6, stosy: 1 },
-    straznik: { frakcja: 'zbocze', tiery: [2, 3], mnoznik: 1.0, stosy: 3 },
+    sredni: { frakcja: 'grota', tiery: [1, 2], mnoznik: 0.85, stosy: 2 },
     silny: { frakcja: 'zbocze', tiery: [2, 3], mnoznik: 1.1, stosy: 2 },
+    straznik: { frakcja: 'zbocze', tiery: [2, 3], mnoznik: 1.3, stosy: 3 },
+    wodz: { frakcja: 'zbocze', tiery: [4, 5], mnoznik: 1.0, stosy: 3 },
   };
 
 /**

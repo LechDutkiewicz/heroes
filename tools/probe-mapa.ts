@@ -113,59 +113,124 @@ sprawdz(
   'zamek przeciwnika NIE jest osiągalny pierwszego dnia',
   !wZasiegu.includes(wrogiZamek)
 );
-const straze = s.obiekty.filter((o) => o.nazwa.startsWith('Strażnik '));
-sprawdz('obie straże graniczne stoją na mapie', straze.length === 2, straze.map((o) => o.nazwa).join(', '));
+const straze = s.obiekty.filter(
+  (o) => o.nazwa.startsWith('Strażnik ') || o.nazwa.startsWith('Wódz ')
+);
+sprawdz('cztery straże graniczne stoją na mapie', straze.length === 4, straze.map((o) => o.nazwa).join(', '));
 for (const g of straze) {
   sprawdz(`${g.nazwa} stoi poza zasięgiem pierwszego dnia`, !wZasiegu.includes(g));
 }
 
-console.log('\n=== grzbiet dzieli mapę na dwie połowy ===');
-// Cały układ „Key to Victory" stoi na tym, że na północ prowadzą DOKŁADNIE dwa
+console.log('\n=== grzbiety dzielą mapę na trzy pasy ===');
+// Cały układ stoi na tym, że przez KAŻDY grzbiet prowadzą dokładnie dwa
 // przejścia i oba są pilnowane. Rozmycie granic w generatorze potrafi wybić
-// w grzbiecie trzecią dziurę szeroką na pole — nie widać tego ani na obrazku,
-// ani w kodzie, a mapa cicho przestaje być tą mapą: da się wejść bokiem.
+// trzecią dziurę szeroką na pole — nie widać tego ani na obrazku, ani w kodzie,
+// a mapa cicho przestaje być tą mapą: da się wejść bokiem, omijając straż.
+const RDZENIE: Array<[string, number, number]> = [
+  ['północny', 21, 22],
+  ['południowy', 45, 46],
+];
 {
-  const RDZEN = [19, 22];
   const przejezdne = (x: number, y: number) => TEREN_INFO[s.teren[y][x]].koszt !== null;
-  const kolumny: number[] = [];
-  for (let x = 0; x < s.szer; x++) {
-    let wolna = true;
-    for (let y = RDZEN[0]; y <= RDZEN[1]; y++) if (!przejezdne(x, y)) wolna = false;
-    if (wolna) kolumny.push(x);
-  }
-  // Sklejamy sąsiadujące kolumny w jedno przejście.
-  const grupy = kolumny.reduce<number[][]>((a, x) => {
-    if (a.length && x === a[a.length - 1][a[a.length - 1].length - 1] + 1) a[a.length - 1].push(x);
-    else a.push([x]);
-    return a;
-  }, []);
-  sprawdz(
-    'przez grzbiet prowadzą dokładnie dwa przejścia',
-    grupy.length === 2,
-    grupy.map((g) => `x ${g[0]}–${g[g.length - 1]}`).join(', ')
-  );
-  // Straż stoi W przejściu, nie obok niego — inaczej da się ją minąć.
-  for (const g of straze) {
+  for (const [nazwa, y0, y1] of RDZENIE) {
+    const kolumny: number[] = [];
+    for (let x = 0; x < s.szer; x++) {
+      let wolna = true;
+      for (let y = y0; y <= y1; y++) if (!przejezdne(x, y)) wolna = false;
+      if (wolna) kolumny.push(x);
+    }
+    const grupy = kolumny.reduce<number[][]>((a, x) => {
+      if (a.length && x === a[a.length - 1][a[a.length - 1].length - 1] + 1) a[a.length - 1].push(x);
+      else a.push([x]);
+      return a;
+    }, []);
     sprawdz(
-      `${g.nazwa} stoi w przejściu`,
-      g.y >= RDZEN[0] && g.y <= RDZEN[1] && grupy.some((k) => k.includes(g.x)),
-      `(${g.x},${g.y})`
+      `przez grzbiet ${nazwa} prowadzą dokładnie dwa przejścia`,
+      grupy.length === 2,
+      grupy.map((g) => `x ${g[0]}–${g[g.length - 1]}`).join(', ')
     );
+    // Przejście szersze niż trzy pola da się obejść: strażnik blokuje pas
+    // szeroki na trzy. To jest ta sama pomyłka, która raz już przepuściła
+    // 74% mapy bez jednej bitwy.
+    for (const g of grupy) {
+      sprawdz(`przejście x ${g[0]}–${g[g.length - 1]} jest wąskie`, g.length <= 3, `${g.length} pola`);
+    }
+    // Straż stoi PRZY przejściu (w jego wylocie albo w nim), nie obok.
+    const wTym = straze.filter((o) => Math.abs(o.y - y0) <= 2 || Math.abs(o.y - y1) <= 2);
+    sprawdz(`grzbiet ${nazwa} ma dwie straże`, wTym.length === 2, wTym.map((o) => o.nazwa).join(', '));
+    for (const o of wTym) {
+      sprawdz(
+        `${o.nazwa} zamyka przejście`,
+        grupy.some((k) => k.some((x) => Math.abs(x - o.x) <= 1)),
+        `(${o.x},${o.y})`
+      );
+    }
   }
 }
 
+console.log('\n=== ile mapy stoi otworem bez jednej bitwy ===');
+// Miara, dla której powstała ta sekcja: jeśli straże da się obejść, plansza
+// przestaje mieć pasy, a wygląda dokładnie tak samo. Dolina gracza to około
+// trzeciej części planszy i tyle ma być dostępne od razu — nie połowa.
+{
+  const blok = new Set<string>();
+  for (const o of s.obiekty) {
+    if (o.rodzaj !== 'potwor' || o.zebrany) continue;
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) blok.add(`${o.x + dx},${o.y + dy}`);
+  }
+  const przejezdne = (x: number, y: number) =>
+    wGranicach(s, x, y) && TEREN_INFO[s.teren[y][x]].koszt !== null;
+  let wszystkie = 0;
+  for (let y = 0; y < s.wys; y++) for (let x = 0; x < s.szer; x++) if (przejezdne(x, y)) wszystkie++;
+  const widziane = new Set([`${s.bohater.x},${s.bohater.y}`]);
+  const kolejka = [[s.bohater.x, s.bohater.y]];
+  while (kolejka.length) {
+    const [x, y] = kolejka.pop()!;
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx, ny = y + dy, k = `${nx},${ny}`;
+        if (!widziane.has(k) && !blok.has(k) && przejezdne(nx, ny)) {
+          widziane.add(k);
+          kolejka.push([nx, ny]);
+        }
+      }
+  }
+  const proc = Math.round((widziane.size * 100) / wszystkie);
+  sprawdz('bez wygranej bitwy stoi otworem od ćwierci do połowy planszy', proc >= 22 && proc <= 50, `${proc}%`);
+}
+
+console.log('\n=== gęstość obiektów jak na mapie M z Heroes 3 ===');
+{
+  let przejezdnych = 0;
+  for (let y = 0; y < s.wys; y++)
+    for (let x = 0; x < s.szer; x++) if (TEREN_INFO[s.teren[y][x]].koszt !== null) przejezdnych++;
+  const naObiekt = przejezdnych / s.obiekty.length;
+  // Rzadziej niż co 30 pól robi się pustynia, gęściej niż co 12 — jarmark,
+  // po którym nie da się przejść bez wejścia na coś.
+  sprawdz('obiekt co 12–30 pól przejezdnych', naObiekt >= 12 && naObiekt <= 30, `co ${naObiekt.toFixed(1)}`);
+}
+
 console.log('\n=== gospodarka jest po stronie gracza ===');
-// W oryginale pierwsza połowa gry to rozbudowa w bezpiecznej połowie mapy.
-// Jeżeli kopalnie rozejdą się po całej planszy, mapa traci ten podział i staje
-// się zwykłą przechadzką z jednym potworem pośrodku.
+// Pierwsza połowa gry to rozbudowa w bezpiecznym pasie. Jeżeli kopalnie
+// rozejdą się po całej planszy, mapa traci podział i staje się przechadzką.
 {
   const kopalnie = s.obiekty.filter((o) => o.rodzaj === 'kopalnia');
-  const wDomu = kopalnie.filter((o) => o.y > 22).length;
-  sprawdz(
-    'większość kopalń leży w dolinie gracza',
-    wDomu * 2 > kopalnie.length,
-    `${wDomu} z ${kopalnie.length}`
-  );
+  const wDomu = kopalnie.filter((o) => o.y > 46);
+  const wPasie = kopalnie.filter((o) => o.y >= 21 && o.y <= 46);
+  sprawdz('dolina gracza ma co najmniej sześć kopalń', wDomu.length >= 6, `${wDomu.length} z ${kopalnie.length}`);
+  sprawdz('pas sporny też ma o co walczyć', wPasie.length >= 5, `${wPasie.length} kopalń`);
+  // To jest sprawdzenie, którego brak kosztował rundę: przy losowanych
+  // surowcach dolina potrafiła nie dostać ANI JEDNEJ kopalni odłamków, a nimi
+  // płaci się za całą górną połowę drzewka miasta. Mapa wyglądała dobrze
+  // i nie dało się na niej skończyć zamku.
+  for (const co of ['odlamek', 'jagoda', 'pokeball']) {
+    sprawdz(
+      `dolina ma własne źródło surowca: ${co}`,
+      wDomu.some((o) => o.surowiec === co),
+      wDomu.map((o) => o.surowiec).join(', ')
+    );
+  }
 }
 
 console.log('\n=== mgła wojny ===');

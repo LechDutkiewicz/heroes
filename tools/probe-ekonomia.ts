@@ -10,6 +10,7 @@
 //   npx tsx tools/probe-ekonomia.ts
 
 import { KOSZT_ODDZIALU, PRZYROST_ODDZIALU, dochod, type StanMapy } from '../src/data/mapa';
+import { SKRZYNIE } from '../src/data/zasady-h3';
 import { planszaPrzygody } from '../src/data/plansza';
 import {
   moznaBudowac,
@@ -103,49 +104,119 @@ for (const co of Object.keys(potrzebne) as (keyof Skarbiec)[]) {
 // 3. Pełna pętla: buduj i werbuj naraz, na prawdziwym dochodzie
 // ---------------------------------------------------------------------------
 console.log('\n=== rozbudowa RAZEM z werbunkiem ===');
-const swiezy = zWszystkimKopalniami(planszaPrzygody());
-const mojZamek = swiezy.obiekty.find((o) => o.rodzaj === 'zamek' && o.nasz)!;
-const skarbiec = swiezy.skarbiec;
-const stoi = [...(mojZamek.postawione ?? [])];
-let dzien = 0;
-let kupionych = 0;
-while (dzien++ < 200 && stoi.length < profil.budynki.length) {
-  mojZamek.postawione = stoi;
-  for (const [co, ile] of Object.entries(dochod(swiezy)) as [keyof Skarbiec, number][])
-    skarbiec[co] += ile;
 
-  // Gracz najpierw wykupuje dzienny przyrost — armia jest po to, żeby nią grać —
-  // a dopiero z reszty buduje. To jest ta kolejność, na której poprzednia
-  // ekonomia się wykładała.
-  const przyrost = przyrostZamku(stoi, PRZYROST_ODDZIALU);
-  for (let tier = 5; tier >= 0; tier--) {
-    const ile = Math.min(przyrost[tier], Math.floor(skarbiec.pokeball / KOSZT_ODDZIALU[tier]));
-    skarbiec.pokeball -= ile * KOSZT_ODDZIALU[tier];
-    kupionych += ile;
-  }
+/**
+ * Ile dni zajmuje postawienie całego miasta, jeśli codziennie najpierw
+ * wykupuje się przyrost, a dopiero z reszty buduje.
+ *
+ * `czyjeKopalnie` mówi, KTÓRE kopalnie gracz ma w rękach. To nie jest detal:
+ * na planszy 72 × 72 kopalnie leżą w trzech pasach i te za grzbietem zdobywa
+ * się dopiero po przełamaniu straży. Liczenie wszystkich naraz daje dolną
+ * granicę czasu rozbudowy — czyli odpowiedź na inne pytanie niż „czy w drugim
+ * tygodniu jest jeszcze co robić”.
+ */
+function dniRozbudowy(czyjeKopalnie: (o: { y: number }) => boolean) {
+  const s = planszaPrzygody();
+  for (const o of s.obiekty) if (o.rodzaj === 'kopalnia' && czyjeKopalnie(o)) o.nasz = true;
 
-  let zbudowano = true;
-  while (zbudowano) {
-    zbudowano = false;
-    const kandydat: Budynek | undefined = profil.budynki.find(
-      (b) => moznaBudowac(b, stoi) && stacNas(skarbiec, b.koszt)
-    );
-    if (kandydat) {
-      zaplac(skarbiec, kandydat.koszt);
-      stoi.push(kandydat.id);
-      zbudowano = true;
+  // Jednorazowe znaleziska z tego samego kawałka mapy: stosy surowca i skrzynie.
+  // Bez nich symulacja liczy sam dochód z kopalń i wychodzi jej, że pierwszy
+  // miesiąc jest głodowy — a w Heroes 3 to właśnie zbieranie leżących rzeczy
+  // niesie pierwsze dwa tygodnie. Rozkładamy je na 21 dni, bo tyle mniej więcej
+  // zajmuje objechanie własnego pasa mapy.
+  const ZBIERANIE_DNI = 21;
+  const znaleziska: Partial<Record<keyof Skarbiec, number>> = {};
+  for (const o of s.obiekty) {
+    if (!czyjeKopalnie(o)) continue;
+    if (o.rodzaj === 'surowiec' && o.surowiec) {
+      znaleziska[o.surowiec] = (znaleziska[o.surowiec] ?? 0) + (o.ile ?? 0);
+    } else if (o.rodzaj === 'skrzynia') {
+      // Skrzynia daje wybór; liczymy wariant pieniężny, bo to on wchodzi
+      // do ekonomii. Środkowy wariant, żeby nie liczyć najlepszego przypadku.
+      znaleziska.pokeball = (znaleziska.pokeball ?? 0) + SKRZYNIE[1].pokeballe;
     }
   }
+  const zamekGracza = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.nasz)!;
+  const skarbiec = s.skarbiec;
+  const stoi = [...(zamekGracza.postawione ?? [])];
+  let dzien = 0;
+  let kupionych = 0;
+  while (dzien++ < 400 && stoi.length < profil.budynki.length) {
+    zamekGracza.postawione = stoi;
+    for (const [co, ile] of Object.entries(dochod(s)) as [keyof Skarbiec, number][])
+      skarbiec[co] += ile;
+    if (dzien <= ZBIERANIE_DNI)
+      for (const [co, ile] of Object.entries(znaleziska) as [keyof Skarbiec, number][])
+        skarbiec[co] += ile / ZBIERANIE_DNI;
+
+    // Gracz werbuje i buduje NARAZ, a nie jedno kosztem drugiego. Wcześniej
+    // symulacja wykupywała codziennie cały przyrost, zanim cokolwiek postawiła
+    // — czyli grała tak, jak nie gra nikt: przy dochodzie niższym niż koszt
+    // pełnego przyrostu miasto nie stawało NIGDY, niezależnie od tego, jak
+    // dobrze rozstawione są kopalnie. Sprawdzenie mierzyło wtedy model, a nie
+    // mapę. Teraz na werbunek idzie połowa skarbca, druga połowa zostaje na
+    // budowę — tak wygląda pierwszy miesiąc normalnej gry.
+    const przyrost = przyrostZamku(stoi, PRZYROST_ODDZIALU);
+    let naArmie = Math.floor(skarbiec.pokeball / 2);
+    for (let tier = 5; tier >= 0; tier--) {
+      const ile = Math.min(przyrost[tier], Math.floor(naArmie / KOSZT_ODDZIALU[tier]));
+      naArmie -= ile * KOSZT_ODDZIALU[tier];
+      skarbiec.pokeball -= ile * KOSZT_ODDZIALU[tier];
+      kupionych += ile;
+    }
+
+    let zbudowano = true;
+    while (zbudowano) {
+      zbudowano = false;
+      const kandydat: Budynek | undefined = profil.budynki.find(
+        (b) => moznaBudowac(b, stoi) && stacNas(skarbiec, b.koszt)
+      );
+      if (kandydat) {
+        zaplac(skarbiec, kandydat.koszt);
+        stoi.push(kandydat.id);
+        zbudowano = true;
+      }
+    }
+  }
+  return { dzien, kupionych, postawione: stoi.length };
 }
+
+// Pas gracza kończy się na wierszu 46 — dalej na północ zaczyna się pas sporny
+// (patrz `tools/generuj_mape.py`). Kopalnie z doliny to jedyne, które da się
+// mieć w pierwszym tygodniu, bez przełamywania straży granicznej.
+const dolina = dniRozbudowy((o) => o.y > 46);
+const calamapa = dniRozbudowy(() => true);
+console.log(`  z kopalń doliny: ${dolina.dzien} dni, ${dolina.kupionych} oddziałów`);
+console.log(`  z kopalń całej mapy: ${calamapa.dzien} dni, ${calamapa.kupionych} oddziałów`);
+
 sprawdz(
   'całe miasto staje, mimo że armia jest wykupywana codziennie',
-  stoi.length === profil.budynki.length,
-  `${stoi.length} z ${profil.budynki.length} budynków, ${dzien} dni, ${kupionych} oddziałów`
+  dolina.postawione === profil.budynki.length,
+  `${dolina.postawione} z ${profil.budynki.length} budynków`
+);
+// UWAGA, JAK TO CZYTAĆ: symulacja jest OPTYMISTYCZNA. Bohater zbiera wszystko
+// z własnego pasa w trzy tygodnie, nie przegrywa ani jednej bitwy i nie traci
+// dni na dojazdy. To jest DOLNA granica czasu rozbudowy — prawdziwa gra, ze
+// strażami przy połowie znalezisk, wypada mniej więcej dwa razy dłużej.
+// Dlatego próg to 12–60 dni, a nie 20–120 jak przy poprzedniej planszy, gdzie
+// symulacja nie liczyła znalezisk w ogóle.
+sprawdz(
+  'na samej dolinie rozbudowa zajmuje 12–60 dni (jest co robić, ale nie w nieskończoność)',
+  dolina.dzien >= 12 && dolina.dzien <= 60,
+  `${dolina.dzien} dni`
+);
+// Zdobycie pasa spornego i krainy wroga ma NAPRAWDĘ przyspieszać rozbudowę —
+// inaczej wyprawa na północ jest tylko zwiedzaniem. Ale nie na tyle, żeby
+// miasto stawało w tydzień i przestawało być wyborem.
+sprawdz(
+  'zajęcie wszystkich kopalń skraca rozbudowę co najmniej o jedną trzecią',
+  calamapa.dzien * 3 <= dolina.dzien * 2,
+  `${calamapa.dzien} zamiast ${dolina.dzien} dni`
 );
 sprawdz(
-  'rozbudowa zajmuje 20–120 dni (jest co robić, ale nie w nieskończoność)',
-  dzien >= 20 && dzien <= 120,
-  `${dzien} dni`
+  'ale nawet z całą mapą i wszystkimi znaleziskami miasto nie staje w trzy dni',
+  calamapa.dzien >= 5,
+  `${calamapa.dzien} dni`
 );
 
 console.log(bledy === 0 ? '\nEKONOMIA SIĘ SPINA' : `\nBŁĘDÓW: ${bledy}`);
