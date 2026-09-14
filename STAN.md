@@ -371,8 +371,8 @@ tym samym profilem co nasza plansza (`tools/profil-wzorca.py`,
 | Miara | My | Oryginały |
 |---|---|---|
 | pól przejezdnych | 45% | 26–43% |
-| obiekt co ile pól | 6,8 | 4,1–12,5 |
-| obiektów razem | 297 | 179–328 |
+| obiekt co ile pól | 7,7 | 4,1–12,5 |
+| obiektów razem | 305 | 179–328 |
 | udział straży | 21% | 10–24% |
 | mapa dostępna bez bitwy | 30% | 7–81% |
 
