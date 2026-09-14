@@ -130,6 +130,15 @@ for _k in (
 SILA_WG_POZIOMU = {1: 'slaby', 2: 'sredni', 3: 'silny', 4: 'straznik',
                    5: 'wodz', 6: 'wodz', 7: 'wodz'}
 
+#: Dekoracja „kamienna”: góry, skały, kaniony, kratery, wulkany, rafy. U nas to
+#: teren '#'; reszta dekoracji (drzewa, krzaki, zarośla) idzie na 'T', tak jak
+#: nasz las. Podział jest umowny, ale bez niego cała bryła mapy wzorcowej
+#: wpadłaby do jednej kategorii i porównanie z naszym '#' straciłoby sens.
+SKALNE = {
+    117, 118, 123, 124, 127, 128, 133, 134, 136, 143, 147, 152, 157, 158, 161,
+    168, 169, 174, 175, 178, 179, 184, 185, 187, 194, 199, 207, 208, 209, 211,
+}
+
 #: Klasy losowych potworów niosą poziom wprost w numerze klasy.
 POZIOM_KLASY = {72: 1, 73: 2, 74: 3, 75: 4, 162: 5, 163: 6, 164: 7, 71: 3}
 
@@ -172,16 +181,20 @@ def pole_obiektu(o):
 def zablokowane_dekoracja(objs, bok):
     """Pola zasłonięte przez dekorację (drzewa, góry, skały, kratery…).
 
-    U nas takie pola są terenem 'T'. W H3 to obiekty, więc żeby profile były
-    porównywalne, przenosimy je na siatkę terenu.
+    U nas takie pola są terenem 'T' albo '#'. W H3 to obiekty, więc żeby
+    profile były porównywalne, przenosimy je na siatkę terenu. Zwraca
+    {(x, y): znak}.
     """
-    blok = set()
+    blok = {}
     for o in objs:
         if KLASY.get(o['class']):
-            continue  # obiekt interaktywny — nie jest „lasem”
+            continue  # obiekt interaktywny — nie jest „lasem” ani „górą”
+        znak = '#' if o['class'] in SKALNE else 'T'
         for (x, y), wolne in kafelki_obiektu(o, 'passability'):
             if not wolne and 0 <= x < bok and 0 <= y < bok:
-                blok.add((x, y))
+                # Góra przykrywa las — bryła terenu jest ważniejsza niż krzak.
+                if znak == '#' or (x, y) not in blok:
+                    blok[(x, y)] = znak
     return blok
 
 
@@ -197,9 +210,9 @@ def wczytaj(sciezka):
     ]
 
     powierzchnia = [o for o in d['objects'] if o.get('z') == 0]
-    for (x, y) in zablokowane_dekoracja(powierzchnia, bok):
+    for (x, y), znak in zablokowane_dekoracja(powierzchnia, bok).items():
         if teren[y][x] in PRZEJEZDNE:
-            teren[y][x] = 'T'
+            teren[y][x] = znak
 
     obiekty = []
     for o in powierzchnia:
@@ -226,17 +239,31 @@ def wczytaj(sciezka):
         if p.get('startingTown') and p['startingTown']['z'] == 0
     ]
     zamki = [o for o in d['objects'] if o.get('z') == 0 and KLASY.get(o['class']) == 'zamek']
+    kotwice = {(z['x'], z['y']): z for z in zamki}
+
+    def wejscie(kotwica):
+        """Współrzędna z pliku to prawy dolny róg sprite'a zamku, a nie brama.
+
+        Bramę bierzemy z maski aktywności; w razie czego cofamy się o dwa pola
+        w lewo, bo tak stoi wejście w każdym zamku H3.
+        """
+        z = kotwice.get(kotwica)
+        if z:
+            return pole_obiektu(z)
+        return (max(0, kotwica[0] - 2), kotwica[1])
+
     if starty:
-        nasz_kolor, punkty['zamek gracza'] = starty[0]
+        nasz_kolor, kotwica = starty[0]
     else:
-        nasz_kolor, punkty['zamek gracza'] = None, (zamki[0]['x'], zamki[0]['y'])
+        nasz_kolor, kotwica = None, (zamki[0]['x'], zamki[0]['y'])
+    punkty['zamek gracza'] = wejscie(kotwica)
     punkty['start'] = punkty['zamek gracza']
 
     # Zamek wroga: start drugiego gracza; jeśli go nie ma na powierzchni
     # (mapy z podziemnym startem, gracze bez zamku startowego) — najdalszy
     # zamek nienależący do nas.
     if len(starty) > 1:
-        punkty['zamek wroga'] = starty[1][1]
+        punkty['zamek wroga'] = wejscie(starty[1][1])
     else:
         sx, sy = punkty['start']
         obce = [
@@ -245,7 +272,7 @@ def wczytaj(sciezka):
             and (z['x'], z['y']) != punkty['start']
         ] or zamki
         daleki = max(obce, key=lambda z: max(abs(z['x'] - sx), abs(z['y'] - sy)))
-        punkty['zamek wroga'] = (daleki['x'], daleki['y'])
+        punkty['zamek wroga'] = pole_obiektu(daleki)
 
     return teren, punkty, obiekty, d['name']
 
@@ -316,8 +343,12 @@ def strefa(d_dom, d_wrog):
     co najmniej jedną piątą → 'dom', bliżej wroga → 'wroga', reszta to pas
     styku, czyli 'pogranicze'.
     """
-    if d_dom is None or d_wrog is None:
+    if d_dom is None and d_wrog is None:
         return 'pogranicze'
+    # Pole nieosiągalne z jednej strony liczymy jako nieskończenie dalekie —
+    # na mapach z wyspami i podziemiem inaczej wszystko wpadłoby na styk.
+    d_dom = float('inf') if d_dom is None else d_dom
+    d_wrog = float('inf') if d_wrog is None else d_wrog
     if d_dom * 1.25 < d_wrog:
         return 'dom'
     if d_wrog * 1.25 < d_dom:
@@ -406,6 +437,8 @@ def slug(nazwa):
 # --- tabela ------------------------------------------------------------------
 
 def do_tekstu(v):
+    if v is None:
+        return '—'   # wróg poza zasięgiem lądowym (wyspy, podziemne przejścia)
     if isinstance(v, dict):
         return ' '.join(f'{k}={x}' for k, x in v.items())
     if isinstance(v, list):

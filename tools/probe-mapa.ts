@@ -10,6 +10,7 @@ import {
   TEREN_INFO,
   kosztPola,
   obiektNa,
+  polaZajete,
   trasa,
   wGranicach,
   type StanMapy,
@@ -79,19 +80,40 @@ sprawdz(
   !obiektNa(s, s.bohater.x, s.bohater.y) && kosztPola(s, s.bohater.x, s.bohater.y) !== null
 );
 
-console.log('\n=== dostępność (bez uwzględniania strażników) ===');
-// Każdy obiekt musi dać się osiągnąć. Trasa nie przechodzi PRZEZ obiekty,
-// więc jeśli potwór zamyka jedyne przejście do zamku, wyjdzie to właśnie tu.
-for (const o of s.obiekty) {
-  // Osiągalność sprawdzamy z POMINIĘCIEM strażników: część mapy leży celowo
-  // za potworem i dopóki się go nie pokona, trasy tam nie ma. To jest zamysł,
-  // a nie usterka. Interesuje nas, czy plansza nie rozpada się na kawałki
-  // niepołączone terenem.
-  const bezStrazy: StanMapy = { ...s, obiekty: s.obiekty.filter((x) => x.rodzaj !== 'potwor') };
-  const t = trasa(bezStrazy, o.x, o.y);
-  if (t === null && !(o.x === s.bohater.x && o.y === s.bohater.y)) {
-    sprawdz(`da się dojść do: ${o.nazwa} (${o.x},${o.y})`, false, 'brak trasy');
+console.log('\n=== do każdego obiektu da się podejść ===');
+// Liczymy to na PRAWDZIWYM stanie gry, z pełną listą obiektów.
+//
+// Pierwsza wersja usuwała najpierw potwory („za strażą też ma być dojście”)
+// i to cicho fałszowało wynik: `polaBryly` pomija pola muru stykające się
+// z cudzym wejściem, więc po usunięciu potworów mury ROSŁY i sonda widziała
+// blokady, których w grze nie ma. Potwory i tak nie zamykają drogi na stałe —
+// pokonuje się je i idzie dalej — więc tutaj traktujemy je jak pola przejezdne.
+{
+  const bryly = polaZajete(s);
+  const przejezdne = (x: number, y: number) =>
+    wGranicach(s, x, y) && TEREN_INFO[s.teren[y][x]].koszt !== null && !bryly.has(`${x},${y}`);
+  const widziane = new Set([`${s.bohater.x},${s.bohater.y}`]);
+  const kolejka = [[s.bohater.x, s.bohater.y]];
+  while (kolejka.length) {
+    const [x, y] = kolejka.pop()!;
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx, ny = y + dy, k = `${nx},${ny}`;
+        if (!widziane.has(k) && przejezdne(nx, ny)) {
+          widziane.add(k);
+          kolejka.push([nx, ny]);
+        }
+      }
   }
+  const bezDojscia = s.obiekty.filter(
+    (o) =>
+      ![-1, 0, 1].some((dx) => [-1, 0, 1].some((dy) => widziane.has(`${o.x + dx},${o.y + dy}`)))
+  );
+  sprawdz(
+    `do wszystkich ${s.obiekty.length} obiektów da się podejść`,
+    bezDojscia.length === 0,
+    bezDojscia.slice(0, 5).map((o) => `${o.nazwa} (${o.x},${o.y})`).join(', ')
+  );
 }
 
 console.log('\n=== pierwsza tura ma sens ===');
@@ -206,9 +228,14 @@ console.log('\n=== gęstość obiektów jak na mapie M z Heroes 3 ===');
   for (let y = 0; y < s.wys; y++)
     for (let x = 0; x < s.szer; x++) if (TEREN_INFO[s.teren[y][x]].koszt !== null) przejezdnych++;
   const naObiekt = przejezdnych / s.obiekty.length;
-  // Rzadziej niż co 30 pól robi się pustynia, gęściej niż co 12 — jarmark,
-  // po którym nie da się przejść bez wejścia na coś.
-  sprawdz('obiekt co 12–30 pól przejezdnych', naObiekt >= 12 && naObiekt <= 30, `co ${naObiekt.toFixed(1)}`);
+  // Widełki wzięte z POMIARU pięciu oficjalnych map 72 × 72 na dwóch graczy
+  // (Faeries, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected
+  // Inheritance, When Dragons Clash — patrz `tools/profil-wzorca.py`): obiekt
+  // co 4,1 / 4,8 / 5,3 / 10,6 / 12,5 pola przejezdnego. Pierwsza wersja tego
+  // sprawdzenia wymagała 12–30 i była zgadywana, zanim którakolwiek z tych map
+  // została zmierzona — nasza plansza wychodziła przez to „za gęsta”, będąc
+  // rzadszą od trzech z pięciu wzorców.
+  sprawdz('obiekt co 4–20 pól przejezdnych (jak na mapach M z Heroes 3)', naObiekt >= 4 && naObiekt <= 20, `co ${naObiekt.toFixed(1)}`);
 }
 
 console.log('\n=== gospodarka jest po stronie gracza ===');

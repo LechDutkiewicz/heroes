@@ -8,6 +8,7 @@
 //   node tools/probe-przygoda.mjs [--url http://localhost:4173]
 
 import { chromium } from 'playwright';
+import { zainstalujPodejdz, zamknijAwans } from './sonda-wspolne.mjs';
 
 const arg = (n, d) => {
   const i = process.argv.indexOf(n);
@@ -30,38 +31,6 @@ const sprawdz = (co, ok, szczegol = '') => {
  * gra rolę gracza, więc musi na to okno kliknąć — inaczej zgłasza „gra nie
  * wraca do sterowania" przy grze, która działa dokładnie tak, jak ma działać.
  */
-const zamknijAwans = async (page) => {
-  // Okno potrafi wejść z opóźnieniem (po bitwie czeka na napis o zwycięstwie),
-  // więc najpierw dajemy mu chwilę. Pierwsza wersja tej funkcji poddawała się
-  // natychmiast, gdy okna jeszcze nie było, i sonda dalej zgłaszała „gra nie
-  // wraca do sterowania".
-  for (let proba = 0; proba < 10; proba++) {
-    const punkt = await page.evaluate(() => {
-      const s = window.__game.scene.getScene('adventure');
-      const c = s.children.list.find(
-        (o) =>
-          o.type === 'Container' &&
-          o.list?.some((x) => x.type === 'Text' && /Naucz się|Ulepsz|Dalej/.test(x.text))
-      );
-      return c ? { x: c.x, y: c.y } : null;
-    });
-    if (!punkt) {
-      const zablokowana = await page.evaluate(
-        () => window.__game.scene.getScene('adventure').zajety === true
-      );
-      if (!zablokowana) return proba > 0;
-      await page.waitForTimeout(400);
-      continue;
-    }
-    // Przez `klikNaPlotnie`, nie przez `page.mouse.click` wprost: okno
-    // przeglądarki ma tu 1000 × 760, a płótno gry 960 × 694, więc współrzędne
-    // sceny są przesunięte względem strony. Pierwsza wersja klikała obok
-    // przycisku i sonda dalej zgłaszała zablokowaną grę.
-    await klikNaPlotnie(page, punkt.x, punkt.y);
-    await page.waitForTimeout(600);
-  }
-  return true;
-};
 /**
  * Klik w punkt PŁÓTNA, nie strony. Pierwsza wersja liczyła współrzędne od
  * lewego górnego rogu okna przeglądarki i chybiała, bo płótno ma wokół siebie
@@ -98,6 +67,8 @@ await page.goto(`${BASE}/?ekran=mapa`, { waitUntil: 'domcontentloaded' });
 await scena('adventure');
 await page.waitForTimeout(900);
 
+await zainstalujPodejdz(page);
+
 // --- mgła wojny ---
 console.log('\n=== mgła wojny ===');
 const mgla = await page.evaluate(() => {
@@ -127,10 +98,7 @@ sprawdz('marsz zużywa punkty ruchu', poMgle.ruch < 1563, String(poMgle.ruch));
 console.log('\n=== skrzynia ===');
 const skrzynia = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
-  const o = s.stan.obiekty.find((x) => x.rodzaj === 'skrzynia' && !x.artefakt);
-  s.stan.bohater.x = o.x;
-  s.stan.bohater.y = o.y - 1;
-  s.stan.bohater.ruch = 2000;
+  const o = window.__podejdz(s, (x) => x.rodzaj === 'skrzynia' && !x.artefakt && !x.zebrany);
   window.__skrzynia = o;
   const przed = { ...s.stan.skarbiec, dosw: s.stan.bohater.doswiadczenie };
   s.idz([{ x: o.x, y: o.y, koszt: 100 }]);
@@ -207,10 +175,7 @@ sprawdz('gra wraca do sterowania', poWyborze.zajety === false);
 console.log('\n=== artefakt ===');
 const artefakt = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
-  const o = s.stan.obiekty.find((x) => x.rodzaj === 'artefakt' && !x.zebrany);
-  s.stan.bohater.x = o.x;
-  s.stan.bohater.y = o.y - 1;
-  s.stan.bohater.ruch = 2000;
+  const o = window.__podejdz(s, (x) => x.rodzaj === 'artefakt' && !x.zebrany);
   const przed = { ...s.statystyki?.(s.stan.bohater) };
   s.idz([{ x: o.x, y: o.y, koszt: 100 }]);
   return { nazwa: o.nazwa, artefakt: o.artefakt, przed };
@@ -226,10 +191,7 @@ sprawdz(`artefakt ląduje u bohatera (${artefakt.nazwa})`, poArtefakcie.ile === 
 console.log('\n=== bitwa ===');
 const bitwa = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
-  const o = s.stan.obiekty.find((x) => x.rodzaj === 'potwor' && !x.zebrany);
-  s.stan.bohater.x = o.x;
-  s.stan.bohater.y = o.y - 1;
-  s.stan.bohater.ruch = 2000;
+  const o = window.__podejdz(s, (x) => x.rodzaj === 'potwor' && !x.zebrany);
   window.__potwor = o.id;
   s.idz([{ x: o.x, y: o.y, koszt: 100 }]);
   return { nazwa: o.nazwa, id: o.id, wrog: (o.oddzialy ?? []).length };
@@ -334,12 +296,8 @@ await page.locator('canvas').screenshot({ path: 'tools/shots/mapa-po-bitwie.png'
 console.log('\n=== zamek ===');
 const doZamku = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
-  const z = s.stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.nasz);
-  s.stan.bohater.x = z.x;
-  s.stan.bohater.y = z.y - 1;
-  s.stan.bohater.ruch = 2000;
+  const z = window.__podejdz(s, (o) => o.rodzaj === 'zamek' && o.nasz);
   s.stan.skarbiec.pokeball = 40;
-  s.zajety = false;
   window.__zamek = z.id;
   const przed = s.stan.bohater.armia.reduce((a, o) => a + (o ? o.ile : 0), 0);
   s.idz([{ x: z.x, y: z.y, koszt: 100 }]);
@@ -469,11 +427,8 @@ if (!pilnowana) {
 console.log('\n=== druga bitwa w tej samej sesji ===');
 const drugi = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
-  const p = s.stan.obiekty.find((o) => o.rodzaj === 'potwor' && !o.zebrany);
+  const p = window.__podejdz(s, (o) => o.rodzaj === 'potwor' && !o.zebrany);
   if (!p) return null;
-  s.stan.bohater.x = p.x;
-  s.stan.bohater.y = p.y - 1;
-  s.stan.bohater.ruch = 2000;
   s.idz([{ x: p.x, y: p.y, koszt: 100 }]);
   return p.nazwa;
 });

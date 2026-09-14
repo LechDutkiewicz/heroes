@@ -75,24 +75,24 @@ ZIARNO = 20260913
 #   12–17  dolina gracza: zamek na południowym zachodzie (8, 64), zatoka na
 #          południowym wschodzie, reszta to gospodarka.
 SZKIC = [
-    '#T...TT....T..##..',
-    '#..T....TT.....#..',
-    '..T...##...T..T...',
-    '.T..~~..T....T....',
-    ',,..~~...T...T....',
+    '#T#T..TT#..T.TT##.',
+    'T..TT..#T.T..T..T#',
+    '.T#..T.T..TT..T...',
+    'T..~~..T#T..T.TT.T',
+    ',,.~~T..T..TT..T.T',
     '##################',
-    '..T....~~~....T...',
-    '.,...T.~~~~..T....',
-    '..T..TT.~~~...T..,',
-    '....T....T....TT..',
-    '.T....T....T...T..',
+    'T.T#..~~~.T..TT..T',
+    '.,T..T~~~~T..T#T.T',
+    'T.T#TT.~~~T.T..TT,',
+    '..TT.T..TT..T.TT..',
+    'T#..TT..T..TT..T.T',
     '##################',
-    '..T...T.....T...,,',
-    '....TT....T....,,,',
-    '.T.....T.....~~,,.',
-    '..T.......T..~~~..',
-    'T....T......~~~...',
-    '..T....T.....~~...',
+    'T.T..TT..T..T.T.,,',
+    '..TT#..TT...TT.,,,',
+    'T#T...TT..T..~~,,.',
+    '..T.TT..T.T..~~~T.',
+    'T..TT...T#.T~~~.T.',
+    '.TT..T.TT...T~~.T.',
 ]
 
 #: Rdzenie obu grzbietów — wiersze, w których pasmo ma być NIEPRZERWANE.
@@ -150,7 +150,7 @@ PUNKTY = {
     'podnoze poludniowe': (14, 50),
     'przelecz poludniowa': (13, 45),
     'brod': (26, 40),
-    'jezioro': (34, 32),
+    'jezioro': (41, 31),
     'wschodnie rozstaje': (54, 38),
     'podnoze polnocne': (21, 26),
     'przelecz polnocna': (21, 21),
@@ -429,11 +429,40 @@ def strefa(y):
     return 'dom'
 
 
-def wolne_pola(mapa, kroki, zajete, ktora, zakres_krokow=(0, 999), min_odstep=3):
+#: Pola, na których obiekt NIE MOŻE stanąć, choć teren jest przejezdny:
+#: przejścia przez grzbiety wraz z wylotami. Obiekt postawiony w przejściu
+#: zatyka je na głucho — trasa nie przechodzi PRZEZ obiekty, więc pół mapy
+#: robi się nieosiągalne. Wygląda to jak zepsuty generator tras, a jest
+#: skrzynią postawioną w wąwozie.
+def w_przejsciu(x, y):
+    for _, (x0, y0, x1, y1), _ in PRZEJSCIA:
+        if x0 - 1 <= x <= x1 + 1 and y0 - 1 <= y <= y1 + 1:
+            return True
+    return False
+
+
+def ciasne(mapa, x, y):
+    """Czy pole jest szyjką — ma mniej niż czterech przejezdnych sąsiadów.
+
+    Ta sama pułapka co w przejściach, tylko rozsiana po całej mapie: przy
+    32% lasu i 15% gór korytarzy jest dużo, a obiekt postawiony w korytarzu
+    odcina wszystko za nim. Zostawiamy szyjki puste.
+    """
+    ilu = 0
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            if (dx or dy) and 0 <= x + dx < BOK and 0 <= y + dy < BOK and mapa[y + dy][x + dx] in PRZEJEZDNE:
+                ilu += 1
+    return ilu < 4
+
+
+def wolne_pola(mapa, kroki, zajete, ktora, zakres_krokow=(0, 999), min_odstep=1):
     wynik = []
     for y in range(BOK):
         for x in range(BOK):
             if mapa[y][x] not in '.,':
+                continue
+            if w_przejsciu(x, y) or ciasne(mapa, x, y):
                 continue
             if strefa(y) != ktora:
                 continue
@@ -458,16 +487,119 @@ def rozstaw(mapa, kroki, rng):
     zajete = list(PUNKTY.values())
     obiekty = []
 
-    def dodaj(ile, ktora, zakres, buduj, odstep=3):
+    # Obiekty ZATYKAJĄ drogę — trasa w grze nie przechodzi przez nie. Przy
+    # gęstości jednego obiektu na osiem pól i mapie w jednej trzeciej zalesionej
+    # dwie skrzynie postawione obok siebie potrafią odciąć ćwierć planszy.
+    # Nie widać tego: plansza wygląda spójnie, tylko połowa rzeczy jest nie do
+    # zdobycia. Dlatego każde postawienie jest SPRAWDZANE — jeśli po nim
+    # dostępnych pól ubywa więcej niż to jedno, którego szukamy, obiekt idzie
+    # gdzie indziej.
+    blokada = set()
+
+    #: Bryły. Zamek zajmuje 3 × 2 pola NAD wejściem, kopalnia 3 × 1, a z budowli
+    #: odwiedzanych — arena, ranczo i ośrodek ewolucji (patrz `BRYLA` i `BUDOWLE`
+    #: w `src/data/mapa.ts`; lista musi się z nimi zgadzać co do nazwy —
+    #: pomyłka „gniazdo zamiast ośrodka ewolucji” kosztowała rundę: generator
+    #: meldował spójną planszę, a w grze czterdzieści obiektów w północno-
+    #: wschodniej ćwiartce nie miało dojścia). Generator musi o tym wiedzieć, bo mur kopalni
+    #: blokuje drogę tak samo jak skała. Pierwsza wersja liczyła tylko pole
+    #: wejścia i wypuściła planszę, na której kopalnia postawiona w korytarzu
+    #: odcinała całą północno-wschodnią ćwiartkę mapy: generator meldował
+    #: spójność, a `probe-mapa.ts` wypisywał pięćdziesiąt „brak trasy”.
+    BRYLY = {
+        ('zamek', None): (3, 2),
+        ('kopalnia', None): (3, 1),
+        ('budynek', 'arena'): (3, 1),
+        ('budynek', 'ranczo'): (3, 1),
+        ('budynek', 'osrodek-ewolucji'): (3, 1),
+    }
+
+    def pola_bryly(rodzaj, co, pole):
+        rozmiar = BRYLY.get((rodzaj, co)) or BRYLY.get((rodzaj, None))
+        if not rozmiar:
+            return []
+        szer, wys = rozmiar
+        x, y = pole
+        return [
+            (x + dx, y + dy)
+            for dy in range(-wys, 0)
+            for dx in range(-(szer // 2), szer // 2 + 1)
+            if 0 <= x + dx < BOK and 0 <= y + dy < BOK and mapa[y + dy][x + dx] in PRZEJEZDNE
+        ]
+
+    def dostepnych(dodatkowe=()):
+        blok = blokada | set(dodatkowe)
+        start = PUNKTY['start']
+        widziane = {start}
+        kolejka = deque([start])
+        while kolejka:
+            x, y = kolejka.popleft()
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    nx, ny = x + dx, y + dy
+                    if (
+                        0 <= nx < BOK
+                        and 0 <= ny < BOK
+                        and (nx, ny) not in widziane
+                        and (nx, ny) not in blok
+                        and mapa[ny][nx] in PRZEJEZDNE
+                    ):
+                        widziane.add((nx, ny))
+                        kolejka.append((nx, ny))
+        return widziane
+
+    # Oba zamki stawia `src/data/plansza.ts`, nie ten skrypt — ale ich mury
+    # (3 × 2 pola nad wejściem) blokują drogę tak samo jak wszystko inne,
+    # więc muszą być w blokadzie od początku.
+    for nazwa in ('zamek gracza', 'zamek wroga'):
+        blokada.update(pola_bryly('zamek', None, PUNKTY[nazwa]))
+
+    stan_dostepnych = [len(dostepnych())]
+
+    #: Odstęp 1 znaczy „nie na tym samym polu”, a nie „z przerwą”. W Heroes 3
+    #: rzeczy stoją w kupkach — trzy stosy drewna obok siebie są na mapach
+    #: oryginalnych normą. Przy odstępie 2 pas sporny nie mieścił nawet połowy
+    #: zaplanowanych obiektów: ma 369 pól nadających się pod zabudowę, a każdy
+    #: obiekt z odstępem 2 zjada dziewięć.
+    def dodaj(ile, ktora, zakres, buduj, odstep=1):
         """Stawia `ile` obiektów w strefie i zwraca ich pola."""
         pola = []
         for _ in range(ile):
             wolne = wolne_pola(mapa, kroki, zajete, ktora, zakres, odstep)
             if not wolne:
                 raise SystemExit(f'Brak miejsca na obiekt: {ktora} {zakres}. Popraw SZKIC.')
-            pole = rng.choice(wolne)
+            pole = None
+            wpis = None
+            for _ in range(min(25, len(wolne))):
+                kandydat = rng.choice(wolne)
+                proba = buduj(kandydat)
+                zajmowane = [kandydat] + pola_bryly(proba[0], proba[1], kandydat)
+                widziane = dostepnych(zajmowane)
+                if len(widziane) < stan_dostepnych[0] - len(zajmowane):
+                    continue
+                # Do KAŻDEGO obiektu — także tych postawionych wcześniej — musi
+                # dać się podejść. Sama spójność mapy nie wystarcza: nowy obiekt
+                # potrafi zamurować ostatnie wolne pole przy cudzym wejściu,
+                # a wtedy plansza jest spójna, tylko kopalni nie da się zająć.
+                def dojdzie(pole_o):
+                    return any(
+                        (pole_o[0] + dx, pole_o[1] + dy) in widziane
+                        for dy in (-1, 0, 1)
+                        for dx in (-1, 0, 1)
+                        if (dx or dy)
+                    )
+                if not dojdzie(kandydat):
+                    continue
+                if not all(dojdzie(p) for p, co in obiekty if co[0] != 'potwor'):
+                    continue
+                stan_dostepnych[0] = len(widziane)
+                pole, wpis = kandydat, proba
+                blokada.update(zajmowane)
+                break
+            if pole is None:
+                raise SystemExit(f'Każde miejsce w strefie {ktora} zatyka drogę. Popraw SZKIC.')
             zajete.append(pole)
-            obiekty.append((pole, buduj(pole)))
+            obiekty.append((pole, wpis))
             pola.append(pole)
         return pola
 
@@ -498,68 +630,67 @@ def rozstaw(mapa, kroki, rng):
             zajete.append(pole)
             obiekty.append((pole, ('potwor', sila)))
 
+    # Budowle odwiedzane: w Heroes 3 to one wypełniają mapę i dają powód, żeby
+    # nadłożyć drogi. Mapy wzorcowe mają ich po 56–105 na planszę M; pierwsza
+    # wersja tej planszy miała 46 i między kopalniami było pusto. Powtórzenia
+    # są w porządku — w Heroes 3 wiatrak czy ognisko stoi po kilka razy.
+    def budowle(ile, ktora, pula, zakres=(0, 999)):
+        for i in range(ile):
+            b = pula[i % len(pula)]
+            dodaj(1, ktora, zakres, lambda p, b=b: ('budynek', b))
+
     # --- DOLINA GRACZA -----------------------------------------------------
     # Pierwszy tydzień. Ma być co robić od pierwszego dnia, bez jednej przegranej
-    # bitwy: trzy stosy surowca i dwie skrzynie leżą w zasięgu pierwszych tur,
+    # bitwy: cztery stosy surowca i dwie skrzynie leżą w zasięgu pierwszych tur,
     # a pierwsza kopalnia stoi bez straży.
     dodaj(4, 'dom', (3, 10), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball'])))
     dodaj(2, 'dom', (3, 10), lambda p: ('skrzynia', None))
     dodaj(1, 'dom', (4, 10), lambda p: ('kopalnia', 'jagoda'))
     dodaj(2, 'dom', (6, 12), lambda p: ('potwor', 'slaby'))
 
-    # Reszta doliny: gospodarka, którą buduje się przed wyprawą na północ.
-    # Liczby kopalń i stosów są dobrane tak, żeby SAMA dolina wystarczała na
-    # rozbudowę miasta w kilkadziesiąt dni — mierzy to `probe-ekonomia.ts`.
-    # Gdy kopalń w dolinie było pięć, miasto nie stawało w ogóle i mapa mówiła
-    # „przełam straż albo nic”, co na średnim poziomie trudności jest za ostro.
+    # Reszta doliny. Surowce kopalń są WYPISANE, nie losowane: losowanie potrafiło
+    # nie dać dolinie ani jednej kopalni odłamków, a odłamkami płaci się za całą
+    # górną połowę drzewka miasta — miasta nie dało się wtedy skończyć i nie było
+    # tego widać. W Heroes 3 strefa startowa zawsze ma komplet podstawowy.
     dodaj(10, 'dom', (10, 40), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])))
-    # Surowce kopalń są WYPISANE, nie losowane. Losowanie potrafiło nie dać
-    # dolinie ani jednej kopalni odłamków — a odłamkami płaci się za całą górną
-    # połowę drzewka miasta. Mapa wyglądała wtedy dobrze i po prostu nie dało
-    # się na niej skończyć zamku: nie z powodu ceny, tylko braku surowca po tej
-    # stronie grzbietu. W Heroes 3 strefa startowa zawsze ma komplet podstawowy.
     kopalnie_dom = []
     for co in ['odlamek', 'jagoda', 'odlamek', 'pokeball', 'jagoda', 'pokeball']:
         kopalnie_dom += dodaj(1, 'dom', (10, 40), lambda p, co=co: ('kopalnia', co))
     strzez(kopalnie_dom[:4], 'slaby')
-    skrzynie_dom = dodaj(9, 'dom', (10, 40), lambda p: ('skrzynia', None))
-    strzez(skrzynie_dom[:3], 'slaby')
-    dodaj(3, 'dom', (12, 40), lambda p: ('potwor', 'slaby'))
+    skrzynie_dom = dodaj(8, 'dom', (10, 40), lambda p: ('skrzynia', None))
+    strzez(skrzynie_dom[:2], 'slaby')
+    dodaj(2, 'dom', (12, 40), lambda p: ('potwor', 'slaby'))
     artefakty_dom = dodaj(4, 'dom', (14, 40), lambda p: ('artefakt', None))
-    strzez(artefakty_dom, 'sredni')
-
-    # Budowle doliny: same rzeczy dobre od pierwszego dnia — drobne nagrody,
-    # ruch i statystyki. To one wypełniają przestrzeń między kopalniami i dają
-    # powód, żeby nadłożyć drogi.
-    for i, b in enumerate([
+    strzez(artefakty_dom[:3], 'sredni')
+    budowle(18, 'dom', [
         'ognisko', 'chatka', 'wiatrak', 'zrodlo', 'oboz-treningowy', 'ranczo',
-        'gniazdo', 'drzewo-wiedzy', 'woz', 'chatka', 'ognisko', 'zrodlo',
-        'wiatrak', 'gniazdo',
-    ]):
-        dodaj(1, 'dom', (3 + i * 2, 45), lambda p, b=b: ('budynek', b))
+        'gniazdo', 'drzewo-wiedzy', 'woz',
+    ])
 
     # --- PAS SPORNY --------------------------------------------------------
-    # Środek gry. Najgęstszy kawałek mapy i jedyny, w którym stoją obok siebie
-    # rzeczy tanie i drogie: gracz ma wybierać, co bierze najpierw, a nie
-    # zbierać wszystko po kolei.
-    dodaj(18, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
+    # Środek gry i najgęstszy kawałek mapy. Stoją tu obok siebie rzeczy tanie
+    # i drogie: gracz ma wybierać, co bierze najpierw, a nie zbierać po kolei.
+    #
+    # Nagroda ROŚNIE Z ODLEGŁOŚCIĄ i to jest osobna decyzja. Mapy wzorcowe mają
+    # wyraźny garb obiektów w trzecim i czwartym pasie odległości od startu
+    # (Hatchet Axe and Saw: 28/60/49/108/81), a nasza pierwsza wersja miała
+    # rozkład płaski: 30/82/47/43/33. Płaski rozkład znaczy, że dalej nie
+    # opłaca się jechać — a wtedy mapa M jest mapą S z doczepionym marginesem.
+    dodaj(22, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
     kopalnie_srodek = []
     for co in ['odlamek', 'kamien', 'pokeball', 'odlamek', 'kamien', 'jagoda', 'pokeball', 'odlamek']:
         kopalnie_srodek += dodaj(1, 'pogranicze', (0, 999), lambda p, co=co: ('kopalnia', co))
     strzez(kopalnie_srodek[:6], 'sredni')
-    skrzynie_srodek = dodaj(14, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
+    skrzynie_srodek = dodaj(16, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
     strzez(skrzynie_srodek[:6], 'sredni')
-    artefakty_srodek = dodaj(8, 'pogranicze', (0, 999), lambda p: ('artefakt', None))
-    strzez(artefakty_srodek[:6], 'silny')
-    dodaj(4, 'pogranicze', (0, 999), lambda p: ('potwor', 'sredni'))
-    dodaj(2, 'pogranicze', (0, 999), lambda p: ('potwor', 'silny'))
-
-    for b in [
+    artefakty_srodek = dodaj(9, 'pogranicze', (0, 999), lambda p: ('artefakt', None))
+    strzez(artefakty_srodek[:5], 'silny')
+    dodaj(3, 'pogranicze', (0, 999), lambda p: ('potwor', 'sredni'))
+    budowle(26, 'pogranicze', [
         'arena', 'wieza-obserwacyjna', 'kamienna-wieza', 'ranczo', 'gniazdo',
         'wiatrak', 'ognisko', 'chatka', 'woz', 'drzewo-wiedzy', 'zrodlo',
-        'oboz-treningowy', 'ognisko', 'gniazdo', 'ranczo', 'woz',
-    ]:
-        dodaj(1, 'pogranicze', (0, 999), lambda p, b=b: ('budynek', b))
+        'oboz-treningowy',
+    ])
     # Para portali — oba PO TEJ SAMEJ stronie grzbietu. Para przez grzbiet
     # obchodziłaby strażników przełęczy i unieważniała cały układ mapy.
     dodaj(2, 'pogranicze', (0, 999), lambda p: ('budynek', 'portal'))
@@ -567,24 +698,45 @@ def rozstaw(mapa, kroki, rng):
     # --- KRAINA PRZECIWNIKA ------------------------------------------------
     # Po co się tam w ogóle jedzie: relikty, kopalnie kamienia i najsilniejsze
     # straże na mapie. Prawie wszystko pilnowane — tu nie ma nic za darmo.
-    dodaj(13, 'wroga', (0, 999), lambda p: ('surowiec', rng.choice(['kamien', 'odlamek', 'pokeball'])))
+    dodaj(20, 'wroga', (0, 999), lambda p: ('surowiec', rng.choice(['kamien', 'odlamek', 'pokeball'])))
     kopalnie_wroga = []
     for co in ['kamien', 'kamien', 'pokeball', 'odlamek', 'kamien', 'pokeball', 'jagoda', 'odlamek']:
         kopalnie_wroga += dodaj(1, 'wroga', (0, 999), lambda p, co=co: ('kopalnia', co))
     strzez(kopalnie_wroga[:6], 'silny')
-    skrzynie_wroga = dodaj(12, 'wroga', (0, 999), lambda p: ('skrzynia', None))
+    skrzynie_wroga = dodaj(18, 'wroga', (0, 999), lambda p: ('skrzynia', None))
     strzez(skrzynie_wroga[:5], 'silny')
-    artefakty_wroga = dodaj(8, 'wroga', (0, 999), lambda p: ('artefakt', None))
-    strzez(artefakty_wroga[:6], 'silny')
-    dodaj(3, 'wroga', (0, 999), lambda p: ('potwor', 'silny'))
-
-    for b in [
+    artefakty_wroga = dodaj(9, 'wroga', (0, 999), lambda p: ('artefakt', None))
+    strzez(artefakty_wroga[:5], 'silny')
+    dodaj(2, 'wroga', (0, 999), lambda p: ('potwor', 'silny'))
+    budowle(24, 'wroga', [
         'osrodek-ewolucji', 'arena', 'kamienna-wieza', 'wieza-obserwacyjna',
         'gniazdo', 'ranczo', 'wiatrak', 'ognisko', 'drzewo-wiedzy', 'woz',
         'zrodlo', 'chatka',
-    ]:
-        dodaj(1, 'wroga', (0, 999), lambda p, b=b: ('budynek', b))
+    ])
     dodaj(2, 'wroga', (0, 999), lambda p: ('budynek', 'portal'))
+
+    # --- SKARBIEC KRAŃCA MAPY ----------------------------------------------
+    # Najdalsza ćwiartka dostaje osobną porcję nagród, i to jest poprawka po
+    # ślepym porównaniu. Krytyk — dwa razy, niezależnie — napisał to samo:
+    # „pogranicze jest tłuste, a najdalszy, najdroższy pierścień pusty; cel
+    # wyprawy nie płaci”. Rozstawianie po STREFACH daje płaski rozkład wzdłuż
+    # mapy, bo strefa wroga jest tak samo gęsta przy grzbiecie, jak przy
+    # krawędzi planszy. Tutaj mierzymy wprost odległość w krokach od startu
+    # i ostatnie 20% zasięgu dostaje własny skarbiec: relikty, skrzynie
+    # i kopalnie, pilnowane przez najsilniejsze straże na mapie.
+    najdalej = max(kroki.values())
+    daleko = (int(najdalej * 0.8), 999)
+    kraniec_artefakty = dodaj(5, 'wroga', daleko, lambda p: ('artefakt', None))
+    strzez(kraniec_artefakty[:3], 'wodz')
+    strzez(kraniec_artefakty[3:], 'silny')
+    kraniec_skrzynie = dodaj(6, 'wroga', daleko, lambda p: ('skrzynia', None))
+    strzez(kraniec_skrzynie[:4], 'silny')
+    kraniec_kopalnie = []
+    for co in ['kamien', 'pokeball', 'odlamek']:
+        kraniec_kopalnie += dodaj(1, 'wroga', daleko, lambda p, co=co: ('kopalnia', co))
+    strzez(kraniec_kopalnie, 'wodz')
+    dodaj(4, 'wroga', daleko, lambda p: ('surowiec', rng.choice(['kamien', 'pokeball'])))
+    budowle(6, 'wroga', ['osrodek-ewolucji', 'arena', 'kamienna-wieza', 'drzewo-wiedzy', 'zrodlo', 'gniazdo'], daleko)
 
     return obiekty
 
@@ -623,6 +775,42 @@ sx, sy = PUNKTY['start']
 for (x, y), co in obiekty:
     if co[0] == 'potwor' and odleglosc((x, y), (sx, sy)) <= 2:
         raise SystemExit(f'Straż stoi na progu startu ({x},{y}).')
+
+# Łączność PRZY OBIEKTACH JAKO PRZESZKODACH. Trasa w grze nie przechodzi przez
+# obiekty, więc dwie skrzynie w korytarzu potrafią odciąć ćwierć mapy — a to
+# jest usterka, której nie widać: plansza wygląda spójnie, tylko połowa rzeczy
+# jest nie do zdobycia. Potwory pomijamy: za nimi się przechodzi po wygranej.
+def osiagalne_przy_obiektach(mapa, obiekty, skad):
+    blok = {p for p, co in obiekty if co[0] != 'potwor'}
+    widziane = {skad}
+    kolejka = deque([skad])
+    while kolejka:
+        x, y = kolejka.popleft()
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                nx, ny = x + dx, y + dy
+                if (
+                    0 <= nx < BOK
+                    and 0 <= ny < BOK
+                    and (nx, ny) not in widziane
+                    and (nx, ny) not in blok
+                    and mapa[ny][nx] in PRZEJEZDNE
+                ):
+                    widziane.add((nx, ny))
+                    kolejka.append((nx, ny))
+    return widziane
+
+
+sasiednie = osiagalne_przy_obiektach(mapa, obiekty, PUNKTY['start'])
+for pole, co in obiekty:
+    x, y = pole
+    if not any(
+        (x + dx, y + dy) in sasiednie
+        for dy in (-1, 0, 1)
+        for dx in (-1, 0, 1)
+        if (dx or dy)
+    ):
+        raise SystemExit(f'Do obiektu {co} na {pole} nie da się podejść — obiekty zatykają drogę.')
 
 print(f'obiektów: {len(obiekty)}')
 policz = {}

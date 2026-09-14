@@ -215,8 +215,19 @@ if __name__ == '__main__':
     # Woda zostaje NAMALOWANA na planszy, choć rusza nią shader. To jest
     # zapasowa wersja obrazu: gdy karta nie da rady z shaderem, gracz zobaczy
     # nieruchomy staw zamiast dziury w mapie.
-    baza.save(KATALOG / 'plansza-0.png')
-    print(f'  plansza-0.png  {baza.width} × {baza.height}')
+    # JPEG, nie PNG, i to jest decyzja o GRZE, a nie o formacie pliku.
+    # Plansza 72 × 72 przy kafelku 48 px ma 3456 × 3456 px. Ten sam obraz jako
+    # PNG waży 21 MB — cztery razy tyle, co cała poprzednia plansza, i tyle
+    # musiałby ściągnąć gracz przez sieć, zanim zobaczy mapę. W JPEG przy
+    # jakości 88 waży 3,4 MB, czyli MNIEJ niż poprzednia plansza 36 × 36,
+    # a jest to podkład terenu: nie ma na nim ani ostrych napisów, ani
+    # przezroczystości, czyli niczego, na czym widać artefakty kompresji.
+    # Maska wody zostaje PNG-iem — tam kanały niosą liczby dla shadera
+    # i stratna kompresja zrobiłaby z brzegu wody szum.
+    (KATALOG / 'plansza-0.png').unlink(missing_ok=True)
+    baza.convert('RGB').save(KATALOG / 'plansza-0.jpg', quality=88, subsampling=1, optimize=True)
+    rozmiar = (KATALOG / 'plansza-0.jpg').stat().st_size / 1048576
+    print(f'  plansza-0.jpg  {baza.width} × {baza.height}  ({rozmiar:.1f} MB)')
 
     # Klatki 1–3 były poprzednią animacją: cztery gotowe obrazy przełączane
     # co pół sekundy. Zostają usunięte, żeby nie leżały w `public` jako

@@ -1,6 +1,6 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-09-06 (scalenie: grafika z modelu, ekonomia na jednej skali, układ mapy).
+Ostatnia aktualizacja: 2026-09-14 (plansza 72 × 72 „Dwie Doliny”, mierzona przeciw pięciu oficjalnym mapom Heroes 3).
 
 Ten plik istnieje po to, żeby po przerwie nie trzeba było odtwarzać kontekstu
 z pamięci. Zapisuję tu, co jest skończone, co jest w połowie i czego świadomie
@@ -23,6 +23,9 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `node tools/capture.mjs` | komplet zrzutów, w tym paski czterech klatek dla animacji |
 | `npx tsx tools/probe-trasa.ts` | poprawność tras ruchu na ~128 tys. przypadków |
 | `npx tsx tools/probe-mapa.ts` | plansza przygody: kształt, okno, dostępność obiektów, odcisk tła |
+| `python3 tools/profil-mapy.py` | profil naszej planszy: gęstość, rozkład, schemat do porównań |
+| `python3 tools/profil-wzorca.py` | ten sam profil z oficjalnych map `.h3m` — poprzeczka |
+| `python3 tools/postep-mapa.py` | strona postępu: nasze liczby na tle wzorców i dziennik rund |
 | `npx tsx tools/probe-ekonomia.ts` | czy dochód z prawdziwej mapy starcza na armię I rozbudowę |
 | `node tools/probe-rozbudowa.mjs` | czy budynek da się KLIKNĄĆ i czy miasto potem daje więcej |
 | `node tools/probe-kopalnia.mjs` | czy budynek produkcyjny się ZAJMUJE, a nie zbiera |
@@ -332,51 +335,108 @@ sceną — `beginTurn` wywracał się na nieżyjącej teksturze napisu i gracz
 zostawał na mapie bez bitwy i bez sterowania. Jedna bitwa w sondzie tego nie
 złapie; trzeba rozegrać co najmniej dwie.
 
-## Układ mapy — „Key to Victory"
+## Układ mapy — „Dwie Doliny" (72 × 72, rozmiar M)
 
-Plansza jest przeniesieniem mapy „Key to Victory" na to, co mamy. Z oryginału
-wzięte są rozmiar (36 × 36), strony (gracz na polu 32,33 na południowym
-wschodzie, przeciwnik na 20,15 na północy) i cała struktura: pasmo gór przez
-całą szerokość mapy z pilnowanymi przejściami. Południe to bezpieczna dolina
-z gospodarką, północ to kraina przeciwnika z nagrodami i silnymi strażami.
+Poprzednia plansza była przeniesieniem „Key to Victory" na 36 × 36. Ta jest
+rozmiaru M i ma inną strukturę — tę, którą w Heroes 3 mają dobre mapy 1 na 1:
 
-Przejścia są dwa, jak w oryginale, gdzie drugą drogę na północ dają podziemia:
-
-| Przejście | Kolumny | Czym się różni |
+| Pas | Wiersze | Co tam jest |
 |---|---|---|
-| Przełęcz | x 12–14 | droga bita, krótko od głównego szlaku |
-| Nadmorska ścieżka | x 3–5 | piasek (125 punktów ruchu zamiast 70), w przeciwległym rogu mapy niż start — sam dojazd to kilka dni |
+| dolina gracza | y 47–71 | zamek na południowym zachodzie (8,64), siedem kopalń, straże słabe |
+| grzbiet południowy | y 45–46 | przejścia w kolumnach 13–14 (droga) i 49–50 (piasek), po strażniku |
+| pas sporny | y 23–44 | jezioro, osiem kopalń, budowle, straże średnie — środek gry |
+| grzbiet północny | y 21–22 | przejścia w kolumnach 21–22 (droga) i 57–58 (piasek), po wodzu |
+| kraina przeciwnika | y 0–20 | zamek wroga (62,8), relikty, jedenaście kopalń, straże silne |
 
-**Czego z oryginału NIE ma i to widać.** Tytułowym kluczem są tam Strażnice
-Graniczne i Namioty Klucznika: strażnicy nie da się pokonać, tylko OTWORZYĆ,
-po znalezieniu namiotu gdzie indziej na mapie. Nie mamy ani jednego, ani
-drugiego, więc w przejściach stoją zwykłe potwory. Mapa mówi więc „zbierz
-armię", a nie „poszukaj klucza" — a to inna zagadka i inna gra. Spis rzeczy,
-których brakuje, jest na końcu `tools/generuj_mape.py`.
+Trzy decyzje, na których ta mapa stoi:
 
-**Rdzeń grzbietu jest zasklepiany po rozmyciu, i musi być.** Rozmycie granic
-w generatorze potrafi wybić w murze dziurę szeroką na jedno pole. Nie widać
-tego ani na obrazku, ani w kodzie — po prostu pewnego dnia da się wejść na
-północ bokiem, omijając straż, i mapa przestaje być tą mapą. Dlatego wiersze
-19–22 wracają po rozmyciu do stanu ze szkicu, przejścia są wycinane ręcznie,
-a `probe-mapa.ts` liczy, ile przejść naprawdę zostało (ma być dwa) i czy straż
-stoi W przejściu, a nie obok.
+1. **Trzy pasy zamiast dwóch.** Przy dwóch mapa ma jedno pytanie („czy stać mnie
+   już na przełamanie straży"). Pas sporny daje pytanie drugie — „co wziąć
+   najpierw" — i to ono wypełnia środek gry.
+2. **Przejścia w obu grzbietach są PRZESUNIĘTE względem siebie.** Nie da się
+   przejechać mapy w linii prostej: po wyjściu z doliny trzeba przeciąć pas
+   sporny w bok.
+3. **Nagroda rośnie z odległością.** Ostatnie 20% zasięgu ma własny skarbiec
+   (relikty, kopalnie, skrzynie pod strażą wodzów), bo rozstawianie po samych
+   strefach dawało rozkład płaski — a wtedy dalej nie opłaca się jechać.
 
-**Odległość od startu przestała nadawać się na miarę trudności.** Przy starcie
-pośrodku mapy działała; przy starcie w ROGU przeciwległy kraniec własnej,
-bezpiecznej doliny wychodzi „dalej" niż zamek przeciwnika za grzbietem — i
-dostawał relikty oraz straże przewidziane dla krainy wroga. Teraz o tym, co
-gdzie stoi, decyduje STREFA (dom / pogranicze / wroga), wyznaczona przez
-grzbiet, a odległość wewnątrz doliny liczy się w polach, którymi naprawdę się
-chodzi (przeszukiwanie wszerz), a nie po przekątnej przez góry.
+### Poprzeczka: pięć oficjalnych map 72 × 72 na dwóch graczy
 
-**Drugie przejście przy zamku gracza wywraca cały zamysł.** Pierwsza wersja
-miała ścieżkę nadmorską przy wschodnim brzegu, trzynaście pól od startu.
-Wychodził z tego skrót KRÓTSZY od głównej drogi, przy którym dało się
-pierwszego dnia wjechać w najsilniejszą straż na mapie i przegrać pierwszą
-bitwę w grze, zanim się w ogóle było w swoim zamku. Drugie przejście musi
-leżeć w przeciwległym rogu mapy niż start — inaczej nie jest alternatywą,
-tylko obejściem.
+Mapa nie jest porównywana z wyobrażeniem o Heroes 3, tylko z PLIKAMI: pobrane
+`.h3m` map Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw,
+Unexpected Inheritance i When Dragons Clash, sparsowane do JSON i policzone
+tym samym profilem co nasza plansza (`tools/profil-wzorca.py`,
+`tools/profil-mapy.py`). Nasze liczby mieszczą się w rozrzucie wzorców:
+
+| Miara | My | Oryginały |
+|---|---|---|
+| pól przejezdnych | 45% | 26–43% |
+| obiekt co ile pól | 6,8 | 4,1–12,5 |
+| obiektów razem | 297 | 179–328 |
+| udział straży | 21% | 10–24% |
+| mapa dostępna bez bitwy | 30% | 7–81% |
+
+Trzech krytyków, każdy ze świeżym kontekstem i przeciw innej mapie oryginalnej,
+w ślepym porównaniu (schematy podpisane A i B, plus liczby) wybrało naszą —
+trzy razy na trzy. Dwaj niezależnie nazwali tę samą słabość (najdalszy pierścień
+nagradzał najsłabiej) i to ona poszła do poprawki. Zapis: `tools/blind/mapa-r2-*`,
+strona postępu: `tools/postep-mapa.html`.
+
+## Znalezione przy planszy 72 × 72
+
+**Przejście szerokie na cztery pola nie jest przejściem.** Strażnik blokuje pas
+szeroki na trzy pola, więc w przejściu na cztery zostaje szpara i da się go
+obejść bokiem. Wyglądało to dokładnie tak samo jak mapa działająca; zobaczyliśmy
+dopiero po zmierzeniu, ile planszy stoi otworem bez jednej wygranej bitwy: 74%.
+Po zwężeniu przejść do dwóch pól — 30%, czyli mniej więcej sama dolina.
+
+**Dziura w murze może siedzieć w SZKICU.** `zasklep` przywraca rdzeń grzbietu
+tam, gdzie szkic mówi „góry" — więc jeśli szkic ma w murze gotową dziurę
+szeroką na komórkę (cztery pola), nie ma czego zasklepiać. Mur jest teraz
+w szkicu pełny, a przejścia wycina wyłącznie tabela `PRZEJSCIA`, która podaje
+też ich teren (boczne mają zostać piaskiem).
+
+**Obiekty zatykają drogę i przy gęstości mapy M robią to często.** Trasa w grze
+nie przechodzi przez obiekty, a bryła kopalni to trzy pola. Dwie skrzynie
+w korytarzu potrafią odciąć ćwiartkę planszy — plansza wygląda spójnie, tylko
+połowa rzeczy jest nie do zdobycia. Generator sprawdza więc KAŻDE postawienie:
+czy po nim ubywa dostępnych pól więcej niż to jedno, i czy do każdego wcześniej
+postawionego obiektu dalej da się podejść.
+
+**Lista brył w generatorze musi zgadzać się z `BUDOWLE` co do nazwy.** Był tam
+wpisany „gniazdo" zamiast „ośrodka ewolucji" — jeden zły wpis i mury dwóch
+budowli zamknęły północno-wschodnią ćwiartkę mapy: czterdzieści obiektów,
+w tym zamek przeciwnika, bez dojścia. Generator meldował spójną planszę, bo
+sprawdzał własnym, niezgodnym z grą modelem.
+
+**Sprawdzenie dostępności nie może najpierw usuwać potworów.** `polaBryly`
+pomija pola muru stykające się z cudzym wejściem, więc po usunięciu potworów
+mury ROSNĄ i sonda widzi blokady, których w grze nie ma. `probe-mapa.ts` liczy
+teraz dojścia na prawdziwym stanie gry, a potwory traktuje jak pola przejezdne
+— bo pokonuje się je i idzie dalej.
+
+**Przy gęstej planszy sondy nie mogą stawiać bohatera „na polu nad obiektem".**
+Prawie każda rzecz warta zabrania ma obok straż, więc to pole bywa zajęte albo
+leży w strefie kontroli potwora. Bohater lądował na straży, marsz nie dochodził
+do celu i trzy sondy naraz zgłaszały nieprawdziwe usterki. Stąd
+`tools/sonda-wspolne.mjs`: `__podejdz` szuka pola, z którego NAPRAWDĘ da się
+wejść na obiekt, a `zamknijAwans` zamyka okno awansu — na tej planszy straże są
+na tyle silne, że bohater awansuje już w pierwszych walkach, a niezamknięte
+okno wygląda jak zwis.
+
+**Tło planszy idzie do JPEG, i to jest decyzja o grze.** 72 × 72 przy kafelku
+48 px to obraz 3456 × 3456. Jako PNG waży 21 MB — tyle musiałby ściągnąć gracz,
+zanim zobaczy mapę. W JPEG przy jakości 88 waży 3,4 MB, czyli mniej niż
+poprzednia plansza 36 × 36. Maska wody zostaje PNG-iem: tam kanały niosą liczby
+dla shadera.
+
+**Symulacja ekonomii musi liczyć ZNALEZISKA, nie sam dochód z kopalń.**
+Przy dochodzie niższym niż koszt pełnego dziennego przyrostu miasto nie stawało
+NIGDY, niezależnie od tego, jak dobrze rozstawione są kopalnie — sprawdzenie
+mierzyło model, a nie mapę. `probe-ekonomia.ts` rozkłada teraz stosy i skrzynie
+z własnego pasa na 21 dni i liczy rozbudowę osobno z kopalń doliny (16 dni)
+i z całej mapy (6 dni). Obie liczby to DOLNA granica: bohater nie przegrywa
+tam żadnej bitwy i nie traci dni na dojazdy.
 
 ## Znalezione przy mapie 36 × 36
 

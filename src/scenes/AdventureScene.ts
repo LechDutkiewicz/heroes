@@ -165,7 +165,7 @@ export class AdventureScene extends Phaser.Scene {
   preload() {
     wersjonujZasoby(this);
     const b = import.meta.env.BASE_URL;
-    this.load.image('plansza-0', `${b}mapa/plansza-0.png`);
+    this.load.image('plansza-0', `${b}mapa/plansza-0.jpg`);
     this.load.image('woda-maska', `${b}mapa/woda-maska.png`);
     this.load.image('woda-zmarszczki', `${b}mapa/woda-zmarszczki.png`);
     this.load.spritesheet('bohater', `${b}mapa/bohater.png`, {

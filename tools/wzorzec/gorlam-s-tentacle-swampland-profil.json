@@ -7,8 +7,8 @@
     ".": 0,
     "=": 19,
     ",": 8,
-    "T": 28,
-    "#": 0,
+    "T": 12,
+    "#": 17,
     "~": 44
   },
   "obiektów": 298,
@@ -23,7 +23,9 @@
     "zamek": 2
   },
   "obiekty wg strefy": {
-    "pogranicze": 298
+    "dom": 200,
+    "wroga": 74,
+    "pogranicze": 24
   },
   "straże wg siły": {
     "silny": 11,

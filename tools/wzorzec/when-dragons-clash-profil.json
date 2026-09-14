@@ -7,8 +7,8 @@
     ".": 28,
     "=": 10,
     ",": 0,
-    "T": 57,
-    "#": 0,
+    "T": 39,
+    "#": 18,
     "~": 4
   },
   "obiektów": 190,
@@ -23,8 +23,8 @@
     "kopalnia": 17
   },
   "obiekty wg strefy": {
-    "dom": 34,
-    "pogranicze": 66,
+    "dom": 31,
+    "pogranicze": 69,
     "wroga": 90
   },
   "straże wg siły": {
@@ -41,7 +41,7 @@
     96,
     36
   ],
-  "kroków do zamku wroga": 68,
+  "kroków do zamku wroga": 66,
   "najdalszy zakątek (kroków)": 94,
   "pól dostępnych bez wygranej bitwy": 1543,
   "dostępnych bez bitwy %": 77

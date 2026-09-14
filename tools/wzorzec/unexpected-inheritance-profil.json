@@ -7,8 +7,8 @@
     ".": 26,
     "=": 0,
     ",": 17,
-    "T": 57,
-    "#": 0,
+    "T": 36,
+    "#": 21,
     "~": 0
   },
   "obiektów": 179,
@@ -23,7 +23,8 @@
     "artefakt": 26
   },
   "obiekty wg strefy": {
-    "pogranicze": 179
+    "wroga": 89,
+    "dom": 90
   },
   "straże wg siły": {
     "straznik": 13,
@@ -34,14 +35,14 @@
   },
   "straże %": 24,
   "obiekty w pasach odległości (5 × 20%)": [
-    14,
-    34,
-    17,
-    14,
-    11
+    12,
+    39,
+    16,
+    13,
+    10
   ],
   "kroków do zamku wroga": null,
-  "najdalszy zakątek (kroków)": 50,
+  "najdalszy zakątek (kroków)": 52,
   "pól dostępnych bez wygranej bitwy": 863,
   "dostępnych bez bitwy %": 39
 }
