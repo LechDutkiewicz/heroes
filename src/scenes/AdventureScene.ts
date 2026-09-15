@@ -34,6 +34,7 @@ import {
 } from '../data/mapa';
 import { planszaPrzygody } from '../data/plansza';
 import { SLOTY_ARMII, dolacz, pustaArmia, zywe } from '../data/armia';
+import { jestZapis, wczytajGre, zapiszGre } from '../data/zapis';
 import {
   efekt,
   ofertaAwansu,
@@ -1248,7 +1249,7 @@ export class AdventureScene extends Phaser.Scene {
       });
 
     const kartaY = this.rysujPasekWlasnosci(wnetrzeX, mmY + mmBok + 22, wnetrzeW) + 10;
-    const kartaH = 142;
+    const kartaH = 134;
     const karta = this.add.graphics().setDepth(Z.hud);
     plate(karta, wnetrzeX, kartaY, wnetrzeW, kartaH, 9, C.panel, C.panelDeep, {
       light: 0.2,
@@ -1342,8 +1343,12 @@ export class AdventureScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.otworzBohatera());
 
+    // Rząd zapisu stoi NAD „Zakończ turę" i zabiera panelowi podpowiedzi
+    // 37 px wysokości — tyle, ile zajmują przyciski (28) plus odstępy z obu
+    // stron (8 i 1) od sąsiadów. Zmiana tej liczby bez przeliczenia niżej
+    // rozjeżdża odstępy, tak jak już raz się zdarzyło z tekstem podpowiedzi.
     const podY = kartaY + kartaH + 10;
-    const podH = py + ph - 56 - podY;
+    const podH = py + ph - 56 - 27 - podY;
     const ramkaPod = this.add.graphics().setDepth(Z.hud);
     plate(ramkaPod, wnetrzeX, podY, wnetrzeW, podH, 9, mix(C.panel, C.panelDeep, 0.16), C.panelDeep, {
       light: 0.14,
@@ -1352,10 +1357,33 @@ export class AdventureScene extends Phaser.Scene {
       edgeW: 2,
     });
     this.podpowiedz = this.add
-      .text(wnetrzeX + 10, podY + 9, DOMYSLNA_PODPOWIEDZ, { ...body(10, H.ink), lineSpacing: 3 })
+      .text(wnetrzeX + 10, podY + 6, DOMYSLNA_PODPOWIEDZ, { ...body(10, H.ink), lineSpacing: 1 })
       .setOrigin(0, 0)
       .setDepth(Z.hud + 2)
       .setWordWrapWidth(wnetrzeW - 20);
+
+    const wierszAkcjiY = py + ph - 65;
+    const polowaW = (wnetrzeW - 6) / 2;
+    const zapiszBtn = makeHudButton(this, {
+      x: wnetrzeX + polowaW / 2,
+      y: wierszAkcjiY,
+      w: polowaW,
+      h: 24,
+      tone: mix(C.panel, C.panelDeep, 0.1),
+      toneDeep: C.panelDeep,
+      onClick: () => this.zapiszStanGry(),
+    });
+    zapiszBtn.setLabel('Zapisz');
+    const wczytajBtn = makeHudButton(this, {
+      x: wnetrzeX + polowaW + 6 + polowaW / 2,
+      y: wierszAkcjiY,
+      w: polowaW,
+      h: 24,
+      tone: mix(C.panel, C.panelDeep, 0.1),
+      toneDeep: C.panelDeep,
+      onClick: () => this.wczytajStanGry(),
+    });
+    wczytajBtn.setLabel('Wczytaj');
 
     const przycisk = makeHudButton(this, {
       x: px + PANEL_W / 2,
@@ -1368,6 +1396,33 @@ export class AdventureScene extends Phaser.Scene {
       onClick: () => this.koniecTury(),
     });
     przycisk.setLabel('Zakończ turę');
+  }
+
+  /** Zapis gry w przeglądarce — jeden slot, żeby dało się wrócić do planszy później. */
+  private zapiszStanGry() {
+    if (this.zajety) return;
+    this.napisUlotny(zapiszGre(this.stan) ? 'Gra zapisana.' : 'Nie udało się zapisać gry.');
+  }
+
+  private wczytajStanGry() {
+    if (this.zajety) return;
+    if (!jestZapis()) {
+      this.napisUlotny('Nie ma jeszcze żadnego zapisu.');
+      return;
+    }
+    // Wczytanie zastępuje bieżący, niezapisany postęp — to jedyna operacja
+    // tutaj, która coś nieodwracalnie kasuje, więc pyta wprost, zamiast
+    // ciszej zamiany stanu pod nogami gracza.
+    if (!window.confirm('Wczytać zapisaną grę? Obecny postęp od ostatniego zapisu przepadnie.')) {
+      return;
+    }
+    const wczytany = wczytajGre();
+    if (!wczytany) {
+      this.napisUlotny('Nie udało się wczytać zapisu.');
+      return;
+    }
+    this.registry.set(KLUCZ_STANU, wczytany);
+    this.scene.start('adventure');
   }
 
   /**
