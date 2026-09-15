@@ -181,6 +181,52 @@ LUZ_SZACHOWNICY = 26
 ROZSTAW_KRATKI = 30
 
 
+#: Tło chromakey: czysta magenta. Model NIE UMIE oddać przezroczystości —
+#: obrazkowe modele Gemini wypuszczają kryjące RGB bez kanału alfa, więc na
+#: prośbę o przezroczyste tło malują kratkę, którą edytory rysują POD alfą.
+#: Odtwarzanie alfy z takiej kratki to zgadywanie wzoru i przegrywa
+#: z gradientem, poświatą i szarym kamieniem budowli. Prościej dać modelowi
+#: tło, którego w rysunku nie ma, i wyciąć je po barwie: jeden warunek
+#: zamiast trzech heurystyk. Magenta, nie zieleń — nasze budowle są pełne
+#: mchu i bluszczu, a różu nie ma w nich ani jednego.
+CHROMA_G = 60
+CHROMA_G_PELNA = 110
+
+
+def jestChroma(tab: np.ndarray) -> bool:
+    """Czy tło jest chromakeyem, a nie kratką albo bielą."""
+    ramka = np.concatenate(
+        [tab[:6, :, :3].reshape(-1, 3), tab[-6:, :, :3].reshape(-1, 3)]).astype(int)
+    roznica = (ramka[:, 0] + ramka[:, 2]) / 2 - ramka[:, 1]
+    return bool((roznica > CHROMA_G_PELNA).mean() > 0.8)
+
+
+def bezChromy(im: Image.Image) -> Image.Image:
+    """Zdejmuje tło chromakey i zdejmuje jego poświatę z krawędzi.
+
+    Miarą jest przewaga czerwieni i błękitu nad zielenią: dla magenty ogromna,
+    dla wszystkiego, co rysujemy, bliska zeru. Krawędzie dostają alfę
+    pośrednią, żeby obrys nie był schodkowy, a piksele częściowo przezroczyste
+    — odbarwienie: model rozmywa magentę w kontur przedmiotu i bez tego
+    budowla dostaje różową obwódkę, widoczną dopiero na trawie.
+    """
+    tab = np.asarray(im.convert('RGBA')).astype(np.float32)
+    r, g, b = tab[:, :, 0], tab[:, :, 1], tab[:, :, 2]
+    roznica = (r + b) / 2 - g
+    alfa = 1.0 - np.clip((roznica - CHROMA_G) / (CHROMA_G_PELNA - CHROMA_G), 0.0, 1.0)
+
+    # Odbarwienie TYLKO na krawędzi, czyli tam, gdzie alfa jest pośrednia
+    # i barwa jest mieszaniną przedmiotu z tłem. Zastosowane do wnętrza
+    # sylwetki odbarwia sam rysunek: czerwona chorągiew strażnicy zrobiła się
+    # pomarańczowa, bo czerwień też ma przewagę nad zielenią.
+    spill = (roznica > 0) & (alfa > 0) & (alfa < 1)
+    nadmiar = np.where(spill, np.minimum(roznica, CHROMA_G), 0.0)
+    tab[:, :, 0] = np.clip(r - nadmiar, 0, 255)
+    tab[:, :, 2] = np.clip(b - nadmiar, 0, 255)
+    tab[:, :, 3] = tab[:, :, 3] * alfa
+    return Image.fromarray(tab.astype(np.uint8), 'RGBA')
+
+
 def odcienieKratki(tab: np.ndarray) -> tuple[int, int] | None:
     """Dwa poziomy jasności namalowanej kratki, albo None, gdy jej nie ma.
 
@@ -242,8 +288,28 @@ def bezTla(im: Image.Image, prog: int = 232) -> Image.Image:
     return Image.fromarray(tab, 'RGBA')
 
 
-#: Promień okna, w którym sprawdzamy, czy piksel siedzi w kratce.
-OKNO_KRATKI = 12
+def _polePola(jasnosc: np.ndarray, ciemne: int, jasne: int) -> int:
+    """Bok jednego pola kratki, w pikselach.
+
+    Okno, przez które patrzy `_wKratke`, musi być WIĘKSZE od pola — inaczej
+    mieści się w całości wewnątrz jednego i nigdy nie zobaczy drugiego.
+    Maska robi się wtedy dziurawa, wypełnienie nie ma którędy przejść
+    i wokół przedmiotu zostaje kwadrat tła. Stała nie wystarcza: model
+    rysuje pole na 12 pikseli przy budowli i na 26 przy drobnym relikcie,
+    bo kadr jest ten sam, a przedmiot w nim mniejszy.
+    """
+    srodek = (ciemne + jasne) / 2
+    dlugosci = []
+    for pas in (jasnosc[:4, :].mean(axis=0), jasnosc[:, :4].mean(axis=1)):
+        granice = np.flatnonzero(np.diff((pas > srodek).astype(int)) != 0)
+        if len(granice) > 2:
+            dlugosci.append(float(np.median(np.diff(granice))))
+    return int(round(max(dlugosci))) if dlugosci else 12
+
+
+def _oknoKratki(jasnosc: np.ndarray, ciemne: int, jasne: int) -> int:
+    """Promień okna: z zapasem większy od pola, żeby zawsze objąć jego sąsiada."""
+    return min(60, max(6, round(_polePola(jasnosc, ciemne, jasne) * 1.3)))
 
 
 def _wKratke(bezbarwny: np.ndarray, jasnosc: np.ndarray, ciemne: int, jasne: int) -> np.ndarray:
@@ -261,9 +327,11 @@ def _wKratke(bezbarwny: np.ndarray, jasnosc: np.ndarray, ciemne: int, jasne: int
     wtedy na niepołączone wnętrza pól (rozmyte granice wypadają) i wypełnienie
     nie ma którędy przejść.
     """
+    okno = _oknoKratki(jasnosc, ciemne, jasne)
+
     def udzial(maska: np.ndarray) -> np.ndarray:
         rozmyte = Image.fromarray((maska * 255).astype(np.uint8)).filter(
-            ImageFilter.BoxBlur(OKNO_KRATKI))
+            ImageFilter.BoxBlur(okno))
         return np.asarray(rozmyte).astype(np.float32) / 255.0
 
     wasko = 10
@@ -310,7 +378,7 @@ def bezSzachownicy(im: Image.Image, odcienie: tuple[int, int] | None = None) -> 
     # w ciemny kamień budowli — przy ciemnej kratce to ta sama jasność.
     czyste = bezbarwny & (
         (np.abs(jasnosc - ciemne) <= 10) | (np.abs(jasnosc - jasne) <= 10))
-    rozrost(czyste, OKNO_KRATKI + 2)
+    rozrost(czyste, _oknoKratki(jasnosc, ciemne, jasne) + 2)
 
     # Obwódka: rozmyty styk kratki z sylwetką. Zakres jasności idzie
     # z WYKRYTYCH pól, bo przy ciemnej kratce widełki dobrane do jasnej nie
@@ -379,8 +447,11 @@ def wczytaj(nazwa: str) -> Image.Image:
     # białe, albo w kratkę udającą przezroczystość.
     tab = np.asarray(im)
     if tab[:, :, 3].min() == 255:
-        kratka = odcienieKratki(tab)
-        im = bezSzachownicy(im, kratka) if kratka else bezTla(im)
+        if jestChroma(tab):
+            im = bezChromy(im)
+        else:
+            kratka = odcienieKratki(tab)
+            im = bezSzachownicy(im, kratka) if kratka else bezTla(im)
     return przytnij(tylkoSylwetka(bezWoalu(im)))
 
 
@@ -394,6 +465,9 @@ BUDYNKI = {
     'ratusz1': 520, 'ratusz2': 600, 'ratusz3': 680, 'fort': 520,
     'siedlisko1': 380, 'siedlisko2': 400, 'siedlisko3': 400, 'siedlisko4': 440,
     'siedlisko5': 470, 'siedlisko6': 640, 'specjalny': 380, 'plac': 360,
+    # Ulepszone siedliska trzech górnych poziomów. Stoją w tym samym punkcie
+    # panoramy co ich podstawowa wersja, więc i wysokość mają tę samą.
+    'siedlisko4u': 440, 'siedlisko5u': 470, 'siedlisko6u': 640,
 }
 
 PANORAMY = {'tlo-bor': 'bor', 'tlo-grota': 'grota', 'tlo-zbocze': 'zbocze'}
@@ -498,9 +572,22 @@ BUDOWLE = {
     # czeka na nią gotowa, przerobiona tym samym potokiem co reszta.
     'straznica': 190,
     'namiot-klucznika': 150,
+    'wiezienie': 168,
+    'chata-jasnowidza': 154,
+    # Relikty leżą na ziemi, więc są drobne — mają kusić z daleka kolorem,
+    # a nie zasłaniać pole, na którym stoją.
+    'relikt-kompas': 62,
+    'relikt-pas': 58,
+    'relikt-rog': 62,
+    'relikt-skrzydla': 66,
 }
 
-TERENY = ['teren-trawa', 'teren-sciezka', 'teren-piasek', 'teren-woda', 'teren-las', 'teren-skaly']
+TERENY = [
+    'teren-trawa', 'teren-sciezka', 'teren-piasek', 'teren-woda', 'teren-las', 'teren-skaly',
+    # Krainy z drugiej dostawy. Kosztów ruchu jeszcze nie mają — tekstura
+    # musi być pierwsza, bo bez niej nie ma czego postawić na planszy.
+    'teren-bagno', 'teren-jalowa', 'teren-snieg',
+]
 
 #: Warianty tego samego terenu — druga i trzecia trawa, drugie skały i tak dalej.
 #: Nazwy z wsadu bywają pisane raz z łącznikiem, raz bez („teren-trawa2" obok

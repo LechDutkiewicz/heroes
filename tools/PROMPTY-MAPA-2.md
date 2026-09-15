@@ -35,10 +35,13 @@ the camera. Hand-painted storybook look: soft smoothed edges, no visible pixels,
 no outline, clean readable silhouette that stays legible at 60 pixels tall.
 Warm saturated palette: brown 170,108,50 / green 92,168,78 / grey 140,150,162 /
 red 222,62,58 / gold 250,198,62. Soft light from the upper right, gentle ambient
-occlusion, no cast shadow on the ground. TRUE ALPHA TRANSPARENCY — a real
-transparent background, never a painted grey checkerboard pattern. Object
-centered, bottom edge of the object touching the bottom of the frame, nothing
-cropped. No ground patch, no grass, no base plate, no text, no logos, no UI.
+no cast shadow on the ground. Object centered, bottom edge of the object
+touching the bottom of the frame, nothing cropped. No ground patch, no grass,
+no base plate, no text, no logos, no UI.
+Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge,
+with no gradient, no vignette, no glow, no shadow and no checkerboard pattern.
+Nothing in the object itself may be magenta or pink. The background is a
+chroma key that gets cut out afterwards, so it must stay one exact colour.
 ```
 
 ---
@@ -114,8 +117,11 @@ potrzebuje kompletu w tej samej skali. Prompty różnią się ostatnim zdaniem.
 Full-body character sprite of a young pokemon trainer girl, about ten years old,
 short dark hair under a green cap, teal jacket with white sleeves, dark shorts,
 tall boots, a satchel on one hip. Cheerful, standing upright, arms relaxed.
-Drawn small and simple enough to read at 55 pixels tall. Plain white background,
-no shadow, no ground, no props. Exactly the same character, outfit, proportions
+Drawn small and simple enough to read at 55 pixels tall. No shadow, no ground, no props.
+Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge,
+with no gradient, no vignette, no glow, no shadow and no checkerboard pattern.
+Nothing in the object itself may be magenta or pink. The background is a
+chroma key that gets cut out afterwards, so it must stay one exact colour. Exactly the same character, outfit, proportions
 and scale in every pose of this set.
 FRONT view, facing the camera.
 ```
@@ -125,8 +131,11 @@ FRONT view, facing the camera.
 Full-body character sprite of a young pokemon trainer girl, about ten years old,
 short dark hair under a green cap, teal jacket with white sleeves, dark shorts,
 tall boots, a satchel on one hip. Cheerful, standing upright, arms relaxed.
-Drawn small and simple enough to read at 55 pixels tall. Plain white background,
-no shadow, no ground, no props. Exactly the same character, outfit, proportions
+Drawn small and simple enough to read at 55 pixels tall. No shadow, no ground, no props.
+Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge,
+with no gradient, no vignette, no glow, no shadow and no checkerboard pattern.
+Nothing in the object itself may be magenta or pink. The background is a
+chroma key that gets cut out afterwards, so it must stay one exact colour. Exactly the same character, outfit, proportions
 and scale in every pose of this set.
 BACK view, seen from behind.
 ```
@@ -136,8 +145,11 @@ BACK view, seen from behind.
 Full-body character sprite of a young pokemon trainer girl, about ten years old,
 short dark hair under a green cap, teal jacket with white sleeves, dark shorts,
 tall boots, a satchel on one hip. Cheerful, standing upright, arms relaxed.
-Drawn small and simple enough to read at 55 pixels tall. Plain white background,
-no shadow, no ground, no props. Exactly the same character, outfit, proportions
+Drawn small and simple enough to read at 55 pixels tall. No shadow, no ground, no props.
+Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge,
+with no gradient, no vignette, no glow, no shadow and no checkerboard pattern.
+Nothing in the object itself may be magenta or pink. The background is a
+chroma key that gets cut out afterwards, so it must stay one exact colour. Exactly the same character, outfit, proportions
 and scale in every pose of this set.
 SIDE view, walking to the right.
 ```
@@ -304,9 +316,11 @@ tam różnica ma być widoczna:
 Upgraded fantasy creature dwelling for a storybook town panorama, seen from a
 slightly elevated three-quarter view: a sturdy lair with carved stone foundations, a shingled roof and two banners. Visibly richer than a simple
 woodland lair — bigger silhouette, worked stone instead of bare earth, banners
-and lanterns. Hand-painted, warm palette, evening light from the right. TRUE
-ALPHA TRANSPARENCY, never a painted checkerboard. No ground, no base plate,
-no cast shadow, no text.
+and lanterns. Hand-painted, warm palette, evening light from the right. No ground, no base plate, no cast shadow, no text.
+Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge,
+with no gradient, no vignette, no glow, no shadow and no checkerboard pattern.
+Nothing in the object itself may be magenta or pink. The background is a
+chroma key that gets cut out afterwards, so it must stay one exact colour.
 ```
 
 <!-- plik: siedlisko5u.png | styl: brak -->
@@ -314,9 +328,11 @@ no cast shadow, no text.
 Upgraded fantasy creature dwelling for a storybook town panorama, seen from a
 slightly elevated three-quarter view: a tall hall of stone and timber with lanterns, a balcony and gilded roof ridges. Visibly richer than a simple
 woodland lair — bigger silhouette, worked stone instead of bare earth, banners
-and lanterns. Hand-painted, warm palette, evening light from the right. TRUE
-ALPHA TRANSPARENCY, never a painted checkerboard. No ground, no base plate,
-no cast shadow, no text.
+and lanterns. Hand-painted, warm palette, evening light from the right. No ground, no base plate, no cast shadow, no text.
+Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge,
+with no gradient, no vignette, no glow, no shadow and no checkerboard pattern.
+Nothing in the object itself may be magenta or pink. The background is a
+chroma key that gets cut out afterwards, so it must stay one exact colour.
 ```
 
 <!-- plik: siedlisko6u.png | styl: brak -->
@@ -325,9 +341,11 @@ Upgraded fantasy creature dwelling for a storybook town panorama, seen from a
 slightly elevated three-quarter view: a grand champions hall: broad stone steps, carved columns, long banners and a
 golden crest above the doorway. Visibly richer than a simple
 woodland lair — bigger silhouette, worked stone instead of bare earth, banners
-and lanterns. Hand-painted, warm palette, evening light from the right. TRUE
-ALPHA TRANSPARENCY, never a painted checkerboard. No ground, no base plate,
-no cast shadow, no text.
+and lanterns. Hand-painted, warm palette, evening light from the right. No ground, no base plate, no cast shadow, no text.
+Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge,
+with no gradient, no vignette, no glow, no shadow and no checkerboard pattern.
+Nothing in the object itself may be magenta or pink. The background is a
+chroma key that gets cut out afterwards, so it must stay one exact colour.
 ```
 
 **Wrogi bohater** — przeciwnik, który naprawdę rusza się po mapie, w tym samym
@@ -337,8 +355,11 @@ układzie trzech ujęć, co drugi bohater.
 ```
 Full-body character sprite of a rival pokemon trainer boy, about twelve years
 old, spiky purple hair, black and violet jacket with a high collar, dark trousers,
-confident smirk, one hand in a pocket. Readable at 55 pixels tall. Plain white
-background, no shadow, no ground, no props. Exactly the same character, outfit,
+confident smirk, one hand in a pocket. Readable at 55 pixels tall. No shadow, no ground, no props.
+Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge,
+with no gradient, no vignette, no glow, no shadow and no checkerboard pattern.
+Nothing in the object itself may be magenta or pink. The background is a
+chroma key that gets cut out afterwards, so it must stay one exact colour. Exactly the same character, outfit,
 proportions and scale in every pose of this set.
 FRONT view, facing the camera.
 ```
@@ -347,8 +368,11 @@ FRONT view, facing the camera.
 ```
 Full-body character sprite of a rival pokemon trainer boy, about twelve years
 old, spiky purple hair, black and violet jacket with a high collar, dark trousers,
-confident smirk, one hand in a pocket. Readable at 55 pixels tall. Plain white
-background, no shadow, no ground, no props. Exactly the same character, outfit,
+confident smirk, one hand in a pocket. Readable at 55 pixels tall. No shadow, no ground, no props.
+Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge,
+with no gradient, no vignette, no glow, no shadow and no checkerboard pattern.
+Nothing in the object itself may be magenta or pink. The background is a
+chroma key that gets cut out afterwards, so it must stay one exact colour. Exactly the same character, outfit,
 proportions and scale in every pose of this set.
 BACK view, seen from behind.
 ```
@@ -357,8 +381,11 @@ BACK view, seen from behind.
 ```
 Full-body character sprite of a rival pokemon trainer boy, about twelve years
 old, spiky purple hair, black and violet jacket with a high collar, dark trousers,
-confident smirk, one hand in a pocket. Readable at 55 pixels tall. Plain white
-background, no shadow, no ground, no props. Exactly the same character, outfit,
+confident smirk, one hand in a pocket. Readable at 55 pixels tall. No shadow, no ground, no props.
+Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge,
+with no gradient, no vignette, no glow, no shadow and no checkerboard pattern.
+Nothing in the object itself may be magenta or pink. The background is a
+chroma key that gets cut out afterwards, so it must stay one exact colour. Exactly the same character, outfit,
 proportions and scale in every pose of this set.
 SIDE view, walking to the right.
 ```

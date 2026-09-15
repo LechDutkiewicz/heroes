@@ -41,9 +41,13 @@ the camera. Hand-painted storybook look: soft smoothed edges, no visible pixels,
 no outline, clean readable silhouette that stays legible at 60 pixels tall.
 Warm saturated palette: brown 170,108,50 / green 92,168,78 / grey 140,150,162 /
 red 222,62,58 / gold 250,198,62. Soft top-left light, gentle ambient occlusion,
-no cast shadow on the ground. Fully transparent background, object centered,
-bottom edge of the object touching the bottom of the frame, nothing cropped.
-No text, no logos, no UI, no characters, no ground patch or base plate.
+no cast shadow on the ground. Object centered, bottom edge of the object
+touching the bottom of the frame, nothing cropped. No ground patch, no grass,
+no base plate, no text, no logos, no UI.
+Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge,
+with no gradient, no vignette, no glow, no shadow and no checkerboard pattern.
+Nothing in the object itself may be magenta or pink. The background is a
+chroma key that gets cut out afterwards, so it must stay one exact colour.
 ```
 
 ---

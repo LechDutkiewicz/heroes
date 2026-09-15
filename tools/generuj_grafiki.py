@@ -180,6 +180,8 @@ def main() -> None:
     ap.add_argument('pliki', nargs='*', help='nazwy plików do wygenerowania')
     ap.add_argument('--lista', action='store_true', help='pokaż zadania i ich stan')
     ap.add_argument('--modele', action='store_true', help='pokaż modele dostępne dla klucza')
+    ap.add_argument('--drukuj', action='store_true',
+                    help='wypisz gotowe prompty do wklejenia w kliencie, nic nie generuj')
     ap.add_argument('--wszystko', action='store_true', help='wygeneruj wszystko, czego brak')
     ap.add_argument('--nadpisz', action='store_true', help='nie omijaj istniejących plików')
     ap.add_argument('--model', help='wymuś model zamiast wyboru z listy')
@@ -192,6 +194,20 @@ def main() -> None:
         for nazwa, (_, styl) in sorted(zadania.items()):
             stan = 'JEST' if (WSAD / nazwa).exists() else 'brak'
             print(f'  {stan:4s}  {nazwa:26s} styl: {styl}')
+        return
+
+    if args.drukuj:
+        # Płatny abonament w kliencie (ChatGPT, aplikacja Gemini) NIE daje
+        # dostępu programistycznego — API rozlicza się osobno. Kto woli nie
+        # płacić za wywołania, generuje ręcznie w kliencie i wrzuca plik do
+        # `tools/wsad/` pod nazwą z nagłówka; reszta potoku jest darmowa.
+        wybrane = args.pliki or sorted(zadania)
+        for nazwa in wybrane:
+            if nazwa not in zadania:
+                sys.exit(f'Nie ma promptu dla: {nazwa}. Zobacz --lista.')
+            prompt, styl = zadania[nazwa]
+            print(f'\n=== {nazwa} ===  (zapisz wynik jako tools/wsad/{nazwa})')
+            print(pelnyPrompt(style, prompt, styl))
         return
 
     if args.modele:
