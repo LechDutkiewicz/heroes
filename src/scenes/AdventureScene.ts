@@ -24,6 +24,7 @@ import {
   wezZeSkrzyni,
   zamknietaBrama,
   zasiegNaTure,
+  dniNaTrase,
   type Krok,
   type Obiekt,
   type Oddzial,
@@ -1607,6 +1608,19 @@ export class AdventureScene extends Phaser.Scene {
       this.podpowiedz.setText('Nieznany teren — trzeba tam podejść.');
       return;
     }
+    // Kursor nad celem wytyczonej trasy, do którego nie da się dojść w tej
+    // turze, ma od razu mówić, ile dni to zajmie — jak w Heroes 3.
+    const t = this.trasaBiezaca;
+    const celTrasy = t && t.length ? t[t.length - 1] : null;
+    if (celTrasy && celTrasy.x === x && celTrasy.y === y) {
+      const dni = dniNaTrase(this.stan.bohater, t!);
+      if (dni > 1) {
+        this.podpowiedz.setText(
+          `Dojście zajmie ${dni} ${dni === 1 ? 'dzień' : 'dni'}.\nKliknij, żeby ruszyć.`
+        );
+        return;
+      }
+    }
     // Kursor musi powiedzieć, które kliknięcie dostaniesz — na bryle zamku
     // inne niż na jego polu. Bez tego podział jest niewidzialny.
     const zamek = this.zamekPodKursorem(p);
@@ -1788,6 +1802,11 @@ export class AdventureScene extends Phaser.Scene {
 
   private idz(kroki: Krok[]) {
     let ile = zasiegNaTure(this.stan.bohater, kroki);
+    // Trasa za daleka na dzisiaj: zapamiętujemy cel, żeby nowy dzień pokazał
+    // ją od razu jako zaznaczoną, zamiast każąc klikać drugi raz w to samo.
+    const celFinalny = kroki[kroki.length - 1];
+    this.stan.bohater.celDlugiejTrasy =
+      celFinalny && ile < kroki.length ? { x: celFinalny.x, y: celFinalny.y } : undefined;
     if (ile === 0) return;
 
     // Pod zamkniętą strażnicę podchodzi się, a nie wchodzi na nią.
@@ -1866,6 +1885,9 @@ export class AdventureScene extends Phaser.Scene {
             this.zajety = false;
             this.wRuchu = false;
             this.trasaBiezaca = null;
+            // Zamiar przerwano — cel z niedokończonej trasy przestaje
+            // obowiązywać, żeby nowy dzień nie wskrzeszał porzuconego planu.
+            this.stan.bohater.celDlugiejTrasy = undefined;
             this.bohaterSprite.stop();
             this.bohaterSprite.setFrame(KIERUNEK_WIERSZ[this.kierunek] * 4);
             const cel = this.celPoPrzerwaniu;
@@ -2560,8 +2582,17 @@ export class AdventureScene extends Phaser.Scene {
   private koniecTury() {
     if (this.zajety) return;
     const wplyw = nowaTura(this.stan);
-    this.trasaBiezaca = null;
     this.warstwaTrasy.clear();
+    // Trasa niedokończona wczoraj wraca od razu jako zaznaczona — jak
+    // w Heroes 3 — pod warunkiem, że cel wciąż da się osiągnąć (np. nie
+    // zajął go w międzyczasie inny obiekt).
+    const cel = this.stan.bohater.celDlugiejTrasy;
+    this.trasaBiezaca = cel ? trasa(this.stan, cel.x, cel.y) : null;
+    if (this.trasaBiezaca && this.trasaBiezaca.length === 0) {
+      this.trasaBiezaca = null;
+      this.stan.bohater.celDlugiejTrasy = undefined;
+    }
+    this.pokazTrase();
     const wpisy = Object.entries(wplyw).map(
       ([co, ile]) => `+${ile} ${SUROWIEC_INFO[co as keyof typeof SUROWIEC_INFO].dopelniacz}`
     );

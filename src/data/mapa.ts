@@ -465,6 +465,12 @@ export interface Bohater {
    * pominięcie tury (bitwa, wczytanie stanu) rozjeżdżałoby go z kalendarzem.
    */
   bonusRuchuDo?: number;
+  /**
+   * Cel wytyczonej trasy, do którego bohater nie zdążył dojść w tej turze.
+   * Nowy dzień pokazuje tę trasę od razu jako zaznaczoną — jak w Heroes 3 —
+   * zamiast zmuszać do ponownego wskazywania tego samego miejsca.
+   */
+  celDlugiejTrasy?: { x: number; y: number };
 }
 
 /**
@@ -898,6 +904,23 @@ export function zasiegNaTure(bohater: Bohater, kroki: Krok[]): number {
     ile++;
   }
   return ile;
+}
+
+/**
+ * Ile dni zajmie przejście całej trasy, licząc dzisiejszy jako pierwszy —
+ * każdy kolejny dzień zaczyna się z pełnym zapasem ruchu (`ruchMax`).
+ */
+export function dniNaTrase(bohater: Bohater, kroki: Krok[]): number {
+  let zostalo = bohater.ruch;
+  let dni = 1;
+  for (const k of kroki) {
+    if (k.koszt > zostalo) {
+      dni++;
+      zostalo = bohater.ruchMax;
+    }
+    zostalo -= k.koszt;
+  }
+  return dni;
 }
 
 export interface WynikWejscia {
