@@ -183,9 +183,12 @@ console.log('\n=== gniazdo: zajmuje się, a nie zbiera ===');
 {
   const s = swiat();
   const o = budowla(s, 'gniazdo');
-  const zamek = s.obiekty.find((z) => z.rodzaj === 'zamek' && z.nasz)!;
+  const zamek = s.obiekty.find((z) => z.rodzaj === 'zamek' && z.wlasciciel === 'gracz')!;
   const w = odwiedz(s, o);
-  sprawdz('gniazdo zostaje na mapie', !o.zebrany && o.nasz === true && w.zajete === o);
+  sprawdz(
+    'gniazdo zostaje na mapie',
+    !o.zebrany && o.wlasciciel === 'gracz' && w.zajete === o
+  );
   const przed = [...zamek.dostepne!];
   nowaTura(s);
   const po = zamek.dostepne!;

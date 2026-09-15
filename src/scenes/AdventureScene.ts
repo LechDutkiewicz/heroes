@@ -31,6 +31,7 @@ import {
   type WyborSkrzyni,
 } from '../data/mapa';
 import { planszaPrzygody } from '../data/plansza';
+import { turaWroga } from '../data/wrog-ai';
 import { SLOTY_ARMII, dolacz, pustaArmia, zywe } from '../data/armia';
 import {
   efekt,
@@ -773,7 +774,10 @@ export class AdventureScene extends Phaser.Scene {
       return { klucz: `m-${b?.plik ?? 'skrzynia'}`, wys: KAFEL * (b?.wys ?? 1) };
     }
     if (o.rodzaj === 'zamek')
-      return { klucz: o.nasz ? 'm-zamek-las' : 'm-zamek-ogien', wys: KAFEL * (bryla ? 3.1 : 1.9) };
+      return {
+        klucz: o.wlasciciel === 'gracz' ? 'm-zamek-las' : 'm-zamek-ogien',
+        wys: KAFEL * (bryla ? 3.1 : 1.9),
+      };
     if (o.rodzaj === 'kopalnia')
       return {
         // Kopalnia, kamieniołom i obóz łowców to jeden rysunek przemalowany
@@ -877,8 +881,11 @@ export class AdventureScene extends Phaser.Scene {
         o.rodzaj === 'zamek' ||
         budowlaPoId(o.budynek)?.efekt.typ === 'gniazdo';
       if (doZajecia) {
-        const f = this.chorag(o.rodzaj === 'zamek' && !o.nasz ? C.foe : C.ally);
-        f.setVisible(!!o.nasz || o.rodzaj === 'zamek');
+        // Kolor chorągwi: przeciwnika (foe), nasza (ally) — a dla zamku, który
+        // nie ma jeszcze właściciela, foe, bo broni go garnizon tak samo jak
+        // wcześniej broniło "nie nasze".
+        const f = this.chorag(o.wlasciciel === 'gracz' ? C.ally : C.foe);
+        f.setVisible(!!o.wlasciciel || o.rodzaj === 'zamek');
         // Chorągiew ma stać na budowli, a nie na wolnym polu przed nią.
         // Odkąd bryła przeniosła się o pole wyżej, flaga musi pójść za nią —
         // inaczej wygląda, jakby ktoś wbił maszt na środku placu.
@@ -1187,7 +1194,7 @@ export class AdventureScene extends Phaser.Scene {
    * Zwraca dolną krawędź, bo to od niej zaczyna się karta bohatera.
    */
   private rysujPasekWlasnosci(x: number, y: number, szer: number): number {
-    const miasta = this.stan.obiekty.filter((o) => o.rodzaj === 'zamek' && o.nasz);
+    const miasta = this.stan.obiekty.filter((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'gracz');
     const bohaterowie = [this.stan.bohater];
     const wpisy: Array<{ klucz: string; klik: () => void; podpis: string }> = [
       ...(bohaterowie.length > 1
@@ -1368,7 +1375,13 @@ export class AdventureScene extends Phaser.Scene {
     for (const o of this.stan.obiekty) {
       if (o.zebrany || !this.stan.odkryte[o.y][o.x]) continue;
       const barwa =
-        o.rodzaj === 'potwor' ? C.foe : o.rodzaj === 'zamek' ? (o.nasz ? C.ally : C.foe) : C.gold;
+        o.rodzaj === 'potwor'
+          ? C.foe
+          : o.rodzaj === 'zamek'
+            ? o.wlasciciel === 'gracz'
+              ? C.ally
+              : C.foe
+            : C.gold;
       g.fillStyle(barwa, 1);
       g.fillRect(mx + o.x * kw - 1, my + o.y * kh - 1, Math.ceil(kw) + 2, Math.ceil(kh) + 2);
     }
@@ -1443,11 +1456,12 @@ export class AdventureScene extends Phaser.Scene {
     }
     if (o.rodzaj === 'kopalnia') {
       const co = SUROWIEC_INFO[o.surowiec ?? 'pokeball'].dopelniacz;
-      return o.nasz
+      return o.wlasciciel === 'gracz'
         ? `${o.nazwa} — twoja\n+${o.ile} ${co} dziennie`
         : `${o.nazwa}\nWejdź, żeby zająć: +${o.ile} ${co} dziennie`;
     }
-    if (o.rodzaj === 'zamek') return `${o.nazwa}\n${o.nasz ? 'Twój zamek' : 'Zamek przeciwnika'}`;
+    if (o.rodzaj === 'zamek')
+      return `${o.nazwa}\n${o.wlasciciel === 'gracz' ? 'Twój zamek' : 'Zamek przeciwnika'}`;
     if (o.rodzaj === 'budynek') {
       const b = budowlaPoId(o.budynek);
       if (!b) return o.nazwa;
@@ -1459,7 +1473,7 @@ export class AdventureScene extends Phaser.Scene {
         if (zostalo > 0)
           return `${b.nazwa}\nZnów będzie czynne za ${zostalo} ${zostalo === 1 ? 'dzień' : 'dni'}`;
       }
-      if (b.efekt.typ === 'gniazdo' && o.nasz) return `${b.nazwa} — twoje\n${b.opis}`;
+      if (b.efekt.typ === 'gniazdo' && o.wlasciciel === 'gracz') return `${b.nazwa} — twoje\n${b.opis}`;
       return `${b.nazwa}\n${b.opis}`;
     }
     if (o.rodzaj === 'skrzynia') return 'Skrzynia\nW środku pokeballe albo doświadczenie.';
@@ -1505,9 +1519,9 @@ export class AdventureScene extends Phaser.Scene {
     // Najpierw mury: pole bryły jest nieprzejezdne, więc nie ma tam czego
     // pokazywać poza wejściem do środka.
     const mur = brylaNa(this.stan, pole.x, pole.y);
-    if (mur?.rodzaj === 'zamek' && mur.nasz) return mur;
+    if (mur?.rodzaj === 'zamek' && mur.wlasciciel === 'gracz') return mur;
     const o = this.obiektPodKursorem(p);
-    if (!o || o.rodzaj !== 'zamek' || !o.nasz) return undefined;
+    if (!o || o.rodzaj !== 'zamek' || o.wlasciciel !== 'gracz') return undefined;
     // Bohater stojący w bramie: całe pole otwiera miasto, bo nie ma go już
     // dokąd prowadzić.
     if (this.stan.bohater.x === o.x && this.stan.bohater.y === o.y) return o;
@@ -2164,7 +2178,7 @@ export class AdventureScene extends Phaser.Scene {
    * zmienić.
    */
   private sprawdzKoniec() {
-    const cudze = this.stan.obiekty.filter((o) => o.rodzaj === 'zamek' && !o.nasz);
+    const cudze = this.stan.obiekty.filter((o) => o.rodzaj === 'zamek' && o.wlasciciel !== 'gracz');
     if (cudze.length > 0) return;
     this.zajety = true;
 
@@ -2233,7 +2247,7 @@ export class AdventureScene extends Phaser.Scene {
       // zebranego skasowałoby go z mapy razem z całym miastem, które właśnie
       // się zdobyło.
       if (o?.rodzaj === 'zamek') {
-        o.nasz = true;
+        o.wlasciciel = 'gracz';
         o.oddzialy = [];
       } else if (o) {
         o.zebrany = true;
@@ -2277,7 +2291,7 @@ export class AdventureScene extends Phaser.Scene {
     } else {
       // Przegrana nie kończy gry: bohater wraca do zamku i traci resztę dnia.
       // Dla ośmiolatka „przegrałeś, zacznij od nowa" to koniec zabawy.
-      const zamek = this.stan.obiekty.find((x) => x.rodzaj === 'zamek' && x.nasz);
+      const zamek = this.stan.obiekty.find((x) => x.rodzaj === 'zamek' && x.wlasciciel === 'gracz');
       if (zamek) {
         this.stan.bohater.x = zamek.x;
         this.stan.bohater.y = zamek.y;
@@ -2314,6 +2328,9 @@ export class AdventureScene extends Phaser.Scene {
   private koniecTury() {
     if (this.zajety) return;
     const wplyw = nowaTura(this.stan);
+    // Przeciwnik gra swoją turę zaraz po naszej — tak jak w Heroes 3, gdzie
+    // AI rusza się między turą gracza a początkiem następnej.
+    turaWroga(this.stan);
     this.trasaBiezaca = null;
     this.warstwaTrasy.clear();
     const wpisy = Object.entries(wplyw).map(

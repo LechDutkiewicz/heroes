@@ -9,6 +9,9 @@ on:
       # się testować na Pages każdą kolejną porcję zmian, a nie dopiero scalenie.
       # Wymaga, żeby środowisko `github-pages` dopuszczało tę gałąź.
       - claude/kontynuuj-zamki-jq9357
+      # AI przeciwnika na mapie przygody — publikujemy do testów, zanim scali
+      # się z main.
+      - claude/gauntlet-hero-adventure-view-cavkbx
   workflow_dispatch:
 
 permissions:

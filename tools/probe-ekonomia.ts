@@ -35,7 +35,7 @@ const kosztPrzyrostu = (postawione: string[]) =>
   );
 
 const stan = planszaPrzygody();
-const zamek = stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.nasz)!;
+const zamek = stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'gracz')!;
 const frakcja = zamek.frakcjaZamku ?? 'bor';
 const profil = profilZamku(frakcja);
 const wszystkie = profil.budynki.map((b) => b.id);
@@ -47,7 +47,7 @@ console.log('\n=== dochód kontra armia ===');
 
 /** Wszystkie kopalnie zajęte — górna granica tego, co daje mapa. */
 const zWszystkimKopalniami = (s: StanMapy) => {
-  for (const o of s.obiekty) if (o.rodzaj === 'kopalnia') o.nasz = true;
+  for (const o of s.obiekty) if (o.rodzaj === 'kopalnia') o.wlasciciel = 'gracz';
   return s;
 };
 zWszystkimKopalniami(stan);
@@ -104,7 +104,7 @@ for (const co of Object.keys(potrzebne) as (keyof Skarbiec)[]) {
 // ---------------------------------------------------------------------------
 console.log('\n=== rozbudowa RAZEM z werbunkiem ===');
 const swiezy = zWszystkimKopalniami(planszaPrzygody());
-const mojZamek = swiezy.obiekty.find((o) => o.rodzaj === 'zamek' && o.nasz)!;
+const mojZamek = swiezy.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'gracz')!;
 const skarbiec = swiezy.skarbiec;
 const stoi = [...(mojZamek.postawione ?? [])];
 let dzien = 0;

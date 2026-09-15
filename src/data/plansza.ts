@@ -277,7 +277,7 @@ export function planszaPrzygody(): StanMapy {
     x: PUNKTY['zamek gracza'].x,
     y: PUNKTY['zamek gracza'].y,
     nazwa: 'Bór Szmaragdowy',
-    nasz: true,
+    wlasciciel: 'gracz',
     frakcjaZamku: 'bor',
     // Miasto startowe nie jest puste i nie jest gotowe. Ratusz daje dochód od
     // pierwszego dnia (inaczej dzień 1 to zero pokeballi i nie ma czym zacząć),
@@ -288,6 +288,14 @@ export function planszaPrzygody(): StanMapy {
     // stało tu [6, 4, 3, 2, 1, 0] — cztery poziomy do kupienia z budynków,
     // których nie ma.
     dostepne: [6, 4, 0, 0, 0, 0],
+    // Garnizon domowy. Symetrycznie z zamkiem przeciwnika: bez tego byłby to
+    // jedyny zamek na mapie, który pada BEZ WALKI, kiedy tylko ktoś do niego
+    // dojdzie, bez względu na to, jak silna jest armia stojąca w polu.
+    // Mnożnik wyższy niż w `garnizonZamku` (jeden tydzień) celowo: to jedyna
+    // linia obrony gracza, dopóki jego bohater akurat gdzie indziej eksploruje
+    // albo buduje, więc ma reprezentować całą miejską straż, nie jeden
+    // tygodniowy przyrost.
+    oddzialy: garnizonZamku('bor', [0, 1]).map((o) => ({ ...o, ile: o.ile * 5 })),
   });
   obiekty.push({
     id: id++,
@@ -295,6 +303,7 @@ export function planszaPrzygody(): StanMapy {
     x: PUNKTY['zamek wroga'].x,
     y: PUNKTY['zamek wroga'].y,
     nazwa: 'Grota Księżycowa',
+    wlasciciel: 'wrog',
     frakcjaZamku: 'grota',
     // Zamek przeciwnika stoi rozbudowany dalej niż nasz. To nie jest kaprys:
     // jak długo nikt nim nie gra, jego stan widać dopiero po zdobyciu — a wtedy
@@ -329,6 +338,23 @@ export function planszaPrzygody(): StanMapy {
   const najwolniejszy = Math.min(...bor.units.slice(0, 4).map((u) => u.move));
   const ruchMax = ruchNaDzien(najwolniejszy);
 
+  // Bohater przeciwnika: ta sama reguła startowej armii co u gracza (cztery
+  // najniższe oddziały własnej frakcji), tylko z Groty zamiast Boru. Stoi na
+  // wejściu do własnego zamku — dokładnie tak samo naturalny start, jak start
+  // gracza kawałek od jego zamku.
+  const grota = factionById('grota') ?? FACTIONS[1] ?? bor;
+  const wrogArmia = znormalizuj(
+    grota.units.slice(0, 4).map((u, i) => ({
+      sprite: u.sprite,
+      nazwa: u.name,
+      ile: [20, 9, 6, 4][i],
+      frakcja: grota.id,
+      tier: i,
+    }))
+  );
+  const wrogNajwolniejszy = Math.min(...grota.units.slice(0, 4).map((u) => u.move));
+  const wrogRuchMax = ruchNaDzien(wrogNajwolniejszy);
+
   const stan: StanMapy = {
     szer: TEREN[0].length,
     wys: TEREN.length,
@@ -350,9 +376,29 @@ export function planszaPrzygody(): StanMapy {
     // decyzję (siedlisko albo garść oddziałów), a nie żeby było na wszystko.
     // Przy 15 pokeballach dzień pierwszy był tylko klikaniem „dalej".
     skarbiec: { pokeball: 40, jagoda: 6, kamien: 1, odlamek: 4 },
+    wrogBohater: {
+      x: PUNKTY['zamek wroga'].x,
+      y: PUNKTY['zamek wroga'].y,
+      ruch: wrogRuchMax,
+      ruchMax: wrogRuchMax,
+      imie: 'Grota',
+      atak: 2,
+      obrona: 1,
+      armia: wrogArmia,
+      artefakty: [],
+      doswiadczenie: 0,
+    },
+    // Ten sam startowy skarbiec co gracz — inaczej różnica tempa na starcie
+    // byłaby przypadkiem liczb, a nie decyzją o trudności.
+    wrogSkarbiec: { pokeball: 40, jagoda: 6, kamien: 1, odlamek: 4 },
     dzien: 1,
     odkryte: TEREN.map(() => new Array(TEREN[0].length).fill(false)),
+    // Mgła wroga: własna siatka, odsłonięta na razie tylko wokół jego zamku —
+    // patrz `odslon(stan, ..., 'wrog')` niżej. Reszta mapy zostaje ukryta,
+    // bo AI nie ma prawa wiedzieć więcej niż faktycznie odkryło.
+    wrogOdkryte: TEREN.map(() => new Array(TEREN[0].length).fill(false)),
   };
   odslon(stan);
+  odslon(stan, undefined, undefined, 'wrog');
   return stan;
 }

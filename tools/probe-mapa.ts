@@ -108,7 +108,7 @@ const wZasiegu = s.obiekty.filter((o) => {
 // tu istotna, tylko dwie rzeczy: żeby było co robić i żeby nie dało się od razu
 // pojechać na koniec mapy.
 sprawdz('w pierwszym dniu jest co robić', wZasiegu.length >= 3, `${wZasiegu.length} obiektów`);
-const wrogiZamek = s.obiekty.find((o) => o.rodzaj === 'zamek' && !o.nasz)!;
+const wrogiZamek = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel !== 'gracz')!;
 sprawdz(
   'zamek przeciwnika NIE jest osiągalny pierwszego dnia',
   !wZasiegu.includes(wrogiZamek)
