@@ -33,6 +33,7 @@ jest teren mapy i prostokątna „łatka" natychmiast to zdradza.
 
 ### Blok stylu (wklejać przed każdym promptem)
 
+<!-- styl: obiekt -->
 ```
 Game asset for a children's fantasy strategy map, Heroes of Might and Magic III
 adventure-map object seen from a slightly elevated three-quarter view, facing
@@ -62,6 +63,7 @@ co się zajmuje — a to jest cała informacja, jakiej potrzebuje gracz.
 | Sad Jagodowy | tartak | jagody | *jest* (`sad.png`) |
 
 **Wytwórnia Pokeballi**
+<!-- plik: wytwornia-pokeballi.png -->
 ```
 A small red-and-white workshop hut that manufactures poke balls: rounded roof
 painted red on the upper half and white on the lower half with a black band and
@@ -70,6 +72,7 @@ little smoke, a wooden crate of finished red-and-white spheres beside the door.
 ```
 
 **Kopalnia Kamieni Ewolucji**
+<!-- plik: kopalnia-kamieni.png -->
 ```
 A mine entrance dug into a rocky hillside, timber-framed doorway with crossed
 wooden beams, a wooden minecart on rails outside loaded with glowing violet
@@ -78,6 +81,7 @@ entrance, faint purple glow from inside the tunnel.
 ```
 
 **Huta Odłamków**
+<!-- plik: huta-odlamkow.png -->
 ```
 A small stone forge building with a tall chimney and an open arched furnace
 mouth glowing warm orange inside, cyan crystal shards stacked in a wooden bin
@@ -98,6 +102,7 @@ liczbę na stałe. Statystyki bohatera (`atak`, `obrona`, `ruchMax`,
 | Arena | Arena | wybór: +2 atak albo +2 obrona | `arena.png` (96 × 72) |
 
 **Obóz Treningowy**
+<!-- plik: oboz-treningowy.png -->
 ```
 A small training camp: two beige canvas tents with red pennants, a wooden weapon
 rack holding wooden practice swords and shields, a straw training dummy, a
@@ -105,6 +110,7 @@ round campfire ring with grey stones, tidy and welcoming rather than military.
 ```
 
 **Kamienna Wieża**
+<!-- plik: kamienna-wieza.png -->
 ```
 A short round stone watchtower, two storeys tall, grey blocks with mossy joints,
 a conical blue slate roof, one small arched window, a wooden door and three
@@ -112,6 +118,7 @@ worn stone steps, a shield hanging beside the door.
 ```
 
 **Drzewo Wiedzy**
+<!-- plik: drzewo-wiedzy.png -->
 ```
 An ancient wise tree with a thick gnarled trunk and a broad round green canopy,
 a friendly face suggested by the bark knots, golden leaves glittering among the
@@ -119,6 +126,7 @@ green, a few open books resting in a hollow at the base of the trunk.
 ```
 
 **Arena**
+<!-- plik: arena.png -->
 ```
 A small round open-air arena: a low circle of sand ringed by pale stone benches
 and short wooden posts, two crossed training staves standing in the sand,
@@ -140,6 +148,7 @@ zniknięcie kawałka mgły i „jeszcze jedna tura ruchu".
 | Portal | Monolith (dwukierunkowy) | przenosi do drugiego portalu w tej samej barwie | `portal.png` (60 × 84) |
 
 **Wieża Obserwacyjna**
+<!-- plik: wieza-obserwacyjna.png -->
 ```
 A tall slender wooden lookout tower on a rocky outcrop, four legs with cross
 bracing, a railed observation platform at the top with a small shingled canopy,
@@ -147,6 +156,7 @@ a brass telescope on the platform pointing outward, a ladder up one side.
 ```
 
 **Ranczo Ponyt**
+<!-- plik: ranczo.png -->
 ```
 A cheerful horse ranch: a long low red barn with a wide open doorway and hay
 bales, a white wooden paddock fence in front, a water trough and a bucket,
@@ -154,6 +164,7 @@ horseshoes nailed above the barn door, no animals visible.
 ```
 
 **Źródło Mocy**
+<!-- plik: zrodlo.png -->
 ```
 A small natural spring: clear turquoise water welling out of a ring of smooth
 mossy grey stones into a shallow round pool, sparkling droplets rising in the
@@ -161,6 +172,7 @@ air, two tufts of grass and small white flowers at the rim.
 ```
 
 **Portal**
+<!-- plik: portal.png -->
 ```
 A standing stone gateway: two rough dark-grey monoliths carved with simple
 glowing cyan runes, joined by a lintel, the opening filled with a swirling
@@ -179,6 +191,7 @@ w Heroes 3 w ogóle zbaczać z drogi.
 | Ośrodek Ewolucji | Hill Fort | ulepsza oddziały za kamienie ewolucji | `osrodek-ewolucji.png` (84 × 84) |
 
 **Gniazdo**
+<!-- plik: gniazdo.png -->
 ```
 A large woven nest of branches and dry grass built on a wooden platform between
 two tree stumps, soft moss lining inside, three pale speckled eggs in the
@@ -186,6 +199,7 @@ middle, a small wooden sign post beside it, cosy and inviting.
 ```
 
 **Ośrodek Ewolucji**
+<!-- plik: osrodek-ewolucji.png -->
 ```
 A small laboratory pavilion: pale stone platform with four carved pillars
 holding a domed blue roof, a glowing violet crystal pedestal in the centre with
@@ -207,6 +221,7 @@ jest pusta między dużymi obiektami. Wszystkie działają jak istniejący `suro
 | Wóz Kupca | Wagon | artefakt albo surowce | `woz.png` (84 × 66) |
 
 **Wiatrak**
+<!-- plik: wiatrak.png -->
 ```
 A small stone windmill with a white plaster upper storey, a conical wooden roof
 and four wooden lattice sails with pale canvas, a low wooden door, a sack of
@@ -214,6 +229,7 @@ grain and a wooden bucket leaning against the wall.
 ```
 
 **Ognisko**
+<!-- plik: ognisko.png -->
 ```
 A small campfire: a ring of grey stones around burning logs with warm orange
 flames and glowing embers, two logs arranged as seats beside it, a couple of
@@ -221,6 +237,7 @@ coins and a small crystal glinting in the grass next to the ring.
 ```
 
 **Chatka Skrzata**
+<!-- plik: chatka.png -->
 ```
 A tiny lean-to shelter of leaning wooden planks and a mossy shingle roof against
 a mossy boulder, a small opening at the front, a wooden bowl and a bundle of
@@ -228,6 +245,7 @@ sticks in the doorway, ivy growing over one side.
 ```
 
 **Wóz Kupca**
+<!-- plik: woz.png -->
 ```
 A merchant's covered wagon with wooden spoked wheels, an arched canvas cover in
 cream and red stripes, wooden crates and a rolled rug tied to the side, the

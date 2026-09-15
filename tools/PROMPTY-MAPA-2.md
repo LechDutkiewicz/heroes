@@ -27,6 +27,7 @@ wypełnia kadr; nic nie jest ucięte przy krawędzi.
 
 ### Blok stylu (wklejać przed każdym promptem OBIEKTU)
 
+<!-- styl: obiekt -->
 ```
 Game asset for a children's fantasy strategy map, Heroes of Might and Magic III
 adventure-map object seen from a slightly elevated three-quarter view, facing
@@ -61,6 +62,7 @@ resztę w barwach neutralnych — drewno, kamień.
 | `namiot-klucznika.png` | źródło klucza | 1 × 1 |
 
 **Strażnica graniczna** — `straznica.png`
+<!-- plik: straznica.png -->
 ```
 A fortified border checkpoint blocking a mountain road: two squat stone towers
 with crenellated tops standing on either side of a heavy closed wooden gate
@@ -71,6 +73,7 @@ lanterns on the towers, unlit. The gate is shut and looks unbreakable.
 ```
 
 **Namiot klucznika** — `namiot-klucznika.png`
+<!-- plik: namiot-klucznika.png -->
 ```
 A small round travellers tent of flat solid-coloured canvas (one plain
 untextured colour field, easy to recolour) with a wooden pole and an open
@@ -93,6 +96,7 @@ skali i z tą samą postacią.
 | `bohaterka-prawo.png` | ta sama postać z profilu, idąca w prawo |
 
 **Więzienie** — `wiezienie.png`
+<!-- plik: wiezienie.png -->
 ```
 A small grim stone prison built into a rocky outcrop: heavy dark stone blocks,
 one barred iron window high on the wall, a massive iron-banded door with a big
@@ -100,19 +104,47 @@ padlock and chains, a stone buttress on one side, dead ivy climbing the corner,
 a raven perched on the roof ridge. Sombre but not frightening, storybook scale.
 ```
 
-**Drugi bohater (trzy ujęcia)** — `bohaterka-dol.png`, `bohaterka-gora.png`, `bohaterka-prawo.png`
+**Drugi bohater — trzy ujęcia**
+
+Trzy osobne wywołania, bo model oddaje jeden obrazek na raz, a `bohater_wczytaj.py`
+potrzebuje kompletu w tej samej skali. Prompty różnią się ostatnim zdaniem.
+
+<!-- plik: bohaterka-dol.png | styl: brak -->
 ```
 Full-body character sprite of a young pokemon trainer girl, about ten years old,
 short dark hair under a green cap, teal jacket with white sleeves, dark shorts,
 tall boots, a satchel on one hip. Cheerful, standing upright, arms relaxed.
-Drawn small and simple enough to read at 55 pixels tall. Same character, same
-outfit, same proportions and same scale in all three images; only the direction
-changes: FRONT view facing the camera / BACK view seen from behind / SIDE view
-walking to the right. Plain white background, no shadow, no ground.
+Drawn small and simple enough to read at 55 pixels tall. Plain white background,
+no shadow, no ground, no props. Exactly the same character, outfit, proportions
+and scale in every pose of this set.
+FRONT view, facing the camera.
 ```
-*(Uwaga: tu proszę o BIAŁE tło, nie przezroczyste — tak samo jak przy pierwszym
-bohaterze. `bohater_wczytaj.py` wycina je wypełnieniem od krawędzi, a przy
-postaci z dużą ilością jasnych fragmentów to wychodzi pewniej niż alfa z modelu.)*
+
+<!-- plik: bohaterka-gora.png | styl: brak -->
+```
+Full-body character sprite of a young pokemon trainer girl, about ten years old,
+short dark hair under a green cap, teal jacket with white sleeves, dark shorts,
+tall boots, a satchel on one hip. Cheerful, standing upright, arms relaxed.
+Drawn small and simple enough to read at 55 pixels tall. Plain white background,
+no shadow, no ground, no props. Exactly the same character, outfit, proportions
+and scale in every pose of this set.
+BACK view, seen from behind.
+```
+
+<!-- plik: bohaterka-prawo.png | styl: brak -->
+```
+Full-body character sprite of a young pokemon trainer girl, about ten years old,
+short dark hair under a green cap, teal jacket with white sleeves, dark shorts,
+tall boots, a satchel on one hip. Cheerful, standing upright, arms relaxed.
+Drawn small and simple enough to read at 55 pixels tall. Plain white background,
+no shadow, no ground, no props. Exactly the same character, outfit, proportions
+and scale in every pose of this set.
+SIDE view, walking to the right.
+```
+
+*(Tu prosimy o BIAŁE tło, nie przezroczyste — tak samo jak przy pierwszym
+bohaterze. `bohater_wczytaj.py` wycina je wypełnieniem od krawędzi, a przy postaci
+z dużą ilością jasnych fragmentów to wychodzi pewniej niż alfa z modelu.)*
 
 ## 3. Chata jasnowidza
 
@@ -124,6 +156,7 @@ przy progu.
 |---|---|
 | `chata-jasnowidza.png` | 1 × 1 |
 
+<!-- plik: chata-jasnowidza.png -->
 ```
 A witchs cottage on the edge of a wood: crooked wooden walls, a steep mossy
 shingle roof with a bent stone chimney, one round window glowing warm yellow, a
@@ -145,6 +178,8 @@ obiektów, bo drzewa, głazy i kępy scena stawia osobno.
 | `teren-jalowa.png`, `teren-jalowa2.png` | ziemia jałowa | 125% |
 
 Blok stylu dla tekstur:
+
+<!-- styl: teren -->
 ```
 Seamless tileable top-down terrain texture for a hand-painted fantasy strategy
 map, 1024 x 1024, edges matching perfectly on all four sides so it can be tiled
@@ -153,16 +188,51 @@ with no directional shadows, no objects, no rocks, no trees, no paths, no
 characters, no vignette, no border. Flat overhead view of the ground only.
 ```
 
-Do tego, po jednym na teren:
-- **bagno** — `dark wet marsh: murky olive-brown water between hummocks of
-  coarse grass, patches of duckweed, half-sunken roots, muddy sheen`
-- **śnieg** — `fresh snow cover: soft blue-white drifts with gentle wind ripples,
-  a few frozen grass tufts poking through, cold bluish shadows in the hollows`
-- **ziemia jałowa** — `barren cracked earth: dry grey-brown dirt with a network
-  of cracks, scattered pebbles, a few dead twigs, no green at all`
+Sześć wywołań — po dwa warianty na teren. Wariant drugi to ta sama ziemia
+namalowana OD NOWA, nie przesunięta: warianty służą do rozbijania powtarzalności,
+więc mają różnić się plamami.
 
-Wariant drugi (`…2.png`) to ta sama tekstura namalowana od nowa, nie przesunięta
-— warianty służą do rozbijania powtarzalności, więc mają się różnić plamami.
+<!-- plik: teren-bagno.png | styl: teren -->
+```
+The ground is a dark wet marsh: murky olive-brown water between hummocks of coarse grass,
+patches of duckweed, half-sunken roots, a muddy sheen.
+```
+
+<!-- plik: teren-bagno2.png | styl: teren -->
+```
+The ground is a dark wet marsh: murky olive-brown water between hummocks of coarse grass,
+patches of duckweed, half-sunken roots, a muddy sheen.
+A different painting of the same ground: the same colours and materials, but
+the blotches, cracks and tufts arranged differently.
+```
+
+<!-- plik: teren-snieg.png | styl: teren -->
+```
+The ground is fresh snow cover: soft blue-white drifts with gentle wind ripples, a few frozen
+grass tufts poking through, cold bluish shadows in the hollows.
+```
+
+<!-- plik: teren-snieg2.png | styl: teren -->
+```
+The ground is fresh snow cover: soft blue-white drifts with gentle wind ripples, a few frozen
+grass tufts poking through, cold bluish shadows in the hollows.
+A different painting of the same ground: the same colours and materials, but
+the blotches, cracks and tufts arranged differently.
+```
+
+<!-- plik: teren-jalowa.png | styl: teren -->
+```
+The ground is barren cracked earth: dry grey-brown dirt with a network of cracks, scattered
+pebbles, a few dead twigs, no green at all.
+```
+
+<!-- plik: teren-jalowa2.png | styl: teren -->
+```
+The ground is barren cracked earth: dry grey-brown dirt with a network of cracks, scattered
+pebbles, a few dead twigs, no green at all.
+A different painting of the same ground: the same colours and materials, but
+the blotches, cracks and tufts arranged differently.
+```
 
 ## 5. Relikty z realnym efektem
 
@@ -180,17 +250,39 @@ zrobi z niego i sprite mapy, i ikonę panelu.
 | `relikt-rog.png` | Róg Przywołania | wojsko |
 | `relikt-kompas.png` | Kompas Odkrywcy | widzenie mapy |
 
+<!-- plik: relikt-pas.png -->
 ```
 A single legendary treasure item floating slightly, seen from a three-quarter
-angle, filling a square frame: <PRZEDMIOT>. Ornate, jewelled, clearly more
+angle, filling a square frame: a champions belt of thick red leather with a huge golden buckle shaped like a
+roaring beast, set with a ruby. Ornate, jewelled, clearly more
 precious than ordinary gear, with a soft magical glow and a few sparkles around
 it. No pedestal, no ground, no hands, no character.
 ```
-Za `<PRZEDMIOT>` wstawić kolejno:
-- `a champions belt of thick red leather with a huge golden buckle shaped like a roaring beast, set with a ruby`
-- `a pair of feathered wings of white and sky-blue plumage, joined by a golden clasp`
-- `a curved hunting horn of polished ivory with golden bands and a green strap`
-- `an open brass compass with a glowing blue needle and an engraved star rose on the lid`
+
+<!-- plik: relikt-skrzydla.png -->
+```
+A single legendary treasure item floating slightly, seen from a three-quarter
+angle, filling a square frame: a pair of feathered wings of white and sky-blue plumage, joined by a golden clasp. Ornate, jewelled, clearly more
+precious than ordinary gear, with a soft magical glow and a few sparkles around
+it. No pedestal, no ground, no hands, no character.
+```
+
+<!-- plik: relikt-rog.png -->
+```
+A single legendary treasure item floating slightly, seen from a three-quarter
+angle, filling a square frame: a curved hunting horn of polished ivory with golden bands and a green strap. Ornate, jewelled, clearly more
+precious than ordinary gear, with a soft magical glow and a few sparkles around
+it. No pedestal, no ground, no hands, no character.
+```
+
+<!-- plik: relikt-kompas.png -->
+```
+A single legendary treasure item floating slightly, seen from a three-quarter
+angle, filling a square frame: an open brass compass with a glowing blue needle and an engraved star rose on
+the lid. Ornate, jewelled, clearly more
+precious than ordinary gear, with a soft magical glow and a few sparkles around
+it. No pedestal, no ground, no hands, no character.
+```
 
 ## 6. Ulepszone siedliska i wrogi bohater
 
@@ -207,25 +299,68 @@ tam różnica ma być widoczna:
 | `siedlisko5u.png` | ulepszone siedlisko poziomu 5 |
 | `siedlisko6u.png` | ulepszone siedlisko poziomu 6 |
 
+<!-- plik: siedlisko4u.png | styl: brak -->
 ```
-Upgraded version of a fantasy creature dwelling for a storybook town panorama,
-seen from a slightly elevated three-quarter view: the same building type as a
-simple woodland lair but visibly richer — carved stone foundations instead of
-bare earth, banners, lanterns, gilded ornaments on the roof, a larger and taller
-silhouette. Hand-painted, warm palette, evening light from the right. TRUE ALPHA
-TRANSPARENCY, no checkerboard, no ground, no cast shadow.
+Upgraded fantasy creature dwelling for a storybook town panorama, seen from a
+slightly elevated three-quarter view: a sturdy lair with carved stone foundations, a shingled roof and two banners. Visibly richer than a simple
+woodland lair — bigger silhouette, worked stone instead of bare earth, banners
+and lanterns. Hand-painted, warm palette, evening light from the right. TRUE
+ALPHA TRANSPARENCY, never a painted checkerboard. No ground, no base plate,
+no cast shadow, no text.
 ```
 
-**Wrogi bohater** — przeciwnik, który naprawdę rusza się po mapie, potrzebuje
-własnej postaci w tym samym układzie trzech ujęć, co drugi bohater:
-`wrog-dol.png`, `wrog-gora.png`, `wrog-prawo.png`.
+<!-- plik: siedlisko5u.png | styl: brak -->
+```
+Upgraded fantasy creature dwelling for a storybook town panorama, seen from a
+slightly elevated three-quarter view: a tall hall of stone and timber with lanterns, a balcony and gilded roof ridges. Visibly richer than a simple
+woodland lair — bigger silhouette, worked stone instead of bare earth, banners
+and lanterns. Hand-painted, warm palette, evening light from the right. TRUE
+ALPHA TRANSPARENCY, never a painted checkerboard. No ground, no base plate,
+no cast shadow, no text.
+```
+
+<!-- plik: siedlisko6u.png | styl: brak -->
+```
+Upgraded fantasy creature dwelling for a storybook town panorama, seen from a
+slightly elevated three-quarter view: a grand champions hall: broad stone steps, carved columns, long banners and a
+golden crest above the doorway. Visibly richer than a simple
+woodland lair — bigger silhouette, worked stone instead of bare earth, banners
+and lanterns. Hand-painted, warm palette, evening light from the right. TRUE
+ALPHA TRANSPARENCY, never a painted checkerboard. No ground, no base plate,
+no cast shadow, no text.
+```
+
+**Wrogi bohater** — przeciwnik, który naprawdę rusza się po mapie, w tym samym
+układzie trzech ujęć, co drugi bohater.
+
+<!-- plik: wrog-dol.png | styl: brak -->
 ```
 Full-body character sprite of a rival pokemon trainer boy, about twelve years
-old, spiky purple hair, black and violet jacket with a high collar, dark
-trousers, confident smirk, one hand in a pocket. Same scale and proportions as
-the other trainer sprites, readable at 55 pixels tall. Same character in all
-three images; only the direction changes: FRONT / BACK / SIDE walking right.
-Plain white background, no shadow, no ground.
+old, spiky purple hair, black and violet jacket with a high collar, dark trousers,
+confident smirk, one hand in a pocket. Readable at 55 pixels tall. Plain white
+background, no shadow, no ground, no props. Exactly the same character, outfit,
+proportions and scale in every pose of this set.
+FRONT view, facing the camera.
+```
+
+<!-- plik: wrog-gora.png | styl: brak -->
+```
+Full-body character sprite of a rival pokemon trainer boy, about twelve years
+old, spiky purple hair, black and violet jacket with a high collar, dark trousers,
+confident smirk, one hand in a pocket. Readable at 55 pixels tall. Plain white
+background, no shadow, no ground, no props. Exactly the same character, outfit,
+proportions and scale in every pose of this set.
+BACK view, seen from behind.
+```
+
+<!-- plik: wrog-prawo.png | styl: brak -->
+```
+Full-body character sprite of a rival pokemon trainer boy, about twelve years
+old, spiky purple hair, black and violet jacket with a high collar, dark trousers,
+confident smirk, one hand in a pocket. Readable at 55 pixels tall. Plain white
+background, no shadow, no ground, no props. Exactly the same character, outfit,
+proportions and scale in every pose of this set.
+SIDE view, walking to the right.
 ```
 
 ---
