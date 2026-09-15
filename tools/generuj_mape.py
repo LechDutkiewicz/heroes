@@ -667,6 +667,16 @@ def rozstaw(mapa, kroki, rng):
         'gniazdo', 'drzewo-wiedzy', 'woz',
     ])
 
+    # NAMIOT KLUCZNIKA — zielony. Stoi w dolinie, czyli po TEJ stronie obu bram,
+    # które otwiera: klucza szuka się w kawałku mapy, który stoi otworem od
+    # pierwszego dnia. Namiot za bramą, którą sam otwiera, zamyka mapę na głucho
+    # i jest to usterka nie do zauważenia z kodu — dlatego sprawdzamy ją niżej,
+    # etapami, a nie wzrokiem.
+    #
+    # Zakres kroków zaczyna się od 16: klucz ma być nagrodą za objechanie
+    # doliny, a nie rzeczą leżącą przy zamku.
+    dodaj(1, 'dom', (16, 45), lambda p: ('namiot', 'zielony'))
+
     # --- PAS SPORNY --------------------------------------------------------
     # Środek gry i najgęstszy kawałek mapy. Stoją tu obok siebie rzeczy tanie
     # i drogie: gracz ma wybierać, co bierze najpierw, a nie zbierać po kolei.
@@ -694,6 +704,11 @@ def rozstaw(mapa, kroki, rng):
     # Para portali — oba PO TEJ SAMEJ stronie grzbietu. Para przez grzbiet
     # obchodziłaby strażników przełęczy i unieważniała cały układ mapy.
     dodaj(2, 'pogranicze', (0, 999), lambda p: ('budynek', 'portal'))
+
+    # NAMIOT KLUCZNIKA — niebieski, w pasie spornym. Ten sam warunek co wyżej:
+    # leży PRZED bramami, które otwiera. Drugi akt mapy zaczyna się więc od
+    # przeszukania pasa spornego, a nie od szturmu na przełęcz.
+    dodaj(1, 'pogranicze', (0, 999), lambda p: ('namiot', 'niebieski'))
 
     # --- KRAINA PRZECIWNIKA ------------------------------------------------
     # Po co się tam w ogóle jedzie: relikty, kopalnie kamienia i najsilniejsze
@@ -745,23 +760,32 @@ kroki = kroki_od(mapa, PUNKTY['start'])
 rng2 = random.Random(ZIARNO + 1)
 obiekty = rozstaw(mapa, kroki, rng2)
 
-# Straże graniczne stoją osobno i zawsze w tym samym miejscu. To one trzymają
-# mapę w ryzach i losowanie ich położenia zamieniłoby zamysł mapy w przypadek.
+# STRAŻNICE GRANICZNE — cztery, po jednej na przejście, zawsze w tym samym
+# miejscu. To one trzymają mapę w ryzach i losowanie ich położenia zamieniłoby
+# zamysł mapy w przypadek.
 #
-# Każda stoi po DALSZEJ stronie swojego przejścia (patrząc od gracza): w wylocie
-# bliższym dałoby się do niej dojechać pierwszego dnia i przegrać pierwszą bitwę
-# w grze, zanim się w ogóle było w swoim zamku.
-STRAZE_GRANICZNE = [
-    ((13, 44), 'straznik', 'Strażnik Przełęczy Południowej'),
-    ((49, 44), 'straznik', 'Strażnik Piaskowego Wąwozu'),
-    ((21, 20), 'wodz', 'Wódz Przełęczy Północnej'),
-    ((57, 20), 'wodz', 'Wódz Północnej Rubieży'),
+# Strażnicy NIE da się pokonać: otwiera ją klucz z namiotu klucznika stojącego
+# gdzie indziej. Wcześniej stały tu zwykłe stada i mapa mówiła „zbierz armię";
+# teraz mówi „znajdź klucznika", a to jest inna zagadka i inna gra.
+#
+# Barwy są DWIE, nie cztery, i to jest kształt mapy, a nie oszczędność: zielony
+# klucz otwiera oba wyjazdy z doliny, niebieski oba wejścia do krainy wroga.
+# Mapa ma więc dwa akty, a nie cztery drobne zadania.
+#
+# Brama stoi w POPRZEK przejścia i blokuje trzy pola w swoim rzędzie (własne
+# i dwa obok — patrz `polaBryly` w `src/data/mapa.ts`). Przejścia mają dwa pola
+# szerokości, więc zamknięta brama zamyka je w całości.
+STRAZNICE = [
+    ((13, 44), 'zielony', 'Strażnica Przełęczy Południowej'),
+    ((49, 44), 'zielony', 'Strażnica Piaskowego Wąwozu'),
+    ((21, 20), 'niebieski', 'Strażnica Przełęczy Północnej'),
+    ((57, 20), 'niebieski', 'Strażnica Północnej Rubieży'),
 ]
-for pole, sila, nazwa in STRAZE_GRANICZNE:
+for pole, klucz, nazwa in STRAZNICE:
     x, y = pole
     if mapa[y][x] not in PRZEJEZDNE:
         raise SystemExit(f'{nazwa} stoi na nieprzejezdnym polu {pole}.')
-    obiekty.append((pole, ('potwor', sila, nazwa)))
+    obiekty.append((pole, ('straznica', klucz, nazwa)))
 
 # --- sprawdzenia, które muszą przejść, zanim plik powstanie ----------------
 
@@ -780,8 +804,25 @@ for (x, y), co in obiekty:
 # obiekty, więc dwie skrzynie w korytarzu potrafią odciąć ćwierć mapy — a to
 # jest usterka, której nie widać: plansza wygląda spójnie, tylko połowa rzeczy
 # jest nie do zdobycia. Potwory pomijamy: za nimi się przechodzi po wygranej.
-def osiagalne_przy_obiektach(mapa, obiekty, skad):
-    blok = {p for p, co in obiekty if co[0] != 'potwor'}
+def osiagalne_przy_obiektach(mapa, obiekty, skad, otwarte_klucze=()):
+    """Pola osiągalne, gdy obiekty zatykają drogę.
+
+    Potwory pomijamy: pokonuje się je i idzie dalej. Strażnice graniczne
+    pomijamy albo nie — zależnie od tego, które klucze gracz już ma. Dzięki
+    temu tą samą funkcją sprawdzamy trzy etapy gry po kolei.
+    """
+    blok = set()
+    for p, co in obiekty:
+        if co[0] == 'potwor':
+            continue
+        if co[0] == 'straznica':
+            if co[1] in otwarte_klucze:
+                continue
+            # Brama blokuje trzy pola w swoim rzędzie: własne i dwa obok.
+            x, y = p
+            blok.update({(x - 1, y), (x, y), (x + 1, y)})
+            continue
+        blok.add(p)
     widziane = {skad}
     kolejka = deque([skad])
     while kolejka:
@@ -801,7 +842,7 @@ def osiagalne_przy_obiektach(mapa, obiekty, skad):
     return widziane
 
 
-sasiednie = osiagalne_przy_obiektach(mapa, obiekty, PUNKTY['start'])
+sasiednie = osiagalne_przy_obiektach(mapa, obiekty, PUNKTY['start'], ('zielony', 'niebieski'))
 for pole, co in obiekty:
     x, y = pole
     if not any(
@@ -818,7 +859,46 @@ for (x, y), _ in obiekty:
     policz[strefa(y)] = policz.get(strefa(y), 0) + 1
 print('obiektów w strefach:', policz)
 print('kroków do zamku wroga:', kroki.get(PUNKTY['zamek wroga']))
-print('kroków do straży granicznych:', [kroki.get(p) for p, _, _ in STRAZE_GRANICZNE])
+print('kroków do strażnic:', [kroki.get(p) for p, _, _ in STRAZNICE])
+
+# --- MAPA MA TRZY AKTY I MUSI SIĘ DAĆ PRZEJŚĆ PO KOLEI ---------------------
+#
+# To jest sprawdzenie, bez którego strażnice są ryzykiem, a nie mechaniką:
+# namiot postawiony ZA bramą, którą sam otwiera, zamyka mapę na głucho. Nie
+# widać tego ani na obrazku, ani w kodzie — plansza wygląda normalnie i po
+# prostu nie da się jej skończyć.
+#
+# Sprawdzamy więc drogę tak, jak przechodzi ją gracz:
+#   akt I   — bez kluczy trzeba dojść do NAMIOTU ZIELONEGO;
+#   akt II  — z zielonym trzeba dojść do NAMIOTU NIEBIESKIEGO;
+#   akt III — z oboma trzeba dojść do ZAMKU WROGA.
+namioty = {co[1]: pole for pole, co in obiekty if co[0] == 'namiot'}
+if set(namioty) != {'zielony', 'niebieski'}:
+    raise SystemExit(f'Namioty klucznika: {sorted(namioty)} — mają być dwa, po jednym na barwę.')
+
+AKTY = [
+    ('I: namiot zielony bez kluczy', (), namioty['zielony']),
+    ('II: namiot niebieski z zielonym kluczem', ('zielony',), namioty['niebieski']),
+    ('III: zamek wroga z obydwoma', ('zielony', 'niebieski'), PUNKTY['zamek wroga']),
+]
+for nazwa, klucze, cel in AKTY:
+    widziane = osiagalne_przy_obiektach(mapa, obiekty, PUNKTY['start'], klucze)
+    blisko = any(
+        (cel[0] + dx, cel[1] + dy) in widziane
+        for dy in (-1, 0, 1)
+        for dx in (-1, 0, 1)
+    )
+    if not blisko:
+        raise SystemExit(f'Akt {nazwa}: cel {cel} jest nieosiągalny. Popraw rozstawienie namiotów.')
+    print(f'akt {nazwa}: OK ({len(widziane)} pól otworem)')
+
+# I odwrotnie: bez kluczy kraina wroga ma być NIEDOSTĘPNA. Gdyby dało się ją
+# obejść, strażnice byłyby ozdobą.
+bez_kluczy = osiagalne_przy_obiektach(mapa, obiekty, PUNKTY['start'])
+if any((PUNKTY['zamek wroga'][0] + dx, PUNKTY['zamek wroga'][1] + dy) in bez_kluczy
+       for dy in (-1, 0, 1) for dx in (-1, 0, 1)):
+    raise SystemExit('Do zamku wroga da się dojść BEZ kluczy — strażnice niczego nie pilnują.')
+print(f'bez kluczy stoi otworem: {len(bez_kluczy)} pól')
 
 wiersze = [''.join(w) for w in mapa]
 udzial = {z: sum(w.count(z) for w in wiersze) for z in '.,=T#~'}
@@ -856,6 +936,7 @@ export const ROZSTAWIENIE: Array<{
   sila?: string;
   nazwa?: string;
   budynek?: string;
+  klucz?: string;
 }> = [
 '''
 for wpis in obiekty:
@@ -865,6 +946,8 @@ for wpis in obiekty:
     pola = [f'x: {x}', f'y: {y}', f"rodzaj: '{rodzaj}'", f"strefa: '{strefa(y)}'"]
     if rodzaj == 'potwor':
         pola.append(f"sila: '{co}'")
+    elif rodzaj in ('straznica', 'namiot'):
+        pola.append(f"klucz: '{co}'")
     elif rodzaj == 'budynek':
         pola.append(f"budynek: '{co}'")
     elif co:

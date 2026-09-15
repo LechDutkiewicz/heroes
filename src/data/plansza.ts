@@ -12,11 +12,13 @@ import {
 import {
   ARTEFAKTY,
   BUDOWLE,
+  KLUCZE,
   PRZYROST_ODDZIALU,
   odslon,
   type Obiekt,
   type Oddzial,
   type StanMapy,
+  type Klucz,
   type Surowiec,
   type Teren,
 } from './mapa';
@@ -260,6 +262,24 @@ export function planszaPrzygody(): StanMapy {
           ...zawartoscBudowli(wpis.budynek ?? '', wpis.strefa, losuj),
         });
       }
+    } else if (wpis.rodzaj === 'straznica') {
+      // Strażnica graniczna. Nazwa mówi wprost, jakiego klucza szukać —
+      // dziecko ma wiedzieć, czego szuka, bez zaglądania w panel.
+      const k = (wpis.klucz ?? 'zielony') as Klucz;
+      obiekty.push({
+        ...wspolne,
+        rodzaj: 'straznica',
+        nazwa: wpis.nazwa ?? `Strażnica (${KLUCZE[k].nazwa})`,
+        klucz: k,
+      });
+    } else if (wpis.rodzaj === 'namiot') {
+      const k = (wpis.klucz ?? 'zielony') as Klucz;
+      obiekty.push({
+        ...wspolne,
+        rodzaj: 'namiot',
+        nazwa: wpis.nazwa ?? `Namiot klucznika (${KLUCZE[k].nazwa})`,
+        klucz: k,
+      });
     } else if (wpis.rodzaj === 'potwor') {
       const sila = wpis.sila ?? 'slaby';
       const oddzialy = oddzialyStrazy(sila, losuj);
@@ -364,6 +384,7 @@ export function planszaPrzygody(): StanMapy {
     // Przy 15 pokeballach dzień pierwszy był tylko klikaniem „dalej".
     skarbiec: { pokeball: 40, jagoda: 6, kamien: 1, odlamek: 4 },
     dzien: 1,
+    klucze: [],
     odkryte: TEREN.map(() => new Array(TEREN[0].length).fill(false)),
   };
   odslon(stan);

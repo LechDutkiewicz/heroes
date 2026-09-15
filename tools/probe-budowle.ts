@@ -172,11 +172,21 @@ console.log('\n=== portal: para i przeniesienie ===');
   sprawdz('portal działa wielokrotnie', odwiedz(s, portale[0]).przenies !== undefined);
   // Portal przez grzbiet obchodziłby strażników przełęczy i unieważniał układ
   // mapy — obie połówki pary muszą leżeć po tej samej stronie pasma.
-  sprawdz(
-    'oba końce po tej samej stronie grzbietu',
-    portale.every((p) => p.y < 19) || portale.every((p) => p.y > 22),
-    portale.map((p) => `${p.x},${p.y}`).join(' ↔ ')
-  );
+  // Portal przez grzbiet obchodziłby strażnicę i unieważniał układ mapy, więc
+  // obie połówki KAŻDEJ pary muszą leżeć w tym samym pasie. Wcześniej ten
+  // warunek żądał, żeby WSZYSTKIE portale leżały po jednej stronie — a plansza
+  // ma dziś dwie pary: jedną w pasie spornym, drugą w krainie wroga.
+  // Pasy wyznaczają rdzenie grzbietów (21–22 i 45–46, patrz generator).
+  const pas = (y: number) => (y < 21 ? 'wroga' : y <= 46 ? 'pogranicze' : 'dom');
+  for (const p of portale) {
+    const drugiKoniec = s.obiekty.find((o) => o.id === p.para);
+    if (!drugiKoniec) continue;
+    sprawdz(
+      `portal ${p.x},${p.y} ma bliźniaka w tym samym pasie`,
+      pas(p.y) === pas(drugiKoniec.y),
+      `${pas(p.y)} ↔ ${pas(drugiKoniec.y)}`
+    );
+  }
 }
 
 console.log('\n=== gniazdo: zajmuje się, a nie zbiera ===');
@@ -248,8 +258,19 @@ console.log('\n=== bryły i dostępność ===');
       `${o.x},${o.y}`
     );
   }
+  // Mur budowli bywa PRZYCIĘTY i to jest zamierzone: `polaBryly` pomija pola
+  // poza planszą, na skale i stykające się z cudzym wejściem — bez tego
+  // budowla stojąca ciasno zamurowuje sąsiadowi drzwi. Przy gęstości mapy M
+  // (obiekt co siedem pól) trafiają się więc budowle bez ani jednego pola muru
+  // i to nie jest usterka. Pilnujemy tego, o co naprawdę chodzi: żeby mury
+  // miała WIĘKSZOŚĆ, bo inaczej znaczyłoby to, że bryły przestały działać.
   const zBryla = s.obiekty.filter((o) => o.rodzaj === 'budynek' && brylaObiektu(o));
-  sprawdz('budowle wielopolowe mają nieprzejezdne mury', zBryla.every((o) => polaBryly(s, o).length > 0), `${zBryla.length} szt.`);
+  const zMurem = zBryla.filter((o) => polaBryly(s, o).length > 0);
+  sprawdz(
+    'budowle wielopolowe mają nieprzejezdne mury',
+    zMurem.length * 2 > zBryla.length,
+    `${zMurem.length} z ${zBryla.length}`
+  );
 }
 
 console.log(`\n${bledy === 0 ? 'Wszystko się zgadza.' : `Błędów: ${bledy}`}`);

@@ -93,7 +93,25 @@ export type RodzajObiektu =
   | 'potwor'
   | 'skrzynia'
   | 'artefakt'
-  | 'budynek';
+  | 'budynek'
+  | 'straznica'
+  | 'namiot';
+
+/**
+ * Klucze do strażnic granicznych.
+ *
+ * W Heroes 3 barw jest osiem i każda strażnica ma swoją; u nas dwie i to nie
+ * jest oszczędność, tylko kształt mapy. Plansza ma dwa grzbiety po dwa
+ * przejścia: zielony klucz otwiera oba przejścia z doliny gracza, niebieski —
+ * oba do krainy przeciwnika. Dzięki temu mapa ma DWA akty, a nie cztery drobne
+ * zadania, w których szuka się czterech namiotów.
+ */
+export type Klucz = 'zielony' | 'niebieski';
+
+export const KLUCZE: Record<Klucz, { nazwa: string; barwa: number }> = {
+  zielony: { nazwa: 'zielony klucz', barwa: 0x5fbf6a },
+  niebieski: { nazwa: 'niebieski klucz', barwa: 0x4f8fe0 },
+};
 
 /**
  * Artefakty. W Heroes 3 dzielą się na klasy o rosnącej sile; u nas trzy klasy
@@ -347,6 +365,11 @@ export interface Obiekt {
   uzyteDnia?: number;
   /** Portal: numer bliźniaczego portalu, do którego przenosi. */
   para?: number;
+  /**
+   * Strażnica graniczna i namiot klucznika: barwa klucza. Strażnica otwiera
+   * się wyłącznie kluczem w SWOJEJ barwie; namiot tej samej barwy klucz daje.
+   */
+  klucz?: Klucz;
 }
 
 /**
@@ -540,6 +563,12 @@ export interface StanMapy {
    * obiektów wewnątrz wyznaczania trasy.
    */
   bryly?: Set<string>;
+  /**
+   * Klucze zabrane z namiotów klucznika. Klucz należy do GRACZA, nie do
+   * bohatera — tak jest w Heroes 3 i tylko tak ma sens, gdy bohaterów będzie
+   * kiedyś dwóch: znaleziony klucz otwiera strażnice każdemu z nich.
+   */
+  klucze: Klucz[];
 }
 
 /**
@@ -595,6 +624,11 @@ export const obiektNa = (s: StanMapy, x: number, y: number) =>
 export const BRYLA: Partial<Record<RodzajObiektu, [number, number]>> = {
   zamek: [3, 2],
   kopalnia: [3, 1],
+  // Strażnica ma szerokość trzech pól TYLKO dla rysunku: scena bierze stąd
+  // dosunięcie od krawędzi planszy, cień i wysokość. Które pola naprawdę
+  // blokuje, mówi `polaBryly` — i są to pola OBOK wejścia, w jego rzędzie,
+  // a nie rząd nad nim jak u zamku.
+  straznica: [3, 1],
 };
 
 /**
@@ -617,6 +651,25 @@ export function brylaObiektu(o: Obiekt): [number, number] | undefined {
  * zamek przy skале dostanie węższy bok i tyle.
  */
 export function polaBryly(s: StanMapy, o: Obiekt): Pole[] {
+  // Strażnica graniczna stoi W POPRZEK drogi, więc jej mur to pola OBOK
+  // wejścia, w tym samym rzędzie — a nie rząd nad nim, jak u zamku czy
+  // kopalni. Przejście przez grzbiet ma dwa pola szerokości, więc brama
+  // szeroka na trzy zamyka je w całości. To jest jedyny powód, dla którego
+  // strażnica w ogóle cokolwiek pilnuje: gdyby blokowała samo swoje pole,
+  // dałoby się ją minąć bokiem, dokładnie tak, jak dawało się minąć
+  // strażnika w przejściu szerokim na cztery pola.
+  if (o.rodzaj === 'straznica') {
+    if (o.zebrany) return [];
+    return [
+      { x: o.x - 1, y: o.y },
+      { x: o.x + 1, y: o.y },
+    ].filter(
+      (p) =>
+        wGranicach(s, p.x, p.y) &&
+        TEREN_INFO[s.teren[p.y][p.x]].koszt !== null &&
+        !obiektNa(s, p.x, p.y)
+    );
+  }
   const rozmiar = brylaObiektu(o);
   if (!rozmiar || o.zebrany) return [];
   const [szer, wys] = rozmiar;
@@ -663,6 +716,11 @@ export function brylaNa(s: StanMapy, x: number, y: number): Obiekt | undefined {
 
 /** Wszystkie pola pod bryłami, jako `"x,y"`. Liczone raz i zapamiętane. */
 export function polaZajete(s: StanMapy): Set<string> {
+  // UWAGA: ten zbiór NIE jest już niezmienny. Zamek i kopalnia z mapy nie
+  // znikają, ale otwarta strażnica graniczna — owszem, i wtedy przejście musi
+  // natychmiast stać się przejezdne. `odwiedz` kasuje więc `s.bryly`, żeby
+  // policzyły się od nowa. Bez tego brama stoi otworem na ekranie, a trasa
+  // dalej ją omija.
   if (!s.bryly) {
     s.bryly = new Set(
       s.obiekty.flatMap((o) => polaBryly(s, o).map((p) => `${p.x},${p.y}`))
@@ -700,7 +758,18 @@ export function kosztPola(s: StanMapy, x: number, y: number): number | null {
   if (!wGranicach(s, x, y)) return null;
   // Mury zamku i budynek kopalni są nie do przejścia — wchodzi się wejściem.
   if (polaZajete(s).has(`${x},${y}`)) return null;
+  // Zamknięta strażnica jest murem także na SWOIM polu. Tym różni się od
+  // potwora: potwora się bije i pole jest przejezdne po wygranej, strażnicy
+  // nie da się pokonać w ogóle — otwiera ją klucz. Wejście na jej pole jest
+  // osobnym przypadkiem w `trasa`: wolno tam wejść jako na CEL, i wtedy albo
+  // brama się otwiera, albo gracz dostaje wiadomość, po co mu klucz.
+  if (zamknietaBrama(s, x, y)) return null;
   return TEREN_INFO[s.teren[y][x]].koszt;
+}
+
+/** Zamknięta strażnica stojąca na tym polu — albo `undefined`. */
+export function zamknietaBrama(s: StanMapy, x: number, y: number): Obiekt | undefined {
+  return s.obiekty.find((o) => o.rodzaj === 'straznica' && !o.zebrany && o.x === x && o.y === y);
 }
 
 /** Osiem kierunków, jak w Heroes 3. Skos kosztuje więcej — inaczej byłby darmowy. */
@@ -731,7 +800,11 @@ export interface Krok {
  * dokładnie jak Heroes 3.
  */
 export function trasa(s: StanMapy, doX: number, doY: number): Krok[] | null {
-  if (!wGranicach(s, doX, doY) || kosztPola(s, doX, doY) === null) return null;
+  // Zamknięta brama jest jedynym polem nieprzejezdnym, na które wolno wejść:
+  // inaczej nie dałoby się do niej podejść i użyć klucza, a gracz widziałby
+  // bramę, w którą nie da się kliknąć.
+  const bramaNaCelu = zamknietaBrama(s, doX, doY);
+  if (!wGranicach(s, doX, doY) || (kosztPola(s, doX, doY) === null && !bramaNaCelu)) return null;
   const start = `${s.bohater.x},${s.bohater.y}`;
   const koszty = new Map<string, number>([[start, 0]]);
   const skad = new Map<string, string>();
@@ -766,7 +839,10 @@ export function trasa(s: StanMapy, doX: number, doY: number): Krok[] | null {
     for (const [dx, dy, mnoznik] of wolneKierunki) {
       const nx = cur.x + dx;
       const ny = cur.y + dy;
-      const bazowy = kosztPola(s, nx, ny);
+      const koncoweDlaBramy = bramaNaCelu !== undefined && nx === doX && ny === doY;
+      const bazowy = koncoweDlaBramy
+        ? TEREN_INFO[s.teren[ny][nx]].koszt ?? 100
+        : kosztPola(s, nx, ny);
       if (bazowy === null) continue;
       // Na obiekt wchodzi się tylko jako na cel trasy — bohater nie przechodzi
       // przez potwora ani przez zamek w drodze gdzie indziej.
@@ -1053,6 +1129,30 @@ export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
   if (o.rodzaj === 'budynek') return odwiedzBudowle(s, o);
 
   if (o.rodzaj === 'potwor') return { opis: `${o.nazwa} zagradza drogę!`, bitwaZ: o };
+
+  if (o.rodzaj === 'namiot') {
+    o.zebrany = true;
+    const k = o.klucz ?? 'zielony';
+    if (!s.klucze.includes(k)) s.klucze.push(k);
+    return {
+      opis: `Klucznik daje ci ${KLUCZE[k].nazwa}.\nOtwiera strażnice w tej barwie.`,
+    };
+  }
+
+  if (o.rodzaj === 'straznica') {
+    const k = o.klucz ?? 'zielony';
+    if (!s.klucze.includes(k)) {
+      // Bez bitwy, bez utraty dnia i bez wchodzenia na pole. Strażnica ma
+      // odesłać gracza po klucz, a nie ukarać go za podejście.
+      return { opis: `Wrota są zamknięte.\nPotrzebny jest ${KLUCZE[k].nazwa} — klucznik\nobozuje gdzieś na tej mapie.` };
+    }
+    o.zebrany = true;
+    // Bryły przestają się zgadzać w chwili otwarcia bramy: policzone są raz
+    // i zapamiętane, a przejście ma być przejezdne NATYCHMIAST.
+    s.bryly = undefined;
+    const nazwaKlucza = KLUCZE[k].nazwa;
+    return { opis: `${nazwaKlucza[0].toUpperCase()}${nazwaKlucza.slice(1)} pasuje.\nWrota stanęły otworem.` };
+  }
 
   if (o.rodzaj === 'surowiec') {
     const co = o.surowiec ?? 'pokeball';

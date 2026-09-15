@@ -12,6 +12,7 @@ import {
   obiektNa,
   polaZajete,
   trasa,
+  zamknietaBrama,
   wGranicach,
   type StanMapy,
 } from '../src/data/mapa';
@@ -89,9 +90,20 @@ console.log('\n=== do każdego obiektu da się podejść ===');
 // blokady, których w grze nie ma. Potwory i tak nie zamykają drogi na stałe —
 // pokonuje się je i idzie dalej — więc tutaj traktujemy je jak pola przejezdne.
 {
-  const bryly = polaZajete(s);
+  // Strażnice liczymy jako OTWARTE: klucz do każdej leży po tej stronie bramy,
+  // co sprawdza osobna sekcja „trzy akty". Tutaj pytamy o co innego — czy
+  // plansza nie ma kawałków odciętych na zawsze przez mury budowli.
+  const otwarta: StanMapy = {
+    ...s,
+    bryly: undefined,
+    obiekty: s.obiekty.map((o) => (o.rodzaj === 'straznica' ? { ...o, zebrany: true } : o)),
+  };
+  const bryly = polaZajete(otwarta);
   const przejezdne = (x: number, y: number) =>
-    wGranicach(s, x, y) && TEREN_INFO[s.teren[y][x]].koszt !== null && !bryly.has(`${x},${y}`);
+    wGranicach(otwarta, x, y) &&
+    TEREN_INFO[otwarta.teren[y][x]].koszt !== null &&
+    !bryly.has(`${x},${y}`) &&
+    !zamknietaBrama(otwarta, x, y);
   const widziane = new Set([`${s.bohater.x},${s.bohater.y}`]);
   const kolejka = [[s.bohater.x, s.bohater.y]];
   while (kolejka.length) {
@@ -135,13 +147,13 @@ sprawdz(
   'zamek przeciwnika NIE jest osiągalny pierwszego dnia',
   !wZasiegu.includes(wrogiZamek)
 );
-const straze = s.obiekty.filter(
-  (o) => o.nazwa.startsWith('Strażnik ') || o.nazwa.startsWith('Wódz ')
-);
-sprawdz('cztery straże graniczne stoją na mapie', straze.length === 4, straze.map((o) => o.nazwa).join(', '));
+const straze = s.obiekty.filter((o) => o.rodzaj === 'straznica');
+sprawdz('cztery strażnice graniczne stoją na mapie', straze.length === 4, straze.map((o) => o.nazwa).join(', '));
 for (const g of straze) {
   sprawdz(`${g.nazwa} stoi poza zasięgiem pierwszego dnia`, !wZasiegu.includes(g));
 }
+const namioty = s.obiekty.filter((o) => o.rodzaj === 'namiot');
+sprawdz('każda barwa klucza ma swój namiot', namioty.length === 2 && new Set(namioty.map((o) => o.klucz)).size === 2, namioty.map((o) => o.klucz).join(', '));
 
 console.log('\n=== grzbiety dzielą mapę na trzy pasy ===');
 // Cały układ stoi na tym, że przez KAŻDY grzbiet prowadzą dokładnie dwa
@@ -179,15 +191,79 @@ const RDZENIE: Array<[string, number, number]> = [
     }
     // Straż stoi PRZY przejściu (w jego wylocie albo w nim), nie obok.
     const wTym = straze.filter((o) => Math.abs(o.y - y0) <= 2 || Math.abs(o.y - y1) <= 2);
-    sprawdz(`grzbiet ${nazwa} ma dwie straże`, wTym.length === 2, wTym.map((o) => o.nazwa).join(', '));
+    sprawdz(`grzbiet ${nazwa} ma dwie strażnice`, wTym.length === 2, wTym.map((o) => o.nazwa).join(', '));
     for (const o of wTym) {
+      // Brama blokuje trzy pola w swoim rzędzie (własne i dwa obok), więc
+      // zamyka przejście tylko wtedy, gdy KAŻDA jego kolumna mieści się w tej
+      // trójce. Przy przejściu szerszym niż trzy pola brama jest ozdobą.
+      const przejscie = grupy.find((k) => k.some((x) => Math.abs(x - o.x) <= 1));
       sprawdz(
-        `${o.nazwa} zamyka przejście`,
-        grupy.some((k) => k.some((x) => Math.abs(x - o.x) <= 1)),
-        `(${o.x},${o.y})`
+        `${o.nazwa} zamyka przejście na całą szerokość`,
+        przejscie !== undefined && przejscie.every((x) => Math.abs(x - o.x) <= 1),
+        przejscie ? `brama x ${o.x}, przejście x ${przejscie[0]}–${przejscie[przejscie.length - 1]}` : 'brak przejścia'
       );
     }
+    // Obie strażnice jednego grzbietu otwiera TEN SAM klucz — inaczej mapa ma
+    // cztery drobne zadania zamiast dwóch aktów.
+    sprawdz(
+      `oba przejścia grzbietu ${nazwa} otwiera ten sam klucz`,
+      new Set(wTym.map((o) => o.klucz)).size === 1,
+      wTym.map((o) => o.klucz).join(', ')
+    );
   }
+}
+
+console.log('\n=== mapa ma trzy akty i da się je przejść po kolei ===');
+// Namiot postawiony ZA bramą, którą sam otwiera, zamyka mapę na głucho:
+// plansza wygląda normalnie i po prostu nie da się jej skończyć. Sprawdzamy
+// więc drogę tak, jak przechodzi ją gracz — zasadami GRY, nie własnym modelem.
+{
+  const osiagalneZ = (klucze: string[]) => {
+    const kopia: StanMapy = {
+      ...s,
+      bryly: undefined,
+      obiekty: s.obiekty.map((o) =>
+        o.rodzaj === 'straznica' && klucze.includes(o.klucz ?? '') ? { ...o, zebrany: true } : o
+      ),
+    };
+    const bryly = polaZajete(kopia);
+    const mozna = (x: number, y: number) =>
+      wGranicach(kopia, x, y) &&
+      TEREN_INFO[kopia.teren[y][x]].koszt !== null &&
+      !bryly.has(`${x},${y}`) &&
+      !zamknietaBrama(kopia, x, y);
+    const widziane = new Set([`${s.bohater.x},${s.bohater.y}`]);
+    const kolejka = [[s.bohater.x, s.bohater.y]];
+    while (kolejka.length) {
+      const [x, y] = kolejka.pop()!;
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx, ny = y + dy, k = `${nx},${ny}`;
+          if (!widziane.has(k) && mozna(nx, ny)) {
+            widziane.add(k);
+            kolejka.push([nx, ny]);
+          }
+        }
+    }
+    return widziane;
+  };
+  const doszlo = (widziane: Set<string>, o: { x: number; y: number }) =>
+    [-1, 0, 1].some((dx) => [-1, 0, 1].some((dy) => widziane.has(`${o.x + dx},${o.y + dy}`)));
+
+  const namiotZielony = s.obiekty.find((o) => o.rodzaj === 'namiot' && o.klucz === 'zielony')!;
+  const namiotNiebieski = s.obiekty.find((o) => o.rodzaj === 'namiot' && o.klucz === 'niebieski')!;
+  const zamekWroga = s.obiekty.find((o) => o.rodzaj === 'zamek' && !o.nasz)!;
+
+  const bezKluczy = osiagalneZ([]);
+  const zZielonym = osiagalneZ(['zielony']);
+  const zOboma = osiagalneZ(['zielony', 'niebieski']);
+
+  sprawdz('akt I: bez kluczy da się dojść do zielonego namiotu', doszlo(bezKluczy, namiotZielony), `${bezKluczy.size} pól`);
+  sprawdz('akt II: z zielonym kluczem da się dojść do niebieskiego namiotu', doszlo(zZielonym, namiotNiebieski), `${zZielonym.size} pól`);
+  sprawdz('akt III: z obydwoma da się dojść do zamku wroga', doszlo(zOboma, zamekWroga), `${zOboma.size} pól`);
+  sprawdz('bez kluczy zamek wroga jest NIEosiągalny', !doszlo(bezKluczy, zamekWroga));
+  sprawdz('każdy akt otwiera nowy kawałek mapy', bezKluczy.size < zZielonym.size && zZielonym.size < zOboma.size,
+    `${bezKluczy.size} → ${zZielonym.size} → ${zOboma.size}`);
 }
 
 console.log('\n=== ile mapy stoi otworem bez jednej bitwy ===');

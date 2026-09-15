@@ -22,6 +22,7 @@ import {
   statystyki,
   trasa,
   wezZeSkrzyni,
+  zamknietaBrama,
   zasiegNaTure,
   type Krok,
   type Obiekt,
@@ -206,6 +207,12 @@ export class AdventureScene extends Phaser.Scene {
       'skrzynia',
       'zamek-las',
       'zamek-ogien',
+      // Strażnice i namioty w obu barwach kluczy. Pliki robi
+      // `tools/klucze_przemaluj.py` z jednej dostawy — patrz tamten skrypt.
+      'straznica-zielony',
+      'straznica-niebieski',
+      'namiot-klucznika-zielony',
+      'namiot-klucznika-niebieski',
     ]) {
       this.load.image(`m-${n}`, `${b}mapa/${n}.png`);
     }
@@ -887,6 +894,18 @@ export class AdventureScene extends Phaser.Scene {
         klucz: o.surowiec === 'jagoda' ? 'm-sad' : `m-kopalnia-${o.surowiec ?? 'pokeball'}`,
         wys: KAFEL * (bryla ? 2.2 : 1.25),
       };
+    // Strażnica jest szeroka na trzy pola i wysoka na dwa — ma zamykać
+    // przejście także dla oka, nie tylko w zasadach gry. Namiot jest drobny:
+    // to obozowisko przy drodze, a nie budowla.
+    // Wysokość dobrana tak, żeby SZEROKOŚĆ wyszła na trzy pola: rysunek ma
+    // 222 × 190 px, więc przy trzech kafelkach szerokości wychodzi 2,57 kafla
+    // wysokości. Skalowanie po wysokości dawało bramę na dwa pola — wąską
+    // jak furtka i wyraźnie nie zamykającą drogi, choć w zasadach gry
+    // zamykała ją w całości.
+    if (o.rodzaj === 'straznica')
+      return { klucz: `m-straznica-${o.klucz ?? 'zielony'}`, wys: KAFEL * 2.57 };
+    if (o.rodzaj === 'namiot')
+      return { klucz: `m-namiot-klucznika-${o.klucz ?? 'zielony'}`, wys: KAFEL * 1.15 };
     if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: KAFEL * 0.78 };
     if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: KAFEL * 0.72 };
     if (o.rodzaj === 'potwor')
@@ -1737,8 +1756,27 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   private idz(kroki: Krok[]) {
-    const ile = zasiegNaTure(this.stan.bohater, kroki);
+    let ile = zasiegNaTure(this.stan.bohater, kroki);
     if (ile === 0) return;
+
+    // Pod zamkniętą strażnicę podchodzi się, a nie wchodzi na nią.
+    //
+    // Reszta obiektów leży NA drodze i bohater staje na ich polu. Brama jest
+    // murem: gdyby bohater na nią wszedł, stałby w środku muru, a po odmowie
+    // („nie masz klucza") zostałby tam na stałe. Zatrzymujemy więc marsz pole
+    // wcześniej i stamtąd próbujemy klucza — dokładnie tak, jak wygląda to
+    // w Heroes 3.
+    const ostatni = kroki[ile - 1];
+    const brama = ostatni ? zamknietaBrama(this.stan, ostatni.x, ostatni.y) : undefined;
+    if (brama) {
+      ile -= 1;
+      if (ile === 0) {
+        this.wejdzNa(brama);
+        this.odswiezWszystko();
+        return;
+      }
+    }
+
     this.zajety = true;
     this.warstwaTrasy.clear();
 
@@ -1761,6 +1799,10 @@ export class AdventureScene extends Phaser.Scene {
           this.zacznijBitwe(straz);
         } else if (o) {
           this.wejdzNa(o);
+        } else if (brama) {
+          // Marsz skrócony o pole: stoimy PRZED bramą i dopiero teraz próbujemy
+          // klucza.
+          this.wejdzNa(brama);
         }
         this.odswiezWszystko();
         return;

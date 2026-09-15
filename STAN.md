@@ -383,6 +383,55 @@ trzy razy na trzy. Dwaj niezależnie nazwali tę samą słabość (najdalszy pie
 nagradzał najsłabiej) i to ona poszła do poprawki. Zapis: `tools/blind/mapa-r2-*`,
 strona postępu: `tools/postep-mapa.html`.
 
+## Strażnica graniczna i klucz — mapa ma trzy akty
+
+Przejść przez grzbiety pilnują teraz STRAŻNICE, a nie stada potworów. Strażnicy
+nie da się pokonać: otwiera ją klucz z namiotu klucznika stojącego w innej
+części mapy. To zmienia pytanie mapy z „czy stać mnie na przełamanie straży" na
+„gdzie jest klucznik" — i dopiero z tym plansza M ma dwa pytania naraz zamiast
+jednego powtórzonego cztery razy.
+
+Barwy są dwie, nie cztery, i to jest kształt mapy, a nie oszczędność na
+grafikach: zielony klucz otwiera oba wyjazdy z doliny, niebieski oba wejścia do
+krainy wroga. Mapa dzieli się więc na trzy akty, a każdy otwiera nowy kawałek:
+
+| Akt | Co gracz ma | Ile planszy stoi otworem |
+|---|---|---|
+| I | nic | 900 pól — dolina |
+| II | zielony klucz | 1411 pól — plus pas sporny |
+| III | oba klucze | 2047 pól — cała mapa |
+
+Sprawdza to `probe-mapa.ts` (sekcja „trzy akty"), zasadami gry, a nie własnym
+modelem: namiot postawiony ZA bramą, którą sam otwiera, zamyka mapę na głucho
+i nie widać tego ani na obrazku, ani w kodzie. To samo liczy generator przy
+rozstawianiu — dwa niezależne sprawdzenia, bo cena pomyłki to plansza nie do
+przejścia.
+
+**Brama blokuje TRZY pola w swoim rzędzie, nie jedno.** `polaBryly` ma dla
+strażnicy osobny przypadek: mur to pola OBOK wejścia, a nie rząd nad nim jak
+u zamku i kopalni. Przejścia mają dwa pola szerokości, więc brama szeroka na
+trzy zamyka je w całości. Gdyby blokowała samo swoje pole, dałoby się ją minąć
+bokiem — dokładnie tak, jak dawało się minąć strażnika w przejściu szerokim na
+cztery pola.
+
+**Pod bramę się PODCHODZI, nie wchodzi się na nią.** Reszta obiektów leży na
+drodze i bohater staje na ich polu. Brama jest murem: bohater, który by na nią
+wszedł, stałby w środku muru, a po odmowie („nie masz klucza") zostałby tam na
+stałe — bo tu nie ma bitwy, po której pole robi się wolne. Marsz kończy się
+więc pole wcześniej (`idz` w `AdventureScene`).
+
+**Otwarcie bramy kasuje zapamiętane bryły.** `polaZajete` liczy się raz i jest
+trzymane w `s.bryly`, bo zamek i kopalnia z mapy nie znikają. Brama znika —
+i bez skasowania tego zbioru przejście stoi otworem na ekranie, a trasa dalej
+je omija. Sprawdza to `probe-brama.mjs`: „przejście staje otworem NATYCHMIAST".
+
+**Barwy kluczy robi `tools/klucze_przemaluj.py`**, z jednej dostawy grafiki.
+Chorągiew strażnicy i proporzec namiotu to jedyne elementy o odcieniu poniżej
+18° przy nasyceniu ponad 0,55 — drewno wrót leży obok na kole barw (24°), więc
+„przemaluj wszystko, co ciepłe" zrobiłoby z bramy zieloną budkę. Zmieniany jest
+sam odcień; jasność i nasycenie zostają, więc fałdy płótna i cień pod belką
+pozostają na miejscu.
+
 ## Znalezione przy planszy 72 × 72
 
 **Przejście szerokie na cztery pola nie jest przejściem.** Strażnik blokuje pas
