@@ -1160,6 +1160,14 @@ export class AdventureScene extends Phaser.Scene {
     this.malujMgle();
   }
 
+  /** Obiekty na nieodkrytych polach nie mają prawa być widoczne pod mgłą. */
+  private aktualizujWidocznoscObiektow() {
+    for (const o of this.stan.obiekty) {
+      const kont = this.ikonyObiektow[o.id];
+      if (kont) kont.setVisible(!!this.stan.odkryte[o.y][o.x]);
+    }
+  }
+
   private malujMgle() {
     const tekstura = this.textures.get('mgla') as Phaser.Textures.CanvasTexture;
     const ctx = tekstura.getContext();
@@ -1172,6 +1180,7 @@ export class AdventureScene extends Phaser.Scene {
       }
     }
     tekstura.refresh();
+    this.aktualizujWidocznoscObiektow();
   }
 
   // ---------- prawa kolumna ----------
