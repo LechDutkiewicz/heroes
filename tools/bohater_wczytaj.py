@@ -29,12 +29,23 @@ pikselu i sylwetki nie tyka.
 from collections import deque
 from pathlib import Path
 
+import sys
+
 import numpy as np
 from PIL import Image
 
 KORZEN = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(KORZEN / 'tools'))
+from wsad_wczytaj import bezChromy, jestChroma  # noqa: E402
+
 WSAD = KORZEN / 'tools' / 'wsad'
-CEL = KORZEN / 'public' / 'mapa' / 'bohater.png'
+CEL = KORZEN / 'public' / 'mapa'
+
+#: Postacie chodzące po mapie. Klucz to przedrostek plików we wsadzie,
+#: wartość — nazwa arkusza w grze. Trzy zamiast jednej, bo drugi trener
+#: i przeciwnik chodzą tym samym krokiem: gdyby każdy miał własny skrypt,
+#: poprawka animacji trafiałaby za każdym razem w jeden z trzech.
+POSTACIE = {'bohater': 'bohater', 'bohaterka': 'bohaterka', 'wrog': 'wrog'}
 
 #: Bok jednej klatki. Musi zgadzać się z `BOHATER_KLATKA` w `AdventureScene`.
 KLATKA = 96
@@ -84,7 +95,10 @@ def wczytaj(nazwa: str) -> Image.Image:
     im = Image.open(WSAD / f'{nazwa}.png')
     # Pliki bez kanału alfa mają tło do wycięcia; te z alfą model już wyciął.
     if im.mode != 'RGBA' or np.asarray(im.convert('RGBA'))[:, :, 3].min() == 255:
-        im = bezTla(im)
+        # Chromakey rozpoznajemy i zdejmujemy tym samym kodem, co reszta wsadu:
+        # dwie kopie tej funkcji rozjechałyby się po pierwszej poprawce progu.
+        tab = np.asarray(im.convert('RGBA'))
+        im = bezChromy(im) if jestChroma(tab) else bezTla(im)
     else:
         im = im.convert('RGBA')
     bbox = im.getbbox()
@@ -101,20 +115,24 @@ if __name__ == '__main__':
     #: że scena stawia sprite'a stopami na dolnej krawędzi klatki.
     wys = int(KLATKA * 0.86)
 
-    zrodla = {k: wczytaj(f'bohater-{k}') for k in ('dol', 'gora', 'prawo')}
-    zrodla['lewo'] = zrodla['prawo'].transpose(Image.FLIP_LEFT_RIGHT)
+    for przedrostek, nazwa in POSTACIE.items():
+        if not (WSAD / f'{przedrostek}-dol.png').exists():
+            print(f'  {przedrostek} — brak wsadu, pomijam')
+            continue
+        zrodla = {k: wczytaj(f'{przedrostek}-{k}') for k in ('dol', 'gora', 'prawo')}
+        zrodla['lewo'] = zrodla['prawo'].transpose(Image.FLIP_LEFT_RIGHT)
 
-    arkusz = Image.new('RGBA', (KLATKA * 4, KLATKA * len(WIERSZE)), (0, 0, 0, 0))
-    for r, kierunek in enumerate(WIERSZE):
-        podstawa = poza(zrodla[kierunek], wys)
-        for k in range(4):
-            skala = UGIECIE[k]
-            szer = max(1, round(podstawa.width / skala))
-            wysK = max(1, round(podstawa.height * skala))
-            klatka = podstawa.resize((szer, wysK), Image.LANCZOS)
-            x = k * KLATKA + (KLATKA - klatka.width) // 2
-            # Stopy na dolnej krawędzi klatki, minus podskok.
-            y = (r + 1) * KLATKA - klatka.height - 2 + PODSKOK[k]
-            arkusz.alpha_composite(klatka, (x, y))
-    arkusz.save(CEL)
-    print(f'  bohater.png  {arkusz.width} × {arkusz.height}  (4 × {len(WIERSZE)} klatek)')
+        arkusz = Image.new('RGBA', (KLATKA * 4, KLATKA * len(WIERSZE)), (0, 0, 0, 0))
+        for r, kierunek in enumerate(WIERSZE):
+            podstawa = poza(zrodla[kierunek], wys)
+            for k in range(4):
+                skala = UGIECIE[k]
+                szer = max(1, round(podstawa.width / skala))
+                wysK = max(1, round(podstawa.height * skala))
+                klatka = podstawa.resize((szer, wysK), Image.LANCZOS)
+                x = k * KLATKA + (KLATKA - klatka.width) // 2
+                # Stopy na dolnej krawędzi klatki, minus podskok.
+                y = (r + 1) * KLATKA - klatka.height - 2 + PODSKOK[k]
+                arkusz.alpha_composite(klatka, (x, y))
+        arkusz.save(CEL / f'{nazwa}.png')
+        print(f'  {nazwa}.png  {arkusz.width} × {arkusz.height}  (4 × {len(WIERSZE)} klatek)')
