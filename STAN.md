@@ -432,6 +432,32 @@ Chorągiew strażnicy i proporzec namiotu to jedyne elementy o odcieniu poniżej
 sam odcień; jasność i nasycenie zostają, więc fałdy płótna i cień pod belką
 pozostają na miejscu.
 
+## Chata jasnowidza — jedyny obiekt, który każe wrócić
+
+„Przynieś dwanaście kamieni ewolucji, dostaniesz relikt." Pierwsza wizyta
+prawie zawsze kończy się na wiadomości, czego brakuje, i o to chodzi: to
+jedyny obiekt w grze, który każe wrócić w to samo miejsce po raz drugi.
+
+Prosi o KAMIENIE i to jest wybór, nie przypadek. Kamień ewolucji był jedynym
+surowcem bez zastosowania — wypadł z kosztów budynków przy porządkowaniu
+ekonomii, a ulepszeń oddziałów jeszcze nie ma. Chata daje mu pierwsze
+zastosowanie i przy okazji powód, żeby zbierać stosy leżące za grzbietem.
+Chaty są dwie: w pasie spornym za sześć kamieni (artefakt klasy znacznej)
+i w krainie wroga za dwanaście (relikt).
+
+`probe-mapa.ts` sprawdza, czy żądany surowiec DA SIĘ zdobyć po tej stronie
+mapy, po której stoi chata — inaczej zadanie nie jest zagadką, tylko ślepym
+zaułkiem. Mechanikę (pierwsza wizyta nic nie zabiera, druga płaci raz)
+sprawdza `probe-budowle.ts`.
+
+**Budowle z bryłą dostają miejsce na mur.** `polaBryly` pomija pole muru
+stykające się z cudzym wejściem, żeby budowla nie zamurowała sąsiadowi drzwi —
+przy obiekcie co siedem pól ta reguła zjadała prawie wszystkie mury: z piętnastu
+budowli wielopolowych mur miały cztery, a reszta była rysowana na trzy pola
+i blokowała jedno. Generator stawia je teraz z zapasem, a na ciasno godzi się
+dopiero, gdy miejsca zabraknie: 13 z 15. Kuszące było rozluźnienie progu
+w sondzie — właściwą naprawą było rozstawienie.
+
 ## Dziewięć rodzajów terenu, każdy o innym koszcie
 
 Do trawy, ścieżki i piasku doszły trzy tereny z drugiej dostawy grafik:

@@ -248,6 +248,29 @@ console.log('\n=== drobiazgi jednorazowe ===');
   sprawdz('drugi raz tego samego dnia — nic', s.skarbiec[w.surowiec!] === po[w.surowiec!]);
 }
 
+console.log('\n=== chata jasnowidza: przynieś i wróć ===');
+{
+  const s = swiat();
+  const chata = s.obiekty.find((o) => o.rodzaj === 'jasnowidz')!;
+  sprawdz('chata stoi na mapie i ma zadanie', !!chata?.zadanie, `${chata?.zadanie?.ile} × ${chata?.zadanie?.surowiec}`);
+  const potrzeba = chata.zadanie!;
+  // Pierwsza wizyta z pustą sakwą: ma powiedzieć, czego chce, i NIC nie wziąć.
+  s.skarbiec[potrzeba.surowiec] = 0;
+  const pierwsza = odwiedz(s, chata);
+  sprawdz('bez surowca nic nie zabiera', s.skarbiec[potrzeba.surowiec] === 0 && !chata.spelnione);
+  sprawdz('mówi, ile potrzebuje', pierwsza.opis.includes(String(potrzeba.ile)), pierwsza.opis.split('\n')[0]);
+  // Druga wizyta, już z surowcem: zamiana na artefakt.
+  s.skarbiec[potrzeba.surowiec] = potrzeba.ile + 3;
+  const artefaktowPrzed = s.bohater.artefakty.length;
+  odwiedz(s, chata);
+  sprawdz('zabiera dokładnie tyle, ile prosiła', s.skarbiec[potrzeba.surowiec] === 3, `zostało ${s.skarbiec[potrzeba.surowiec]}`);
+  sprawdz('daje artefakt', s.bohater.artefakty.length === artefaktowPrzed + 1);
+  // Trzecia: nagroda tylko raz.
+  s.skarbiec[potrzeba.surowiec] = potrzeba.ile + 3;
+  odwiedz(s, chata);
+  sprawdz('drugi raz już nie płaci', s.bohater.artefakty.length === artefaktowPrzed + 1 && s.skarbiec[potrzeba.surowiec] === potrzeba.ile + 3);
+}
+
 console.log('\n=== bryły i dostępność ===');
 {
   const s = swiat();
@@ -266,13 +289,18 @@ console.log('\n=== bryły i dostępność ===');
   // miała WIĘKSZOŚĆ, bo inaczej znaczyłoby to, że bryły przestały działać.
   const zBryla = s.obiekty.filter((o) => o.rodzaj === 'budynek' && brylaObiektu(o));
   const zMurem = zBryla.filter((o) => polaBryly(s, o).length > 0);
-  // Próg to jedna trzecia, nie większość: przy planszy w jednej trzeciej
-  // zalesionej i obiekcie co osiem pól przycięcie muru jest normą, a nie
-  // wyjątkiem. Pilnujemy tego, o co chodzi — czy bryły w ogóle działają —
-  // a nie tego, ile akurat wypadło przy tym rozstawieniu.
+  // Próg to dwie trzecie. Pojedyncze przycięcie jest w porządku — `polaBryly`
+  // celowo pomija pole muru stykające się z cudzym wejściem, żeby budowla nie
+  // zamurowała sąsiadowi drzwi — ale budowla rysowana na trzy pola i blokująca
+  // jedno wygląda jak budynek, przez który da się przejść.
+  //
+  // Przy pierwszym podejściu wychodziło 4 z 15 i kuszące było rozluźnienie
+  // progu. Właściwą naprawą było rozstawienie: generator stawia teraz budowle
+  // z bryłą z zapasem miejsca na mur, a dopiero gdy miejsca zabraknie, godzi
+  // się na ciasno (`tools/generuj_mape.py`, dwa podejścia w `dodaj`).
   sprawdz(
     'budowle wielopolowe mają nieprzejezdne mury',
-    zMurem.length * 3 >= zBryla.length,
+    zMurem.length * 3 >= zBryla.length * 2,
     `${zMurem.length} z ${zBryla.length}`
   );
 }

@@ -331,6 +331,30 @@ console.log('\n=== gęstość obiektów jak na mapie M z Heroes 3 ===');
   sprawdz('obiekt co 4–20 pól przejezdnych (jak na mapach M z Heroes 3)', naObiekt >= 4 && naObiekt <= 20, `co ${naObiekt.toFixed(1)}`);
 }
 
+console.log('\n=== chata jasnowidza ma z czego zapłacić ===');
+// Zadanie „przynieś X" jest zadaniem tylko wtedy, gdy X naprawdę leży po tej
+// stronie mapy, po której stoi chata. Inaczej to nie zagadka, tylko ślepy
+// zaułek: gracz dowiaduje się, czego chce jasnowidz, i nie ma gdzie tego wziąć.
+{
+  const pasY = (y: number) => (y < 21 ? 0 : y <= 46 ? 1 : 2);
+  for (const chata of s.obiekty.filter((o) => o.rodzaj === 'jasnowidz')) {
+    const co = chata.zadanie!.surowiec;
+    const trzeba = chata.zadanie!.ile;
+    // „Bliżej" znaczy: w tym samym pasie albo po stronie gracza (pas o wyższym
+    // numerze), bo do chaty idzie się właśnie stamtąd.
+    const dostepne = s.obiekty.filter((o) => pasY(o.y) >= pasY(chata.y));
+    const kopalnie = dostepne.filter((o) => o.rodzaj === 'kopalnia' && o.surowiec === co).length;
+    const zeStosow = dostepne
+      .filter((o) => o.rodzaj === 'surowiec' && o.surowiec === co)
+      .reduce((a, o) => a + (o.ile ?? 0), 0);
+    sprawdz(
+      `chata (${chata.x},${chata.y}) prosi o ${trzeba} × ${co} i jest skąd to wziąć`,
+      kopalnie > 0 || zeStosow >= trzeba,
+      `${kopalnie} kopalń + ${zeStosow} ze stosów`
+    );
+  }
+}
+
 console.log('\n=== gospodarka jest po stronie gracza ===');
 // Pierwsza połowa gry to rozbudowa w bezpiecznym pasie. Jeżeli kopalnie
 // rozejdą się po całej planszy, mapa traci podział i staje się przechadzką.

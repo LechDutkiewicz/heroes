@@ -1,69 +1,118 @@
 # Następny krok — notatka przekazania
 
-Stan na koniec sesji „Budynki na mapie przygody". Gałąź:
-`claude/adventure-map-buildings-tv8cuc`.
+Stan na koniec sesji „Mapa 72 × 72 Dwie Doliny". Gałąź:
+`claude/charming-clarke-cfmev2`, wdrożona też na Pages z
+`claude/pokemon-heroes-3-game-57m7wm`.
 
-Ten plik mówi tylko, co robić DALEJ. Co jest zrobione i dlaczego — `STAN.md`;
+Ten plik mówi, co robić DALEJ. Co jest zrobione i dlaczego — `STAN.md`;
 droga od obrazka z modelu do gry — `tools/PRZEBIEG.md`.
 
 ## Zrobione w tej sesji
 
-- Czternaście budowli odwiedzanych i cztery kopalnie na mapie (`BUDOWLE`
-  w `src/data/mapa.ts`, rozstawienie w `tools/generuj_mape.py`, sprawdza
-  `npx tsx tools/probe-budowle.ts`).
-- Trzy usterki tła w potoku wsadu: namalowana szachownica, woal z pikseli
-  o alfie 1–15, brudny kontur po zmniejszaniu. Wszystkie w `wsad_wczytaj.py`,
-  z ostrzeżeniem `ostrzezOTle`, gdyby wróciły.
-- Prompty na drugą dostawę grafik (`tools/PROMPTY-MAPA-2.md`) i generator
-  czytający je wprost z markdownu (`tools/generuj_grafiki.py`).
+- **Plansza 72 × 72 („Dwie Doliny", rozmiar M)** zamiast 36 × 36: trzy pasy
+  rozdzielone dwoma grzbietami, po dwa wąskie przejścia w każdym.
+  Generator: `tools/generuj_mape.py`.
+- **Poprzeczka z prawdziwych plików.** Pięć oficjalnych map 72 × 72 na dwóch
+  graczy, pobranych jako `.h3m` i policzonych tym samym profilem co nasza
+  (`tools/profil-wzorca.py`, `tools/profil-mapy.py`). Cztery ślepe porównania,
+  cztery wygrane — zapis w `tools/blind/`, strona: `tools/postep-mapa.html`.
+- **Strażnice graniczne i klucze** — mapa ma trzy akty (880 → 1338 → 2150 pól).
+- **Trzy nowe tereny**: bagno 175, śnieg 150, ziemia jałowa 125 punktów ruchu.
+- **Chata jasnowidza** — „przynieś kamienie, dostaniesz artefakt".
 
-## Pierwsza rzecz do zrobienia: jeden obrazek, nie dwadzieścia trzy
+## Pierwsza rzecz do zrobienia: PRZECIWNIK, KTÓRY GRA
 
-Klucz `GEMINI_API_KEY` siedzi w zmiennych środowiska (sesja czyta je przy
-starcie, więc musi być NOWA sesja). Kolejność:
+To jedyna pozycja z listy braków, która zmienia grę, a nie planszę. Dziś zamek
+wroga stoi i czeka: mapa ma tempo wyścigu z samym sobą.
 
-```bash
-python3 tools/generuj_grafiki.py --modele          # do czego klucz ma dostęp
-python3 tools/generuj_grafiki.py --lista           # 40 zadań, 17 gotowych
-python3 tools/generuj_grafiki.py straznica.png     # najtrudniejszy przypadek
-python3 tools/wsad_wczytaj.py                      # do public/mapa
-```
+**Rób to w OSOBNEJ sesji.** To inna warstwa niż mapa — pętla tury, a nie dane
+planszy — i ma własną poprzeczkę. Mieszanie obu w jednej gałęzi daje commity,
+w których nie widać, co zepsuło co, a w tym projekcie połowa usterek wychodzi
+dopiero z pomiaru.
 
-Strażnica jest pierwsza celowo: musi mieć duże, jednolite pole barwy na
-chorągwi, bo trzy kolory kluczy robimy przemalowaniem w `frakcje_przemaluj.py`,
-a nie trzema dostawami. Jeśli model tego nie odda, poprawiamy prompt
-w dokumencie, a nie w skrypcie.
+### Poprzeczka: dwie liczby, nie opis zachowania
 
-Obejrzeć wynik na trawie, nie na białym tle — biel ukrywa dokładnie te dwie
-usterki, które kosztowały nas commit naprawczy. Zrzut z gry robi
-`node tools/zrzut-mapa.mjs` przy chodzącym `npm run preview`.
+„Dobry przeciwnik" jest nieweryfikowalne. Weryfikowalne jest to:
 
-Dopiero gdy strażnica wygląda dobrze: `--wszystko`.
+1. gra, w której gracz **nic nie robi przez czterdzieści dni, ma być
+   PRZEGRANA**;
+2. gracz grający normalnie **nie ma być zmieciony przed mniej więcej
+   dwudziestym piątym dniem**.
 
-## Co da się robić BEZ jednego obrazka
+Obie liczby mierzy się bez grafiki, symulacją dnia po dniu — tak jak
+`tools/balance.ts` rozgrywa setki bitew bez przeglądarki.
 
-Z notatki buildera mapy (całość w `tools/PROMPTY-MAPA-2.md`, sekcja „Czego
-z tej listy NIE trzeba rysować"):
+### Czego NIE pisać drugi raz
 
-- **Efekty reliktów** — dziś wszystkie artefakty dają płaski dodatek do
-  statystyki i rysują się jednym kamieniem ewolucji. Relikt ma zmieniać grę;
-  to `ARTEFAKTY` i `statystyki` w `src/data/mapa.ts` plus sonda.
-- **Koszty ruchu nowych terenów** — trzy liczby w `zasady-h3.ts`. Czekają
-  wyłącznie na tekstury, bo bez nich nie ma czego postawić na planszy.
-- **Mechanika strażnicy i klucza** — nowy rodzaj obiektu, który nie jest
-  bitwą: przejścia otwiera posiadanie klucza z namiotu. To jest ten punkt
-  z notatki, który zmienia pytanie mapy z „czy mam armię" na „gdzie jest
-  klucz".
-- **Przeciwnik, który gra** — ruch po trasie, zajmowanie kopalń, rekrutacja
-  w swoim zamku. Sprite'u potrzebuje dopiero wtedy, gdy ma być widoczny.
+- **Szukania trasy.** `trasa()` w `src/data/mapa.ts` zna strefę kontroli
+  potworów, bryły budowli i zamknięte strażnice. Własny pathfinder przeciwnika
+  rozjedzie się z regułami gracza i będzie to widać jako „wróg przeszedł przez
+  bramę".
+- **Modelu walki.** Jest `src/data/battle.ts` i `rozstrzygnijNatychmiast`
+  w scenie bitwy.
+- **Rekrutacji i rozbudowy.** `src/data/zamki.ts`: `moznaBudowac`, `stacNas`,
+  `zaplac`, `przyrostZamku`. Zamek wroga ma już `postawione` i `dostepne`.
+
+### Cztery decyzje do podjęcia na starcie
+
+1. **Własność obiektów to dziś wartość logiczna `nasz`** — kopalnia jest albo
+   nasza, albo niczyja. Nie ma miejsca na „wroga". Przebudowa dotknie
+   `dochod()`, chorągiewek w scenie i sond ekonomii. Lepiej zrobić to
+   świadomie na początku niż doklejać `nasz2`.
+2. **Strażnice blokują KAŻDEGO.** Albo przeciwnik dostaje swoje klucze od
+   pierwszego dnia (wychodzi z krainy i naciska), albo bramy trzymają go
+   u siebie, dopóki gracz ich nie otworzy (jest rosnącym zagrożeniem, nie
+   rywalem w wyścigu). Jedno i drugie da się obronić, ale to zmienia tempo
+   całej mapy.
+3. **Bez wszechwiedzy.** Przeciwnik widzący całą planszę i zawsze idący po
+   najlepszy łup czyta się jak oszustwo. Minimum: zna swoją krainę, resztę
+   odkrywa. I niech nie wchodzi w straż, której nie pokona — jeden samobójczy
+   atak na wodza kasuje mu armię i mapa przestaje mieć przeciwnika.
+4. **Losowanie z ziarna, nie `Math.random`.** Mapa i bitwy już tak mają, dzięki
+   czemu `?seed=` odtwarza rozgrywkę. To się przyda dokładnie wtedy, gdy
+   przyjdzie zgłoszenie „wróg zrobił coś dziwnego".
+
+### Wydajność
+
+Przy trzystu obiektach i planszy 72 × 72 `trasa()` sortuje kolejkę tablicowo.
+Liczenie pełnych ścieżek do każdego celu co turę będzie wolne: do WYBORU celu
+wystarczy tanie przeszukiwanie wszerz, pełną trasę licz dopiero dla wybranego.
+
+### Co mapa już dla niego przygotowała
+
+- Kraina wroga: jedenaście kopalń, rozbudowany zamek z garnizonem, relikty
+  i najsilniejsze straże.
+- Sprite przeciwnika: `public/mapa/wrog.png` (trzy kierunki, z drugiej dostawy).
+- Druga postać gracza: `public/mapa/bohaterka.png`, gdyby przy okazji robić
+  drugiego bohatera.
+
+## Co jeszcze czeka, w kolejności wartości
+
+- **Więzienie z bohaterem** (`public/mapa/wiezienie.png` gotowe). Drugi bohater
+  to drugi kierunek naraz — jedyny powód, dla którego mapa M nie nudzi się
+  w trzecim tygodniu.
+- **Efekty reliktów.** Cztery grafiki są (`relikt-kompas`, `relikt-pas`,
+  `relikt-rog`, `relikt-skrzydla`), ale wszystkie artefakty dają dziś płaski
+  dodatek do statystyki i rysują się jednym kamieniem ewolucji. Relikt ma
+  zmieniać grę.
+- **Ulepszenia siedlisk** (`bor-siedlisko4u/5u/6u` gotowe). Kamień ewolucji ma
+  wreszcie pierwsze zastosowanie w chacie jasnowidza, ale docelowo idzie właśnie
+  tu.
+- **Pionowy wariant strażnicy.** Wszystkie cztery przejścia tej mapy biegną
+  z północy na południe, więc używany jest tylko wariant poziomy. Przy mapie
+  z przejściem wschód–zachód będzie potrzebny drugi rysunek.
 
 ## Czego nie robić
 
-- Nie instalować pluginów w sesji webowej — `/plugin` tam nie działa,
-  dlatego powstał własny generator zamiast skilla `banana-claude`.
-- Nie puszczać `--wszystko` przed obejrzeniem pierwszego obrazka. Każde
-  wywołanie kosztuje, a zły prompt kosztuje dwadzieścia trzy razy.
-- Nie zapisywać niczego wprost do `public/` — źródłem jest `tools/wsad/`,
-  resztę robi `wsad_wczytaj.py`, który da się puścić od nowa.
-- Nie ruszać rozmieszczania lasu i skał (`tools/kepy.py`) ani sprite'ów
-  stworków — to one wyznaczają styl.
+- Nie przełączać domyślnego ekranu na mapę „przy okazji". Wszystkie sondy
+  wchodzą na „/" i czekają na scenę `battle`; mapa siedzi pod `?ekran=mapa`.
+  To osobna zmiana, razem z poprawką adresów w `capture.mjs`, `smoke.mjs`
+  i sondach.
+- Nie stawiać obiektów ręcznie w `plansza-teren.ts` — to plik GENEROWANY.
+  Wszystko idzie przez `tools/generuj_mape.py`, który sprawdza spójność mapy
+  po każdym postawieniu.
+- Nie zmieniać progów w sondach, żeby przeszły. Trzy razy w tej sesji zły
+  POMIAR udawał złą pracę: sonda szukała pola za bramą na sztywno i trafiła
+  w las, druga usuwała potwory i przez to widziała mury, których nie ma,
+  trzecia wymagała murów u większości budowli. Za każdym razem naprawą było
+  poprawienie pomiaru i opisanie dlaczego — nie rozluźnienie progu.

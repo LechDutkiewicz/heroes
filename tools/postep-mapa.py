@@ -128,13 +128,25 @@ RUNDY = [
                    'kopalnie. Po poprawce: 34%. Dziewięć rodzajów terenu — tyle, ile ma mapa '
                    'oryginalna.',
     },
+    {
+        'nr': 8,
+        'tytul': 'Chata jasnowidza',
+        'wynik': 'poprawka',
+        'co': '„Przynieś kamienie, dostaniesz artefakt” — dwie chaty, jedna w pasie spornym '
+              'za sześć kamieni, druga w krainie wroga za dwanaście. Kamień ewolucji dostał '
+              'pierwsze zastosowanie.',
+        'luka': 'Budowle z bryłą stały tak ciasno, że gra przycinała im mury: z piętnastu '
+                'wielopolowych mur miały cztery, a reszta była rysowana na trzy pola '
+                'i blokowała jedno.',
+        'naprawa': 'Generator stawia je z zapasem miejsca na mur, a na ciasno godzi się dopiero '
+                   'wtedy, gdy miejsca zabraknie: 13 z 15. Próg w sondzie został ZAOSTRZONY, '
+                   'nie rozluźniony.',
+    },
 ]
 
 BRAKI = [
     ('Więzienie z bohaterem', 'Drugi bohater to drugi kierunek naraz — jedyny powód, dla którego '
      'mapa M nie nudzi się w trzecim tygodniu.'),
-    ('Chata jasnowidza', '„Przynieś X, dostaniesz Y” — jedyny obiekt, który każe wrócić w to samo '
-     'miejsce po raz drugi.'),
     ('Artefakty klasy relikt z realnym efektem', 'Pas sporny i kraina wroga potrzebują nagród, '
      'które zmieniają grę, a nie tylko dokładają statystykę.'),
     ('Przeciwnik, który gra', 'Zamek wroga stoi i czeka. Dopóki nikt nim nie rusza, mapa ma tempo '

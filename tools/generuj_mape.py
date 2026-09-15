@@ -613,35 +613,70 @@ def rozstaw(mapa, kroki, rng):
                 raise SystemExit(f'Brak miejsca na obiekt: {ktora} {zakres}. Popraw SZKIC.')
             pole = None
             wpis = None
-            for _ in range(min(25, len(wolne))):
-                kandydat = rng.choice(wolne)
-                proba = buduj(kandydat)
-                zajmowane = [kandydat] + pola_bryly(proba[0], proba[1], kandydat)
-                widziane = dostepnych(zajmowane)
-                if len(widziane) < stan_dostepnych[0] - len(zajmowane):
-                    continue
-                # Do KAŻDEGO obiektu — także tych postawionych wcześniej — musi
-                # dać się podejść. Sama spójność mapy nie wystarcza: nowy obiekt
-                # potrafi zamurować ostatnie wolne pole przy cudzym wejściu,
-                # a wtedy plansza jest spójna, tylko kopalni nie da się zająć.
-                def dojdzie(pole_o):
-                    return any(
-                        (pole_o[0] + dx, pole_o[1] + dy) in widziane
-                        for dy in (-1, 0, 1)
-                        for dx in (-1, 0, 1)
-                        if (dx or dy)
-                    )
-                if not dojdzie(kandydat):
-                    continue
-                if not all(dojdzie(p) for p, co in obiekty if co[0] != 'potwor'):
-                    continue
-                stan_dostepnych[0] = len(widziane)
-                pole, wpis = kandydat, proba
-                blokada.update(zajmowane)
-                break
+            # Dwa podejścia. W pierwszym budowla z bryłą musi dostać miejsce na
+            # mur; w drugim ten warunek odpada, bo lepszy przycięty mur niż
+            # plansza, która się nie wygenerowała. Przy gęstości mapy M miejsca
+            # z zapasem po prostu się kończą.
+            for wymagaj_muru in (True, False):
+                for _ in range(min(40, len(wolne))):
+                    kandydat = rng.choice(wolne)
+                    proba = buduj(kandydat)
+                    zajmowane = [kandydat] + pola_bryly(proba[0], proba[1], kandydat)
+                    widziane = dostepnych(zajmowane)
+                    if len(widziane) < stan_dostepnych[0] - len(zajmowane):
+                        continue
+
+                    # Do KAŻDEGO obiektu — także tych postawionych wcześniej —
+                    # musi dać się podejść. Sama spójność mapy nie wystarcza:
+                    # nowy obiekt potrafi zamurować ostatnie wolne pole przy
+                    # cudzym wejściu, a wtedy plansza jest spójna, tylko
+                    # kopalni nie da się zająć.
+                    def dojdzie(pole_o, widziane=widziane):
+                        return any(
+                            (pole_o[0] + dx, pole_o[1] + dy) in widziane
+                            for dy in (-1, 0, 1)
+                            for dx in (-1, 0, 1)
+                            if (dx or dy)
+                        )
+
+                    if not dojdzie(kandydat):
+                        continue
+                    if not all(dojdzie(p) for p, co in obiekty if co[0] != 'potwor'):
+                        continue
+                    # Budowla z bryłą potrzebuje miejsca na MUR.
+                    #
+                    # `polaBryly` w grze pomija pole muru, które styka się
+                    # bokiem z cudzym wejściem — inaczej budowla zamurowałaby
+                    # sąsiadowi drzwi. Przy obiekcie co siedem pól ta reguła
+                    # zjadała prawie wszystkie mury: z piętnastu budowli
+                    # wielopolowych mur miały cztery, a pozostałe jedenaście
+                    # było rysowanych na trzy pola i blokowało jedno. Wygląda
+                    # to jak budynek, przez który da się przejść.
+                    if (
+                        wymagaj_muru
+                        and len(zajmowane) > 1
+                        and any(
+                            abs(bx - ox) + abs(by - oy) <= 1
+                            for bx, by in zajmowane[1:]
+                            for (ox, oy), _ in obiekty
+                        )
+                    ):
+                        continue
+                    stan_dostepnych[0] = len(widziane)
+                    pole, wpis = kandydat, proba
+                    blokada.update(zajmowane)
+                    break
+                if pole is not None:
+                    break
             if pole is None:
                 raise SystemExit(f'Każde miejsce w strefie {ktora} zatyka drogę. Popraw SZKIC.')
             zajete.append(pole)
+            # Pola muru i ich sąsiedztwo są odtąd zajęte: postawienie tam
+            # czegokolwiek skasowałoby ten mur (patrz wyżej).
+            for bx, by in pola_bryly(wpis[0], wpis[1], pole):
+                zajete.append((bx, by))
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    zajete.append((bx + dx, by + dy))
             obiekty.append((pole, wpis))
             pola.append(pole)
         return pola
@@ -759,6 +794,12 @@ def rozstaw(mapa, kroki, rng):
     # obchodziłaby strażników przełęczy i unieważniała cały układ mapy.
     dodaj(2, 'pogranicze', (0, 999), lambda p: ('budynek', 'portal'))
 
+    # CHATA JASNOWIDZA — jedyny obiekt, który każe wrócić w to samo miejsce
+    # po raz drugi: pierwsza wizyta mówi, czego chce, druga zamienia to na
+    # artefakt. Stoi przy głównym szlaku, żeby gracz trafił na nią wcześnie
+    # i wiedział, po co zbiera kamienie.
+    dodaj(1, 'pogranicze', (0, 999), lambda p: ('jasnowidz', None))
+
     # NAMIOT KLUCZNIKA — niebieski, w pasie spornym. Ten sam warunek co wyżej:
     # leży PRZED bramami, które otwiera. Drugi akt mapy zaczyna się więc od
     # przeszukania pasa spornego, a nie od szturmu na przełęcz.
@@ -783,6 +824,8 @@ def rozstaw(mapa, kroki, rng):
         'zrodlo', 'chatka',
     ])
     dodaj(2, 'wroga', (0, 999), lambda p: ('budynek', 'portal'))
+    # Druga chata, w krainie wroga: droższa i płaci reliktem.
+    dodaj(1, 'wroga', (0, 999), lambda p: ('jasnowidz', None))
 
     # --- SKARBIEC KRAŃCA MAPY ----------------------------------------------
     # Najdalsza ćwiartka dostaje osobną porcję nagród, i to jest poprawka po
@@ -1003,6 +1046,8 @@ for wpis in obiekty:
         pola.append(f"sila: '{co}'")
     elif rodzaj in ('straznica', 'namiot'):
         pola.append(f"klucz: '{co}'")
+    elif rodzaj == 'jasnowidz':
+        pass
     elif rodzaj == 'budynek':
         pola.append(f"budynek: '{co}'")
     elif co:

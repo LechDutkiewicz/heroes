@@ -265,6 +265,28 @@ export function planszaPrzygody(): StanMapy {
           ...zawartoscBudowli(wpis.budynek ?? '', wpis.strefa, losuj),
         });
       }
+    } else if (wpis.rodzaj === 'jasnowidz') {
+      // Zadanie i nagroda ustalane RAZ, przy składaniu planszy — tak samo jak
+      // zawartość skrzyni i z tego samego powodu: inaczej dałoby się wyjść
+      // i wejść ponownie, aż trafi się na tanie.
+      //
+      // Jasnowidz prosi o KAMIENIE EWOLUCJI i to jest wybór, nie przypadek:
+      // kamień jest jedynym surowcem, który nie ma dziś na co iść (wypadł
+      // z kosztów budynków, a ulepszeń oddziałów jeszcze nie ma). Chata daje
+      // mu pierwsze zastosowanie, a przy okazji powód, żeby zbierać stosy,
+      // które leżą po drugiej stronie grzbietu.
+      const wDalekiej = wpis.strefa === 'wroga';
+      const ile = wDalekiej ? 12 : 6;
+      const klasa = wDalekiej ? 'relikt' : 'znaczny';
+      const pula = ARTEFAKTY.filter((a) => a.klasa === klasa);
+      const a = pula[Math.floor(losuj() * pula.length)];
+      obiekty.push({
+        ...wspolne,
+        rodzaj: 'jasnowidz',
+        nazwa: 'Chata Jasnowidza',
+        zadanie: { surowiec: 'kamien', ile },
+        nagroda: { artefakt: a.id },
+      });
     } else if (wpis.rodzaj === 'straznica') {
       // Strażnica graniczna. Nazwa mówi wprost, jakiego klucza szukać —
       // dziecko ma wiedzieć, czego szuka, bez zaglądania w panel.

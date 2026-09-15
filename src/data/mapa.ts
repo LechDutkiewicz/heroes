@@ -110,7 +110,8 @@ export type RodzajObiektu =
   | 'artefakt'
   | 'budynek'
   | 'straznica'
-  | 'namiot';
+  | 'namiot'
+  | 'jasnowidz';
 
 /**
  * Klucze do strażnic granicznych.
@@ -380,6 +381,15 @@ export interface Obiekt {
   uzyteDnia?: number;
   /** Portal: numer bliźniaczego portalu, do którego przenosi. */
   para?: number;
+  /**
+   * Chata jasnowidza: czego żąda i co za to daje. Zadanie jest ustalane raz,
+   * przy składaniu planszy — inaczej dałoby się wyjść i wejść jeszcze raz,
+   * aż trafi się na tanie.
+   */
+  zadanie?: { surowiec: Surowiec; ile: number };
+  nagroda?: { artefakt?: string; doswiadczenie?: number };
+  /** Czy zadanie zostało już wykonane. */
+  spelnione?: boolean;
   /**
    * Strażnica graniczna i namiot klucznika: barwa klucza. Strażnica otwiera
    * się wyłącznie kluczem w SWOJEJ barwie; namiot tej samej barwy klucz daje.
@@ -1144,6 +1154,36 @@ export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
   if (o.rodzaj === 'budynek') return odwiedzBudowle(s, o);
 
   if (o.rodzaj === 'potwor') return { opis: `${o.nazwa} zagradza drogę!`, bitwaZ: o };
+
+  if (o.rodzaj === 'jasnowidz') {
+    const z = o.zadanie;
+    if (!z) return { opis: 'Chata jest pusta.' };
+    if (o.spelnione) {
+      return { opis: 'Jasnowidz już ci pomógł.\nNie ma dla ciebie nic więcej.' };
+    }
+    const mamy = s.skarbiec[z.surowiec];
+    if (mamy < z.ile) {
+      // Pierwsza wizyta prawie zawsze kończy się tutaj i o to chodzi: chata
+      // jasnowidza jest jedynym obiektem w grze, który każe WRÓCIĆ w to samo
+      // miejsce po raz drugi. Mówimy więc wprost, czego brakuje i ile.
+      return {
+        opis:
+          `Jasnowidz prosi o ${z.ile} ${SUROWIEC_INFO[z.surowiec].dopelniacz}.\n` +
+          `Masz ${mamy}. Wróć, gdy uzbierasz resztę.`,
+      };
+    }
+    s.skarbiec[z.surowiec] -= z.ile;
+    o.spelnione = true;
+    const a = artefaktPoId(o.nagroda?.artefakt ?? '');
+    if (a) s.bohater.artefakty.push(a.id);
+    const dosw = o.nagroda?.doswiadczenie ?? 0;
+    if (dosw) s.bohater.doswiadczenie += dosw;
+    return {
+      opis:
+        `Oddajesz ${z.ile} ${SUROWIEC_INFO[z.surowiec].dopelniacz}.\n` +
+        (a ? `Jasnowidz daje w zamian: ${a.nazwa}` : `Jasnowidz dzieli się wiedzą: +${dosw} doświadczenia`),
+    };
+  }
 
   if (o.rodzaj === 'namiot') {
     o.zebrany = true;

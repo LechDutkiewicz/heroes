@@ -213,6 +213,7 @@ export class AdventureScene extends Phaser.Scene {
       'straznica-niebieski',
       'namiot-klucznika-zielony',
       'namiot-klucznika-niebieski',
+      'chata-jasnowidza',
     ]) {
       this.load.image(`m-${n}`, `${b}mapa/${n}.png`);
     }
@@ -906,6 +907,7 @@ export class AdventureScene extends Phaser.Scene {
       return { klucz: `m-straznica-${o.klucz ?? 'zielony'}`, wys: KAFEL * 2.57 };
     if (o.rodzaj === 'namiot')
       return { klucz: `m-namiot-klucznika-${o.klucz ?? 'zielony'}`, wys: KAFEL * 1.15 };
+    if (o.rodzaj === 'jasnowidz') return { klucz: 'm-chata-jasnowidza', wys: KAFEL * 1.35 };
     if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: KAFEL * 0.78 };
     if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: KAFEL * 0.72 };
     if (o.rodzaj === 'potwor')
