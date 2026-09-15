@@ -149,7 +149,14 @@ def dostepnyModel() -> str:
     )
 
 
-def generuj(model: str, tresc: str) -> bytes:
+#: Cena tokenów obrazkowych na wyjściu, w dolarach za milion. Jedna liczba
+#: zamiast tabeli „tyle za obrazek": rozdzielczości i tabele w sieci chodzą
+#: parami, które się nie zgadzają, a rachunek idzie i tak z tokenów, więc
+#: mnożymy to, co API naprawdę policzyło.
+CENA_ZA_MILION = 120.0
+
+
+def generuj(model: str, tresc: str) -> tuple[bytes, int]:
     odp = zapytaj(
         f'models/{model}:generateContent',
         {
@@ -157,11 +164,13 @@ def generuj(model: str, tresc: str) -> bytes:
             'generationConfig': {'responseModalities': ['IMAGE']},
         },
     )
+    zuzycie = odp.get('usageMetadata', {})
+    tokeny = zuzycie.get('candidatesTokenCount') or zuzycie.get('totalTokenCount') or 0
     for kandydat in odp.get('candidates', []):
         for czesc in kandydat.get('content', {}).get('parts', []):
             dane = czesc.get('inlineData') or czesc.get('inline_data')
             if dane and 'data' in dane:
-                return base64.b64decode(dane['data'])
+                return base64.b64decode(dane['data']), int(tokeny)
     powod = json.dumps(odp)[:400]
     raise SystemExit(f'Odpowiedź bez obrazka:\n{powod}')
 
@@ -205,6 +214,7 @@ def main() -> None:
     model = args.model or dostepnyModel()
     print(f'model: {model}')
     WSAD.mkdir(parents=True, exist_ok=True)
+    razem = 0
     for nazwa in doZrobienia:
         cel = WSAD / nazwa
         if cel.exists() and not args.nadpisz:
@@ -212,9 +222,14 @@ def main() -> None:
             continue
         prompt, styl = zadania[nazwa]
         print(f'  {nazwa} … ', end='', flush=True)
-        cel.write_bytes(generuj(model, pelnyPrompt(style, prompt, styl)))
-        print(f'{cel.stat().st_size // 1024} kB')
+        obraz, tokeny = generuj(model, pelnyPrompt(style, prompt, styl))
+        cel.write_bytes(obraz)
+        razem += tokeny
+        koszt = tokeny * CENA_ZA_MILION / 1_000_000
+        print(f'{cel.stat().st_size // 1024} kB  ·  {tokeny} tok.  ·  ${koszt:.3f}')
 
+    if razem:
+        print(f'\nRazem: {razem} tokenów wyjścia ≈ ${razem * CENA_ZA_MILION / 1_000_000:.2f}')
     print('\nGotowe. Obejrzyj pliki w tools/wsad/, potem: python3 tools/wsad_wczytaj.py')
 
 

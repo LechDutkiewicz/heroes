@@ -497,6 +497,7 @@ BUDOWLE = {
     # przejście, a nie stać przy drodze. Mechaniki jeszcze nie ma — grafika
     # czeka na nią gotowa, przerobiona tym samym potokiem co reszta.
     'straznica': 190,
+    'namiot-klucznika': 150,
 }
 
 TERENY = ['teren-trawa', 'teren-sciezka', 'teren-piasek', 'teren-woda', 'teren-las', 'teren-skaly']
