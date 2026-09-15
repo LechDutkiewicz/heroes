@@ -48,7 +48,24 @@ console.log('\n=== tło zgodne z rysunkiem planszy ===');
 // jak usterka silnika, a nie jak zapomniane przegenerowanie.
 {
   const rysunek = s.teren
-    .map((w) => w.map((t) => ({ trawa: '.', sciezka: '=', piasek: ',', las: 'T', skaly: '#', woda: '~' })[t]).join(''))
+    .map((w) =>
+      w
+        .map(
+          (t) =>
+            ({
+              trawa: '.',
+              sciezka: '=',
+              piasek: ',',
+              jalowa: 'j',
+              snieg: 's',
+              bagno: 'b',
+              las: 'T',
+              skaly: '#',
+              woda: '~',
+            })[t]
+        )
+        .join('')
+    )
     .join('\n');
   const teraz = createHash('sha256').update(rysunek, 'utf8').digest('hex').slice(0, 16);
   let zapisany = '(brak pliku)';

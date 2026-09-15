@@ -103,17 +103,38 @@ RUNDY = [
                    'gry — poprzednia wersja usuwała najpierw potwory, przez co mury rosły '
                    'i sonda widziała blokady, których w grze nie ma.',
     },
+    {
+        'nr': 6,
+        'tytul': 'Strażnica graniczna i klucz',
+        'wynik': 'poprawka',
+        'co': 'Przejść pilnują strażnice, których nie da się pokonać — otwiera je klucz '
+              'z namiotu klucznika. Dwie barwy: zielona otwiera oba wyjazdy z doliny, '
+              'niebieska oba wejścia do krainy wroga.',
+        'luka': 'Mapa pytała tylko „czy stać mnie na przełamanie straży”, i to cztery razy '
+                'pod rząd.',
+        'naprawa': 'Trzy akty, każdy otwiera nowy kawałek planszy: 880 → 1338 → 2150 pól. '
+                   'Sprawdzają to dwa niezależne liczenia — generatora i sondy.',
+    },
+    {
+        'nr': 7,
+        'tytul': 'Trzy nowe tereny',
+        'wynik': 'poprawka',
+        'co': 'Bagno (175 punktów ruchu), śnieg (150) i ziemia jałowa (125) przy 100 za trawę '
+              'i 70 za drogę. Bagno wokół jeziora w pasie spornym, śnieg na rubieżach wroga, '
+              'jałowa na wschodzie przy bocznych przejściach.',
+        'luka': 'Po zagęszczeniu lasu straż postawiona w korytarzu zamykała wszystko za sobą: '
+                'bez jednej bitwy stało otworem 10% mapy zamiast trzydziestu kilku.',
+        'naprawa': 'Straż nie staje w szyjce, a w dolinie pilnowane są tylko artefakty i dwie '
+                   'kopalnie. Po poprawce: 34%. Dziewięć rodzajów terenu — tyle, ile ma mapa '
+                   'oryginalna.',
+    },
 ]
 
 BRAKI = [
-    ('Strażnica graniczna + namiot klucznika', 'Strażnicy nie pokonuje się, tylko OTWIERA — '
-     'po znalezieniu namiotu gdzie indziej na mapie. Zamienia „zbierz armię” w „poszukaj klucza”.'),
     ('Więzienie z bohaterem', 'Drugi bohater to drugi kierunek naraz — jedyny powód, dla którego '
      'mapa M nie nudzi się w trzecim tygodniu.'),
     ('Chata jasnowidza', '„Przynieś X, dostaniesz Y” — jedyny obiekt, który każe wrócić w to samo '
      'miejsce po raz drugi.'),
-    ('Bagno, śnieg, ziemia jałowa', 'Mamy sześć rodzajów terenu, wzorce mają po osiem na mapę. '
-     'Teren o innym koszcie ruchu to najtańszy sposób na to, żeby droga naprawdę była wyborem.'),
     ('Artefakty klasy relikt z realnym efektem', 'Pas sporny i kraina wroga potrzebują nagród, '
      'które zmieniają grę, a nie tylko dokładają statystykę.'),
     ('Przeciwnik, który gra', 'Zamek wroga stoi i czeka. Dopóki nikt nim nie rusza, mapa ma tempo '

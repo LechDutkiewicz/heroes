@@ -34,6 +34,9 @@ BARWY = {
     '.': (104, 152, 72),
     '=': (176, 148, 100),
     ',': (214, 196, 140),
+    'j': (168, 140, 104),
+    's': (226, 232, 240),
+    'b': (92, 108, 72),
     'T': (56, 104, 56),
     '#': (120, 116, 112),
     '~': (72, 112, 176),
@@ -52,6 +55,10 @@ BARWY_OBIEKTOW = {
 }
 
 SKALA = 6   # px na pole na schemacie
+
+#: Znaki terenu, po którym się chodzi. Las, skały i woda są w tej grze
+#: NIEPRZEJEZDNE, reszta różni się tylko kosztem ruchu.
+PRZEJEZDNE = '.,=jsb'
 
 
 def wczytaj():
@@ -81,7 +88,7 @@ def kroki_od(teren, skad):
         for dx in (-1, 0, 1):
             for dy in (-1, 0, 1):
                 nx, ny = x + dx, y + dy
-                if 0 <= nx < bok_x and 0 <= ny < bok_y and (nx, ny) not in odl and teren[ny][nx] in '.,=':
+                if 0 <= nx < bok_x and 0 <= ny < bok_y and (nx, ny) not in odl and teren[ny][nx] in PRZEJEZDNE:
                     odl[(nx, ny)] = odl[(x, y)] + 1
                     q.append((nx, ny))
     return odl
@@ -115,7 +122,7 @@ def bez_walki(teren, obiekty, start):
                     and 0 <= ny < bok_y
                     and (nx, ny) not in widziane
                     and (nx, ny) not in blok
-                    and teren[ny][nx] in '.,='
+                    and teren[ny][nx] in PRZEJEZDNE
                 ):
                     widziane.add((nx, ny))
                     q.append((nx, ny))
@@ -127,7 +134,7 @@ def profil():
     wys, szer = len(teren), len(teren[0])
     pola = wys * szer
     udzial = {z: sum(w.count(z) for w in teren) for z in BARWY}
-    przejezdne = udzial['.'] + udzial[','] + udzial['=']
+    przejezdne = sum(udzial[z] for z in PRZEJEZDNE)
 
     start = punkty['start']
     kroki = kroki_od(teren, start)

@@ -63,15 +63,30 @@ const start = await page.evaluate(() => {
 });
 sprawdz(`strażnica stoi na mapie (${start.nazwa})`, !!start.klucz, `klucz ${start.klucz}`);
 
+// Pole PO DRUGIEJ STRONIE bramy wybiera gra, a nie sonda.
+//
+// Pierwsza wersja brała na sztywno (x−1, y−1) i po dołożeniu bagna ze śniegiem
+// trafiła w las — sonda ogłosiła wtedy, że przejście nie otwiera się kluczem,
+// choć otwierało się normalnie. Szukamy więc najbliższego pola na północ od
+// bramy, na które w ogóle da się wejść.
 const przed = await page.evaluate((b) => {
   const s = window.__game.scene.getScene('adventure');
+  const wolne = [];
+  for (let dy = 1; dy <= 4 && wolne.length === 0; dy++)
+    for (let dx = -2; dx <= 2; dx++) {
+      const x = b.x + dx;
+      const y = b.y - dy;
+      if (!['skaly', 'woda', 'las'].includes(s.stan.teren[y]?.[x])) wolne.push({ x, y });
+    }
+  window.__zaBrama = wolne[0];
   return {
     naBrame: s.trasaDo(b.x, b.y)?.length ?? null,
-    zaBrame: s.trasaDo(b.x - 1, b.y - 1)?.length ?? null,
+    zaBrame: wolne[0] ? (s.trasaDo(wolne[0].x, wolne[0].y)?.length ?? null) : null,
+    pole: wolne[0],
   };
 }, start);
 sprawdz('do bramy prowadzi trasa (da się w nią kliknąć)', przed.naBrame !== null, `${przed.naBrame} pola`);
-sprawdz('ZA bramę trasy nie ma', przed.zaBrame === null);
+sprawdz('ZA bramę trasy nie ma', przed.zaBrame === null, `cel ${przed.pole?.x},${przed.pole?.y}`);
 
 await page.evaluate((b) => {
   const s = window.__game.scene.getScene('adventure');
@@ -109,7 +124,7 @@ const po = await page.evaluate((b) => {
   const brama = s.stan.obiekty.find((o) => o.rodzaj === 'straznica' && o.x === b.x && o.y === b.y);
   return {
     otwarta: !!brama.zebrany,
-    zaBrame: s.trasaDo(b.x - 1, b.y - 1)?.length ?? null,
+    zaBrame: s.trasaDo(window.__zaBrama.x, window.__zaBrama.y)?.length ?? null,
     zajety: s.zajety,
   };
 }, start);

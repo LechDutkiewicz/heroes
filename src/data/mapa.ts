@@ -68,14 +68,29 @@ export const SUROWIEC_INFO: Record<
 export type Skarbiec = Record<Surowiec, number>;
 
 /** Rodzaje pól. `koszt` to punkty ruchu za wejście; null znaczy nieprzejezdne. */
-export type Teren = 'trawa' | 'sciezka' | 'piasek' | 'las' | 'skaly' | 'woda';
+export type Teren =
+  | 'trawa'
+  | 'sciezka'
+  | 'piasek'
+  | 'jalowa'
+  | 'snieg'
+  | 'bagno'
+  | 'las'
+  | 'skaly'
+  | 'woda';
 
 export const TEREN_INFO: Record<Teren, { koszt: number | null; nazwa: string }> = {
   // Ścieżka tańsza od trawy — w Heroes 3 drogi są głównym powodem, dla
   // którego opłaca się nadkładać drogi, i to samo ma tu działać.
   sciezka: { koszt: 70, nazwa: 'Ścieżka' },
   trawa: { koszt: 100, nazwa: 'Trawa' },
+  // [H3] Koszty ruchu po terenie: trawa/ziemia 100, żwir i piach 125–150,
+  // bagno 175. To jest najtańszy sposób, żeby wybór drogi naprawdę coś
+  // kosztował: bagno przez środek mapy jest krótsze, a droga naokoło szybsza.
+  jalowa: { koszt: 125, nazwa: 'Ziemia jałowa' },
   piasek: { koszt: 125, nazwa: 'Piasek' },
+  snieg: { koszt: 150, nazwa: 'Śnieg' },
+  bagno: { koszt: 175, nazwa: 'Bagno' },
   las: { koszt: null, nazwa: 'Las' },
   skaly: { koszt: null, nazwa: 'Skały' },
   woda: { koszt: null, nazwa: 'Woda' },

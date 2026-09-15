@@ -64,6 +64,12 @@ NAD = 4
 # i głazów: ściółka pod drzewem ma inny kolor niż łąka i bez tego kępa lasu
 # wygląda jak drzewa postawione na trawniku.
 WARSTWY = [
+    # Kolejność jest kolejnością MALOWANIA: to, co niżej, przykrywa to, co
+    # wyżej. Nowe tereny idą przed lasem i skałami, bo drzewo rośnie NA bagnie
+    # i na śniegu, a nie odwrotnie.
+    ('bagno', 'b', 0.50, 0.30),
+    ('snieg', 's', 0.60, 0.26),
+    ('jalowa', 'j', 0.55, 0.32),
     ('las', 'T', 0.55, 0.30),
     ('skaly', '#', 0.45, 0.34),
     ('piasek', ',', 0.55, 0.34),

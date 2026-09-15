@@ -432,6 +432,32 @@ Chorągiew strażnicy i proporzec namiotu to jedyne elementy o odcieniu poniżej
 sam odcień; jasność i nasycenie zostają, więc fałdy płótna i cień pod belką
 pozostają na miejscu.
 
+## Dziewięć rodzajów terenu, każdy o innym koszcie
+
+Do trawy, ścieżki i piasku doszły trzy tereny z drugiej dostawy grafik:
+
+| Teren | Koszt ruchu | Gdzie |
+|---|---|---|
+| ścieżka | 70 | główny szlak przez oba grzbiety |
+| trawa | 100 | wszędzie |
+| ziemia jałowa | 125 | wschodnia rubież, przy bocznych przejściach |
+| piasek | 125 | boczne przejścia i południowy wschód |
+| śnieg | 150 | północne rubieże krainy wroga |
+| bagno | 175 | wokół jeziora w pasie spornym |
+
+To nie jest ozdoba: bagno leży dokładnie tam, gdzie kusi skrót przez środek
+pasa spornego, więc mapa pyta „naokoło drogą czy na przełaj?" — a to jest
+pytanie, którego plansza z jednym kosztem terenu nie umie zadać. Las, skały
+i woda zostają nieprzejezdne.
+
+Dwie pułapki wyszły dopiero przy wpuszczaniu ich na planszę. Wycinanie przejść
+przez grzbiet zamieniało tylko skałę i wodę, więc gdy rozmycie postawiło
+w przejściu LAS, brama lądowała na polu nieprzejezdnym — teraz wycinany jest
+każdy teren nie do przejścia. I druga: rozmycie potrafi zasypać lasem sam
+wylot przejścia, tuż za grzbietem; przełęcz prowadzi wtedy donikąd, a widać to
+dopiero po tym, że do bramy nie da się podejść od strony doliny. Stąd
+`udroznij_wyloty`.
+
 ## Znalezione przy planszy 72 × 72
 
 **Przejście szerokie na cztery pola nie jest przejściem.** Strażnik blokuje pas

@@ -63,6 +63,14 @@ ZIARNO = 20260913
 # Szkic krain, 18 × 18. Każdy znak to kwadrat 4 × 4 pola.
 #   .  trawa      ,  piasek     ~  woda
 #   T  las        #  góry
+#   s  śnieg      b  bagno      j  ziemia jałowa
+#
+# Trzy nowe tereny nie są ozdobą — każdy kosztuje inaczej (100 trawa,
+# 125 ziemia jałowa, 150 śnieg, 175 bagno przy 70 za drogę), więc dokładają
+# mapie pytanie „naokoło drogą czy na przełaj?". Rozłożone są tak, żeby każdy
+# pas miał własny charakter: śnieg na północnych rubieżach wroga, bagno wokół
+# jeziora w pasie spornym (tam, gdzie kusi skrót), ziemia jałowa na wschodniej
+# rubieży przy bocznych przejściach.
 #
 # Wiersz szkicu = cztery wiersze planszy. Zamysł, pas po pasie:
 #
@@ -75,17 +83,17 @@ ZIARNO = 20260913
 #   12–17  dolina gracza: zamek na południowym zachodzie (8, 64), zatoka na
 #          południowym wschodzie, reszta to gospodarka.
 SZKIC = [
-    '#T#T..TT#..T.TT##.',
-    'T..TT..#T.T..T..T#',
-    '.T#..T.T..TT..T...',
-    'T..~~..T#T..T.TT.T',
-    ',,.~~T..T..TT..T.T',
+    '#s#ss.TTss.T.TT##.',
+    'Ts.sTT.#Ts.T.T.sT#',
+    '.T#s.T.T.sTT..T.jj',
+    'T..~~..T#T..T.Tjjj',
+    ',,.~~T..T..TT..jjj',
     '##################',
-    'T.T#..~~~.T..TT..T',
-    '.,T..T~~~~T..T#T.T',
-    'T.T#TT.~~~T.T..TT,',
-    '..TT.T..TT..T.TT..',
-    'T#..TT..T..TT..T.T',
+    'T.T#bb~~~bT.bTT.jj',
+    '.,T.bb~~~~Tb.T#T.j',
+    'T.T#Tbb~~~T.T.bTTj',
+    '..TT.Tbb.T..T.TT.j',
+    'T#..TT.b.T.TT..T.T',
     '##################',
     'T.T..TT..T..T.T.,,',
     '..TT#..TT...TT.,,,',
@@ -188,7 +196,7 @@ SZLAK = [
     'polnocna polana',
 ]
 
-PRZEJEZDNE = set('.,=')
+PRZEJEZDNE = set('.,=jsb')
 
 
 def szkic_na_mape(rng):
@@ -220,7 +228,10 @@ def koszt(z):
     omijają grzbiety zamiast je przecinać — chyba że nie ma innej możliwości,
     i wtedy powstaje przełęcz, czyli miejsce warte pilnowania.
     """
-    return {'=': 0.5, '.': 1, ',': 3, 'T': 6, '#': None, '~': None}[z]
+    # Bagno jest droższe od lasu: droga ma je OMIJAĆ, bo w grze kosztuje 175
+    # punktów ruchu przy 70 za ścieżkę. Gdyby droga szła bagnem, gracz nie
+    # miałby czego wybierać — a na tym polega dokładanie drogi w Heroes 3.
+    return {'=': 0.5, '.': 1, 'j': 2, ',': 3, 's': 4, 'T': 6, 'b': 8, '#': None, '~': None}[z]
 
 
 def trasa(mapa, skad, dokad):
@@ -306,8 +317,39 @@ def wytnij_przejscia(mapa):
     for _, (x0, y0, x1, y1), teren in PRZEJSCIA:
         for y in range(y0, y1 + 1):
             for x in range(x0, x1 + 1):
-                if mapa[y][x] in '#~':
+                # Wycinamy KAŻDY teren nieprzejezdny, nie tylko skałę i wodę.
+                # Las też nie jest przejezdny, a rozmycie potrafi go wstawić
+                # w sam środek przejścia — wtedy brama stoi na polu, na które
+                # nie da się wejść, i generator wywala się dopiero na niej.
+                if mapa[y][x] not in PRZEJEZDNE:
                     mapa[y][x] = teren
+
+
+def udroznij_wyloty(mapa, ile=4):
+    """Przebija wyloty przejść, jeśli rozmycie zasypało je lasem albo skałą.
+
+    Przejście jest wycinane dokładnie w rdzeniu grzbietu, ale tuż za nim leży
+    już zwykły teren — a ten bywa lasem, który w tej grze jest NIEPRZEJEZDNY.
+    Wystarczy, że rozmycie postawi dwa drzewa w wylocie i przełęcz prowadzi
+    donikąd: mapa wygląda poprawnie, przejścia są w grzbiecie policzone, a do
+    bramy nie da się podejść od strony doliny. Kosztowało to rundę przy
+    dokładaniu bagna i śniegu, bo nowy szkic przesunął granice lasu.
+
+    Idziemy więc od obu końców przejścia na zewnątrz i tak długo, jak cały
+    rząd kolumn przejścia jest nieprzejezdny, kładziemy w nim teren przejścia.
+    """
+    for _, (x0, y0, x1, y1), teren in PRZEJSCIA:
+        kolumny = range(x0, x1 + 1)
+        for kierunek, start in ((-1, y0 - 1), (1, y1 + 1)):
+            y = start
+            for _ in range(ile):
+                if not (0 <= y < BOK):
+                    break
+                if any(mapa[y][x] in PRZEJEZDNE for x in kolumny):
+                    break
+                for x in kolumny:
+                    mapa[y][x] = teren
+                y += kierunek
 
 
 def przejscia_w_grzbiecie(mapa, y0, y1):
@@ -331,6 +373,7 @@ def zbuduj():
     mapa = szkic_na_mape(rng)
     zasklep(mapa)
     wytnij_przejscia(mapa)
+    udroznij_wyloty(mapa)
 
     # Punkty orientacyjne muszą stać na przejezdnym terenie — inaczej trasa do
     # nich nie istnieje i drogi cicho się nie wytyczą.
@@ -620,6 +663,13 @@ def rozstaw(mapa, kroki, rng):
                 and 0 <= y + dy < BOK
                 and mapa[y + dy][x + dx] in PRZEJEZDNE
                 and (x + dx, y + dy) not in zajete
+                # Straż nie staje w SZYJCE. Potwór blokuje pola wokół siebie,
+                # więc postawiony w korytarzu zamyka wszystko za sobą, a nie
+                # pilnuje skarbu, przy którym stoi. Przy planszy w jednej
+                # trzeciej zalesionej korytarzy jest dużo i zmierzyliśmy to:
+                # bez tego warunku bez jednej bitwy stało otworem 10% mapy
+                # zamiast trzydziestu kilku.
+                and not ciasne(mapa, x + dx, y + dy)
                 # Straż ma stać od strony gracza, czyli na polu BLIŻSZYM startu:
                 # postawiona za obiektem nie pilnuje niczego.
                 and kroki.get((x + dx, y + dy), 999) < kroki.get((x, y), 0)
@@ -656,12 +706,16 @@ def rozstaw(mapa, kroki, rng):
     kopalnie_dom = []
     for co in ['odlamek', 'jagoda', 'odlamek', 'pokeball', 'jagoda', 'pokeball']:
         kopalnie_dom += dodaj(1, 'dom', (10, 40), lambda p, co=co: ('kopalnia', co))
-    strzez(kopalnie_dom[:4], 'slaby')
+    strzez(kopalnie_dom[:2], 'slaby')
     skrzynie_dom = dodaj(8, 'dom', (10, 40), lambda p: ('skrzynia', None))
-    strzez(skrzynie_dom[:2], 'slaby')
-    dodaj(2, 'dom', (12, 40), lambda p: ('potwor', 'slaby'))
+    strzez(skrzynie_dom[:1], 'slaby')
+    dodaj(1, 'dom', (12, 40), lambda p: ('potwor', 'slaby'))
     artefakty_dom = dodaj(4, 'dom', (14, 40), lambda p: ('artefakt', None))
-    strzez(artefakty_dom[:3], 'sredni')
+    # W dolinie pilnowane są tylko artefakty i dwie kopalnie. Reszta stoi
+    # otworem, bo pierwszy tydzień ma się dać rozegrać bez jednej przegranej
+    # bitwy — a każdy strażnik w dolinie zabiera kawałek mapy, po którym da się
+    # chodzić od razu (mierzy to `probe-mapa.ts`).
+    strzez(artefakty_dom[:2], 'sredni')
     budowle(18, 'dom', [
         'ognisko', 'chatka', 'wiatrak', 'zrodlo', 'oboz-treningowy', 'ranczo',
         'gniazdo', 'drzewo-wiedzy', 'woz',
@@ -901,7 +955,7 @@ if any((PUNKTY['zamek wroga'][0] + dx, PUNKTY['zamek wroga'][1] + dy) in bez_klu
 print(f'bez kluczy stoi otworem: {len(bez_kluczy)} pól')
 
 wiersze = [''.join(w) for w in mapa]
-udzial = {z: sum(w.count(z) for w in wiersze) for z in '.,=T#~'}
+udzial = {z: sum(w.count(z) for w in wiersze) for z in '.,=jsbT#~'}
 print(f'plansza {BOK} × {BOK}, pól przejezdnych: {len(dostepne)}')
 print('udział terenów:', {k: f'{v * 100 // (BOK * BOK)}%' for k, v in udzial.items()})
 print(f'gęstość: obiekt co {len(dostepne) / len(obiekty):.1f} pola przejezdne')
@@ -913,7 +967,8 @@ naglowek = f'''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 // grzbietami górskimi, każdy grzbiet z dwoma pilnowanymi przejściami:
 // dolina gracza na południowym zachodzie, pas sporny pośrodku, kraina
 // przeciwnika na północnym wschodzie.
-// Znaki: . trawa, = ścieżka, , piasek, T las, # skały, ~ woda.
+// Znaki: . trawa, = ścieżka, , piasek, j ziemia jałowa, s śnieg, b bagno,
+// T las, # skały, ~ woda.
 
 export const TEREN = [
 '''
