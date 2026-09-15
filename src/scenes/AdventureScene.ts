@@ -154,6 +154,16 @@ export class AdventureScene extends Phaser.Scene {
 
   private trasaBiezaca: Krok[] | null = null;
   private zajety = false;
+  /**
+   * Czy trwa właśnie animacja marszu — w odróżnieniu od `zajety`, który blokuje
+   * kliknięcia też przy bitwach i innych animacjach. Tylko podczas marszu ma
+   * sens przerywanie klikiem i zmiana trasy w locie, jak w Heroes 3.
+   */
+  private wRuchu = false;
+  /** Klik podczas marszu: przerywa go i czeka na dokończenie bieżącego kroku. */
+  private przerwijRuch = false;
+  /** Cel klikniętego pola/obiektu, gdy klik przerwał trwający marsz. */
+  private celPoPrzerwaniu: { x: number; y: number } | null = null;
   /** Ostatnie położenie kursora — do przewijania przy krawędzi. */
   private kursor: { x: number; y: number } | null = null;
   private przewX = 0;
@@ -251,6 +261,9 @@ export class AdventureScene extends Phaser.Scene {
     // włączone po wyjściu do bitwy i po powrocie nie dało się już sterować
     // bohaterem. Reszta to tablice trzymające obiekty, których Phaser już nie ma.
     this.zajety = false;
+    this.wRuchu = false;
+    this.przerwijRuch = false;
+    this.celPoPrzerwaniu = null;
     this.trasaBiezaca = null;
     this.kierunek = 'dol';
     this.woda = null;
@@ -1659,7 +1672,16 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   private klikMapa(p: Phaser.Input.Pointer) {
-    if (this.zajety || !this.wRamie(p.x, p.y)) return;
+    if (!this.wRamie(p.x, p.y)) return;
+    // Klik w trakcie marszu przerywa go — jak w Heroes 3, gdzie kliknięcie
+    // gdzie indziej podczas chodzenia zatrzymuje bohatera i pozwala wskazać
+    // nową trasę, zamiast czekać, aż dojdzie do wcześniej wybranego celu.
+    if (this.wRuchu) {
+      this.celPoPrzerwaniu = this.obiektPodKursorem(p) ?? this.zEkranu(p.x, p.y);
+      this.przerwijRuch = true;
+      return;
+    }
+    if (this.zajety) return;
     const zamek = this.zamekPodKursorem(p);
     if (zamek) return this.pokazZamek(zamek);
     const cel = this.obiektPodKursorem(p) ?? this.zEkranu(p.x, p.y);
@@ -1787,12 +1809,14 @@ export class AdventureScene extends Phaser.Scene {
     }
 
     this.zajety = true;
+    this.wRuchu = true;
     this.warstwaTrasy.clear();
 
     let i = 0;
     const dalej = () => {
       if (i >= ile) {
         this.zajety = false;
+        this.wRuchu = false;
         this.trasaBiezaca = null;
         this.bohaterSprite.stop();
         this.bohaterSprite.setFrame(KIERUNEK_WIERSZ[this.kierunek] * 4);
@@ -1837,6 +1861,18 @@ export class AdventureScene extends Phaser.Scene {
         ease: 'Linear',
         onComplete: () => {
           this.odswiezWszystko();
+          if (this.przerwijRuch) {
+            this.przerwijRuch = false;
+            this.zajety = false;
+            this.wRuchu = false;
+            this.trasaBiezaca = null;
+            this.bohaterSprite.stop();
+            this.bohaterSprite.setFrame(KIERUNEK_WIERSZ[this.kierunek] * 4);
+            const cel = this.celPoPrzerwaniu;
+            this.celPoPrzerwaniu = null;
+            if (cel) this.celujW(cel.x, cel.y);
+            return;
+          }
           dalej();
         },
       });
