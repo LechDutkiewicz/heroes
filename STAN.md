@@ -1,6 +1,42 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-09-06 (scalenie: grafika z modelu, ekonomia na jednej skali, układ mapy).
+Ostatnia aktualizacja: 2026-09-15 (scalono AI przeciwnika z `claude/gauntlet-hero-adventure-view-cavkbx`).
+
+## Scalenie z AI przeciwnika (2026-09-15)
+
+Ta gałąź (mapa „Dwie Doliny") i osobna praca nad AI przeciwnika rozjechały
+się na dwóch branchach tego samego dnia; deploy z gałęzi AI (opartej na
+starszej mapie) nadpisał Pages i skasował dzisiejszą mapę. Scalono ręcznie:
+AI (`src/data/wrog-ai.ts`, `turaAI(s, kto, ziarno)`) działa teraz NA TEJ
+mapie, z trzema realnymi konsekwencjami:
+
+1. **Klucze przeciwnika.** Namioty klucznika stoją po POŁUDNIOWEJ (gracza)
+   stronie obu bram — z zamku wroga (północ) `trasa()` nie dochodzi do
+   żadnego z nich, sprawdzone wprost (`trasa()` zwraca `null`). Przeciwnik
+   dostaje więc oba klucze od dnia 1 (`wrogKlucze` w `plansza.ts`) — jedyny
+   wariant, w którym w ogóle wychodzi z własnej doliny. Klucze są PER STRONA
+   (`kluczeOf`, `s.klucze` / `s.wrogKlucze`) — otwarta brama jest już otwarta
+   dla obu stron (to przeszkoda fizyczna), ale sam klucz jednej strony nie
+   daje drugiej nic.
+2. **Wydajność `znajdzCel`.** Na planszy 72×72 pełny skan wszystkich
+   widocznych obiektów z `trasa()` na każdym z nich (Dijkstra po całej
+   mapie) potrafił trwać dosłownie minuty na jedną decyzję. Posortowane
+   najpierw po wartości/odległości w linii prostej (górne ograniczenie
+   prawdziwej oceny — nigdy jej nie zaniża) i licząc `trasa()` tylko dla
+   góry ~60 kandydatów, z wczesnym urwaniem, gdy nic dalszego już nie
+   przebije znalezionego wyniku.
+3. **Próg trudności NIE jest w pełni zweryfikowany na tej mapie.** Na starej,
+   mniejszej planszy próg (bierny gracz pada do dnia 40, grający normalnie
+   nie pada przed dniem 25) przechodził w 100% z 20 przebiegów. Na tej mapie,
+   z powodu czasu wykonania (~2 min/przebieg), przetestowano tylko 3+3
+   przebiegi: "normalnie grający" pada dopiero dnia 31 w 3/3 (próg 25
+   bezpiecznie spełniony), ale "bierny" pada w 2/3 do dnia 40 — jeden
+   przebieg nie skończył się w 40 dni. Zbyt mała próbka, żeby wiedzieć, czy
+   to pech konkretnego ziarna, czy realna luka w AI (być może przegrana
+   wczesna bitwa opóźnia całą resztę). `tools/wrog-symulacja.ts` (uruchamiana
+   `npx tsx tools/wrog-symulacja.ts`, `PROB=`/`DNI=` do sterowania liczbą
+   przebiegów) jest gotowa do dalszego strojenia, kiedy będzie czas na
+   dłuższe przebiegi.
 
 Ten plik istnieje po to, żeby po przerwie nie trzeba było odtwarzać kontekstu
 z pamięci. Zapisuję tu, co jest skończone, co jest w połowie i czego świadomie
@@ -23,10 +59,14 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `node tools/capture.mjs` | komplet zrzutów, w tym paski czterech klatek dla animacji |
 | `npx tsx tools/probe-trasa.ts` | poprawność tras ruchu na ~128 tys. przypadków |
 | `npx tsx tools/probe-mapa.ts` | plansza przygody: kształt, okno, dostępność obiektów, odcisk tła |
+| `python3 tools/profil-mapy.py` | profil naszej planszy: gęstość, rozkład, schemat do porównań |
+| `python3 tools/profil-wzorca.py` | ten sam profil z oficjalnych map `.h3m` — poprzeczka |
+| `python3 tools/postep-mapa.py` | strona postępu: nasze liczby na tle wzorców i dziennik rund |
 | `npx tsx tools/probe-ekonomia.ts` | czy dochód z prawdziwej mapy starcza na armię I rozbudowę |
 | `node tools/probe-rozbudowa.mjs` | czy budynek da się KLIKNĄĆ i czy miasto potem daje więcej |
 | `node tools/probe-kopalnia.mjs` | czy budynek produkcyjny się ZAJMUJE, a nie zbiera |
 | `npx tsx tools/probe-budowle.ts` | czy każda budowla odwiedzana coś daje, i to raz |
+| `python3 tools/generuj_grafiki.py --lista` | które grafiki z promptów są, a których brak |
 | `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia, artefakt, bitwa, zamek, powrót |
 | `node tools/probe-klik.mjs` | czy KLIKNIĘCIE prowadzi bohatera tam, gdzie się kliknęło |
 | `npx tsx tools/probe-armia.ts` | arytmetyka slotów armii: 40 tys. losowych ruchów z niezmiennikami |
@@ -332,51 +372,209 @@ sceną — `beginTurn` wywracał się na nieżyjącej teksturze napisu i gracz
 zostawał na mapie bez bitwy i bez sterowania. Jedna bitwa w sondzie tego nie
 złapie; trzeba rozegrać co najmniej dwie.
 
-## Układ mapy — „Key to Victory"
+## Układ mapy — „Dwie Doliny" (72 × 72, rozmiar M)
 
-Plansza jest przeniesieniem mapy „Key to Victory" na to, co mamy. Z oryginału
-wzięte są rozmiar (36 × 36), strony (gracz na polu 32,33 na południowym
-wschodzie, przeciwnik na 20,15 na północy) i cała struktura: pasmo gór przez
-całą szerokość mapy z pilnowanymi przejściami. Południe to bezpieczna dolina
-z gospodarką, północ to kraina przeciwnika z nagrodami i silnymi strażami.
+Poprzednia plansza była przeniesieniem „Key to Victory" na 36 × 36. Ta jest
+rozmiaru M i ma inną strukturę — tę, którą w Heroes 3 mają dobre mapy 1 na 1:
 
-Przejścia są dwa, jak w oryginale, gdzie drugą drogę na północ dają podziemia:
-
-| Przejście | Kolumny | Czym się różni |
+| Pas | Wiersze | Co tam jest |
 |---|---|---|
-| Przełęcz | x 12–14 | droga bita, krótko od głównego szlaku |
-| Nadmorska ścieżka | x 3–5 | piasek (125 punktów ruchu zamiast 70), w przeciwległym rogu mapy niż start — sam dojazd to kilka dni |
+| dolina gracza | y 47–71 | zamek na południowym zachodzie (8,64), siedem kopalń, straże słabe |
+| grzbiet południowy | y 45–46 | przejścia w kolumnach 13–14 (droga) i 49–50 (piasek), po strażniku |
+| pas sporny | y 23–44 | jezioro, osiem kopalń, budowle, straże średnie — środek gry |
+| grzbiet północny | y 21–22 | przejścia w kolumnach 21–22 (droga) i 57–58 (piasek), po wodzu |
+| kraina przeciwnika | y 0–20 | zamek wroga (62,8), relikty, jedenaście kopalń, straże silne |
 
-**Czego z oryginału NIE ma i to widać.** Tytułowym kluczem są tam Strażnice
-Graniczne i Namioty Klucznika: strażnicy nie da się pokonać, tylko OTWORZYĆ,
-po znalezieniu namiotu gdzie indziej na mapie. Nie mamy ani jednego, ani
-drugiego, więc w przejściach stoją zwykłe potwory. Mapa mówi więc „zbierz
-armię", a nie „poszukaj klucza" — a to inna zagadka i inna gra. Spis rzeczy,
-których brakuje, jest na końcu `tools/generuj_mape.py`.
+Trzy decyzje, na których ta mapa stoi:
 
-**Rdzeń grzbietu jest zasklepiany po rozmyciu, i musi być.** Rozmycie granic
-w generatorze potrafi wybić w murze dziurę szeroką na jedno pole. Nie widać
-tego ani na obrazku, ani w kodzie — po prostu pewnego dnia da się wejść na
-północ bokiem, omijając straż, i mapa przestaje być tą mapą. Dlatego wiersze
-19–22 wracają po rozmyciu do stanu ze szkicu, przejścia są wycinane ręcznie,
-a `probe-mapa.ts` liczy, ile przejść naprawdę zostało (ma być dwa) i czy straż
-stoi W przejściu, a nie obok.
+1. **Trzy pasy zamiast dwóch.** Przy dwóch mapa ma jedno pytanie („czy stać mnie
+   już na przełamanie straży"). Pas sporny daje pytanie drugie — „co wziąć
+   najpierw" — i to ono wypełnia środek gry.
+2. **Przejścia w obu grzbietach są PRZESUNIĘTE względem siebie.** Nie da się
+   przejechać mapy w linii prostej: po wyjściu z doliny trzeba przeciąć pas
+   sporny w bok.
+3. **Nagroda rośnie z odległością.** Ostatnie 20% zasięgu ma własny skarbiec
+   (relikty, kopalnie, skrzynie pod strażą wodzów), bo rozstawianie po samych
+   strefach dawało rozkład płaski — a wtedy dalej nie opłaca się jechać.
 
-**Odległość od startu przestała nadawać się na miarę trudności.** Przy starcie
-pośrodku mapy działała; przy starcie w ROGU przeciwległy kraniec własnej,
-bezpiecznej doliny wychodzi „dalej" niż zamek przeciwnika za grzbietem — i
-dostawał relikty oraz straże przewidziane dla krainy wroga. Teraz o tym, co
-gdzie stoi, decyduje STREFA (dom / pogranicze / wroga), wyznaczona przez
-grzbiet, a odległość wewnątrz doliny liczy się w polach, którymi naprawdę się
-chodzi (przeszukiwanie wszerz), a nie po przekątnej przez góry.
+### Poprzeczka: pięć oficjalnych map 72 × 72 na dwóch graczy
 
-**Drugie przejście przy zamku gracza wywraca cały zamysł.** Pierwsza wersja
-miała ścieżkę nadmorską przy wschodnim brzegu, trzynaście pól od startu.
-Wychodził z tego skrót KRÓTSZY od głównej drogi, przy którym dało się
-pierwszego dnia wjechać w najsilniejszą straż na mapie i przegrać pierwszą
-bitwę w grze, zanim się w ogóle było w swoim zamku. Drugie przejście musi
-leżeć w przeciwległym rogu mapy niż start — inaczej nie jest alternatywą,
-tylko obejściem.
+Mapa nie jest porównywana z wyobrażeniem o Heroes 3, tylko z PLIKAMI: pobrane
+`.h3m` map Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw,
+Unexpected Inheritance i When Dragons Clash, sparsowane do JSON i policzone
+tym samym profilem co nasza plansza (`tools/profil-wzorca.py`,
+`tools/profil-mapy.py`). Nasze liczby mieszczą się w rozrzucie wzorców:
+
+| Miara | My | Oryginały |
+|---|---|---|
+| pól przejezdnych | 45% | 26–43% |
+| obiekt co ile pól | 7,7 | 4,1–12,5 |
+| obiektów razem | 305 | 179–328 |
+| udział straży | 21% | 10–24% |
+| mapa dostępna bez bitwy | 30% | 7–81% |
+
+Trzech krytyków, każdy ze świeżym kontekstem i przeciw innej mapie oryginalnej,
+w ślepym porównaniu (schematy podpisane A i B, plus liczby) wybrało naszą —
+trzy razy na trzy. Dwaj niezależnie nazwali tę samą słabość (najdalszy pierścień
+nagradzał najsłabiej) i to ona poszła do poprawki. Zapis: `tools/blind/mapa-r2-*`,
+strona postępu: `tools/postep-mapa.html`.
+
+## Strażnica graniczna i klucz — mapa ma trzy akty
+
+Przejść przez grzbiety pilnują teraz STRAŻNICE, a nie stada potworów. Strażnicy
+nie da się pokonać: otwiera ją klucz z namiotu klucznika stojącego w innej
+części mapy. To zmienia pytanie mapy z „czy stać mnie na przełamanie straży" na
+„gdzie jest klucznik" — i dopiero z tym plansza M ma dwa pytania naraz zamiast
+jednego powtórzonego cztery razy.
+
+Barwy są dwie, nie cztery, i to jest kształt mapy, a nie oszczędność na
+grafikach: zielony klucz otwiera oba wyjazdy z doliny, niebieski oba wejścia do
+krainy wroga. Mapa dzieli się więc na trzy akty, a każdy otwiera nowy kawałek:
+
+| Akt | Co gracz ma | Ile planszy stoi otworem |
+|---|---|---|
+| I | nic | 900 pól — dolina |
+| II | zielony klucz | 1411 pól — plus pas sporny |
+| III | oba klucze | 2047 pól — cała mapa |
+
+Sprawdza to `probe-mapa.ts` (sekcja „trzy akty"), zasadami gry, a nie własnym
+modelem: namiot postawiony ZA bramą, którą sam otwiera, zamyka mapę na głucho
+i nie widać tego ani na obrazku, ani w kodzie. To samo liczy generator przy
+rozstawianiu — dwa niezależne sprawdzenia, bo cena pomyłki to plansza nie do
+przejścia.
+
+**Brama blokuje TRZY pola w swoim rzędzie, nie jedno.** `polaBryly` ma dla
+strażnicy osobny przypadek: mur to pola OBOK wejścia, a nie rząd nad nim jak
+u zamku i kopalni. Przejścia mają dwa pola szerokości, więc brama szeroka na
+trzy zamyka je w całości. Gdyby blokowała samo swoje pole, dałoby się ją minąć
+bokiem — dokładnie tak, jak dawało się minąć strażnika w przejściu szerokim na
+cztery pola.
+
+**Pod bramę się PODCHODZI, nie wchodzi się na nią.** Reszta obiektów leży na
+drodze i bohater staje na ich polu. Brama jest murem: bohater, który by na nią
+wszedł, stałby w środku muru, a po odmowie („nie masz klucza") zostałby tam na
+stałe — bo tu nie ma bitwy, po której pole robi się wolne. Marsz kończy się
+więc pole wcześniej (`idz` w `AdventureScene`).
+
+**Otwarcie bramy kasuje zapamiętane bryły.** `polaZajete` liczy się raz i jest
+trzymane w `s.bryly`, bo zamek i kopalnia z mapy nie znikają. Brama znika —
+i bez skasowania tego zbioru przejście stoi otworem na ekranie, a trasa dalej
+je omija. Sprawdza to `probe-brama.mjs`: „przejście staje otworem NATYCHMIAST".
+
+**Barwy kluczy robi `tools/klucze_przemaluj.py`**, z jednej dostawy grafiki.
+Chorągiew strażnicy i proporzec namiotu to jedyne elementy o odcieniu poniżej
+18° przy nasyceniu ponad 0,55 — drewno wrót leży obok na kole barw (24°), więc
+„przemaluj wszystko, co ciepłe" zrobiłoby z bramy zieloną budkę. Zmieniany jest
+sam odcień; jasność i nasycenie zostają, więc fałdy płótna i cień pod belką
+pozostają na miejscu.
+
+## Chata jasnowidza — jedyny obiekt, który każe wrócić
+
+„Przynieś dwanaście kamieni ewolucji, dostaniesz relikt." Pierwsza wizyta
+prawie zawsze kończy się na wiadomości, czego brakuje, i o to chodzi: to
+jedyny obiekt w grze, który każe wrócić w to samo miejsce po raz drugi.
+
+Prosi o KAMIENIE i to jest wybór, nie przypadek. Kamień ewolucji był jedynym
+surowcem bez zastosowania — wypadł z kosztów budynków przy porządkowaniu
+ekonomii, a ulepszeń oddziałów jeszcze nie ma. Chata daje mu pierwsze
+zastosowanie i przy okazji powód, żeby zbierać stosy leżące za grzbietem.
+Chaty są dwie: w pasie spornym za sześć kamieni (artefakt klasy znacznej)
+i w krainie wroga za dwanaście (relikt).
+
+`probe-mapa.ts` sprawdza, czy żądany surowiec DA SIĘ zdobyć po tej stronie
+mapy, po której stoi chata — inaczej zadanie nie jest zagadką, tylko ślepym
+zaułkiem. Mechanikę (pierwsza wizyta nic nie zabiera, druga płaci raz)
+sprawdza `probe-budowle.ts`.
+
+**Budowle z bryłą dostają miejsce na mur.** `polaBryly` pomija pole muru
+stykające się z cudzym wejściem, żeby budowla nie zamurowała sąsiadowi drzwi —
+przy obiekcie co siedem pól ta reguła zjadała prawie wszystkie mury: z piętnastu
+budowli wielopolowych mur miały cztery, a reszta była rysowana na trzy pola
+i blokowała jedno. Generator stawia je teraz z zapasem, a na ciasno godzi się
+dopiero, gdy miejsca zabraknie: 13 z 15. Kuszące było rozluźnienie progu
+w sondzie — właściwą naprawą było rozstawienie.
+
+## Dziewięć rodzajów terenu, każdy o innym koszcie
+
+Do trawy, ścieżki i piasku doszły trzy tereny z drugiej dostawy grafik:
+
+| Teren | Koszt ruchu | Gdzie |
+|---|---|---|
+| ścieżka | 70 | główny szlak przez oba grzbiety |
+| trawa | 100 | wszędzie |
+| ziemia jałowa | 125 | wschodnia rubież, przy bocznych przejściach |
+| piasek | 125 | boczne przejścia i południowy wschód |
+| śnieg | 150 | północne rubieże krainy wroga |
+| bagno | 175 | wokół jeziora w pasie spornym |
+
+To nie jest ozdoba: bagno leży dokładnie tam, gdzie kusi skrót przez środek
+pasa spornego, więc mapa pyta „naokoło drogą czy na przełaj?" — a to jest
+pytanie, którego plansza z jednym kosztem terenu nie umie zadać. Las, skały
+i woda zostają nieprzejezdne.
+
+Dwie pułapki wyszły dopiero przy wpuszczaniu ich na planszę. Wycinanie przejść
+przez grzbiet zamieniało tylko skałę i wodę, więc gdy rozmycie postawiło
+w przejściu LAS, brama lądowała na polu nieprzejezdnym — teraz wycinany jest
+każdy teren nie do przejścia. I druga: rozmycie potrafi zasypać lasem sam
+wylot przejścia, tuż za grzbietem; przełęcz prowadzi wtedy donikąd, a widać to
+dopiero po tym, że do bramy nie da się podejść od strony doliny. Stąd
+`udroznij_wyloty`.
+
+## Znalezione przy planszy 72 × 72
+
+**Przejście szerokie na cztery pola nie jest przejściem.** Strażnik blokuje pas
+szeroki na trzy pola, więc w przejściu na cztery zostaje szpara i da się go
+obejść bokiem. Wyglądało to dokładnie tak samo jak mapa działająca; zobaczyliśmy
+dopiero po zmierzeniu, ile planszy stoi otworem bez jednej wygranej bitwy: 74%.
+Po zwężeniu przejść do dwóch pól — 30%, czyli mniej więcej sama dolina.
+
+**Dziura w murze może siedzieć w SZKICU.** `zasklep` przywraca rdzeń grzbietu
+tam, gdzie szkic mówi „góry" — więc jeśli szkic ma w murze gotową dziurę
+szeroką na komórkę (cztery pola), nie ma czego zasklepiać. Mur jest teraz
+w szkicu pełny, a przejścia wycina wyłącznie tabela `PRZEJSCIA`, która podaje
+też ich teren (boczne mają zostać piaskiem).
+
+**Obiekty zatykają drogę i przy gęstości mapy M robią to często.** Trasa w grze
+nie przechodzi przez obiekty, a bryła kopalni to trzy pola. Dwie skrzynie
+w korytarzu potrafią odciąć ćwiartkę planszy — plansza wygląda spójnie, tylko
+połowa rzeczy jest nie do zdobycia. Generator sprawdza więc KAŻDE postawienie:
+czy po nim ubywa dostępnych pól więcej niż to jedno, i czy do każdego wcześniej
+postawionego obiektu dalej da się podejść.
+
+**Lista brył w generatorze musi zgadzać się z `BUDOWLE` co do nazwy.** Był tam
+wpisany „gniazdo" zamiast „ośrodka ewolucji" — jeden zły wpis i mury dwóch
+budowli zamknęły północno-wschodnią ćwiartkę mapy: czterdzieści obiektów,
+w tym zamek przeciwnika, bez dojścia. Generator meldował spójną planszę, bo
+sprawdzał własnym, niezgodnym z grą modelem.
+
+**Sprawdzenie dostępności nie może najpierw usuwać potworów.** `polaBryly`
+pomija pola muru stykające się z cudzym wejściem, więc po usunięciu potworów
+mury ROSNĄ i sonda widzi blokady, których w grze nie ma. `probe-mapa.ts` liczy
+teraz dojścia na prawdziwym stanie gry, a potwory traktuje jak pola przejezdne
+— bo pokonuje się je i idzie dalej.
+
+**Przy gęstej planszy sondy nie mogą stawiać bohatera „na polu nad obiektem".**
+Prawie każda rzecz warta zabrania ma obok straż, więc to pole bywa zajęte albo
+leży w strefie kontroli potwora. Bohater lądował na straży, marsz nie dochodził
+do celu i trzy sondy naraz zgłaszały nieprawdziwe usterki. Stąd
+`tools/sonda-wspolne.mjs`: `__podejdz` szuka pola, z którego NAPRAWDĘ da się
+wejść na obiekt, a `zamknijAwans` zamyka okno awansu — na tej planszy straże są
+na tyle silne, że bohater awansuje już w pierwszych walkach, a niezamknięte
+okno wygląda jak zwis.
+
+**Tło planszy idzie do JPEG, i to jest decyzja o grze.** 72 × 72 przy kafelku
+48 px to obraz 3456 × 3456. Jako PNG waży 21 MB — tyle musiałby ściągnąć gracz,
+zanim zobaczy mapę. W JPEG przy jakości 88 waży 3,4 MB, czyli mniej niż
+poprzednia plansza 36 × 36. Maska wody zostaje PNG-iem: tam kanały niosą liczby
+dla shadera.
+
+**Symulacja ekonomii musi liczyć ZNALEZISKA, nie sam dochód z kopalń.**
+Przy dochodzie niższym niż koszt pełnego dziennego przyrostu miasto nie stawało
+NIGDY, niezależnie od tego, jak dobrze rozstawione są kopalnie — sprawdzenie
+mierzyło model, a nie mapę. `probe-ekonomia.ts` rozkłada teraz stosy i skrzynie
+z własnego pasa na 21 dni i liczy rozbudowę osobno z kopalń doliny (16 dni)
+i z całej mapy (6 dni). Obie liczby to DOLNA granica: bohater nie przegrywa
+tam żadnej bitwy i nie traci dni na dojazdy.
 
 ## Znalezione przy mapie 36 × 36
 
@@ -544,3 +742,54 @@ Trzy rzeczy, które kosztowały najwięcej dochodzenia:
 `plansza-1..3.png` zostały usunięte — nikt ich już nie wczytuje. Namalowana
 `plansza-0.png` ma wodę wypaloną w obrazie i służy jako zapas: gdy shadera nie
 da się utworzyć, gracz widzi nieruchomy staw zamiast dziury w mapie.
+
+## Klik trafiał rząd niżej — i dlaczego sondy tego nie łapały
+
+Zgłoszenie: kliknięcie w bramę zamku prowadziło bohatera na pole wyraźnie
+niżej. Przyczyna nie miała nic wspólnego z zamkiem.
+
+Kontener świata stał na `(mapaX, mapaY)`, czyli `(8, 44)`, a kamera planszy ma
+tam SWÓJ początek. Przesunięcie liczyło się więc dwa razy: plansza była
+rysowana o 44 piksele niżej, niż sądziła kamera. `zEkranu` — jedyne miejsce,
+w którym ekran przelicza się na pole — o tym przesunięciu nie wiedziało,
+a 44 piksele to prawie całe pole (48), więc niemal każde kliknięcie lądowało
+rząd niżej. Przy okazji u góry ramy zostawał czterdziestoczteropikselowy pas
+pustki, a dolny rząd planszy był ucięty.
+
+Kontener stoi teraz na `(0, 0)` i cały układ jest jeden: współrzędne sceny to
+wprost współrzędne planszy, a za położenie na ekranie odpowiada wyłącznie
+kamera.
+
+**Dlaczego przeszło przez sondy.** `probe-klik` liczył położenie pola tym samym
+wzorem, którego używa `zEkranu` — sprawdzał więc wzór sam ze sobą i przechodził
+niezależnie od tego, gdzie naprawdę jest narysowana plansza. Doszła asercja,
+która bierze punkt odniesienia z NARYSOWANEGO tła (`plansza.getBounds()`)
+i żąda, żeby środek pola wracał jako to samo pole. Przy przywróceniu starego
+przesunięcia wypisuje wprost `3,3 → 3,4` — czyli dokładnie objaw ze zgłoszenia.
+
+Po drodze wyszła druga rzecz, tym razem prawdziwa: `obiektPodKursorem`
+sprawdzał PROSTOKĄT rysunku. Prostokąt wieży obserwacyjnej jest w dwóch
+trzecich pustym niebem, więc wysoka budowla zabierała kliknięcia wszystkiemu,
+co stało za nią. Teraz liczy się piksel: kanał alfa tekstury jest czytany raz
+i trzymany w pamięci.
+
+## Budowle „naklejone na mapę" — właściwa przyczyna
+
+To wracało kilka razy i za każdym razem poprawka celowała w to samo,
+nieistniejące miejsce. `zamek-las.png` ma pod murami **28 pikseli
+przezroczystego marginesu** (`kopalnia-pokeball.png` dwa, `wiatrak.png` zero).
+Cały kod osadzania — cień kontaktowy, grunt podchodzący na spód, zarośla —
+mierzył od dolnej krawędzi PLIKU. Przy zamku to jedenaście pikseli poniżej
+murów: cień leżał w powietrzu, grunt zakrywał pustkę.
+
+Margines jest teraz mierzony z alfy (`pustkaPodRysunkiem`), a nie wpisany
+w tabelę — tabela rozjeżdża się przy pierwszej wymianie grafiki, a wymieniamy
+je często. Od tej jednej wartości liczy się wszystko, więc nie da się już tego
+rozjechać osobno dla cienia i osobno dla gruntu.
+
+Do tego sam sposób osadzania: zamiast trzech pasów gruntu o skokowym kryciu
+(trzy widoczne stopnie) jest gładka krzywa, a NA NIEJ szesnaście kolumn
+podchodzących na różną wysokość. To jest sedno: sprite jest ucięty POZIOMO,
+więc gładkie przejście tylko przesuwa tę samą prostą wyżej — dopiero nierówna
+linia gruntu ją likwiduje. Kilka krzaków przy podstawie, z pominięciem bramy,
+dokłada resztę.

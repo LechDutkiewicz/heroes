@@ -46,7 +46,7 @@ await page.waitForTimeout(800);
 await page.evaluate(
   ([frakcja, postawione]) => {
     const s = window.__game.scene.getScene('adventure');
-    const z = s.stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.nasz);
+    const z = s.stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'gracz');
     z.frakcjaZamku = frakcja;
     z.nazwa = { bor: 'Bór Szmaragdowy', grota: 'Grota Księżycowa', zbocze: 'Zbocze Popielne' }[
       frakcja

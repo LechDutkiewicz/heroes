@@ -22,17 +22,16 @@
  * oszustwo" — ośmiolatek wyłapuje przeciwnika, który zawsze idzie prosto po
  * najlepszy łup, natychmiast.
  *
- * Decyzja o strażnicach: w tej grze NIE MA osobnej bramy z kluczem — jedyna
- * rzecz, która blokuje wejście do krainy, to strefa kontroli potwora
- * (`strzezoneProzez`), i blokuje każdego jednakowo, bo `trasa()` jest jedna
- * dla obu stron. Przeciwnik dostaje więc "klucze" do świata dokładnie w tym
- * samym sensie co gracz: może iść, dokąd dojdzie, pod warunkiem że pokona to,
- * co stoi na drodze. Efekt jest równoważny wariantowi "klucze od dnia
- * pierwszego" — przeciwnik może wyjść ze swojej doliny i naciskać gracza —
- * ale bez jednej linijki nowego kodu blokującego, bo istniejąca reguła ZoC
- * już to robi symetrycznie. Tempo obu stron jest więc takie samo: kto
- * pierwszy urośnie dość, żeby przejść przez własnego strażnika granicznego,
- * ten pierwszy wychodzi na drugą połowę mapy.
+ * Decyzja o strażnicach: mapa ma teraz PRAWDZIWE bramy (`rodzaj: 'straznica'`)
+ * blokujące przejście dosłownie, aż ktoś przyniesie klucz z namiotu klucznika
+ * — `polaBryly`/`kosztPola` w mapa.ts traktują nieotwartą bramę jako mur, więc
+ * `trasa()` sama odmawia przejścia, bez żadnego kodu tutaj. AI dostaje klucze
+ * na TYCH SAMYCH zasadach co gracz: szuka namiotu we własnej mgle (`namiot`
+ * ma wysoką wartość w `wartoscKandydata`, żeby nie przegrywał z eksploracją),
+ * bierze klucz i dopiero wtedy strażnica staje się celem. Klucze są PER
+ * STRONA (`kluczeOf`, `s.klucze` / `s.wrogKlucze`) — inaczej klucz znaleziony
+ * przez jedną stronę otwierałby bramy drugiej za darmo. Sama brama, raz
+ * otwarta, jest już otwarta dla obu — to fizyczna przeszkoda, nie własność.
  *
  * Bezpieczeństwo ataku: żaden cel nie trafia na listę kandydatów, dopóki
  * `wygramy()` — wywołanie tej samej `createBattle`/`runBattle`, powtórzone
@@ -43,6 +42,7 @@
 import {
   budowlaPoId,
   bohaterOf,
+  kluczeOf,
   obiektNa,
   odkryteOf,
   odpowiedzNaPytanie,
@@ -172,6 +172,36 @@ function rozstrzygnijBitwe(s: StanMapy, kto: Wlasciciel, obrona: Obiekt, ziarno:
 }
 
 /** Ile jest warty cel — proste priorytety, nie ranking bliski wszechwiedzy. */
+/**
+ * Ocena kandydata z uwzględnieniem stanu strony `kto` — namiot i strażnica
+ * potrzebują wiedzieć, czy `kto` ma już odpowiedni klucz, a chata jasnowidza,
+ * czy `kto` stać na zapłatę. Reszta idzie przez `wartoscObiektu`, która o
+ * stanie gracza nic nie wie.
+ */
+function wartoscKandydata(o: Obiekt, s: StanMapy, kto: Wlasciciel): number {
+  if (o.rodzaj === 'namiot') {
+    // Klucz jest jedynym sposobem, żeby AI w ogóle ruszyło się dalej niż
+    // pierwszy grzbiet — bez wysokiej wartości eksploracja (30) czasem by
+    // wygrywała, a namiot bywa dalej niż najbliższy nieznany skrawek mapy.
+    return 200;
+  }
+  if (o.rodzaj === 'straznica') {
+    // Bez klucza w tej barwie podejście do strażnicy nic nie daje — `odwiedz`
+    // tylko odsyła po klucz, nie kończy dnia, ale i nie otwiera przejścia.
+    // Z kluczem w ręku otwarcie jest natychmiastowe i tanie, więc wysoka
+    // wartość: to jest DOKŁADNIE ten ruch, po który klucz się brało.
+    const k = o.klucz ?? 'zielony';
+    return kluczeOf(s, kto).includes(k) ? 250 : 0;
+  }
+  if (o.rodzaj === 'jasnowidz') {
+    // Bez zapłaty wizyta jest jałowa i, gdyby miała wartość dodatnią, AI
+    // wracałoby tam w kółko — ta sama pułapka, co przy budowlach na odnowie.
+    if (o.spelnione || !o.zadanie) return 0;
+    return skarbiecOf(s, kto)[o.zadanie.surowiec] >= o.zadanie.ile ? 150 : 0;
+  }
+  return wartoscObiektu(o);
+}
+
 function wartoscObiektu(o: Obiekt): number {
   if (o.rodzaj === 'zamek') return 400;
   if (o.rodzaj === 'kopalnia') return 120;
@@ -223,6 +253,12 @@ function znajdzCel(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefine
   const bohater = bohaterOf(s, kto);
   let najlepszy: (Cel & { ocena: number }) | undefined;
 
+  // Sito PRZED `trasa()`, nie po: na dużej mapie widocznych obiektów bywają
+  // setki, a `trasa()` to Dijkstra po całej planszy — policzona dla każdego
+  // z nich osobno potrafi zjeść dosłownie minuty na jedną decyzję. Wartość i
+  // odległość w linii prostej nic nie kosztują, więc liczymy je dla
+  // WSZYSTKICH, a drogę (drogą) tylko dla garstki najlepiej rokujących.
+  const kandydaci: Array<{ o: Obiekt; wstepna: number }> = [];
   for (const o of s.obiekty) {
     if (o.zebrany) continue;
     if (!mgla[o.y]?.[o.x]) continue;
@@ -247,6 +283,23 @@ function znajdzCel(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefine
       }
     }
 
+    const wartosc = wartoscKandydata(o, s, kto);
+    if (wartosc <= 0) continue;
+    const dKw = (o.x - bohater.x) ** 2 + (o.y - bohater.y) ** 2;
+    // Ocena wstępna dzieli przez odległość w linii prostej — ZAWSZE krótszą
+    // albo równą prawdziwej drodze, więc ranking nigdy nie zaniża kandydata,
+    // który po policzeniu drogi okaże się lepszy niż podpowiadał dystans.
+    kandydaci.push({ o, wstepna: wartosc / (Math.sqrt(dKw) + 1) });
+  }
+  kandydaci.sort((a, b) => b.wstepna - a.wstepna);
+
+  for (const { o, wstepna } of kandydaci.slice(0, 60)) {
+    // Lista jest posortowana malejąco po górnym ograniczeniu oceny (prawdziwa
+    // droga nigdy nie jest krótsza niż linia prosta) — gdy już znaleziony
+    // kandydat bije nawet ten najlepszy MOŻLIWY wynik reszty listy, dalsze
+    // wywołania `trasa()` z definicji nic nie poprawią.
+    if (najlepszy && wstepna <= najlepszy.ocena) break;
+
     const kroki = trasa(widok, o.x, o.y);
     if (!kroki || kroki.length === 0) continue;
 
@@ -258,7 +311,7 @@ function znajdzCel(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefine
     if (obronca && !wygramy(zywe(bohater.armia), obronca.oddzialy ?? [], ziarno)) continue;
 
     const koszt = kroki.reduce((a, k) => a + k.koszt, 0);
-    const ocena = wartoscObiektu(o) / (koszt + 1);
+    const ocena = wartoscKandydata(o, s, kto) / (koszt + 1);
     if (ocena <= 0) continue;
     if (!najlepszy || ocena > najlepszy.ocena) najlepszy = { kroki, ocena };
   }
@@ -291,27 +344,14 @@ function znajdzFrontowe(s: StanMapy, kto: Wlasciciel): Cel | undefined {
   const mgla = odkryteOf(s, kto);
   const bohater = bohaterOf(s, kto);
 
-  // Środek już poznanego terenu. Brzeg NAJBLIŻSZY bohaterowi prawie zawsze
-  // leży tuż obok niego, po tej samej stronie, którą właśnie przemierzył —
-  // więc "idź do najbliższej dziury" trzyma AI w kółko przy jednym skrawku
-  // mapy, zamiast pchać poznawanie DALEJ, tam gdzie jeszcze nic nie wie.
-  // Odległość od środka poznanego terenu wskazuje kierunek, w którym mgła
-  // faktycznie jeszcze się cofa.
-  let sx = 0;
-  let sy = 0;
-  let n = 0;
-  for (let y = 0; y < s.wys; y++) {
-    for (let x = 0; x < s.szer; x++) {
-      if (!mgla[y][x]) continue;
-      sx += x;
-      sy += y;
-      n++;
-    }
-  }
-  const srodekX = n ? sx / n : bohater.x;
-  const srodekY = n ? sy / n : bohater.y;
-
-  const brzegi: Array<{ x: number; y: number; odSrodka: number }> = [];
+  // Najbliższy brzeg mgły PO PROSTU — nie „najdalszy od środka poznanego":
+  // na mapie z bramami większość odległych pól leży za bramą, której jeszcze
+  // nie widać, więc próba dziesiątek dalekich celów kończyła się samymi
+  // odmowami `trasa()` i AI stało w miejscu. Bliski brzeg zawsze jest
+  // osiągalny, a `lepkiCel` (patrz `wybierzCel`) pilnuje, żeby raz wybrany
+  // kierunek trzymał się do przybycia — dzięki temu eksploracja i tak
+  // pcha się w głąb mapy dzień po dniu, zamiast kręcić się w kółko.
+  const brzegi: Array<{ x: number; y: number; d: number }> = [];
   for (let y = 0; y < s.wys; y++) {
     for (let x = 0; x < s.szer; x++) {
       if (mgla[y][x]) continue;
@@ -335,24 +375,17 @@ function znajdzFrontowe(s: StanMapy, kto: Wlasciciel): Cel | undefined {
         }
       }
       if (!naBrzegu) continue;
-      const odSrodka = (x - srodekX) ** 2 + (y - srodekY) ** 2;
-      brzegi.push({ x, y, odSrodka });
+      const d = (x - bohater.x) ** 2 + (y - bohater.y) ** 2;
+      brzegi.push({ x, y, d });
     }
   }
-  // Najdalej od środka poznanego terenu = prawdziwa krawędź eksploracji, nie
-  // przypadkowa dziura tuż przy bohaterze.
-  brzegi.sort((a, b) => b.odSrodka - a.odSrodka);
+  brzegi.sort((a, b) => a.d - b.d);
 
-  // Spośród prawdziwie dalekich brzegów bierzemy ten najtańszy DLA BOHATERA —
-  // kierunek wyznacza środek mgły, ale drogę i tak liczy `trasa()`.
-  let najlepszy: { kroki: Krok[]; koszt: number } | undefined;
-  for (const b of brzegi.slice(0, 40)) {
+  for (const b of brzegi.slice(0, 24)) {
     const kroki = trasa(widok, b.x, b.y);
-    if (!kroki || kroki.length === 0) continue;
-    const koszt = kroki.reduce((a, k) => a + k.koszt, 0);
-    if (!najlepszy || koszt < najlepszy.koszt) najlepszy = { kroki, koszt };
+    if (kroki && kroki.length > 0) return { kroki };
   }
-  return najlepszy;
+  return undefined;
 }
 
 /** Wejście na pole z obiektem — decyzje przy pytaniach są celowo najprostsze. */

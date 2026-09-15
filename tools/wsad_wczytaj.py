@@ -43,34 +43,49 @@ PAN_W, PAN_H = 960, 596
 #: Scena musi znać tę samą liczbę, żeby wiedzieć, gdzie w pliku stoi budynek.
 MARGINES_CIENIA = 0.42
 
-#: Powyżej tego nasycenia piksel należy do przedmiotu, a nie do tła. Szachownica
-#: przezroczystości z modelu ma nasycenie do 7, bryły — mediana 67 i wyżej.
-SZARE_NASYCENIE = 12
-#: Najciemniejsza szarość, jaką jeszcze uznajemy za tło. Ciemniejsza krata się
-#: nie zdarza, a niżej zaczynają się czarne kontury rysunków.
-SZARE_OD = 95
-#: Ile kadru musi zająć tło, żeby uznać, że reguła je znalazła. Obrazy z wsadu
-#: mają wokół sylwetki kilkaset pikseli marginesu, więc prawdziwe tło zajmuje
-#: kilkanaście procent i więcej; kilka procent to znak, że reguła trafiła
-#: w pojedyncze jasne piksele przy krawędzi, a nie w tło.
-MINIMUM_TLA = 0.05
+
+#: Wysepka mniejsza niż tyle procent głównej bryły to śmieć z kadru, nie część
+#: budowli. Ognisko ma najdrobniejsze osobne elementy w całym wsadzie i mieści
+#: się grubo powyżej tego progu.
+PROG_WYSEPKI = 0.02
 
 
-def zapisz(im: Image.Image, sciezka: Path) -> None:
-    """Zapisuje sprite'a i pilnuje, żeby MIAŁ przezroczystość.
+def tylkoSylwetka(im: Image.Image) -> Image.Image:
+    """Wycina drobiny, które model zostawił poza budowlą.
 
-    Sprite bez ani jednego przezroczystego piksela to sprite z wypalonym tłem.
-    W grze wygląda jak szary prostokąt położony na trawie i widać to dopiero
-    na ekranie — osiem budowli przeszło tak przez cały potok, sondy i deploy,
-    bo żadne sprawdzenie nie patrzyło na sam obrazek. Tutaj to kosztuje jedną
-    linijkę i wywala się w miejscu, w którym błąd powstaje.
+    Wokół sylwetki potrafią zostać kreski i smugi z kadru: nie stykają się
+    z kratką, więc wypełnienie ich nie zabiera, a `przytnij` rozciąga przez
+    nie kadr i budowla przestaje stać tam, gdzie mówi jej położenie. Zostaje
+    największa spójna bryła i wszystko, co jest od niej istotnym ułamkiem —
+    osobne kamienie czy iskry przy ognisku są duże, ślad po kadrze nie.
     """
-    if np.asarray(im.convert('RGBA'))[:, :, 3].min() == 255:
-        raise SystemExit(
-            f'{sciezka.name}: brak przezroczystości — tło zostało wypalone w piksele. '
-            f'Popraw regułę w `bezTla` dla {sciezka.stem}.'
-        )
-    im.save(sciezka)
+    widoczne = np.asarray(im.convert('RGBA'))[:, :, 3] > PROG_ALFY
+    h, w = widoczne.shape
+    etykiety = np.zeros((h, w), dtype=np.int32)
+    pola: list[int] = [0]
+    for y0 in range(h):
+        for x0 in range(w):
+            if not widoczne[y0, x0] or etykiety[y0, x0]:
+                continue
+            nr = len(pola)
+            pola.append(0)
+            kolejka = deque([(y0, x0)])
+            etykiety[y0, x0] = nr
+            while kolejka:
+                y, x = kolejka.popleft()
+                pola[nr] += 1
+                for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    ny, nx = y + dy, x + dx
+                    if 0 <= ny < h and 0 <= nx < w and widoczne[ny, nx] and not etykiety[ny, nx]:
+                        etykiety[ny, nx] = nr
+                        kolejka.append((ny, nx))
+    if len(pola) <= 1:
+        return im
+    najwieksze = max(pola)
+    zostaje = np.array([i == 0 or n >= najwieksze * PROG_WYSEPKI for i, n in enumerate(pola)])
+    tab = np.asarray(im.convert('RGBA')).copy()
+    tab[~zostaje[etykiety], 3] = 0
+    return Image.fromarray(tab, 'RGBA')
 
 
 def przytnij(im: Image.Image) -> Image.Image:
@@ -81,8 +96,25 @@ def przytnij(im: Image.Image) -> Image.Image:
 
 
 def dopasuj(im: Image.Image, wysokosc: int) -> Image.Image:
+    """Zmniejsza do zadanej wysokości — z alfą WMNOŻONĄ w barwę.
+
+    Bez tego zmniejszanie miesza barwę widocznych pikseli z barwą pikseli
+    przezroczystych, a te mają w plikach z modelu kolor czarny. Wynik to
+    ciemna obwódka dookoła całej sylwetki: na białym tle niewidoczna,
+    na trawie widać ją jako brudny kontur. Mnożymy więc barwę przez alfę
+    przed zmniejszeniem i dzielimy po nim — wtedy w mieszanie idzie tylko to,
+    co naprawdę widać.
+    """
     w = max(1, round(im.width * wysokosc / im.height))
-    return im.resize((w, wysokosc), Image.LANCZOS)
+    tab = np.asarray(im.convert('RGBA')).astype(np.float32)
+    a = tab[:, :, 3:4] / 255.0
+    tab[:, :, :3] *= a
+    male = np.asarray(
+        Image.fromarray(tab.astype(np.uint8), 'RGBA').resize((w, wysokosc), Image.LANCZOS)
+    ).astype(np.float32)
+    a2 = np.clip(male[:, :, 3:4] / 255.0, 1e-3, 1)
+    male[:, :, :3] = np.clip(male[:, :, :3] / a2, 0, 255)
+    return Image.fromarray(male.astype(np.uint8), 'RGBA')
 
 
 def zCieniem(im: Image.Image, sila: float = 1.0) -> Image.Image:
@@ -113,87 +145,314 @@ def zCieniem(im: Image.Image, sila: float = 1.0) -> Image.Image:
     return plotno
 
 
-def _wytnij_tlo(im: Image.Image, kandydaci) -> tuple[Image.Image, float]:
-    """Wypełnienie od KRAWĘDZI kadru po polach uznanych za możliwe tło.
+def _flood_od_krawedzi(kandydat: np.ndarray) -> np.ndarray:
+    """Zbiór pikseli tła: wypełnienie od KRAWĘDZI kadru po polu `kandydat`.
 
-    Zwraca obrazek i ułamek kadru, który uznano za tło — po tym ułamku poznaje
-    się, czy reguła w ogóle trafiła. Wypełnienie zatrzymuje się na obrysie
-    sylwetki, więc białe światła w środku bryły i tak zostają nietknięte.
+    Od krawędzi, a nie progiem po całym obrazku, bo inaczej znikają jasne
+    części samego przedmiotu — biały kamień, oświetlona ściana, jajko w gnieździe.
     """
-    tab = np.asarray(im).copy()
-    h, w = tab.shape[:2]
-
+    h, w = kandydat.shape
     tlo = np.zeros((h, w), dtype=bool)
     kolejka = deque()
     for x in range(w):
         for y in (0, h - 1):
-            if kandydaci[y, x] and not tlo[y, x]:
+            if kandydat[y, x] and not tlo[y, x]:
                 tlo[y, x] = True
                 kolejka.append((y, x))
     for y in range(h):
         for x in (0, w - 1):
-            if kandydaci[y, x] and not tlo[y, x]:
+            if kandydat[y, x] and not tlo[y, x]:
                 tlo[y, x] = True
                 kolejka.append((y, x))
     while kolejka:
         y, x = kolejka.popleft()
         for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             ny, nx = y + dy, x + dx
-            if 0 <= ny < h and 0 <= nx < w and kandydaci[ny, nx] and not tlo[ny, nx]:
+            if 0 <= ny < h and 0 <= nx < w and kandydat[ny, nx] and not tlo[ny, nx]:
                 tlo[ny, nx] = True
                 kolejka.append((ny, nx))
+    return tlo
 
-    # Obrys sylwetki jest wygładzony, więc tuż przy nim leżą piksele w połowie
-    # tła. Zostawione, dają wokół bryły jasną obwódkę — na trawie widać ją od
-    # razu. Poszerzamy więc tło o jeden piksel w stronę przedmiotu: kosztuje to
-    # włos sylwetki, a obwódki nie ma.
-    maska = np.asarray(
-        Image.fromarray((tlo * 255).astype(np.uint8), 'L').filter(ImageFilter.MaxFilter(3))
-    ) > 0
-    tab[maska, 3] = 0
-    return Image.fromarray(tab, 'RGBA'), float(tlo.mean())
+
+#: Ile piksel może odbiegać od odcienia kratki, żeby wciąż być tłem.
+LUZ_SZACHOWNICY = 26
+#: Najmniejsza różnica jasności między polami kratki. Poniżej tego to nie
+#: szachownica, tylko jednolite szare tło — a tym zajmuje się `bezTla`.
+ROZSTAW_KRATKI = 30
+
+
+#: Tło chromakey: czysta magenta. Model NIE UMIE oddać przezroczystości —
+#: obrazkowe modele Gemini wypuszczają kryjące RGB bez kanału alfa, więc na
+#: prośbę o przezroczyste tło malują kratkę, którą edytory rysują POD alfą.
+#: Odtwarzanie alfy z takiej kratki to zgadywanie wzoru i przegrywa
+#: z gradientem, poświatą i szarym kamieniem budowli. Prościej dać modelowi
+#: tło, którego w rysunku nie ma, i wyciąć je po barwie: jeden warunek
+#: zamiast trzech heurystyk. Magenta, nie zieleń — nasze budowle są pełne
+#: mchu i bluszczu, a różu nie ma w nich ani jednego.
+CHROMA_G = 60
+CHROMA_G_PELNA = 110
+
+
+def jestChroma(tab: np.ndarray) -> bool:
+    """Czy tło jest chromakeyem, a nie kratką albo bielą."""
+    ramka = np.concatenate(
+        [tab[:6, :, :3].reshape(-1, 3), tab[-6:, :, :3].reshape(-1, 3)]).astype(int)
+    roznica = (ramka[:, 0] + ramka[:, 2]) / 2 - ramka[:, 1]
+    return bool((roznica > CHROMA_G_PELNA).mean() > 0.8)
+
+
+def bezChromy(im: Image.Image) -> Image.Image:
+    """Zdejmuje tło chromakey i zdejmuje jego poświatę z krawędzi.
+
+    Miarą jest przewaga czerwieni i błękitu nad zielenią: dla magenty ogromna,
+    dla wszystkiego, co rysujemy, bliska zeru. Krawędzie dostają alfę
+    pośrednią, żeby obrys nie był schodkowy, a piksele częściowo przezroczyste
+    — odbarwienie: model rozmywa magentę w kontur przedmiotu i bez tego
+    budowla dostaje różową obwódkę, widoczną dopiero na trawie.
+    """
+    tab = np.asarray(im.convert('RGBA')).astype(np.float32)
+    r, g, b = tab[:, :, 0], tab[:, :, 1], tab[:, :, 2]
+    roznica = (r + b) / 2 - g
+    alfa = 1.0 - np.clip((roznica - CHROMA_G) / (CHROMA_G_PELNA - CHROMA_G), 0.0, 1.0)
+
+    # Odbarwienie TYLKO na krawędzi, czyli tam, gdzie alfa jest pośrednia
+    # i barwa jest mieszaniną przedmiotu z tłem. Zastosowane do wnętrza
+    # sylwetki odbarwia sam rysunek: czerwona chorągiew strażnicy zrobiła się
+    # pomarańczowa, bo czerwień też ma przewagę nad zielenią.
+    spill = (roznica > 0) & (alfa > 0) & (alfa < 1)
+    nadmiar = np.where(spill, np.minimum(roznica, CHROMA_G), 0.0)
+    tab[:, :, 0] = np.clip(r - nadmiar, 0, 255)
+    tab[:, :, 2] = np.clip(b - nadmiar, 0, 255)
+    tab[:, :, 3] = tab[:, :, 3] * alfa
+    return Image.fromarray(tab.astype(np.uint8), 'RGBA')
+
+
+def odcienieKratki(tab: np.ndarray) -> tuple[int, int] | None:
+    """Dwa poziomy jasności namalowanej kratki, albo None, gdy jej nie ma.
+
+    Pierwotnie stały tu dwie liczby (126 i 196) odczytane z pierwszej dostawy.
+    Druga dostawa przyszła z kratką CIEMNĄ (~26 i ~87) i wykrywanie ją
+    przepuściło — plik szedł do gry jako pełny prostokąt tła. Odcieni nie da
+    się więc wpisać na stałe: model rysuje kratkę w takim odcieniu, w jakim
+    akurat pokazuje ją jego edytor. Szukamy zatem WZORU, nie barwy: dwóch
+    bezbarwnych poziomów, które razem zajmują obrzeże całego kadru.
+    """
+    ramka = np.concatenate(
+        [tab[:8, :, :3].reshape(-1, 3), tab[-8:, :, :3].reshape(-1, 3),
+         tab[:, :8, :3].reshape(-1, 3), tab[:, -8:, :3].reshape(-1, 3)]
+    ).astype(int)
+    bezbarwne = (ramka.max(axis=1) - ramka.min(axis=1)) <= 14
+    if bezbarwne.mean() < 0.7:
+        return None
+    jasnosc = ramka[bezbarwne].mean(axis=1)
+    ile = np.bincount(np.round(jasnosc).astype(int), minlength=256)
+    a = int(ile.argmax())
+    # Drugie pole musi leżeć DALEKO od pierwszego, inaczej złapiemy sąsiedni
+    # słupek tego samego pola i wyjdzie „kratka" z jednolitej szarości.
+    daleko = ile.copy()
+    daleko[max(0, a - ROZSTAW_KRATKI):a + ROZSTAW_KRATKI + 1] = 0
+    b = int(daleko.argmax())
+    if daleko[b] == 0:
+        return None
+    wKratke = (np.abs(jasnosc - a) <= LUZ_SZACHOWNICY) | (np.abs(jasnosc - b) <= LUZ_SZACHOWNICY)
+    # Oba pola muszą naprawdę występować: przy jednym mamy tło jednolite.
+    udzialy = [(np.abs(jasnosc - x) <= LUZ_SZACHOWNICY).mean() for x in (a, b)]
+    if wKratke.mean() * bezbarwne.mean() <= 0.7 or min(udzialy) < 0.2:
+        return None
+    return (min(a, b), max(a, b))
+
+
+def jestSzachownica(tab: np.ndarray) -> bool:
+    """Czy obrazek ma NAMALOWANĄ szachownicę zamiast przezroczystości.
+
+    Model raz oddaje prawdziwą alfę, raz białe tło, a raz rysuje kratkę, którą
+    edytory pokazują pod przezroczystością — i wtedy plik jest w pełni kryjący,
+    a budowla ma na mapie szary prostokąt zamiast tła. Kratki nie da się
+    pomylić z niczym w samych budowlach: jest idealnie bezbarwna i zajmuje
+    obrzeże całego kadru.
+    """
+    return odcienieKratki(tab) is not None
 
 
 def bezTla(im: Image.Image, prog: int = 232) -> Image.Image:
-    """Usuwa wypalone tło. Dwie reguły, w kolejności od bezpieczniejszej.
+    """Usuwa jednolite jasne tło, idąc wypełnieniem od krawędzi kadru.
 
-    Model oddaje tło na trzy sposoby. Raz jest to prawdziwa przezroczystość,
-    raz białe tło (o które prosi prompt, bo tak jest pewniej), a raz — i to
-    kosztowało osiem grafik — SZACHOWNICA przezroczystości wypalona w piksele:
-    model rysuje to, co widzi w edytorze, razem z szarą kratą. Krata ma dwie
-    szarości, około 125 i 195, więc próg 232 jej w ogóle nie widzi i sprite
-    trafia do gry jako nieprzezroczysty szary prostokąt.
-
-    Kraty nie da się złapać samą jasnością — obniżenie progu do 100 zjadłoby
-    jasne części przedmiotów. Rozpoznaje ją NIEBARWNOŚĆ: krata ma nasycenie
-    poniżej 8, a bryły z wsadu medianę 67–149.
-
-    Ale niebarwność sama w sobie też nie wystarczy jako reguła domyślna:
-    kamienie są szare i jasne, i wypełnienie zaczęło im zjadać brzegi
-    (sprawdzone na `skala-plaska` — ubyło pół głazu). Dlatego najpierw idzie
-    reguła biała, a szara wchodzi TYLKO wtedy, gdy tamta nie znalazła tła.
-    Obraz na białym tle ma go kilkanaście procent kadru i więcej; jeśli wyszło
-    mniej niż `MINIMUM_TLA`, znaczy, że tło jest inne niż białe.
+    Progowanie całego obrazka odpada: zjadłoby też jasne części samego
+    przedmiotu. Wypełnienie od brzegu zatrzymuje się na pierwszym ciemniejszym
+    pikselu i sylwetki nie tyka.
     """
     im = im.convert('RGBA')
-    rgb = np.asarray(im)[:, :, :3].astype(np.int16)
-    jasnosc = rgb.min(axis=2)
+    tab = np.asarray(im).copy()
+    jasny = tab[:, :, :3].min(axis=2) >= prog
+    tab[_flood_od_krawedzi(jasny), 3] = 0
+    return Image.fromarray(tab, 'RGBA')
 
-    wynik, udzial = _wytnij_tlo(im, jasnosc >= prog)
-    if udzial >= MINIMUM_TLA:
-        return wynik
 
-    nasycenie = rgb.max(axis=2) - jasnosc
-    szare, _ = _wytnij_tlo(im, (nasycenie <= SZARE_NASYCENIE) & (jasnosc >= SZARE_OD))
-    return szare
+def _polePola(jasnosc: np.ndarray, ciemne: int, jasne: int) -> int:
+    """Bok jednego pola kratki, w pikselach.
+
+    Okno, przez które patrzy `_wKratke`, musi być WIĘKSZE od pola — inaczej
+    mieści się w całości wewnątrz jednego i nigdy nie zobaczy drugiego.
+    Maska robi się wtedy dziurawa, wypełnienie nie ma którędy przejść
+    i wokół przedmiotu zostaje kwadrat tła. Stała nie wystarcza: model
+    rysuje pole na 12 pikseli przy budowli i na 26 przy drobnym relikcie,
+    bo kadr jest ten sam, a przedmiot w nim mniejszy.
+    """
+    srodek = (ciemne + jasne) / 2
+    dlugosci = []
+    for pas in (jasnosc[:4, :].mean(axis=0), jasnosc[:, :4].mean(axis=1)):
+        granice = np.flatnonzero(np.diff((pas > srodek).astype(int)) != 0)
+        if len(granice) > 2:
+            dlugosci.append(float(np.median(np.diff(granice))))
+    return int(round(max(dlugosci))) if dlugosci else 12
+
+
+def _oknoKratki(jasnosc: np.ndarray, ciemne: int, jasne: int) -> int:
+    """Promień okna: z zapasem większy od pola, żeby zawsze objąć jego sąsiada."""
+    return min(60, max(6, round(_polePola(jasnosc, ciemne, jasne) * 1.3)))
+
+
+def _wKratke(bezbarwny: np.ndarray, jasnosc: np.ndarray, ciemne: int, jasne: int) -> np.ndarray:
+    """Maska pikseli należących do namalowanej kratki.
+
+    Sam warunek „bezbarwny i w jasności któregoś pola" nie wystarcza i przy
+    ciemnej kratce jest wręcz groźny: szary kamień budowli też jest bezbarwny
+    i trafia w te widełki, więc wypełnienie od krawędzi wchodzi przez niego
+    w środek sylwetki i wyjada jej kawałek. Widać to dopiero na trawie —
+    w podglądzie z szachownicą dziura w murze wygląda jak przezroczystość.
+
+    Rozróżnia je WZÓR, nie barwa: w oknie wokół piksela kratki leżą OBA pola
+    i prawie nic poza nimi, a wokół piksela kamienia rozciąga się ciągłe
+    pasmo odcieni. Zwężanie widełek tego nie załatwia — kratka rozpada się
+    wtedy na niepołączone wnętrza pól (rozmyte granice wypadają) i wypełnienie
+    nie ma którędy przejść.
+    """
+    okno = _oknoKratki(jasnosc, ciemne, jasne)
+
+    def udzial(maska: np.ndarray) -> np.ndarray:
+        rozmyte = Image.fromarray((maska * 255).astype(np.uint8)).filter(
+            ImageFilter.BoxBlur(okno))
+        return np.asarray(rozmyte).astype(np.float32) / 255.0
+
+    wasko = 10
+    uc = udzial(bezbarwny & (np.abs(jasnosc - ciemne) <= wasko))
+    uj = udzial(bezbarwny & (np.abs(jasnosc - jasne) <= wasko))
+    return (uc > 0.15) & (uj > 0.15) & (uc + uj > 0.62)
+
+
+def bezSzachownicy(im: Image.Image, odcienie: tuple[int, int] | None = None) -> Image.Image:
+    """Usuwa NAMALOWANĄ szachownicę przezroczystości.
+
+    Dwa kroki, bo sam flood zostawia obwódkę: kratka jest rozmyta na styku
+    z sylwetką i ten wieniec jasnoszarych pikseli widać na mapie jako aureolę
+    wokół budowli — dokładnie to, co miało zniknąć.
+
+     1. wypełnienie od krawędzi po pikselach rozpoznanych jako kratka;
+     2. dosięgnięcie do sylwetki: `_wKratke` patrzy przez okno, więc pas
+        kratki o szerokości tego okna tuż przy budowli nie ma jak się
+        zakwalifikować i zostaje wieńcem. Rozrost po pikselach w barwie
+        kratki, na tyle kroków, ile liczy okno, dochodzi do samej sylwetki;
+     3. dokładka: piksele stykające się z tłem, wciąż bezbarwne i w zakresie
+        jasności kratki, idą razem z nią. To zjada obwódkę, a nie sylwetkę,
+        bo prawdziwe krawędzie budowli mają barwę.
+    """
+    im = im.convert('RGBA')
+    tab = np.asarray(im).copy()
+    ciemne, jasne = odcienie or odcienieKratki(tab) or (126, 196)
+    rgb = tab[:, :, :3].astype(int)
+    bezbarwny = (rgb.max(axis=2) - rgb.min(axis=2)) <= 14
+    jasnosc = rgb.mean(axis=2)
+    wKratke = _wKratke(bezbarwny, jasnosc, ciemne, jasne)
+    tlo = _flood_od_krawedzi(wKratke)
+
+    def rozrost(maska: np.ndarray, kroki: int) -> None:
+        for _ in range(kroki):
+            sasiad = np.zeros_like(tlo)
+            sasiad[1:, :] |= tlo[:-1, :]
+            sasiad[:-1, :] |= tlo[1:, :]
+            sasiad[:, 1:] |= tlo[:, :-1]
+            sasiad[:, :-1] |= tlo[:, 1:]
+            tlo[:] |= sasiad & maska
+
+    # Wieniec: same pola kratki, wąskie widełki. Szersze wpuściłyby rozrost
+    # w ciemny kamień budowli — przy ciemnej kratce to ta sama jasność.
+    czyste = bezbarwny & (
+        (np.abs(jasnosc - ciemne) <= 10) | (np.abs(jasnosc - jasne) <= 10))
+    rozrost(czyste, _oknoKratki(jasnosc, ciemne, jasne) + 2)
+
+    # Obwódka: rozmyty styk kratki z sylwetką. Zakres jasności idzie
+    # z WYKRYTYCH pól, bo przy ciemnej kratce widełki dobrane do jasnej nie
+    # objęłyby ani jednego piksela obwódki.
+    prawie = ((rgb.max(axis=2) - rgb.min(axis=2)) <= 26) & (
+        jasnosc > ciemne - LUZ_SZACHOWNICY) & (jasnosc < jasne + LUZ_SZACHOWNICY)
+    rozrost(prawie, 2)
+
+    tab[tlo, 3] = 0
+    wynik = Image.fromarray(tab, 'RGBA')
+    # Miękka krawędź: po wycięciu obrys jest schodkowy, a wszystko dokoła na
+    # tej mapie jest wygładzone. Rozmycie samej alfy zostawia barwy w spokoju.
+    alfa = wynik.getchannel('A').filter(ImageFilter.GaussianBlur(0.8))
+    wynik.putalpha(alfa)
+    return wynik
+
+
+#: Poniżej tej alfy piksel jest resztką po tle, a nie krawędzią przedmiotu.
+PROG_ALFY = 40
+
+
+def bezWoalu(im: Image.Image) -> Image.Image:
+    """Ścina prawie przezroczystą mgiełkę wokół sylwetki.
+
+    Model zostawia wokół przedmiotu kilkadziesiąt tysięcy pikseli o alfie 1–15
+    w kolorze ciemnoszarym. Na białym tle w podglądzie tego nie widać, ale na
+    mapie każdy taki piksel PRZYCIEMNIA trawę — i budowla dostaje prostokątny
+    woal dokładnie w kształcie kadru z modelu. To jest ten „dorysowany kawałek
+    tła", którego nie da się wtopić w teren, bo on nie ma nic wspólnego
+    z terenem: to ślad po kadrze.
+
+    Zamiast samego progu rozciągamy resztę alfy z powrotem do pełnej skali —
+    inaczej krawędzie, które model zrobił miękko, zrobiłyby się o krok bledsze.
+    """
+    tab = np.asarray(im.convert('RGBA')).astype(np.float32)
+    a = tab[:, :, 3]
+    a = np.where(a < PROG_ALFY, 0.0, (a - PROG_ALFY) * (255.0 / (255.0 - PROG_ALFY)))
+    tab[:, :, 3] = a.clip(0, 255)
+    return Image.fromarray(tab.astype(np.uint8), 'RGBA')
+
+
+def ostrzezOTle(nazwa: str, im: Image.Image) -> None:
+    """Krzyczy, gdy sprite wyszedł z tłem zamiast z sylwetką.
+
+    Dwa błędy, które przeszły do gry i wyglądały jak usterka silnika: budowla
+    z NAMALOWANĄ szachownicą (szary prostokąt na trawie) i budowla z woalem
+    z prawie przezroczystych pikseli (prostokątny cień w kształcie kadru).
+    Oba widać w pliku od razu — dlatego mówimy o nich tutaj, a nie dopiero
+    na ekranie.
+    """
+    a = np.asarray(im.convert('RGBA'))[:, :, 3]
+    if a.min() == 255:
+        print(f'  UWAGA: {nazwa} nie ma ANI JEDNEGO przezroczystego piksela — tło zostało w pliku')
+        return
+    # Próg wysoki, bo mały, ciasno przycięty sprite (pokeball, jagody) dotyka
+    # krawędzi całkiem legalnie — sylwetka po prostu wypełnia kadr. Woal po tle
+    # kryje ramkę niemal w całości i dopiero to jest usterką.
+    ramka = np.concatenate([a[0], a[-1], a[:, 0], a[:, -1]])
+    if (ramka > 16).mean() > 0.85:
+        print(f'  UWAGA: {nazwa} dotyka tłem krawędzi kadru — sylwetka jest przycięta albo została mgiełka')
 
 
 def wczytaj(nazwa: str) -> Image.Image:
     im = Image.open(WSAD / f'{nazwa}.png').convert('RGBA')
-    # Plik bez ani jednego przezroczystego piksela to plik na białym tle.
-    if np.asarray(im)[:, :, 3].min() == 255:
-        im = bezTla(im)
-    return przytnij(im)
+    # Plik bez ani jednego przezroczystego piksela ma tło namalowane: albo
+    # białe, albo w kratkę udającą przezroczystość.
+    tab = np.asarray(im)
+    if tab[:, :, 3].min() == 255:
+        if jestChroma(tab):
+            im = bezChromy(im)
+        else:
+            kratka = odcienieKratki(tab)
+            im = bezSzachownicy(im, kratka) if kratka else bezTla(im)
+    return przytnij(tylkoSylwetka(bezWoalu(im)))
 
 
 # ---------------------------------------------------------------------------
@@ -206,6 +465,9 @@ BUDYNKI = {
     'ratusz1': 520, 'ratusz2': 600, 'ratusz3': 680, 'fort': 520,
     'siedlisko1': 380, 'siedlisko2': 400, 'siedlisko3': 400, 'siedlisko4': 440,
     'siedlisko5': 470, 'siedlisko6': 640, 'specjalny': 380, 'plac': 360,
+    # Ulepszone siedliska trzech górnych poziomów. Stoją w tym samym punkcie
+    # panoramy co ich podstawowa wersja, więc i wysokość mają tę samą.
+    'siedlisko4u': 440, 'siedlisko5u': 470, 'siedlisko6u': 640,
 }
 
 PANORAMY = {'tlo-bor': 'bor', 'tlo-grota': 'grota', 'tlo-zbocze': 'zbocze'}
@@ -222,7 +484,7 @@ def miasto():
         # pod podstawą, a ten jeden naprawdę osadza bryłę. Dwa cienie naraz to
         # o jeden za dużo, więc zostaje ten lepszy.
         im = dopasuj(wczytaj(nazwa), wys)
-        zapisz(im, MIASTO / f'bor-{nazwa}.png')
+        im.save(MIASTO / f'bor-{nazwa}.png')
         print(f'  bor-{nazwa}.png  {im.width} × {im.height}')
 
     for plik, frakcja in PANORAMY.items():
@@ -305,9 +567,27 @@ BUDOWLE = {
     'ognisko': 86,
     'chatka': 115,
     'woz': 125,
+    # Brama w przełęczy: szeroka na dwa pola z okładem, bo ma zagradzać
+    # przejście, a nie stać przy drodze. Mechaniki jeszcze nie ma — grafika
+    # czeka na nią gotowa, przerobiona tym samym potokiem co reszta.
+    'straznica': 190,
+    'namiot-klucznika': 150,
+    'wiezienie': 168,
+    'chata-jasnowidza': 154,
+    # Relikty leżą na ziemi, więc są drobne — mają kusić z daleka kolorem,
+    # a nie zasłaniać pole, na którym stoją.
+    'relikt-kompas': 62,
+    'relikt-pas': 58,
+    'relikt-rog': 62,
+    'relikt-skrzydla': 66,
 }
 
-TERENY = ['teren-trawa', 'teren-sciezka', 'teren-piasek', 'teren-woda', 'teren-las', 'teren-skaly']
+TERENY = [
+    'teren-trawa', 'teren-sciezka', 'teren-piasek', 'teren-woda', 'teren-las', 'teren-skaly',
+    # Krainy z drugiej dostawy. Kosztów ruchu jeszcze nie mają — tekstura
+    # musi być pierwsza, bo bez niej nie ma czego postawić na planszy.
+    'teren-bagno', 'teren-jalowa', 'teren-snieg',
+]
 
 #: Warianty tego samego terenu — druga i trzecia trawa, drugie skały i tak dalej.
 #: Nazwy z wsadu bywają pisane raz z łącznikiem, raz bez („teren-trawa2" obok
@@ -335,7 +615,8 @@ def mapa():
             wynik = dopasuj(im, wys)
             if odbij and odbij[0]:
                 wynik = wynik.transpose(Image.FLIP_LEFT_RIGHT)
-            zapisz(wynik, MAPA / f'{nazwa}.png')
+            ostrzezOTle(nazwa, wynik)
+            wynik.save(MAPA / f'{nazwa}.png')
         print(f'  {zrodlo} → {", ".join(c[0] for c in cele)}')
 
     for nazwa, wys in BUDOWLE.items():
@@ -344,7 +625,8 @@ def mapa():
             print(f'  {nazwa} — brak pliku, pomijam')
             continue
         im = dopasuj(wczytaj(nazwa), wys)
-        zapisz(im, MAPA / f'{nazwa}.png')
+        ostrzezOTle(nazwa, im)
+        im.save(MAPA / f'{nazwa}.png')
         print(f'  {nazwa}.png  {im.width} × {im.height}')
 
     TEREN.mkdir(parents=True, exist_ok=True)
