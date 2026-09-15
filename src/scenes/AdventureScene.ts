@@ -2581,23 +2581,48 @@ export class AdventureScene extends Phaser.Scene {
 
   private koniecTury() {
     if (this.zajety) return;
-    const wplyw = nowaTura(this.stan);
-    this.warstwaTrasy.clear();
-    // Trasa niedokończona wczoraj wraca od razu jako zaznaczona — jak
-    // w Heroes 3 — pod warunkiem, że cel wciąż da się osiągnąć (np. nie
-    // zajął go w międzyczasie inny obiekt).
-    const cel = this.stan.bohater.celDlugiejTrasy;
-    this.trasaBiezaca = cel ? trasa(this.stan, cel.x, cel.y) : null;
-    if (this.trasaBiezaca && this.trasaBiezaca.length === 0) {
-      this.trasaBiezaca = null;
-      this.stan.bohater.celDlugiejTrasy = undefined;
-    }
-    this.pokazTrase();
-    const wpisy = Object.entries(wplyw).map(
-      ([co, ile]) => `+${ile} ${SUROWIEC_INFO[co as keyof typeof SUROWIEC_INFO].dopelniacz}`
-    );
-    zapisz('mapa', 'koniec tury', { data: this.stan.dzien, dochod: wplyw });
-    this.napisUlotny(['Nowy dzień', ...wpisy].join('\n'));
-    this.odswiezWszystko();
+    this.zajety = true;
+    // Bez żadnego znaku na ekranie koniec tury wygląda jak zawieszenie gry —
+    // zwłaszcza gdy w tym miejscu kiedyś dojdzie ruch przeciwnika. Nakładka
+    // rysuje się NIM zaczniemy liczyć nowy dzień, a `setTimeout(0)` oddaje
+    // klatkę przeglądarce, żeby zdążyła ją namalować przed resztą pracy.
+    const zaslona = this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.45)
+      .setOrigin(0, 0)
+      .setDepth(Z.overlay);
+    const napis = this.add
+      .text(
+        this.mapaX + this.oknoW / 2,
+        this.mapaY + this.oknoH / 2,
+        'Przetwarzanie tury…',
+        display(18, H.goldLight)
+      )
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 1);
+    this.naWierzchu(zaslona, napis);
+
+    setTimeout(() => {
+      const wplyw = nowaTura(this.stan);
+      this.warstwaTrasy.clear();
+      // Trasa niedokończona wczoraj wraca od razu jako zaznaczona — jak
+      // w Heroes 3 — pod warunkiem, że cel wciąż da się osiągnąć (np. nie
+      // zajął go w międzyczasie inny obiekt).
+      const cel = this.stan.bohater.celDlugiejTrasy;
+      this.trasaBiezaca = cel ? trasa(this.stan, cel.x, cel.y) : null;
+      if (this.trasaBiezaca && this.trasaBiezaca.length === 0) {
+        this.trasaBiezaca = null;
+        this.stan.bohater.celDlugiejTrasy = undefined;
+      }
+      this.pokazTrase();
+      const wpisy = Object.entries(wplyw).map(
+        ([co, ile]) => `+${ile} ${SUROWIEC_INFO[co as keyof typeof SUROWIEC_INFO].dopelniacz}`
+      );
+      zapisz('mapa', 'koniec tury', { data: this.stan.dzien, dochod: wplyw });
+      zaslona.destroy();
+      napis.destroy();
+      this.zajety = false;
+      this.napisUlotny(['Nowy dzień', ...wpisy].join('\n'));
+      this.odswiezWszystko();
+    }, 0);
   }
 }
