@@ -837,3 +837,10 @@ podglądy ze strony. Nie jest to trwałe: magazyn ma komplet, więc najbliższy
 poprawny deploy odtwarza wszystko. Kolejność wdrożenia też ma znaczenie —
 gałąź główna MUSI pójść pierwsza, inaczej magazyn powstaje z pustym korzeniem
 i główny adres gry zwraca 404 do czasu jej deployu.
+
+**Pułapka przy sprawdzaniu podglądów:** `actions/deploy-pages` nazywa wydanie
+odciskiem commita (`pages_build_version`). Dwie gałęzie wskazujące ten SAM
+commit dają więc jedno wydanie — drugi deploy kończy się sukcesem, ale niczego
+nie zmienia. W normalnej pracy to nie występuje, bo każda gałąź ma własne
+commity; łatwo się za to o to potknąć przy testowaniu mechanizmu, wypychając
+tę samą rewizję w dwa miejsca. Objaw jest mylący: zielony run i stara strona.
