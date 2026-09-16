@@ -52,6 +52,17 @@ import { GORA, KAFEL, MARGINES, PANEL_W, PASEK_H } from '../visual/uklad';
 import { dodajWode } from '../visual/woda';
 import { wersjonujZasoby } from '../visual/zasoby';
 import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
+import {
+  MUZYKA_MAPA,
+  aktualizujAmbient,
+  initSfx,
+  loadSfx,
+  sfx,
+  startMusic,
+  stopAmbient,
+  stopMusic,
+  toggleSfx,
+} from '../audio/mapSfx';
 
 /**
  * Mapa przygody.
@@ -178,6 +189,7 @@ export class AdventureScene extends Phaser.Scene {
 
   preload() {
     wersjonujZasoby(this);
+    loadSfx(this, MUZYKA_MAPA);
     const b = import.meta.env.BASE_URL;
     this.load.image('plansza-0', `${b}mapa/plansza-0.jpg`);
     this.load.image('woda-maska', `${b}mapa/woda-maska.png`);
@@ -311,8 +323,18 @@ export class AdventureScene extends Phaser.Scene {
     this.rysujPanel();
     this.rysujPasekSurowcow();
     this.rozdzielKamery();
+    initSfx(this);
+    startMusic(this, MUZYKA_MAPA);
     this.odswiezWszystko();
     this.wysrodkujNaBohaterze(false);
+
+    // Wyciszenie, ten sam skrót i ten sam powód co w walce: dźwięku nie da
+    // się przeczekać wzrokiem, więc kto go nie chce, musi mieć czym wyłączyć
+    // go od razu.
+    this.input.keyboard?.on('keydown-M', () => {
+      const wlaczony = toggleSfx(this);
+      this.napisUlotny(wlaczony ? 'Dźwięk włączony  (M)' : 'Dźwięk wyciszony  (M)');
+    });
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => this.klikMapa(p));
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
@@ -1596,6 +1618,7 @@ export class AdventureScene extends Phaser.Scene {
     const d = data(this.stan.dzien);
     this.dataTekst.setText(`Tydzień ${d.tydzien}, dzień ${d.dzienTygodnia}`);
     this.rysujMinimape();
+    aktualizujAmbient(this, b, this.stan.obiekty);
     // Nieodebrany awans na samym końcu odświeżania — po tym, jak panel
     // pokazał już nowe liczby. Okno ma być ostatnią rzeczą, którą gracz
     // zobaczy, a nie pierwszą.
@@ -1943,6 +1966,7 @@ export class AdventureScene extends Phaser.Scene {
       const { x, y } = this.naEkran(k.x, k.y);
       this.bohaterObj.setDepth(k.y + 0.8);
       this.dosunDoBohatera();
+      sfx(this, 'krok');
       this.tweens.add({
         targets: this.bohaterObj,
         x,
@@ -1989,7 +2013,10 @@ export class AdventureScene extends Phaser.Scene {
 
     if (wynik.bitwaZ) return this.zacznijBitwe(wynik.bitwaZ);
     if (wynik.wybor) return this.zapytajOSkrzynie(wynik.wybor);
-    if (wynik.pytanie) return this.zapytajOBudowle(wynik.pytanie);
+    if (wynik.pytanie) {
+      sfx(this, 'wejscie');
+      return this.zapytajOBudowle(wynik.pytanie);
+    }
     if (wynik.zamek) return this.pokazZamek(wynik.zamek);
 
     // Wieża obserwacyjna odsłania mgłę bez ruchu bohatera, więc trzeba ją
@@ -1997,8 +2024,14 @@ export class AdventureScene extends Phaser.Scene {
     if (wynik.odkryto) this.malujMgle();
     if (wynik.opis) this.napisUlotny(wynik.opis);
     if (wynik.przenies) this.przeniesBohatera(wynik.przenies.x, wynik.przenies.y);
-    if (o.zebrany) this.znikaj(o);
-    if (wynik.zajete) this.podnies(o);
+    if (o.zebrany) {
+      sfx(this, 'zbior');
+      this.znikaj(o);
+    }
+    if (wynik.zajete) {
+      sfx(this, 'zajecie');
+      this.podnies(o);
+    }
     this.odswiezWszystko();
   }
 
@@ -2074,6 +2107,7 @@ export class AdventureScene extends Phaser.Scene {
       const opis = wezZeSkrzyni(this.stan, w, co);
       [zaslona, tlo, ...napisy].forEach((x) => x.destroy());
       przyciski.forEach((p) => p.destroy());
+      sfx(this, 'zbior');
       this.znikaj(w.obiekt);
       this.napisUlotny(opis);
       this.zajety = false;
@@ -2173,7 +2207,10 @@ export class AdventureScene extends Phaser.Scene {
       const opis = odpowiedzNaPytanie(this.stan, p, klucz);
       [zaslona, tlo, ...napisy].forEach((x) => x.destroy());
       przyciski.forEach((b) => b.destroy());
-      if (p.obiekt.zebrany) this.znikaj(p.obiekt);
+      if (p.obiekt.zebrany) {
+        sfx(this, 'zbior');
+        this.znikaj(p.obiekt);
+      }
       if (opis) this.napisUlotny(opis);
       this.zajety = false;
       this.odswiezWszystko();
@@ -2258,6 +2295,7 @@ export class AdventureScene extends Phaser.Scene {
    */
   private oknoAwansu(poziomPrzed: number, poziomPo: number) {
     this.zajety = true;
+    sfx(this, 'awans');
     const przed = bonusPoziomu(poziomPrzed);
     const po = bonusPoziomu(poziomPo);
     const zyski: string[] = [];
@@ -2442,6 +2480,9 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   private pokazZamek(o: Obiekt) {
+    sfx(this, 'wejscie');
+    stopMusic(this);
+    stopAmbient(this);
     this.registry.set(KLUCZ_STANU, this.stan);
     this.registry.set('otwarty-zamek', o.id);
     this.scene.start('zamek');
@@ -2454,6 +2495,8 @@ export class AdventureScene extends Phaser.Scene {
    */
   private zacznijBitwe(o: Obiekt) {
     this.zajety = true;
+    stopMusic(this);
+    stopAmbient(this);
     // Skład PRZED bitwą: Uzdrowiciel liczy straty, a te znamy tylko przez
     // porównanie z tym, co ruszyło do boju. Wynik bitwy zna wyłącznie
     // ocalałych.
