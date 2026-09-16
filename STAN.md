@@ -793,3 +793,47 @@ podchodzących na różną wysokość. To jest sedno: sprite jest ucięty POZIOM
 więc gładkie przejście tylko przesuwa tę samą prostą wyżej — dopiero nierówna
 linia gruntu ją likwiduje. Kilka krzaków przy podstawie, z pominięciem bramy,
 dokłada resztę.
+
+## Publikowanie: jedna strona, wiele wersji
+
+Do września każda gałąź dopisywała SIEBIE do listy publikujących na Pages,
+a Pages ma jedną stronę na repozytorium. Gałęzie zamalowywały się więc
+nawzajem i to, co widać pod adresem, zależało od tego, która wypchnęła jako
+ostatnia. Nie jest to teoretyczne: deploy AI przeciwnika cofnął mapę do
+starszej wersji, a zapis gry przez tydzień nie był widoczny w ogóle, choć był
+gotowy i przetestowany.
+
+Teraz jest tak:
+
+| Co | Gdzie |
+|---|---|
+| gałąź główna | `…/heroes/` |
+| każda inna gałąź | `…/heroes/podglad/<gałąź-z-myślnikami>/` |
+| spis podglądów | `…/heroes/podglad/` |
+
+Deploy rusza WYŁĄCZNIE swój kawałek, a resztę przepisuje z poprzedniego
+wydania — dlatego nic już nikogo nie nadpisuje.
+
+**Dlaczego przez gałąź-magazyn.** `actions/deploy-pages` wysyła stronę
+w całości i zastępuje poprzednią; nie umie dołożyć katalogu do tego, co już
+stoi. Poprzednie wydanie musi więc gdzieś leżeć, żeby dało się je złożyć
+z nowym kawałkiem — leży w gałęzi `strona-podglady`, nadpisywanej jednym
+commitem bez historii (trzyma zbudowane grafiki; z historią repozytorium
+puchłoby o kilkadziesiąt megabajtów przy każdym wypchnięciu). Alternatywa —
+przestawienie źródła Pages na gałąź — daje szybsze deploye, ale wymaga
+kliknięcia w ustawieniach repozytorium.
+
+**Cena.** Każdy podgląd to pełna kopia gry, około 50 MB, a przy każdym
+deployu cała strona idzie na serwer od nowa. Stąd limit `MAKS_PODGLADOW`
+w workflow: najstarsze podglądy kasują się same. Podgląd gałęzi, która
+właśnie się publikuje, jest chroniony bezwarunkowo — deploy nie ma prawa
+skasować tego, co przed chwilą zbudował.
+
+**Uwaga przy wdrażaniu, kosztowała jedno przemyślenie:** gałąź dostaje nowy
+sposób publikowania dopiero wtedy, gdy scali do siebie gałąź główną — bo
+workflow jest plikiem W REPOZYTORIUM i każda gałąź ma własną kopię. Gałąź ze
+starym plikiem, która wypchnie zmiany, opublikuje sam swój `dist` i zmiecie
+podglądy ze strony. Nie jest to trwałe: magazyn ma komplet, więc najbliższy
+poprawny deploy odtwarza wszystko. Kolejność wdrożenia też ma znaczenie —
+gałąź główna MUSI pójść pierwsza, inaczej magazyn powstaje z pustym korzeniem
+i główny adres gry zwraca 404 do czasu jej deployu.

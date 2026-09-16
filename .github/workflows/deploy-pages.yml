@@ -1,41 +1,133 @@
 name: Deploy to GitHub Pages
 
+# Jedna strona, wiele wersji do obejrzenia.
+#
+# Po co to przepisane
+# -------------------
+# Wcześniej każda gałąź dopisywała SIEBIE do listy publikujących, a GitHub
+# Pages ma jedną stronę na repozytorium — więc gałęzie zamalowywały się
+# nawzajem i to, co widać pod adresem, zależało od tego, która wypchnęła
+# ostatnia. Zdarzyło się to naprawdę: deploy AI przeciwnika cofnął mapę do
+# starszej wersji, a zapis gry przez tydzień nie był widoczny w ogóle, choć
+# był gotowy.
+#
+# Teraz gałąź główna leży w korzeniu strony, a każda inna dostaje własny
+# katalog `podglad/<gałąź>/`. Nikt nikogo nie nadpisuje, bo każdy deploy
+# rusza WYŁĄCZNIE swój kawałek, a resztę przepisuje z poprzedniego wydania.
+#
+# Dlaczego przez gałąź-magazyn, a nie wprost
+# ------------------------------------------
+# `actions/deploy-pages` wysyła stronę W CAŁOŚCI i zastępuje poprzednią —
+# nie umie dołożyć katalogu do tego, co już tam stoi. Poprzednie wydanie
+# musi więc gdzieś leżeć, żeby dało się je złożyć z nowym kawałkiem; leży
+# w gałęzi `strona-podglady`. Da się to zrobić inaczej, przestawiając
+# w ustawieniach repozytorium źródło Pages na gałąź — ale to wymaga
+# kliknięcia w GitHubie, a tak działa samo.
+#
+# Gałąź-magazyn jest nadpisywana jednym commitem bez historii. Trzyma
+# zbudowane pliki, w tym grafiki; z historią repozytorium puchłoby o kilkadziesiąt
+# megabajtów przy każdym wypchnięciu.
+
 on:
   push:
-    branches:
-      - main
-      - claude/pokemon-heroes-3-game-57m7wm
-      # Gałąź, na której idzie przebudowa grafiki. Publikujemy z niej, żeby dało
-      # się testować na Pages każdą kolejną porcję zmian, a nie dopiero scalenie.
-      # Wymaga, żeby środowisko `github-pages` dopuszczało tę gałąź.
-      - claude/kontynuuj-zamki-jq9357
-      # AI przeciwnika na mapie przygody — publikujemy do testów, zanim scali
-      # się z main.
-      - claude/gauntlet-hero-adventure-view-cavkbx
+    branches-ignore:
+      # Zapis magazynu nie może wywołać kolejnego deployu.
+      - strona-podglady
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # `contents: write`, bo workflow zapisuje gałąź-magazyn.
+  contents: write
   pages: write
   id-token: write
 
+# `cancel-in-progress: false`, a nie `true`: dwa deploye naraz czytałyby ten
+# sam magazyn i ten, który zapisze drugi, skasowałby pracę pierwszego.
+# Kolejkujemy zamiast przerywać.
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: strona
+  cancel-in-progress: false
+
+env:
+  MAGAZYN: strona-podglady
+  # Ile podglądów gałęzi trzymamy. Każdy to pełna kopia gry (~50 MB), a przy
+  # każdym deployu cała strona idzie na serwer od nowa — więc ta liczba wprost
+  # przekłada się na czas publikowania. Pięć to kompromis; gdyby deploye
+  # zaczęły męczyć, wystarczy tu wpisać mniej.
+  MAKS_PODGLADOW: 5
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Pobierz poprzednie wydanie strony
+        # Przy pierwszym uruchomieniu gałęzi-magazynu jeszcze nie ma i to jest
+        # normalne — składanie niżej radzi sobie z pustym katalogiem.
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          ref: strona-podglady
+          path: strona
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm ci
       - run: npm run build
+
+      - name: Złóż stronę z poprzedniego wydania i nowego builda
+        env:
+          DOMYSLNA: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+
+          GALAZ="$GITHUB_REF_NAME"
+          # Nazwa gałęzi trafia do adresu, a zawiera ukośnik
+          # (`claude/cos-tam`). Zamieniamy go na myślnik i odsiewamy wszystko,
+          # co nie jest bezpieczne w ścieżce.
+          SLUG="$(printf '%s' "$GALAZ" | tr '/' '-' | tr -cd 'A-Za-z0-9._-')"
+
+          rm -rf strona/.git
+          mkdir -p strona/podglad
+
+          if [ "$GALAZ" = "$DOMYSLNA" ]; then
+            echo "Gałąź główna → korzeń strony"
+            # Korzeń wymieniamy w całości, ale katalog podglądów zostaje:
+            # deploy gałęzi głównej nie ma prawa kasować cudzych podglądów.
+            find strona -mindepth 1 -maxdepth 1 ! -name podglad -exec rm -rf {} +
+            cp -r dist/. strona/
+          else
+            echo "Gałąź $GALAZ → podglad/$SLUG/"
+            rm -rf "strona/podglad/$SLUG"
+            mkdir -p "strona/podglad/$SLUG"
+            cp -r dist/. "strona/podglad/$SLUG/"
+            # Znacznik służy sprzątaniu: bez historii gita nie ma skąd wiedzieć,
+            # który podgląd jest najstarszy.
+            printf '{"galaz":"%s","commit":"%s","data":"%s"}\n' \
+              "$GALAZ" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+              > "strona/podglad/$SLUG/podglad.json"
+          fi
+
+          SLUG="$SLUG" python3 .github/skrypty/podglady.py strona/podglad "$MAKS_PODGLADOW"
+
+      - name: Zapisz wydanie w gałęzi-magazynie
+        run: |
+          set -euo pipefail
+          cd strona
+          git init -q
+          git checkout -q -b "$MAGAZYN"
+          git add -A
+          git -c user.email='actions@github.com' -c user.name='GitHub Actions' \
+              commit -q -m "Wydanie strony z $GITHUB_REF_NAME ($GITHUB_SHA)"
+          git push -q --force \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" \
+            "$MAGAZYN"
+
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: strona
 
   deploy:
     needs: build
