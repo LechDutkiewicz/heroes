@@ -46,3 +46,25 @@ Paczki źródłowe:
 Pliki są kopiowane bez przetwarzania — zmieniona jest wyłącznie nazwa.
 Zróżnicowanie brzmienia (wariant i rozstrojenie wysokości) robi kod
 w `src/audio/sfx.ts`, nie edycja próbek.
+
+## Mapa przygody i miasto — placeholdery
+
+Pliki `krok-mapa.wav`, `zajecie.wav`, `zbior.wav`, `wejscie.wav`, `awans.wav`,
+`budowa.wav`, `ambient-kopalnia.wav`, `ambient-wieza.wav`, `muzyka-mapa.wav`
+i `muzyka-miasto.wav` (obsługiwane przez `src/audio/mapSfx.ts`) **nie są**
+próbkami z Kenneya ani OpenGameArt — to wygenerowana synteza (czysty ton
+i szum, bez próbek instrumentów), zrobiona skryptem
+`tools/synteza_dzwiekow.py`, bo środowisko, w którym to powstawało, nie miało
+dostępu do kenney.nl ani opengameart.org (proxy sieciowe odrzucało
+połączenie). Zero praw autorskich osób trzecich, ale też nie ten sam poziom
+brzmienia co reszta katalogu.
+
+Podmiana na docelowe próbki, gdy będzie dostęp do sieci: te same nazwy
+plików w tym katalogu (rozszerzenie może zostać `.wav` albo zmienić się na
+`.ogg` — wtedy dopisać rozszerzenie też w `loadSfx` w `src/audio/mapSfx.ts`).
+Dobrzy kandydaci w tym samym stylu co reszta:
+
+- krótkie zdarzenia (krok, zajęcie, zbiór, wejście, awans, budowa) — paczki
+  Kenneya **RPG Audio** i **Interface Sounds** (<https://kenney.nl>, CC0);
+- ambient budowli i podkład mapy/miasta — pętle z OpenGameArt w tagu
+  `ambient`/`loop`, licencja CC0 lub CC-BY (z podpisem w tej tabeli).

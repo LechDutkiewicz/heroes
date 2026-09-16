@@ -28,6 +28,15 @@ import { drawPanelBody, makeHudButton, mix, plate } from '../visual/hud';
 import { ICON, buildIcons } from '../visual/icons';
 import { OKNO_H, OKNO_W } from '../visual/uklad';
 import { wersjonujZasoby } from '../visual/zasoby';
+import {
+  MUZYKA_MIASTO,
+  initSfx,
+  loadSfx,
+  sfx,
+  startMusic,
+  stopMusic,
+  toggleSfx,
+} from '../audio/mapSfx';
 
 /**
  * Ekran miasta.
@@ -133,6 +142,7 @@ export class TownScene extends Phaser.Scene {
 
   preload() {
     wersjonujZasoby(this);
+    loadSfx(this, MUZYKA_MIASTO);
     const b = import.meta.env.BASE_URL;
     for (const s of SUROWCE) this.load.image(`m-${SUROWIEC_INFO[s].ikona}`, `${b}mapa/${SUROWIEC_INFO[s].ikona}.png`);
     for (const f of FACTIONS) for (const u of f.units) this.load.image(`p-${u.sprite}`, `${b}sprites/${u.sprite}.png`);
@@ -170,6 +180,13 @@ export class TownScene extends Phaser.Scene {
     this.rysujPasekDolny();
     this.rysujKarte();
     this.odswiez();
+
+    initSfx(this);
+    startMusic(this, MUZYKA_MIASTO);
+    this.input.keyboard?.on('keydown-M', () => {
+      const wlaczony = toggleSfx(this);
+      this.komunikat.setText(wlaczony ? 'Dźwięk włączony  (M)' : 'Dźwięk wyciszony  (M)');
+    });
   }
 
   private get frakcja() {
@@ -625,7 +642,10 @@ export class TownScene extends Phaser.Scene {
       icon: ICON.boot,
       tone: C.ally,
       toneDeep: C.allyDeep,
-      onClick: () => this.scene.start('adventure'),
+      onClick: () => {
+        stopMusic(this);
+        this.scene.start('adventure');
+      },
       depth: Z.hud + 2,
     });
     wyjscie.setLabel('Wyjdź na mapę');
@@ -1036,6 +1056,7 @@ export class TownScene extends Phaser.Scene {
     this.komunikat.setText(wynik.opis);
     if (!wynik.ok) return;
 
+    sfx(this, 'budowa');
     // Zarys zamienia się w budynek na oczach gracza. To jest cała nagroda za
     // wydanie surowców — bez niej rozbudowa jest liczbą w tabeli. Panoramę
     // składamy od nowa, bo ratusz wyższego stopnia zastępuje niższy i sama
