@@ -68,14 +68,29 @@ export const SUROWIEC_INFO: Record<
 export type Skarbiec = Record<Surowiec, number>;
 
 /** Rodzaje pól. `koszt` to punkty ruchu za wejście; null znaczy nieprzejezdne. */
-export type Teren = 'trawa' | 'sciezka' | 'piasek' | 'las' | 'skaly' | 'woda';
+export type Teren =
+  | 'trawa'
+  | 'sciezka'
+  | 'piasek'
+  | 'jalowa'
+  | 'snieg'
+  | 'bagno'
+  | 'las'
+  | 'skaly'
+  | 'woda';
 
 export const TEREN_INFO: Record<Teren, { koszt: number | null; nazwa: string }> = {
   // Ścieżka tańsza od trawy — w Heroes 3 drogi są głównym powodem, dla
   // którego opłaca się nadkładać drogi, i to samo ma tu działać.
   sciezka: { koszt: 70, nazwa: 'Ścieżka' },
   trawa: { koszt: 100, nazwa: 'Trawa' },
+  // [H3] Koszty ruchu po terenie: trawa/ziemia 100, żwir i piach 125–150,
+  // bagno 175. To jest najtańszy sposób, żeby wybór drogi naprawdę coś
+  // kosztował: bagno przez środek mapy jest krótsze, a droga naokoło szybsza.
+  jalowa: { koszt: 125, nazwa: 'Ziemia jałowa' },
   piasek: { koszt: 125, nazwa: 'Piasek' },
+  snieg: { koszt: 150, nazwa: 'Śnieg' },
+  bagno: { koszt: 175, nazwa: 'Bagno' },
   las: { koszt: null, nazwa: 'Las' },
   skaly: { koszt: null, nazwa: 'Skały' },
   woda: { koszt: null, nazwa: 'Woda' },
@@ -93,7 +108,26 @@ export type RodzajObiektu =
   | 'potwor'
   | 'skrzynia'
   | 'artefakt'
-  | 'budynek';
+  | 'budynek'
+  | 'straznica'
+  | 'namiot'
+  | 'jasnowidz';
+
+/**
+ * Klucze do strażnic granicznych.
+ *
+ * W Heroes 3 barw jest osiem i każda strażnica ma swoją; u nas dwie i to nie
+ * jest oszczędność, tylko kształt mapy. Plansza ma dwa grzbiety po dwa
+ * przejścia: zielony klucz otwiera oba przejścia z doliny gracza, niebieski —
+ * oba do krainy przeciwnika. Dzięki temu mapa ma DWA akty, a nie cztery drobne
+ * zadania, w których szuka się czterech namiotów.
+ */
+export type Klucz = 'zielony' | 'niebieski';
+
+export const KLUCZE: Record<Klucz, { nazwa: string; barwa: number }> = {
+  zielony: { nazwa: 'zielony klucz', barwa: 0x5fbf6a },
+  niebieski: { nazwa: 'niebieski klucz', barwa: 0x4f8fe0 },
+};
 
 /**
  * Artefakty. W Heroes 3 dzielą się na klasy o rosnącej sile; u nas trzy klasy
@@ -284,6 +318,9 @@ export const BUDOWLE: Record<string, Budowla> = {
 
 export const budowlaPoId = (id: string | undefined) => (id ? BUDOWLE[id] : undefined);
 
+/** Kto jest właścicielem obiektu/zamku/bohatera na mapie. */
+export type Wlasciciel = 'gracz' | 'wrog';
+
 export interface Obiekt {
   id: number;
   rodzaj: RodzajObiektu;
@@ -306,12 +343,18 @@ export interface Obiekt {
    */
   zebrany?: boolean;
   /**
-   * Czy budynek produkcyjny jest już nasz. To NIE to samo co `zebrany`:
-   * kopalni i sadu się nie podnosi — wchodzi się na nie, zajmuje i zostają
-   * na mapie, dając surowiec każdego dnia. Wcześniej sad znikał po wejściu
-   * jak stos jagód i cała mechanika była nieczytelna.
+   * Czyj jest budynek produkcyjny (kopalnia, gniazdo, zamek). To NIE to samo
+   * co `zebrany`: kopalni i sadu się nie podnosi — wchodzi się na nie,
+   * zajmuje i zostają na mapie, dając surowiec każdego dnia. Wcześniej sad
+   * znikał po wejściu jak stos jagód i cała mechanika była nieczytelna.
+   *
+   * Trzy stany: brak pola — niczyje; `'gracz'` — nasze; `'wrog'` — przeciwnika.
+   * Wcześniej było to `boolean` ("nasz"), co nie miało miejsca na "wroga" —
+   * kopalnia była albo nasza, albo (fałszywie) niczyja, nawet gdy stała już
+   * zajęta przez przeciwnika. Tamten model rozjeżdżał się z dniem, w którym
+   * na mapie pojawił się drugi gracz.
    */
-  nasz?: boolean;
+  wlasciciel?: Wlasciciel;
   /**
    * Zamek: ile oddziałów każdego poziomu czeka na rekrutację. Przyrasta co
    * dzień, tak jak w Heroes 3 przyrasta tygodniowo — u nas codziennie i po
@@ -347,6 +390,20 @@ export interface Obiekt {
   uzyteDnia?: number;
   /** Portal: numer bliźniaczego portalu, do którego przenosi. */
   para?: number;
+  /**
+   * Chata jasnowidza: czego żąda i co za to daje. Zadanie jest ustalane raz,
+   * przy składaniu planszy — inaczej dałoby się wyjść i wejść jeszcze raz,
+   * aż trafi się na tanie.
+   */
+  zadanie?: { surowiec: Surowiec; ile: number };
+  nagroda?: { artefakt?: string; doswiadczenie?: number };
+  /** Czy zadanie zostało już wykonane. */
+  spelnione?: boolean;
+  /**
+   * Strażnica graniczna i namiot klucznika: barwa klucza. Strażnica otwiera
+   * się wyłącznie kluczem w SWOJEJ barwie; namiot tej samej barwy klucz daje.
+   */
+  klucz?: Klucz;
 }
 
 /**
@@ -495,15 +552,14 @@ export function statystyki(b: Bohater) {
  * Zapas ruchu na dziś: maksimum bohatera plus dodatek z ranczo, jeśli jeszcze
  * trwa. Jedno miejsce, bo liczą to trzy: nowa tura, źródło mocy i panel.
  */
-export function ruchNaDzis(s: StanMapy): number {
+export function ruchNaDzis(s: StanMapy, kto: Wlasciciel = 'gracz'): number {
+  const bohater = kto === 'gracz' ? s.bohater : s.wrogBohater;
   const bonus =
-    s.bohater.bonusRuchuDo !== undefined && s.dzien <= s.bohater.bonusRuchuDo
-      ? STAJNIA_BONUS
-      : 0;
+    bohater.bonusRuchuDo !== undefined && s.dzien <= bohater.bonusRuchuDo ? STAJNIA_BONUS : 0;
   // Zwiad podbija CAŁY zapas, razem z dodatkiem z ranczo — inaczej gracz
   // z mistrzowskim Zwiadem miałby w dniu po ranczu mniejszy procentowy zysk
   // niż zwykle i wyglądałoby to na usterkę.
-  return Math.round((statystyki(s.bohater).ruchMax + bonus) * (1 + efekt(s.bohater, 'ruch')));
+  return Math.round((statystyki(bohater).ruchMax + bonus) * (1 + efekt(bohater, 'ruch')));
 }
 
 /** Poziom bohatera z doświadczenia. Progi rosną, jak w Heroes 3. */
@@ -526,13 +582,27 @@ export interface StanMapy {
   obiekty: Obiekt[];
   bohater: Bohater;
   skarbiec: Skarbiec;
+  /**
+   * Bohater przeciwnika. Gra jest tymi samymi zasadami co bohater gracza —
+   * `trasa`, `odwiedz`, `zbuduj` — tyle że wywoływanymi z `kto: 'wrog'`.
+   * Osobne pole (a nie lista bohaterów) celowo: gra ma dokładnie dwie strony,
+   * nigdy więcej, i kod, który by to zakładał, byłby ogólnością bez potrzeby.
+   */
+  wrogBohater: Bohater;
+  wrogSkarbiec: Skarbiec;
   dzien: number;
   /**
-   * Mgła wojny. `true` znaczy „już tu byliśmy". Raz odsłonięte pole zostaje
-   * odsłonięte — tak jest w Heroes 3 i tak jest łaskawiej dla dziecka niż
-   * mgła, która wraca.
+   * Mgła wojny GRACZA. `true` znaczy „już tu byliśmy". Raz odsłonięte pole
+   * zostaje odsłonięte — tak jest w Heroes 3 i tak jest łaskawiej dla dziecka
+   * niż mgła, która wraca.
    */
   odkryte: boolean[][];
+  /**
+   * Mgła wojny PRZECIWNIKA — osobna siatka, bo przeciwnik nie ma prawa
+   * wiedzieć więcej niż faktycznie odkrył. Bez tego AI widziałoby całą mapę
+   * i zawsze szło po najlepszy łup, a to czuć od razu jako oszustwo.
+   */
+  wrogOdkryte: boolean[][];
   /**
    * Pola zajęte bryłami zamków i kopalni, policzone raz. Zamek ani kopalnia
    * nigdy z mapy nie znikają, więc ten zbiór się nie zmienia — a liczenie go
@@ -540,19 +610,50 @@ export interface StanMapy {
    * obiektów wewnątrz wyznaczania trasy.
    */
   bryly?: Set<string>;
+  /**
+   * Klucze zabrane z namiotów klucznika. Klucz należy do GRACZA, nie do
+   * bohatera — tak jest w Heroes 3 i tylko tak ma sens, gdy bohaterów będzie
+   * kiedyś dwóch: znaleziony klucz otwiera strażnice każdemu z nich.
+   */
+  klucze: Klucz[];
+  /** Klucze przeciwnika — osobna pula, symetrycznie z `klucze` gracza. */
+  wrogKlucze: Klucz[];
 }
 
 /**
  * Odsłania mgłę wokół bohatera — albo wokół dowolnego pola, bo wieża
  * obserwacyjna odsłania okolicę WIEŻY, a nie tego, kto na nią wszedł.
  */
-export function odslon(s: StanMapy, promien = PROMIEN_WIDZENIA, srodek?: Pole): number {
+/** Bohater danej strony. Jedyne miejsce, które wie, że są dwa pola na stan. */
+export const bohaterOf = (s: StanMapy, kto: Wlasciciel): Bohater =>
+  kto === 'gracz' ? s.bohater : s.wrogBohater;
+
+/** Skarbiec danej strony. */
+export const skarbiecOf = (s: StanMapy, kto: Wlasciciel): Skarbiec =>
+  kto === 'gracz' ? s.skarbiec : s.wrogSkarbiec;
+
+/** Siatka mgły wojny danej strony. */
+export const odkryteOf = (s: StanMapy, kto: Wlasciciel): boolean[][] =>
+  kto === 'gracz' ? s.odkryte : s.wrogOdkryte;
+
+/** Klucze zebrane przez daną stronę. */
+export const kluczeOf = (s: StanMapy, kto: Wlasciciel): Klucz[] =>
+  kto === 'gracz' ? s.klucze : s.wrogKlucze;
+
+export function odslon(
+  s: StanMapy,
+  promien = PROMIEN_WIDZENIA,
+  srodek?: Pole,
+  kto: Wlasciciel = 'gracz'
+): number {
   let nowe = 0;
-  const { x, y } = srodek ?? s.bohater;
+  const bohater = bohaterOf(s, kto);
+  const { x, y } = srodek ?? bohater;
   // Tropiciel poszerza wzrok BOHATERA, nie wieży: odsłanianie z podanym
   // środkiem to zawsze budowla, która widzi tyle, ile widzi, bez względu na
   // to, kto koło niej przechodził.
-  if (!srodek) promien += efekt(s.bohater, 'mgla');
+  if (!srodek) promien += efekt(bohater, 'mgla');
+  const siatka = odkryteOf(s, kto);
   for (let dy = -promien; dy <= promien; dy++) {
     for (let dx = -promien; dx <= promien; dx++) {
       // Koło, nie kwadrat — inaczej odsłonięty obszar ma widoczne rogi
@@ -561,8 +662,8 @@ export function odslon(s: StanMapy, promien = PROMIEN_WIDZENIA, srodek?: Pole): 
       const nx = x + dx;
       const ny = y + dy;
       if (nx < 0 || ny < 0 || nx >= s.szer || ny >= s.wys) continue;
-      if (!s.odkryte[ny][nx]) {
-        s.odkryte[ny][nx] = true;
+      if (!siatka[ny][nx]) {
+        siatka[ny][nx] = true;
         nowe++;
       }
     }
@@ -595,6 +696,11 @@ export const obiektNa = (s: StanMapy, x: number, y: number) =>
 export const BRYLA: Partial<Record<RodzajObiektu, [number, number]>> = {
   zamek: [3, 2],
   kopalnia: [3, 1],
+  // Strażnica ma szerokość trzech pól TYLKO dla rysunku: scena bierze stąd
+  // dosunięcie od krawędzi planszy, cień i wysokość. Które pola naprawdę
+  // blokuje, mówi `polaBryly` — i są to pola OBOK wejścia, w jego rzędzie,
+  // a nie rząd nad nim jak u zamku.
+  straznica: [3, 1],
 };
 
 /**
@@ -617,6 +723,25 @@ export function brylaObiektu(o: Obiekt): [number, number] | undefined {
  * zamek przy skале dostanie węższy bok i tyle.
  */
 export function polaBryly(s: StanMapy, o: Obiekt): Pole[] {
+  // Strażnica graniczna stoi W POPRZEK drogi, więc jej mur to pola OBOK
+  // wejścia, w tym samym rzędzie — a nie rząd nad nim, jak u zamku czy
+  // kopalni. Przejście przez grzbiet ma dwa pola szerokości, więc brama
+  // szeroka na trzy zamyka je w całości. To jest jedyny powód, dla którego
+  // strażnica w ogóle cokolwiek pilnuje: gdyby blokowała samo swoje pole,
+  // dałoby się ją minąć bokiem, dokładnie tak, jak dawało się minąć
+  // strażnika w przejściu szerokim na cztery pola.
+  if (o.rodzaj === 'straznica') {
+    if (o.zebrany) return [];
+    return [
+      { x: o.x - 1, y: o.y },
+      { x: o.x + 1, y: o.y },
+    ].filter(
+      (p) =>
+        wGranicach(s, p.x, p.y) &&
+        TEREN_INFO[s.teren[p.y][p.x]].koszt !== null &&
+        !obiektNa(s, p.x, p.y)
+    );
+  }
   const rozmiar = brylaObiektu(o);
   if (!rozmiar || o.zebrany) return [];
   const [szer, wys] = rozmiar;
@@ -663,6 +788,11 @@ export function brylaNa(s: StanMapy, x: number, y: number): Obiekt | undefined {
 
 /** Wszystkie pola pod bryłami, jako `"x,y"`. Liczone raz i zapamiętane. */
 export function polaZajete(s: StanMapy): Set<string> {
+  // UWAGA: ten zbiór NIE jest już niezmienny. Zamek i kopalnia z mapy nie
+  // znikają, ale otwarta strażnica graniczna — owszem, i wtedy przejście musi
+  // natychmiast stać się przejezdne. `odwiedz` kasuje więc `s.bryly`, żeby
+  // policzyły się od nowa. Bez tego brama stoi otworem na ekranie, a trasa
+  // dalej ją omija.
   if (!s.bryly) {
     s.bryly = new Set(
       s.obiekty.flatMap((o) => polaBryly(s, o).map((p) => `${p.x},${p.y}`))
@@ -700,7 +830,18 @@ export function kosztPola(s: StanMapy, x: number, y: number): number | null {
   if (!wGranicach(s, x, y)) return null;
   // Mury zamku i budynek kopalni są nie do przejścia — wchodzi się wejściem.
   if (polaZajete(s).has(`${x},${y}`)) return null;
+  // Zamknięta strażnica jest murem także na SWOIM polu. Tym różni się od
+  // potwora: potwora się bije i pole jest przejezdne po wygranej, strażnicy
+  // nie da się pokonać w ogóle — otwiera ją klucz. Wejście na jej pole jest
+  // osobnym przypadkiem w `trasa`: wolno tam wejść jako na CEL, i wtedy albo
+  // brama się otwiera, albo gracz dostaje wiadomość, po co mu klucz.
+  if (zamknietaBrama(s, x, y)) return null;
   return TEREN_INFO[s.teren[y][x]].koszt;
+}
+
+/** Zamknięta strażnica stojąca na tym polu — albo `undefined`. */
+export function zamknietaBrama(s: StanMapy, x: number, y: number): Obiekt | undefined {
+  return s.obiekty.find((o) => o.rodzaj === 'straznica' && !o.zebrany && o.x === x && o.y === y);
 }
 
 /** Osiem kierunków, jak w Heroes 3. Skos kosztuje więcej — inaczej byłby darmowy. */
@@ -731,7 +872,11 @@ export interface Krok {
  * dokładnie jak Heroes 3.
  */
 export function trasa(s: StanMapy, doX: number, doY: number): Krok[] | null {
-  if (!wGranicach(s, doX, doY) || kosztPola(s, doX, doY) === null) return null;
+  // Zamknięta brama jest jedynym polem nieprzejezdnym, na które wolno wejść:
+  // inaczej nie dałoby się do niej podejść i użyć klucza, a gracz widziałby
+  // bramę, w którą nie da się kliknąć.
+  const bramaNaCelu = zamknietaBrama(s, doX, doY);
+  if (!wGranicach(s, doX, doY) || (kosztPola(s, doX, doY) === null && !bramaNaCelu)) return null;
   const start = `${s.bohater.x},${s.bohater.y}`;
   const koszty = new Map<string, number>([[start, 0]]);
   const skad = new Map<string, string>();
@@ -766,7 +911,10 @@ export function trasa(s: StanMapy, doX: number, doY: number): Krok[] | null {
     for (const [dx, dy, mnoznik] of wolneKierunki) {
       const nx = cur.x + dx;
       const ny = cur.y + dy;
-      const bazowy = kosztPola(s, nx, ny);
+      const koncoweDlaBramy = bramaNaCelu !== undefined && nx === doX && ny === doY;
+      const bazowy = koncoweDlaBramy
+        ? TEREN_INFO[s.teren[ny][nx]].koszt ?? 100
+        : kosztPola(s, nx, ny);
       if (bazowy === null) continue;
       // Na obiekt wchodzi się tylko jako na cel trasy — bohater nie przechodzi
       // przez potwora ani przez zamek w drodze gdzie indziej.
@@ -889,28 +1037,35 @@ export function doUlepszenia(b: Bohater) {
 }
 
 /** Rozstrzygnięcie pytania budowli (arena, ośrodek ewolucji). */
-export function odpowiedzNaPytanie(s: StanMapy, p: Pytanie, klucz: string): string {
+export function odpowiedzNaPytanie(
+  s: StanMapy,
+  p: Pytanie,
+  klucz: string,
+  kto: Wlasciciel = 'gracz'
+): string {
   const o = p.obiekt;
   const b = budowlaPoId(o.budynek);
+  const bohater = bohaterOf(s, kto);
+  const skarbiec = skarbiecOf(s, kto);
   if (klucz === 'nie') return 'Może innym razem';
 
   if (b?.efekt.typ === 'arena') {
     o.uzyteDnia = s.dzien;
     if (klucz === 'atak') {
-      s.bohater.atak += ARENA_BONUS;
+      bohater.atak += ARENA_BONUS;
       return `+${ARENA_BONUS} do ataku`;
     }
-    s.bohater.obrona += ARENA_BONUS;
+    bohater.obrona += ARENA_BONUS;
     return `+${ARENA_BONUS} do obrony`;
   }
 
   if (b?.efekt.typ === 'ewolucja') {
-    const u = doUlepszenia(s.bohater);
+    const u = doUlepszenia(bohater);
     if (!u) return 'Nie ma czego ulepszać';
-    if (s.skarbiec.kamien < EWOLUCJA_KOSZT) return 'Za mało kamieni ewolucji';
-    s.skarbiec.kamien -= EWOLUCJA_KOSZT;
+    if (skarbiec.kamien < EWOLUCJA_KOSZT) return 'Za mało kamieni ewolucji';
+    skarbiec.kamien -= EWOLUCJA_KOSZT;
     const stara = u.oddzial.nazwa;
-    s.bohater.armia[u.indeks] = {
+    bohater.armia[u.indeks] = {
       sprite: u.na.sprite,
       nazwa: u.na.name,
       ile: u.ile,
@@ -927,9 +1082,11 @@ export function odpowiedzNaPytanie(s: StanMapy, p: Pytanie, klucz: string): stri
  * Wejście na budowlę odwiedzaną. Cała czternastka idzie tędy: co budowla robi,
  * mówi jej wpis w `BUDOWLE`, a nie kolejna gałąź w `odwiedz`.
  */
-function odwiedzBudowle(s: StanMapy, o: Obiekt): WynikWejscia {
+function odwiedzBudowle(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): WynikWejscia {
   const b = budowlaPoId(o.budynek);
   if (!b) return { opis: o.nazwa };
+  const bohater = bohaterOf(s, kto);
+  const skarbiec = skarbiecOf(s, kto);
 
   // Czy już z niej korzystaliśmy. `odnowa` równa 0 znaczy „zawsze wolno"
   // (portal, ośrodek ewolucji), brak `odnowy` — „raz na zawsze".
@@ -944,8 +1101,8 @@ function odwiedzBudowle(s: StanMapy, o: Obiekt): WynikWejscia {
 
   if (e.typ === 'staty') {
     o.uzyteDnia = s.dzien;
-    s.bohater.atak += e.atak ?? 0;
-    s.bohater.obrona += e.obrona ?? 0;
+    bohater.atak += e.atak ?? 0;
+    bohater.obrona += e.obrona ?? 0;
     const co = e.atak ? `+${e.atak} do ataku` : `+${e.obrona} do obrony`;
     return { opis: `${b.nazwa}\n${co}` };
   }
@@ -968,15 +1125,15 @@ function odwiedzBudowle(s: StanMapy, o: Obiekt): WynikWejscia {
     o.uzyteDnia = s.dzien;
     // Tyle, ile brakuje do następnego poziomu — czyli awans od ręki, ale nie
     // za darmo na wysokim poziomie, gdzie brakować może dużo więcej.
-    const p = postepPoziomu(s.bohater.doswiadczenie);
+    const p = postepPoziomu(bohater.doswiadczenie);
     const ile = Math.max(DRZEWO_WIEDZY_MIN, p.doAwansu - p.wPoziomie);
-    s.bohater.doswiadczenie += ile;
+    bohater.doswiadczenie += ile;
     return { opis: `${b.nazwa}\n+${ile} doświadczenia` };
   }
 
   if (e.typ === 'odslona') {
     o.uzyteDnia = s.dzien;
-    const nowe = odslon(s, OBSERWATORIUM_PROMIEN, { x: o.x, y: o.y });
+    const nowe = odslon(s, OBSERWATORIUM_PROMIEN, { x: o.x, y: o.y }, kto);
     return { opis: `${b.nazwa}\nWidać stąd całą okolicę`, odkryto: nowe > 0 };
   }
 
@@ -984,14 +1141,14 @@ function odwiedzBudowle(s: StanMapy, o: Obiekt): WynikWejscia {
     o.uzyteDnia = s.dzien;
     // Dzień odwiedzin liczy się jako pierwszy z trzech — inaczej „przez trzy
     // dni" znaczyłoby cztery: dziś i trzy następne.
-    s.bohater.bonusRuchuDo = s.dzien + STAJNIA_DNI - 1;
-    s.bohater.ruch += STAJNIA_BONUS;
+    bohater.bonusRuchuDo = s.dzien + STAJNIA_DNI - 1;
+    bohater.ruch += STAJNIA_BONUS;
     return { opis: `${b.nazwa}\n+${STAJNIA_BONUS} ruchu przez ${STAJNIA_DNI} dni` };
   }
 
   if (e.typ === 'zrodlo') {
     o.uzyteDnia = s.dzien;
-    s.bohater.ruch = ruchNaDzis(s);
+    bohater.ruch = ruchNaDzis(s, kto);
     return { opis: `${b.nazwa}\nSiły wróciły — pełen zapas ruchu` };
   }
 
@@ -1002,15 +1159,15 @@ function odwiedzBudowle(s: StanMapy, o: Obiekt): WynikWejscia {
   }
 
   if (e.typ === 'gniazdo') {
-    if (o.nasz) return { opis: `${b.nazwa} — już twoje` };
-    o.nasz = true;
+    if (o.wlasciciel === kto) return { opis: `${b.nazwa} — już twoje` };
+    o.wlasciciel = kto;
     return { opis: `${b.nazwa} jest twoje!\nOddziały czekają w zamku`, zajete: o };
   }
 
   if (e.typ === 'ewolucja') {
-    const u = doUlepszenia(s.bohater);
+    const u = doUlepszenia(bohater);
     if (!u) return { opis: `${b.nazwa}\nNie ma czego ulepszać` };
-    if (s.skarbiec.kamien < EWOLUCJA_KOSZT)
+    if (skarbiec.kamien < EWOLUCJA_KOSZT)
       return { opis: `${b.nazwa}\nPotrzeba ${EWOLUCJA_KOSZT} kamieni ewolucji` };
     return {
       opis: '',
@@ -1031,32 +1188,97 @@ function odwiedzBudowle(s: StanMapy, o: Obiekt): WynikWejscia {
   if (o.artefakt) {
     o.zebrany = true;
     const a = artefaktPoId(o.artefakt);
-    if (a) s.bohater.artefakty.push(a.id);
+    if (a) bohater.artefakty.push(a.id);
     return { opis: a ? `${b.nazwa}\nZnaleziono: ${a.nazwa}` : b.nazwa };
   }
   const co = o.surowiec ?? 'pokeball';
   const czesci: string[] = [];
   if (o.ile) {
-    s.skarbiec[co] += o.ile;
+    skarbiec[co] += o.ile;
     czesci.push(`+${o.ile} ${SUROWIEC_INFO[co].dopelniacz}`);
   }
   if (b.pokeballe) {
-    s.skarbiec.pokeball += b.pokeballe;
+    skarbiec.pokeball += b.pokeballe;
     czesci.push(`+${b.pokeballe} pokeballi`);
   }
   if (b.znika) o.zebrany = true;
   return { opis: `${b.nazwa}\n${czesci.join(', ')}` };
 }
 
-/** Wejście na pole z obiektem: zbiera, zajmuje albo zaczyna bitwę. */
-export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
-  if (o.rodzaj === 'budynek') return odwiedzBudowle(s, o);
+/**
+ * Wejście na pole z obiektem: zbiera, zajmuje albo zaczyna bitwę.
+ *
+ * `kto` domyślnie 'gracz' — to jedyny aktor, dopóki AI nie istniało, więc
+ * żadne dotychczasowe wywołanie w scenie nie musiało się zmienić. AI wywołuje
+ * tę samą funkcję z `kto: 'wrog'` — bez tego mielibyśmy dwie kopie tych
+ * samych czternastu reguł, jedną dla gracza i jedną dla przeciwnika.
+ */
+export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): WynikWejscia {
+  if (o.rodzaj === 'budynek') return odwiedzBudowle(s, o, kto);
 
   if (o.rodzaj === 'potwor') return { opis: `${o.nazwa} zagradza drogę!`, bitwaZ: o };
 
+  const bohater = bohaterOf(s, kto);
+  const skarbiec = skarbiecOf(s, kto);
+
+  if (o.rodzaj === 'jasnowidz') {
+    const z = o.zadanie;
+    if (!z) return { opis: 'Chata jest pusta.' };
+    if (o.spelnione) {
+      return { opis: 'Jasnowidz już ci pomógł.\nNie ma dla ciebie nic więcej.' };
+    }
+    const mamy = skarbiec[z.surowiec];
+    if (mamy < z.ile) {
+      // Pierwsza wizyta prawie zawsze kończy się tutaj i o to chodzi: chata
+      // jasnowidza jest jedynym obiektem w grze, który każe WRÓCIĆ w to samo
+      // miejsce po raz drugi. Mówimy więc wprost, czego brakuje i ile.
+      return {
+        opis:
+          `Jasnowidz prosi o ${z.ile} ${SUROWIEC_INFO[z.surowiec].dopelniacz}.\n` +
+          `Masz ${mamy}. Wróć, gdy uzbierasz resztę.`,
+      };
+    }
+    skarbiec[z.surowiec] -= z.ile;
+    o.spelnione = true;
+    const a = artefaktPoId(o.nagroda?.artefakt ?? '');
+    if (a) bohater.artefakty.push(a.id);
+    const dosw = o.nagroda?.doswiadczenie ?? 0;
+    if (dosw) bohater.doswiadczenie += dosw;
+    return {
+      opis:
+        `Oddajesz ${z.ile} ${SUROWIEC_INFO[z.surowiec].dopelniacz}.\n` +
+        (a ? `Jasnowidz daje w zamian: ${a.nazwa}` : `Jasnowidz dzieli się wiedzą: +${dosw} doświadczenia`),
+    };
+  }
+
+  if (o.rodzaj === 'namiot') {
+    o.zebrany = true;
+    const k = o.klucz ?? 'zielony';
+    const klucze = kluczeOf(s, kto);
+    if (!klucze.includes(k)) klucze.push(k);
+    return {
+      opis: `Klucznik daje ci ${KLUCZE[k].nazwa}.\nOtwiera strażnice w tej barwie.`,
+    };
+  }
+
+  if (o.rodzaj === 'straznica') {
+    const k = o.klucz ?? 'zielony';
+    if (!kluczeOf(s, kto).includes(k)) {
+      // Bez bitwy, bez utraty dnia i bez wchodzenia na pole. Strażnica ma
+      // odesłać gracza po klucz, a nie ukarać go za podejście.
+      return { opis: `Wrota są zamknięte.\nPotrzebny jest ${KLUCZE[k].nazwa} — klucznik\nobozuje gdzieś na tej mapie.` };
+    }
+    o.zebrany = true;
+    // Bryły przestają się zgadzać w chwili otwarcia bramy: policzone są raz
+    // i zapamiętane, a przejście ma być przejezdne NATYCHMIAST.
+    s.bryly = undefined;
+    const nazwaKlucza = KLUCZE[k].nazwa;
+    return { opis: `${nazwaKlucza[0].toUpperCase()}${nazwaKlucza.slice(1)} pasuje.\nWrota stanęły otworem.` };
+  }
+
   if (o.rodzaj === 'surowiec') {
     const co = o.surowiec ?? 'pokeball';
-    s.skarbiec[co] += o.ile ?? 0;
+    skarbiec[co] += o.ile ?? 0;
     o.zebrany = true;
     return { opis: `+${o.ile} ${SUROWIEC_INFO[co].dopelniacz}` };
   }
@@ -1064,7 +1286,7 @@ export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
   if (o.rodzaj === 'artefakt') {
     o.zebrany = true;
     const a = artefaktPoId(o.artefakt ?? '');
-    if (a) s.bohater.artefakty.push(a.id);
+    if (a) bohater.artefakty.push(a.id);
     return { opis: a ? `Znaleziono: ${a.nazwa}` : 'Pusto' };
   }
 
@@ -1074,7 +1296,7 @@ export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
     if (o.artefakt) {
       o.zebrany = true;
       const a = artefaktPoId(o.artefakt);
-      if (a) s.bohater.artefakty.push(a.id);
+      if (a) bohater.artefakty.push(a.id);
       return { opis: a ? `W skrzyni był artefakt!\n${a.nazwa}` : 'Pusta skrzynia' };
     }
     const w = SKRZYNIE[o.wariant ?? 0];
@@ -1086,8 +1308,11 @@ export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
 
   if (o.rodzaj === 'kopalnia') {
     // Zajęcie, nie zebranie: budynek zostaje na mapie i od jutra produkuje.
-    if (o.nasz) return { opis: `${o.nazwa} — już twoja` };
-    o.nasz = true;
+    // Wchodzi się i na kopalnię niczyją, i na kopalnię przeciwnika — tak jak
+    // w Heroes 3: przejęcie cudzej kopalni nie wymaga bitwy, samo wejście
+    // przestawia właściciela.
+    if (o.wlasciciel === kto) return { opis: `${o.nazwa} — już twoja` };
+    o.wlasciciel = kto;
     const co = o.surowiec ?? 'pokeball';
     return {
       opis: `${o.nazwa} jest twoja!\n+${o.ile} ${SUROWIEC_INFO[co].dopelniacz} dziennie`,
@@ -1102,9 +1327,9 @@ export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
     // Wcześniej stało tu „jeszcze nie do zdobycia": gra nie miała żadnego
     // zakończenia. Dziecko dochodziło przez pół planszy do celu i dostawało
     // komunikat, że celu nie ma.
-    if (!o.nasz) {
+    if (o.wlasciciel !== kto) {
       if (o.oddzialy?.length) return { opis: `${o.nazwa}\nBroni się!`, bitwaZ: o };
-      o.nasz = true;
+      o.wlasciciel = kto;
       return { opis: `${o.nazwa} jest twoja!`, zamek: o, zajete: o };
     }
     return { opis: o.nazwa, zamek: o };
@@ -1120,13 +1345,13 @@ export function odwiedz(s: StanMapy, o: Obiekt): WynikWejscia {
  * osobne rachunki, których trzeba się domyślać. Panel czyta wyłącznie tę
  * funkcję, więc rozdzielenie ich oznaczałoby pokazywanie nieprawdy.
  */
-export function dochod(s: StanMapy): Partial<Record<Surowiec, number>> {
+export function dochod(s: StanMapy, kto: Wlasciciel = 'gracz'): Partial<Record<Surowiec, number>> {
   const suma: Partial<Record<Surowiec, number>> = {};
   for (const o of s.obiekty) {
-    if (o.rodzaj === 'kopalnia' && o.nasz && o.surowiec) {
+    if (o.rodzaj === 'kopalnia' && o.wlasciciel === kto && o.surowiec) {
       suma[o.surowiec] = (suma[o.surowiec] ?? 0) + (o.ile ?? 1);
     }
-    if (o.rodzaj === 'zamek' && o.nasz) {
+    if (o.rodzaj === 'zamek' && o.wlasciciel === kto) {
       const dary = daryZamku(o.postawione ?? [], o.frakcjaZamku ?? 'bor');
       for (const [co, ile] of Object.entries(dary)) {
         suma[co as Surowiec] = (suma[co as Surowiec] ?? 0) + ile;
@@ -1136,52 +1361,65 @@ export function dochod(s: StanMapy): Partial<Record<Surowiec, number>> {
   // Gospodarność wchodzi TUTAJ, a nie w `nowaTura`, bo pasek na mapie czyta
   // dochód z tej funkcji. Doliczona osobno przy naliczaniu dawałaby co dzień
   // więcej pokeballi, niż pasek obiecuje — a to wygląda jak błąd rachunku.
-  const gospodarnosc = efekt(s.bohater, 'dochod');
+  const gospodarnosc = efekt(bohaterOf(s, kto), 'dochod');
   if (gospodarnosc > 0) suma.pokeball = (suma.pokeball ?? 0) + gospodarnosc;
   return suma;
 }
 
-/** Nowa tura: odnawia ruch, dolicza dochód z zajętych budynków. */
+/**
+ * Nowa tura: odnawia ruch OBU bohaterów, dolicza dochód i przyrost OBU stron.
+ *
+ * Jedna funkcja na dwie strony, a nie `nowaTura` + `wrogTura`: dzień jest
+ * jeden na całą mapę, a rachunek dochodu/przyrostu to te same wzory z
+ * `zamki.ts`, tylko czytane z innym `wlasciciel`. Druga kopia tej pętli
+ * rozjechałaby się z pierwszą przy pierwszej poprawce balansu.
+ */
 export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
   s.dzien++;
-  s.bohater.ruch = ruchNaDzis(s);
-  const wplyw = dochod(s);
-  for (const [co, ile] of Object.entries(wplyw)) {
-    s.skarbiec[co as Surowiec] += ile;
-  }
-  // Przyrost w zamkach. Bez niego rekrutacja byłaby jednorazowa i cała
-  // gospodarka kończyłaby się w pierwszym dniu.
-  //
-  // Przyrasta tylko to, co POSTAWIONE: siedlisko, którego nie ma, nie hoduje
-  // niczego, a fort podnosi przyrost we wszystkich naraz. Dopóki liczyło się
-  // to z samej tablicy `PRZYROST_ODDZIALU`, rozbudowa miasta nie zmieniała
-  // nic w armii i drzewko budynków było dekoracją.
-  for (const o of s.obiekty) {
-    if (o.rodzaj === 'zamek' && o.nasz && o.dostepne) {
-      // Przyrost liczy się z POSTAWIONYCH siedlisk: poziom bez siedliska nie
-      // daje nic, a fort podnosi wszystkie naraz o połowę. Wcześniej przyrastały
-      // wszystkie sześć poziomów niezależnie od miasta, więc rozbudowa nie
-      // zmieniała niczego poza opisem.
-      const przyrost = przyrostZamku(o.postawione ?? [], PRZYROST_ODDZIALU);
-      o.dostepne = o.dostepne.map((ile, t) => Math.min(ile + przyrost[t], 99));
+  s.bohater.ruch = ruchNaDzis(s, 'gracz');
+  s.wrogBohater.ruch = ruchNaDzis(s, 'wrog');
+  let wplywGracza: Partial<Record<Surowiec, number>> = {};
+  for (const kto of ['gracz', 'wrog'] as const) {
+    const wplyw = dochod(s, kto);
+    const skarbiec = skarbiecOf(s, kto);
+    for (const [co, ile] of Object.entries(wplyw)) {
+      skarbiec[co as Surowiec] += ile;
     }
-  }
-  // Zajęte gniazda hodują do NASZEGO zamku, bo rekrutuje się w mieście.
-  //
-  // W Heroes 3 werbuje się wprost w siedlisku na mapie, ale to znaczyłoby
-  // trzeci ekran werbunku (mapa, miasto, gniazdo) na tę samą czynność.
-  // Gniazdo daje więc to samo, co siedlisko tego poziomu w mieście — tyle że
-  // trzeba po nie pojechać i utrzymać je po swojej stronie mapy.
-  const nasz = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.nasz);
-  if (nasz?.dostepne) {
+    if (kto === 'gracz') wplywGracza = wplyw;
+
+    // Przyrost w zamkach. Bez niego rekrutacja byłaby jednorazowa i cała
+    // gospodarka kończyłaby się w pierwszym dniu.
+    //
+    // Przyrasta tylko to, co POSTAWIONE: siedlisko, którego nie ma, nie hoduje
+    // niczego, a fort podnosi przyrost we wszystkich naraz. Dopóki liczyło się
+    // to z samej tablicy `PRZYROST_ODDZIALU`, rozbudowa miasta nie zmieniała
+    // nic w armii i drzewko budynków było dekoracją.
     for (const o of s.obiekty) {
-      if (o.rodzaj !== 'budynek' || !o.nasz) continue;
-      if (budowlaPoId(o.budynek)?.efekt.typ !== 'gniazdo') continue;
-      const t = GNIAZDO_TIER;
-      nasz.dostepne[t] = Math.min(nasz.dostepne[t] + PRZYROST_ODDZIALU[t], 99);
+      if (o.rodzaj === 'zamek' && o.wlasciciel === kto && o.dostepne) {
+        const przyrost = przyrostZamku(o.postawione ?? [], PRZYROST_ODDZIALU);
+        o.dostepne = o.dostepne.map((ile, t) => Math.min(ile + przyrost[t], 99));
+      }
+    }
+    // Zajęte gniazda hodują do zamku TEJ SAMEJ strony, bo rekrutuje się w mieście.
+    //
+    // W Heroes 3 werbuje się wprost w siedlisku na mapie, ale to znaczyłoby
+    // trzeci ekran werbunku (mapa, miasto, gniazdo) na tę samą czynność.
+    // Gniazdo daje więc to samo, co siedlisko tego poziomu w mieście — tyle że
+    // trzeba po nie pojechać i utrzymać je po swojej stronie mapy.
+    const zamekTejStrony = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === kto);
+    if (zamekTejStrony?.dostepne) {
+      for (const o of s.obiekty) {
+        if (o.rodzaj !== 'budynek' || o.wlasciciel !== kto) continue;
+        if (budowlaPoId(o.budynek)?.efekt.typ !== 'gniazdo') continue;
+        const t = GNIAZDO_TIER;
+        zamekTejStrony.dostepne[t] = Math.min(
+          zamekTejStrony.dostepne[t] + PRZYROST_ODDZIALU[t],
+          99
+        );
+      }
     }
   }
-  return wplyw;
+  return wplywGracza;
 }
 
 export interface WynikBudowy {
@@ -1198,10 +1436,11 @@ export interface WynikBudowy {
  * dziecka ślepym zaułkiem — nie wie, czy ma szukać surowca, czy postawić
  * najpierw co innego, czy po prostu poczekać do jutra.
  */
-export function zbuduj(s: StanMapy, zamek: Obiekt, id: string): WynikBudowy {
+export function zbuduj(s: StanMapy, zamek: Obiekt, id: string, kto: Wlasciciel = 'gracz'): WynikBudowy {
   const frakcja = zamek.frakcjaZamku ?? 'bor';
   const b = budynek(frakcja, id);
   if (!b) return { ok: false, opis: 'Nie ma tu czego budować.' };
+  const skarbiec = skarbiecOf(s, kto);
 
   const postawione = (zamek.postawione ??= []);
   if (postawione.includes(id)) return { ok: false, opis: `${b.nazwa} już stoi.` };
@@ -1214,14 +1453,14 @@ export function zbuduj(s: StanMapy, zamek: Obiekt, id: string): WynikBudowy {
   if (zamek.budowanoDnia === s.dzien) {
     return { ok: false, opis: 'Dziś już tu budowano. Jeden budynek dziennie.' };
   }
-  if (!stacNas(s.skarbiec, b.koszt)) {
-    const brak = brakuje(s.skarbiec, b.koszt)
+  if (!stacNas(skarbiec, b.koszt)) {
+    const brak = brakuje(skarbiec, b.koszt)
       .map((x) => `${x.ile} ${SUROWIEC_INFO[x.surowiec].dopelniacz}`)
       .join(', ');
     return { ok: false, opis: `Brakuje: ${brak}.` };
   }
 
-  zaplac(s.skarbiec, b.koszt);
+  zaplac(skarbiec, b.koszt);
   postawione.push(id);
   zamek.budowanoDnia = s.dzien;
 

@@ -1,0 +1,49 @@
+{
+  "rozmiar": "72 × 72",
+  "pól": 5184,
+  "przejezdnych": 1425,
+  "przejezdnych %": 27,
+  "teren %": {
+    ".": 0,
+    "=": 19,
+    ",": 8,
+    "T": 12,
+    "#": 17,
+    "~": 44
+  },
+  "obiektów": 298,
+  "obiekt co ile pól przejezdnych": 4.8,
+  "obiekty wg rodzaju": {
+    "skrzynia": 84,
+    "potwor": 44,
+    "budynek": 96,
+    "kopalnia": 4,
+    "surowiec": 54,
+    "artefakt": 14,
+    "zamek": 2
+  },
+  "obiekty wg strefy": {
+    "dom": 200,
+    "wroga": 74,
+    "pogranicze": 24
+  },
+  "straże wg siły": {
+    "silny": 11,
+    "sredni": 14,
+    "slaby": 8,
+    "wodz": 5,
+    "straznik": 6
+  },
+  "straże %": 15,
+  "obiekty w pasach odległości (5 × 20%)": [
+    36,
+    50,
+    44,
+    51,
+    19
+  ],
+  "kroków do zamku wroga": null,
+  "najdalszy zakątek (kroków)": 95,
+  "pól dostępnych bez wygranej bitwy": 586,
+  "dostępnych bez bitwy %": 41
+}

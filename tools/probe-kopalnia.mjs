@@ -51,7 +51,7 @@ const przed = await page.evaluate(() => {
     nazwa: sad.nazwa,
     surowiec: sad.surowiec,
     ile: sad.ile,
-    nasz: !!sad.nasz,
+    nasz: sad.wlasciciel === 'gracz',
     skarbiec: { ...s.stan.skarbiec },
   };
 });
@@ -71,7 +71,7 @@ const po = await page.evaluate(() => {
   const kont = s.ikonyObiektow[sad.id];
   const flaga = kont?.getData('flaga');
   return {
-    nasz: !!sad.nasz,
+    nasz: sad.wlasciciel === 'gracz',
     zebrany: !!sad.zebrany,
     stoiNaMapie: !!kont && kont.active && kont.alpha > 0.5,
     flagaWidoczna: !!flaga && flaga.visible,

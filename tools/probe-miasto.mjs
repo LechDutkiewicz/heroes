@@ -92,7 +92,7 @@ await page.waitForTimeout(900);
 // Wejście do zamku drogą gry: bohater staje obok i wchodzi na pole zamku.
 await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
-  const z = s.stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.nasz);
+  const z = s.stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'gracz');
   s.stan.bohater.x = z.x;
   s.stan.bohater.y = z.y - 1;
   s.stan.bohater.ruch = 3000;
@@ -200,7 +200,7 @@ await page.evaluate(() => window.__game.scene.getScene('adventure').koniecTury()
 await page.waitForTimeout(600);
 const jutro = await page.evaluate((przed) => {
   const s = window.__game.scene.getScene('adventure');
-  const z = s.stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.nasz);
+  const z = s.stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'gracz');
   return {
     przed: przed.dostepne,
     po: [...(z.dostepne ?? [])],
@@ -233,7 +233,7 @@ console.log('\n=== werbunek ===');
 // Wracamy do miasta tą samą drogą co gracz: wejściem na pole zamku.
 await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
-  const z = s.stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.nasz);
+  const z = s.stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'gracz');
   s.stan.bohater.x = z.x;
   s.stan.bohater.y = z.y - 1;
   s.stan.bohater.ruch = 3000;

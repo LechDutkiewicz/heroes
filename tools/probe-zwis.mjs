@@ -20,6 +20,7 @@
 //   node tools/probe-zwis.mjs [--url http://localhost:4173]
 
 import { chromium } from 'playwright';
+import { zainstalujPodejdz, zamknijAwans } from './sonda-wspolne.mjs';
 
 const arg = (n, d) => {
   const i = process.argv.indexOf(n);
@@ -62,6 +63,7 @@ async function klikNaPlotnie(page, x, y) {
 await page.goto(`${BASE}/?ekran=mapa`, { waitUntil: 'domcontentloaded' });
 await scena('adventure');
 await page.waitForTimeout(900);
+await zainstalujPodejdz(page);
 
 // ---------------------------------------------------------------------------
 // 1. Okno skrzyni naprawdę widać
@@ -71,10 +73,7 @@ console.log('\n=== okno skrzyni jest WIDOCZNE ===');
 // Wchodzimy na skrzynię kliknięciami, czyli tak, jak robi to gracz.
 const skrzynia = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
-  const o = s.stan.obiekty.find((x) => x.rodzaj === 'skrzynia' && !x.artefakt);
-  s.stan.bohater.x = o.x;
-  s.stan.bohater.y = o.y - 2;
-  s.stan.bohater.ruch = 2000;
+  const o = window.__podejdz(s, (x) => x.rodzaj === 'skrzynia' && !x.artefakt && !x.zebrany);
   s.wysrodkujNaBohaterze(false);
   window.__skrzynia = o;
   return { x: o.x, y: o.y };
@@ -143,11 +142,8 @@ console.log('\n=== kolejne bitwy startują ===');
 for (const nr of [1, 2, 3]) {
   const cel = await page.evaluate(() => {
     const s = window.__game.scene.getScene('adventure');
-    const o = s.stan.obiekty.find((x) => x.rodzaj === 'potwor' && !x.zebrany);
+    const o = window.__podejdz(s, (x) => x.rodzaj === 'potwor' && !x.zebrany);
     if (!o) return null;
-    s.stan.bohater.x = o.x;
-    s.stan.bohater.y = o.y - 1;
-    s.stan.bohater.ruch = 2000;
     s.idz([{ x: o.x, y: o.y, koszt: 100 }]);
     return { nazwa: o.nazwa };
   });
@@ -191,6 +187,9 @@ for (const nr of [1, 2, 3]) {
   sprawdz(`po bitwie ${nr} wracamy na mapę`, wrocilismy);
   if (!wrocilismy) break;
   await page.waitForTimeout(900);
+  // Na tej planszy straże są na tyle silne, że bohater awansuje już w pierwszych
+  // walkach — okno awansu zatrzymuje mapę i bez zamknięcia wygląda jak zwis.
+  await zamknijAwans(page);
   const po = await page.evaluate(() => window.__game.scene.getScene('adventure').zajety);
   sprawdz(`po bitwie ${nr} da się sterować`, po === false);
 }
@@ -208,23 +207,42 @@ console.log('\n=== budowle: okno areny i przeskok portalem ===');
 const wejdzNaBudowle = async (id) => {
   const cel = await page.evaluate((budynek) => {
     const s = window.__game.scene.getScene('adventure');
-    const o = s.stan.obiekty.find((x) => x.budynek === budynek && !x.zebrany);
+    // Stajemy POD budowlą: jej rysunek jest wyższy niż pole, więc tylko stamtąd
+    // widać go w całości i da się w niego kliknąć.
+    const o = window.__podejdz(
+      s,
+      (x) => x.budynek === budynek && !x.zebrany,
+      [[0, 1], [-1, 1], [1, 1], [-1, 0], [1, 0], [0, -1]]
+    );
     if (!o) return null;
-    s.stan.bohater.x = o.x;
-    s.stan.bohater.y = o.y + 1;
-    s.stan.bohater.ruch = 3000;
     s.stan.odkryte.forEach((w, y) => w.forEach((_, x) => (s.stan.odkryte[y][x] = true)));
     s.wysrodkujNaBohaterze(false);
     return { x: o.x, y: o.y };
   }, id);
   if (!cel) return null;
   await page.waitForTimeout(400);
+  // Klikamy w WIDOCZNY kawałek budowli, a nie w środek jej pola.
+  //
+  // Środek pola bywa zasłonięty: wieża obserwacyjna stojąca dwa rzędy bliżej
+  // jest wysoka i jej rysunek zachodzi na pole portalu. Kliknięcie w takie
+  // miejsce celuje — słusznie — w wieżę, bo to ją tam widać. Sonda ma
+  // sprawdzać portal, więc szuka punktu, w którym gra rozpoznaje portal:
+  // idzie po rysunku od dołu do góry i bierze pierwsze trafienie.
   const p = await page.evaluate((c) => {
     const s = window.__game.scene.getScene('adventure');
-    return {
-      x: 8 + c.x * 48 + 24 - (s.kamera?.scrollX ?? 0),
-      y: 44 + c.y * 48 + 24 - (s.kamera?.scrollY ?? 0),
-    };
+    const naEkran = (wx, wy) => ({
+      x: wx - s.kamera.scrollX + s.kamera.x,
+      y: wy - s.kamera.scrollY + s.kamera.y,
+    });
+    const t = s.trafienia.find((z) => z.o.x === c.x && z.o.y === c.y);
+    if (t) {
+      const b = t.im.getBounds();
+      for (let f = 0.9; f >= 0.1; f -= 0.05) {
+        const e = naEkran(b.centerX, b.y + b.height * f);
+        if (s.obiektPodKursorem(e) === t.o) return e;
+      }
+    }
+    return naEkran(c.x * 48 + 24, c.y * 48 + 24);
   }, cel);
   await klikNaPlotnie(page, p.x, p.y);
   await page.waitForTimeout(250);
@@ -275,16 +293,22 @@ const przedPortalem = await page.evaluate(() => {
   return { ile: p.length, cel: p[0] ? { x: p[0].x, y: p[0].y, para: p[0].para } : null };
 });
 if (przedPortalem.ile >= 2) {
-  await wejdzNaBudowle('portal');
-  const poPortalu = await page.evaluate(() => {
+  // Który portal — decyduje sonda wchodząca, nie my. Portali jest na tej
+  // planszy więcej niż jeden para: sprawdzenie brało wcześniej bliźniaka
+  // PIERWSZEGO portalu z listy, a bohater wchodził w ten, do którego dało się
+  // podejść. Wychodziło z tego „portal nie przenosi", choć przeniósł —
+  // tylko do innej pary.
+  const wejscie = await wejdzNaBudowle('portal');
+  const poPortalu = await page.evaluate((w) => {
     const s = window.__game.scene.getScene('adventure');
-    const drugi = s.stan.obiekty.find((o) => o.id === s.stan.obiekty.find((x) => x.budynek === 'portal').para);
+    const ten = s.stan.obiekty.find((o) => o.budynek === 'portal' && o.x === w.x && o.y === w.y);
+    const drugi = s.stan.obiekty.find((o) => o.id === ten.para);
     return {
       bohater: { x: s.stan.bohater.x, y: s.stan.bohater.y },
       drugi: { x: drugi.x, y: drugi.y },
       zajety: s.zajety,
     };
-  });
+  }, wejscie);
   sprawdz(
     'portal przenosi bohatera na bliźniaka',
     poPortalu.bohater.x === poPortalu.drugi.x && poPortalu.bohater.y === poPortalu.drugi.y,

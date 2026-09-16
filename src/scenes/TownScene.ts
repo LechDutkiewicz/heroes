@@ -499,7 +499,7 @@ export class TownScene extends Phaser.Scene {
   private rysujZachety() {
     for (const z of this.zachety) z.destroy();
     this.zachety = [];
-    if (!this.zamek.nasz) return;
+    if (this.zamek.wlasciciel !== 'gracz') return;
     const postawione = this.zamek.postawione ?? [];
     if (this.zamek.budowanoDnia === this.stan.dzien) return;
 
@@ -768,7 +768,7 @@ export class TownScene extends Phaser.Scene {
     const rozbudowa = b.rodzaj === 'ratusz' && b.id !== 'ratusz1';
     this.kartaPrzycisk.setLabel(rozbudowa ? 'Rozbuduj' : 'Buduj');
     this.kartaPrzycisk.setEnabled(
-      mozna && !juzBudowano && stacNas(this.stan.skarbiec, b.koszt) && !!this.zamek.nasz
+      mozna && !juzBudowano && stacNas(this.stan.skarbiec, b.koszt) && this.zamek.wlasciciel === 'gracz'
     );
   }
 
@@ -840,7 +840,7 @@ export class TownScene extends Phaser.Scene {
       const stoi = postawione.includes(b.id);
       const mozna = moznaBudowac(b, postawione);
       const stac = stacNas(this.stan.skarbiec, b.koszt);
-      const dostepny = !stoi && mozna && stac && !juzBudowano && !!this.zamek.nasz;
+      const dostepny = !stoi && mozna && stac && !juzBudowano && this.zamek.wlasciciel === 'gracz';
 
       const rzad = this.add.graphics().setDepth(Z.overlay + 2);
       rzad.fillStyle(mix(C.panel, C.panelDeep, i % 2 ? 0.24 : 0.12), 1);

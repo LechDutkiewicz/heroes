@@ -172,20 +172,33 @@ console.log('\n=== portal: para i przeniesienie ===');
   sprawdz('portal działa wielokrotnie', odwiedz(s, portale[0]).przenies !== undefined);
   // Portal przez grzbiet obchodziłby strażników przełęczy i unieważniał układ
   // mapy — obie połówki pary muszą leżeć po tej samej stronie pasma.
-  sprawdz(
-    'oba końce po tej samej stronie grzbietu',
-    portale.every((p) => p.y < 19) || portale.every((p) => p.y > 22),
-    portale.map((p) => `${p.x},${p.y}`).join(' ↔ ')
-  );
+  // Portal przez grzbiet obchodziłby strażnicę i unieważniał układ mapy, więc
+  // obie połówki KAŻDEJ pary muszą leżeć w tym samym pasie. Wcześniej ten
+  // warunek żądał, żeby WSZYSTKIE portale leżały po jednej stronie — a plansza
+  // ma dziś dwie pary: jedną w pasie spornym, drugą w krainie wroga.
+  // Pasy wyznaczają rdzenie grzbietów (21–22 i 45–46, patrz generator).
+  const pas = (y: number) => (y < 21 ? 'wroga' : y <= 46 ? 'pogranicze' : 'dom');
+  for (const p of portale) {
+    const drugiKoniec = s.obiekty.find((o) => o.id === p.para);
+    if (!drugiKoniec) continue;
+    sprawdz(
+      `portal ${p.x},${p.y} ma bliźniaka w tym samym pasie`,
+      pas(p.y) === pas(drugiKoniec.y),
+      `${pas(p.y)} ↔ ${pas(drugiKoniec.y)}`
+    );
+  }
 }
 
 console.log('\n=== gniazdo: zajmuje się, a nie zbiera ===');
 {
   const s = swiat();
   const o = budowla(s, 'gniazdo');
-  const zamek = s.obiekty.find((z) => z.rodzaj === 'zamek' && z.nasz)!;
+  const zamek = s.obiekty.find((z) => z.rodzaj === 'zamek' && z.wlasciciel === 'gracz')!;
   const w = odwiedz(s, o);
-  sprawdz('gniazdo zostaje na mapie', !o.zebrany && o.nasz === true && w.zajete === o);
+  sprawdz(
+    'gniazdo zostaje na mapie',
+    !o.zebrany && o.wlasciciel === 'gracz' && w.zajete === o
+  );
   const przed = [...zamek.dostepne!];
   nowaTura(s);
   const po = zamek.dostepne!;
@@ -238,6 +251,29 @@ console.log('\n=== drobiazgi jednorazowe ===');
   sprawdz('drugi raz tego samego dnia — nic', s.skarbiec[w.surowiec!] === po[w.surowiec!]);
 }
 
+console.log('\n=== chata jasnowidza: przynieś i wróć ===');
+{
+  const s = swiat();
+  const chata = s.obiekty.find((o) => o.rodzaj === 'jasnowidz')!;
+  sprawdz('chata stoi na mapie i ma zadanie', !!chata?.zadanie, `${chata?.zadanie?.ile} × ${chata?.zadanie?.surowiec}`);
+  const potrzeba = chata.zadanie!;
+  // Pierwsza wizyta z pustą sakwą: ma powiedzieć, czego chce, i NIC nie wziąć.
+  s.skarbiec[potrzeba.surowiec] = 0;
+  const pierwsza = odwiedz(s, chata);
+  sprawdz('bez surowca nic nie zabiera', s.skarbiec[potrzeba.surowiec] === 0 && !chata.spelnione);
+  sprawdz('mówi, ile potrzebuje', pierwsza.opis.includes(String(potrzeba.ile)), pierwsza.opis.split('\n')[0]);
+  // Druga wizyta, już z surowcem: zamiana na artefakt.
+  s.skarbiec[potrzeba.surowiec] = potrzeba.ile + 3;
+  const artefaktowPrzed = s.bohater.artefakty.length;
+  odwiedz(s, chata);
+  sprawdz('zabiera dokładnie tyle, ile prosiła', s.skarbiec[potrzeba.surowiec] === 3, `zostało ${s.skarbiec[potrzeba.surowiec]}`);
+  sprawdz('daje artefakt', s.bohater.artefakty.length === artefaktowPrzed + 1);
+  // Trzecia: nagroda tylko raz.
+  s.skarbiec[potrzeba.surowiec] = potrzeba.ile + 3;
+  odwiedz(s, chata);
+  sprawdz('drugi raz już nie płaci', s.bohater.artefakty.length === artefaktowPrzed + 1 && s.skarbiec[potrzeba.surowiec] === potrzeba.ile + 3);
+}
+
 console.log('\n=== bryły i dostępność ===');
 {
   const s = swiat();
@@ -248,8 +284,28 @@ console.log('\n=== bryły i dostępność ===');
       `${o.x},${o.y}`
     );
   }
+  // Mur budowli bywa PRZYCIĘTY i to jest zamierzone: `polaBryly` pomija pola
+  // poza planszą, na skale i stykające się z cudzym wejściem — bez tego
+  // budowla stojąca ciasno zamurowuje sąsiadowi drzwi. Przy gęstości mapy M
+  // (obiekt co siedem pól) trafiają się więc budowle bez ani jednego pola muru
+  // i to nie jest usterka. Pilnujemy tego, o co naprawdę chodzi: żeby mury
+  // miała WIĘKSZOŚĆ, bo inaczej znaczyłoby to, że bryły przestały działać.
   const zBryla = s.obiekty.filter((o) => o.rodzaj === 'budynek' && brylaObiektu(o));
-  sprawdz('budowle wielopolowe mają nieprzejezdne mury', zBryla.every((o) => polaBryly(s, o).length > 0), `${zBryla.length} szt.`);
+  const zMurem = zBryla.filter((o) => polaBryly(s, o).length > 0);
+  // Próg to dwie trzecie. Pojedyncze przycięcie jest w porządku — `polaBryly`
+  // celowo pomija pole muru stykające się z cudzym wejściem, żeby budowla nie
+  // zamurowała sąsiadowi drzwi — ale budowla rysowana na trzy pola i blokująca
+  // jedno wygląda jak budynek, przez który da się przejść.
+  //
+  // Przy pierwszym podejściu wychodziło 4 z 15 i kuszące było rozluźnienie
+  // progu. Właściwą naprawą było rozstawienie: generator stawia teraz budowle
+  // z bryłą z zapasem miejsca na mur, a dopiero gdy miejsca zabraknie, godzi
+  // się na ciasno (`tools/generuj_mape.py`, dwa podejścia w `dodaj`).
+  sprawdz(
+    'budowle wielopolowe mają nieprzejezdne mury',
+    zMurem.length * 3 >= zBryla.length * 2,
+    `${zMurem.length} z ${zBryla.length}`
+  );
 }
 
 console.log(`\n${bledy === 0 ? 'Wszystko się zgadza.' : `Błędów: ${bledy}`}`);

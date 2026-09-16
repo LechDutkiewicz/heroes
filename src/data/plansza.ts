@@ -12,11 +12,13 @@ import {
 import {
   ARTEFAKTY,
   BUDOWLE,
+  KLUCZE,
   PRZYROST_ODDZIALU,
   odslon,
   type Obiekt,
   type Oddzial,
   type StanMapy,
+  type Klucz,
   type Surowiec,
   type Teren,
 } from './mapa';
@@ -36,6 +38,9 @@ const ZNAKI: Record<string, Teren> = {
   '.': 'trawa',
   '=': 'sciezka',
   ',': 'piasek',
+  j: 'jalowa',
+  s: 'snieg',
+  b: 'bagno',
   T: 'las',
   '#': 'skaly',
   '~': 'woda',
@@ -73,19 +78,32 @@ const NAZWY_BUDYNKU: Record<Surowiec, string> = {
 };
 
 /**
- * Straże. Trzy poziomy siły, dobrane tak, żeby dziecko widziało po sprite'ie
+ * Straże. Pięć stopni siły, dobranych tak, żeby dziecko widziało po sprite'ie
  * i liczbie, czy to jest na teraz.
  *
- * `straznik` to straż graniczna: stoi w jednym z dwóch przejść przez grzbiet
- * i jest jedyną rzeczą dzielącą mapę na bezpieczne południe i groźną północ.
- * Ma być wyraźnie trudniejsza od wszystkiego, co gracz spotkał wcześniej —
- * inaczej podział mapy przestaje cokolwiek znaczyć.
+ * Stopni jest pięć, a nie trzy, bo plansza ma trzy pasy i dwa grzbiety.
+ * Przy trzech stopniach pas sporny dostawał albo straże z doliny (czyli był
+ * darmowy), albo straże z krainy wroga (czyli był nie do ruszenia przez pół
+ * gry) — a to on ma być środkiem gry. Krzywa idzie więc tak:
+ *
+ * | Stopień | Gdzie stoi | Kiedy da się pokonać |
+ * |---|---|---|
+ * | `slaby` | dolina gracza | pierwszy tydzień, armią startową |
+ * | `sredni` | pas sporny, przy kopalniach i skrzyniach | drugi tydzień |
+ * | `silny` | kraina wroga, przy reliktach | trzeci tydzień |
+ * | `straznik` | przejścia przez grzbiet POŁUDNIOWY | brama do pasa spornego |
+ * | `wodz` | przejścia przez grzbiet PÓŁNOCNY | brama do krainy wroga |
+ *
+ * Obie straże graniczne są wyraźnie trudniejsze od wszystkiego, co stoi po
+ * ich stronie mapy — inaczej podział na pasy przestaje cokolwiek znaczyć.
  */
 const STRAZE: Record<string, { frakcja: string; tiery: number[]; mnoznik: number; stosy: number }> =
   {
     slaby: { frakcja: 'grota', tiery: [0, 1], mnoznik: 0.6, stosy: 1 },
-    straznik: { frakcja: 'zbocze', tiery: [2, 3], mnoznik: 1.0, stosy: 3 },
+    sredni: { frakcja: 'grota', tiery: [1, 2], mnoznik: 0.85, stosy: 2 },
     silny: { frakcja: 'zbocze', tiery: [2, 3], mnoznik: 1.1, stosy: 2 },
+    straznik: { frakcja: 'zbocze', tiery: [2, 3], mnoznik: 1.3, stosy: 3 },
+    wodz: { frakcja: 'zbocze', tiery: [4, 5], mnoznik: 1.0, stosy: 3 },
   };
 
 /**
@@ -247,6 +265,46 @@ export function planszaPrzygody(): StanMapy {
           ...zawartoscBudowli(wpis.budynek ?? '', wpis.strefa, losuj),
         });
       }
+    } else if (wpis.rodzaj === 'jasnowidz') {
+      // Zadanie i nagroda ustalane RAZ, przy składaniu planszy — tak samo jak
+      // zawartość skrzyni i z tego samego powodu: inaczej dałoby się wyjść
+      // i wejść ponownie, aż trafi się na tanie.
+      //
+      // Jasnowidz prosi o KAMIENIE EWOLUCJI i to jest wybór, nie przypadek:
+      // kamień jest jedynym surowcem, który nie ma dziś na co iść (wypadł
+      // z kosztów budynków, a ulepszeń oddziałów jeszcze nie ma). Chata daje
+      // mu pierwsze zastosowanie, a przy okazji powód, żeby zbierać stosy,
+      // które leżą po drugiej stronie grzbietu.
+      const wDalekiej = wpis.strefa === 'wroga';
+      const ile = wDalekiej ? 12 : 6;
+      const klasa = wDalekiej ? 'relikt' : 'znaczny';
+      const pula = ARTEFAKTY.filter((a) => a.klasa === klasa);
+      const a = pula[Math.floor(losuj() * pula.length)];
+      obiekty.push({
+        ...wspolne,
+        rodzaj: 'jasnowidz',
+        nazwa: 'Chata Jasnowidza',
+        zadanie: { surowiec: 'kamien', ile },
+        nagroda: { artefakt: a.id },
+      });
+    } else if (wpis.rodzaj === 'straznica') {
+      // Strażnica graniczna. Nazwa mówi wprost, jakiego klucza szukać —
+      // dziecko ma wiedzieć, czego szuka, bez zaglądania w panel.
+      const k = (wpis.klucz ?? 'zielony') as Klucz;
+      obiekty.push({
+        ...wspolne,
+        rodzaj: 'straznica',
+        nazwa: wpis.nazwa ?? `Strażnica (${KLUCZE[k].nazwa})`,
+        klucz: k,
+      });
+    } else if (wpis.rodzaj === 'namiot') {
+      const k = (wpis.klucz ?? 'zielony') as Klucz;
+      obiekty.push({
+        ...wspolne,
+        rodzaj: 'namiot',
+        nazwa: wpis.nazwa ?? `Namiot klucznika (${KLUCZE[k].nazwa})`,
+        klucz: k,
+      });
     } else if (wpis.rodzaj === 'potwor') {
       const sila = wpis.sila ?? 'slaby';
       const oddzialy = oddzialyStrazy(sila, losuj);
@@ -277,7 +335,7 @@ export function planszaPrzygody(): StanMapy {
     x: PUNKTY['zamek gracza'].x,
     y: PUNKTY['zamek gracza'].y,
     nazwa: 'Bór Szmaragdowy',
-    nasz: true,
+    wlasciciel: 'gracz',
     frakcjaZamku: 'bor',
     // Miasto startowe nie jest puste i nie jest gotowe. Ratusz daje dochód od
     // pierwszego dnia (inaczej dzień 1 to zero pokeballi i nie ma czym zacząć),
@@ -288,6 +346,14 @@ export function planszaPrzygody(): StanMapy {
     // stało tu [6, 4, 3, 2, 1, 0] — cztery poziomy do kupienia z budynków,
     // których nie ma.
     dostepne: [6, 4, 0, 0, 0, 0],
+    // Garnizon domowy. Symetrycznie z zamkiem przeciwnika: bez tego byłby to
+    // jedyny zamek na mapie, który pada BEZ WALKI, kiedy tylko ktoś do niego
+    // dojdzie, bez względu na to, jak silna jest armia stojąca w polu.
+    // Mnożnik wyższy niż w `garnizonZamku` (jeden tydzień) celowo: to jedyna
+    // linia obrony gracza, dopóki jego bohater akurat gdzie indziej eksploruje
+    // albo buduje, więc ma reprezentować całą miejską straż, nie jeden
+    // tygodniowy przyrost.
+    oddzialy: garnizonZamku('bor', [0, 1]).map((o) => ({ ...o, ile: o.ile * 5 })),
   });
   obiekty.push({
     id: id++,
@@ -295,6 +361,7 @@ export function planszaPrzygody(): StanMapy {
     x: PUNKTY['zamek wroga'].x,
     y: PUNKTY['zamek wroga'].y,
     nazwa: 'Grota Księżycowa',
+    wlasciciel: 'wrog',
     frakcjaZamku: 'grota',
     // Zamek przeciwnika stoi rozbudowany dalej niż nasz. To nie jest kaprys:
     // jak długo nikt nim nie gra, jego stan widać dopiero po zdobyciu — a wtedy
@@ -329,6 +396,23 @@ export function planszaPrzygody(): StanMapy {
   const najwolniejszy = Math.min(...bor.units.slice(0, 4).map((u) => u.move));
   const ruchMax = ruchNaDzien(najwolniejszy);
 
+  // Bohater przeciwnika: ta sama reguła startowej armii co u gracza (cztery
+  // najniższe oddziały własnej frakcji), tylko z Groty zamiast Boru. Stoi na
+  // wejściu do własnego zamku — dokładnie tak samo naturalny start, jak start
+  // gracza kawałek od jego zamku.
+  const grota = factionById('grota') ?? FACTIONS[1] ?? bor;
+  const wrogArmia = znormalizuj(
+    grota.units.slice(0, 4).map((u, i) => ({
+      sprite: u.sprite,
+      nazwa: u.name,
+      ile: [20, 9, 6, 4][i],
+      frakcja: grota.id,
+      tier: i,
+    }))
+  );
+  const wrogNajwolniejszy = Math.min(...grota.units.slice(0, 4).map((u) => u.move));
+  const wrogRuchMax = ruchNaDzien(wrogNajwolniejszy);
+
   const stan: StanMapy = {
     szer: TEREN[0].length,
     wys: TEREN.length,
@@ -350,9 +434,40 @@ export function planszaPrzygody(): StanMapy {
     // decyzję (siedlisko albo garść oddziałów), a nie żeby było na wszystko.
     // Przy 15 pokeballach dzień pierwszy był tylko klikaniem „dalej".
     skarbiec: { pokeball: 40, jagoda: 6, kamien: 1, odlamek: 4 },
+    wrogBohater: {
+      x: PUNKTY['zamek wroga'].x,
+      y: PUNKTY['zamek wroga'].y,
+      ruch: wrogRuchMax,
+      ruchMax: wrogRuchMax,
+      imie: 'Grota',
+      atak: 2,
+      obrona: 1,
+      armia: wrogArmia,
+      artefakty: [],
+      doswiadczenie: 0,
+    },
+    // Ten sam startowy skarbiec co gracz — inaczej różnica tempa na starcie
+    // byłaby przypadkiem liczb, a nie decyzją o trudności.
+    wrogSkarbiec: { pokeball: 40, jagoda: 6, kamien: 1, odlamek: 4 },
     dzien: 1,
+    klucze: [],
+    // Przeciwnik startuje w krainie wroga — za OBOMA bramami, licząc od
+    // doliny gracza. Oba namioty klucznika stoją po PRZECIWNEJ (południowej)
+    // stronie tych samych bram, więc z zamku wroga nie da się do żadnego
+    // dojść: `trasa()` zwraca `null` dla obu, to nie kwestia siły armii, tylko
+    // fizycznej niedostępności na jednokierunkowej mapie zaprojektowanej pod
+    // marsz gracza z południa na północ. Przeciwnik dostaje więc klucze od
+    // pierwszego dnia — jedyny wariant, który w ogóle pozwala mu wyjść z
+    // własnej doliny i naciskać gracza, zamiast czekać bezczynnie, aż gracz
+    // sam otworzy mu bramę od swojej strony.
+    wrogKlucze: Object.keys(KLUCZE) as Klucz[],
     odkryte: TEREN.map(() => new Array(TEREN[0].length).fill(false)),
+    // Mgła wroga: własna siatka, odsłonięta na razie tylko wokół jego zamku —
+    // patrz `odslon(stan, ..., 'wrog')` niżej. Reszta mapy zostaje ukryta,
+    // bo AI nie ma prawa wiedzieć więcej niż faktycznie odkryło.
+    wrogOdkryte: TEREN.map(() => new Array(TEREN[0].length).fill(false)),
   };
   odslon(stan);
+  odslon(stan, undefined, undefined, 'wrog');
   return stan;
 }
