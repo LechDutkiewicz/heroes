@@ -148,6 +148,15 @@ export class AdventureScene extends Phaser.Scene {
   private minimapa!: Phaser.GameObjects.Graphics;
   private ramkaWidoku!: Phaser.GameObjects.Graphics;
   private slotyArmii: Phaser.GameObjects.Container[] = [];
+  /**
+   * Znak przy kursorze — miecz nad tym, co skończy się bitwą, gwiazda nad
+   * tym, co coś uruchomi (surowiec, skrzynia, budowla), klepsydra z liczbą
+   * dni nad odległym celem trasy. Jak w Heroes 3, gdzie kursor sam mówił,
+   * co się stanie, zanim się kliknęło.
+   */
+  private kursorZnak!: Phaser.GameObjects.Container;
+  private kursorZnakIkona!: Phaser.GameObjects.Image;
+  private kursorZnakTekst!: Phaser.GameObjects.Text;
 
   /** Zmierzone marginesy tekstur — liczone raz, bo to czytanie całego obrazka. */
   private marginesy = new Map<string, number>();
@@ -309,6 +318,11 @@ export class AdventureScene extends Phaser.Scene {
     this.rysujPanel();
     this.rysujPasekSurowcow();
     this.rozdzielKamery();
+    // Znak przy kursorze powstaje PO podziale kamer, jak każde okno: powstały
+    // wcześniej trafiał w domyślny snapshot `kameraOkien.ignore(...)` i nie
+    // rysowała go żadna kamera, bo `kamera` planszy i tak zamalowywała go
+    // w obrębie mapy, zanim doszło do `naWierzchu`.
+    this.zbudujKursor();
     this.odswiezWszystko();
     this.wysrodkujNaBohaterze(false);
 
@@ -623,6 +637,41 @@ export class AdventureScene extends Phaser.Scene {
     this.cameras.main.ignore(obiekty);
     this.kamera?.ignore(obiekty);
     this.cameras.main.ignore(obiekty);
+  }
+
+  /**
+   * Znak przy kursorze — miecz, gwiazda albo klepsydra z liczbą dni, zależnie
+   * od tego, co spotka bohatera na polu pod kursorem. Powstaje jak zwykły
+   * element HUD, PRZED `rozdzielKamery`: ta metoda i tak weźmie go pod uwagę
+   * przy dzieleniu, więc nie trzeba go osobno oddawać żadnej kamerze.
+   */
+  private zbudujKursor() {
+    const tlo = this.add.graphics();
+    tlo.fillStyle(C.shadow, 0.6);
+    tlo.fillCircle(0, 0, 13);
+    tlo.lineStyle(2, C.gold, 0.9);
+    tlo.strokeCircle(0, 0, 13);
+    const ikona = this.add.image(0, 0, ICON.sword).setDisplaySize(16, 16);
+    const tekst = this.add
+      .text(15, 12, '', { ...display(12, H.goldLight), fontStyle: 'bold' })
+      .setOrigin(0, 0.5);
+    this.kursorZnak = this.add
+      .container(0, 0, [tlo, ikona, tekst])
+      .setDepth(Z.overlay + 5)
+      .setVisible(false);
+    this.kursorZnakIkona = ikona;
+    this.kursorZnakTekst = tekst;
+    // Bez tego kamera planszy zamalowywała znak w każdej klatce wewnątrz
+    // obszaru mapy — dokładnie ten sam powód, dla którego okno skrzyni idzie
+    // do kamery okien, opisany przy `naWierzchu`.
+    this.naWierzchu(this.kursorZnak);
+  }
+
+  /** Pokazuje znak przy kursorze z daną ikoną i opcjonalną liczbą (dni). */
+  private pokazZnakKursora(ikona: string, tekst = '') {
+    this.kursorZnakIkona.setTexture(ikona);
+    this.kursorZnakTekst.setText(tekst).setVisible(!!tekst);
+    this.kursorZnak.setVisible(true);
   }
 
   /**
@@ -1672,16 +1721,22 @@ export class AdventureScene extends Phaser.Scene {
   // ---------- interakcja ----------
 
   private ruchMyszy(p: Phaser.Input.Pointer) {
-    if (this.zajety) return;
+    if (this.zajety) {
+      this.kursorZnak.setVisible(false);
+      return;
+    }
     const { x, y } = this.zEkranu(p.x, p.y);
     if (!this.wRamie(p.x, p.y) || !this.wGranicach(x, y)) {
       this.podpowiedz.setText(DOMYSLNA_PODPOWIEDZ);
+      this.kursorZnak.setVisible(false);
       return;
     }
     if (!this.stan.odkryte[y][x]) {
       this.podpowiedz.setText('Nieznany teren — trzeba tam podejść.');
+      this.kursorZnak.setVisible(false);
       return;
     }
+    this.kursorZnak.setPosition(p.x + 16, p.y + 16);
     // Kursor nad celem wytyczonej trasy, do którego nie da się dojść w tej
     // turze, ma od razu mówić, ile dni to zajmie — jak w Heroes 3.
     const t = this.trasaBiezaca;
@@ -1692,6 +1747,7 @@ export class AdventureScene extends Phaser.Scene {
         this.podpowiedz.setText(
           `Dojście zajmie ${dni} ${dni === 1 ? 'dzień' : 'dni'}.\nKliknij, żeby ruszyć.`
         );
+        this.pokazZnakKursora(ICON.hourglass, String(dni));
         return;
       }
     }
@@ -1701,19 +1757,27 @@ export class AdventureScene extends Phaser.Scene {
     this.input.setDefaultCursor(zamek ? 'pointer' : 'default');
     if (zamek) {
       this.podpowiedz.setText(`${zamek.nazwa}\nKliknij, żeby wejść do miasta.`);
+      this.kursorZnak.setVisible(false);
       return;
     }
     const o = this.obiektPodKursorem(p) ?? obiektNa(this.stan, x, y);
+    const straz = strzezoneProzez(this.stan, x, y);
+    // Miecz nad wszystkim, co skończy się bitwą — potwór wprost albo
+    // strażnik pilnujący pola czy obiektu. Gwiazda nad resztą, co da się
+    // odwiedzić: to zawsze albo surowiec, albo skrzynia, albo budowla —
+    // czyli coś, co po wejściu COŚ robi.
+    const bedzieBitwa = o?.rodzaj === 'potwor' || !!(straz && straz !== o);
     if (o) {
       this.podpowiedz.setText(this.opisObiektu(o));
+      this.pokazZnakKursora(bedzieBitwa ? ICON.sword : ICON.star);
       return;
     }
     const teren = TEREN_INFO[this.stan.teren[y][x]];
-    const straz = strzezoneProzez(this.stan, x, y);
     if (straz && teren.koszt !== null) {
       this.podpowiedz.setText(
         `${teren.nazwa} — koszt ${teren.koszt}\nPilnuje tego: ${straz.nazwa}.\nWejście tu zaczyna bitwę.`
       );
+      this.pokazZnakKursora(ICON.sword);
       return;
     }
     this.podpowiedz.setText(
@@ -1721,6 +1785,7 @@ export class AdventureScene extends Phaser.Scene {
         ? `${teren.nazwa} — nie do przejścia`
         : `${teren.nazwa} — koszt ${teren.koszt}`
     );
+    this.kursorZnak.setVisible(false);
   }
 
   private opisObiektu(o: Obiekt) {
@@ -1761,6 +1826,9 @@ export class AdventureScene extends Phaser.Scene {
 
   private klikMapa(p: Phaser.Input.Pointer) {
     if (!this.wRamie(p.x, p.y)) return;
+    // Bez tego znak (miecz, gwiazda, klepsydra) wisiał przy kursorze przez
+    // całą bitwę czy animację marszu, jeśli mysz się w tym czasie nie ruszyła.
+    this.kursorZnak.setVisible(false);
     // Klik w trakcie marszu przerywa go — jak w Heroes 3, gdzie kliknięcie
     // gdzie indziej podczas chodzenia zatrzymuje bohatera i pozwala wskazać
     // nową trasę, zamiast czekać, aż dojdzie do wcześniej wybranego celu.
