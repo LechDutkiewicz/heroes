@@ -193,6 +193,7 @@ const bitwa = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   const o = window.__podejdz(s, (x) => x.rodzaj === 'potwor' && !x.zebrany);
   window.__potwor = o.id;
+  window.__potworPole = { x: o.x, y: o.y };
   s.idz([{ x: o.x, y: o.y, koszt: 100 }]);
   return { nazwa: o.nazwa, id: o.id, wrog: (o.oddzialy ?? []).length };
 });
@@ -241,6 +242,8 @@ const poBitwie = await page.evaluate(() => {
     artefakty: s.stan.bohater.artefakty.length,
     odkryte: s.stan.odkryte.flat().filter(Boolean).length,
     zajety: s.zajety,
+    bohater: { x: s.stan.bohater.x, y: s.stan.bohater.y },
+    potworPole: window.__potworPole,
   };
 });
 sprawdz('po bitwie wracamy na mapę', poBitwie.naMapie === true);
@@ -253,6 +256,18 @@ sprawdz('pokonany potwór znika z mapy', poBitwie.potworZebrany === true);
 sprawdz('doświadczenie za wygraną wpłynęło', poBitwie.dosw > poWyborze.dosw);
 sprawdz('stan mapy przeżył bitwę — artefakt', poBitwie.artefakty === 1);
 sprawdz('stan mapy przeżył bitwę — mgła', poBitwie.odkryte > mgla.przed, `${poBitwie.odkryte} pól`);
+// Z potworem bije się Z SĄSIEDNIEGO POLA, tak jak w Heroes 3 — bohater nie
+// wchodzi na jego pole ani przed bitwą, ani po wygranej. To jest ta sama
+// zasada, przez którą gubiła się skrzynia pilnowana przez straż: dopóki
+// bohater STAWAŁ na polu obiektu, obiekt i straż konkurowały o jedno pole.
+sprawdz(
+  'bitwa toczy się z sąsiedniego pola — bohater nie wchodzi na potwora',
+  Math.max(
+    Math.abs(poBitwie.bohater.x - poBitwie.potworPole.x),
+    Math.abs(poBitwie.bohater.y - poBitwie.potworPole.y)
+  ) === 1,
+  `bohater (${poBitwie.bohater.x},${poBitwie.bohater.y}), potwór (${poBitwie.potworPole.x},${poBitwie.potworPole.y})`
+);
 
 // --- strefa kontroli potwora ---
 console.log('\n=== strefa kontroli potwora ===');

@@ -165,6 +165,24 @@ export const PRODUKCJA = {
 } as const;
 
 // ---------------------------------------------------------------------------
+// STRAŻE ROSNĄ W CZASIE
+// ---------------------------------------------------------------------------
+
+/**
+ * [H3] Neutralne stada na mapie przygody powiększają się z upływem tygodni —
+ * stado, które w pierwszym tygodniu było do pokonania startową armią, w piątym
+ * już nie jest. Dzięki temu zwlekanie kosztuje, a mapa nie zamienia się
+ * w spokojne zbieranie po wyczyszczeniu okolicy.
+ *
+ * [NASZE] Co tydzień każdy stos rośnie o dziesiątą część, zawsze o co najmniej
+ * jedną sztukę, i nie więcej niż dwuipółkrotność stanu początkowego. Sufit jest
+ * po to, żeby mapa nie zamknęła się sama: bez niego straże w krainie wroga po
+ * dwóch miesiącach są nie do ruszenia niezależnie od tego, jak dobrze się grało.
+ */
+export const PRZYROST_STRAZY = 0.1;
+export const PRZYROST_STRAZY_SUFIT = 2.5;
+
+// ---------------------------------------------------------------------------
 // MGŁA WOJNY
 // ---------------------------------------------------------------------------
 

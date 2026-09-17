@@ -468,6 +468,71 @@ Chorągiew strażnicy i proporzec namiotu to jedyne elementy o odcieniu poniżej
 sam odcień; jasność i nasycenie zostają, więc fałdy płótna i cień pod belką
 pozostają na miejscu.
 
+## Straże: co pilnują i jak rosną
+
+Zgłoszenie z rozgrywki brzmiało: „stwory są rozrzucone trochę losowo". Było
+trafne. Każdy strażnik dostawał jeden obiekt na głowę (`strzez(lista)`), więc
+mapa miała pięćdziesiąt stad stojących przy pojedynczych skrzyniach. W Heroes 3
+stado stoi w przejściu, przy wejściu do kopalni albo przed zakątkiem, w którym
+leży kilka rzeczy naraz — i to ostatnie było u nas nieobecne w ogóle.
+
+**Kieszenie ze skarbem.** Generator szuka teraz w terenie zakątków, które
+zamyka JEDEN strażnik, i liczy to dokładnie tak, jak działa straż: potwór
+blokuje swoje pole i osiem wokół, więc pytamy, co odetnie się od reszty planszy
+po zamknięciu kwadratu 3 × 3. Pierwsza wersja liczyła „ile odcina jedno pole"
+i znalazła dwie kieszenie na całej mapie — bo takich szyjek po prostu nie ma,
+przejścia mają po dwa i trzy pola. Po poprawce jest ich dziewięć, po trzy na
+pas. W każdej leżą trzy–pięć rzeczy, w szyjce stoi jeden strażnik: bitwa opłaca
+się za cały zakątek, a nie za jedną skrzynię.
+
+**Podstawowe kopalnie stoją otworem.** Jagody i odłamki — odpowiedniki tartaku
+i kopalni rudy — nie są pilnowane nigdzie na mapie. Bez nich nie ma z czego
+zacząć, więc straż przy nich nie jest wyborem, tylko karą za pierwszy tydzień.
+Pilnowane są kopalnie kamienia i obozy z pokeballami, czyli to, co w Heroes 3
+odpowiada kryształom i złotu. Warunek przy stawianiu jest miękki (w ciasnej
+krainie wroga inaczej kończą się miejsca), a to, co się prześlizgnie, odsuwa
+`odsun_straze` po rozstawieniu.
+
+Straży jest 35 zamiast 53 i stanowią 13% obiektów — mapy wzorcowe mają 10–24%.
+`probe-mapa.ts` sprawdza, że każda straż ma przy sobie coś wartego pilnowania
+i że co najmniej sześć pilnuje całych zakątków, a nie pojedynczej rzeczy.
+
+**Stada rosną co tydzień.** Stos ustalał się przy składaniu planszy i zostawał
+taki do końca gry, więc zwlekanie nic nie kosztowało, a w piątym tygodniu straże
+były grupką na jeden strzał. Teraz co tydzień każdy stos rośnie o dziesiątą
+część (zawsze co najmniej o sztukę), z sufitem na dwuipółkrotności stanu
+początkowego. Sufit jest po to, żeby mapa nie zamknęła się sama: bez niego
+straże w krainie wroga po dwóch miesiącach są nie do ruszenia niezależnie od
+tego, jak dobrze się grało.
+
+## Z sąsiedniego pola: łup I bitwa
+
+Zgłoszenie: „wszedłem na skrzynię, koło której stał stwór, wygrałem bitwę
+i skrzyni nie podniosło". Tak właśnie było. Scena widziała na polu bohatera
+skrzynię i straż obok, wybierała bitwę — a po powrocie z niej okno skrzyni
+otwierało się po 1200 ms i wpadało pod okno awansu, które wchodzi 900 ms
+później. Gra zostawała z `zajety`, którego nikt nie zdejmował, a skrzynia leżała
+pod stojącym na niej bohaterem, więc nie dało się jej nawet wywołać ponownie.
+
+Pierwsza naprawa zatrzymywała marsz pole wcześniej przed rzeczą leżącą i była
+tu opisana jako „świadome odstępstwo od Heroes 3". To było błędne rozpoznanie
+oryginału i tak też zostało zgłoszone. W Heroes 3 pole obiektu jest
+ZABLOKOWANE i jednocześnie „odwiedzalne": bohater sięga po stos surowca,
+artefakt i skrzynię Z SĄSIEDNIEGO POLA i na nim zostaje. **Tak samo bije się
+z potworem** — atak idzie z pola obok, nie przez wejście na stwora. Na stałe
+wchodzi się tylko na przejezdne WEJŚCIE, jakie mają zamek i kopalnia; dlatego
+kopalni się nie „podnosi", tylko zajmuje i stoi w jej bramie.
+
+Czyli: to nie było odstępstwo, tylko zasada zastosowana w połowie. Potwór
+dołączył do listy (`Z_SASIEDNIEGO_POLA` w `src/data/mapa.ts`), a sonda
+`probe-przygoda` mierzy teraz odległość bohatera od pokonanego stwora po
+bitwie — ma być dokładnie jeden.
+
+Obiekty, na które się WCHODZI — kopalnie, budowle, zamki — dostały osobną
+naprawę: po wygranej bitwie scena odwiedza to, na czym bohater stoi, ale czeka
+z tym na zamknięcie okna awansu i sprawdza `zajety`. Poprzednia wersja robiła
+to bezwarunkowo i właśnie dlatego gubiła nagrody.
+
 ## Chata jasnowidza — jedyny obiekt, który każe wrócić
 
 „Przynieś dwanaście kamieni ewolucji, dostaniesz relikt." Pierwsza wizyta

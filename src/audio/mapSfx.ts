@@ -200,6 +200,32 @@ function kluczAmbientu(o: { rodzaj: string; budynek?: string }): string | undefi
 }
 
 /**
+ * Wygasza JEDEN dźwięk i sprząta go po sobie.
+ *
+ * Zdejmowanie wcześniejszych tweenów nie jest tu ostrożnością, tylko warunkiem
+ * poprawności. Ambient wchodzi narostem głośności trwającym pół sekundy; jeśli
+ * w tym czasie bohater przejdzie z sąsiedztwa kopalni w sąsiedztwo wieży, ten
+ * sam dźwięk dostaje drugi tween — krótszy, wygaszający, z `destroy` na końcu.
+ * Krótszy kończy się pierwszy, dźwięk znika, a narost dalej pisze do niego
+ * głośność i pada wyjątkiem „Cannot set properties of null (setting 'volume')".
+ * Wychodziło to dopiero na mapie, na której kopalnia i wieża stoją blisko
+ * siebie — czyli na nowej.
+ */
+function wygas(scene: Phaser.Scene, dzwiek: Phaser.Sound.BaseSound, czas: number) {
+  scene.tweens.killTweensOf(dzwiek);
+  if (!dzwiek.isPlaying) {
+    dzwiek.destroy();
+    return;
+  }
+  scene.tweens.add({
+    targets: dzwiek,
+    volume: 0,
+    duration: czas,
+    onComplete: () => dzwiek.destroy(),
+  });
+}
+
+/**
  * Tło budowli, słyszalne stojąc na kopalni/wieży obserwacyjnej albo na
  * polu bezpośrednio sąsiednim — głośniej na samej budowli, ciszej obok,
  * cisza dalej. Wołane z `odswiezWszystko`, czyli po każdej zmianie pozycji
@@ -231,12 +257,7 @@ export function aktualizujAmbient(
   if (!najlepszy) {
     if (obecny) {
       s.ambient = undefined;
-      scene.tweens.add({
-        targets: obecny.dzwiek,
-        volume: 0,
-        duration: 500,
-        onComplete: () => obecny.dzwiek.destroy(),
-      });
+      wygas(scene, obecny.dzwiek, 500);
     }
     return;
   }
@@ -250,14 +271,7 @@ export function aktualizujAmbient(
     return;
   }
 
-  if (obecny) {
-    scene.tweens.add({
-      targets: obecny.dzwiek,
-      volume: 0,
-      duration: 350,
-      onComplete: () => obecny.dzwiek.destroy(),
-    });
-  }
+  if (obecny) wygas(scene, obecny.dzwiek, 350);
   if (!scene.cache.audio.exists(def.plik)) return;
 
   const puscic = () => {

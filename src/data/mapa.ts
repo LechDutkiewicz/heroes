@@ -7,6 +7,8 @@ import {
   OBSERWATORIUM_PROMIEN,
   OGNISKO_POKEBALLE,
   PROMIEN_WIDZENIA,
+  PRZYROST_STRAZY,
+  PRZYROST_STRAZY_SUFIT,
   SKRZYNIE,
   STAJNIA_BONUS,
   STAJNIA_DNI,
@@ -337,6 +339,11 @@ export interface Obiekt {
   /** dla potwora: która frakcja go wystawia i co konkretnie stoi na drodze */
   frakcja?: string;
   oddzialy?: Oddzial[];
+  /**
+   * Potwór: ilu ich było na początku gry. Z tego liczy się sufit przyrostu —
+   * stado rośnie co tydzień, ale nie w nieskończoność.
+   */
+  wyjsciowe?: number;
   /**
    * Czy zniknął z mapy. Dotyczy rzeczy jednorazowych: stosu surowca, skrzyni,
    * pokonanego potwora.
@@ -828,9 +835,13 @@ export function strzezoneProzez(s: StanMapy, x: number, y: number): Obiekt | und
 }
 
 /**
- * Koszt wejścia na pole. Obiekty do odwiedzenia (surowiec, skrzynia, potwór)
- * stoją na przejezdnym terenie — wchodzi się na nie. Zamek i kopalnia też,
- * bo w Heroes 3 wjeżdża się na nie wprost.
+ * Koszt wejścia na pole — samego TERENU, bez pytania, co na nim leży.
+ *
+ * Kto na pole wejdzie, a kto tylko sięgnie z sąsiedztwa, rozstrzyga się wyżej:
+ * `trasa` wpuszcza na pole obiektu wyłącznie jako na CEL, a scena skraca marsz
+ * o jedno pole przed wszystkim, co jest w `Z_SASIEDNIEGO_POLA` (stos surowca,
+ * artefakt, skrzynia, potwór). Wprost wjeżdża się tylko na przejezdne wejście
+ * zamku i kopalni — tak jak w Heroes 3.
  */
 export function kosztPola(s: StanMapy, x: number, y: number): number | null {
   if (!wGranicach(s, x, y)) return null;
@@ -844,6 +855,35 @@ export function kosztPola(s: StanMapy, x: number, y: number): number | null {
   if (zamknietaBrama(s, x, y)) return null;
   return TEREN_INFO[s.teren[y][x]].koszt;
 }
+
+/**
+ * Rzeczy ODWIEDZANE Z SĄSIEDNIEGO POLA — bohater na nie nie wchodzi.
+ *
+ * Tak to działa w Heroes 3: pole obiektu jest ZABLOKOWANE, a jednocześnie
+ * „odwiedzalne". Bohater wjeżdża w nie z sąsiedztwa, obiekt się odpala,
+ * a bohater zostaje tam, gdzie stał. Na stałe wchodzi się tylko na przejezdne
+ * WEJŚCIE, jakie mają zamek i kopalnia — dlatego kopalni się nie „podnosi",
+ * tylko się ją zajmuje i stoi w jej bramie.
+ *
+ * U nas przez długi czas wszystko działało odwrotnie i to zgubiło skrzynię:
+ * bohater wchodził na jej pole, obok stała straż, scena wybierała bitwę,
+ * a po niej nikt skrzyni już nie odwiedzał — a że bohater NA NIEJ STAŁ, nie
+ * dało się jej nawet wywołać ponownie bez odejścia i powrotu.
+ *
+ * Potwór jest na tej liście z tego samego powodu, dla którego jest w Heroes 3:
+ * bije się go z sąsiedniego pola, a nie wchodząc na niego.
+ */
+export const Z_SASIEDNIEGO_POLA: RodzajObiektu[] = [
+  'surowiec',
+  'artefakt',
+  'skrzynia',
+  'potwor',
+];
+
+export const zSasiedniegoPola = (s: StanMapy, x: number, y: number): Obiekt | undefined =>
+  s.obiekty.find(
+    (o) => !o.zebrany && o.x === x && o.y === y && Z_SASIEDNIEGO_POLA.includes(o.rodzaj)
+  );
 
 /** Zamknięta strażnica stojąca na tym polu — albo `undefined`. */
 export function zamknietaBrama(s: StanMapy, x: number, y: number): Obiekt | undefined {
@@ -1390,6 +1430,33 @@ export function dochod(s: StanMapy, kto: Wlasciciel = 'gracz'): Partial<Record<S
 }
 
 /**
+ * Straże rosną co tydzień. Patrz `PRZYROST_STRAZY` w `zasady-h3.ts`.
+ *
+ * Rośnie KAŻDY stos osobno, żeby stado trzystosowe nie przyrastało trzy razy
+ * wolniej od jednostosowego, a sufit liczy się z sumy — czyli z tego, co gracz
+ * naprawdę widzi w oknie bitwy.
+ */
+export function urosnijStraze(s: StanMapy): number {
+  let urosly = 0;
+  for (const o of s.obiekty) {
+    if (o.rodzaj !== 'potwor' || o.zebrany || !o.oddzialy?.length) continue;
+    const razem = o.oddzialy.reduce((a, od) => a + od.ile, 0);
+    if (o.wyjsciowe === undefined) o.wyjsciowe = razem;
+    const sufit = Math.round(o.wyjsciowe * PRZYROST_STRAZY_SUFIT);
+    if (razem >= sufit) continue;
+    let zostalo = sufit - razem;
+    for (const od of o.oddzialy) {
+      if (zostalo <= 0) break;
+      const ile = Math.min(zostalo, Math.max(1, Math.round(od.ile * PRZYROST_STRAZY)));
+      od.ile += ile;
+      zostalo -= ile;
+    }
+    urosly++;
+  }
+  return urosly;
+}
+
+/**
  * Nowa tura: odnawia ruch OBU bohaterów, dolicza dochód i przyrost OBU stron.
  *
  * Jedna funkcja na dwie strony, a nie `nowaTura` + `wrogTura`: dzień jest
@@ -1399,6 +1466,10 @@ export function dochod(s: StanMapy, kto: Wlasciciel = 'gracz'): Partial<Record<S
  */
 export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
   s.dzien++;
+  // Nowy tydzień: stada na mapie się powiększają. Dzień 8, 15, 22...
+  // Straże są NICZYJE, więc rosną raz na dzień, a nie raz na stronę —
+  // dlatego stoi to przed pętlą po graczu i wrogu, a nie w niej.
+  if (s.dzien > 1 && s.dzien % 7 === 1) urosnijStraze(s);
   s.bohater.ruch = ruchNaDzis(s, 'gracz');
   s.wrogBohater.ruch = ruchNaDzis(s, 'wrog');
   let wplywGracza: Partial<Record<Surowiec, number>> = {};

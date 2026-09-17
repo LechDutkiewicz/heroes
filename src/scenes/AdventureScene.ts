@@ -22,6 +22,7 @@ import {
   statystyki,
   trasa,
   wezZeSkrzyni,
+  zSasiedniegoPola,
   zamknietaBrama,
   zasiegNaTure,
   dniNaTrase,
@@ -1911,11 +1912,17 @@ export class AdventureScene extends Phaser.Scene {
     // wcześniej i stamtąd próbujemy klucza — dokładnie tak, jak wygląda to
     // w Heroes 3.
     const ostatni = kroki[ile - 1];
-    const brama = ostatni ? zamknietaBrama(this.stan, ostatni.x, ostatni.y) : undefined;
-    if (brama) {
+    // Stos surowca, artefakt, skrzynia i POTWÓR odwiedza się z sąsiedniego
+    // pola, tak samo jak otwiera się bramę: marsz kończy się pole wcześniej.
+    // Patrz `Z_SASIEDNIEGO_POLA` w `src/data/mapa.ts`, tam jest powód i to,
+    // jak robi to Heroes 3.
+    const zObok =
+      (ostatni ? zamknietaBrama(this.stan, ostatni.x, ostatni.y) : undefined) ??
+      (ostatni ? zSasiedniegoPola(this.stan, ostatni.x, ostatni.y) : undefined);
+    if (zObok) {
       ile -= 1;
       if (ile === 0) {
-        this.wejdzNa(brama);
+        this.wejdzNa(zObok);
         this.odswiezWszystko();
         return;
       }
@@ -1945,10 +1952,10 @@ export class AdventureScene extends Phaser.Scene {
           this.zacznijBitwe(straz);
         } else if (o) {
           this.wejdzNa(o);
-        } else if (brama) {
-          // Marsz skrócony o pole: stoimy PRZED bramą i dopiero teraz próbujemy
-          // klucza.
-          this.wejdzNa(brama);
+        } else if (zObok) {
+          // Marsz skrócony o pole: stoimy PRZED bramą albo przed rzeczą, po
+          // którą przyszliśmy, i dopiero teraz sięgamy.
+          this.wejdzNa(zObok);
         }
         this.odswiezWszystko();
         return;
@@ -2643,19 +2650,37 @@ export class AdventureScene extends Phaser.Scene {
       if (poziomPo > poziomPrzed) {
         this.time.delayedCall(2100, () => this.sprawdzAwans());
       }
+      // Obiekt POD BOHATEREM po wygranej bitwie.
+      //
+      // Na pilnowaną kopalnię czy budowlę wchodzi się wprost, a straż stoi
+      // obok — scena wybiera wtedy bitwę i po powrocie trzeba odwiedzić to,
+      // po co się przyszło. Poprzednia wersja robiła to bezwarunkowo po 1200 ms
+      // i właśnie dlatego gubiła nagrody: gdy bitwa dała awans, okno awansu
+      // wchodziło 900 ms później i przykrywało okno obiektu, a gra zostawała
+      // z `zajety`, którego nikt już nie zdejmował. Stąd i odczekanie na awans,
+      // i warunek `!zajety`.
+      // (Wszystko z `Z_SASIEDNIEGO_POLA` — surowiec, artefakt, skrzynia, potwór
+      // — nie trafia tu nigdy, bo sięga się po to z sąsiedniego pola i bohater
+      // na tym nie staje.)
+      const podNogami = obiektNa(this.stan, this.stan.bohater.x, this.stan.bohater.y);
+      if (
+        podNogami &&
+        podNogami !== o &&
+        !podNogami.zebrany &&
+        podNogami.wlasciciel !== 'gracz'
+      ) {
+        // Po awansie czekamy, aż zamknie się jego okno: dwa okna naraz to
+        // jedno okno niewidoczne pod drugim.
+        this.time.delayedCall(poziomPo > poziomPrzed ? 2600 : 1400, () => {
+          if (!this.zajety) this.wejdzNa(podNogami);
+        });
+      }
+
       // Zdobycie ostatniego cudzego zamku KOŃCZY grę. Bez tego wyprawa nie ma
       // mety: dziecko przechodzi pół planszy, wygrywa najtrudniejszą bitwę
       // w grze i nic się nie dzieje.
       if (o?.rodzaj === 'zamek') this.time.delayedCall(1800, () => this.sprawdzKoniec());
 
-      // Bitwa ze strażą toczy się wtedy, gdy bohater STOI JUŻ na pilnowanym
-      // polu — wszedł na kopalnię, a strażnik zagrodził mu drogę. Po wygranej
-      // trzeba więc odwiedzić to, po co przyszedł; inaczej trzeba by zejść
-      // z pola i wrócić na nie po raz drugi, co wygląda po prostu na usterkę.
-      const podNogami = obiektNa(this.stan, this.stan.bohater.x, this.stan.bohater.y);
-      if (podNogami && podNogami !== o) {
-        this.time.delayedCall(1200, () => this.wejdzNa(podNogami));
-      }
     } else {
       // Przegrana nie kończy gry: bohater wraca do zamku i traci resztę dnia.
       // Dla ośmiolatka „przegrałeś, zacznij od nowa" to koniec zabawy.

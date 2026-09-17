@@ -38,7 +38,7 @@ const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromi
 const page = await browser.newPage({ viewport: { width: 1000, height: 760 } });
 page.on('pageerror', (e) => {
   bledy++;
-  console.log('  BŁĄD JS —', String(e));
+  console.log('  BŁĄD JS —', String(e), '\n', e.stack);
 });
 
 /**

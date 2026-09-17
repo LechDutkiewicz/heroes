@@ -142,6 +142,47 @@ RUNDY = [
                    'wtedy, gdy miejsca zabraknie: 13 z 15. Próg w sondzie został ZAOSTRZONY, '
                    'nie rozluźniony.',
     },
+    {
+        'nr': 9,
+        'tytul': 'Straże pilnują, zamiast stać',
+        'wynik': 'poprawka',
+        'co': 'Po rozgrywce: „stwory są rozrzucone trochę losowo”. Generator szuka teraz '
+              'zakątków, które zamyka jeden strażnik, i stawia w nich po 3–5 nagród naraz. '
+              'Stada rosną co tydzień o dziesiątą część, z sufitem na dwuipółkrotności.',
+        'luka': 'Każdy strażnik dostawał JEDEN obiekt na głowę, więc mapa miała pięćdziesiąt '
+                'stad przy pojedynczych skrzyniach. Podstawowe kopalnie bywały pilnowane, '
+                'a stos ustalony przy składaniu planszy zostawał taki do końca gry.',
+        'naprawa': 'Dziewięć kieszeni ze skarbem, po trzy na pas. 35 straży zamiast 53 (13% '
+                   'obiektów, wzorce 10–24%). Jagody i odłamki — odpowiedniki tartaku i rudy — '
+                   'nie są pilnowane nigdzie.',
+    },
+    {
+        'nr': 10,
+        'tytul': 'Zgubiona skrzynia',
+        'wynik': 'poprawka',
+        'co': 'Rzeczy leżące — surowiec, artefakt, skrzynia — podnosi się z SĄSIEDNIEGO pola, '
+              'tym samym mechanizmem, co otwiera się strażnicę.',
+        'luka': 'Wejście na skrzynię pilnowaną przez stwora dawało bitwę, a po niej okno skrzyni '
+                'wpadało pod okno awansu. Gra zostawała zablokowana, a skrzynia leżała pod '
+                'stojącym na niej bohaterem — nie dało się jej nawet wywołać ponownie.',
+        'naprawa': 'Bohater nigdy nie stoi na czymś, czego nie podniósł. Dla obiektów, na które '
+                   'się wchodzi (kopalnie, budowle), scena odwiedza je po bitwie — ale dopiero '
+                   'po zamknięciu okna awansu.',
+    },
+    {
+        'nr': 11,
+        'tytul': 'Z sąsiedniego pola bije się też z potworem',
+        'wynik': 'poprawka',
+        'co': 'Zgłoszenie po rozgrywce sprostowało nasze rozpoznanie oryginału: w Heroes 3 pole '
+              'obiektu jest zablokowane i jednocześnie odwiedzalne, więc po łup sięga się '
+              'z sąsiedztwa — i tak samo z sąsiedztwa atakuje się stwora.',
+        'luka': 'Runda 10 opisywała podchodzenie pod łup jako „świadome odstępstwo od Heroes 3”, '
+                'a potwór dalej był polem, na które bohater WCHODZIŁ. Zasada była zastosowana '
+                'w połowie i opisana odwrotnie niż działa oryginał.',
+        'naprawa': 'Potwór dołącza do `Z_SASIEDNIEGO_POLA`; wprost wjeżdża się tylko na przejezdne '
+                   'wejście zamku i kopalni. Sonda przygody mierzy po bitwie odległość bohatera '
+                   'od pokonanego stada — ma być dokładnie jedno pole.',
+    },
 ]
 
 BRAKI = [
