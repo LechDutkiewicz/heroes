@@ -77,6 +77,13 @@ interface Stan {
   muzyka?: Phaser.Sound.BaseSound;
   muzykaCfg?: { klucz: string; glosnosc: number; narost: number; zanik: number };
   ambient?: Ambient;
+  /** Dźwięki w trakcie wygaszania tweenem — `stopMusic` i wygaszanie
+   * ambientu czyszczą swoje pole (`muzyka`/`ambient`) NATYCHMIAST, żeby
+   * `startMusic` nie uznał, że coś już gra. Prawdziwy obiekt dźwięku żyje
+   * do końca tweenu tylko w jego domknięciu — więc gdyby scena zamknęła się
+   * w międzyczasie, nic by go nie widziało. Ta lista to jedyne miejsce,
+   * gdzie taki gasnący dźwięk jest w tym oknie widoczny z zewnątrz. */
+  gasnace: Phaser.Sound.BaseSound[];
 }
 
 const stany = new WeakMap<Phaser.Scene, Stan>();
@@ -84,9 +91,33 @@ const stany = new WeakMap<Phaser.Scene, Stan>();
 const ODSTEP = 80;
 const NARAZ = 6;
 
-/** Włącza dźwięk w scenie. Wołane z `create`. */
+/**
+ * Włącza dźwięk w scenie. Wołane z `create`.
+ *
+ * `stopMusic`/`stopAmbient` wygaszają tweenem, a ten dogrywa się dopiero
+ * po kilkuset ms. Kłopot: `pokazZamek` i `zacznijBitwe` wołają je tuż przed
+ * `scene.start(...)` — sceny w Phaserze dzielą jeden globalny menedżer
+ * dźwięku, ale mają WŁASNY menedżer tweenów, który usypia w tej samej
+ * klatce, w której `scene.start` rusza. Tween ginie w połowie, `destroy()`
+ * z jego `onComplete` nigdy nie leci, a dźwięk — bo żyje w menedżerze
+ * globalnym, nie scenowym — zostaje osierocony i gra dalej w nieskończoność
+ * pod nowo wystartowaną sceną. Efekt: w mieście słychać podkład mapy i miasta
+ * naraz. Nasłuch na `shutdown` to siatka bezpieczeństwa — niezależnie od
+ * tego, czy tween zdążył dobiec końca, scena przy zamknięciu ubija swój
+ * dźwięk natychmiast.
+ */
 export function initSfx(scene: Phaser.Scene, wlaczony = true) {
-  stany.set(scene, { wlaczony, ostatnie: new Map(), gra: 0 });
+  stany.set(scene, { wlaczony, ostatnie: new Map(), gra: 0, gasnace: [] });
+  scene.events.once('shutdown', () => {
+    const s = stany.get(scene);
+    if (!s) return;
+    s.muzyka?.destroy();
+    s.muzyka = undefined;
+    s.ambient?.dzwiek.destroy();
+    s.ambient = undefined;
+    for (const d of s.gasnace) d.destroy();
+    s.gasnace = [];
+  });
 }
 
 /** Startuje podkład muzyczny sceny — patrz `sfx.ts#startMusic`, ten sam wzorzec z opóźnieniem do gestu gracza. */
@@ -127,12 +158,19 @@ export function stopMusic(scene: Phaser.Scene) {
     m.destroy();
     return;
   }
+  // Dopóki tween nie skończy, `m` żyje tylko tutaj i w domknięciu poniżej —
+  // `gasnace` to jedyny sposób, żeby siatka bezpieczeństwa z `initSfx` mogła
+  // go ubić, gdyby scena zamknęła się, zanim tween dobiegnie końca.
+  s.gasnace.push(m);
   scene.tweens.add({
     targets: m,
     volume: 0,
     duration: zanik,
     ease: 'Sine.easeIn',
-    onComplete: () => m.destroy(),
+    onComplete: () => {
+      m.destroy();
+      s.gasnace = s.gasnace.filter((d) => d !== m);
+    },
   });
 }
 
@@ -231,11 +269,15 @@ export function aktualizujAmbient(
   if (!najlepszy) {
     if (obecny) {
       s.ambient = undefined;
+      s.gasnace.push(obecny.dzwiek);
       scene.tweens.add({
         targets: obecny.dzwiek,
         volume: 0,
         duration: 500,
-        onComplete: () => obecny.dzwiek.destroy(),
+        onComplete: () => {
+          obecny.dzwiek.destroy();
+          s.gasnace = s.gasnace.filter((d) => d !== obecny.dzwiek);
+        },
       });
     }
     return;
@@ -251,11 +293,15 @@ export function aktualizujAmbient(
   }
 
   if (obecny) {
+    s.gasnace.push(obecny.dzwiek);
     scene.tweens.add({
       targets: obecny.dzwiek,
       volume: 0,
       duration: 350,
-      onComplete: () => obecny.dzwiek.destroy(),
+      onComplete: () => {
+        obecny.dzwiek.destroy();
+        s.gasnace = s.gasnace.filter((d) => d !== obecny.dzwiek);
+      },
     });
   }
   if (!scene.cache.audio.exists(def.plik)) return;
