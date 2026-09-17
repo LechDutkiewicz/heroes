@@ -71,6 +71,20 @@ szarpnięcia na wierzchu), nie jako ciągły, wielogłosowy akord. `zzfx_build`
 w skrypcie to port matematyki `ZZFX.buildSamples` z ZzFX.js, bez zależności
 od `AudioContext` — żeby dało się to odpalić w Pythonie, offline.
 
+ZzFX wciąż był syntezą fal — brzmiał jak efekty z gier 8-bitowych, nie jak
+gra z klimatem Heroes 3. Trzecia wersja (`awans.wav`, `budowa.wav`,
+`muzyka-mapa.wav`, `muzyka-miasto.wav`, `wejscie.wav`, `zajecie.wav`,
+`zbior.wav` — `krok-mapa.wav`, `ambient-kopalnia.wav` i `ambient-wieza.wav`
+zostają przy ZzFX/szumie, bo tych nikt nie kwestionował) komponuje utwory
+jako MIDI (`tools/muzyka_fluidsynth.py`, biblioteka `mido`, PyPI) i renderuje
+je programem `fluidsynth` z soundfontem **FluidR3_GM** — pakiet apt
+`fluid-soundfont-gm`, autor Frank Wen, **licencja MIT** (kopia w
+`/usr/share/doc/fluid-soundfont-gm/copyright` po instalacji pakietu). To
+prawdziwe próbkowane instrumenty (smyczki, harfa, róg, kotły, trąbka,
+dzwony rurowe, talerz), nie fala syntetyczna — ale to wciąż jeden darmowy
+soundfont grany przez prosty MIDI-sequencer, nie sesja z orkiestrą, więc
+traktuj to jako spory krok w górę, nie jako wersję docelową.
+
 Podmiana na docelowe próbki, gdy będzie dostęp do sieci: te same nazwy
 plików w tym katalogu (rozszerzenie może zostać `.wav` albo zmienić się na
 `.ogg` — wtedy dopisać rozszerzenie też w `loadSfx` w `src/audio/mapSfx.ts`).
