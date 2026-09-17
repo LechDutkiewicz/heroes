@@ -509,6 +509,25 @@ export class AdventureScene extends Phaser.Scene {
       e.preventDefault();
       this.wysrodkujNaBohaterze();
     }
+    if (e.key === 'm' || e.key === 'M') {
+      e.preventDefault();
+      this.kontynuujTrase();
+    }
+  }
+
+  /**
+   * Kontynuuje wytyczoną trasę pod M — przydatne rano, gdy `koniecTury` już
+   * pokazał zaznaczoną trasę sprzed dnia i zostaje tylko ruszyć, bez
+   * ponownego celowania w to samo pole.
+   *
+   * Heroes 3 nie miał do tego osobnego klawisza — tam wystarczał sam klik
+   * w bohatera, bo trasa czekała już jako gotowa strzałka. U nas trasa jest
+   * tylko narysowana, nie „aktywna" do samego kliknięcia, więc M daje ten
+   * sam skrót jednym klawiszem.
+   */
+  private kontynuujTrase() {
+    if (this.zajety || !this.trasaBiezaca || this.trasaBiezaca.length === 0) return;
+    this.idz(this.trasaBiezaca);
   }
 
   // ---------- świat ----------
