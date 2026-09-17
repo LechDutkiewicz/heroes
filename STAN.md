@@ -469,7 +469,7 @@ początkowego. Sufit jest po to, żeby mapa nie zamknęła się sama: bez niego
 straże w krainie wroga po dwóch miesiącach są nie do ruszenia niezależnie od
 tego, jak dobrze się grało.
 
-## Rzeczy leżące podnosi się z SĄSIEDNIEGO pola
+## Z sąsiedniego pola: łup I bitwa
 
 Zgłoszenie: „wszedłem na skrzynię, koło której stał stwór, wygrałem bitwę
 i skrzyni nie podniosło". Tak właśnie było. Scena widziała na polu bohatera
@@ -478,11 +478,19 @@ otwierało się po 1200 ms i wpadało pod okno awansu, które wchodzi 900 ms
 później. Gra zostawała z `zajety`, którego nikt nie zdejmował, a skrzynia leżała
 pod stojącym na niej bohaterem, więc nie dało się jej nawet wywołać ponownie.
 
-Uwaga co do wierności oryginałowi: w Heroes 3 bohater WCHODZI na pole stosu
-surowca czy artefaktu i staje w jego miejscu. U nas zatrzymuje się pole
-wcześniej i jest to świadome odstępstwo — usuwa całą tę klasę usterek naraz,
-bo bohater nigdy nie stoi na czymś, czego nie zdążył podnieść. Mechanizm jest
-ten sam, co przy podchodzeniu pod strażnicę (`PODNOSZONE` w `src/data/mapa.ts`).
+Pierwsza naprawa zatrzymywała marsz pole wcześniej przed rzeczą leżącą i była
+tu opisana jako „świadome odstępstwo od Heroes 3". To było błędne rozpoznanie
+oryginału i tak też zostało zgłoszone. W Heroes 3 pole obiektu jest
+ZABLOKOWANE i jednocześnie „odwiedzalne": bohater sięga po stos surowca,
+artefakt i skrzynię Z SĄSIEDNIEGO POLA i na nim zostaje. **Tak samo bije się
+z potworem** — atak idzie z pola obok, nie przez wejście na stwora. Na stałe
+wchodzi się tylko na przejezdne WEJŚCIE, jakie mają zamek i kopalnia; dlatego
+kopalni się nie „podnosi", tylko zajmuje i stoi w jej bramie.
+
+Czyli: to nie było odstępstwo, tylko zasada zastosowana w połowie. Potwór
+dołączył do listy (`Z_SASIEDNIEGO_POLA` w `src/data/mapa.ts`), a sonda
+`probe-przygoda` mierzy teraz odległość bohatera od pokonanego stwora po
+bitwie — ma być dokładnie jeden.
 
 Obiekty, na które się WCHODZI — kopalnie, budowle, zamki — dostały osobną
 naprawę: po wygranej bitwie scena odwiedza to, na czym bohater stoi, ale czeka

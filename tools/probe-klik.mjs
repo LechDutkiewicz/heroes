@@ -205,7 +205,7 @@ const poSurowcu = await page.evaluate(() => {
   };
 });
 // Bohater ma stanąć OBOK, nie na stosie. Rzeczy leżące podnosi się
-// z sąsiedniego pola — patrz `PODNOSZONE` w `src/data/mapa.ts`. Poprzednia
+// z sąsiedniego pola — patrz `Z_SASIEDNIEGO_POLA` w `src/data/mapa.ts`. Poprzednia
 // wersja tego sprawdzenia wymagała wejścia na pole i po zmianie zasady
 // zgłaszała usterkę tam, gdzie zmieniła się reguła gry.
 sprawdz(

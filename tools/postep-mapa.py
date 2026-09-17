@@ -169,6 +169,20 @@ RUNDY = [
                    'się wchodzi (kopalnie, budowle), scena odwiedza je po bitwie — ale dopiero '
                    'po zamknięciu okna awansu.',
     },
+    {
+        'nr': 11,
+        'tytul': 'Z sąsiedniego pola bije się też z potworem',
+        'wynik': 'poprawka',
+        'co': 'Zgłoszenie po rozgrywce sprostowało nasze rozpoznanie oryginału: w Heroes 3 pole '
+              'obiektu jest zablokowane i jednocześnie odwiedzalne, więc po łup sięga się '
+              'z sąsiedztwa — i tak samo z sąsiedztwa atakuje się stwora.',
+        'luka': 'Runda 10 opisywała podchodzenie pod łup jako „świadome odstępstwo od Heroes 3”, '
+                'a potwór dalej był polem, na które bohater WCHODZIŁ. Zasada była zastosowana '
+                'w połowie i opisana odwrotnie niż działa oryginał.',
+        'naprawa': 'Potwór dołącza do `Z_SASIEDNIEGO_POLA`; wprost wjeżdża się tylko na przejezdne '
+                   'wejście zamku i kopalni. Sonda przygody mierzy po bitwie odległość bohatera '
+                   'od pokonanego stada — ma być dokładnie jedno pole.',
+    },
 ]
 
 BRAKI = [

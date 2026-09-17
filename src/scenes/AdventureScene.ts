@@ -21,8 +21,8 @@ import {
   strzezoneProzez,
   statystyki,
   trasa,
-  podnoszoneZObok,
   wezZeSkrzyni,
+  zSasiedniegoPola,
   zamknietaBrama,
   zasiegNaTure,
   type Krok,
@@ -1770,12 +1770,13 @@ export class AdventureScene extends Phaser.Scene {
     // wcześniej i stamtąd próbujemy klucza — dokładnie tak, jak wygląda to
     // w Heroes 3.
     const ostatni = kroki[ile - 1];
-    // Rzeczy leżące — surowiec, artefakt, skrzynia — podnosi się Z SĄSIEDNIEGO
+    // Stos surowca, artefakt, skrzynia i POTWÓR odwiedza się z sąsiedniego
     // pola, tak samo jak otwiera się bramę: marsz kończy się pole wcześniej.
-    // Patrz `PODNOSZONE` w `src/data/mapa.ts`, tam jest powód.
+    // Patrz `Z_SASIEDNIEGO_POLA` w `src/data/mapa.ts`, tam jest powód i to,
+    // jak robi to Heroes 3.
     const zObok =
       (ostatni ? zamknietaBrama(this.stan, ostatni.x, ostatni.y) : undefined) ??
-      (ostatni ? podnoszoneZObok(this.stan, ostatni.x, ostatni.y) : undefined);
+      (ostatni ? zSasiedniegoPola(this.stan, ostatni.x, ostatni.y) : undefined);
     if (zObok) {
       ile -= 1;
       if (ile === 0) {

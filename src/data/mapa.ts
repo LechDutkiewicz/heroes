@@ -782,9 +782,13 @@ export function strzezoneProzez(s: StanMapy, x: number, y: number): Obiekt | und
 }
 
 /**
- * Koszt wejścia na pole. Obiekty do odwiedzenia (surowiec, skrzynia, potwór)
- * stoją na przejezdnym terenie — wchodzi się na nie. Zamek i kopalnia też,
- * bo w Heroes 3 wjeżdża się na nie wprost.
+ * Koszt wejścia na pole — samego TERENU, bez pytania, co na nim leży.
+ *
+ * Kto na pole wejdzie, a kto tylko sięgnie z sąsiedztwa, rozstrzyga się wyżej:
+ * `trasa` wpuszcza na pole obiektu wyłącznie jako na CEL, a scena skraca marsz
+ * o jedno pole przed wszystkim, co jest w `Z_SASIEDNIEGO_POLA` (stos surowca,
+ * artefakt, skrzynia, potwór). Wprost wjeżdża się tylko na przejezdne wejście
+ * zamku i kopalni — tak jak w Heroes 3.
  */
 export function kosztPola(s: StanMapy, x: number, y: number): number | null {
   if (!wGranicach(s, x, y)) return null;
@@ -800,23 +804,33 @@ export function kosztPola(s: StanMapy, x: number, y: number): number | null {
 }
 
 /**
- * Rzeczy, które PODNOSI SIĘ Z SĄSIEDNIEGO POLA, nie wchodząc na nie.
+ * Rzeczy ODWIEDZANE Z SĄSIEDNIEGO POLA — bohater na nie nie wchodzi.
  *
- * W Heroes 3 bohater wchodzi na stos surowca i staje w jego miejscu. U nas
- * zatrzymuje się pole wcześniej i to jest świadome odstępstwo, bo usuwa całą
- * klasę usterek naraz. Zgłoszenie brzmiało: „wszedłem na skrzynię, obok stała
- * straż, wygrałem bitwę i skrzynia się nie podniosła". Tak było: scena widziała
- * na polu bohatera straż i skrzynię naraz, wybierała bitwę, a po niej nikt już
- * skrzyni nie odwiedzał — a że bohater NA NIEJ STAŁ, nie dało się jej nawet
- * wywołać ponownie bez odejścia i powrotu.
+ * Tak to działa w Heroes 3: pole obiektu jest ZABLOKOWANE, a jednocześnie
+ * „odwiedzalne". Bohater wjeżdża w nie z sąsiedztwa, obiekt się odpala,
+ * a bohater zostaje tam, gdzie stał. Na stałe wchodzi się tylko na przejezdne
+ * WEJŚCIE, jakie mają zamek i kopalnia — dlatego kopalni się nie „podnosi",
+ * tylko się ją zajmuje i stoi w jej bramie.
  *
- * Gdy się na nie nie wchodzi, problem znika u źródła: bitwa rozgrywa się na
- * polu podejścia, a przedmiot dalej leży obok i czeka.
+ * U nas przez długi czas wszystko działało odwrotnie i to zgubiło skrzynię:
+ * bohater wchodził na jej pole, obok stała straż, scena wybierała bitwę,
+ * a po niej nikt skrzyni już nie odwiedzał — a że bohater NA NIEJ STAŁ, nie
+ * dało się jej nawet wywołać ponownie bez odejścia i powrotu.
+ *
+ * Potwór jest na tej liście z tego samego powodu, dla którego jest w Heroes 3:
+ * bije się go z sąsiedniego pola, a nie wchodząc na niego.
  */
-export const PODNOSZONE: RodzajObiektu[] = ['surowiec', 'artefakt', 'skrzynia'];
+export const Z_SASIEDNIEGO_POLA: RodzajObiektu[] = [
+  'surowiec',
+  'artefakt',
+  'skrzynia',
+  'potwor',
+];
 
-export const podnoszoneZObok = (s: StanMapy, x: number, y: number): Obiekt | undefined =>
-  s.obiekty.find((o) => !o.zebrany && o.x === x && o.y === y && PODNOSZONE.includes(o.rodzaj));
+export const zSasiedniegoPola = (s: StanMapy, x: number, y: number): Obiekt | undefined =>
+  s.obiekty.find(
+    (o) => !o.zebrany && o.x === x && o.y === y && Z_SASIEDNIEGO_POLA.includes(o.rodzaj)
+  );
 
 /** Zamknięta strażnica stojąca na tym polu — albo `undefined`. */
 export function zamknietaBrama(s: StanMapy, x: number, y: number): Obiekt | undefined {
