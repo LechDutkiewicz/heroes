@@ -7,6 +7,8 @@ import {
   OBSERWATORIUM_PROMIEN,
   OGNISKO_POKEBALLE,
   PROMIEN_WIDZENIA,
+  PRZYROST_STRAZY,
+  PRZYROST_STRAZY_SUFIT,
   SKRZYNIE,
   STAJNIA_BONUS,
   STAJNIA_DNI,
@@ -334,6 +336,11 @@ export interface Obiekt {
   /** dla potwora: która frakcja go wystawia i co konkretnie stoi na drodze */
   frakcja?: string;
   oddzialy?: Oddzial[];
+  /**
+   * Potwór: ilu ich było na początku gry. Z tego liczy się sufit przyrostu —
+   * stado rośnie co tydzień, ale nie w nieskończoność.
+   */
+  wyjsciowe?: number;
   /**
    * Czy zniknął z mapy. Dotyczy rzeczy jednorazowych: stosu surowca, skrzyni,
    * pokonanego potwora.
@@ -791,6 +798,25 @@ export function kosztPola(s: StanMapy, x: number, y: number): number | null {
   if (zamknietaBrama(s, x, y)) return null;
   return TEREN_INFO[s.teren[y][x]].koszt;
 }
+
+/**
+ * Rzeczy, które PODNOSI SIĘ Z SĄSIEDNIEGO POLA, nie wchodząc na nie.
+ *
+ * W Heroes 3 bohater wchodzi na stos surowca i staje w jego miejscu. U nas
+ * zatrzymuje się pole wcześniej i to jest świadome odstępstwo, bo usuwa całą
+ * klasę usterek naraz. Zgłoszenie brzmiało: „wszedłem na skrzynię, obok stała
+ * straż, wygrałem bitwę i skrzynia się nie podniosła". Tak było: scena widziała
+ * na polu bohatera straż i skrzynię naraz, wybierała bitwę, a po niej nikt już
+ * skrzyni nie odwiedzał — a że bohater NA NIEJ STAŁ, nie dało się jej nawet
+ * wywołać ponownie bez odejścia i powrotu.
+ *
+ * Gdy się na nie nie wchodzi, problem znika u źródła: bitwa rozgrywa się na
+ * polu podejścia, a przedmiot dalej leży obok i czeka.
+ */
+export const PODNOSZONE: RodzajObiektu[] = ['surowiec', 'artefakt', 'skrzynia'];
+
+export const podnoszoneZObok = (s: StanMapy, x: number, y: number): Obiekt | undefined =>
+  s.obiekty.find((o) => !o.zebrany && o.x === x && o.y === y && PODNOSZONE.includes(o.rodzaj));
 
 /** Zamknięta strażnica stojąca na tym polu — albo `undefined`. */
 export function zamknietaBrama(s: StanMapy, x: number, y: number): Obiekt | undefined {
@@ -1297,8 +1323,37 @@ export function dochod(s: StanMapy): Partial<Record<Surowiec, number>> {
 }
 
 /** Nowa tura: odnawia ruch, dolicza dochód z zajętych budynków. */
+/**
+ * Straże rosną co tydzień. Patrz `PRZYROST_STRAZY` w `zasady-h3.ts`.
+ *
+ * Rośnie KAŻDY stos osobno, żeby stado trzystosowe nie przyrastało trzy razy
+ * wolniej od jednostosowego, a sufit liczy się z sumy — czyli z tego, co gracz
+ * naprawdę widzi w oknie bitwy.
+ */
+export function urosnijStraze(s: StanMapy): number {
+  let urosly = 0;
+  for (const o of s.obiekty) {
+    if (o.rodzaj !== 'potwor' || o.zebrany || !o.oddzialy?.length) continue;
+    const razem = o.oddzialy.reduce((a, od) => a + od.ile, 0);
+    if (o.wyjsciowe === undefined) o.wyjsciowe = razem;
+    const sufit = Math.round(o.wyjsciowe * PRZYROST_STRAZY_SUFIT);
+    if (razem >= sufit) continue;
+    let zostalo = sufit - razem;
+    for (const od of o.oddzialy) {
+      if (zostalo <= 0) break;
+      const ile = Math.min(zostalo, Math.max(1, Math.round(od.ile * PRZYROST_STRAZY)));
+      od.ile += ile;
+      zostalo -= ile;
+    }
+    urosly++;
+  }
+  return urosly;
+}
+
 export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
   s.dzien++;
+  // Nowy tydzień: stada na mapie się powiększają. Dzień 8, 15, 22...
+  if (s.dzien > 1 && s.dzien % 7 === 1) urosnijStraze(s);
   s.bohater.ruch = ruchNaDzis(s);
   const wplyw = dochod(s);
   for (const [co, ile] of Object.entries(wplyw)) {

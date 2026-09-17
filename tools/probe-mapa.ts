@@ -17,6 +17,7 @@ import {
   type StanMapy,
 } from '../src/data/mapa';
 import { planszaPrzygody } from '../src/data/plansza';
+import { nowaTura } from '../src/data/mapa';
 import { MAPA_H, MAPA_W, OKNO_H, OKNO_W } from '../src/visual/uklad';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -331,6 +332,60 @@ console.log('\n=== gęstość obiektów jak na mapie M z Heroes 3 ===');
   sprawdz('obiekt co 4–20 pól przejezdnych (jak na mapach M z Heroes 3)', naObiekt >= 4 && naObiekt <= 20, `co ${naObiekt.toFixed(1)}`);
 }
 
+console.log('\n=== straże czegoś pilnują ===');
+// Zgłoszenie z rozgrywki brzmiało: „stwory są rozrzucone trochę losowo".
+// Było trafne — każdy strażnik dostawał jeden obiekt na głowę, więc stada
+// stały porozrzucane po planszy zamiast pilnować czegoś, po co warto przyjść.
+// W Heroes 3 stado stoi w przejściu, przy wejściu do kopalni albo przed
+// zakątkiem, w którym leży kilka rzeczy naraz.
+{
+  const NAGRODY = ['surowiec', 'skrzynia', 'artefakt', 'kopalnia', 'namiot', 'jasnowidz'];
+  const straze = s.obiekty.filter((o) => o.rodzaj === 'potwor' && !o.zebrany);
+  const pilnuje = (m: typeof straze[number]) =>
+    s.obiekty.filter(
+      (o) =>
+        o !== m &&
+        NAGRODY.includes(o.rodzaj) &&
+        Math.max(Math.abs(o.x - m.x), Math.abs(o.y - m.y)) <= 3
+    ).length;
+  const zNagroda = straze.filter((m) => pilnuje(m) > 0);
+  const zeSkarbcem = straze.filter((m) => pilnuje(m) >= 3);
+  sprawdz(
+    'każda straż ma przy sobie coś wartego pilnowania',
+    zNagroda.length * 10 >= straze.length * 9,
+    `${zNagroda.length} z ${straze.length}`
+  );
+  sprawdz(
+    'część straży pilnuje całych zakątków, nie pojedynczej rzeczy',
+    zeSkarbcem.length >= 6,
+    `${zeSkarbcem.length} straży z trzema nagrodami w zasięgu`
+  );
+}
+
+console.log('\n=== podstawowe kopalnie stoją otworem ===');
+// W Heroes 3 tartak i kopalnia rudy przy strefie startowej są niepilnowane
+// albo pilnowane symbolicznie: bez nich nie ma z czego zacząć, więc straż przy
+// nich nie jest wyborem, tylko karą za pierwszy tydzień.
+{
+  const podstawowe = s.obiekty.filter(
+    (o) => o.rodzaj === 'kopalnia' && (o.surowiec === 'jagoda' || o.surowiec === 'odlamek')
+  );
+  const pilnowane = podstawowe.filter((k) =>
+    s.obiekty.some(
+      (m) =>
+        m.rodzaj === 'potwor' &&
+        !m.zebrany &&
+        Math.abs(m.x - k.x) <= 1 &&
+        Math.abs(m.y - k.y) <= 1
+    )
+  );
+  sprawdz(
+    'żadna kopalnia jagód ani odłamków nie jest pilnowana',
+    pilnowane.length === 0,
+    `${pilnowane.length} z ${podstawowe.length} pilnowanych`
+  );
+}
+
 console.log('\n=== chata jasnowidza ma z czego zapłacić ===');
 // Zadanie „przynieś X" jest zadaniem tylko wtedy, gdy X naprawdę leży po tej
 // stronie mapy, po której stoi chata. Inaczej to nie zagadka, tylko ślepy
@@ -375,6 +430,38 @@ console.log('\n=== gospodarka jest po stronie gracza ===');
       wDomu.map((o) => o.surowiec).join(', ')
     );
   }
+}
+
+console.log('\n=== straże rosną w czasie ===');
+// Zgłoszenie z rozgrywki: „po kilku tygodniach stada są grupką na jeden
+// strzał". Tak było — stos ustalał się przy składaniu planszy i zostawał taki
+// do końca gry, więc zwlekanie nic nie kosztowało.
+{
+  const s2 = planszaPrzygody();
+  const stado = s2.obiekty.find((o) => o.rodzaj === 'potwor' && !o.zebrany)!;
+  const suma = (o: typeof stado) => (o.oddzialy ?? []).reduce((a, od) => a + od.ile, 0);
+  const przed = suma(stado);
+  for (let i = 0; i < 7; i++) nowaTura(s2);
+  const poTygodniu = suma(stado);
+  sprawdz('po tygodniu stado jest liczniejsze', poTygodniu > przed, `${przed} → ${poTygodniu}`);
+  // A teraz długa gra: przyrost ma mieć SUFIT, inaczej mapa zamyka się sama
+  // i po dwóch miesiącach nie da się jej przejść niezależnie od tego, jak
+  // dobrze się grało.
+  for (let i = 0; i < 120; i++) nowaTura(s2);
+  const poDwóchMiesiacach = suma(stado);
+  sprawdz(
+    'przyrost ma sufit (najwyżej dwuipółkrotność)',
+    poDwóchMiesiacach <= Math.round(przed * 2.5) + 1,
+    `${przed} → ${poDwóchMiesiacach}`
+  );
+  sprawdz('pokonane stado nie rośnie', (() => {
+    const s3 = planszaPrzygody();
+    const m = s3.obiekty.find((o) => o.rodzaj === 'potwor')!;
+    m.zebrany = true;
+    const ile = (m.oddzialy ?? []).reduce((a, od) => a + od.ile, 0);
+    for (let i = 0; i < 14; i++) nowaTura(s3);
+    return (m.oddzialy ?? []).reduce((a, od) => a + od.ile, 0) === ile;
+  })());
 }
 
 console.log('\n=== mgła wojny ===');

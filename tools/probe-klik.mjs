@@ -204,9 +204,16 @@ const poSurowcu = await page.evaluate(() => {
     teraz: s.stan.skarbiec[o.surowiec],
   };
 });
+// Bohater ma stanąć OBOK, nie na stosie. Rzeczy leżące podnosi się
+// z sąsiedniego pola — patrz `PODNOSZONE` w `src/data/mapa.ts`. Poprzednia
+// wersja tego sprawdzenia wymagała wejścia na pole i po zmianie zasady
+// zgłaszała usterkę tam, gdzie zmieniła się reguła gry.
 sprawdz(
-  `bohater dochodzi na pole surowca (${surowiec.nazwa})`,
-  poSurowcu.bohater.x === surowiec.x && poSurowcu.bohater.y === surowiec.y,
+  `bohater podchodzi pod surowiec (${surowiec.nazwa})`,
+  Math.max(
+    Math.abs(poSurowcu.bohater.x - surowiec.x),
+    Math.abs(poSurowcu.bohater.y - surowiec.y)
+  ) === 1,
   `stoi na (${poSurowcu.bohater.x},${poSurowcu.bohater.y}), surowiec na (${surowiec.x},${surowiec.y})`
 );
 sprawdz('surowiec zostaje podniesiony', poSurowcu.zebrany === true);

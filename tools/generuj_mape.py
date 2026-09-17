@@ -518,6 +518,72 @@ def wolne_pola(mapa, kroki, zajete, ktora, zakres_krokow=(0, 999), min_odstep=1)
     return wynik
 
 
+def znajdz_kieszenie(mapa, start, najmniej=3, najwiecej=28):
+    """Zakątki, które zamyka JEDEN strażnik — miejsca na skarb pod strażą.
+
+    W Heroes 3 stado prawie nigdy nie stoi „gdzieś": pilnuje przejścia, wejścia
+    do kopalni albo zakątka, w którym leży kilka skrzyń i artefakt. Ostatniego
+    rodzaju u nas nie było w ogóle, bo straże dostawały po jednym obiekcie na
+    głowę i wychodziły z tego stwory rozsypane po mapie.
+
+    Kieszeń liczymy DOKŁADNIE TAK, JAK DZIAŁA STRAŻ: potwór blokuje pole,
+    na którym stoi, i osiem pól wokół, więc pytamy, co odetnie się od reszty
+    planszy po zamknięciu tego kwadratu 3 × 3. Liczenie „ile odcina jedno pole"
+    znajdowało dwie kieszenie na całej mapie, bo takich szyjek po prostu nie
+    ma — przejścia mają po dwa i trzy pola szerokości.
+
+    Kandydatów zawężamy do pól z najwyżej pięcioma przejezdnymi sąsiadami:
+    pośrodku otwartej łąki nic się nie odetnie, a przeszukiwanie z każdego pola
+    planszy kosztuje kilkanaście sekund.
+    """
+    wszystkie = osiagalne(mapa, start)
+    kieszenie = []
+    zajete_pola = set()
+    for (gx, gy) in sorted(wszystkie):
+        if (gx, gy) == start:
+            continue
+        sasiedzi = sum(
+            1
+            for dy in (-1, 0, 1)
+            for dx in (-1, 0, 1)
+            if (dx or dy)
+            and 0 <= gx + dx < BOK
+            and 0 <= gy + dy < BOK
+            and mapa[gy + dy][gx + dx] in PRZEJEZDNE
+        )
+        if sasiedzi > 5:
+            continue
+        # Strefa kontroli strażnika: jego pole i osiem wokół.
+        bez = {
+            (gx + dx, gy + dy)
+            for dy in (-1, 0, 1)
+            for dx in (-1, 0, 1)
+        }
+        if start in bez:
+            continue
+        widziane = {start}
+        kolejka = deque([start])
+        while kolejka:
+            x, y = kolejka.popleft()
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    q = (x + dx, y + dy)
+                    if (
+                        0 <= q[0] < BOK
+                        and 0 <= q[1] < BOK
+                        and q not in widziane
+                        and q not in bez
+                        and mapa[q[1]][q[0]] in PRZEJEZDNE
+                    ):
+                        widziane.add(q)
+                        kolejka.append(q)
+        odciete = wszystkie - widziane - bez
+        if najmniej <= len(odciete) <= najwiecej and not (odciete & zajete_pola):
+            kieszenie.append(((gx, gy), sorted(odciete)))
+            zajete_pola |= odciete | bez
+    return kieszenie
+
+
 def rozstaw(mapa, kroki, rng):
     """Rozstawia obiekty i zwraca listę `(pole, (rodzaj, co, nazwa?))`.
 
@@ -527,7 +593,11 @@ def rozstaw(mapa, kroki, rng):
     20–25 pól przejezdnych i tyle tu celujemy, z ciężarem przesuniętym na pas
     sporny — to on ma być powodem, żeby wyjść z doliny.
     """
-    zajete = list(PUNKTY.values())
+    # Pola strażnic granicznych są zajęte OD POCZĄTKU. Same strażnice dokładamy
+    # po rozstawieniu (są stałe, nie losowane), ale gdyby ich pola nie były
+    # zarezerwowane, strażnik kieszeni potrafi stanąć dokładnie w bramie —
+    # i generator wywala się na końcu, że dwa obiekty stoją na jednym polu.
+    zajete = list(PUNKTY.values()) + [pole for pole, _, _ in STRAZNICE]
     obiekty = []
 
     # Obiekty ZATYKAJĄ drogę — trasa w grze nie przechodzi przez nie. Przy
@@ -604,11 +674,20 @@ def rozstaw(mapa, kroki, rng):
     #: oryginalnych normą. Przy odstępie 2 pas sporny nie mieścił nawet połowy
     #: zaplanowanych obiektów: ma 369 pól nadających się pod zabudowę, a każdy
     #: obiekt z odstępem 2 zjada dziewięć.
-    def dodaj(ile, ktora, zakres, buduj, odstep=1):
-        """Stawia `ile` obiektów w strefie i zwraca ich pola."""
+    def dodaj(ile, ktora, zakres, buduj, odstep=1, kandydaci=None):
+        """Stawia `ile` obiektów i zwraca ich pola.
+
+        `kandydaci` pozwala narzucić pulę pól — używa tego rozstawianie skarbów
+        w kieszeni, gdzie o miejscu decyduje kształt zaułka, a nie strefa
+        i odległość od startu.
+        """
         pola = []
         for _ in range(ile):
-            wolne = wolne_pola(mapa, kroki, zajete, ktora, zakres, odstep)
+            wolne = (
+                [p for p in kandydaci if p not in zajete]
+                if kandydaci is not None
+                else wolne_pola(mapa, kroki, zajete, ktora, zakres, odstep)
+            )
             if not wolne:
                 raise SystemExit(f'Brak miejsca na obiekt: {ktora} {zakres}. Popraw SZKIC.')
             pole = None
@@ -652,6 +731,11 @@ def rozstaw(mapa, kroki, rng):
                     # wielopolowych mur miały cztery, a pozostałe jedenaście
                     # było rysowanych na trzy pola i blokowało jedno. Wygląda
                     # to jak budynek, przez który da się przejść.
+                    # W pierwszym podejściu twardo, w drugim odpuszczamy —
+                    # a to, co się prześlizgnie, poprawia `odsun_straze`
+                    # po rozstawieniu.
+                    if wymagaj_muru and koliduje_ze_straza(kandydat, proba):
+                        continue
                     if (
                         wymagaj_muru
                         and len(zajmowane) > 1
@@ -681,6 +765,67 @@ def rozstaw(mapa, kroki, rng):
             pola.append(pole)
         return pola
 
+    # Kieszenie znalezione w terenie, rozdzielone na pasy. Kolejność jest
+    # ustalona (sortowanie w `znajdz_kieszenie`), więc mapa wychodzi za każdym
+    # razem taka sama.
+    kieszenie = {'dom': [], 'pogranicze': [], 'wroga': []}
+    for szyjka, pola_kieszeni in znajdz_kieszenie(mapa, PUNKTY['start']):
+        kieszenie[strefa(szyjka[1])].append((szyjka, pola_kieszeni))
+
+    def skarb_w_kieszeni(ktora, sila, ile_nagrod, co_lezy):
+        """Kilka nagród w ślepym zaułku, jeden strażnik w szyjce.
+
+        To jest układ, po którym poznaje się mapę z Heroes 3: walka opłaca się
+        za CAŁY zakątek, a nie za jedną skrzynię. Wcześniej każdy strażnik
+        dostawał jeden obiekt na głowę i stwory wyglądały na rozsypane po mapie
+        przypadkiem — bo w gruncie rzeczy były.
+        """
+        # Szyjka musi być WOLNA — jeśli coś już tam stoi, strażnik wylądowałby
+        # na cudzym polu i generator wywala się dopiero na końcowym sprawdzeniu
+        # („dwa obiekty na tym samym polu"). Bierzemy więc pierwszą kieszeń
+        # z wolną szyjką, a nie pierwszą z brzegu.
+        wybrana = next(
+            (k for k in kieszenie[ktora] if k[0] not in zajete),
+            None,
+        )
+        if wybrana is None:
+            return []
+        kieszenie[ktora].remove(wybrana)
+        szyjka, pola_kieszeni = wybrana
+        wolne_w_kieszeni = [q for q in pola_kieszeni if mapa[q[1]][q[0]] in '.,jsb']
+        # Najwyżej połowa pól kieszeni: obiekty zatykają drogę, więc zakątek
+        # wypełniony po brzegi jest zakątkiem, do którego nie da się wejść.
+        ile = min(ile_nagrod, max(1, len(wolne_w_kieszeni) // 2))
+        polozone = []
+        for i in range(ile):
+            polozone += dodaj(1, ktora, (0, 999), co_lezy, kandydaci=wolne_w_kieszeni)
+        if polozone and not koliduje_ze_straza(szyjka, ('potwor', sila)):
+            zajete.append(szyjka)
+            obiekty.append((szyjka, ('potwor', sila)))
+        return polozone
+
+    #: Kopalnie podstawowe — odpowiedniki tartaku i kopalni rudy. Przy strefie
+    #: startowej w Heroes 3 stoją niepilnowane: bez nich nie ma z czego zacząć,
+    #: więc straż przy nich nie jest wyborem, tylko karą za pierwszy tydzień.
+    PODSTAWOWE = ('jagoda', 'odlamek')
+
+    def koliduje_ze_straza(pole, proba):
+        """Czy to postawienie zrobiłoby z podstawowej kopalni kopalni pilnowanej.
+
+        Działa w obie strony, bo kolejność rozstawiania jest różna w różnych
+        pasach: potwór nie stanie obok takiej kopalni, a taka kopalnia nie
+        stanie obok potwora.
+        """
+        obok = lambda a, b: max(abs(a[0] - b[0]), abs(a[1] - b[1])) <= 1
+        if proba[0] == 'potwor':
+            return any(
+                co[0] == 'kopalnia' and co[1] in PODSTAWOWE and obok(pole, p)
+                for p, co in obiekty
+            )
+        if proba[0] == 'kopalnia' and proba[1] in PODSTAWOWE:
+            return any(co[0] == 'potwor' and obok(pole, p) for p, co in obiekty)
+        return False
+
     def strzez(pola, sila):
         """Stawia straż PRZY obiekcie, od strony, z której się do niego podchodzi.
 
@@ -709,6 +854,9 @@ def rozstaw(mapa, kroki, rng):
                 # postawiona za obiektem nie pilnuje niczego.
                 and kroki.get((x + dx, y + dy), 999) < kroki.get((x, y), 0)
             ]
+            if not kandydaci:
+                continue
+            kandydaci = [q for q in kandydaci if not koliduje_ze_straza(q, ('potwor', sila))]
             if not kandydaci:
                 continue
             pole = rng.choice(kandydaci)
@@ -741,16 +889,20 @@ def rozstaw(mapa, kroki, rng):
     kopalnie_dom = []
     for co in ['odlamek', 'jagoda', 'odlamek', 'pokeball', 'jagoda', 'pokeball']:
         kopalnie_dom += dodaj(1, 'dom', (10, 40), lambda p, co=co: ('kopalnia', co))
-    strzez(kopalnie_dom[:2], 'slaby')
-    skrzynie_dom = dodaj(8, 'dom', (10, 40), lambda p: ('skrzynia', None))
-    strzez(skrzynie_dom[:1], 'slaby')
-    dodaj(1, 'dom', (12, 40), lambda p: ('potwor', 'slaby'))
-    artefakty_dom = dodaj(4, 'dom', (14, 40), lambda p: ('artefakt', None))
-    # W dolinie pilnowane są tylko artefakty i dwie kopalnie. Reszta stoi
-    # otworem, bo pierwszy tydzień ma się dać rozegrać bez jednej przegranej
-    # bitwy — a każdy strażnik w dolinie zabiera kawałek mapy, po którym da się
-    # chodzić od razu (mierzy to `probe-mapa.ts`).
-    strzez(artefakty_dom[:2], 'sredni')
+    # PODSTAWOWE KOPALNIE STOJĄ OTWOREM. W Heroes 3 tartak i kopalnia rudy przy
+    # strefie startowej są niepilnowane albo pilnowane symbolicznie — bez nich
+    # nie ma z czego zacząć, więc straż przy nich nie jest wyborem, tylko karą
+    # za pierwszy tydzień. Pilnowany jest tylko obóz z pokeballami, czyli
+    # odpowiednik kopalni złota.
+    strzez([p for p, co in zip(kopalnie_dom, ['odlamek', 'jagoda', 'odlamek', 'pokeball', 'jagoda', 'pokeball']) if co == 'pokeball'], 'slaby')
+    dodaj(6, 'dom', (10, 40), lambda p: ('skrzynia', None))
+    dodaj(3, 'dom', (12, 40), lambda p: ('potwor', 'slaby'))
+    dodaj(2, 'dom', (14, 40), lambda p: ('artefakt', None))
+
+    # Dwie kieszenie ze skarbem w dolinie: pierwsza nagroda za wygraną bitwę,
+    # jeszcze w bezpiecznym pasie.
+    skarb_w_kieszeni('dom', 'slaby', 3, lambda p: ('skrzynia', None))
+    skarb_w_kieszeni('dom', 'sredni', 3, lambda p: rng.choice([('artefakt', None), ('skrzynia', None), ('surowiec', 'odlamek')]))
     budowle(18, 'dom', [
         'ognisko', 'chatka', 'wiatrak', 'zrodlo', 'oboz-treningowy', 'ranczo',
         'gniazdo', 'drzewo-wiedzy', 'woz',
@@ -779,12 +931,21 @@ def rozstaw(mapa, kroki, rng):
     kopalnie_srodek = []
     for co in ['odlamek', 'kamien', 'pokeball', 'odlamek', 'kamien', 'jagoda', 'pokeball', 'odlamek']:
         kopalnie_srodek += dodaj(1, 'pogranicze', (0, 999), lambda p, co=co: ('kopalnia', co))
-    strzez(kopalnie_srodek[:6], 'sredni')
-    skrzynie_srodek = dodaj(16, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
-    strzez(skrzynie_srodek[:6], 'sredni')
-    artefakty_srodek = dodaj(9, 'pogranicze', (0, 999), lambda p: ('artefakt', None))
-    strzez(artefakty_srodek[:5], 'silny')
-    dodaj(3, 'pogranicze', (0, 999), lambda p: ('potwor', 'sredni'))
+    # Pilnowane są kopalnie DROGIE — kamień i pokeballe. Odłamki i jagody stoją
+    # otworem także tutaj: to gospodarka, nie nagroda.
+    strzez(
+        [p for p, co in zip(kopalnie_srodek, ['odlamek', 'kamien', 'pokeball', 'odlamek', 'kamien', 'jagoda', 'pokeball', 'odlamek']) if co in ('kamien', 'pokeball')],
+        'sredni',
+    )
+    dodaj(12, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
+    dodaj(5, 'pogranicze', (0, 999), lambda p: ('artefakt', None))
+    dodaj(4, 'pogranicze', (0, 999), lambda p: ('potwor', 'sredni'))
+
+    # Trzy kieszenie: to jest właściwy środek gry. Za strażą leżą trzy–cztery
+    # rzeczy naraz, więc bitwa ma stawkę.
+    skarb_w_kieszeni('pogranicze', 'sredni', 4, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'kamien'), ('artefakt', None)]))
+    skarb_w_kieszeni('pogranicze', 'silny', 4, lambda p: rng.choice([('artefakt', None), ('skrzynia', None)]))
+    skarb_w_kieszeni('pogranicze', 'silny', 4, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'pokeball')]))
     budowle(26, 'pogranicze', [
         'arena', 'wieza-obserwacyjna', 'kamienna-wieza', 'ranczo', 'gniazdo',
         'wiatrak', 'ognisko', 'chatka', 'woz', 'drzewo-wiedzy', 'zrodlo',
@@ -808,17 +969,23 @@ def rozstaw(mapa, kroki, rng):
     # --- KRAINA PRZECIWNIKA ------------------------------------------------
     # Po co się tam w ogóle jedzie: relikty, kopalnie kamienia i najsilniejsze
     # straże na mapie. Prawie wszystko pilnowane — tu nie ma nic za darmo.
-    dodaj(20, 'wroga', (0, 999), lambda p: ('surowiec', rng.choice(['kamien', 'odlamek', 'pokeball'])))
+    dodaj(15, 'wroga', (0, 999), lambda p: ('surowiec', rng.choice(['kamien', 'odlamek', 'pokeball'])))
     kopalnie_wroga = []
     for co in ['kamien', 'kamien', 'pokeball', 'odlamek', 'kamien', 'pokeball', 'jagoda', 'odlamek']:
         kopalnie_wroga += dodaj(1, 'wroga', (0, 999), lambda p, co=co: ('kopalnia', co))
-    strzez(kopalnie_wroga[:6], 'silny')
-    skrzynie_wroga = dodaj(18, 'wroga', (0, 999), lambda p: ('skrzynia', None))
-    strzez(skrzynie_wroga[:5], 'silny')
-    artefakty_wroga = dodaj(9, 'wroga', (0, 999), lambda p: ('artefakt', None))
-    strzez(artefakty_wroga[:5], 'silny')
-    dodaj(2, 'wroga', (0, 999), lambda p: ('potwor', 'silny'))
-    budowle(24, 'wroga', [
+    strzez(
+        [p for p, co in zip(kopalnie_wroga, ['kamien', 'kamien', 'pokeball', 'odlamek', 'kamien', 'pokeball', 'jagoda', 'odlamek']) if co in ('kamien', 'pokeball')],
+        'silny',
+    )
+    dodaj(9, 'wroga', (0, 999), lambda p: ('skrzynia', None))
+    dodaj(5, 'wroga', (0, 999), lambda p: ('artefakt', None))
+    dodaj(4, 'wroga', (0, 999), lambda p: ('potwor', 'silny'))
+
+    # Kieszenie krainy wroga: tu leżą relikty i tu stoją wodzowie.
+    skarb_w_kieszeni('wroga', 'silny', 4, lambda p: rng.choice([('artefakt', None), ('skrzynia', None)]))
+    skarb_w_kieszeni('wroga', 'wodz', 5, lambda p: rng.choice([('artefakt', None), ('skrzynia', None), ('surowiec', 'kamien')]))
+    skarb_w_kieszeni('wroga', 'wodz', 4, lambda p: rng.choice([('artefakt', None), ('surowiec', 'kamien')]))
+    budowle(20, 'wroga', [
         'osrodek-ewolucji', 'arena', 'kamienna-wieza', 'wieza-obserwacyjna',
         'gniazdo', 'ranczo', 'wiatrak', 'ognisko', 'drzewo-wiedzy', 'woz',
         'zrodlo', 'chatka',
@@ -847,15 +1014,11 @@ def rozstaw(mapa, kroki, rng):
     for co in ['kamien', 'pokeball', 'odlamek']:
         kraniec_kopalnie += dodaj(1, 'wroga', daleko, lambda p, co=co: ('kopalnia', co))
     strzez(kraniec_kopalnie, 'wodz')
-    dodaj(4, 'wroga', daleko, lambda p: ('surowiec', rng.choice(['kamien', 'pokeball'])))
+    dodaj(3, 'wroga', daleko, lambda p: ('surowiec', rng.choice(['kamien', 'pokeball'])))
     budowle(6, 'wroga', ['osrodek-ewolucji', 'arena', 'kamienna-wieza', 'drzewo-wiedzy', 'zrodlo', 'gniazdo'], daleko)
 
     return obiekty
 
-
-kroki = kroki_od(mapa, PUNKTY['start'])
-rng2 = random.Random(ZIARNO + 1)
-obiekty = rozstaw(mapa, kroki, rng2)
 
 # STRAŻNICE GRANICZNE — cztery, po jednej na przejście, zawsze w tym samym
 # miejscu. To one trzymają mapę w ryzach i losowanie ich położenia zamieniłoby
@@ -878,6 +1041,60 @@ STRAZNICE = [
     ((21, 20), 'niebieski', 'Strażnica Przełęczy Północnej'),
     ((57, 20), 'niebieski', 'Strażnica Północnej Rubieży'),
 ]
+
+def odsun_straze(mapa, obiekty):
+    """Odsuwa straż, która przypadkiem stanęła przy podstawowej kopalni.
+
+    Warunek przy stawianiu jest miękki (inaczej w ciasnej krainie wroga
+    kończą się miejsca i generator nie kończy pracy), więc pojedyncze
+    przypadki prześlizgują się i poprawiamy je tutaj. Potwór nie blokuje
+    niczego na stałe — pokonuje się go — więc przesunięcie go o dwa pola jest
+    bezpieczne dla spójności mapy.
+    """
+    PODSTAWOWE = ('jagoda', 'odlamek')
+    obok = lambda a, b: max(abs(a[0] - b[0]), abs(a[1] - b[1])) <= 1
+    zajete = {p for p, _ in obiekty}
+    kopalnie = [p for p, co in obiekty if co[0] == 'kopalnia' and co[1] in PODSTAWOWE]
+    przesuniete = 0
+    for i, (pole, co) in enumerate(obiekty):
+        if co[0] != 'potwor' or not any(obok(pole, k) for k in kopalnie):
+            continue
+        nowe = None
+        for r in (2, 3, 4):
+            kandydaci = [
+                (pole[0] + dx, pole[1] + dy)
+                for dy in range(-r, r + 1)
+                for dx in range(-r, r + 1)
+                if max(abs(dx), abs(dy)) == r
+            ]
+            kandydaci = [
+                q
+                for q in kandydaci
+                if 0 <= q[0] < BOK
+                and 0 <= q[1] < BOK
+                and mapa[q[1]][q[0]] in PRZEJEZDNE
+                and q not in zajete
+                and not any(obok(q, k) for k in kopalnie)
+            ]
+            if kandydaci:
+                nowe = kandydaci[0]
+                break
+        if nowe is None:
+            continue
+        zajete.discard(pole)
+        zajete.add(nowe)
+        obiekty[i] = (nowe, co)
+        przesuniete += 1
+    return przesuniete
+
+
+kroki = kroki_od(mapa, PUNKTY['start'])
+rng2 = random.Random(ZIARNO + 1)
+obiekty = rozstaw(mapa, kroki, rng2)
+odsuniete = odsun_straze(mapa, obiekty)
+if odsuniete:
+    print(f'straży odsuniętych od podstawowych kopalń: {odsuniete}')
+
 for pole, klucz, nazwa in STRAZNICE:
     x, y = pole
     if mapa[y][x] not in PRZEJEZDNE:
