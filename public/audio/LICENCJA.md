@@ -52,12 +52,24 @@ w `src/audio/sfx.ts`, nie edycja próbek.
 Pliki `krok-mapa.wav`, `zajecie.wav`, `zbior.wav`, `wejscie.wav`, `awans.wav`,
 `budowa.wav`, `ambient-kopalnia.wav`, `ambient-wieza.wav`, `muzyka-mapa.wav`
 i `muzyka-miasto.wav` (obsługiwane przez `src/audio/mapSfx.ts`) **nie są**
-próbkami z Kenneya ani OpenGameArt — to wygenerowana synteza (czysty ton
-i szum, bez próbek instrumentów), zrobiona skryptem
-`tools/synteza_dzwiekow.py`, bo środowisko, w którym to powstawało, nie miało
-dostępu do kenney.nl ani opengameart.org (proxy sieciowe odrzucało
-połączenie). Zero praw autorskich osób trzecich, ale też nie ten sam poziom
-brzmienia co reszta katalogu.
+próbkami z Kenneya ani OpenGameArt — środowisko, w którym to powstawało,
+nie miało dostępu do kenney.nl ani opengameart.org (proxy sieciowe
+odrzucało połączenie). To wygenerowana synteza, zrobiona skryptem
+`tools/synteza_dzwiekow.py`. Zero praw autorskich osób trzecich, ale też
+nie ten sam poziom brzmienia co reszta katalogu — nadaje się jako
+funkcjonalny placeholder, nie jako cel.
+
+Pierwsza wersja tego skryptu sumowała gołe sinusoidy (zdarzenia) i po kilka
+rozstrojonych głosów sinusoidalnych na akord (muzyka) — to drugie brzmiało
+jak buczenie, bo bliskie częstotliwości grane naraz dudnią. Druga wersja
+renderuje próbki silnikiem **ZzFX** (Frank Force, MIT,
+<https://github.com/KilledByAPixel/ZzFX>) — syntezatorem zaprojektowanym
+pod gry, z obwiednią ataku/zaniku/podtrzymania/wybrzmienia, slajdem
+wysokości i kilkoma kształtami fali zamiast gołego sinusa — a muzykę
+buduje jako rzadką melodię (jeden bas-dron pod akordem plus pojedyncze
+szarpnięcia na wierzchu), nie jako ciągły, wielogłosowy akord. `zzfx_build`
+w skrypcie to port matematyki `ZZFX.buildSamples` z ZzFX.js, bez zależności
+od `AudioContext` — żeby dało się to odpalić w Pythonie, offline.
 
 Podmiana na docelowe próbki, gdy będzie dostęp do sieci: te same nazwy
 plików w tym katalogu (rozszerzenie może zostać `.wav` albo zmienić się na
