@@ -765,6 +765,34 @@ def rozstaw(mapa, kroki, rng):
             pola.append(pole)
         return pola
 
+    def para_portali(ktora, min_odl=20):
+        """Dwa końce jednego portalu, MUSZĄ stać daleko od siebie.
+
+        Samo `dodaj(2, ...)` stawiało oba końce gdziekolwiek w strefie i raz
+        wylosowało je na polach (26,7) i (27,7) — obok siebie. Portal
+        przenosił wtedy o jedno pole, czyli donikąd, a AI przeciwnika wpadało
+        w pętlę: wchodziło w jeden koniec, wypadało na drugim i tak przez
+        resztę partii. Od dwudziestego dnia wróg stał w miejscu z armią
+        rosnącą do dwustu i nigdy nie ruszał na gracza.
+
+        Dlatego odległość jest WARUNKIEM, nie szczęściem. Przy 72 × 72 dwadzieścia
+        pól to mniej więcej tyle, ile bohater robi w trzy dni marszu — poniżej
+        tego skrót nie jest skrótem i portal nie ma po co istnieć.
+        """
+        a = dodaj(1, ktora, (0, 999), lambda p: ('budynek', 'portal'))[0]
+        daleko = [
+            p
+            for p in wolne_pola(mapa, kroki, zajete, ktora, (0, 999), 1)
+            if max(abs(p[0] - a[0]), abs(p[1] - a[1])) >= min_odl
+        ]
+        if not daleko:
+            raise SystemExit(
+                f'Strefa {ktora} nie ma dwóch pól oddalonych o {min_odl} na parę portali. '
+                'Popraw SZKIC albo zmniejsz min_odl.'
+            )
+        b = dodaj(1, ktora, (0, 999), lambda p: ('budynek', 'portal'), kandydaci=daleko)[0]
+        return [a, b]
+
     # Kieszenie znalezione w terenie, rozdzielone na pasy. Kolejność jest
     # ustalona (sortowanie w `znajdz_kieszenie`), więc mapa wychodzi za każdym
     # razem taka sama.
@@ -953,7 +981,7 @@ def rozstaw(mapa, kroki, rng):
     ])
     # Para portali — oba PO TEJ SAMEJ stronie grzbietu. Para przez grzbiet
     # obchodziłaby strażników przełęczy i unieważniała cały układ mapy.
-    dodaj(2, 'pogranicze', (0, 999), lambda p: ('budynek', 'portal'))
+    para_portali('pogranicze')
 
     # CHATA JASNOWIDZA — jedyny obiekt, który każe wrócić w to samo miejsce
     # po raz drugi: pierwsza wizyta mówi, czego chce, druga zamienia to na
@@ -990,7 +1018,7 @@ def rozstaw(mapa, kroki, rng):
         'gniazdo', 'ranczo', 'wiatrak', 'ognisko', 'drzewo-wiedzy', 'woz',
         'zrodlo', 'chatka',
     ])
-    dodaj(2, 'wroga', (0, 999), lambda p: ('budynek', 'portal'))
+    para_portali('wroga')
     # Druga chata, w krainie wroga: droższa i płaci reliktem.
     dodaj(1, 'wroga', (0, 999), lambda p: ('jasnowidz', None))
 

@@ -183,6 +183,20 @@ RUNDY = [
                    'wejście zamku i kopalni. Sonda przygody mierzy po bitwie odległość bohatera '
                    'od pokonanego stada — ma być dokładnie jedno pole.',
     },
+    {
+        'nr': 12,
+        'tytul': 'Portal, który prowadził o jedno pole',
+        'wynik': 'poprawka',
+        'co': 'Para portali musi teraz stać co najmniej dwadzieścia pól od siebie — to warunek '
+              'w generatorze i pytanie w sondzie planszy, a nie kwestia szczęścia w losowaniu.',
+        'luka': 'Generator stawiał oba końce gdziekolwiek w strefie i wylosował je na polach '
+                '(26,7) i (27,7) — obok siebie. Wyszło to dopiero z poprzeczki AI przeciwnika: '
+                'wróg wchodził w jeden koniec, wypadał na drugim i tak w kółko. Od dwudziestego '
+                'dnia stał w miejscu z armią rosnącą do dwustu i nigdy nie ruszał na gracza.',
+        'naprawa': 'Pary stoją teraz 27 i 45 pól od siebie. Poprzeczka AI wróciła z 0/8 do 3/8 — '
+                   'czyli do stanu sprzed tej mapy; do progu 95% dalej daleko, ale to już '
+                   'zadanie dla sesji przeciwnika, nie dla planszy.',
+    },
 ]
 
 BRAKI = [
