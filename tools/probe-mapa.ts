@@ -173,6 +173,29 @@ for (const g of straze) {
 const namioty = s.obiekty.filter((o) => o.rodzaj === 'namiot');
 sprawdz('każda barwa klucza ma swój namiot', namioty.length === 2 && new Set(namioty.map((o) => o.klucz)).size === 2, namioty.map((o) => o.klucz).join(', '));
 
+console.log('\n=== portal ma dokąd przenosić ===');
+// Skrót, który skraca o jedno pole, nie jest skrótem.
+//
+// Generator stawiał oba końce pary gdziekolwiek w strefie i raz wylosował je
+// na polach (26,7) i (27,7) — obok siebie. Dla gracza to dziwactwo, dla AI
+// przeciwnika pułapka bez wyjścia: wchodziło w jeden koniec, wypadało na
+// drugim i tak przez resztę partii. Od dwudziestego dnia wróg stał w miejscu
+// z armią rosnącą do dwustu i nigdy nie ruszał na gracza — a sonda planszy
+// nie miała o to ani jednego pytania.
+const portale = s.obiekty.filter((o) => o.rodzaj === 'budynek' && o.budynek === 'portal');
+sprawdz('portale stoją parami', portale.length % 2 === 0, `${portale.length} sztuk`);
+for (let i = 0; i < portale.length; i += 2) {
+  const a = portale[i];
+  const b = portale[i + 1];
+  if (!b) break;
+  const odl = Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+  sprawdz(
+    `para portali (${a.x},${a.y}) ↔ (${b.x},${b.y}) przenosi o co najmniej 20 pól`,
+    odl >= 20,
+    `${odl} pól`
+  );
+}
+
 console.log('\n=== grzbiety dzielą mapę na trzy pasy ===');
 // Cały układ stoi na tym, że przez KAŻDY grzbiet prowadzą dokładnie dwa
 // przejścia i oba są pilnowane. Rozmycie granic w generatorze potrafi wybić

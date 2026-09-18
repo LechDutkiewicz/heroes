@@ -909,3 +909,27 @@ commit dają więc jedno wydanie — drugi deploy kończy się sukcesem, ale nic
 nie zmienia. W normalnej pracy to nie występuje, bo każda gałąź ma własne
 commity; łatwo się za to o to potknąć przy testowaniu mechanizmu, wypychając
 tę samą rewizję w dwa miejsca. Objaw jest mylący: zielony run i stara strona.
+## Portal, który prowadził o jedno pole
+
+Generator stawiał oba końce pary portali gdziekolwiek w strefie — jedynym
+warunkiem było „ta sama strona grzbietu". Po przebudowie rozstawienia straży
+losowanie wypadło tak, że oba końce stanęły na polach (26,7) i (27,7), czyli
+obok siebie. Portal przenosił o jedno pole.
+
+Nie znalazła tego żadna sonda planszy, bo żadna nie miała o to pytania.
+Znalazła to poprzeczka AI przeciwnika z sąsiedniej gałęzi: wróg wchodził
+w jeden koniec, wypadał na drugim, i tak przez resztę partii. Od dwudziestego
+dnia stał w tym samym miejscu z armią rosnącą do dwustu i nigdy nie ruszał
+na gracza. W liczbach: zamek biernego gracza padał 3/8 przed tą mapą i 0/8 po
+niej, a po podmianie samych danych planszy z powrotem na starą — znowu 3/8.
+Kod nie miał z tym nic wspólnego.
+
+Odległość jest teraz WARUNKIEM w `para_portali` (`tools/generuj_mape.py`):
+co najmniej dwadzieścia pól, czyli mniej więcej trzy dni marszu. Poniżej tego
+skrót nie jest skrótem. Sonda planszy sprawdza to samo na gotowych danych,
+parując portale tak, jak paruje je gra (pierwszy z drugim, trzeci z czwartym).
+
+Morał jest ten sam, co zwykle w tym projekcie, tylko z drugiej strony: tym
+razem to nie zły pomiar udawał złą pracę, tylko BRAK pomiaru pozwolił złej
+pracy przejść. Mapa przeszła wszystkie sondy i cztery ślepe porównania
+z prawdziwymi mapami Heroes 3, mając w sobie portal donikąd.

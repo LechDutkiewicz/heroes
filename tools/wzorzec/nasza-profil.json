@@ -14,14 +14,14 @@
     "#": 15,
     "~": 7
   },
-  "obiektów": 260,
+  "obiektów": 259,
   "obiekt co ile pól przejezdnych": 9.7,
   "obiekty wg rodzaju": {
     "surowiec": 57,
-    "skrzynia": 40,
+    "skrzynia": 39,
     "kopalnia": 26,
-    "potwor": 35,
-    "artefakt": 20,
+    "potwor": 34,
+    "artefakt": 21,
     "budynek": 74,
     "namiot": 2,
     "jasnowidz": 2,
@@ -30,21 +30,21 @@
   "obiekty wg strefy": {
     "dom": 62,
     "pogranicze": 89,
-    "wroga": 109
+    "wroga": 108
   },
   "straże wg siły": {
     "slaby": 7,
     "sredni": 8,
     "silny": 15,
-    "wodz": 5
+    "wodz": 4
   },
   "straże %": 13,
   "obiekty w pasach odległości (5 × 20%)": [
     29,
     33,
-    96,
-    48,
-    54
+    97,
+    50,
+    50
   ],
   "kroków do zamku wroga": 90,
   "najdalszy zakątek (kroków)": 100,
