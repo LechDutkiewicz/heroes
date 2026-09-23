@@ -168,6 +168,7 @@ export class AdventureScene extends Phaser.Scene {
    * co się stanie, zanim się kliknęło.
    */
   private kursorZnak!: Phaser.GameObjects.Container;
+  private kursorZnakTlo!: Phaser.GameObjects.Graphics;
   private kursorZnakIkona!: Phaser.GameObjects.Image;
   private kursorZnakTekst!: Phaser.GameObjects.Text;
 
@@ -358,7 +359,13 @@ export class AdventureScene extends Phaser.Scene {
     });
     // Kursor poza płótnem nie wysyła `pointermove`, więc bez tego mapa jechałaby
     // dalej po wyjściu myszy za okno — aż do końca planszy.
-    this.input.on('gameout', () => (this.kursor = null));
+    this.input.on('gameout', () => {
+      this.kursor = null;
+      // Bez tego znak-kursor zostawał zawieszony w powietrzu, kiedy mysz
+      // wyjeżdżała za okno gry — a systemowy kursor jest tam wyłączony.
+      this.kursorZnak.setVisible(false);
+      this.input.setDefaultCursor('default');
+    });
     // Strzałki przesuwają widok. Na planszy 36 × 36 samo podążanie za bohaterem
     // nie wystarczy — trzeba móc się rozejrzeć, zanim się ruszy.
     this.input.keyboard?.on('keydown', (e: KeyboardEvent) => this.klawisz(e));
@@ -674,20 +681,36 @@ export class AdventureScene extends Phaser.Scene {
    * element HUD, PRZED `rozdzielKamery`: ta metoda i tak weźmie go pod uwagę
    * przy dzieleniu, więc nie trzeba go osobno oddawać żadnej kamerze.
    */
+  /**
+   * Zastępuje kursor systemowy w całości — dotąd znak (miecz/gwiazda/klepsydra)
+   * pływał OBOK zwykłej strzałki, więc podpowiedź i to, co naprawdę wskazywał
+   * kursor, żyły osobno. Grot w (0,0) jest tym, co dotąd było samą strzałką
+   * systemową — stoi dokładnie tam, gdzie wskaźnik myszy — a odznaka z ikoną
+   * siedzi obok niego tak jak wcześniej.
+   */
   private zbudujKursor() {
+    const grot = this.add.graphics();
+    grot.fillStyle(C.shadow, 0.9);
+    grot.fillTriangle(1, 1, 1, 15, 11, 11);
+    grot.fillStyle(C.white, 1);
+    grot.fillTriangle(0, 0, 0, 13, 9, 9);
+    grot.lineStyle(1.5, C.shadow, 0.8);
+    grot.strokeTriangle(0, 0, 0, 13, 9, 9);
+
     const tlo = this.add.graphics();
     tlo.fillStyle(C.shadow, 0.6);
-    tlo.fillCircle(0, 0, 13);
+    tlo.fillCircle(16, 16, 13);
     tlo.lineStyle(2, C.gold, 0.9);
-    tlo.strokeCircle(0, 0, 13);
-    const ikona = this.add.image(0, 0, ICON.sword).setDisplaySize(16, 16);
+    tlo.strokeCircle(16, 16, 13);
+    const ikona = this.add.image(16, 16, ICON.sword).setDisplaySize(16, 16).setVisible(false);
     const tekst = this.add
-      .text(15, 12, '', { ...display(12, H.goldLight), fontStyle: 'bold' })
+      .text(31, 28, '', { ...display(12, H.goldLight), fontStyle: 'bold' })
       .setOrigin(0, 0.5);
     this.kursorZnak = this.add
-      .container(0, 0, [tlo, ikona, tekst])
+      .container(0, 0, [grot, tlo, ikona, tekst])
       .setDepth(Z.overlay + 5)
       .setVisible(false);
+    this.kursorZnakTlo = tlo;
     this.kursorZnakIkona = ikona;
     this.kursorZnakTekst = tekst;
     // Bez tego kamera planszy zamalowywała znak w każdej klatce wewnątrz
@@ -696,9 +719,16 @@ export class AdventureScene extends Phaser.Scene {
     this.naWierzchu(this.kursorZnak);
   }
 
-  /** Pokazuje znak przy kursorze z daną ikoną i opcjonalną liczbą (dni). */
-  private pokazZnakKursora(ikona: string, tekst = '') {
-    this.kursorZnakIkona.setTexture(ikona);
+  /**
+   * Pokazuje znak przy kursorze. `ikona = null` to stan neutralny — sam grot,
+   * bez odznaki — bo nad zwykłym, przejezdnym terenem klik nie obiecuje nic
+   * szczególnego. Gracz i tak potrzebuje TEGO grotu zawsze, skoro systemowy
+   * kursor jest wyłączony na całej planszy.
+   */
+  private pokazZnakKursora(ikona: string | null, tekst = '') {
+    this.kursorZnakIkona.setVisible(!!ikona);
+    if (ikona) this.kursorZnakIkona.setTexture(ikona);
+    this.kursorZnakTlo.setVisible(!!ikona);
     this.kursorZnakTekst.setText(tekst).setVisible(!!tekst);
     this.kursorZnak.setVisible(true);
   }
@@ -1079,6 +1109,21 @@ export class AdventureScene extends Phaser.Scene {
         .setBlendMode(Phaser.BlendModes.MULTIPLY)
         .setAlpha(bryla ? 0.85 : 0.7);
       kont.add(cien);
+      // Wejście do budowli z bryłą (zamek, kopalnia) nie ma żadnego
+      // odrębnego oznaczenia na gruncie — z daleka wygląda jak zwykła
+      // ścieżka POD budynkiem, więc nie widać, gdzie naprawdę trzeba
+      // kliknąć, żeby wejść: budynek wygląda na jedną spójną bryłę, choć
+      // pole wejścia leży kawałek przed nią. Miękka złota poświata na tym
+      // polu nie zmienia mechaniki — to wciąż to samo pole — tylko robi je
+      // wreszcie widocznym jako osobne miejsce, a nie część muru.
+      if (bryla && (o.rodzaj === 'zamek' || o.rodzaj === 'kopalnia')) {
+        const wejscie = this.add.graphics();
+        wejscie.fillStyle(C.gold, 0.3);
+        wejscie.fillEllipse(0, KAFEL * 0.1, KAFEL * 0.85, KAFEL * 0.4);
+        wejscie.lineStyle(2, C.gold, 0.6);
+        wejscie.strokeEllipse(0, KAFEL * 0.1, KAFEL * 0.85, KAFEL * 0.4);
+        kont.add(wejscie);
+      }
       // Budowle z bryłą stoją ZA polem wejścia, a nie na nim: podstawa siada na
       // górnej krawędzi tego pola, więc brama zostaje odsłonięta i widać, że
       // jest po niej gdzie chodzić. Reszta obiektów stoi na swoim polu.
@@ -1772,14 +1817,21 @@ export class AdventureScene extends Phaser.Scene {
     if (!this.wRamie(p.x, p.y) || !this.wGranicach(x, y)) {
       this.podpowiedz.setText(DOMYSLNA_PODPOWIEDZ);
       this.kursorZnak.setVisible(false);
+      // Poza planszą (panel, przyciski) wraca zwykły kursor systemowy —
+      // to tam żyją prawdziwe elementy HUD-u z własnym `useHandCursor`.
+      this.input.setDefaultCursor('default');
       return;
     }
+    // Od tego miejsca kursor systemowy jest wyłączony w całości — zastępuje
+    // go nasz znak, żeby to, co widać, i to, co obiecuje podpowiedź, były
+    // dokładnie tym samym rysunkiem, a nie dwoma osobnymi kursorami naraz.
+    this.input.setDefaultCursor('none');
+    this.kursorZnak.setPosition(p.x, p.y);
     if (!this.stan.odkryte[y][x]) {
       this.podpowiedz.setText('Nieznany teren — trzeba tam podejść.');
-      this.kursorZnak.setVisible(false);
+      this.pokazZnakKursora(null);
       return;
     }
-    this.kursorZnak.setPosition(p.x + 16, p.y + 16);
     // Kursor nad celem wytyczonej trasy, do którego nie da się dojść w tej
     // turze, ma od razu mówić, ile dni to zajmie — jak w Heroes 3.
     const t = this.trasaBiezaca;
@@ -1797,10 +1849,9 @@ export class AdventureScene extends Phaser.Scene {
     // Kursor musi powiedzieć, które kliknięcie dostaniesz — na bryle zamku
     // inne niż na jego polu. Bez tego podział jest niewidzialny.
     const zamek = this.zamekPodKursorem(p);
-    this.input.setDefaultCursor(zamek ? 'pointer' : 'default');
     if (zamek) {
       this.podpowiedz.setText(`${zamek.nazwa}\nKliknij, żeby wejść do miasta.`);
-      this.kursorZnak.setVisible(false);
+      this.pokazZnakKursora(ICON.star);
       return;
     }
     const o = this.obiektPodKursorem(p) ?? obiektNa(this.stan, x, y);
@@ -1828,7 +1879,9 @@ export class AdventureScene extends Phaser.Scene {
         ? `${teren.nazwa} — nie do przejścia`
         : `${teren.nazwa} — koszt ${teren.koszt}`
     );
-    this.kursorZnak.setVisible(false);
+    // Nie do przejścia dostaje czaszkę — jedyny wypadek, gdzie kursor
+    // ostrzega, zamiast tylko milczeć jak nad zwykłą, przejezdną trawą.
+    this.pokazZnakKursora(teren.koszt === null ? ICON.skull : null);
   }
 
   private opisObiektu(o: Obiekt) {
