@@ -1,4 +1,4 @@
-import type { Bohater, StanMapy, Surowiec } from './mapa';
+import { artefaktPoId, type Bohater, type StanMapy, type Surowiec } from './mapa';
 
 /**
  * Kampania — kolejne misje ułożone w jedną opowieść, jak „The Succession Wars"
@@ -271,7 +271,7 @@ export function ocenMisje(stan: StanMapy, m: Misja): Rozstrzygniecie {
 export function opisZwyciestwa(m: Misja): string {
   const z = m.zwyciestwo;
   if (z.typ === 'zamki') return 'Zdobądź wszystkie zamki przeciwnika.';
-  if (z.typ === 'artefakt') return `Odnajdź artefakt: ${z.artefakt}.`;
+  if (z.typ === 'artefakt') return `Odnajdź artefakt: ${artefaktPoId(z.artefakt)?.nazwa ?? z.artefakt}.`;
   if (z.typ === 'zbierz') return `Zbierz ${z.ile} × ${z.surowiec}.`;
   return `Pokonaj: ${z.nazwa}.`;
 }
