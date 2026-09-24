@@ -29,7 +29,18 @@ import { KROJ, deseczka, pokazAutorow, pokazRekordy, type Zwoj } from '../visual
 const B = import.meta.env.BASE_URL;
 
 /** Słup drogowskazu: czubek daszka. Słup stoi na malowanym słupku płotu z tła. */
-const SLUP = { x: 104, y: 300 };
+const SLUP = { x: 104, y: 262 };
+
+/**
+ * Latarnia na kutym ramieniu u szczytu słupa: lewy brzeg obrazka i środek
+ * szybki (tools/menu_wczytaj.py, `latarnia`: obejma w x 0–8, ramię na
+ * y 10, szybka w (76, 49)). Plama światła na tle jest liczona z tego samego
+ * miejsca (`LATARNIA` w tym skrypcie).
+ */
+const LATARNIA = { x: SLUP.x - 4, y: SLUP.y + 8, szybkaX: 76, szybkaY: 49 };
+
+/** Sztandar z logo: drążek na tej wysokości, skala tak, by odsłonić drzwi chaty. */
+const SZTANDAR = { x: 480, y: 22, skala: 0.8, drazekY: 64 };
 
 /**
  * Deski od góry. Kąty są drobne i różne — równiutko przybite deski wyglądają
@@ -78,6 +89,9 @@ interface Deska {
   szara: Phaser.GameObjects.Image;
   napis: Phaser.GameObjects.Text;
   podpis: Phaser.GameObjects.Text;
+  klodka: Phaser.GameObjects.Image;
+  /** Środek napisu na czynnej desce; nieczynna przesuwa go w lewo, robiąc miejsce na kłódkę. */
+  srodek: number;
   pozycja?: Pozycja;
   x: number;
   y: number;
@@ -153,8 +167,7 @@ export class MenuScene extends Phaser.Scene {
     }
     for (const n of ['tabliczka', 'tabliczka-jasna', 'deseczka', 'deseczka-jasna'])
       this.load.image(`menu-${n}`, `${m}${n}.png`);
-    // Stworki z wioski — te same pliki i klucze co na mapie przygody.
-    for (const s of ['00096', '00218', '00020']) this.load.image(`p-${s}`, `${B}sprites/${s}.png`);
+    for (const n of ['latarnia', 'klodka', 'stworek']) this.load.image(`menu-${n}`, `${m}${n}.png`);
     // Dwie krótkie próbki: stuknięcie deski i wejście. Muzyka dochodzi
     // później, w tle — 4 MB nie może trzymać czarnego ekranu.
     this.load.audio('wejscie', `${B}audio/wejscie.wav`);
@@ -214,10 +227,10 @@ export class MenuScene extends Phaser.Scene {
     this.zbudujDrogowskaz();
     this.przelacznikDzwieku();
 
-    const glos = () => this.graj('krok', 0.5);
-    stworek(this, 'p-00096', SLUP.x + 2, SLUP.y + 6, 62, { glos, depth: Z.deski + 2 });
-    stworek(this, 'p-00218', 578, 446, 44, { glos, flip: true });
-    stworek(this, 'p-00020', 906, 134, 40, { glos, flip: true });
+    // Jeden towarzysz zamiast trzech naklejek: siedzi w plamie światła
+    // latarni i patrzy na drogowskaz — spojrzenie prowadzi oko do menu.
+    // Obrazek jest już wmalowany w zmierzch (tools/menu_wczytaj.py, `stworek`).
+    stworek(this, 'menu-stworek', 486, 516, 76, { glos: () => this.graj('krok', 0.5) });
 
     this.pokazPoziom('glowne', false);
     this.klawiatura();
@@ -226,19 +239,38 @@ export class MenuScene extends Phaser.Scene {
 
   // ——————————————————————————————————————————————— logo
 
+  /**
+   * Logo to sztandar na drążku, zawieszony nad wioską — przedmiot, nie
+   * napis (patrz `sztandar` w tools/menu_wczytaj.py). Kołysze się na linach
+   * wokół drążka, bardzo wolno: wiatr o zmierzchu, nie wichura.
+   */
   private logo() {
-    const logo = this.add.image(480, 132, 'menu-logo').setDepth(Z.logo);
-    // Błyski na literach — jak odbicie słońca na złocie. Punkt losujemy
-    // w górnej połowie logo (litery, nie wstęga) i tylko tam, gdzie tekstura
-    // jest nieprzezroczysta, żeby gwiazdka nie zabłysła w powietrzu.
     const tex = this.textures.get('menu-logo').getSourceImage() as HTMLImageElement;
+    const logo = this.add
+      .image(SZTANDAR.x, SZTANDAR.y, 'menu-logo')
+      .setOrigin(0.5, SZTANDAR.drazekY / tex.height)
+      .setScale(SZTANDAR.skala)
+      .setDepth(Z.logo);
+    this.tweens.add({
+      targets: logo,
+      angle: { from: -0.6, to: 0.6 },
+      duration: 4200,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    // Błyski na złotej nici liter. Punkt losujemy tylko tam, gdzie piksel
+    // jest złoty (jasny, ciepły) — gwiazdka na czerwonym suknie wyglądałaby
+    // na błąd, a w powietrzu obok sztandaru jeszcze gorzej.
     const blysk = () => {
-      for (let proba = 0; proba < 20; proba++) {
-        const px = Phaser.Math.Between(40, tex.width - 40);
-        const py = Phaser.Math.Between(30, tex.height * 0.66);
-        if ((this.textures.getPixelAlpha(px, py, 'menu-logo') ?? 0) < 250) continue;
+      for (let proba = 0; proba < 30; proba++) {
+        const px = Phaser.Math.Between(60, tex.width - 60);
+        const py = Phaser.Math.Between(SZTANDAR.drazekY + 20, tex.height - 60);
+        const c = this.textures.getPixel(px, py, 'menu-logo');
+        if (!c || c.alpha < 250 || c.red < 220 || c.green < 150 || c.blue > 150) continue;
+        const k = SZTANDAR.skala;
         const g = this.add
-          .image(logo.x - tex.width / 2 + px, logo.y - tex.height / 2 + py, TEX.gwiazdka)
+          .image(logo.x + (px - tex.width / 2) * k, logo.y + (py - SZTANDAR.drazekY) * k, TEX.gwiazdka)
           .setBlendMode(Phaser.BlendModes.ADD)
           .setTint(0xfff6d0)
           .setScale(0)
@@ -255,7 +287,7 @@ export class MenuScene extends Phaser.Scene {
         return;
       }
     };
-    this.time.addEvent({ delay: 650, loop: true, callback: blysk });
+    this.time.addEvent({ delay: 900, loop: true, callback: blysk });
     this.data.set('logo', logo);
   }
 
@@ -266,6 +298,7 @@ export class MenuScene extends Phaser.Scene {
     // Czubek daszka w teksturze: środek w poziomie, 16 px od góry (margines
     // na cień z tools/menu_wczytaj.py).
     slup.setOrigin(0.5, 16 / slup.height);
+    this.latarnia();
 
     // Zaproszenie: miękki złoty blask za „Nową grą", dopóki gracz niczego
     // nie wskazał. Pierwsze pytanie dziecka przed menu brzmi „gdzie się
@@ -292,15 +325,26 @@ export class MenuScene extends Phaser.Scene {
         .text(srodek, 0, '', { fontFamily: KROJ.szyld, fontSize: `${d.kroj}px`, fontStyle: '900' })
         .setOrigin(0.5);
       const podpis = this.add
-        .text(srodek, 0, '', { fontFamily: KROJ.tekst, fontSize: '14px', color: '#4a2a12' })
+        .text(srodek, 0, '', { fontFamily: KROJ.tekst, fontSize: '15px', color: '#4a2a12' })
         .setOrigin(0.5);
+      // Kłódka wisi na gwoździu przy górnym brzegu, przed grotem — widać ją
+      // tylko na desce nieczynnej.
+      const klodka = this.add
+        .image(d.w - grot - 30, -d.h / 2 - 4, 'menu-klodka')
+        .setOrigin(0.5, 0.08)
+        .setVisible(false);
+      // Deski niżej są dalej od latarni — ciemniejsze drewno (napis nie,
+      // napis ma zostać czytelny). Ten sam spadek światła, co na tle.
+      const mrok = Phaser.Display.Color.GetColor(255 - i * 16, 255 - i * 20, 255 - i * 24);
+      zwykla.setTint(mrok);
+      szara.setTint(mrok);
       // Strefa kliknięcia = cała deska. Osobna strefa w kontenerze, a nie
       // `setInteractive` na kontenerze: kontener ma początek na lewym końcu
       // deski (tam jest oś obrotu — gwoździe), a jego pole trafień liczy się
       // od środka i wypadałoby pół deski w bok.
       const strefa = this.add.zone(d.w / 2, 0, d.w, d.h).setInteractive({ useHandCursor: true });
       const kont = this.add
-        .container(x, d.y, [zwykla, jasna, szara, napis, podpis, strefa])
+        .container(x, d.y, [zwykla, jasna, szara, napis, podpis, klodka, strefa])
         .setAngle(d.kat)
         .setDepth(Z.deski + (DESKI.length - i) * 0.01);
       strefa.on('pointerover', () => this.ustawWybor(i, true));
@@ -308,8 +352,36 @@ export class MenuScene extends Phaser.Scene {
         if (this.wybor === i) this.ustawWybor(-1, true);
       });
       strefa.on('pointerdown', () => this.uruchom(i));
-      this.deski.push({ kont, zwykla, jasna, szara, napis, podpis, x, y: d.y });
+      this.deski.push({ kont, zwykla, jasna, szara, napis, podpis, klodka, srodek, x, y: d.y });
     });
+  }
+
+  /**
+   * Latarnia i jej światło. Dwie poświaty: szeroka POD deskami (oświetla
+   * tło wokół drogowskazu, dokłada się do plamy namalowanej w `tlo.jpg`)
+   * i mała, ostra przy szybce. Obie migoczą nierówno — dwa tweeny o różnych
+   * okresach nakładają się tak, że rytm się nie powtarza.
+   */
+  private latarnia() {
+    this.add.image(LATARNIA.x, LATARNIA.y, 'menu-latarnia').setOrigin(0, 0).setDepth(Z.slup + 0.5);
+    const x = LATARNIA.x + LATARNIA.szybkaX;
+    const y = LATARNIA.y + LATARNIA.szybkaY;
+    const szeroka = this.add
+      .image(x, y + 30, TEX.blask)
+      .setDisplaySize(420, 360)
+      .setTint(0xffa040)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setAlpha(0.28)
+      .setDepth(Z.slup - 1);
+    const rdzen = this.add
+      .image(x, y, TEX.blask)
+      .setDisplaySize(70, 80)
+      .setTint(0xffd27a)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setAlpha(0.8)
+      .setDepth(Z.slup + 0.6);
+    this.tweens.add({ targets: szeroka, alpha: 0.2, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: rdzen, alpha: 0.55, scale: rdzen.scale * 0.92, duration: 170, yoyo: true, repeat: -1, repeatDelay: 380 });
   }
 
   /** Pozycje menu na danym poziomie — liczone przy każdym wejściu, bo zapis mógł się zmienić. */
@@ -445,13 +517,17 @@ export class MenuScene extends Phaser.Scene {
   /** Trzy wyglądy deski: zwykła (wyryty ciemny napis), wskazana (złoty, świecący), nieczynna. */
   private pomalujDeske(d: Deska, wskazana: boolean) {
     const czynna = d.pozycja?.wlaczona ?? false;
+    d.klodka.setVisible(!czynna);
+    const x = czynna ? d.srodek : d.srodek - 26;
+    d.napis.setX(x);
+    d.podpis.setX(x);
     d.zwykla.setVisible(czynna && !wskazana);
     d.jasna.setVisible(czynna && wskazana);
     d.szara.setVisible(!czynna);
     if (!czynna) {
       d.napis.setStroke('#000000', 0).setShadow(0, 1.5, 'rgba(255,255,255,0.45)', 0, false, true);
-      d.napis.setFill('#3c3630');
-      d.napis.setAlpha(0.75);
+      d.napis.setFill('#2e2924');
+      d.napis.setAlpha(0.85);
       d.podpis.setColor('#2a241e').setAlpha(1);
       return;
     }
@@ -553,6 +629,8 @@ export class MenuScene extends Phaser.Scene {
       // Nieczynna deska kiwa się „nie" — kliknięcie bez żadnej odpowiedzi
       // dziecko odbiera jako zepsutą grę i klika dalej.
       this.tweens.add({ targets: d.kont, angle: DESKI[i].kat + 3, duration: 60, yoyo: true, repeat: 2 });
+      this.tweens.add({ targets: d.klodka, angle: { from: 18, to: 0 }, duration: 700, ease: 'Elastic.easeOut' });
+      this.graj('krok', 0.4);
       return;
     }
     this.graj('wejscie', 0.45);
@@ -727,10 +805,11 @@ export class MenuScene extends Phaser.Scene {
   /** Logo spada z góry, deski wjeżdżają po kolei — menu „rozkłada się" na oczach. */
   private wejscie() {
     this.zajety = true;
+    // Sztandar opuszcza się na linach z góry i dobija z lekkim sprężynowaniem.
     const logo = this.data.get('logo') as Phaser.GameObjects.Image;
     const yLogo = logo.y;
-    logo.setAlpha(0).setY(yLogo - 40);
-    this.tweens.add({ targets: logo, alpha: 1, y: yLogo, duration: 700, ease: 'Back.easeOut', delay: 150 });
+    logo.setY(yLogo - 260);
+    this.tweens.add({ targets: logo, y: yLogo, duration: 900, ease: 'Back.easeOut', delay: 120 });
     this.deski.forEach((d, i) => {
       const cel = d.kont.alpha;
       d.kont.setAlpha(0).setX(d.x - 40);

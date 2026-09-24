@@ -16,15 +16,26 @@ szukanie szyldów po obrazku, a strzałka znaczy „tędy" bez słów).
 
 | Plik w `public/menu/` | Skąd |
 |---|---|
-| `tlo.jpg` | `tools/wsad/miasto-kotwica.png` — obraz z modelu, który był kotwicą stylu miasta i do gry wcześniej nie wszedł; przycięty, z winietą |
-| `logo.png` | renderowane w `tools/menu_wczytaj.py` (Cinzel Decorative, fazka z mapy wysokości, wstęga) |
+| `tlo.jpg` | `tools/wsad/miasto-kotwica.png` — obraz z modelu, który był kotwicą stylu miasta i do gry wcześniej nie wszedł; przycięty i przemalowany w zmierzch: głębia ostrości, zgaszone światło dzienne z ocalonymi oknami i latarniami, plama światła od latarni drogowskazu |
+| `logo.png` | renderowany w `tools/menu_wczytaj.py` sztandar: sukno z fałdami, litery namalowane na suknie (Cinzel Decorative), drewniany drążek, liny |
 | `deska-*.png`, `slup.png`, `deseczka*.png`, `tabliczka*.png` | renderowane tamże: słoje z szumu, fazka, gwoździe |
+| `latarnia.png`, `klodka.png` | renderowane tamże: kute żelazo, szybka z płomieniem, mosiężna kłódka na łańcuszku |
+| `stworek.png` | Verdiko z `assets/pokemon/00096.png` (Pixmon Index, domena publiczna), przemalowany w zmierzch: nasycenie, światło krawędziowe od latarni, zmiękczone kontury |
 | `pergamin.png` | renderowany tamże: papier z przebarwieniami, wałki |
 | `*.woff2`, `OFL.txt` | kroje Cinzel i Fredoka (SIL OFL) z `tools/fonty/` |
 
 Wszystko odtwarza `python3 tools/menu_wczytaj.py` (zależności w jego
 nagłówku). Napisów na deskach nie ma w plikach — kładzie je gra, bo te same
 deski niosą raz „Nowa gra", raz „Kampania", a „Wczytaj" bywa wyszarzone.
+
+**Runda 2.** Ślepy krytyk pierwszej wersji (dzień, pełne słońce, złote logo
+na wstążce, trzy stworki z gry) napisał: „równo zajęte od brzegu do brzegu,
+bez punktu skupienia; logo to ogólny błyszczący font, który pływa nad
+drzewem; stworki to płaskie naklejki; szara deska wygląda na zepsutą".
+Odpowiedzią nie było nic nowego do obrazka, tylko światło: zmierzch, w którym
+jasno jest przy drogowskazie (latarnia) i w oknach, logo jako przedmiot
+zawieszony nad wioską, jeden stworek wmalowany w to samo światło zamiast
+trzech naklejek i kłódka na nieczynnej desce.
 
 **Czemu logo i deski nie są z modelu.** Przy budowie menu (2026-09-24) konto
 API Gemini odpowiadało `RESOURCE_EXHAUSTED` („prepayment credits are

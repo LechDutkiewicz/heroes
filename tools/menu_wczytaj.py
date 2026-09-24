@@ -328,12 +328,27 @@ def slup(w: int, h: int, ziarno: int) -> Image.Image:
 
 # ————————————————————————————————————————————————————————— tło
 
-def tlo() -> Image.Image:
-    """Kotwica miasta przycięta do płótna, z winietą i przyciemnieniem pod logo.
+#: Latarnia na drogowskazie — źródło plamy światła na tle (MenuScene: LATARNIA).
+LATARNIA = (176, 319)
 
-    Winieta nie jest ozdobą: bez niej jasny, równo oświetlony obrazek nie ma
-    środka i oko nie wie, gdzie patrzeć. Heroes 2 ma to za darmo (ciemna
-    uliczka z jasnym prześwitem), my musimy to dołożyć.
+
+def tlo() -> Image.Image:
+    """Kotwica miasta o zmierzchu, z głębią ostrości i plamą światła przy drogowskazie.
+
+    Pierwsza runda przegrała ze ślepym krytykiem jednym zdaniem: „równo
+    zajęte od brzegu do brzegu, bez punktu skupienia — drogowskaz, staw
+    i domek na drzewie walczą o uwagę". Obrazek jest w pełnym słońcu, więc
+    wszystko jest tak samo jasne i tak samo ostre. Heroes 2 ma to za darmo:
+    ciemna uliczka, a światło tylko tam, gdzie ma patrzeć oko.
+
+    Stąd trzy zabiegi, w tej kolejności:
+    1. Głębia ostrości — dalekie tło i prawa połowa lekko rozmyte; ostro
+       zostaje to, co blisko drogowskazu.
+    2. Zmierzch — całość przygaszona i schłodzona, ale okna i latarnie
+       (jasne ORAZ ciepłe piksele) zostają jasne. Świecące okna w ciemnej
+       wiosce to najmocniejszy „dom" w całym obrazku.
+    3. Plama ciepłego światła od latarni na słupie drogowskazu — jedyne
+       miejsce, które jest jaśniej oświetlone niż reszta. Tam idzie oko.
     """
     im = Image.open(WSAD / 'miasto-kotwica.png').convert('RGB')
     s = H / im.height
@@ -342,17 +357,28 @@ def tlo() -> Image.Image:
     im = im.crop((x0, 0, x0 + W, H))
     a = np.asarray(im, np.float32) / 255
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-    # Winieta eliptyczna, środek przesunięty w prawo — tam jest „świat".
-    d = np.hypot((xx - W * 0.6) / (W * 0.72), (yy - H * 0.55) / (H * 0.75))
-    win = 1 - 0.42 * smooth((d - 0.55) / 0.6)
-    # Lewa kolumna (drogowskaz i logo) lekko przygaszona, żeby deski
-    # odcinały się od tła, a nie ginęły wśród innych desek i płotów.
-    lewa = 1 - 0.18 * smooth((380 - xx) / 300) * smooth((yy - 120) / 200)
-    gora = 1 - 0.3 * smooth((150 - yy) / 150) * smooth((620 - xx) / 300)
-    a = a * (win * lewa * gora)[..., None]
-    # Ciepły filtr złotej godziny — tło jest dziś w południowym słońcu.
-    a = a * np.array([1.04, 0.99, 0.9], np.float32)
-    return Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8))
+    waga = np.array([0.3, 0.59, 0.11], np.float32)
+
+    lum = a @ waga
+    cieply = a[..., 0] - a[..., 2]
+    swiatla = smooth((lum - 0.62) / 0.25) * smooth((cieply - 0.18) / 0.2)
+    swiatla = ndimage.gaussian_filter(swiatla, 1.2)
+
+    rozm = np.asarray(im.filter(ImageFilter.GaussianBlur(2.4)), np.float32) / 255
+    ostrosc = smooth((yy - 150) / 180) * smooth((560 - xx) / 380)
+    ostrosc = np.maximum(ostrosc, smooth((yy - 400) / 220) * 0.55)
+    a = rozm + (a - rozm) * ostrosc[..., None]
+
+    szar = (a @ waga)[..., None]
+    zm = (a * 0.5 + szar * 0.12) * np.array([0.92, 0.86, 1.0], np.float32)
+    lx, ly = LATARNIA
+    d = np.hypot(xx - lx - 60, (yy - ly - 150) / 1.3)
+    plama = np.exp(-(d / 260) ** 2)
+    zm = zm * (1 + plama[..., None] * np.array([1.0, 0.72, 0.36], np.float32))
+    dv = np.hypot((xx - W * 0.42) / (W * 0.72), (yy - H * 0.52) / (H * 0.72))
+    zm *= (1 - 0.5 * smooth((dv - 0.45) / 0.6))[..., None]
+    wynik = zm + (a * 1.05 - zm) * swiatla[..., None]
+    return Image.fromarray((np.clip(wynik, 0, 1) * 255 + 0.5).astype(np.uint8))
 
 
 # ————————————————————————————————————————————————————————— logo
@@ -400,135 +426,161 @@ def napisMaska(tekst: str, kroje, rozstaw: float = 0) -> Image.Image:
     return im.crop(im.getbbox())
 
 
-def wstega(szer: int, wys: int, ziarno: int) -> tuple[np.ndarray, np.ndarray]:
-    """Czerwona wstęga pod tytułem: środek z przodu, końce zawinięte do tyłu.
+#: Wymiary sztandaru z logo (przed marginesem na cień) i wysokość drążka.
+SZTANDAR_W, SZTANDAR_H, DRAZEK_Y = 600, 300, 40
 
-    Zwraca (rgb, alfa) w nadpróbkowaniu. Końce są ciemniejsze i schowane
-    za środkiem — to zagięcie mówi „materiał", płaski prostokąt mówi „pasek".
+
+def sztandar() -> Image.Image:
+    """Logo jako PRZEDMIOT: sztandar z sukna na drążku, zawieszony na linach.
+
+    Pierwsza wersja była złotym napisem na wstążce, położonym na obrazek —
+    krytyk: „ogólny błyszczący font, pływa nad drzewem, pasowałby do każdej
+    gry na telefon". W Heroes 2 logo jest chorągwią rozpiętą nad uliczką:
+    ma drążek, fałdy i cień, więc należy do świata. Tu to samo:
+
+    - sukno ma fałdy (pasy jasności w poprzek, szersze u dołu, gdzie
+      materiał swobodnie wisi) i splot (drobny szum w dwóch kierunkach);
+    - litery są NAMALOWANE na suknie — cieniuje je ta sama funkcja fałd, co
+      materiał, więc zginają się razem z nim, a nie leżą na wierzchu;
+    - drążek jest drewniany, z gałkami, a liny idą w górę poza kadr;
+    - dół sztandaru jest cięty w trzy ogony ze złotą lamówką.
     """
-    W3, H3 = szer * NS, wys * NS
-    ogon = int(wys * 1.1) * NS
-    pas = int(wys * 0.66) * NS
-    zakl = 14 * NS  # o ile końce są niżej od środka
-    im_przod = Image.new('L', (W3, H3), 0)
-    im_tyl = Image.new('L', (W3, H3), 0)
-    dp, dt = ImageDraw.Draw(im_przod), ImageDraw.Draw(im_tyl)
-    y0 = (H3 - pas) // 2 - zakl // 2
-    dp.rectangle((ogon * 0.75, y0, W3 - ogon * 0.75, y0 + pas), fill=255)
-    for lewy in (True, False):
-        x_in = ogon * 1.2 if lewy else W3 - ogon * 1.2
-        x_out = P if lewy else W3 - P
-        ya = y0 + zakl
-        wciecie = ogon * 0.38 * (1 if lewy else -1)
-        dt.polygon([
-            (x_in, ya), (x_out, ya), (x_out + wciecie, ya + pas / 2), (x_out, ya + pas),
-            (x_in, ya + pas),
-        ], fill=255)
-    przod = (ndimage.gaussian_filter(np.asarray(im_przod, np.float32) / 255, NS) > 0.5).astype(np.float32)
-    tyl = (ndimage.gaussian_filter(np.asarray(im_tyl, np.float32) / 255, NS) > 0.5).astype(np.float32)
-    yy, xx = np.mgrid[0:H3, 0:W3].astype(np.float32)
-    # Sukno: fałdy w poprzek jako łagodna fala jasności.
-    fald = 0.5 + 0.5 * np.sin(xx / (38 * NS) * math.pi + szum(H3, W3, 80 * NS, 80 * NS, ziarno, 2) * 3)
-    wys_pas = np.clip((yy - y0) / pas, 0, 1)
-    cyl = 0.75 + 0.35 * np.sin(wys_pas * math.pi) - 0.18 * wys_pas
-    czerw = paleta(np.clip(cyl * (0.8 + 0.25 * fald), 0, 1.2) / 1.2, [
-        (0.0, kolor(70, 8, 10)), (0.45, kolor(150, 22, 24)), (0.8, kolor(206, 46, 38)), (1.0, kolor(240, 96, 70)),
+    Wn, Hn = SZTANDAR_W * NS, SZTANDAR_H * NS
+    yy, xx = np.mgrid[0:Hn, 0:Wn].astype(np.float32)
+    dy = DRAZEK_Y * NS
+
+    # — kształt sukna
+    lewo, prawo = 48 * NS, Wn - 48 * NS
+    ogon, wciecie, srodek = 262 * NS, 236 * NS, 292 * NS
+    im = Image.new('L', (Wn, Hn), 0)
+    ImageDraw.Draw(im).polygon(
+        [
+            (lewo, dy), (prawo, dy), (prawo, ogon),
+            (Wn * 0.72, wciecie), (Wn / 2, srodek), (Wn * 0.28, wciecie), (lewo, ogon),
+        ],
+        fill=255,
+    )
+    sukno = np.asarray(im, np.float32) / 255
+    # Dolny brzeg faluje razem z fałdami — prosto cięty materiał nie wisi prosto.
+    fal = np.sin(xx / (48 * NS) * math.pi + 0.7) * 6 * NS * smooth((yy - dy) / (200 * NS))
+    sukno = ndimage.map_coordinates(sukno, [yy - fal, xx], order=1)
+    sukno = (ndimage.gaussian_filter(sukno, 0.8 * NS) > 0.5).astype(np.float32)
+
+    # — fałdy: funkcja jasności zależna od x, mocniejsza ku dołowi
+    t = np.clip((yy - dy) / (srodek - dy), 0, 1)
+    rng = np.random.default_rng(4)
+    fald = np.zeros_like(xx)
+    for lam, amp in ((96, 0.6), (51, 0.32), (27, 0.14)):
+        fald += amp * np.sin(xx / (lam * NS) * 2 * math.pi + rng.uniform(0, 6)) * (0.35 + 0.65 * t)
+    # Marszczenie przy drążku — gęste, krótkie fałdki tuż pod nim.
+    fald += 0.5 * np.sin(xx / (9 * NS) * 2 * math.pi) * np.exp(-(yy - dy) / (10 * NS))
+    # Profil ostrzejszy niż sinus: grzbiet fałdy jest wąski i jasny, dolina
+    # szeroka i ciemna — tak wygląda ciężkie sukno, a nie falująca tafla.
+    fald = np.sign(fald) * np.abs(fald) ** 0.7
+    swiatlo = 0.84 + 0.42 * fald
+    # Boki sukna zawijają się do tyłu (ciemniej), a światło pada z lewej —
+    # od latarni drogowskazu i zachodniego nieba; prawy brzeg jest w cieniu.
+    wzdluz = np.clip((xx - lewo) / (prawo - lewo), 0, 1)
+    swiatlo *= (0.62 + 0.38 * np.clip(np.sin(wzdluz * math.pi), 0, 1) ** 0.35) * (1.08 - 0.3 * wzdluz)
+    splot = (szum(Hn, Wn, 1.2 * NS, 40 * NS, 8, 1) + szum(Hn, Wn, 40 * NS, 1.2 * NS, 9, 1)) * 0.5
+    swiatlo *= 0.97 + 0.06 * splot
+    # Góra pod drążkiem w cieniu drążka, dół cieplej doświetlony latarnią.
+    swiatlo *= 0.72 + 0.28 * smooth((yy - dy) / (30 * NS))
+    czerwien = paleta(np.clip(swiatlo - 0.3, 0, 1) / 0.95, [
+        (0.0, kolor(60, 6, 12)),
+        (0.4, kolor(128, 18, 26)),
+        (0.75, kolor(178, 34, 36)),
+        (1.0, kolor(222, 76, 60)),
     ])
-    rgb = np.where(tyl[..., None] > 0.5, czerw * 0.55, 0)
-    rgb = np.where(przod[..., None] > 0.5, czerw, rgb)
-    # Złota lamówka wzdłuż krawędzi przodu.
-    d = odleglosc(przod)
-    lam = np.exp(-((d - 3.2 * NS) / (1.1 * NS)) ** 2) * (przod > 0.5)
-    rgb = lerp(rgb, kolor(255, 206, 96), (lam * 0.85)[..., None])
-    alfa = np.maximum(przod, tyl)
-    krawedz = np.exp(-odleglosc(alfa) / (1.2 * NS))
-    rgb = lerp(rgb, kolor(40, 6, 6), (krawedz * 0.8)[..., None])
-    # Cień przodu na zawiniętych końcach.
-    cien_p = ndimage.gaussian_filter(przod, 5 * NS)
-    rgb = np.where((przod < 0.5)[..., None], rgb * (1 - 0.6 * cien_p)[..., None], rgb)
-    return rgb, alfa
 
+    # — złota lamówka wzdłuż brzegu (poza górą, którą zakrywa drążek)
+    dist = odleglosc(sukno)
+    lam = np.exp(-((dist - 7 * NS) / (1.6 * NS)) ** 2) * (yy > dy + 8 * NS)
+    krawedz = np.exp(-dist / (1.3 * NS))
+    rgb = lerp(czerwien, kolor(236, 180, 70) * swiatlo[..., None], (lam * 0.9)[..., None])
+    rgb = lerp(rgb, kolor(40, 6, 8), (krawedz * 0.7)[..., None])
 
-def logo() -> Image.Image:
-    """„POKEMON / HEROES" na czerwonej wstędze z podtytułem kampanii.
+    # — litery namalowane na suknie
+    f_duzy = ImageFont.truetype(str(FONTY / 'cinzel-decorative-900.ttf'), 86 * NS)
+    f_maly = ImageFont.truetype(str(FONTY / 'cinzel-decorative-900.ttf'), 46 * NS)
+    kroje = krojWoff('cinzel-latin-900.woff2', 'cinzel-latin-ext-900.woff2', rozmiar=19 * NS)
+    napisy = np.zeros((Hn, Wn), np.float32)
+    lokal = np.zeros((Hn, Wn), np.float32)
+    podtytul = np.zeros((Hn, Wn), np.float32)
+    y = dy + 18 * NS
+    for tekst, font, cel, odstep in (
+        ('POKEMON', f_maly, napisy, -2),
+        ('HEROES', f_duzy, napisy, 8),
+        ('KSIĘŻYCOWA GROTA', kroje, podtytul, 0),
+    ):
+        m = np.asarray(napisMaska(tekst, font, 2 * NS), np.float32) / 255
+        h, w = m.shape
+        x = (Wn - w) // 2
+        cel[y : y + h, x : x + w] = np.maximum(cel[y : y + h, x : x + w], m)
+        if cel is napisy:
+            lokal[y : y + h, x : x + w] = np.linspace(0, 1, h)[:, None]
+        y += h + odstep * NS
 
-    Litery: warstwy od spodu — ciemny rant zewnętrzny, kremowy rant,
-    ciemnoczerwona obwódka, złoto z fazką. Tak samo zbudowane jest logo
-    Heroes 2 i dlatego czyta się na każdym tle, także na jasnym niebie
-    i na liściach. Wstęga z podtytułem („Księżycowa Grota" — nazwa
-    kampanii) robi z napisu logo: sam napis to tylko tytuł strony.
-    """
-    f_duzy = ImageFont.truetype(str(FONTY / 'cinzel-decorative-900.ttf'), 92 * NS)
-    f_maly = ImageFont.truetype(str(FONTY / 'cinzel-decorative-900.ttf'), 50 * NS)
-    gora = napisMaska('POKEMON', f_maly, 2 * NS)
-    dol = napisMaska('HEROES', f_duzy, 1 * NS)
-    m = 30 * NS
-    wstega_w, wstega_h = 470, 60
-    szer = max(gora.width, dol.width, wstega_w * NS) + m * 2
-    odstep = -4 * NS
-    y_dol = m + gora.height + odstep
-    y_wst = y_dol + dol.height - 10 * NS
-    wys = y_wst + wstega_h * NS + m
-    maska_im = Image.new('L', (szer, wys), 0)
-    maska_im.paste(gora, ((szer - gora.width) // 2, m))
-    maska_im.paste(dol, ((szer - dol.width) // 2, y_dol))
-    litery = np.asarray(maska_im, np.float32) / 255
-
-    # Fazka z odległości od brzegu litery: wąska, stroma — jak odlew.
-    dist = ndimage.distance_transform_edt(litery > 0.5).astype(np.float32)
-    faz = 3.6 * NS
-    wysok = smooth(dist / faz) * faz + np.minimum(dist, 10 * NS) * 0.25
-    sw = oswietlenie(wysok, 1.3)
-    lokal = np.zeros((wys, szer), np.float32)
-    for y1, h1 in ((m, gora.height), (y_dol, dol.height)):
-        lokal[y1 : y1 + h1] = np.linspace(0, 1, h1)[:, None]
+    # Obwódka i cień liter na suknie (farba ma grubość, materiał nie).
+    zew = ndimage.distance_transform_edt(napisy < 0.5).astype(np.float32)
+    obw = smooth((3.2 * NS - zew) / (0.7 * NS))
+    cien_l = ndimage.gaussian_filter(ndimage.shift(obw, (3 * NS, 2 * NS), order=1), 2 * NS)
+    rgb *= (1 - 0.55 * cien_l)[..., None]
+    rgb = lerp(rgb, kolor(52, 16, 6) * swiatlo[..., None], obw[..., None])
+    wew = ndimage.distance_transform_edt(napisy > 0.5).astype(np.float32)
+    faz = oswietlenie(smooth(wew / (2.5 * NS)) * 2.5 * NS, 0.9)
     zloto = paleta(lokal, [
-        (0.0, kolor(255, 246, 196)),
-        (0.35, kolor(255, 214, 92)),
-        (0.62, kolor(236, 150, 34)),
-        (1.0, kolor(170, 76, 14)),
+        (0.0, kolor(255, 240, 180)),
+        (0.45, kolor(246, 196, 84)),
+        (1.0, kolor(196, 110, 26)),
     ])
-    rgb = zloto * (0.55 + 0.75 * sw)[..., None]
-    blik = np.clip((sw - 0.9) / 0.1, 0, 1) ** 2
-    rgb = lerp(rgb, kolor(255, 255, 240), (blik * 0.7)[..., None])
+    zloto = zloto * (0.7 + 0.45 * faz)[..., None] * swiatlo[..., None] * 1.08
+    rgb = lerp(rgb, zloto, napisy[..., None])
 
-    zew = ndimage.distance_transform_edt(litery < 0.5).astype(np.float32)
+    # Podtytuł kremowy, z ozdobnikami — rombami po bokach.
+    rgb = lerp(rgb, kolor(40, 6, 8), (ndimage.shift(podtytul, (1.5 * NS, 0), order=1) * 0.8)[..., None])
+    rgb = lerp(rgb, kolor(252, 232, 190) * swiatlo[..., None], podtytul[..., None])
+    rys = np.nonzero(podtytul.max(axis=0) > 0.5)[0]
+    wiersze = np.nonzero(podtytul.max(axis=1) > 0.5)[0]
+    if len(rys) and len(wiersze):
+        cy = (wiersze[0] + wiersze[-1]) / 2
+        for cx in (rys[0] - 22 * NS, rys[-1] + 22 * NS):
+            romb = (np.abs(xx - cx) + np.abs(yy - cy) * 1.4) < 6 * NS
+            rgb = np.where(romb[..., None], kolor(236, 180, 70) * swiatlo[..., None], rgb)
 
-    def rant(px: float) -> np.ndarray:
-        return smooth((px * NS - zew) / (0.8 * NS))
+    alfa = sukno.copy()
 
-    obw1, obw2, obw3 = rant(4.0), rant(7.0), rant(9.5)
-    yy = np.linspace(0, 1, wys, dtype=np.float32)[:, None] * np.ones((1, szer), np.float32)
-    kol = np.zeros((wys, szer, 3), np.float32)
-    kol[:] = kolor(46, 18, 8)
-    krem = kolor(255, 236, 190) * (0.75 + 0.3 * (1 - yy))[..., None]
-    kol = lerp(kol, krem, obw2[..., None])
-    kol = lerp(kol, kolor(120, 24, 16), obw1[..., None])
-    kol = lerp(kol, rgb, litery[..., None])
+    # — drążek: drewniany walec z gałkami
+    r = 9 * NS
+    d_l, d_p = 22 * NS, Wn - 22 * NS
+    walec = ((np.abs(yy - dy) < r) & (xx > d_l) & (xx < d_p)).astype(np.float32)
+    galki = ((np.hypot(xx - d_l, yy - dy) < r * 1.55) | (np.hypot(xx - d_p, yy - dy) < r * 1.55)).astype(np.float32)
+    drewno = slojeDeski(Hn, Wn, 21) * 0.8
+    prof = np.clip(1 - ((yy - dy) / r) ** 2, 0, 1)
+    rgb_d = drewno * (0.35 + 0.85 * np.sqrt(prof) * (0.8 - 0.35 * (yy - dy) / r))[..., None]
+    kula = np.minimum(np.hypot(xx - d_l, yy - dy), np.hypot(xx - d_p, yy - dy)) / (r * 1.55)
+    rgb_g = kolor(150, 104, 40) * (0.4 + 0.9 * np.sqrt(np.clip(1 - kula**2, 0, 1)))[..., None]
+    blik = np.exp(-(np.minimum(np.hypot(xx - d_l + 4 * NS, yy - dy + 5 * NS), np.hypot(xx - d_p + 4 * NS, yy - dy + 5 * NS)) / (3 * NS)) ** 2)
+    rgb_g = lerp(rgb_g, kolor(255, 236, 170), (blik * 0.8)[..., None])
+    # Cień drążka na suknie.
+    cien_d = np.exp(-((yy - dy - r - 2 * NS) / (4 * NS)) ** 2) * (yy > dy)
+    rgb *= (1 - 0.5 * cien_d)[..., None]
+    rgb = np.where(walec[..., None] > 0, rgb_d, rgb)
+    rgb = np.where(galki[..., None] > 0, rgb_g, rgb)
+    alfa = np.maximum(alfa, np.maximum(walec, galki))
 
-    # Wstęga POD literami: najpierw ona, potem litery na wierzchu.
-    w_rgb, w_a = wstega(wstega_w, wstega_h, 5)
-    x_w = (szer - w_rgb.shape[1]) // 2
-    tlo_rgb = np.zeros_like(kol)
-    tlo_a = np.zeros((wys, szer), np.float32)
-    tlo_rgb[y_wst : y_wst + w_rgb.shape[0], x_w : x_w + w_rgb.shape[1]] = w_rgb
-    tlo_a[y_wst : y_wst + w_a.shape[0], x_w : x_w + w_a.shape[1]] = w_a
-    # Podtytuł na wstędze — kremowy, z ciemnym cieniem pod spodem.
-    kroje = krojWoff('cinzel-latin-900.woff2', 'cinzel-latin-ext-900.woff2', rozmiar=21 * NS)
-    pod = napisMaska('KSIĘŻYCOWA GROTA', kroje, 3 * NS)
-    pm = np.zeros((wys, szer), np.float32)
-    px = (szer - pod.width) // 2
-    py = y_wst + (wstega_h * NS - pod.height) // 2 - 5 * NS
-    pm[py : py + pod.height, px : px + pod.width] = np.asarray(pod, np.float32) / 255
-    pcien = ndimage.shift(pm, (1.5 * NS, 0), order=1)
-    tlo_rgb = lerp(tlo_rgb, kolor(50, 8, 6), (pcien * 0.9)[..., None])
-    tlo_rgb = lerp(tlo_rgb, kolor(255, 240, 200), pm[..., None])
+    # — liny w górę, poza kadr
+    for x_dol, x_gora in ((70 * NS, 30 * NS), (Wn - 70 * NS, Wn - 30 * NS)):
+        u = np.clip(yy / dy, 0, 1)
+        xl = x_gora + (x_dol - x_gora) * u
+        lina = (np.abs(xx - xl) < 2.2 * NS) & (yy < dy)
+        skret = 0.7 + 0.3 * np.sin((yy + (xx - xl) * 2) / (2.2 * NS) * math.pi)
+        rgb = np.where(lina[..., None], kolor(150, 118, 76) * skret[..., None], rgb)
+        alfa = np.maximum(alfa, lina.astype(np.float32))
 
-    alfa_l = obw3
-    rgb_all = lerp(tlo_rgb, kol, alfa_l[..., None])
-    alfa = np.maximum(alfa_l, tlo_a)
-    im = zmniejsz(rgba(rgb_all, alfa))
-    return cien(im, -4, 7, 7, 0.7, 24)
+    alfa = ndimage.gaussian_filter(alfa, 0.5 * NS)
+    im = zmniejsz(rgba(rgb, np.clip(alfa * 1.2, 0, 1)))
+    return cien(im, 6, 11, 8, 0.6, 24)
 
 
 # ————————————————————————————————————————————————————————— pergamin
@@ -607,6 +659,177 @@ def tabliczka(r: int, ziarno: int, podswietlona: bool = False) -> Image.Image:
     return zmniejsz(rgba(rgb, maska))
 
 
+# ————————————————————————————————————————————————————————— latarnia, kłódka, stworek
+
+def _rysuj(w: int, h: int, fn) -> np.ndarray:
+    """Maska z rysunku PIL w nadpróbkowaniu — kształty żelaza są prostsze do narysowania niż do policzenia."""
+    im = Image.new('L', (w * NS, h * NS), 0)
+    fn(ImageDraw.Draw(im), NS)
+    return np.asarray(im, np.float32) / 255
+
+
+def zelazo(maska: np.ndarray, wypuklosc: float = 2.0) -> np.ndarray:
+    """Kute żelazo: prawie czarne, z chłodnym blikiem na krawędziach od światła."""
+    d = odleglosc(maska)
+    wys = smooth(d / (wypuklosc * NS)) * wypuklosc * NS
+    sw = oswietlenie(wys, 1.2)
+    return lerp(kolor(26, 22, 22), kolor(120, 108, 100), (sw ** 3)[..., None])
+
+
+def latarnia() -> Image.Image:
+    """Latarnia na kutym ramieniu, wisząca nad górną deską drogowskazu.
+
+    To ona „tłumaczy" plamę ciepłego światła na tle (`LATARNIA` w `tlo()`):
+    światło bez źródła wygląda jak filtr, światło z latarni — jak wieczór.
+    Punkt zaczepienia ramienia (słup) to lewy górny róg obrazka + (6, 10).
+    """
+    w, h = 96, 84
+
+    def ramie(d: ImageDraw.ImageDraw, k: int):
+        d.line([(4 * k, 10 * k), (80 * k, 10 * k)], fill=255, width=4 * k)
+        # Wspornik ukośny i ślimacznica — kute ramię, nie rurka.
+        d.line([(6 * k, 30 * k), (40 * k, 11 * k)], fill=255, width=3 * k)
+        d.arc([(34 * k, 12 * k), (52 * k, 30 * k)], 180, 450, fill=255, width=3 * k)
+        d.rectangle([(0, 4 * k), (8 * k, 36 * k)], fill=255)  # obejma na słupie
+        d.line([(76 * k, 10 * k), (76 * k, 22 * k)], fill=255, width=2 * k)  # hak
+
+    def klosz_rama(d: ImageDraw.ImageDraw, k: int):
+        cx = 76 * k
+        d.polygon([(cx - 12 * k, 30 * k), (cx + 12 * k, 30 * k), (cx + 6 * k, 21 * k), (cx - 6 * k, 21 * k)], fill=255)
+        d.rectangle([(cx - 13 * k, 29 * k), (cx + 13 * k, 33 * k)], fill=255)
+        d.rectangle([(cx - 11 * k, 62 * k), (cx + 11 * k, 67 * k)], fill=255)
+        d.polygon([(cx - 7 * k, 67 * k), (cx + 7 * k, 67 * k), (cx, 74 * k)], fill=255)
+        for x in (-11, 0, 11):
+            d.line([(cx + x * k, 33 * k), (cx + x * 0.9 * k, 62 * k)], fill=255, width=2 * k)
+
+    def szklo(d: ImageDraw.ImageDraw, k: int):
+        cx = 76 * k
+        d.polygon([(cx - 11 * k, 33 * k), (cx + 11 * k, 33 * k), (cx + 10 * k, 62 * k), (cx - 10 * k, 62 * k)], fill=255)
+
+    m_ram = _rysuj(w, h, ramie)
+    m_kl = _rysuj(w, h, klosz_rama)
+    m_sz = _rysuj(w, h, szklo)
+    yy, xx = np.mgrid[0 : h * NS, 0 : w * NS].astype(np.float32)
+    # Szkło: płomień w środku, żółty rdzeń przechodzący w pomarańcz przy ramie.
+    dp = np.hypot((xx - 76 * NS) / 1.0, (yy - 49 * NS) / 1.5) / (13 * NS)
+    ogien = paleta(np.clip(dp, 0, 1), [
+        (0.0, kolor(255, 250, 220)), (0.35, kolor(255, 214, 110)), (1.0, kolor(214, 110, 30)),
+    ])
+    rgb = np.zeros((h * NS, w * NS, 3), np.float32)
+    rgb = np.where(m_sz[..., None] > 0.5, ogien, rgb)
+    zel = np.maximum(m_ram, m_kl)
+    rgb = np.where(zel[..., None] > 0.5, zelazo(zel), rgb)
+    # Rama oświetlona od środka: pręty przy szkle łapią pomarańczowy odblask.
+    odbl = np.exp(-(dp * 13 / 16) ** 2) * m_kl
+    rgb = rgb + kolor(120, 60, 10) * odbl[..., None] * 0.8
+    alfa = np.maximum(zel, m_sz)
+    return zmniejsz(rgba(rgb, ndimage.gaussian_filter(alfa, 0.4 * NS)))
+
+
+def klodka() -> Image.Image:
+    """Kłódka na łańcuszku — „Wczytaj" jest zamknięte, a nie zepsute.
+
+    Krytyk pierwszej rundy: „wyszarzona deska z mikroskopijnym podpisem
+    wygląda na zepsutą, a nie celowo wyłączoną". Kłódka to znak, który
+    ośmiolatek zna z każdej gry: tu jeszcze nie wolno, ale kiedyś będzie.
+    """
+    w, h = 44, 60
+
+    def ksztalt(d: ImageDraw.ImageDraw, k: int):
+        d.arc([(10 * k, 16 * k), (34 * k, 42 * k)], 180, 360, fill=255, width=5 * k)
+        d.line([(12 * k, 29 * k), (12 * k, 34 * k)], fill=255, width=5 * k)
+        d.line([(32 * k, 29 * k), (32 * k, 34 * k)], fill=255, width=5 * k)
+
+    def korpus(d: ImageDraw.ImageDraw, k: int):
+        d.rounded_rectangle([(6 * k, 32 * k), (38 * k, 58 * k)], 6 * k, fill=255)
+
+    def ogniwa(d: ImageDraw.ImageDraw, k: int):
+        for i, (x, y) in enumerate(((22, 3), (22, 10))):
+            if i % 2:
+                d.ellipse([((x - 2.5) * k, (y - 4) * k), ((x + 2.5) * k, (y + 4) * k)], outline=255, width=2 * k)
+            else:
+                d.ellipse([((x - 4) * k, (y - 2.5) * k), ((x + 4) * k, (y + 2.5) * k)], outline=255, width=2 * k)
+
+    m_k = _rysuj(w, h, ksztalt)
+    m_b = _rysuj(w, h, korpus)
+    m_o = _rysuj(w, h, ogniwa)
+    rgb = np.zeros((h * NS, w * NS, 3), np.float32)
+    rgb = np.where((np.maximum(m_k, m_o) > 0.5)[..., None], zelazo(np.maximum(m_k, m_o), 1.5), rgb)
+    # Korpus mosiężny, żeby odciął się od szarej deski i od czarnego ucha.
+    d = odleglosc(m_b)
+    sw = oswietlenie(smooth(d / (3 * NS)) * 3 * NS, 1.2)
+    mosiadz = lerp(kolor(96, 62, 20), kolor(236, 190, 96), sw[..., None] ** 1.5)
+    yy, xx = np.mgrid[0 : h * NS, 0 : w * NS].astype(np.float32)
+    dziurka = (np.hypot(xx - 22 * NS, yy - 42 * NS) < 3 * NS) | (
+        (np.abs(xx - 22 * NS) < 1.3 * NS) & (yy > 42 * NS) & (yy < 50 * NS)
+    )
+    mosiadz = np.where(dziurka[..., None], kolor(30, 16, 6), mosiadz)
+    rgb = np.where(m_b[..., None] > 0.5, mosiadz, rgb)
+    alfa = np.maximum.reduce([m_k, m_b, m_o])
+    im = zmniejsz(rgba(rgb, ndimage.gaussian_filter(alfa, 0.4 * NS)))
+    return cien(im, -2, 4, 2, 0.6, 6)
+
+
+def stworek() -> Image.Image:
+    """Towarzysz z wioski (Verdiko, `assets/pokemon/00096.png`) wmalowany w zmierzch.
+
+    Krytyk: „stworki to malutkie, wyblakłe, płaskie naklejki, które nie
+    pasują ani skalą, ani sposobem malowania". Rysunek stworka jest płaski
+    (kontur i dwa odcienie), a tło — malowane i o zmierzchu. Więc zanim
+    stworek trafi do gry, dostaje to samo światło co wioska:
+    - przygaszenie i ochłodzenie jak w `tlo()` — ten sam zmierzch;
+    - ciepłe światło krawędziowe od latarni (z lewej, z góry), policzone
+      z normalnych sylwetki;
+    - cień własny ku dołowi (okluzja przy ziemi);
+    - zmiękczone kontury — ostra czarna kreska to znak rozpoznawczy naklejki.
+    """
+    sys_path = str(KORZEN / 'tools')
+    import sys
+
+    if sys_path not in sys.path:
+        sys.path.insert(0, sys_path)
+    from process_sprites import background_mask
+
+    zrodlo = np.asarray(Image.open(KORZEN / 'assets' / 'pokemon' / '00096.png').convert('RGB'))
+    tlo_m = background_mask(zrodlo)
+    a = (~tlo_m).astype(np.float32)
+    ys, xs = np.nonzero(a)
+    y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+    rgb = zrodlo[y0:y1, x0:x1].astype(np.float32) / 255
+    a = a[y0:y1, x0:x1]
+    a = ndimage.gaussian_filter(a, 0.7)
+    h, w = a.shape
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+
+    # Kontury: ciemne piksele rysunku rozjaśnione ku barwie sąsiedztwa.
+    lum = rgb @ np.array([0.3, 0.59, 0.11], np.float32)
+    rozm = np.dstack([ndimage.gaussian_filter(rgb[..., i], 2.0) for i in range(3)])
+    kreska = smooth((0.35 - lum) / 0.2)[..., None]
+    rgb = lerp(rgb, rozm * 0.6, kreska * 0.3)
+
+    # Bryła: ciemniej ku dołowi i ku prawej (od latarni).
+    bryla = 1.0 - 0.3 * (yy / h) ** 1.5 - 0.15 * (xx / w)
+    rgb *= bryla[..., None]
+    # Zmierzch — te same liczby co w tle.
+    szar = (rgb @ np.array([0.3, 0.59, 0.11], np.float32))[..., None]
+    # Jaśniej niż tło (0,5): stworek siedzi w plamie światła latarni.
+    rgb = np.clip(rgb * 1.25 - szar * 0.25, 0, 1)  # bledziutki rysunek: więcej nasycenia
+    rgb = rgb * 0.68 * np.array([1.0, 0.9, 0.8], np.float32)
+    # Światło krawędziowe z lewej-góry: normalne z rozmytej sylwetki.
+    gl = ndimage.gaussian_filter(a, 3.0)
+    gy, gx = np.gradient(gl)
+    n = np.hypot(gx, gy) + 1e-6
+    ku_swiatlu = np.clip((gx * 0.75 + gy * 0.66) / n, 0, 1)  # gradient rośnie do środka
+    brzeg = np.clip(n * 18, 0, 1)
+    rgb += kolor(255, 170, 70) * (ku_swiatlu * brzeg * a * 0.5)[..., None]
+    # Ogólne ciepło latarni na lewej połowie.
+    rgb *= 1 + 0.35 * np.clip(1 - xx / w, 0, 1)[..., None] * np.array([1, 0.75, 0.45], np.float32)
+    im = Image.fromarray((np.dstack([np.clip(rgb, 0, 1), a]) * 255).astype(np.uint8), 'RGBA')
+    # Lekkie rozmycie: stworek stoi w średnim planie, gdzie tło też jest
+    # już odrobinę miękkie — ostrzejszy od otoczenia wyglądał na doklejony.
+    return im.resize((int(w * 96 / h), 96), Image.LANCZOS).filter(ImageFilter.GaussianBlur(0.55))
+
+
 # ————————————————————————————————————————————————————————— całość
 
 #: Deski drogowskazu: (nazwa, szerokość, wysokość, ziarno). Szerokość
@@ -626,7 +849,7 @@ def main() -> None:
     CEL.mkdir(parents=True, exist_ok=True)
 
     tlo().save(CEL / 'tlo.jpg', quality=88, optimize=True, progressive=True)
-    logo().save(CEL / 'logo.png', optimize=True)
+    sztandar().save(CEL / 'logo.png', optimize=True)
     for nazwa, w, h, z in DESKI:
         deska(w, h, z).save(CEL / f'{nazwa}.png', optimize=True)
         deska(w, h, z, podswietlona=True).save(CEL / f'{nazwa}-jasna.png', optimize=True)
@@ -636,6 +859,9 @@ def main() -> None:
     for jasna in (False, True):
         t = tabliczka(34, 17, jasna)
         cien(t, -3, 5, 4, 0.55, 10).save(CEL / f'tabliczka{"-jasna" if jasna else ""}.png', optimize=True)
+    latarnia().save(CEL / 'latarnia.png', optimize=True)
+    klodka().save(CEL / 'klodka.png', optimize=True)
+    stworek().save(CEL / 'stworek.png', optimize=True)
     deska(176, 40, 51, ksztalt='prostokat', gwozdzie=()).save(CEL / 'deseczka.png', optimize=True)
     deska(176, 40, 51, ksztalt='prostokat', gwozdzie=(), podswietlona=True).save(
         CEL / 'deseczka-jasna.png', optimize=True
@@ -651,7 +877,7 @@ def main() -> None:
 
     if args.podglad:
         ark = Image.open(CEL / 'tlo.jpg').convert('RGBA')
-        ark.alpha_composite(Image.open(CEL / 'logo.png'), (40, 0))
+        ark.alpha_composite(Image.open(CEL / 'logo.png'), (160, -20))
         ark.alpha_composite(Image.open(CEL / 'slup.png'), (80, 170))
         y = 220
         for nazwa, w, h, z in DESKI:
