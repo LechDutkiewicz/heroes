@@ -138,7 +138,13 @@ def zakapturzony(rgb, a, kaptur, twarz, oczy, swiatlo, barwa=(178, 184, 214)):
     sylw = ndimage.gaussian_filter(ndimage.grey_dilation(a, size=(31, 31)), 4)
     ka = warstwa((Wd, H), kaptur, 8)
     tw = warstwa((Wd, H), twarz, 10)
+    # Brzeg ostry: miękka krawędź rozdętej sylwetki (alfa 0,3–0,7 na kilku
+    # pikselach) dostawała światło krawędziowe i wychodziła biała obwódka
+    # dookoła postaci — krytyk nazwał to „wyciętą halo". Teraz alfa przechodzi
+    # w 1–2 px, a światło krawędziowe siedzi WEWNĄTRZ sylwetki.
     al = np.clip(np.maximum(sylw, ka), 0, 1)
+    al = np.clip((al - 0.35) / 0.3, 0, 1)
+    al = al * al * (3 - 2 * al)
     plamy = ndimage.gaussian_filter(np.where(a > 0.5, lum, 0.6), 7)
     yy, xx = np.mgrid[0:H, 0:Wd].astype(np.float32)
     ys = np.nonzero(al.max(1) > 0.1)[0]
@@ -152,10 +158,17 @@ def zakapturzony(rgb, a, kaptur, twarz, oczy, swiatlo, barwa=(178, 184, 214)):
     # kaptur nieco jaśniejszy u góry — pada na niego księżyc
     out = out + (ka * np.clip(0.5 - t, 0, 0.5))[..., None] * 0.25
     out = out * (1 - tw[..., None]) + np.array([20, 14, 36], np.float32) / 255 * tw[..., None]
+    # Światło groty: całość przygaszona ku fioletowi jaskini (światło otoczenia),
+    # a od strony kryształów wąskie, chłodne światło krawędziowe — w środku
+    # sylwetki, nie na jej obrysie.
+    out = out * 0.62 + np.array([74, 60, 140], np.float32) / 255 * 0.38
+    # nogi w cieniu posadzki, kaptur w świetle z góry
+    out = out * (1 - 0.35 * t[..., None] ** 1.5)
     dx, dy = swiatlo
-    przes = ndimage.shift(al, (dy * 8, -dx * 8), order=1, mode='constant')
-    krawedz = ndimage.gaussian_filter(np.clip(al - przes, 0, 1), 1.5)[..., None]
-    out = out + np.array([200, 220, 255], np.float32) / 255 * krawedz * 1.1
+    wew = ndimage.grey_erosion(al, size=(7, 7))
+    przes = ndimage.shift(wew, (dy * 7, -dx * 7), order=1, mode='constant')
+    krawedz = ndimage.gaussian_filter(np.clip(wew - przes, 0, 1), 1.2)[..., None]
+    out = out + np.array([150, 200, 255], np.float32) / 255 * krawedz * 0.55
     # ciemny obrys, jak u postaci z mapy
     obrys = ndimage.gaussian_filter(ndimage.grey_dilation(al, size=(7, 7)), 1.2)
     out = np.where((al < 0.5)[..., None], np.array([30, 22, 48], np.float32) / 255, out)
@@ -360,8 +373,15 @@ def main():
     zmniejsz(wrog_przod(), 250).save(CEL / 'wrog-b.png', optimize=True)
     # Ikony nagród (128 px; na ekranie ~46).
     buty = Image.open(W + 'bohater-dol.png').convert('RGBA').crop((105 + 340, 21 + 920, 105 + 760, 21 + 1207))
-    for nazwa, im in (('buty', buty), ('rower', rower()), ('tarcza', tarcza()), ('miecz', miecz())):
-        gotowa(im, obrys=nazwa != 'buty').save(CEL / f'ikona-{nazwa}.png', optimize=True)
+    # Surowce z malowanych oryginałów wsadu (1254 px), nie z 29-pikselowych
+    # ikonek mapy — powiększona ikonka mapy wyglądała płasko obok stworka.
+    # Wszystkie ikony przechodzą przez `gotowa`: ten sam ciemny obrys i ta sama
+    # wielkość w kadrze, bo to one robią z pięciu źródeł jeden komplet.
+    zrodla = [('buty', buty), ('rower', rower()), ('tarcza', tarcza()), ('miecz', miecz())]
+    for n in ('pokeball', 'jagody', 'kamien', 'odlamki'):
+        zrodla.append((n, Image.open(W + f's-{n}.png').convert('RGBA')))
+    for nazwa, im in zrodla:
+        gotowa(im).save(CEL / f'ikona-{nazwa}.png', optimize=True)
     print(f'zapisano postacie i ikony do {CEL}')
 
 
