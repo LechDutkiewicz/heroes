@@ -15,7 +15,9 @@ Wiązanie prompt → plik robi znacznik w komentarzu HTML tuż nad blokiem kodu:
     ```
 
 Opcjonalnie `| styl: teren` albo `| styl: brak` wybiera blok stylu doklejany
-przed promptem (domyślnie `obiekt`). Bloki stylu są oznaczone tak samo:
+przed promptem (domyślnie `obiekt`), a `| proporcje: 4:3` prosi model o kadr
+inny niż kwadrat — ilustracja na cały ekran przycięta z kwadratu traci
+jedną trzecią kompozycji. Bloki stylu są oznaczone tak samo:
 
     <!-- styl: obiekt -->
 
@@ -55,6 +57,7 @@ DOKUMENTY = [
     KORZEN / 'tools' / 'PROMPTY-BUDYNKI.md',
     KORZEN / 'tools' / 'PROMPTY-MAPA-2.md',
     KORZEN / 'tools' / 'PROMPTY-WYNIK.md',
+    KORZEN / 'tools' / 'PROMPTY-MENU.md',
 ]
 
 API = 'https://generativelanguage.googleapis.com/v1beta'
@@ -68,7 +71,14 @@ MODELE = [
     'gemini-2.5-flash-image',
 ]
 
-ZNACZNIK = re.compile(r'<!--\s*(plik|styl):\s*([^|\s]+)\s*(?:\|\s*styl:\s*(\w+)\s*)?-->')
+ZNACZNIK = re.compile(
+    r'<!--\s*(plik|styl):\s*([^|\s]+)\s*(?:\|\s*styl:\s*(\w+)\s*)?'
+    r'(?:\|\s*proporcje:\s*(\d+:\d+)\s*)?-->'
+)
+
+#: Proporcje kadru per plik — osobny słownik, a nie trzeci element krotki
+#: zadania, żeby reszta skryptu (lista, drukowanie) nie musiała o nich wiedzieć.
+PROPORCJE: dict[str, str] = {}
 
 
 def klucz() -> str:
@@ -128,6 +138,8 @@ def czytajPrompty() -> tuple[dict[str, str], dict[str, tuple[str, str]]]:
                 style[nazwa] = tresc
             else:
                 zadania[nazwa] = (tresc, styl)
+                if m.group(4):
+                    PROPORCJE[nazwa] = m.group(4)
             i = koniec + 1
     return style, zadania
 
@@ -160,12 +172,15 @@ def dostepnyModel() -> str:
 CENA_ZA_MILION = 120.0
 
 
-def generuj(model: str, tresc: str) -> tuple[bytes, int]:
+def generuj(model: str, tresc: str, proporcje: str | None = None) -> tuple[bytes, int]:
+    konfig: dict = {'responseModalities': ['IMAGE']}
+    if proporcje:
+        konfig['imageConfig'] = {'aspectRatio': proporcje}
     odp = zapytaj(
         f'models/{model}:generateContent',
         {
             'contents': [{'parts': [{'text': tresc}]}],
-            'generationConfig': {'responseModalities': ['IMAGE']},
+            'generationConfig': konfig,
         },
     )
     zuzycie = odp.get('usageMetadata', {})
@@ -242,7 +257,7 @@ def main() -> None:
             continue
         prompt, styl = zadania[nazwa]
         print(f'  {nazwa} … ', end='', flush=True)
-        obraz, tokeny = generuj(model, pelnyPrompt(style, prompt, styl))
+        obraz, tokeny = generuj(model, pelnyPrompt(style, prompt, styl), PROPORCJE.get(nazwa))
         cel.write_bytes(obraz)
         razem += tokeny
         koszt = tokeny * CENA_ZA_MILION / 1_000_000
