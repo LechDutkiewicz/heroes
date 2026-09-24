@@ -94,3 +94,11 @@ Dobrzy kandydaci w tym samym stylu co reszta:
   Kenneya **RPG Audio** i **Interface Sounds** (<https://kenney.nl>, CC0);
 - ambient budowli i podkład mapy/miasta — pętle z OpenGameArt w tagu
   `ambient`/`loop`, licencja CC0 lub CC-BY (z podpisem w tej tabeli).
+
+## Ekran wyniku
+
+`wynik-zwyciestwo.wav` (fanfara, trąbka i blacha z kotłami), `wynik-porazka.wav`
+(obój i harfa w a-moll, zakończone akordem durowym) i `wynik-koniec.wav`
+(zapętlony motyw rogów pod zakończenie kampanii i Salę sław) powstają tą samą
+drogą — MIDI z `tools/muzyka_wynik.py` renderowane przez `fluidsynth`
+z **FluidR3_GM** (MIT). Własna kompozycja, bez cudzych melodii.

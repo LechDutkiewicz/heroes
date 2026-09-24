@@ -611,6 +611,12 @@ export interface StanMapy {
   /** Misja kampanii, która się na tej planszy toczy. Brak = gra pojedyncza. */
   misja?: string;
   /**
+   * Czy gracz widział już okno „Warunki misji". Siedzi w stanie, a nie
+   * w scenie: mapa buduje się od nowa po każdej bitwie i wizycie w mieście,
+   * a okno ma wyskoczyć raz — na starcie misji, nie po każdym powrocie.
+   */
+  warunkiPokazane?: boolean;
+  /**
    * Jak gra przeciwnik na tej planszy (z `USTAWIENIA` planszy): `aktywny` —
    * pełna tura, bohater wyrusza po mapie; `obronca` — bohater zostaje w zamku,
    * a przeciwnik co dzień werbuje do załogi, czyli umacnia się. Brak = aktywny.

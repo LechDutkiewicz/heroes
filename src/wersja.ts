@@ -32,8 +32,11 @@ export function pokazWersje() {
   el.id = 'wersja';
   el.textContent = PODPIS_WERSJI;
   el.title = `Wersja gry (gałąź ${WERSJA.galaz}). F8 — dziennik do zgłoszenia błędu.`;
+  // Pod płótnem, a nie na nim: przypięty do rogu okna leżał na przyciskach
+  // w prawym dolnym rogu ekranów menu i kampanii („Graj" był nim przekreślony),
+  // bo przy oknie wielkości gry róg okna JEST rogiem płótna.
   el.style.cssText = [
-    'position:fixed', 'right:8px', 'bottom:6px', 'z-index:50',
+    'width:960px', 'max-width:100%', 'text-align:right', 'margin-top:4px',
     'color:#8f92c0', 'opacity:0.72', 'pointer-events:none',
     'font:11px/1 ui-monospace,Menlo,Consolas,monospace',
     'text-shadow:0 1px 2px #000a',
