@@ -55,7 +55,7 @@
   },
   {
    "name": "Warunki misji, wygrana i porażka",
-   "status": "build",
+   "status": "done",
    "bar": "Okno „Scenario Information” oraz ekrany zwycięstwa i porażki z HoMM2",
    "note": "Okno warunków na starcie misji, rozstrzygnięcie misji, ekran wyniku, przejście do kolejnej misji, rekordy.",
    "rounds": [
@@ -64,6 +64,12 @@
      "gap": "Panele i przyciski wyglądają jak zwykła strona internetowa (bladoniebieskie ramki, błyszczące pigułki, bezszeryfowe litery z czarnym konturem) i psują malowane sceny. Finał kampanii powtarza scenę z misji 1. Obok siebie są dwa style grafiki.",
      "blind": "tools/blind/wynik-r1.png",
      "note": "Sceny zwycięstwa i porażki mają ładunek emocjonalny, a porażka jest łagodna. Komplet paneli i przycisków powstaje raz, wspólnie dla wszystkich ekranów. Sonda misji: 38/38 OK."
+    },
+    {
+     "win": true,
+     "gap": "Słabość zwycięzcy: bohater i stworki to statyczne wycinki bez cieni, na trzech ekranach jest ta sama poza, a pergaminowe okna gryzą się z niebieskim HUD-em mapy.",
+     "blind": "tools/blind/wynik-r2.png",
+     "note": "Nasze wygrywa, nieznacznie. Sceny wygranej i porażki mają więcej emocji i czytelności niż krótkie klipy HoMM2, a porażka jest łagodna dla dziecka. Builder poprawia jeszcze trzy wskazane usterki."
     }
    ]
   },
