@@ -15,7 +15,11 @@ Wiązanie prompt → plik robi znacznik w komentarzu HTML tuż nad blokiem kodu:
     ```
 
 Opcjonalnie `| styl: teren` albo `| styl: brak` wybiera blok stylu doklejany
-przed promptem (domyślnie `obiekt`). Bloki stylu są oznaczone tak samo:
+przed promptem (domyślnie `obiekt`), a `| proporcje: 4:3` prosi model o kadr
+w tych proporcjach (domyślnie kwadrat). Proporcje są w znaczniku, a nie
+w prompcie, bo model słowne „szeroki kadr" traktuje jak sugestię i oddaje
+kwadrat — ilustracja wycięta potem z kwadratu traci górę i dół kompozycji.
+Bloki stylu są oznaczone tak samo:
 
     <!-- styl: obiekt -->
 
@@ -51,7 +55,11 @@ from pathlib import Path
 
 KORZEN = Path(__file__).resolve().parent.parent
 WSAD = KORZEN / 'tools' / 'wsad'
-DOKUMENTY = [KORZEN / 'tools' / 'PROMPTY-BUDYNKI.md', KORZEN / 'tools' / 'PROMPTY-MAPA-2.md']
+DOKUMENTY = [
+    KORZEN / 'tools' / 'PROMPTY-BUDYNKI.md',
+    KORZEN / 'tools' / 'PROMPTY-MAPA-2.md',
+    KORZEN / 'tools' / 'PROMPTY-KAMPANIA.md',
+]
 
 API = 'https://generativelanguage.googleapis.com/v1beta'
 
@@ -64,7 +72,10 @@ MODELE = [
     'gemini-2.5-flash-image',
 ]
 
-ZNACZNIK = re.compile(r'<!--\s*(plik|styl):\s*([^|\s]+)\s*(?:\|\s*styl:\s*(\w+)\s*)?-->')
+ZNACZNIK = re.compile(
+    r'<!--\s*(plik|styl):\s*([^|\s]+)\s*(?:\|\s*styl:\s*(\w+)\s*)?'
+    r'(?:\|\s*proporcje:\s*(\d+:\d+)\s*)?-->'
+)
 
 
 def klucz() -> str:
@@ -92,10 +103,10 @@ def zapytaj(sciezka: str, dane: dict | None = None) -> dict:
         raise SystemExit(f'API odpowiedziało {e.code}:\n{tresc}')
 
 
-def czytajPrompty() -> tuple[dict[str, str], dict[str, tuple[str, str]]]:
-    """Zwraca (bloki stylu, zadania). Zadanie to `plik -> (prompt, nazwa stylu)`."""
+def czytajPrompty() -> tuple[dict[str, str], dict[str, tuple[str, str, str | None]]]:
+    """Zwraca (bloki stylu, zadania). Zadanie to `plik -> (prompt, nazwa stylu, proporcje)`."""
     style: dict[str, str] = {}
-    zadania: dict[str, tuple[str, str]] = {}
+    zadania: dict[str, tuple[str, str, str | None]] = {}
     for dok in DOKUMENTY:
         if not dok.exists():
             continue
@@ -107,6 +118,7 @@ def czytajPrompty() -> tuple[dict[str, str], dict[str, tuple[str, str]]]:
                 i += 1
                 continue
             rodzaj, nazwa, styl = m.group(1), m.group(2), m.group(3) or 'obiekt'
+            proporcje = m.group(4)
             # Blok kodu zaczyna się w następnej linii — pusta linia po drodze
             # zdarza się, gdy ktoś sformatuje dokument edytorem.
             j = i + 1
@@ -123,7 +135,7 @@ def czytajPrompty() -> tuple[dict[str, str], dict[str, tuple[str, str]]]:
             if rodzaj == 'styl':
                 style[nazwa] = tresc
             else:
-                zadania[nazwa] = (tresc, styl)
+                zadania[nazwa] = (tresc, styl, proporcje)
             i = koniec + 1
     return style, zadania
 
@@ -156,13 +168,13 @@ def dostepnyModel() -> str:
 CENA_ZA_MILION = 120.0
 
 
-def generuj(model: str, tresc: str) -> tuple[bytes, int]:
+def generuj(model: str, tresc: str, proporcje: str | None = None) -> tuple[bytes, int]:
+    konfig: dict = {'responseModalities': ['IMAGE']}
+    if proporcje:
+        konfig['imageConfig'] = {'aspectRatio': proporcje}
     odp = zapytaj(
         f'models/{model}:generateContent',
-        {
-            'contents': [{'parts': [{'text': tresc}]}],
-            'generationConfig': {'responseModalities': ['IMAGE']},
-        },
+        {'contents': [{'parts': [{'text': tresc}]}], 'generationConfig': konfig},
     )
     zuzycie = odp.get('usageMetadata', {})
     tokeny = zuzycie.get('candidatesTokenCount') or zuzycie.get('totalTokenCount') or 0
@@ -191,7 +203,7 @@ def main() -> None:
 
     if args.lista:
         print(f'{len(zadania)} zadań z {len([d for d in DOKUMENTY if d.exists()])} dokumentów:')
-        for nazwa, (_, styl) in sorted(zadania.items()):
+        for nazwa, (_, styl, _proporcje) in sorted(zadania.items()):
             stan = 'JEST' if (WSAD / nazwa).exists() else 'brak'
             print(f'  {stan:4s}  {nazwa:26s} styl: {styl}')
         return
@@ -205,7 +217,7 @@ def main() -> None:
         for nazwa in wybrane:
             if nazwa not in zadania:
                 sys.exit(f'Nie ma promptu dla: {nazwa}. Zobacz --lista.')
-            prompt, styl = zadania[nazwa]
+            prompt, styl, _proporcje = zadania[nazwa]
             print(f'\n=== {nazwa} ===  (zapisz wynik jako tools/wsad/{nazwa})')
             print(pelnyPrompt(style, prompt, styl))
         return
@@ -236,9 +248,9 @@ def main() -> None:
         if cel.exists() and not args.nadpisz:
             print(f'  {nazwa} — już jest, pomijam (--nadpisz, żeby zastąpić)')
             continue
-        prompt, styl = zadania[nazwa]
+        prompt, styl, proporcje = zadania[nazwa]
         print(f'  {nazwa} … ', end='', flush=True)
-        obraz, tokeny = generuj(model, pelnyPrompt(style, prompt, styl))
+        obraz, tokeny = generuj(model, pelnyPrompt(style, prompt, styl), proporcje)
         cel.write_bytes(obraz)
         razem += tokeny
         koszt = tokeny * CENA_ZA_MILION / 1_000_000
