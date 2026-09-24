@@ -20,7 +20,14 @@
    "status": "build",
    "bar": "Ekran kampanii HoMM2: mapa krainy ze znacznikami misji, opis, trzy bonusy do wyboru",
    "note": "Wybór trenera, mapa kampanii, opis misji, bonusy, start. Prawdziwego zrzutu ekranu kampanii HoMM2 jeszcze nie ma — trwa próba uruchomienia fheroes2 z darmowym demem.",
-   "rounds": []
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Wszystko wokół mapy wygląda jak strona internetowa, a nie malowany ekran gry: płaskie niebieskie tło, białe karty bonusów, błyszczące przyciski jak z gry mobilnej. Na jednym ekranie są cztery języki wizualne, a HoMM2 ma jeden. Janek i Ola są narysowani w dwóch różnych stylach.",
+     "blind": "tools/blind/kampania-r1.png",
+     "note": "Brak prawdziwego zrzutu ekranu kampanii z HoMM2. Krytyk oceniał na tle prawdziwej grafiki HoMM2 i opisu oryginalnego ekranu. Mapa i kolejność misji były lepsze niż w oryginale."
+    }
+   ]
   },
   {
    "name": "Warunki misji, wygrana i porażka",
