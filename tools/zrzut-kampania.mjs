@@ -87,7 +87,10 @@ async function otworz(stan) {
   });
   // Wejście sceny to rozjaśnienie kamery, a pulsy znaczników ruszają od
   // zera — czekamy, aż kamera skończy, i jeszcze chwilę na pulsy.
-  await page.waitForFunction(() => !window.__game.scene.getScene('kampania').cameras.main.fadeEffect.isRunning, null, {
+  await page.waitForFunction(() => {
+    const s = window.__game.scene.getScene('kampania');
+    return s.gotowa && !s.cameras.main.fadeEffect.isRunning;
+  }, null, {
     timeout: 30000,
   });
   await page.waitForTimeout(1200);

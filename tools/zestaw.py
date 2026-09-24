@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Materiał ekranów kampanii: drewno, złocona rama, pergamin, tabliczki.
+"""Wspólny zestaw materiałów interfejsu: drewno, złocona rama, pergamin, tabliczki.
 
 Po co osobny komplet
 --------------------
@@ -24,8 +24,11 @@ a układ ekranu żyje wyłącznie w `KampaniaScene.ts` — nie trzeba go
 powtarzać tutaj.
 
 Wszystkie pliki mają 2× rozdzielczość ekranu, scena skaluje je o połowę.
+Po stronie gry komplet obsługuje `src/visual/zestaw.ts` — tam jest API
+(ramy, panele, przyciski, kroje), przez które sięgają po te pliki ekran
+kampanii, a dalej ekrany wyniku misji i okno warunków.
 
-    python3 tools/kampania_kit.py
+    python3 tools/zestaw.py
 """
 
 from pathlib import Path
@@ -34,11 +37,11 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 KORZEN = Path(__file__).resolve().parent.parent
-CEL = KORZEN / 'public' / 'kampania'
+CEL = KORZEN / 'public' / 'zestaw'
 
 #: Ekran w 2×.
 EW, EH = 1920, 1388
-#: Wysokość belki nagłówka (2×) — ta sama liczba co BELKA w KampaniaScene.ts.
+#: Wysokość belki nagłówka (2×) — `BELKA_H` w src/visual/zestaw.ts to jej połowa z listwą.
 BELKA = 96
 
 
@@ -254,6 +257,12 @@ def tabliczka(w: int, h: int, r: int, nazwa: str, zlota: bool, stan: str):
     rgb = np.where((d < 1.6 * SS)[..., None], rgb * 0.45, rgb)
     if stan == 'jasny':
         rgb = rgb * 1.16 + 8
+    elif stan == 'wcisniety':
+        # Wciśnięty: ciemniej i z cieniem od górnej krawędzi lica — tabliczka
+        # zapada się w obwódkę, zamiast tylko zmienić barwę.
+        rgb = rgb * 0.8
+        wew = (d >= obw) & (yy < H * 0.45)
+        rgb = np.where(wew[..., None], rgb * (0.72 + 0.28 * (yy / (H * 0.45)))[..., None], rgb)
     elif stan == 'wyl':
         szary = rgb.mean(axis=2, keepdims=True)
         rgb = (rgb * 0.25 + szary * 0.75) * 0.62
@@ -279,7 +288,7 @@ def main():
     ramaZlota(192, 30, 'rama-zlota.png', True)
     ramaZlota(96, 13, 'rama-cienka.png', False)
     pergamin(256, 'pergamin.png')
-    for stan in ('', 'jasny', 'wyl'):
+    for stan in ('', 'jasny', 'wcisniety', 'wyl'):
         k = f'-{stan}' if stan else ''
         tabliczka(240, 88, 24, f'tabliczka-drewno{k}.png', False, stan or 'n')
         tabliczka(240, 88, 24, f'tabliczka-zloto{k}.png', True, stan or 'n')

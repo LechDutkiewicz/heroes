@@ -16,7 +16,25 @@ import { rozpocznijMisje } from '../data/kampania-start';
 import { SUROWIEC_INFO, artefaktPoId } from '../data/mapa';
 import { FACTIONS, factionById } from '../data/factions';
 import { C } from '../visual/theme';
-import { gradientText, mix } from '../visual/hud';
+import { mix } from '../visual/hud';
+import {
+  BARWA,
+  BELKA_Y,
+  KROJ,
+  Przycisk,
+  cienPanelu,
+  krojeZestawu,
+  latki,
+  napisNaDrewnie,
+  napisTytulowy,
+  ozdobnik,
+  panelPergaminu,
+  pieczecLakowa,
+  ramaZlota,
+  tloDrewna,
+  wczytajZestaw,
+  wstazka,
+} from '../visual/zestaw';
 import { ICON, buildIcons, type IconKey } from '../visual/icons';
 import { buildArtefakty, kluczArtefaktu } from '../visual/artefakty';
 import { wersjonujZasoby } from '../visual/zasoby';
@@ -69,8 +87,6 @@ import { MUZYKA_MAPA, initSfx, sfx, startMusic, toggleSfx } from '../audio/mapSf
 
 const EKRAN_W = 960;
 const EKRAN_H = 694;
-/** Belka nagłówka namalowana w `drewno.jpg` (z listwą perełkową pod spodem). */
-const BELKA_Y = 25;
 /** Mapa krainy, 4:3 jak plik (1232 × 924). */
 const MAPA = { x: 28, y: 76, w: 588, h: 441 };
 /** Zwój z opisem misji — prawa kolumna. */
@@ -81,22 +97,17 @@ const GRAJ = { x: 850, y: 650, w: 188, h: 54 };
 const MENU = { x: 698, y: 650, w: 92, h: 46 };
 
 /**
- * Kroje. Lora (OFL, `public/fonty/`) — szeryfowa, z kaligraficznym
- * zacięciem, wczytywana z plików gry, a nie z sieci. Pogrubiony Trebuchet
- * z grubym konturem, którego używa bitwa, czytał się przy malowanej mapie
- * jak napis z gry na telefon.
+ * Kroje i atrament ze wspólnego zestawu (`src/visual/zestaw.ts`): Cinzel na
+ * tytuły i tabliczki (jak w menu), Lora na tekst ciągły.
  */
-const SERIF = 'KampaniaSerif, Georgia, serif';
-const TEKST = 'KampaniaTekst, Georgia, serif';
-const KURSYWA = 'KampaniaKursywa, Georgia, serif';
-
-/** Atrament na pergaminie. */
-const ATRAMENT = '#4a2c12';
-const ATRAMENT_MIEKKI = '#7a5530';
-const ATRAMENT_CZERWONY = '#8e2a18';
-/** Napis na drewnie: kremowy z ciemnym konturem, jak wypalony i pozłacany. */
-const KREM = '#f8e6b8';
-const BRAZ = '#2a1606';
+const SERIF = KROJ.tytul;
+const TEKST = KROJ.tekst;
+const KURSYWA = KROJ.kursywa;
+const ATRAMENT = BARWA.atrament;
+const ATRAMENT_MIEKKI = BARWA.atramentMiekki;
+const ATRAMENT_CZERWONY = BARWA.atramentCzerwony;
+const KREM = BARWA.krem;
+const BRAZ = BARWA.braz;
 
 /** Barwa chorągiewki trenera: ta sama, co jego czapka. */
 const BARWA_TRENERA: Record<string, number> = { Janek: 0xe4413c, Ola: 0x3fae5a };
@@ -220,11 +231,13 @@ export class KampaniaScene extends Phaser.Scene {
   private tresc?: Phaser.GameObjects.Container;
   private karty: KartaNagrody[] = [];
   private podpowiedz?: Phaser.GameObjects.Text;
-  private graj?: Tabliczka;
+  private graj?: Przycisk;
   private nakladka?: Phaser.GameObjects.Container;
   private trenerNaMapie?: Phaser.GameObjects.Image;
   /** Postacie scenek opowieści — przesuwane co klatkę; `false` = do usunięcia. */
   private ruchome: ((czas: number) => boolean)[] = [];
+  /** Ekran zbudowany (kroje wczytane) — na to czekają narzędzia zrzutów. */
+  gotowa = false;
 
   constructor() {
     super('kampania');
@@ -233,29 +246,9 @@ export class KampaniaScene extends Phaser.Scene {
   preload() {
     wersjonujZasoby(this);
     const b = import.meta.env.BASE_URL;
-    this.load.font('KampaniaSerif', `${b}fonty/Lora-Bold.ttf`, 'truetype');
-    this.load.font('KampaniaTekst', `${b}fonty/Lora-Regular.ttf`, 'truetype');
-    this.load.font('KampaniaKursywa', `${b}fonty/Lora-Italic.ttf`, 'truetype');
-    for (const n of ['mapa', 'drewno']) this.load.image(`k-${n}`, `${b}kampania/${n}.jpg`);
-    for (const n of [
-      'woda-a',
-      'woda-b',
-      'zwoj',
-      'janek',
-      'ola',
-      'glowa-janek',
-      'glowa-ola',
-      'rama-zlota',
-      'rama-cienka',
-      'pergamin',
-      'cien',
-      'tabliczka-drewno',
-      'tabliczka-drewno-jasny',
-      'tabliczka-drewno-wyl',
-      'tabliczka-zloto',
-      'tabliczka-zloto-jasny',
-      'tabliczka-zloto-wyl',
-    ])
+    wczytajZestaw(this);
+    this.load.image('k-mapa', `${b}kampania/mapa.jpg`);
+    for (const n of ['woda-a', 'woda-b', 'zwoj', 'janek', 'ola', 'glowa-janek', 'glowa-ola'])
       this.load.image(`k-${n}`, `${b}kampania/${n}.png`);
     this.load.json('k-mapa-json', `${b}kampania/mapa.json`);
     // Ilustracje wstępu i zakończenia: panoramy Groty i Boru z ekranu miasta.
@@ -303,10 +296,19 @@ export class KampaniaScene extends Phaser.Scene {
     this.postep = wczytajPostep();
     migawkaStanu('kampania', () => ({ postep: this.postep, pokazana: this.pokazana?.id, bonus: this.bonus }));
 
-    this.add.image(0, 0, 'k-drewno').setOrigin(0).setDisplaySize(EKRAN_W, EKRAN_H);
-    if (!this.postep) this.pokazWybor();
-    else this.pokazKampanie();
-    this.cameras.main.fadeIn(280, 20, 12, 6);
+    // Napisy dopiero po krojach — inaczej pierwsza klatka rysuje się krojem
+    // zapasowym i tak zostaje (tekst w Phaserze to wyrenderowana tekstura).
+    this.gotowa = false;
+    this.cameras.main.setAlpha(0);
+    void krojeZestawu().then(() => {
+      if (!this.sys.isActive()) return;
+      this.cameras.main.setAlpha(1);
+      tloDrewna(this);
+      if (!this.postep) this.pokazWybor();
+      else this.pokazKampanie();
+      this.cameras.main.fadeIn(280, 20, 12, 6);
+      this.gotowa = true;
+    });
   }
 
   /**
@@ -412,49 +414,25 @@ export class KampaniaScene extends Phaser.Scene {
 
   // ═════════════════════════════════════════════════ materiał
 
-  /** Dziewięć łatek w 2× — tekstury kitu mają podwójną rozdzielczość. */
+  // Skróty do zestawu — scena woła je dziesiątki razy.
   private latki(klucz: string, x: number, y: number, w: number, h: number, l: number, r: number, t: number, b: number) {
-    return this.add
-      .nineslice(x, y, klucz, undefined, w * 2, h * 2, l, r, t, b)
-      .setOrigin(0)
-      .setScale(0.5);
+    return latki(this, klucz, x, y, w, h, l, r, t, b);
   }
 
-  /**
-   * Złocona rama WOKÓŁ prostokąta (x, y, w, h) — wewnętrzna warga ramy
-   * zachodzi na treść o 2 px, żeby między złotem a obrazem nie było szpary.
-   */
   private ramaZlota(x: number, y: number, w: number, h: number, gruba = true) {
-    const g = gruba ? 13 : 5;
-    return gruba
-      ? this.latki('k-rama-zlota', x - g, y - g, w + g * 2, h + g * 2, 34, 34, 34, 34)
-      : this.latki('k-rama-cienka', x - g, y - g, w + g * 2, h + g * 2, 16, 16, 16, 16);
+    return ramaZlota(this, x, y, w, h, gruba);
   }
 
-  /** Miękki cień rzucony przez panel na drewno. */
   private cien(x: number, y: number, w: number, h: number, moc = 0.8) {
-    return this.latki('k-cien', x - 22, y - 16, w + 44, h + 48, 60, 60, 60, 60).setAlpha(moc);
+    return cienPanelu(this, x, y, w, h, moc);
   }
 
-  /** Pergamin w cienkiej złotej ramie, z cieniem — każdy panel tekstu na tym ekranie. */
   private panelPergaminu(x: number, y: number, w: number, h: number) {
-    const cien = this.cien(x, y, w, h);
-    const papier = this.latki('k-pergamin', x, y, w, h, 48, 48, 48, 48);
-    const rama = this.ramaZlota(x, y, w, h, false);
-    return [cien, papier, rama];
+    return panelPergaminu(this, x, y, w, h);
   }
 
-  /** Napis na drewnie (belka, tabliczki): kremowy z ciemnym konturem. */
   private napisNaDrewnie(x: number, y: number, tekst: string, rozmiar: number) {
-    return this.add
-      .text(x, y, tekst, {
-        fontFamily: SERIF,
-        fontSize: `${rozmiar}px`,
-        color: KREM,
-        stroke: BRAZ,
-        strokeThickness: Math.max(3, rozmiar * 0.2),
-      })
-      .setShadow(0, 2, '#00000088', 3, true, true);
+    return napisNaDrewnie(this, x, y, tekst, rozmiar);
   }
 
   // ═════════════════════════════════════════════════ wybór trenera
@@ -474,7 +452,7 @@ export class KampaniaScene extends Phaser.Scene {
 
     TRENERZY.forEach((t, i) => this.kartaTrenera(t, EKRAN_W / 2 + (i === 0 ? -170 : 170), 146));
 
-    const menu = new Tabliczka(this, EKRAN_W - 66, BELKA_Y, 100, 36, 'Menu', false, 16, () => this.scene.start('menu'));
+    const menu = tabliczka(this, EKRAN_W - 66, BELKA_Y, 100, 36, 'Menu', false, 16, () => this.scene.start('menu'));
     menu.ustaw(true);
     this.input.keyboard?.on('keydown-ESC', () => this.scene.start('menu'));
     this.input.keyboard?.on('keydown-LEFT', () => this.wybierzTrenera(TRENERZY[0]));
@@ -496,7 +474,7 @@ export class KampaniaScene extends Phaser.Scene {
     const x = -w / 2;
 
     const blask = this.add.image(0, h / 2, 'k-poswiata').setDisplaySize(w * 1.9, h * 1.5).setTint(C.gold).setAlpha(0);
-    const cien = this.latki('k-cien', x - 22, -16, w + 44, h + 48, 60, 60, 60, 60).setAlpha(0.9);
+    const cien = this.latki('z-cien', x - 22, -16, w + 44, h + 48, 60, 60, 60, 60).setAlpha(0.9);
 
     // Okno: wycinek ilustracji Boru, inny dla każdego trenera, z poświatą za postacią.
     const tlo = this.add.image(0, 0, 'k-tlo-bor');
@@ -512,12 +490,12 @@ export class KampaniaScene extends Phaser.Scene {
     // Figurka: pixel art powiększony całkowicie (×4), stopy na cieniu.
     const figurka = this.add.image(0, oknoH - 24, t.figurka).setOrigin(0.5, 1).setScale(4);
 
-    const rama = this.latki('k-rama-zlota', x - 13, -13, w + 26, oknoH + 26, 34, 34, 34, 34);
+    const rama = this.latki('z-rama-zlota', x - 13, -13, w + 26, oknoH + 26, 34, 34, 34, 34);
 
     // Pergamin z imieniem i jednym zdaniem.
     const py = oknoH + 14;
-    const papier = this.latki('k-pergamin', x, py, w, papierH, 48, 48, 48, 48);
-    const ramaP = this.latki('k-rama-cienka', x - 5, py - 5, w + 10, papierH + 10, 16, 16, 16, 16);
+    const papier = this.latki('z-pergamin', x, py, w, papierH, 48, 48, 48, 48);
+    const ramaP = this.latki('z-rama-cienka', x - 5, py - 5, w + 10, papierH + 10, 16, 16, 16, 16);
     const imie = this.add
       .text(0, py + 30, t.imie, { fontFamily: SERIF, fontSize: '30px', color: ATRAMENT_CZERWONY })
       .setOrigin(0.5)
@@ -594,7 +572,7 @@ export class KampaniaScene extends Phaser.Scene {
     const n = this.add.container(0, 0).setDepth(500);
     this.nakladka = n;
     const blok = this.add.zone(0, 0, EKRAN_W, EKRAN_H).setOrigin(0).setInteractive();
-    n.add([blok, this.add.image(0, 0, 'k-drewno').setOrigin(0).setDisplaySize(EKRAN_W, EKRAN_H)]);
+    n.add([blok, tloDrewna(this)]);
 
     n.add(napisTytulowy(this, EKRAN_W / 2, BELKA_Y, `${o.naglowek} · ${o.podtytul}`, 26));
 
@@ -643,8 +621,8 @@ export class KampaniaScene extends Phaser.Scene {
     med.fillCircle(NX, NY, 55);
     const drzewo = this.add.image(NX, NY + 6, 'k-drzewo');
     drzewo.setScale(96 / drzewo.height);
-    const ts = new Tabliczka(this, NX, NY + 88, 176, 34, 'Drzewo Wiedzy', false, 15, () => {});
-    ts.ustaw(true, false);
+    const ts = tabliczka(this, NX, NY + 88, 176, 34, 'Drzewo Wiedzy', false, 15, () => {});
+    ts.szyld();
     n.add([med, drzewo, ts.kontener]);
 
     // Pergamin z tekstem, z „dzióbkiem" w stronę narratora — to on mówi.
@@ -669,9 +647,9 @@ export class KampaniaScene extends Phaser.Scene {
     o.akapity.forEach((a, i) => {
       const t = this.add
         .text(PX + 30, y, a, {
-          fontFamily: i === 0 ? SERIF : TEKST,
+          fontFamily: TEKST,
           fontSize: '19px',
-          color: ATRAMENT,
+          color: i === 0 ? ATRAMENT_CZERWONY : ATRAMENT,
           wordWrap: { width: PW - 60 },
           lineSpacing: 5,
         })
@@ -700,7 +678,7 @@ export class KampaniaScene extends Phaser.Scene {
     };
 
     let odslonieta = false;
-    const dalej = new Tabliczka(this, EKRAN_W - 132, EKRAN_H - 38, 190, 50, o.przycisk, true, 21, () => {
+    const dalej = tabliczka(this, EKRAN_W - 132, EKRAN_H - 38, 190, 50, o.przycisk, true, 21, () => {
       if (!odslonieta && teksty.some((t) => t.alpha < 1)) {
         odslonieta = true;
         for (const tw of odslony) tw.complete();
@@ -712,7 +690,7 @@ export class KampaniaScene extends Phaser.Scene {
     dalej.strzalka();
     n.add(dalej.kontener);
     if (o.odNowa) {
-      const od = new Tabliczka(this, EKRAN_W - 360, EKRAN_H - 38, 200, 42, 'Zagraj od nowa', false, 16, () =>
+      const od = tabliczka(this, EKRAN_W - 360, EKRAN_H - 38, 200, 42, 'Zagraj od nowa', false, 16, () =>
         this.potwierdzNowa()
       );
       od.ustaw(true);
@@ -821,12 +799,13 @@ export class KampaniaScene extends Phaser.Scene {
 
   private rysujPasekGorny() {
     const p = this.postep!;
-    napisTytulowy(this, 22, BELKA_Y, KAMPANIA.tytul, 26, 0);
+    const tytul = napisTytulowy(this, 22, BELKA_Y, KAMPANIA.tytul, 24, 0);
 
-    // Postęp w klejnotach osadzonych w belce: pełne za zrobione.
+    // Postęp w klejnotach osadzonych w belce: pełne za zrobione. Za tytułem
+    // mierzonym, nie w stałym miejscu — Cinzel jest szerszy od kroju zapasowego.
     const ile = KAMPANIA.misje.length;
     const zrobione = p.ukonczone.length;
-    const kx = 296;
+    const kx = tytul.x + tytul.width + 24;
     const g = this.add.graphics();
     for (let i = 0; i < ile; i++) {
       const cx = kx + i * 24;
@@ -849,7 +828,7 @@ export class KampaniaScene extends Phaser.Scene {
     const dni = Object.values(p.wyniki).reduce((s, w) => s + w.dni, 0);
     const t = trenerPoImieniu(p.trener);
     const prawy = EKRAN_W - 16;
-    const wstep = new Tabliczka(this, prawy - 48, BELKA_Y, 96, 34, 'Wstęp', false, 15, () => {
+    const wstep = tabliczka(this, prawy - 48, BELKA_Y, 96, 34, 'Wstęp', false, 15, () => {
       sfx(this, 'wejscie', 0.6);
       this.pokazOpowiesc(
         { tlo: 'k-tlo-grota', naglowek: KAMPANIA.tytul, podtytul: 'Wstęp', akapity: KAMPANIA.wstep, przycisk: 'Zamknij' },
@@ -1422,61 +1401,13 @@ export class KampaniaScene extends Phaser.Scene {
       y += t.height;
       return t;
     };
-    const ozdobnik = () => {
-      const g = this.add.graphics();
-      g.lineStyle(1.5, 0x9a6a38, 0.7);
-      g.beginPath();
-      g.moveTo(lewy + 10, y + 8);
-      g.lineTo(srodek - 12, y + 8);
-      g.moveTo(srodek + 12, y + 8);
-      g.lineTo(lewy + szer - 10, y + 8);
-      g.strokePath();
-      g.fillStyle(0x9a6a38, 0.85);
-      g.fillPoints(
-        [
-          new Phaser.Math.Vector2(srodek, y + 3),
-          new Phaser.Math.Vector2(srodek + 6, y + 8),
-          new Phaser.Math.Vector2(srodek, y + 13),
-          new Phaser.Math.Vector2(srodek - 6, y + 8),
-        ],
-        true
-      );
-      k.add(g);
+    const kreska = () => {
+      k.add(ozdobnik(this, lewy, y + 8, szer));
       y += 20;
     };
-    /** Wstążka z lakowej czerwieni (albo zieleni/złota) z wciętymi końcami. */
-    const wstazka = (tekst: string, barwa: number) => {
-      const t = this.add
-        .text(srodek, y + 12, tekst, { fontFamily: SERIF, fontSize: '13px', color: '#fff4dc' })
-        .setOrigin(0.5)
-        .setShadow(0, 1, '#00000088', 1, false, true);
-      const w = t.width + 34;
-      const g = this.add.graphics();
-      const ciemna = mix(barwa, 0x0a0602, 0.4);
-      for (const s of [-1, 1]) {
-        const x0 = srodek + s * (w / 2 - 6);
-        const x1 = srodek + s * (w / 2 + 12);
-        g.fillStyle(ciemna, 1);
-        g.fillPoints(
-          [
-            new Phaser.Math.Vector2(x0, y + 6),
-            new Phaser.Math.Vector2(x1, y + 6),
-            new Phaser.Math.Vector2(x1 - s * 6, y + 15),
-            new Phaser.Math.Vector2(x1, y + 24),
-            new Phaser.Math.Vector2(x0, y + 24),
-          ],
-          true
-        );
-      }
-      g.fillStyle(0x0a0602, 0.25);
-      g.fillRect(srodek - w / 2, y + 3, w, 24);
-      g.fillStyle(barwa, 1);
-      g.fillRect(srodek - w / 2, y, w, 24);
-      g.fillStyle(0xffffff, 0.16);
-      g.fillRect(srodek - w / 2, y + 2, w, 3);
-      g.fillStyle(0x0a0602, 0.18);
-      g.fillRect(srodek - w / 2, y + 19, w, 5);
-      k.add([g, t]);
+    /** Wstążka z laku (albo zieleni/złota) z wciętymi końcami. */
+    const naglowek = (tekst: string, barwa: number) => {
+      k.add(wstazka(this, srodek, y + 12, tekst, barwa));
       y += 34;
     };
     /** Tytuł misji odręcznym atramentem — czerwonym, jak inicjał w kronice. */
@@ -1512,14 +1443,14 @@ export class KampaniaScene extends Phaser.Scene {
 
     if (!m) {
       // Zakończenie kampanii.
-      wstazka('KONIEC KAMPANII', 0xa8781c);
+      naglowek('KONIEC KAMPANII', 0xa8781c);
       tytul('Zwycięstwo!');
-      ozdobnik();
+      kreska();
       for (const a of KAMPANIA.zakonczenie) {
         akapit(a);
         y += 8;
       }
-      ozdobnik();
+      kreska();
       const dni = Object.values(p.wyniki).reduce((s, w) => s + w.dni, 0);
       const pkt = Object.values(p.wyniki).reduce((s, w) => s + w.punkty, 0);
       wiersz(ICON.hourglass, 'Cała wyprawa', `${dni} ${odmianaDni(dni)} w drodze`);
@@ -1531,9 +1462,9 @@ export class KampaniaScene extends Phaser.Scene {
     const stan: StanZnacznika = p.ukonczone.includes(m.id) ? 'zrobiona' : m === biezacaMisja(p) ? 'biezaca' : 'zamknieta';
 
     if (stan === 'zamknieta') {
-      wstazka(nr(m), 0x6d5f50);
+      naglowek(nr(m), 0x6d5f50);
       tytul(m.tytul);
-      ozdobnik();
+      kreska();
       const poprzednia = KAMPANIA.misje[m.nr - 2];
       y += 20;
       const klodka = this.add.graphics();
@@ -1562,15 +1493,15 @@ export class KampaniaScene extends Phaser.Scene {
 
     if (stan === 'zrobiona') {
       const w = p.wyniki[m.id];
-      wstazka(`${nr(m)} · UKOŃCZONA`, 0x2f7a45);
+      naglowek(`${nr(m)} · UKOŃCZONA`, 0x2f7a45);
       tytul(m.tytul);
       winieta(m);
-      ozdobnik();
+      kreska();
       for (const a of m.opis) {
         akapit(a, { rozmiar: 14, barwa: ATRAMENT_MIEKKI });
         y += 6;
       }
-      ozdobnik();
+      kreska();
       akapit(m.epilog, { kursywa: true });
       y += 12;
       if (w) {
@@ -1585,15 +1516,15 @@ export class KampaniaScene extends Phaser.Scene {
     }
 
     // Bieżąca misja.
-    wstazka(nr(m), 0x9c2f1d);
+    naglowek(nr(m), 0x9c2f1d);
     tytul(m.tytul);
     winieta(m);
-    ozdobnik();
+    kreska();
     for (const a of m.opis) {
       akapit(a);
       y += 8;
     }
-    ozdobnik();
+    kreska();
     wiersz(ICON.star, 'Cel misji', celMisji(m));
     for (const w of porazkiMisji(m)) wiersz(w.ikona, w.ikona === ICON.skull ? 'Uważaj' : 'Czas', w.tekst);
     const plecak = p.bohater?.artefakty ?? [];
@@ -1632,7 +1563,7 @@ export class KampaniaScene extends Phaser.Scene {
   /** Link „wróć do bieżącej misji" na dole zwoju, gdy pokazana jest inna. */
   private przyciskPowrotu(k: Phaser.GameObjects.Container) {
     const cel = biezacaMisja(this.postep!) ?? null;
-    const b = new Tabliczka(
+    const b = tabliczka(
       this,
       ZWOJ.x + ZWOJ.w / 2,
       ZWOJ.y + ZWOJ.h - 58,
@@ -1652,30 +1583,9 @@ export class KampaniaScene extends Phaser.Scene {
     k.add(b.kontener);
   }
 
-  /** Czerwona pieczęć lakowa — „zdobyte", jak stempel na liście z frontu. */
+  /** Czerwona pieczęć lakowa — „zdobyte", jak stempel na liście z frontu. Wpada z rozmachem. */
   private pieczec(k: Phaser.GameObjects.Container, x: number, y: number, napis: string) {
-    const g = this.add.graphics();
-    const rnd = new Phaser.Math.RandomDataGenerator([napis]);
-    const pts: Phaser.Math.Vector2[] = [];
-    for (let i = 0; i < 22; i++) {
-      const a = (i / 22) * Math.PI * 2;
-      const r = 34 + rnd.between(-3, 3);
-      pts.push(new Phaser.Math.Vector2(Math.cos(a) * r, Math.sin(a) * r));
-    }
-    g.fillStyle(0x3a0a06, 0.35);
-    g.fillPoints(pts.map((v) => new Phaser.Math.Vector2(v.x + 2, v.y + 3)), true);
-    g.fillStyle(0xa3261b, 1);
-    g.fillPoints(pts, true);
-    g.fillStyle(0x7d1a12, 1);
-    g.fillCircle(0, 0, 25);
-    g.fillStyle(0xb8342a, 1);
-    g.fillCircle(0, -1, 23);
-    g.lineStyle(1.5, 0xe57a6a, 0.6);
-    g.strokeCircle(0, 0, 19);
-    g.fillStyle(0xffffff, 0.18);
-    g.fillEllipse(-8, -12, 26, 12);
-    const t = this.add.text(0, 0, napis, { fontFamily: SERIF, fontSize: '11px', color: '#ffe6d8' }).setOrigin(0.5);
-    const kont = this.add.container(x, y, [g, t]).setAngle(-14);
+    const kont = pieczecLakowa(this, x, y, napis);
     k.add(kont);
     kont.setScale(1.6).setAlpha(0);
     this.tweens.add({ targets: kont, scale: 1, alpha: 0.95, duration: 260, ease: 'Back.easeOut' });
@@ -1766,7 +1676,7 @@ export class KampaniaScene extends Phaser.Scene {
     const opis = this.add
       .text(86, h / 2, wyglad.nazwa, {
         fontFamily: SERIF,
-        fontSize: '16px',
+        fontSize: '14px',
         color: ATRAMENT,
         wordWrap: { width: w - 100 },
         lineSpacing: 0,
@@ -1943,7 +1853,7 @@ export class KampaniaScene extends Phaser.Scene {
 
   private rysujPrzyciski() {
     const p = this.postep!;
-    const menu = new Tabliczka(this, MENU.x, MENU.y, MENU.w, MENU.h, 'Menu', false, 18, () => {
+    const menu = tabliczka(this, MENU.x, MENU.y, MENU.w, MENU.h, 'Menu', false, 18, () => {
       sfx(this, 'wejscie', 0.5);
       this.scene.start('menu');
     });
@@ -1953,7 +1863,7 @@ export class KampaniaScene extends Phaser.Scene {
       // Po kampanii jest jeden następny krok: posłuchać zakończenia. „Od nowa"
       // kasuje wyniki, więc mieszka dopiero w opowieści końcowej, pod pytaniem
       // — nie w miejscu, gdzie dziecko przez cztery misje klikało „Graj".
-      const koniec = new Tabliczka(this, GRAJ.x, GRAJ.y, GRAJ.w, GRAJ.h, 'Zakończenie', true, 21, () => {
+      const koniec = tabliczka(this, GRAJ.x, GRAJ.y, GRAJ.w, GRAJ.h, 'Zakończenie', true, 21, () => {
         sfx(this, 'wejscie', 0.6);
         this.pokazOpowiesc(
           {
@@ -1972,7 +1882,7 @@ export class KampaniaScene extends Phaser.Scene {
       return;
     }
 
-    this.graj = new Tabliczka(this, GRAJ.x, GRAJ.y, GRAJ.w, GRAJ.h, 'Graj', true, 26, () => this.start());
+    this.graj = tabliczka(this, GRAJ.x, GRAJ.y, GRAJ.w, GRAJ.h, 'Graj', true, 26, () => this.start());
     this.graj.strzalka();
     this.graj.ustaw(this.bonus !== undefined);
   }
@@ -2034,12 +1944,12 @@ export class KampaniaScene extends Phaser.Scene {
       .setOrigin(0.5);
     n.add([t1, t2]);
     // „Nie" jest złote — bezpieczny wybór wygląda jak główny.
-    const tak = new Tabliczka(this, EKRAN_W / 2 - 96, y + h - 40, 170, 44, 'Tak, od nowa', false, 16, () => {
+    const tak = tabliczka(this, EKRAN_W / 2 - 96, y + h - 40, 170, 44, 'Tak, od nowa', false, 16, () => {
       usunPostep();
       this.registry.remove('kampania-widziane');
       this.scene.restart();
     });
-    const nie = new Tabliczka(this, EKRAN_W / 2 + 96, y + h - 40, 150, 44, 'Nie', true, 18, () => n.destroy());
+    const nie = tabliczka(this, EKRAN_W / 2 + 96, y + h - 40, 150, 44, 'Nie', true, 18, () => n.destroy());
     tak.ustaw(true);
     nie.ustaw(true);
     n.add([tak.kontener, nie.kontener]);
@@ -2074,156 +1984,17 @@ export class KampaniaScene extends Phaser.Scene {
 
 // ————————————————————————————————————————————————— elementy
 
-/**
- * Tytuł na belce: Lora ze złotym gradientem i cienkim ciemnym konturem —
- * jak litery wycięte w drewnie i pozłocone. Gruby kontur i kapitaliki
- * z interfejsu bitwy (pierwsza runda) czytały się jak logo gry mobilnej.
- */
-function napisTytulowy(scena: Phaser.Scene, x: number, y: number, tekst: string, rozmiar: number, ox = 0.5) {
-  const t = scena.add
-    .text(x, y, tekst, {
-      fontFamily: SERIF,
-      fontSize: `${rozmiar}px`,
-      color: '#ffe9a8',
-      stroke: BRAZ,
-      strokeThickness: Math.max(3, rozmiar * 0.16),
-    })
-    .setOrigin(ox, 0.5)
-    .setShadow(0, 3, '#000000aa', 4, true, true);
-  gradientText(t, '#fff7d6', '#e0a53a');
-  return t;
-}
-
-/**
- * Tabliczka przycisku: drewniana w złotej obwódce albo cała złota (przycisk
- * główny). Trzy stany to trzy tekstury z `tools/kampania_kit.py`
- * (zwykły, podświetlony, wyłączony), przełączane widocznością — przerysowanie
- * przy każdym najechaniu kursorem migałoby.
- */
-class Tabliczka {
-  readonly kontener: Phaser.GameObjects.Container;
-  private wlaczony = true;
-  private nad = false;
-  private reaguje = true;
-  private normal: Phaser.GameObjects.NineSlice;
-  private jasny: Phaser.GameObjects.NineSlice;
-  private wyl: Phaser.GameObjects.NineSlice;
-  private napis: Phaser.GameObjects.Text;
-  private grot?: Phaser.GameObjects.Graphics;
-  private puls?: Phaser.Tweens.Tween;
-  private scena: Phaser.Scene;
-  private y: number;
-  private zlota: boolean;
-  private akcja: () => void;
-
-  constructor(
-    scena: Phaser.Scene,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    tekst: string,
-    zlota: boolean,
-    rozmiar: number,
-    akcja: () => void
-  ) {
-    this.scena = scena;
-    this.y = y;
-    this.zlota = zlota;
-    this.akcja = akcja;
-    const rodzaj = zlota ? 'zloto' : 'drewno';
-    const latka = (klucz: string) =>
-      scena.add
-        .nineslice(0, 0, klucz, undefined, w * 2, h * 2, 40, 40, 30, 30)
-        .setScale(0.5)
-        .setOrigin(0.5);
-    const cien = scena.add.ellipse(0, h / 2 - 1, w * 0.92, 10, 0x0a0602, 0.45);
-    this.normal = latka(`k-tabliczka-${rodzaj}`);
-    this.jasny = latka(`k-tabliczka-${rodzaj}-jasny`);
-    this.wyl = latka(`k-tabliczka-${rodzaj}-wyl`);
-    this.napis = scena.add
-      .text(0, 0, tekst, {
-        fontFamily: SERIF,
-        fontSize: `${rozmiar}px`,
-        color: zlota ? '#3b1f08' : KREM,
-        stroke: zlota ? '#fff0c0' : BRAZ,
-        strokeThickness: zlota ? 0 : Math.max(3, rozmiar * 0.18),
-      })
-      .setOrigin(0.5);
-    // Na złocie napis wybity: ciemna litera z jasnym odbiciem pod spodem.
-    if (zlota) this.napis.setShadow(0, 1.5, '#fff3c8', 0, false, true);
-    else this.napis.setShadow(0, 2, '#000000aa', 2, true, true);
-    const strefa = scena.add.zone(0, 0, w, h).setInteractive({ useHandCursor: true });
-    this.kontener = scena.add.container(x, y, [cien, this.normal, this.jasny, this.wyl, this.napis, strefa]).setDepth(30);
-
-    strefa.on('pointerover', () => {
-      if (!this.reaguje) return;
-      this.nad = true;
-      this.maluj();
-      if (this.wlaczony) scena.tweens.add({ targets: this.kontener, y: this.y - 2, duration: 90 });
-    });
-    strefa.on('pointerout', () => {
-      if (!this.reaguje) return;
-      this.nad = false;
-      this.maluj();
-      scena.tweens.add({ targets: this.kontener, y: this.y, duration: 90 });
-    });
-    strefa.on('pointerdown', () => this.kliknij());
-    this.maluj();
-  }
-
-  kliknij() {
-    if (!this.wlaczony || !this.reaguje) return;
-    this.scena.tweens.add({ targets: this.kontener, scaleX: 0.97, scaleY: 0.92, duration: 70, yoyo: true });
-    this.akcja();
-  }
-
-  /** Grot w prawo za napisem — „dalej", „graj". */
-  strzalka() {
-    const g = this.scena.add.graphics();
-    const x = this.napis.width / 2 + 14;
-    const ciemny = this.zlota ? 0x3b1f08 : 0x2a1606;
-    const jasny = this.zlota ? 0x6b3a10 : 0xf8e6b8;
-    g.fillStyle(ciemny, 1);
-    g.fillTriangle(x - 7, -10, x - 7, 10, x + 10, 0);
-    g.fillStyle(jasny, 1);
-    g.fillTriangle(x - 4.5, -6, x - 4.5, 6, x + 5.5, 0);
-    this.napis.x -= 10;
-    g.x = -10;
-    this.grot = g;
-    this.kontener.add(g);
-    this.maluj();
-  }
-
-  /** `reaguje = false` robi z tabliczki szyld (np. imię narratora): bez kursora i klików. */
-  ustaw(wlaczony: boolean, reaguje = true) {
-    this.wlaczony = wlaczony;
-    this.reaguje = reaguje;
-    if (!reaguje) (this.kontener.list[this.kontener.list.length - 1] as Phaser.GameObjects.Zone).disableInteractive();
-    this.maluj();
-  }
-
-  private maluj() {
-    this.normal.setVisible(this.wlaczony && !this.nad);
-    this.jasny.setVisible(this.wlaczony && this.nad);
-    this.wyl.setVisible(!this.wlaczony);
-    this.napis.setAlpha(this.wlaczony ? 1 : 0.5);
-    this.grot?.setAlpha(this.wlaczony ? 1 : 0.35);
-    // Włączony przycisk główny oddycha — zaprasza do kliknięcia, gdy wszystko
-    // jest już wybrane. Wyłączony stoi, żeby nie kusił na próżno.
-    if (this.wlaczony && this.grot && this.reaguje && !this.puls) {
-      this.puls = this.scena.tweens.add({
-        targets: this.kontener,
-        scale: 1.035,
-        duration: 700,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-      });
-    } else if (!this.wlaczony && this.puls) {
-      this.puls.stop();
-      this.puls = undefined;
-      this.kontener.setScale(1);
-    }
-  }
+/** Tabliczka zestawu w skrócie pozycyjnym — tak wołają ją wszystkie miejsca tej sceny. */
+function tabliczka(
+  scena: Phaser.Scene,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  tekst: string,
+  glowny: boolean,
+  rozmiar: number,
+  akcja: () => void
+) {
+  return new Przycisk(scena, { x, y, w, h, tekst, glowny, rozmiar, akcja });
 }
