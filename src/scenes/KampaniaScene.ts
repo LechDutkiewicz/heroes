@@ -24,7 +24,6 @@ import {
   Przycisk,
   cienPanelu,
   krojeZestawu,
-  latki,
   napisNaDrewnie,
   napisTytulowy,
   ozdobnik,
@@ -106,7 +105,6 @@ const KURSYWA = KROJ.kursywa;
 const ATRAMENT = BARWA.atrament;
 const ATRAMENT_MIEKKI = BARWA.atramentMiekki;
 const ATRAMENT_CZERWONY = BARWA.atramentCzerwony;
-const KREM = BARWA.krem;
 const BRAZ = BARWA.braz;
 
 /** Barwa chorągiewki trenera: ta sama, co jego czapka. */
@@ -137,6 +135,12 @@ const trenerPoImieniu = (imie: string) => TRENERZY.find((t) => t.imie === imie) 
  * „ksiezycowy-kamien" pokazany dziecku wprost wyglądałby na błąd.
  */
 const NAZWY_FABULARNE: Record<string, string> = { 'ksiezycowy-kamien': 'Księżycowy Kamień' };
+
+/**
+ * Malowane ikony artefaktów z nagród (`tools/kampania_postacie.py`). Reszta
+ * artefaktów ma naklejki z `artefakty.ts` — w nagrodach kampanii ich nie ma.
+ */
+const IKONA_ARTEFAKTU: Record<string, string> = { buty: 'buty', rower: 'rower', tarcza: 'tarcza' };
 
 const nazwaArtefaktu = (id: string) =>
   artefaktPoId(id)?.nazwa ?? NAZWY_FABULARNE[id] ?? id.replace(/-/g, ' ');
@@ -258,8 +262,13 @@ export class KampaniaScene extends Phaser.Scene {
     this.load.image('k-tlo-bor', `${b}miasto/tlo-bor.png`);
     // Narrator opowieści — Drzewo Wiedzy, to samo, które dziecko spotyka na mapie.
     this.load.image('k-drzewo', `${b}mapa/drzewo-wiedzy.png`);
-    // Srebrne płaszcze we wstępie: figurka przeciwnika z mapy przygody.
-    this.load.spritesheet('k-wrog', `${b}mapa/wrog.png`, { frameWidth: 96, frameHeight: 96 });
+    // Srebrne płaszcze, ikony nagród i obozowisko — malowane
+    // (`tools/kampania_postacie.py`) albo z mapy przygody.
+    for (const n of ['wrog-a', 'wrog-b', 'ikona-buty', 'ikona-rower', 'ikona-tarcza', 'ikona-miecz'])
+      this.load.image(`k-${n}`, `${b}kampania/${n}.png`);
+    this.load.image('k-woz', `${b}mapa/woz.png`);
+    this.load.image('k-ognisko', `${b}mapa/ognisko.png`);
+    this.load.image('k-deseczka', `${b}menu/deseczka.png`);
     for (const s of Object.values(SUROWIEC_INFO)) this.load.image(`m-${s.ikona}`, `${b}mapa/${s.ikona}.png`);
     const bor = factionById('bor') ?? FACTIONS[0];
     for (const u of bor.units) this.load.image(`p-${u.sprite}`, `${b}sprites/${u.sprite}.png`);
@@ -326,17 +335,6 @@ export class KampaniaScene extends Phaser.Scene {
 
   /** Tekstury rysowane: poświata, chmura, iskra. Raz na grę. */
   private zbudujTekstury() {
-    // Figurki trenerów to pixel art — powiększane bez wygładzania, inaczej
-    // każdy piksel rozlewa się w plamę.
-    for (const k of ['k-janek', 'k-ola', 'k-glowa-janek', 'k-glowa-ola', 'k-wrog'])
-      this.textures.get(k).setFilter(Phaser.Textures.FilterMode.NEAREST);
-    if (!this.anims.exists('k-wrog-idzie'))
-      this.anims.create({
-        key: 'k-wrog-idzie',
-        frames: this.anims.generateFrameNumbers('k-wrog', { start: 4, end: 7 }),
-        frameRate: 6,
-        repeat: -1,
-      });
     if (!this.textures.exists('k-poswiata')) {
       // Poświata z prawdziwego gradientu promienistego. Koła o malejącej alfie
       // na dużej plamie dają widoczne pierścienie.
@@ -415,10 +413,6 @@ export class KampaniaScene extends Phaser.Scene {
   // ═════════════════════════════════════════════════ materiał
 
   // Skróty do zestawu — scena woła je dziesiątki razy.
-  private latki(klucz: string, x: number, y: number, w: number, h: number, l: number, r: number, t: number, b: number) {
-    return latki(this, klucz, x, y, w, h, l, r, t, b);
-  }
-
   private ramaZlota(x: number, y: number, w: number, h: number, gruba = true) {
     return ramaZlota(this, x, y, w, h, gruba);
   }
@@ -437,101 +431,109 @@ export class KampaniaScene extends Phaser.Scene {
 
   // ═════════════════════════════════════════════════ wybór trenera
 
+  /**
+   * Wybór trenera jako SCENA, nie formularz: obaj trenerzy stoją na polanie
+   * z Boru — tej samej, którą dziecko zobaczy w zakończeniu — każdy ze swoim
+   * pierwszym stworkiem, a pod stopami mają pergaminowe tabliczki z imieniem.
+   * Heroes 2 stawia w tym miejscu dwa portrety; my stawiamy dwie postacie
+   * w świecie, bo dziecko wybiera, KIM będzie chodzić po mapie.
+   */
   private pokazWybor() {
     napisTytulowy(this, EKRAN_W / 2, BELKA_Y, 'Kto wyruszy w drogę?', 28);
-    const pod = this.add
-      .text(EKRAN_W / 2, 96, 'Wybierz trenera. Poprowadzi twoje stworki przez całą kampanię.', {
-        fontFamily: KURSYWA,
-        fontSize: '18px',
-        color: KREM,
-        stroke: BRAZ,
-        strokeThickness: 4,
-      })
-      .setOrigin(0.5);
-    void pod;
-
-    TRENERZY.forEach((t, i) => this.kartaTrenera(t, EKRAN_W / 2 + (i === 0 ? -170 : 170), 146));
-
     const menu = tabliczka(this, EKRAN_W - 66, BELKA_Y, 100, 36, 'Menu', false, 16, () => this.scene.start('menu'));
     menu.ustaw(true);
+
+    const IL = { x: 30, y: 72, w: 900, h: 520 };
+    this.cien(IL.x, IL.y, IL.w, IL.h, 1);
+    const tlo = this.add.image(IL.x, IL.y, 'k-tlo-bor').setOrigin(0);
+    const tw = tlo.width;
+    const th = tlo.height;
+    const bazowa = Math.max(IL.w / tw, IL.h / th);
+    const najazd = { z: 1.02 };
+    const kadruj = () => {
+      const sk = bazowa * najazd.z;
+      const cw = IL.w / sk;
+      const ch = IL.h / sk;
+      const cx = (tw - cw) / 2;
+      const cy = (th - ch) * 0.7;
+      tlo.setScale(sk).setCrop(cx, cy, cw, ch).setPosition(IL.x - cx * sk, IL.y - cy * sk);
+    };
+    kadruj();
+    this.tweens.add({ targets: najazd, z: 1.08, duration: 24000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', onUpdate: kadruj });
+    // Ciepłe światło od góry i przyciemnione brzegi — postacie mają wyjść z tła.
+    this.add.image(IL.x + IL.w / 2, IL.y + IL.h * 0.62, 'k-poswiata').setDisplaySize(IL.w * 1.1, IL.h).setTint(0xfff0c0).setAlpha(0.35);
+    const win = this.add.graphics();
+    for (let i = 0; i < 10; i++) {
+      win.fillStyle(0x1a0e04, 0.035);
+      win.fillRect(IL.x, IL.y, IL.w, 30 + i * 6);
+    }
+    this.pylki(26, 0xfff2b0, IL);
+    this.ramaZlota(IL.x, IL.y, IL.w, IL.h).setDepth(5);
+
+    const bor = factionById('bor') ?? FACTIONS[0];
+    const towarzysze = [bor.units[1], bor.units[2]];
+    TRENERZY.forEach((t, i) => this.postacTrenera(t, EKRAN_W / 2 + (i === 0 ? -200 : 200), IL.y + IL.h - 64, towarzysze[i]?.sprite, i));
+
+    this.napisNaDrewnie(EKRAN_W / 2, 672, 'Kliknij trenera, który poprowadzi twoje stworki przez całą kampanię.', 16)
+      .setOrigin(0.5)
+      .setFontFamily(KURSYWA);
+
     this.input.keyboard?.on('keydown-ESC', () => this.scene.start('menu'));
     this.input.keyboard?.on('keydown-LEFT', () => this.wybierzTrenera(TRENERZY[0]));
     this.input.keyboard?.on('keydown-RIGHT', () => this.wybierzTrenera(TRENERZY[1]));
   }
 
-  /**
-   * Karta trenera: malowane okno z postacią w złotej ramie, pod nim pergamin
-   * z imieniem. Heroes 2 w tym miejscu stawia dwa portrety w ramach — tu jest
-   * to samo, tylko portret jest całą postacią, bo dziecko wybiera, KIM będzie
-   * chodzić po mapie.
-   */
-  private kartaTrenera(t: Trener, cx: number, gora: number) {
-    const w = 292;
-    const oknoH = 318;
-    const papierH = 118;
-    const h = oknoH + 14 + papierH;
-    const k = this.add.container(cx, gora);
-    const x = -w / 2;
+  /** Trener na polanie: postać, stworek u boku, cień, tabliczka z imieniem. */
+  private postacTrenera(t: Trener, cx: number, stopy: number, stworek: string | undefined, i: number) {
+    const k = this.add.container(cx, stopy).setDepth(6);
+    const blask = this.add.image(0, -130, 'k-poswiata').setDisplaySize(330, 380).setTint(C.gold).setAlpha(0);
+    const cien = this.add.ellipse(0, 2, 170, 30, 0x1a0e04, 0.4);
+    const figurka = this.add.image(0, 4, t.figurka).setOrigin(0.5, 1);
+    figurka.setScale(300 / figurka.height);
+    const czesci: Phaser.GameObjects.GameObject[] = [blask, cien];
+    let zwierz: Phaser.GameObjects.Image | undefined;
+    if (stworek) {
+      // Stworek stoi po zewnętrznej stronie — trenerzy patrzą na siebie przez środek.
+      const sx = i === 0 ? -118 : 118;
+      czesci.push(this.add.ellipse(sx, 4, 70, 14, 0x1a0e04, 0.35));
+      zwierz = this.add.image(sx, 6, `p-${stworek}`).setOrigin(0.5, 1);
+      zwierz.setScale(92 / zwierz.height).setFlipX(i === 1);
+      czesci.push(zwierz);
+      this.tweens.add({ targets: zwierz, y: -4, duration: 520 + i * 90, yoyo: true, repeat: -1, ease: 'Sine.easeOut' });
+    }
+    czesci.push(figurka);
+    // Tabliczka na pergaminie pod stopami, zachodzi na dolną ramę jak metryczka obrazu.
+    const pw = 270;
+    const ph = 92;
+    const py = 22;
+    czesci.push(...this.panelPergaminu(-pw / 2, py, pw, ph));
+    czesci.push(
+      this.add
+        .text(0, py + 28, t.imie, { fontFamily: SERIF, fontSize: '30px', color: ATRAMENT_CZERWONY })
+        .setOrigin(0.5)
+        .setShadow(0, 1, '#fff6dc', 0, false, true),
+      this.add
+        .text(0, py + 66, t.opis.replace('\n', ' '), {
+          fontFamily: KURSYWA,
+          fontSize: '14px',
+          color: ATRAMENT,
+          align: 'center',
+          wordWrap: { width: pw - 30 },
+        })
+        .setOrigin(0.5)
+    );
+    const strefa = this.add.zone(0, -110, 300, 260 + py + ph).setOrigin(0.5, 0.5).setInteractive({ useHandCursor: true });
+    strefa.y = (-310 + py + ph) / 2;
+    czesci.push(strefa);
+    k.add(czesci);
 
-    const blask = this.add.image(0, h / 2, 'k-poswiata').setDisplaySize(w * 1.9, h * 1.5).setTint(C.gold).setAlpha(0);
-    const cien = this.latki('z-cien', x - 22, -16, w + 44, h + 48, 60, 60, 60, 60).setAlpha(0.9);
-
-    // Okno: wycinek ilustracji Boru, inny dla każdego trenera, z poświatą za postacią.
-    const tlo = this.add.image(0, 0, 'k-tlo-bor');
-    const skala = oknoH / tlo.height * 1.25;
-    const cw = w / skala;
-    const ch = oknoH / skala;
-    const sx = Phaser.Math.Clamp(t.tloX * tlo.width - cw / 2, 0, tlo.width - cw);
-    const sy = tlo.height - ch - 20;
-    tlo.setOrigin(0).setScale(skala).setCrop(sx, sy, cw, ch).setPosition(x - sx * skala, -sy * skala);
-    const swiatlo = this.add.image(0, oknoH * 0.5, 'k-poswiata').setDisplaySize(w * 1.1, oknoH).setTint(0xfff2c0).setAlpha(0.55);
-    const ziemia = this.add.ellipse(0, oknoH - 26, 150, 26, 0x1a0e04, 0.45);
-
-    // Figurka: pixel art powiększony całkowicie (×4), stopy na cieniu.
-    const figurka = this.add.image(0, oknoH - 24, t.figurka).setOrigin(0.5, 1).setScale(4);
-
-    const rama = this.latki('z-rama-zlota', x - 13, -13, w + 26, oknoH + 26, 34, 34, 34, 34);
-
-    // Pergamin z imieniem i jednym zdaniem.
-    const py = oknoH + 14;
-    const papier = this.latki('z-pergamin', x, py, w, papierH, 48, 48, 48, 48);
-    const ramaP = this.latki('z-rama-cienka', x - 5, py - 5, w + 10, papierH + 10, 16, 16, 16, 16);
-    const imie = this.add
-      .text(0, py + 30, t.imie, { fontFamily: SERIF, fontSize: '30px', color: ATRAMENT_CZERWONY })
-      .setOrigin(0.5)
-      .setShadow(0, 1, '#fff6dc', 0, false, true);
-    const opis = this.add
-      .text(0, py + 78, t.opis, {
-        fontFamily: KURSYWA,
-        fontSize: '16px',
-        color: ATRAMENT,
-        align: 'center',
-        lineSpacing: 2,
-      })
-      .setOrigin(0.5);
-
-    const strefa = this.add.zone(0, h / 2, w, h).setInteractive({ useHandCursor: true });
-    k.add([blask, cien, tlo, swiatlo, ziemia, figurka, rama, papier, ramaP, imie, opis, strefa]);
-
-    // Postać oddycha — stojąca nieruchomo wygląda jak wycinanka.
-    this.tweens.add({
-      targets: figurka,
-      y: figurka.y - 3,
-      duration: 700 + (t.imie === 'Ola' ? 120 : 0),
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-
+    this.tweens.add({ targets: figurka, scaleY: figurka.scaleY * 1.012, duration: 1300 + i * 200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     strefa.on('pointerover', () => {
-      this.tweens.add({ targets: k, y: gora - 8, duration: 140, ease: 'Quad.easeOut' });
-      this.tweens.add({ targets: blask, alpha: 0.55, duration: 160 });
+      this.tweens.add({ targets: blask, alpha: 0.5, duration: 160 });
+      this.tweens.add({ targets: figurka, y: -8, duration: 150, yoyo: true, ease: 'Quad.easeOut' });
       sfx(this, 'wejscie', 0.3);
     });
-    strefa.on('pointerout', () => {
-      this.tweens.add({ targets: k, y: gora, duration: 140, ease: 'Quad.easeOut' });
-      this.tweens.add({ targets: blask, alpha: 0, duration: 160 });
-    });
+    strefa.on('pointerout', () => this.tweens.add({ targets: blask, alpha: 0, duration: 160 }));
     strefa.on('pointerdown', () => this.wybierzTrenera(t, k));
   }
 
@@ -542,7 +544,7 @@ export class KampaniaScene extends Phaser.Scene {
     sfx(this, 'awans', 0.8);
     if (karta) {
       this.tweens.add({ targets: karta, scale: 1.04, duration: 160, yoyo: true, ease: 'Back.easeOut' });
-      this.iskry(karta.x, karta.y + 140, 14);
+      this.iskry(karta.x, karta.y - 160, 14);
     }
     this.time.delayedCall(520, () =>
       this.pokazOpowiesc(
@@ -700,49 +702,57 @@ export class KampaniaScene extends Phaser.Scene {
   }
 
   /**
-   * Wstęp to nie sama grota: przez ilustrację idą dwa srebrne płaszcze,
-   * a za nimi, na smyczy z blasku, trzy stworki z pogranicza — dokładnie to,
-   * o czym mówi tekst. Pusta panorama była tłem; z postaciami jest sceną.
+   * Wstęp to nie sama grota: przez ilustrację ciągnie pochód — srebrny
+   * płaszcz z przodu, wóz z uwięzionymi stworkami, drugi płaszcz z tyłu.
+   * Dokładnie to, o czym mówi tekst. Postacie są malowane z tego samego
+   * rysunku co trener (`tools/kampania_postacie.py`) i przyciemnione barwą
+   * groty, żeby stały w jej świetle, a nie na nim.
    */
   private scenkaWstepu(IL: { x: number; y: number; w: number; h: number }) {
     const figury: Phaser.GameObjects.GameObject[] = [];
     const bor = factionById('bor') ?? FACTIONS[0];
-    const ziemia = IL.y + IL.h - 34;
-    const start = IL.x + IL.w - 40;
-    const koniec = IL.x + 220;
-    const CZAS = 26000;
-    // Odstępy w pochodzie są odstępami w CZASIE, nie w miejscu: każdy rusza
-    // z prawego brzegu ilustracji chwilę po poprzednim. Odstęp w miejscu
-    // wypychał ostatnich poza ramę, na drewno.
-    const idz = (obj: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite, odstep: number, podskok: number) => {
-      const cien = this.add.ellipse(start, ziemia + 2, obj.displayWidth * 0.7, 8, 0x05030a, 0.45);
-      figury.push(cien, obj);
-      // Ruch liczony z zegara sceny, nie tweenem: pochód ma zaczynać się
-      // w pół drogi (kto otworzy wstęp, od razu widzi scenę, a nie pustą
-      // grotę), a przewijanie tweenu z opóźnieniem (`seek`) gubiło pozycje.
-      // Odstępy są odstępami w CZASIE — każdy rusza z prawego brzegu chwilę
-      // po poprzednim, więc nikt nie wychodzi poza ramę na drewno.
-      const faza = 0.42 - odstep / (start - koniec);
+    const ziemia = IL.y + IL.h - 30;
+    const start = IL.x + IL.w - 60;
+    const koniec = IL.x + 200;
+    const CZAS = 30000;
+    const SWIATLO_GROTY = 0xc4c0f0;
+    // Ruch liczony z zegara sceny, nie tweenem: pochód ma zaczynać się
+    // w pół drogi (kto otworzy wstęp, od razu widzi scenę), a odstępy są
+    // odstępami w CZASIE — każdy rusza z prawego brzegu chwilę po poprzednim,
+    // więc nikt nie wychodzi poza ramę na drewno.
+    const idz = (obiekty: Phaser.GameObjects.Image[], odstep: number, podskok: number, szer: number) => {
+      const cien = this.add.ellipse(start, ziemia + 2, szer, 10, 0x05030a, 0.5);
+      figury.push(cien, ...obiekty);
+      const dy = obiekty.map((o) => o.y - ziemia);
+      const faza = 0.58 - odstep / (start - koniec);
       this.ruchome.push((czas) => {
-        if (!obj.active) return false;
+        if (!obiekty[0].active) return false;
         const u = (((czas / CZAS + faza) % 1) + 1) % 1;
         const x = start - u * (start - koniec);
         const a = Phaser.Math.Clamp(Math.min(u, 1 - u) * 8, 0, 1);
-        obj.setPosition(x, ziemia - Math.abs(Math.sin(u * Math.PI * 60)) * podskok).setAlpha(a);
-        cien.setPosition(x, ziemia + 2).setAlpha(a * 0.45);
+        const skok = Math.abs(Math.sin(u * Math.PI * 48)) * podskok;
+        obiekty.forEach((o, i) => o.setPosition(x + (o.getData('dx') ?? 0), ziemia + dy[i] - skok * (i === 0 ? 1 : 0.6)).setAlpha(a));
+        cien.setPosition(x, ziemia + 2).setAlpha(a * 0.5);
         return true;
       });
     };
-    for (const [i, odstep] of [0, 70].entries()) {
-      const w = this.add.sprite(0, ziemia, 'k-wrog', 4).setOrigin(0.5, 1).setScale(1.25);
-      w.play({ key: 'k-wrog-idzie', startFrame: i * 2 });
-      idz(w, odstep, 0);
-    }
-    bor.units.slice(0, 3).forEach((u, i) => {
-      const s = this.add.image(0, ziemia, `p-${u.sprite}`).setOrigin(0.5, 1);
-      s.setScale(40 / s.height).setTint(0xc8d4ff);
-      idz(s, 150 + i * 46, 5);
+    // Przywódca z profilu — idzie w lewo, więc odbity.
+    const a = this.add.image(0, ziemia, 'k-wrog-a').setOrigin(0.5, 1).setFlipX(true).setTint(SWIATLO_GROTY);
+    a.setScale(128 / a.height);
+    idz([a], 0, 3, 60);
+    // Wóz z mapy przygody, a na nim trzy stworki z pogranicza.
+    const woz = this.add.image(0, ziemia, 'k-woz').setOrigin(0.5, 1).setTint(SWIATLO_GROTY);
+    woz.setScale(104 / woz.height);
+    const stworki = bor.units.slice(0, 3).map((u, i) => {
+      const st = this.add.image(0, ziemia - 52 - (i === 1 ? 8 : 0), `p-${u.sprite}`).setOrigin(0.5, 1).setTint(0xd8dcff);
+      st.setScale(50 / st.height).setData('dx', (i - 1) * 26 + 8);
+      return st;
     });
+    idz([woz, ...stworki], 118, 1.5, 110);
+    const b2 = this.add.image(0, ziemia, 'k-wrog-b').setOrigin(0.5, 1).setTint(SWIATLO_GROTY);
+    b2.setScale(118 / b2.height);
+    idz([b2], 250, 3, 70);
+    // Wóz rysujemy pod stworkami: kolejność w tablicy to kolejność warstw.
     return figury;
   }
 
@@ -752,15 +762,17 @@ export class KampaniaScene extends Phaser.Scene {
     const t = trenerPoImieniu(this.postep?.trener ?? 'Janek');
     const ziemia = IL.y + IL.h - 26;
     const tx = IL.x + 250;
-    figury.push(this.add.ellipse(tx, ziemia, 60, 12, 0x1a0e04, 0.4));
-    const tr = this.add.image(tx, ziemia, t.figurka).setOrigin(0.5, 1).setScale(2);
+    figury.push(this.add.ellipse(tx, ziemia, 90, 16, 0x1a0e04, 0.4));
+    const tr = this.add.image(tx, ziemia, t.figurka).setOrigin(0.5, 1);
+    tr.setScale(170 / tr.height);
     figury.push(tr);
-    this.tweens.add({ targets: tr, y: ziemia - 6, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeOut' });
+    // Podskok radości — krótki i sprężysty, jak u stworków obok.
+    this.tweens.add({ targets: tr, y: ziemia - 8, duration: 380, yoyo: true, repeat: -1, ease: 'Sine.easeOut' });
     const bor = factionById('bor') ?? FACTIONS[0];
     bor.units.forEach((u, i) => {
       const s = this.add.image(0, 0, `p-${u.sprite}`).setOrigin(0.5, 1);
-      s.setScale(46 / s.height);
-      const x0 = tx + 50;
+      s.setScale(56 / s.height);
+      const x0 = tx + 60;
       const x1 = IL.x + IL.w - 24;
       const faza = i / bor.units.length;
       const okres = 7000 + i * 700;
@@ -851,7 +863,7 @@ export class KampaniaScene extends Phaser.Scene {
     medal.fillCircle(mx, BELKA_Y - 0.5, 16);
     medal.fillStyle(BARWA_TRENERA[p.trener] ?? C.foe, 1);
     medal.fillCircle(mx, BELKA_Y, 13);
-    this.add.image(mx, BELKA_Y + 1, t.glowa).setOrigin(0.5, 0.5);
+    this.add.image(mx, BELKA_Y + 1, t.glowa).setOrigin(0.5, 0.5).setDisplaySize(27, 27);
   }
 
   // ————————————————————————————————————————————————— mapa
@@ -997,7 +1009,9 @@ export class KampaniaScene extends Phaser.Scene {
   private znacznik(m: Misja, i: number, stan: StanZnacznika) {
     const { x, y } = this.naEkran(m.naMapie.x, m.naMapie.y);
     const k = this.add.container(x, y).setDepth(10 + i);
-    const r = stan === 'biezaca' ? 21 : 18;
+    // Moneta jest mała: miejscem misji ma być namalowana budowla za nią,
+    // a nie żeton interfejsu na mapie.
+    const r = stan === 'biezaca' ? 16 : 13;
 
     if (stan === 'biezaca') {
       // Pulsujące kręgi — dwa, przesunięte w fazie, żeby puls był ciągły.
@@ -1051,10 +1065,10 @@ export class KampaniaScene extends Phaser.Scene {
     const nr = this.add
       .text(0, 0, String(m.nr), {
         fontFamily: SERIF,
-        fontSize: `${stan === 'biezaca' ? 21 : 18}px`,
+        fontSize: `${stan === 'biezaca' ? 16 : 13}px`,
         color: '#fff8e4',
         stroke: BRAZ,
-        strokeThickness: 4,
+        strokeThickness: 3,
       })
       .setOrigin(0.5);
     if (stan === 'zamknieta') nr.setAlpha(0.7);
@@ -1091,26 +1105,27 @@ export class KampaniaScene extends Phaser.Scene {
     }
     k.add(b);
 
-    // Wstążka z nazwą: pergaminowy szyld z atramentem, jak podpis na mapie.
+    // Nazwa na deseczce — tej samej malowanej desce, z której są drogowskazy
+    // menu. Wbita w ziemię pod budowlą czyta się jak tabliczka przy drodze,
+    // a nie jak etykieta interfejsu.
     const podpis = this.add
       .text(0, r + 16, m.tytul, {
         fontFamily: SERIF,
-        fontSize: '12px',
-        color: stan === 'zamknieta' ? '#6e5a44' : ATRAMENT,
+        fontSize: '11px',
+        color: stan === 'zamknieta' ? '#cdbfa6' : BARWA.krem,
+        stroke: BRAZ,
+        strokeThickness: 3,
       })
       .setOrigin(0.5);
-    const ww = podpis.width + 18;
-    const wst = this.add.graphics();
-    wst.fillStyle(0x0a0602, 0.4);
-    wst.fillRoundedRect(-ww / 2 + 1, r + 8, ww, 19, 4);
-    wst.fillStyle(stan === 'biezaca' ? C.goldDeep : 0x6b4a26, 1);
-    wst.fillRoundedRect(-ww / 2 - 1.5, r + 5.5, ww + 3, 22, 5);
-    wst.fillStyle(stan === 'zamknieta' ? 0xd9c7a2 : 0xf3e2ba, 1);
-    wst.fillRoundedRect(-ww / 2, r + 7, ww, 19, 4);
-    wst.fillStyle(0xffffff, 0.25);
-    wst.fillRect(-ww / 2 + 3, r + 8, ww - 6, 2);
-    if (stan === 'zamknieta') wst.setAlpha(0.88);
-    k.add([wst, podpis]);
+    const ww = podpis.width + 22;
+    const deska = this.add
+      .nineslice(0, r + 16, 'k-deseczka', undefined, ww, 22, 12, 12, 8, 8)
+      .setOrigin(0.5);
+    if (stan === 'zamknieta') deska.setTint(0x9a8f84);
+    const palik = this.add.graphics();
+    palik.fillStyle(0x3a2412, 1);
+    palik.fillRect(-2, r + 26, 4, 8);
+    k.add([palik, deska, podpis]);
 
     if (stan === 'biezaca') {
       // Strzałka nad bieżącą: podskakuje. Najprostszy znak „tu" dla dziecka.
@@ -1125,9 +1140,9 @@ export class KampaniaScene extends Phaser.Scene {
       s.fillRect(-4, -16, 8, 13);
       s.fillStyle(C.gold, 1);
       s.fillRect(-2.5, -15, 5, 12);
-      s.setY(-r - 26);
+      s.setY(-r - 40).setScale(0.8);
       k.add(s);
-      this.tweens.add({ targets: s, y: -r - 18, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.tweens.add({ targets: s, y: -r - 32, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
       // Trener stoi obok bieżącej misji.
       this.postawTrenera(x, y, r);
@@ -1141,7 +1156,7 @@ export class KampaniaScene extends Phaser.Scene {
     }
 
     // Klik i najechanie. Strefa pokrywa też wstążkę z nazwą.
-    const strefa = this.add.zone(0, 8, 64, 72).setInteractive({ useHandCursor: true });
+    const strefa = this.add.zone(0, 4, 70, 76).setInteractive({ useHandCursor: true });
     k.add(strefa);
     strefa.on('pointerover', () => {
       this.tweens.add({ targets: k, scale: 1.1, duration: 120, ease: 'Quad.easeOut' });
@@ -1172,12 +1187,24 @@ export class KampaniaScene extends Phaser.Scene {
     });
     const { x, y } = strony[0].ocena >= strony[1].ocena ? strony[0] : strony[1];
     const t = trenerPoImieniu(this.postep!.trener);
-    const cien = this.add.ellipse(x, y - 1, 26, 8, 0x0a0602, 0.45).setDepth(9);
-    // Pixel art w skali 1: jeden piksel rysunku na piksel ekranu.
+    const cien = this.add.ellipse(x, y - 1, 30, 8, 0x0a0602, 0.45).setDepth(9);
     const tr = this.add.image(x, y, t.figurka).setOrigin(0.5, 1).setDepth(9);
+    tr.setScale(60 / tr.height);
+    // Obozowisko: malowane ognisko z mapy przygody obok trenera, z drgającym
+    // blaskiem. Bieżąca misja to „tu rozbiłem obóz", nie tylko świecący żeton.
+    if (biezacaMisja(this.postep!)) {
+      const strona = x < xZnacznika ? -1 : 1;
+      const fx = x + strona * 20;
+      const blask = this.add.image(fx, y - 6, 'k-poswiata').setDisplaySize(60, 44).setTint(0xffa040).setAlpha(0.5).setDepth(8);
+      blask.setBlendMode(Phaser.BlendModes.ADD);
+      const ogien = this.add.image(fx, y + 2, 'k-ognisko').setOrigin(0.5, 1).setDepth(9);
+      ogien.setScale(28 / ogien.height);
+      this.tweens.add({ targets: blask, alpha: 0.25, scale: blask.scale * 0.85, duration: 260, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.tweens.add({ targets: ogien, scaleY: ogien.scaleY * 1.06, duration: 180, yoyo: true, repeat: -1 });
+    }
     this.trenerNaMapie = tr;
     tr.setData('cien', cien);
-    this.tweens.add({ targets: tr, y: y - 2, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: tr, scaleY: tr.scaleY * 1.02, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   }
 
   /** Obwódka wokół znacznika misji pokazanej na zwoju. */
@@ -1185,7 +1212,7 @@ export class KampaniaScene extends Phaser.Scene {
     for (const z of this.znaczniki) {
       z.obwodka.clear();
       if (z.misja !== this.pokazana) continue;
-      const r = z.stan === 'biezaca' ? 30 : 27;
+      const r = z.stan === 'biezaca' ? 24 : 20;
       z.obwodka.lineStyle(5, 0x0a0602, 0.35);
       z.obwodka.strokeCircle(0, 1, r);
       z.obwodka.lineStyle(3, 0xffffff, 0.95);
@@ -1310,7 +1337,7 @@ export class KampaniaScene extends Phaser.Scene {
           tr.setFlipX(false).setPosition(cel.x, cel.y);
           odc.odkryty = 1;
           sfx(this, 'wejscie', 0.7);
-          this.tweens.add({ targets: tr, y: cel.y - 2, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+          this.tweens.add({ targets: tr, scaleY: tr.scaleY * 1.02, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         },
       });
     });
@@ -1705,10 +1732,11 @@ export class KampaniaScene extends Phaser.Scene {
     }
     if (b.typ === 'artefakt') {
       const a = artefaktPoId(b.artefakt);
+      const malowana = `k-ikona-${IKONA_ARTEFAKTU[b.artefakt] ?? ''}`;
       return {
-        tekstura: kluczArtefaktu(b.artefakt, a?.klasa ?? 'drobny'),
+        tekstura: this.textures.exists(malowana) ? malowana : kluczArtefaktu(b.artefakt, a?.klasa ?? 'drobny'),
         nazwa: a?.nazwa ?? nazwaArtefaktu(b.artefakt),
-        bok: 46,
+        bok: 52,
       };
     }
     if (b.typ === 'oddzial') {
@@ -1718,10 +1746,10 @@ export class KampaniaScene extends Phaser.Scene {
     }
     const atak = b.atak ?? 0;
     return {
-      tekstura: atak ? ICON.sword : ICON.shield,
+      tekstura: atak ? 'k-ikona-miecz' : 'k-ikona-tarcza',
       nazwa: atak ? 'Silniejszy atak' : 'Mocniejsza obrona',
       liczba: `+${atak || b.obrona || 0}`,
-      bok: 38,
+      bok: 50,
     };
   }
 
