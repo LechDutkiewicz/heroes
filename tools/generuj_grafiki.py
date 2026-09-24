@@ -51,7 +51,11 @@ from pathlib import Path
 
 KORZEN = Path(__file__).resolve().parent.parent
 WSAD = KORZEN / 'tools' / 'wsad'
-DOKUMENTY = [KORZEN / 'tools' / 'PROMPTY-BUDYNKI.md', KORZEN / 'tools' / 'PROMPTY-MAPA-2.md']
+DOKUMENTY = [
+    KORZEN / 'tools' / 'PROMPTY-BUDYNKI.md',
+    KORZEN / 'tools' / 'PROMPTY-MAPA-2.md',
+    KORZEN / 'tools' / 'PROMPTY-WYNIK.md',
+]
 
 API = 'https://generativelanguage.googleapis.com/v1beta'
 
