@@ -1031,7 +1031,7 @@ export class WynikScene extends Phaser.Scene {
     const tresc: Phaser.GameObjects.GameObject[] = [
       this.add.text(kx + 24, ky + 18, 'Co się stało?', stylEtykiety(19)).setDepth(45),
       this.add
-        .text(kx + 24, ky + 50, coSieStalo(przyczyna), stylEtykiety(15, BARWA.atrament))
+        .text(kx + 24, ky + 50, coSieStalo(przyczyna), { ...stylAtramentu(16, 'czerwony'), fontStyle: 'bold' })
         .setWordWrapWidth(370)
         .setDepth(45),
       this.add
@@ -1071,7 +1071,7 @@ export class WynikScene extends Phaser.Scene {
       this.obraz(rx + 22, ky + 40, ICON.star, 22).setDepth(45),
       this.add.text(rx + 40, ky + 40, 'Rada', stylEtykiety(16)).setOrigin(0, 0.5).setDepth(45),
       this.add
-        .text(rx + 14, ky + 60, rada(przyczyna), { ...stylAtramentu(15), lineSpacing: 5 })
+        .text(rx + 14, ky + 58, rada(przyczyna), { ...stylAtramentu(14), lineSpacing: 2 })
         .setWordWrapWidth(rw - 26)
         .setDepth(45)
     );
@@ -1311,18 +1311,10 @@ export class WynikScene extends Phaser.Scene {
         this.pasmo(g, kx + 16, y - 19, kw - 32, 38, i);
       }
       tresc.push(g);
-      // Trzy pierwsze miejsca dostają medal zamiast gołej liczby.
-      const medal = [C.gold, 0xc9d3dd, 0xd08a4a][i];
-      if (medal !== undefined) {
-        const m = this.add.graphics().setDepth(45);
-        m.fillStyle(C.shadow, 0.35);
-        m.fillCircle(kol.miejsce, y + 2, 14);
-        m.fillStyle(medal, 1);
-        m.fillCircle(kol.miejsce, y, 14);
-        m.fillStyle(C.white, 0.45);
-        m.fillCircle(kol.miejsce - 4, y - 5, 5);
-        tresc.push(m);
-      }
+      // Trzy pierwsze miejsca dostają medalion z zestawu — złoty pierścień
+      // i dno w barwie miejsca (złoto, srebro, brąz) — zamiast gołej liczby.
+      const medal = [0x7a4a10, 0x4d5560, 0x6a3a1a][i];
+      if (medal !== undefined) tresc.push(medalion(this, kol.miejsce, y, 15, medal).setDepth(45));
       const t = tytulZaWynik(r.punkty);
       const imie = this.add
         .text(kol.imie, y, r.imie, stylAtramentu(18, miekki ? 'miekki' : 'zwykly'))
