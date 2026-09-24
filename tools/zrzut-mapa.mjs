@@ -56,6 +56,21 @@ const gotowa = () =>
 await page.goto(`${BASE}/?ekran=mapa${MAPA ? `&mapa=${MAPA}` : ''}`, { waitUntil: 'domcontentloaded' });
 await gotowa();
 
+if (ZWIAD > 0) {
+  // Okolica startu odsłonięta tak, jak po kilku dniach zwiadu — ten sam
+  // widok gry, tylko bez czerni mgły, która w pierwszej turze zakrywa
+  // prawie cały ekran i nie pozwala ocenić, jak plansza wygląda.
+  await page.evaluate((r) => {
+    const scena = window.__game.scene.getScene('adventure');
+    const stan = window.__game.registry.get('stan-mapy');
+    const { x, y } = stan.bohater;
+    stan.odkryte = stan.odkryte.map((w, wy) => w.map((v, wx) => v || (wx - x) ** 2 + (wy - y) ** 2 <= r * r));
+    scena.scene.restart();
+  }, ZWIAD);
+  await page.waitForTimeout(300);
+  await gotowa();
+}
+
 if (CALY) {
   // Zdejmujemy mgłę w stanie gry i przerysowujemy scenę — mgła jest rysowana
   // w `create`, więc samo przestawienie tablicy nie wystarczy.
