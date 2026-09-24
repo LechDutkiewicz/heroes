@@ -1,5 +1,5 @@
 {
- "updated": "2026-09-24, menu: runda 1",
+ "updated": "2026-09-24, scalone: menu, kampania, wynik; wspólny komplet w budowie",
  "pieces": [
   {
    "name": "Menu główne",
@@ -40,7 +40,14 @@
    "status": "build",
    "bar": "Okno „Scenario Information” oraz ekrany zwycięstwa i porażki z HoMM2",
    "note": "Okno warunków na starcie misji, rozstrzygnięcie misji, ekran wyniku, przejście do kolejnej misji, rekordy.",
-   "rounds": []
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Panele i przyciski wyglądają jak zwykła strona internetowa (bladoniebieskie ramki, błyszczące pigułki, bezszeryfowe litery z czarnym konturem) i psują malowane sceny. Finał kampanii powtarza scenę z misji 1. Obok siebie są dwa style grafiki.",
+     "blind": "tools/blind/wynik-r1.png",
+     "note": "Sceny zwycięstwa i porażki mają ładunek emocjonalny, a porażka jest łagodna. Komplet paneli i przycisków powstaje raz, wspólnie dla wszystkich ekranów. Sonda misji: 38/38 OK."
+    }
+   ]
   },
   {
    "name": "Plansze misji",
