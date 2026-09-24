@@ -18,7 +18,9 @@ import { ILE_REKORDOW, wczytajRekordy, type Rekord } from '../data/rekordy';
 /** Kroje menu — rejestruje je MenuScene (`wczytajKroje`). */
 export const KROJ = {
   szyld: 'MenuCinzel, Georgia, serif',
-  tekst: 'MenuFredoka, Trebuchet MS, Verdana, sans-serif',
+  // Lora ze wspólnego zestawu, a nie Fredoka: podzbiór Fredoki nie ma ą, ć, ę,
+  // ń, ś, ź, ż i te litery wypadały z kroju zapasowego w środku słowa.
+  tekst: 'ZestawLora, Georgia, serif',
 } as const;
 
 /** Atrament na pergaminie: brąz, nie czerń — czerń na beżu wygląda jak wydruk. */
@@ -422,7 +424,7 @@ const AUTORZY: [string, string][][] = [
     ['Muzyka bitwy', '„Cynic Battle Loop" (CC0)'],
     ['Muzyka wioski i mapy', 'napisana w kodzie'],
     ['Logo, drogowskaz i zwój', 'rysowane w kodzie'],
-    ['Silnik i kroje', 'Phaser · Cinzel · Fredoka'],
+    ['Silnik i kroje', 'Phaser · Cinzel · Lora'],
   ],
 ];
 

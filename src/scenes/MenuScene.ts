@@ -5,6 +5,7 @@ import { jestZapis, wczytajGre } from '../data/zapis';
 import { MUZYKA_MIASTO, initSfx, startMusic, stopMusic } from '../audio/mapSfx';
 import { gradientText } from '../visual/hud';
 import { TEX, ZM, ozywTlo, stworek, zbudujTekstury } from '../visual/menuZycie';
+import { krojeZestawu } from '../visual/zestaw';
 import { KROJ, pokazAutorow, pokazRekordy, type Zwoj } from '../visual/menuOkna';
 
 /**
@@ -130,20 +131,19 @@ let kroje: Promise<void> | undefined;
  * Trebuchet), brzydziej, ale czytelnie.
  */
 function wczytajKroje(): Promise<void> {
-  kroje ??= Promise.all(
-    (
+  kroje ??= Promise.all([
+    krojeZestawu(),
+    ...(
       [
         ['MenuCinzel', 'cinzel-latin-900', LACINSKI, '900'],
         ['MenuCinzel', 'cinzel-latin-ext-900', ROZSZERZONY, '900'],
-        ['MenuFredoka', 'fredoka-latin-600', LACINSKI, '400'],
-        ['MenuFredoka', 'fredoka-latin-ext-600', ROZSZERZONY, '400'],
       ] as const
     ).map(async ([rodzina, plik, zakres, waga]) => {
       const f = new FontFace(rodzina, `url(${B}menu/${plik}.woff2)`, { unicodeRange: zakres, weight: waga });
       await f.load();
       document.fonts.add(f);
-    })
-  ).then(
+    }),
+  ]).then(
     () => undefined,
     () => undefined
   );
