@@ -1,5 +1,5 @@
 {
- "updated": "2026-09-24, menu wygrywa ślepo (runda 3)",
+ "updated": "2026-09-24, kampania i wynik wygrywają; nowy kawałek: HUD mapy",
  "pieces": [
   {
    "name": "Menu główne",
@@ -84,6 +84,13 @@
    "status": "build",
    "bar": "Mapy kampanii HoMM2 (mapa przygody), grywalne od początku do końca",
    "note": "Cztery misje na trzech nowych planszach i jednej istniejącej.",
+   "rounds": []
+  },
+  {
+   "name": "HUD mapy przygody",
+   "status": "todo",
+   "bar": "Mapa przygody HoMM2 (tools/reference/homm2/mapa-przygody-640.png): prawy panel, pasek zasobów, przyciski w jednym złoto-kamiennym komplecie",
+   "note": "Dwaj krytycy niezależnie wskazali, że błękitny HUD mapy z czcionką jak Arial gryzie się z nowymi pergaminowymi oknami. HUD przechodzi na wspólny komplet src/visual/zestaw.ts.",
    "rounds": []
   }
  ]
