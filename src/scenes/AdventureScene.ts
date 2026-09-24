@@ -34,6 +34,7 @@ import {
   type WyborSkrzyni,
 } from '../data/mapa';
 import { planszaPrzygody } from '../data/plansza';
+import { planszaPoId } from '../data/mapy';
 import { turaWroga } from '../data/wrog-ai';
 import { SLOTY_ARMII, dolacz, pustaArmia, zywe } from '../data/armia';
 import { jestZapis, wczytajGre, zapiszGre } from '../data/zapis';
@@ -111,6 +112,8 @@ const KLUCZ_STANU = 'stan-mapy';
 /** Skład armii sprzed bitwy (slot → liczebność) — z niego Uzdrowiciel liczy straty. */
 const KLUCZ_PRZED_BITWA = 'armia-przed-bitwa';
 const KLUCZ_WYNIKU = 'wynik-bitwy';
+/** Katalog tła, z którego wczytano `plansza-0` — patrz `preload`. */
+const KLUCZ_TLA = 'tlo-planszy';
 
 const DOMYSLNA_PODPOWIEDZ =
   'Klik w pole pokazuje trasę, drugi klik w to samo miejsce — rusza.\n' +
@@ -202,8 +205,18 @@ export class AdventureScene extends Phaser.Scene {
     wersjonujZasoby(this);
     loadSfx(this, MUZYKA_MAPA);
     const b = import.meta.env.BASE_URL;
-    this.load.image('plansza-0', `${b}mapa/plansza-0.jpg`);
-    this.load.image('woda-maska', `${b}mapa/woda-maska.png`);
+    // Tło zależy od planszy, a klucze tekstur zostają te same (`plansza-0`,
+    // `woda-maska`) — sięga po nie kilka miejsc sceny i shader wody. Phaser
+    // nie wczytuje drugi raz klucza, który już zna, więc przy zmianie
+    // planszy (następna misja kampanii) stare tło trzeba najpierw usunąć.
+    const tlo = `${b}${planszaPoId(this.wczytajStan().mapa).tlo}`;
+    if (this.registry.get(KLUCZ_TLA) !== tlo) {
+      this.textures.remove('plansza-0');
+      this.textures.remove('woda-maska');
+      this.registry.set(KLUCZ_TLA, tlo);
+    }
+    this.load.image('plansza-0', `${tlo}plansza-0.jpg`);
+    this.load.image('woda-maska', `${tlo}woda-maska.png`);
     this.load.image('woda-zmarszczki', `${b}mapa/woda-zmarszczki.png`);
     this.load.spritesheet('bohater', `${b}mapa/bohater.png`, {
       frameWidth: BOHATER_KLATKA,

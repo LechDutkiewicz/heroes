@@ -7,7 +7,7 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1000, height: 900 }, deviceScaleFactor: 2 });
 page.on('pageerror', (e) => console.error('BŁĄD:', e.message));
-await page.goto('http://localhost:4173/?seed=7&terrain=laka', { waitUntil: 'load' });
+await page.goto('http://localhost:4173/?ekran=bitwa&seed=7&terrain=laka', { waitUntil: 'load' });
 await page.waitForFunction(() => window.__game?.scene.getScene('battle')?.sys.settings.status === 5, null, { timeout: 30000 });
 await page.waitForTimeout(500);
 await page.evaluate(() => {

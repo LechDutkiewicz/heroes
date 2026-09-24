@@ -589,6 +589,10 @@ export function poziom(doswiadczenie: number) {
 }
 
 export interface StanMapy {
+  /** Identyfikator planszy z `MAPY` (src/data/mapy.ts). Brak = „Dwie Doliny". */
+  mapa?: string;
+  /** Misja kampanii, która się na tej planszy toczy. Brak = gra pojedyncza. */
+  misja?: string;
   szer: number;
   wys: number;
   teren: Teren[][];

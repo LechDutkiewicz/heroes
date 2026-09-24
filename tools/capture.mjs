@@ -125,7 +125,7 @@ function wokol(punkt, w = 620, h = 470, obrazW = 1920, obrazH = 1388) {
  *     scena nie wstanie, wolimy stracić kilka sekund niż cały przebieg.
  */
 async function open(page, query = '') {
-  const url = `${BASE}/?seed=${SEED}${query}`;
+  const url = `${BASE}/?ekran=bitwa&seed=${SEED}${query}`;
   try {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
     await ready(page);

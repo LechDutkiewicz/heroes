@@ -1,4 +1,4 @@
-import { PUNKTY, ROZSTAWIENIE, TEREN } from './plansza-teren';
+import { planszaPoId } from './mapy';
 import {
   CHATKA_ILE,
   OGNISKO_SUROWIEC,
@@ -203,7 +203,9 @@ function wielkoscStosu(co: Surowiec, losuj: () => number) {
   return min + Math.floor(losuj() * (max - min + 1));
 }
 
-export function planszaPrzygody(): StanMapy {
+export function planszaPrzygody(mapaId?: string): StanMapy {
+  const plansza = planszaPoId(mapaId);
+  const { TEREN, PUNKTY, ROZSTAWIENIE } = plansza.modul;
   const losuj = losowarka(20260812);
   const teren: Teren[][] = TEREN.map((w) => [...w].map((z) => ZNAKI[z] ?? 'trawa'));
 
@@ -252,7 +254,10 @@ export function planszaPrzygody(): StanMapy {
       const klasa =
         wpis.strefa === 'wroga' ? 'relikt' : wpis.strefa === 'pogranicze' ? 'znaczny' : 'drobny';
       const pula = ARTEFAKTY.filter((a) => a.klasa === klasa);
-      const a = pula[Math.floor(losuj() * pula.length)];
+      const losowy = pula[Math.floor(losuj() * pula.length)];
+      // Artefakt-cel misji stoi w rozstawieniu z nazwy; losowanie i tak
+      // idzie, żeby reszta planszy nie przesunęła się o jedno losowanie.
+      const a = (wpis.artefakt && ARTEFAKTY.find((x) => x.id === wpis.artefakt)) || losowy;
       obiekty.push({ ...wspolne, rodzaj: 'artefakt', nazwa: a.nazwa, artefakt: a.id });
     } else if (wpis.rodzaj === 'budynek') {
       const b = BUDOWLE[wpis.budynek ?? ''];
@@ -355,12 +360,15 @@ export function planszaPrzygody(): StanMapy {
     // tygodniowy przyrost.
     oddzialy: garnizonZamku('bor', [0, 1]).map((o) => ({ ...o, ile: o.ile * 5 })),
   });
-  obiekty.push({
+  // Każdy punkt zaczynający się od „zamek wroga" stawia zamek przeciwnika —
+  // plansze kampanii mają ich po kilka. Pierwszy (bez przyrostka) jest stolicą.
+  const zamkiWroga = Object.keys(PUNKTY).filter((k) => k.startsWith('zamek wroga'));
+  zamkiWroga.forEach((klucz, i) => obiekty.push({
     id: id++,
     rodzaj: 'zamek',
-    x: PUNKTY['zamek wroga'].x,
-    y: PUNKTY['zamek wroga'].y,
-    nazwa: 'Grota Księżycowa',
+    x: PUNKTY[klucz].x,
+    y: PUNKTY[klucz].y,
+    nazwa: i === 0 ? 'Grota Księżycowa' : `Grota Księżycowa ${['II', 'III', 'IV'][i - 1] ?? i + 1}`,
     wlasciciel: 'wrog',
     frakcjaZamku: 'grota',
     // Zamek przeciwnika stoi rozbudowany dalej niż nasz. To nie jest kaprys:
@@ -378,7 +386,7 @@ export function planszaPrzygody(): StanMapy {
     // posterunkiem po drodze.
     oddzialy: garnizonZamku('grota', [0, 1, 2]),
 
-  });
+  }));
 
   // Armia startowa: cztery najniższe oddziały Boru. Punkty ruchu liczymy
   // z szybkości najwolniejszego, dokładnie jak w Heroes 3 — dzięki temu
@@ -414,6 +422,7 @@ export function planszaPrzygody(): StanMapy {
   const wrogRuchMax = ruchNaDzien(wrogNajwolniejszy);
 
   const stan: StanMapy = {
+    mapa: plansza.id,
     szer: TEREN[0].length,
     wys: TEREN.length,
     teren,
@@ -435,8 +444,10 @@ export function planszaPrzygody(): StanMapy {
     // Przy 15 pokeballach dzień pierwszy był tylko klikaniem „dalej".
     skarbiec: { pokeball: 40, jagoda: 6, kamien: 1, odlamek: 4 },
     wrogBohater: {
-      x: PUNKTY['zamek wroga'].x,
-      y: PUNKTY['zamek wroga'].y,
+      // Bez zamku wroga (misja bez przeciwnika) bohater wroga stoi poza
+      // grą w rogu mapy i nigdy nie dostaje tury — patrz `wrogAktywny`.
+      x: (PUNKTY[zamkiWroga[0]] ?? { x: 0 }).x,
+      y: (PUNKTY[zamkiWroga[0]] ?? { y: 0 }).y,
       ruch: wrogRuchMax,
       ruchMax: wrogRuchMax,
       imie: 'Grota',

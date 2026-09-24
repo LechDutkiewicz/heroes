@@ -1,0 +1,9 @@
+{
+  "updated": "2026-09-24, start",
+  "pieces": [
+    {"name": "Menu główne", "status": "build", "bar": "Menu główne HoMM2: malowany ekran tytułowy z kolumną przycisków", "note": "Ilustracja tytułowa, przyciski, podmenu nowej gry, autorzy, rekordy.", "rounds": []},
+    {"name": "Ekran kampanii", "status": "build", "bar": "Ekran kampanii HoMM2: mapa krainy ze znacznikami misji, opis, trzy bonusy do wyboru", "note": "Wybór trenera, mapa kampanii, opis misji, bonusy, start.", "rounds": []},
+    {"name": "Warunki misji, wygrana i porażka", "status": "build", "bar": "Okno „Scenario Information” oraz ekrany zwycięstwa i porażki z HoMM2", "note": "Okno warunków na starcie misji, rozstrzygnięcie misji, ekran wyniku, przejście do kolejnej misji, rekordy.", "rounds": []},
+    {"name": "Plansze misji", "status": "build", "bar": "Mapy kampanii HoMM2 (mapa przygody), grywalne od początku do końca", "note": "Cztery misje na trzech nowych planszach i jednej istniejącej.", "rounds": []}
+  ]
+}
