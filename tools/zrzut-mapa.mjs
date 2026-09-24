@@ -3,6 +3,14 @@
 // mapa się w ogóle wczytała.
 //
 //   node tools/zrzut-mapa.mjs [--url http://localhost:4173] [--out tools/shots/mapa.png]
+//                             [--mapa polana] [--caly]
+//
+// `--mapa` wybiera planszę z rejestru `MAPY` (adres `?ekran=mapa&mapa=<id>`).
+// `--caly` robi PODGLĄD CAŁEJ PLANSZY: mgła zdjęta, kamera planszy
+// rozciągnięta na całe płótno i oddalona tak, żeby zmieściła się cała mapa —
+// to jest ta sama scena co w grze (drzewa, skały, obiekty, woda), tylko
+// widziana z góry, a nie obrazek składany osobno, który mógłby się z grą
+// rozjechać.
 
 import { chromium } from 'playwright';
 import { mkdir } from 'node:fs/promises';
@@ -13,10 +21,17 @@ const arg = (n, d) => {
   return i !== -1 ? process.argv[i + 1] : d;
 };
 const BASE = arg('--url', 'http://localhost:4173');
-const OUT = arg('--out', 'tools/shots/mapa.png');
+const MAPA = arg('--mapa', null);
+const CALY = process.argv.includes('--caly');
+const OUT = arg('--out', `tools/shots/mapa${MAPA ? `-${MAPA}` : ''}${CALY ? '-caly' : ''}.png`);
+/** Bok podglądu całej planszy w pikselach. */
+const BOK_PODGLADU = Number(arg('--bok', 1152));
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const page = await browser.newPage({ viewport: { width: 1000, height: 760 } });
+const page = await browser.newPage({
+  viewport: CALY ? { width: BOK_PODGLADU + 40, height: BOK_PODGLADU + 40 } : { width: 1000, height: 760 },
+  deviceScaleFactor: 1,
+});
 
 const bledy = [];
 page.on('pageerror', (e) => bledy.push(String(e)));
@@ -26,19 +41,59 @@ page.on('requestfinished', async (r) => {
 });
 page.on('console', (m) => m.type() === 'error' && bledy.push(m.text()));
 
-await page.goto(`${BASE}/?ekran=mapa`, { waitUntil: 'domcontentloaded' });
-await page.waitForFunction(
-  () => window.__game?.scene.getScene('adventure')?.sys.settings.status === 5,
-  null,
-  { timeout: 30000 }
-);
-// Kafelki i sprite'y przeszkód ładują się po starcie sceny — bez tej pauzy
-// zrzut łapie gołe tło i wygląda, jakby teren się nie rysował.
-await page.waitForTimeout(1200);
+const gotowa = () =>
+  page.waitForFunction(
+    () => window.__game?.scene.getScene('adventure')?.sys.settings.status === 5,
+    null,
+    { timeout: 60000 }
+  );
+
+await page.goto(`${BASE}/?ekran=mapa${MAPA ? `&mapa=${MAPA}` : ''}`, { waitUntil: 'domcontentloaded' });
+await gotowa();
+
+if (CALY) {
+  // Zdejmujemy mgłę w stanie gry i przerysowujemy scenę — mgła jest rysowana
+  // w `create`, więc samo przestawienie tablicy nie wystarczy.
+  await page.evaluate(() => {
+    const scena = window.__game.scene.getScene('adventure');
+    const stan = window.__game.registry.get('stan-mapy');
+    stan.odkryte = stan.odkryte.map((w) => w.map(() => true));
+    scena.scene.restart();
+  });
+  await page.waitForTimeout(300);
+  await gotowa();
+  await page.waitForTimeout(1500);
+  await page.evaluate((bok) => {
+    const gra = window.__game;
+    const scena = gra.scene.getScene('adventure');
+    gra.scale.resize(bok, bok);
+    const k = scena.kamera;
+    k.setViewport(0, 0, bok, bok);
+    k.setBounds(0, 0, scena.mapaW, scena.mapaH);
+    k.setZoom(bok / Math.max(scena.mapaW, scena.mapaH));
+    k.centerOn(scena.mapaW / 2, scena.mapaH / 2);
+    // Pasek HUD-u i okna nie należą do podglądu mapy.
+    scena.cameras.main.setVisible(false);
+    // Shader wody liczy współrzędne z kamery w zwykłym oknie gry; po
+    // oddaleniu kamery rysowałby wodę w złym miejscu. Pod nim leży woda
+    // namalowana w tle (patrz `render_mapa.py`) — ta sama, tylko nieruchoma.
+    scena.woda?.setVisible(false);
+    scena.kameraOkien?.setVisible(false);
+  }, BOK_PODGLADU);
+  await page.waitForTimeout(800);
+} else {
+  // Kafelki i sprite'y przeszkód ładują się po starcie sceny — bez tej pauzy
+  // zrzut łapie gołe tło i wygląda, jakby teren się nie rysował.
+  await page.waitForTimeout(1500);
+}
 
 await mkdir(dirname(OUT), { recursive: true });
 const el = await page.$('canvas');
-await el.screenshot({ path: OUT });
+if (CALY) {
+  await el.screenshot({ path: OUT, clip: { x: 0, y: 0, width: BOK_PODGLADU, height: BOK_PODGLADU } });
+} else {
+  await el.screenshot({ path: OUT });
+}
 console.log(`zrzut: ${OUT}`);
 if (bledy.length) {
   console.log('BŁĘDY W KONSOLI:');

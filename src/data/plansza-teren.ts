@@ -1,5 +1,5 @@
 // PLIK GENEROWANY — nie poprawiaj ręcznie.
-// Źródło: tools/generuj_mape.py (szkic krain jest w tamtym pliku).
+// Źródło: tools/mapy/dwie_doliny.py (szkic i rozstawienie), silnik: tools/generuj_mape.py.
 //
 // Plansza 72 × 72 („Dwie Doliny”, rozmiar M) — trzy pasy rozdzielone dwoma
 // grzbietami górskimi, każdy grzbiet z dwoma pilnowanymi przejściami:

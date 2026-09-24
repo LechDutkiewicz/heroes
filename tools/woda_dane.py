@@ -95,7 +95,7 @@ def zmarszczki():
     print(f'  woda-zmarszczki.png  {BOK_ZMARSZCZEK} × {BOK_ZMARSZCZEK}  (3 oktawy w kanałach)')
 
 
-def maska(rysunek: list[str], kafel: int, maskaWody: Image.Image):
+def maska(rysunek: list[str], kafel: int, maskaWody: Image.Image, katalog: Path = MAPA):
     """Maska wody z polem odległości od brzegu.
 
     Maskę bierzemy tę samą, którą teren malował na planszy — inaczej shader
@@ -131,5 +131,5 @@ def maska(rysunek: list[str], kafel: int, maskaWody: Image.Image):
     tab = np.stack(
         [woda * 255, odleglosc * 255, glebia * 255], axis=-1
     ).astype(np.uint8)
-    Image.fromarray(tab, 'RGB').save(MAPA / 'woda-maska.png')
+    Image.fromarray(tab, 'RGB').save(katalog / 'woda-maska.png')
     print(f'  woda-maska.png  {W} × {H}  (R woda, G odległość od brzegu, B głębia)')

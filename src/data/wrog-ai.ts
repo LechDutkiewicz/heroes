@@ -40,6 +40,7 @@
  */
 
 import {
+  artefaktPoId,
   budowlaPoId,
   bohaterOf,
   kluczeOf,
@@ -199,6 +200,14 @@ function wartoscKandydata(o: Obiekt, s: StanMapy, kto: Wlasciciel): number {
     if (o.spelnione || !o.zadanie) return 0;
     return skarbiecOf(s, kto)[o.zadanie.surowiec] >= o.zadanie.ile ? 150 : 0;
   }
+  if (o.rodzaj === 'artefakt' && artefaktPoId(o.artefakt ?? '')?.klasa === 'misja') {
+    // Cel misji (Księżycowy Kamień). Przeciwnik go NIE rusza: wódz, który go
+    // ukrył, nie przenosi go po mapie, a gdyby AI podniosło Kamień, misji nie
+    // dałoby się wygrać — i dziecko nie miałoby jak się dowiedzieć dlaczego.
+    // Autopilot gracza w symulacji traktuje go jak zamek: to jest powód, dla
+    // którego przyszedł na tę planszę.
+    return kto === 'gracz' ? 1000 : 0;
+  }
   return wartoscObiektu(o);
 }
 
@@ -270,7 +279,14 @@ function znajdzCel(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefine
     // Dotyczy WYŁĄCZNIE AI atakującego gracza — sam gracz może uderzyć na
     // zamek przeciwnika, gdy tylko go znajdzie i pokona; próg mierzy, jak
     // szybko PRZECIWNIK zagraża graczowi, nie odwrotnie.
-    if (o.rodzaj === 'zamek' && kto === 'wrog' && s.dzien < DZIEN_PIERWSZEGO_NATARCIA) continue;
+    // Plansza może ten próg przesunąć (`dzienNatarcia` z jej USTAWIEŃ): w Twierdzy
+    // wróg „nie czeka, aż do niego przyjdziesz".
+    if (
+      o.rodzaj === 'zamek' &&
+      kto === 'wrog' &&
+      s.dzien < (s.dzienNatarcia ?? DZIEN_PIERWSZEGO_NATARCIA)
+    )
+      continue;
 
     // Budowla na odnowie (albo jednorazowa i już użyta) nie da dziś nic
     // więcej — ten sam warunek co w `odwiedzBudowle`. Bez niego AI depcze
@@ -487,6 +503,17 @@ function priorytetBudowy(id: string): number {
   return 3;
 }
 
+/**
+ * Werbunek do ZAŁOGI zamku zamiast do armii bohatera — tryb `obronca`.
+ * Załoga to zwykła lista oddziałów (bez pustych slotów), więc ten sam gatunek
+ * dokleja się do istniejącego stosu, a nowy staje na końcu, najwyżej siedem.
+ */
+function doZalogi(zaloga: Oddzial[], o: Oddzial) {
+  const ten = zaloga.find((z) => z.sprite === o.sprite);
+  if (ten) ten.ile += o.ile;
+  else if (zaloga.length < 7) zaloga.push({ ...o });
+}
+
 /** Rozbudowa zamku i werbunek dla `kto` — te same `zbuduj`/`moznaBudowac` co gracz. */
 function rozbudujIWerbuj(s: StanMapy, kto: Wlasciciel) {
   const zamek = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === kto);
@@ -496,8 +523,13 @@ function rozbudujIWerbuj(s: StanMapy, kto: Wlasciciel) {
   const profil = profilZamku(frakcja);
   const postawione = zamek.postawione ?? [];
 
+  // Obrońca nie rozbudowuje fortu — umacnia się samym werbunkiem, więc tempo,
+  // w jakim rośnie załoga, wynika wprost z budynków, które plansza mu dała.
+  // Przy rozbudowie przyrost podwajałby się co kilka dni i misja samouczkowa
+  // przestałaby być samouczkiem.
+  const buduje = !(kto === 'wrog' && s.wrogTryb === 'obronca');
   const kandydaci = profil.budynki
-    .filter((b) => !postawione.includes(b.id) && moznaBudowac(b, postawione))
+    .filter((b) => buduje && !postawione.includes(b.id) && moznaBudowac(b, postawione))
     .sort((a, b) => priorytetBudowy(a.id) - priorytetBudowy(b.id));
   for (const b of kandydaci) {
     if (zbuduj(s, zamek, b.id, kto).ok) break; // jeden budynek dziennie
@@ -515,7 +547,12 @@ function rozbudujIWerbuj(s: StanMapy, kto: Wlasciciel) {
     if (ile <= 0) continue;
     skarbiec.pokeball -= ile * koszt;
     zamek.dostepne[tier] -= ile;
-    dolacz(bohater.armia, { sprite: def.sprite, nazwa: def.name, ile, frakcja, tier });
+    const oddzial = { sprite: def.sprite, nazwa: def.name, ile, frakcja, tier };
+    // Obrońca werbuje do załogi: zamek „umacnia się" z dnia na dzień, a jego
+    // bohater nigdzie nie wychodzi. Tak gra fort na Polanie — misja uczy
+    // pętli „zbierz, zbuduj, zdobądź", a nie obrony przed najazdem.
+    if (kto === 'wrog' && s.wrogTryb === 'obronca') doZalogi((zamek.oddzialy ??= []), oddzial);
+    else dolacz(bohater.armia, oddzial);
   }
 }
 
@@ -526,7 +563,14 @@ function rozbudujIWerbuj(s: StanMapy, kto: Wlasciciel) {
  * między niezależnymi przebiegami symulacji — w prawdziwej grze zostaje 0.
  */
 export function turaAI(s: StanMapy, kto: Wlasciciel, ziarno = 0): void {
+  // Przeciwnik bez żadnego zamku nie ma już czym grać — w misji z kilkoma
+  // zamkami to znaczy, że gracz zdobył wszystkie. Bez tego bohater wroga
+  // krążyłby dalej po mapie, choć misja jest już rozstrzygnięta.
+  const maZamek = s.obiekty.some((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'wrog');
+  if (kto === 'wrog' && !maZamek) return;
   rozbudujIWerbuj(s, kto);
+  // Obrońca nie wychodzi z zamku — patrz `wrogTryb` w `StanMapy`.
+  if (kto === 'wrog' && s.wrogTryb === 'obronca') return;
   ruszSie(s, kto, ziarno);
 }
 

@@ -36,6 +36,7 @@
 import Phaser from 'phaser';
 import {
   ARTEFAKTY,
+  ARTEFAKTY_LOSOWE,
   artefaktPoId,
   poziom,
   postepPoziomu,
@@ -102,7 +103,7 @@ const SLOT_ODSTEP = 12;
 const ARMIA_Y = TRESC_Y + TRESC_H + 32;
 
 /** Kolejność klas — karta pokazuje domyślnie najmocniejszy noszony artefakt. */
-const WAGA_KLASY = { drobny: 1, znaczny: 2, relikt: 3 } as const;
+const WAGA_KLASY = { drobny: 1, znaczny: 2, relikt: 3, misja: 4 } as const;
 
 interface WidokSlotu {
   indeks: number;
@@ -543,7 +544,7 @@ export class HeroScene extends Phaser.Scene {
     const startX = ARTE.x + (ARTE.w - siatkaW) / 2;
     const startY = TRESC_Y + 46;
 
-    ARTEFAKTY.forEach((a, i) => {
+    ARTEFAKTY_LOSOWE.forEach((a, i) => {
       const gx = startX + (i % kol) * (bok + odstep);
       const gy = startY + Math.floor(i / kol) * (bok + odstep + 14);
       const g = this.add.graphics().setDepth(Z.hud + 2);
@@ -1421,7 +1422,11 @@ export class HeroScene extends Phaser.Scene {
       podpis.setAlpha(ma ? 1 : 0.4);
     }
     const licznikArt = this.children.getByName('licznik-artefaktow') as Phaser.GameObjects.Text;
-    licznikArt?.setText(`ZEBRANE: ${b.artefakty.length} z ${ARTEFAKTY.length}`);
+    // Siatka i licznik obejmują artefakty do zbierania. Cel misji (Księżycowy
+    // Kamień) nie ma gniazda w siatce — pokazuje go karta pod nią, jako
+    // najważniejszą rzecz, którą bohater niesie.
+    const zebrane = b.artefakty.filter((id) => ARTEFAKTY_LOSOWE.some((a) => a.id === id)).length;
+    licznikArt?.setText(`ZEBRANE: ${zebrane} z ${ARTEFAKTY_LOSOWE.length}`);
     this.pokazArtefakt();
 
     this.armiaPodsumowanie.setText(`${lacznie(b.armia)} stworków w ${zywe(b.armia).length} stosach`);

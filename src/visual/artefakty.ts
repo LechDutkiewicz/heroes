@@ -27,12 +27,16 @@ export const BARWA_KLASY = {
   drobny: 0x8fd48f,
   znaczny: 0x6fb7ff,
   relikt: 0xffb24a,
+  // Cel misji: srebrzysty fiolet Groty. Ma się odróżniać od wszystkich trzech
+  // klas naraz — to nie jest „lepszy relikt", tylko rzecz, po którą się przyszło.
+  misja: 0xc9b6ff,
 } as const;
 
 export const OBRYS_KLASY = {
   drobny: 0x3f8a4a,
   znaczny: 0x2f6ea8,
   relikt: 0xc06a10,
+  misja: 0x6a4fb8,
 } as const;
 
 /** Krążek pod kształtem — daje ikonie bryłę i odsuwa ją od tła gniazda. */
@@ -144,6 +148,23 @@ const RYSUNKI: Record<string, (g: Pen) => void> = {
     sticker(g, C.goldDeep, (p) => poly(p, [30, 20, 34, 20, 34, 48, 30, 48]));
     gloss(g, 44, 24, 7, 3);
   },
+  // Księżycowy Kamień: owalny kamień z sierpem księżyca w środku — to, po co
+  // gracz jechał przez bagna, ma być rozpoznawalne bez podpisu.
+  'ksiezycowy-kamien': (g) => {
+    krazek(g, BARWA_KLASY.misja);
+    const owal: number[] = [];
+    for (let i = 0; i < 20; i++) {
+      const a = Phaser.Math.DegToRad(i * 18);
+      owal.push(32 + 17 * Math.cos(a), 33 + 21 * Math.sin(a));
+    }
+    sticker(g, 0x5a4a9a, (p) => poly(p, owal));
+    const sierp = [
+      ...arcPts(33, 33, 12, 110, 330, 12),
+      ...arcPts(38, 30, 9, 330, 110, 10),
+    ];
+    sticker(g, 0xf4f0ff, (p) => poly(p, sierp));
+    gloss(g, 26, 22, 6, 3.5);
+  },
 };
 
 /**
@@ -153,7 +174,7 @@ const RYSUNKI: Record<string, (g: Pen) => void> = {
  */
 function pieczec(g: Pen, klasa: keyof typeof BARWA_KLASY) {
   krazek(g, BARWA_KLASY[klasa]);
-  const boki = klasa === 'drobny' ? 3 : klasa === 'znaczny' ? 6 : 5;
+  const boki = klasa === 'drobny' ? 3 : klasa === 'znaczny' ? 6 : klasa === 'misja' ? 4 : 5;
   const pts: number[] = [];
   for (let i = 0; i < boki * 2; i++) {
     const a = Phaser.Math.DegToRad(-90 + (i * 360) / (boki * 2));
@@ -173,7 +194,7 @@ export function buildArtefakty(scene: Phaser.Scene) {
     g.generateTexture(klucz, S, S);
     g.destroy();
   }
-  for (const klasa of ['drobny', 'znaczny', 'relikt'] as const) {
+  for (const klasa of ['drobny', 'znaczny', 'relikt', 'misja'] as const) {
     const klucz = `art-klasa-${klasa}`;
     if (scene.textures.exists(klucz)) continue;
     const g = scene.add.graphics();

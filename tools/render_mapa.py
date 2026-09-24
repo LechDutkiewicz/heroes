@@ -17,7 +17,9 @@ Poprzednia wersja składała teren z arkusza 16-pikselowego i powiększała go
 trzykrotnie; przy teksturach 768 × 768 ta droga wyrzuciłaby cały detal,
 po który po nie sięgnęliśmy.
 
-Woda ma cztery klatki animacji, więc i plansza ma cztery klatki.
+Każda plansza kampanii ma własne tło: „Dwie Doliny" leżą w `public/mapa/`,
+kolejne w `public/mapa/<id>/` (patrz `katalog_tla` w `generuj_mape.py`
+i `MAPY` w `src/data/mapy.ts`).
 
 Kontrola zgodności
 ------------------
@@ -25,7 +27,8 @@ Skrypt zapisuje obok obrazków odcisk rysunku mapy. `tools/probe-mapa.ts`
 sprawdza, czy odcisk zgadza się z bieżącym terenem — inaczej łatwo
 zmienić planszę w kodzie i oglądać stare tło, nie wiedząc o tym.
 
-    python3 tools/render_mapa.py
+    python3 tools/render_mapa.py              # wszystkie plansze
+    python3 tools/render_mapa.py bagna        # jedna
 """
 
 import hashlib
@@ -49,8 +52,12 @@ from teren_malowanie import (  # noqa: E402
     zmieszaj,
 )
 
+from generuj_mape import MAPY, katalog_tla, plik_ts  # noqa: E402
+
 KORZEN = Path(__file__).resolve().parent.parent
+#: Ustawiane przez `ustaw(mapa_id)` — plik planszy i katalog tła.
 KATALOG = KORZEN / 'public' / 'mapa'
+ZRODLO = KORZEN / 'src' / 'data' / 'plansza-teren.ts'
 
 KAFEL = 48                  # bok pola na ekranie
 #: Ile razy nadpróbkowujemy maskę drogi, zanim ją zmniejszymy. Rysowanie
@@ -77,7 +84,7 @@ WARSTWY = [
 ]
 
 def wczytaj_rysunek():
-    src = (KORZEN / 'src' / 'data' / 'plansza-teren.ts').read_text(encoding='utf-8')
+    src = ZRODLO.read_text(encoding='utf-8')
     blok = re.search(r'export const TEREN = \[(.*?)\];', src, re.S).group(1)
     return re.findall(r"'([^']+)'", blok)
 
@@ -89,9 +96,10 @@ def wczytaj_budowle():
     zgadzać się z `BRYLA` w `src/data/mapa.ts`; tam decyduje o przejezdności,
     tu o tym, ile ziemi jest wydeptane.
     """
-    src = (KORZEN / 'src' / 'data' / 'plansza-teren.ts').read_text(encoding='utf-8')
+    src = ZRODLO.read_text(encoding='utf-8')
     lista = []
-    for m in re.finditer(r"'zamek (?:gracza|wroga)': \{ x: (\d+), y: (\d+) \}", src):
+    # Każdy punkt „zamek …" — plansze kampanii mają po dwa zamki wroga.
+    for m in re.finditer(r"'zamek [^']*': \{ x: (\d+), y: (\d+) \}", src):
         lista.append((int(m.group(1)), int(m.group(2)), 3, 2))
     blok = re.search(r'export const ROZSTAWIENIE.*?\n\];', src, re.S).group(0)
     for m in re.finditer(r"\{ x: (\d+), y: (\d+), rodzaj: 'kopalnia'", blok):
@@ -99,9 +107,16 @@ def wczytaj_budowle():
     return lista
 
 
-RYSUNEK = wczytaj_rysunek()
-WYS, SZER = len(RYSUNEK), len(RYSUNEK[0])
-W, H = SZER * KAFEL, WYS * KAFEL
+def ustaw(mapa_id: str):
+    """Przełącza moduł na planszę `mapa_id`. Funkcje niżej czytają rysunek
+    i wymiary z globali — tak było, gdy plansza była jedna, i tak zostaje,
+    bo każda z nich jest wołana raz na planszę."""
+    global KATALOG, ZRODLO, RYSUNEK, WYS, SZER, W, H
+    KATALOG = katalog_tla(mapa_id)
+    ZRODLO = plik_ts(mapa_id)
+    RYSUNEK = wczytaj_rysunek()
+    WYS, SZER = len(RYSUNEK), len(RYSUNEK[0])
+    W, H = SZER * KAFEL, WYS * KAFEL
 
 
 def pola(znaki: str) -> np.ndarray:
@@ -214,7 +229,9 @@ def klatka() -> tuple[Image.Image, Image.Image]:
     return plansza, maskaWody
 
 
-if __name__ == '__main__':
+def renderuj(mapa_id: str):
+    ustaw(mapa_id)
+    print(f'=== {mapa_id} ===')
     KATALOG.mkdir(parents=True, exist_ok=True)
     baza, maskaWody = klatka()
 
@@ -241,8 +258,7 @@ if __name__ == '__main__':
     for k in range(1, 4):
         (KATALOG / f'plansza-{k}.png').unlink(missing_ok=True)
 
-    woda_dane.zmarszczki()
-    woda_dane.maska(RYSUNEK, KAFEL, maskaWody)
+    woda_dane.maska(RYSUNEK, KAFEL, maskaWody, KATALOG)
 
     odcisk = hashlib.sha256('\n'.join(RYSUNEK).encode('utf-8')).hexdigest()[:16]
     (KATALOG / 'plansza.json').write_text(
@@ -250,3 +266,11 @@ if __name__ == '__main__':
         encoding='utf-8',
     )
     print(f'  odcisk terenu: {odcisk}')
+
+
+if __name__ == '__main__':
+    # Zmarszczki są wspólne dla wszystkich plansz (`public/mapa/`) — to szum,
+    # nie rysunek, więc jedna tekstura starcza każdej wodzie.
+    woda_dane.zmarszczki()
+    for mapa_id in sys.argv[1:] or MAPY:
+        renderuj(mapa_id)
