@@ -2,6 +2,31 @@
 
 Ostatnia aktualizacja: 2026-09-15 (scalono AI przeciwnika z `claude/gauntlet-hero-adventure-view-cavkbx`).
 
+## Przebieg misji: warunki, koniec gry, ekran wyniku (2026-09-24)
+
+- **Okno „Warunki misji"** (`pokazWarunki` w `AdventureScene`) wyskakuje raz
+  na starcie misji — flaga `warunkiPokazane` siedzi w STANIE, nie w scenie,
+  bo mapa buduje się od nowa po każdej bitwie. Potem pod „Cele (C)" w górnej
+  belce i klawiszem C. Nieodebrany awans czeka, aż okno się zamknie.
+- **Koniec gry sprawdza jedno miejsce**: `odswiezWszystko` →
+  `sprawdzRozstrzygniecie` → `ocenGre` (`src/data/wynik.ts`). Przez
+  `odswiezWszystko` przechodzi każde zdarzenie (krok, obiekt, okno, powrót
+  z bitwy, koniec tury z ruchem przeciwnika), więc nie trzeba pilnować końca
+  w dziesięciu miejscach. Gra pojedyncza idzie przez tę samą ocenę z dwoma
+  warunkami: wszystkie zamki / utrata ostatniego. Stare `sprawdzKoniec`
+  („Odśwież stronę") zniknęło.
+- Po rozstrzygnięciu scena wyłącza **całe wejście** (`input.enabled`), nie
+  tylko `zajety` — okno zamknięte w tej chwili zdjęłoby `zajety`. `create`
+  włącza je z powrotem, bo obiekt sceny przeżywa do następnej gry.
+- **Ekran wyniku** (`WynikScene`): zwycięstwo, porażka, zakończenie kampanii
+  i Sala sław (`src/data/rekordy.ts`). Tła to przemalowane panoramy miast,
+  bo API obrazków nie miało środków (patrz `tools/PROMPTY-WYNIK.md`).
+- Sprawdza to `node tools/probe-misja.mjs`, zrzuty robi `node tools/zrzut-wynik.mjs`.
+  Most `window.__kampania` w `main.ts` pozwala sondzie startować misję tą
+  samą funkcją, co gra.
+- `probe-zwis.mjs` liczyła znak-kursor (głębokość 205) jako resztkę okna
+  i zgłaszała dwa fałszywe błędy także na czystej gałęzi — poprawione.
+
 ## Scalenie z AI przeciwnika (2026-09-15)
 
 Ta gałąź (mapa „Dwie Doliny") i osobna praca nad AI przeciwnika rozjechały

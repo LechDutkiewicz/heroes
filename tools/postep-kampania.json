@@ -1,9 +1,53 @@
 {
-  "updated": "2026-09-24, start",
-  "pieces": [
-    {"name": "Menu główne", "status": "build", "bar": "Menu główne HoMM2: malowany ekran tytułowy z kolumną przycisków", "note": "Ilustracja tytułowa, przyciski, podmenu nowej gry, autorzy, rekordy.", "rounds": []},
-    {"name": "Ekran kampanii", "status": "build", "bar": "Ekran kampanii HoMM2: mapa krainy ze znacznikami misji, opis, trzy bonusy do wyboru", "note": "Wybór trenera, mapa kampanii, opis misji, bonusy, start.", "rounds": []},
-    {"name": "Warunki misji, wygrana i porażka", "status": "build", "bar": "Okno „Scenario Information” oraz ekrany zwycięstwa i porażki z HoMM2", "note": "Okno warunków na starcie misji, rozstrzygnięcie misji, ekran wyniku, przejście do kolejnej misji, rekordy.", "rounds": []},
-    {"name": "Plansze misji", "status": "build", "bar": "Mapy kampanii HoMM2 (mapa przygody), grywalne od początku do końca", "note": "Cztery misje na trzech nowych planszach i jednej istniejącej.", "rounds": []}
-  ]
+ "updated": "2026-09-24, menu: runda 1",
+ "pieces": [
+  {
+   "name": "Menu główne",
+   "status": "build",
+   "bar": "tools/reference/homm2/menu-glowne.png — prawdziwe menu HoMM2 (ulica miasteczka, przyciski jako szyldy sklepów)",
+   "note": "Ilustracja tytułowa, przyciski, podmenu nowej gry, autorzy, rekordy.",
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Brak ogniska uwagi i spójnego stylu: tło jest równo zapchane od brzegu do brzegu, logo to błyszczący złoty napis na wstążce jak z gry mobilnej, stworki wyglądają jak doklejone naklejki, a wyszarzona deska Wczytaj wygląda na zepsutą.",
+     "blind": "tools/blind/menu-r1.png",
+     "note": "Wzorzec (A) wygrał, bo każda opcja jest przedmiotem w scenie: szyldy, tarcza, beczka. Builder poprawia. Klucz Gemini nie ma środków, więc bez nowej malowanej grafiki."
+    },
+    {
+     "win": false,
+     "gap": "Menu i logo wciąż leżą na obrazie jako osobna warstwa: deski są oświetlone płasko i nie zgadzają się z kierunkiem słońca, sznury proporca giną w niebie, logo wygląda jak gotowy szablon, a kompozycja nie ma głównego motywu.",
+     "blind": "tools/blind/menu-r2.png",
+     "note": "Poprawione od rundy 1: wieczorne światło, latarnia, kłódka, jeden stworek z cieniem. Krytyk wciąż wybrał wzorzec. Następna runda: scena złożona z istniejących malowanych grafik, z dużym bohaterem w centrum uwagi i wszystkim oświetlonym z jednego źródła."
+    }
+   ]
+  },
+  {
+   "name": "Ekran kampanii",
+   "status": "build",
+   "bar": "Ekran kampanii HoMM2: mapa krainy ze znacznikami misji, opis, trzy bonusy do wyboru",
+   "note": "Wybór trenera, mapa kampanii, opis misji, bonusy, start. Prawdziwego zrzutu ekranu kampanii HoMM2 jeszcze nie ma — trwa próba uruchomienia fheroes2 z darmowym demem.",
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Wszystko wokół mapy wygląda jak strona internetowa, a nie malowany ekran gry: płaskie niebieskie tło, białe karty bonusów, błyszczące przyciski jak z gry mobilnej. Na jednym ekranie są cztery języki wizualne, a HoMM2 ma jeden. Janek i Ola są narysowani w dwóch różnych stylach.",
+     "blind": "tools/blind/kampania-r1.png",
+     "note": "Brak prawdziwego zrzutu ekranu kampanii z HoMM2. Krytyk oceniał na tle prawdziwej grafiki HoMM2 i opisu oryginalnego ekranu. Mapa i kolejność misji były lepsze niż w oryginale."
+    }
+   ]
+  },
+  {
+   "name": "Warunki misji, wygrana i porażka",
+   "status": "build",
+   "bar": "Okno „Scenario Information” oraz ekrany zwycięstwa i porażki z HoMM2",
+   "note": "Okno warunków na starcie misji, rozstrzygnięcie misji, ekran wyniku, przejście do kolejnej misji, rekordy.",
+   "rounds": []
+  },
+  {
+   "name": "Plansze misji",
+   "status": "build",
+   "bar": "Mapy kampanii HoMM2 (mapa przygody), grywalne od początku do końca",
+   "note": "Cztery misje na trzech nowych planszach i jednej istniejącej.",
+   "rounds": []
+  }
+ ]
 }

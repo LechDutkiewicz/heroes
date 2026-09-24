@@ -129,7 +129,9 @@ const poWyborze = await page.evaluate(() => {
   return {
     zajety: s.zajety,
     zebrana: !!window.__skrzynia.zebrany,
-    resztki: s.children.list.filter((o) => o.depth >= 200).length,
+    // Znak-kursor też siedzi na głębokości okien (205), ale żyje przez całą
+    // scenę — liczony jako „resztka okna" dawał tu fałszywy błąd.
+    resztki: s.children.list.filter((o) => o.depth >= 200 && o !== s.kursorZnak).length,
   };
 });
 sprawdz('wybór zamyka okno i oddaje sterowanie', poWyborze.zajety === false && poWyborze.zebrana === true);
@@ -277,7 +279,7 @@ const poArenie = await page.evaluate(() => {
   return {
     zajety: s.zajety,
     obrona: s.stan.bohater.obrona,
-    resztki: s.children.list.filter((o) => o.depth >= 200).length,
+    resztki: s.children.list.filter((o) => o.depth >= 200 && o !== s.kursorZnak).length,
   };
 });
 sprawdz(

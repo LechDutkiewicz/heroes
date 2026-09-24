@@ -7,6 +7,8 @@ import { MenuScene } from './scenes/MenuScene';
 import { KampaniaScene } from './scenes/KampaniaScene';
 import { WynikScene } from './scenes/WynikScene';
 import { wlaczDziennik, wysiejZiarno } from './dev/dziennik';
+import { rozpocznijMisje } from './data/kampania-start';
+import { misjaPoId, nowyPostep } from './data/kampania';
 import { pokazWersje } from './wersja';
 
 // Który ekran otworzyć. Domyślnie menu główne, jak w każdej grze.
@@ -60,6 +62,9 @@ const game = new Phaser.Game({
 // w powtarzalny stan i złapać konkretną klatkę animacji, zamiast zgadywać
 // klikaniem. Nie wpływa na grę, dopóki nikt po nim nie sięgnie.
 (window as unknown as { __game: Phaser.Game }).__game = game;
+// Drugi most, dla sond kampanii (`tools/probe-misja.mjs`): start misji tą samą
+// funkcją, której używa gra, zamiast składania stanu misji ręcznie w sondzie.
+(window as unknown as { __kampania: object }).__kampania = { rozpocznijMisje, misjaPoId, nowyPostep };
 
 // Generator Phasera istnieje dopiero teraz, więc ziarno sesji wysiewamy po
 // utworzeniu gry — a jeszcze przed pierwszą sceną, która z niego korzysta.
