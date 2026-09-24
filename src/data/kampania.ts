@@ -74,31 +74,95 @@ export interface Kampania {
  * ta tablica jest jedynym źródłem kolejności.
  */
 export const KAMPANIA: Kampania = {
-  id: 'szmaragdowy-bor',
+  id: 'ksiezycowa-grota',
   tytul: 'Księżycowa Grota',
   wstep: [
     'Od stu lat Bór Szmaragdowy i Grota Księżycowa żyły w zgodzie.',
     'Aż pewnej nocy z Groty wyszli trenerzy w srebrnych płaszczach i zaczęli zabierać stworki z pogranicza.',
+    'Stary strażnik Boru nie da już rady ich gonić. Dlatego wybrał ciebie.',
   ],
   misje: [
     {
       id: 'pierwsze-kroki',
       nr: 1,
       tytul: 'Pierwsze kroki',
-      mapa: 'dwie-doliny',
-      opis: ['Misja do wypełnienia przez buildera map.'],
+      mapa: 'polana',
+      opis: [
+        'Srebrne płaszcze zajęły stary fort na wschodnim skraju Polany.',
+        'Zbierz stworki, rozbuduj swój zamek i odbij fort, zanim wróg się w nim umocni.',
+      ],
       zwyciestwo: { typ: 'zamki' },
       porazka: [{ typ: 'utrata' }],
       bonusy: [
-        { typ: 'surowiec', surowiec: 'pokeball', ile: 30, opis: '+30 pokeballi' },
+        { typ: 'surowiec', surowiec: 'pokeball', ile: 30, opis: '30 pokeballi' },
         { typ: 'artefakt', artefakt: 'buty', opis: 'Buty Wędrowca' },
         { typ: 'oddzial', tier: 1, ile: 6, opis: '6 stworków drugiego poziomu' },
       ],
-      naMapie: { x: 0.2, y: 0.8 },
-      epilog: 'Dolina jest wolna.',
+      naMapie: { x: 0.2, y: 0.78 },
+      epilog: 'Fort jest wolny, a stworki z Polany wracają do domu. Ale srebrne płaszcze uciekły za góry.',
+    },
+    {
+      id: 'klucze-do-przeleczy',
+      nr: 2,
+      tytul: 'Klucze do przełęczy',
+      mapa: 'dwie-doliny',
+      opis: [
+        'Za górami leżą Dwie Doliny. Przełęczy pilnują strażnice, których nie da się pokonać siłą.',
+        'Odszukaj namioty klucznika, otwórz przejścia i zdobądź Grotę Księżycową.',
+      ],
+      zwyciestwo: { typ: 'zamki' },
+      porazka: [{ typ: 'utrata' }],
+      bonusy: [
+        { typ: 'surowiec', surowiec: 'jagoda', ile: 10, opis: '10 jagód' },
+        { typ: 'statystyka', atak: 1, opis: '+1 do ataku' },
+        { typ: 'oddzial', tier: 2, ile: 4, opis: '4 stworki trzeciego poziomu' },
+      ],
+      naMapie: { x: 0.42, y: 0.5 },
+      epilog: 'Grota Księżycowa padła. W jej skarbcu była tylko mapa bagien i jedno słowo: Kamień.',
+    },
+    {
+      id: 'bagienny-szlak',
+      nr: 3,
+      tytul: 'Bagienny szlak',
+      mapa: 'bagna',
+      opis: [
+        'Wódz srebrnych płaszczy ukrył na bagnach Księżycowy Kamień. To z niego Grota bierze swoją moc.',
+        'Odnajdź Kamień w ciągu ośmiu tygodni, zanim wódz przeniesie go w bezpieczne miejsce.',
+      ],
+      zwyciestwo: { typ: 'artefakt', artefakt: 'ksiezycowy-kamien' },
+      porazka: [{ typ: 'utrata' }, { typ: 'termin', dni: 56 }],
+      bonusy: [
+        { typ: 'artefakt', artefakt: 'rower', opis: 'Rower Terenowy' },
+        { typ: 'surowiec', surowiec: 'kamien', ile: 6, opis: '6 kamieni ewolucji' },
+        { typ: 'statystyka', obrona: 2, opis: '+2 do obrony' },
+      ],
+      naMapie: { x: 0.64, y: 0.66 },
+      epilog: 'Księżycowy Kamień świeci w twojej dłoni. Bez niego twierdze Groty są słabsze niż kiedykolwiek.',
+    },
+    {
+      id: 'oblezenie-groty',
+      nr: 4,
+      tytul: 'Oblężenie Groty',
+      mapa: 'twierdza',
+      opis: [
+        'Srebrne płaszcze bronią się w dwóch ostatnich twierdzach na północy.',
+        'Zdobądź obie i zakończ tę wojnę. Wróg nie będzie czekał, aż do niego przyjdziesz.',
+      ],
+      zwyciestwo: { typ: 'zamki' },
+      porazka: [{ typ: 'utrata' }],
+      bonusy: [
+        { typ: 'oddzial', tier: 3, ile: 4, opis: '4 stworki czwartego poziomu' },
+        { typ: 'artefakt', artefakt: 'tarcza', opis: 'Tarcza z Łusek' },
+        { typ: 'surowiec', surowiec: 'pokeball', ile: 60, opis: '60 pokeballi' },
+      ],
+      naMapie: { x: 0.8, y: 0.24 },
+      epilog: 'Ostatnia twierdza Groty otwiera bramy. Srebrne płaszcze składają broń.',
     },
   ],
-  zakonczenie: ['Koniec kampanii.'],
+  zakonczenie: [
+    'Stworki wróciły do Boru, a Grota Księżycowa znów świeci tylko nocą, tak jak dawniej.',
+    'Stary strażnik mówi, że nigdy nie widział lepszego trenera. I chyba ma rację.',
+  ],
 };
 
 export const misjaPoId = (id: string | undefined): Misja | undefined =>
