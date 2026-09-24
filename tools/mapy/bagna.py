@@ -300,8 +300,13 @@ BARWY_TERENU = {
     'woda': {'nasycenie': 0.45, 'barwa': (90, 120, 80), 'moc': 0.7, 'jasnosc': 0.72},
     'trawa': {'nasycenie': 0.62, 'barwa': (140, 140, 80), 'moc': 0.5, 'jasnosc': 0.8},
     'las': {'nasycenie': 0.7, 'barwa': (90, 110, 75), 'moc': 0.4, 'jasnosc': 0.82},
-    'sciezka': {'nasycenie': 0.8, 'barwa': (140, 120, 90), 'moc': 0.3, 'jasnosc': 0.88},
+    'sciezka': {'nasycenie': 0.75, 'barwa': (175, 150, 110), 'moc': 0.3, 'jasnosc': 1.08},
 }
+
+#: Po rundzie 1 ślepego porównania („bagno to brązowa plama w kolorze drogi"):
+#: oczka ciemnej wody, trzcina i grążele na bagnie, obwódka i jaśniejsza
+#: jezdnia na grobli (`tools/teren_efekty.py`).
+EFEKTY = ['bagno', 'obwodka_drogi']
 
 #: Plac wokół zamków wolny od innych budowli (patrz silnik).
 ODSTEP_OD_ZAMKOW = 2
