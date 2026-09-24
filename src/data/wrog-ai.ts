@@ -467,12 +467,17 @@ function celMisji(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefined
   // wszystkie zamki"), ale tylko taki, którego załogę autopilot pobije.
   // Zamek bez tego przegrywał z odkrywaniem mapy tak samo jak Kamień: w Twierdzy
   // autopilot widział twierdzę i szedł zwiedzać tundrę.
+  // Na planszy z artefaktem-celem zamki celem misji NIE są — na Bagnach
+  // autopilot zdobywał Warownię w drugim tygodniu, a Kamienia nie zdążył.
+  const artefaktowa = s.obiekty.some(
+    (q) => q.rodzaj === 'artefakt' && artefaktPoId(q.artefakt ?? '')?.klasa === 'misja'
+  );
   const cele = s.obiekty.filter(
     (q) =>
       !q.zebrany &&
       mgla[q.y]?.[q.x] &&
       ((q.rodzaj === 'artefakt' && artefaktPoId(q.artefakt ?? '')?.klasa === 'misja') ||
-        (q.rodzaj === 'zamek' && q.wlasciciel === 'wrog'))
+        (!artefaktowa && q.rodzaj === 'zamek' && q.wlasciciel === 'wrog'))
   );
   for (const o of cele) {
     const kroki = trasa(widok, o.x, o.y);
