@@ -90,6 +90,13 @@ await page.mouse.move(box.x + DESKA[2].x, box.y + DESKA[2].y, { steps: 4 });
 await page.waitForTimeout(400);
 await zrzut('menu-wskazanie.png');
 
+// Wskazanie nieczynnego „Wczytaj" (bez zapisu): kłódka i dymek z wyjaśnieniem.
+if (!Z_ZAPISEM) {
+  await page.mouse.move(box.x + DESKA[1].x, box.y + DESKA[1].y, { steps: 4 });
+  await page.waitForTimeout(400);
+  await zrzut('menu-zamkniete.png');
+}
+
 // Nowa gra → podmenu (deski się obracają), mysz zostaje na „Kampanii".
 await klik(DESKA[0]);
 await page.waitForTimeout(900);

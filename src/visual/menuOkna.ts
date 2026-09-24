@@ -413,7 +413,7 @@ const AUTORZY: [string, string][][] = [
   [
     ['Pomysł i prowadzenie', 'Lech Dutkiewicz'],
     ['Kod i zasady gry', 'Claude Code (Anthropic)'],
-    ['Wioska, mapa i budynki', 'obrazy z modeli AI'],
+    ['Wioska, trener i budynki', 'obrazy z modeli AI'],
     ['Stworki', 'Pixmon Index (domena publiczna)'],
     ['Tła bitew', 'Ismael García „scarloxy"'],
   ],
