@@ -38,6 +38,12 @@
      "gap": "Wszystko wokół mapy wygląda jak strona internetowa, a nie malowany ekran gry: płaskie niebieskie tło, białe karty bonusów, błyszczące przyciski jak z gry mobilnej. Na jednym ekranie są cztery języki wizualne, a HoMM2 ma jeden. Janek i Ola są narysowani w dwóch różnych stylach.",
      "blind": "tools/blind/kampania-r1.png",
      "note": "Brak prawdziwego zrzutu ekranu kampanii z HoMM2. Krytyk oceniał na tle prawdziwej grafiki HoMM2 i opisu oryginalnego ekranu. Mapa i kolejność misji były lepsze niż w oryginale."
+    },
+    {
+     "win": false,
+     "gap": "Pikselowe postacie trenerów i złoczyńców (mapa, wybór, wstęp) wyglądają na doklejone do malowanych teł. Ikony bonusów są w czterech różnych stylach. Ekrany wyboru i wstępu są ubogie.",
+     "blind": "tools/blind/kampania-r2.png",
+     "note": "Poprawione od rundy 1: jeden materiał (drewno, złoto, pergamin) na całym ekranie, jasny następny krok. Z tego powstał wspólny komplet src/visual/zestaw.ts."
     }
    ]
   },
