@@ -1,12 +1,19 @@
 {
- "updated": "2026-09-24, builderzy w pracy",
+ "updated": "2026-09-24, menu: runda 1",
  "pieces": [
   {
    "name": "Menu główne",
    "status": "build",
    "bar": "tools/reference/homm2/menu-glowne.png — prawdziwe menu HoMM2 (ulica miasteczka, przyciski jako szyldy sklepów)",
    "note": "Ilustracja tytułowa, przyciski, podmenu nowej gry, autorzy, rekordy.",
-   "rounds": []
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Brak ogniska uwagi i spójnego stylu: tło jest równo zapchane od brzegu do brzegu, logo to błyszczący złoty napis na wstążce jak z gry mobilnej, stworki wyglądają jak doklejone naklejki, a wyszarzona deska Wczytaj wygląda na zepsutą.",
+     "blind": "tools/blind/menu-r1.png",
+     "note": "Wzorzec (A) wygrał, bo każda opcja jest przedmiotem w scenie: szyldy, tarcza, beczka. Builder poprawia. Klucz Gemini nie ma środków, więc bez nowej malowanej grafiki."
+    }
+   ]
   },
   {
    "name": "Ekran kampanii",
