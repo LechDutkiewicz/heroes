@@ -12,6 +12,12 @@
      "gap": "Brak ogniska uwagi i spójnego stylu: tło jest równo zapchane od brzegu do brzegu, logo to błyszczący złoty napis na wstążce jak z gry mobilnej, stworki wyglądają jak doklejone naklejki, a wyszarzona deska Wczytaj wygląda na zepsutą.",
      "blind": "tools/blind/menu-r1.png",
      "note": "Wzorzec (A) wygrał, bo każda opcja jest przedmiotem w scenie: szyldy, tarcza, beczka. Builder poprawia. Klucz Gemini nie ma środków, więc bez nowej malowanej grafiki."
+    },
+    {
+     "win": false,
+     "gap": "Menu i logo wciąż leżą na obrazie jako osobna warstwa: deski są oświetlone płasko i nie zgadzają się z kierunkiem słońca, sznury proporca giną w niebie, logo wygląda jak gotowy szablon, a kompozycja nie ma głównego motywu.",
+     "blind": "tools/blind/menu-r2.png",
+     "note": "Poprawione od rundy 1: wieczorne światło, latarnia, kłódka, jeden stworek z cieniem. Krytyk wciąż wybrał wzorzec. Następna runda: scena złożona z istniejących malowanych grafik, z dużym bohaterem w centrum uwagi i wszystkim oświetlonym z jednego źródła."
     }
    ]
   },
