@@ -29,7 +29,7 @@
   },
   {
    "name": "Ekran kampanii",
-   "status": "build",
+   "status": "done",
    "bar": "Ekran kampanii HoMM2: mapa krainy ze znacznikami misji, opis, trzy bonusy do wyboru",
    "note": "Wybór trenera, mapa kampanii, opis misji, bonusy, start. Prawdziwego zrzutu ekranu kampanii HoMM2 jeszcze nie ma — trwa próba uruchomienia fheroes2 z darmowym demem.",
    "rounds": [
@@ -50,6 +50,12 @@
      "gap": "Wzorzec wygrywa nieznacznie. Główny ekran kampanii sam by przeszedł, ale we wstępie srebrne płaszcze to płaskie szare sylwetki z białą obwódką, a wóz unosi się nad własnym cieniem.",
      "blind": "tools/blind/kampania-r3.png",
      "note": "Postacie są już malowane, bonusy mają jeden styl, przy bieżącej misji stoi obóz. Krytyk uznał, że główny ekran czyta się lepiej niż w HoMM2."
+    },
+    {
+     "win": true,
+     "gap": "Słabość zwycięzcy: wstęp i wybór trenera są złożone z istniejących grafik (sylwetki, wóz, naklejkowe postacie) zamiast jednej malowanej sceny. Poprawimy to, gdy będą środki na generowanie grafik.",
+     "blind": "tools/blind/kampania-r4.png",
+     "note": "Nasze wygrywa, nieznacznie, dzięki głównemu ekranowi. Jest czytelniejszy niż w HoMM2: odhaczone misje, kłódki, strzałka, jeden komplet drewno, złoto i pergamin, wybór nagrody, który mówi, co zrobić dalej."
     }
    ]
   },
