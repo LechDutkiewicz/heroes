@@ -2,6 +2,24 @@
 
 Ostatnia aktualizacja: 2026-09-15 (scalono AI przeciwnika z `claude/gauntlet-hero-adventure-view-cavkbx`).
 
+## HUD mapy przygody na wspólnym zestawie (2026-09-24)
+
+- Mapa stoi na tym samym materiale co kampania i okna misji
+  (`src/visual/zestaw.ts`): drewno z belką, gruba złota rama wokół planszy,
+  prawa kolumna jako wpuszczone pole w cienkiej ramie, karta bohatera
+  i podpowiedź na pergaminie, pasek surowców jak rachunek, tabliczki
+  przycisków (złota tylko „Zakończ turę"). Okna mapy (skrzynia, budowle,
+  awans) — pergamin w złotej ramie. Geometria kliknięć się nie zmieniła.
+- **Okna znaczą swoje obiekty zbiorem, nie indeksem** (`znacznik()`):
+  lista sceny jest sortowana po głębokości, więc `children.list.slice(n)`
+  potrafił zgarnąć znak kursora (głębokość 205) i skasować go razem
+  z oknem, a zostawić kawałek okna. Wszystkie okna mapy idą teraz przez
+  `znacznik()` + `zamknijOkno()`.
+- Kroje zestawu dochodzą czasem po zbudowaniu HUD-u (wejście `?ekran=mapa`)
+  — `przerysujNapisy()` odświeża wtedy wszystkie napisy.
+- `sh tools/sondy-mapy.sh <url>` puszcza wszystkie sondy mapy po kolei,
+  `node tools/zrzut-hud.mjs` robi zrzuty HUD-u.
+
 ## Przebieg misji: warunki, koniec gry, ekran wyniku (2026-09-24)
 
 - **Okno „Warunki misji"** (`pokazWarunki` w `AdventureScene`) wyskakuje raz

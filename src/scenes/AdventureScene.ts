@@ -2347,7 +2347,7 @@ export class AdventureScene extends Phaser.Scene {
     // Okno nie należy ani do planszy (jechałoby razem z mapą), ani do HUD-u
     // (plansza rysuje się po nim i by je zakryła) — idzie do kamery okien.
     // Wszystko, co przybyło na liście sceny od tej chwili, jest oknem.
-    const przed = this.children.list.length;
+    const nowe = this.znacznik();
     this.oknoPergaminu(cx, cy, szer, wys);
     this.add
       .text(cx, cy - wys / 2 + 30, 'Skrzynia!', stylEtykiety(26))
@@ -2360,7 +2360,7 @@ export class AdventureScene extends Phaser.Scene {
 
     const zamknij = (co: 'pokeballe' | 'doswiadczenie') => {
       const opis = wezZeSkrzyni(this.stan, w, co);
-      this.zamknijOkno(przed);
+      this.zamknijOkno(nowe());
       sfx(this, 'zbior');
       this.znikaj(w.obiekt);
       this.napisUlotny(opis);
@@ -2371,7 +2371,7 @@ export class AdventureScene extends Phaser.Scene {
     // podpowiadałaby, że jedna jest „tą właściwą".
     this.guzikOkna(cx - 86, cy + 36, 160, `${w.pokeballe} pokeballi`, () => zamknij('pokeballe'));
     this.guzikOkna(cx + 86, cy + 36, 160, `${w.doswiadczenie} dośw.`, () => zamknij('doswiadczenie'));
-    this.naWierzchu(...this.children.list.slice(przed));
+    this.naWierzchu(...nowe());
   }
 
   /**
@@ -2393,10 +2393,32 @@ export class AdventureScene extends Phaser.Scene {
     return new Przycisk(this, { x, y, w, h, tekst, glowny, rozmiar: 15, glebia: Z.overlay + 3, akcja });
   }
 
-  /** Zamyka okno: kasuje wszystko, co przybyło na liście sceny od `przed`. */
-  private zamknijOkno(przed: number) {
-    for (const o of this.children.list.slice(przed)) {
+  /**
+   * Znacznik okna: zapamiętuje, co JUŻ jest na liście sceny, i zwraca
+   * funkcję oddającą wszystko, co przybyło później.
+   *
+   * Wcześniej okna liczyły to indeksem (`children.list.slice(n)`), ale lista
+   * sceny jest sortowana po głębokości — znak kursora (głębokość 205) potrafił
+   * wskoczyć za indeks okna i zniknąć razem z nim, a kawałek okna zostawał
+   * na ekranie. Porównanie z zapamiętanym zbiorem nie zależy od kolejności.
+   */
+  private znacznik(): () => Phaser.GameObjects.GameObject[] {
+    const byly = new Set(this.children.list);
+    return () => this.children.list.filter((o) => !byly.has(o));
+  }
+
+  /**
+   * Zamyka okno. Tweeny gasimy także na dzieciach kontenerów: tabliczka
+   * z zestawu przy kliknięciu podskakuje napisem, a okno zamyka się w tym
+   * samym kliknięciu — tween sięgał potem do zniszczonego napisu.
+   */
+  private zamknijOkno(obiekty: Phaser.GameObjects.GameObject[]) {
+    const zgas = (o: Phaser.GameObjects.GameObject) => {
       this.tweens.killTweensOf(o);
+      if (o instanceof Phaser.GameObjects.Container) o.list.forEach(zgas);
+    };
+    for (const o of obiekty) {
+      zgas(o);
       o.destroy();
     }
   }
@@ -2429,7 +2451,7 @@ export class AdventureScene extends Phaser.Scene {
     const wys = 176;
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
-    const przed = this.children.list.length;
+    const nowe = this.znacznik();
     this.oknoPergaminu(cx, cy, szer, wys);
     this.add
       .text(cx, cy - wys / 2 + 30, p.tytul, stylEtykiety(24))
@@ -2442,7 +2464,7 @@ export class AdventureScene extends Phaser.Scene {
 
     const zamknij = (klucz: string) => {
       const opis = odpowiedzNaPytanie(this.stan, p, klucz);
-      this.zamknijOkno(przed);
+      this.zamknijOkno(nowe());
       if (p.obiekt.zebrany) {
         sfx(this, 'zbior');
         this.znikaj(p.obiekt);
@@ -2464,7 +2486,7 @@ export class AdventureScene extends Phaser.Scene {
         i === 0 && p.opcje.length > 1
       )
     );
-    this.naWierzchu(...this.children.list.slice(przed));
+    this.naWierzchu(...nowe());
   }
 
   /**
@@ -2538,7 +2560,7 @@ export class AdventureScene extends Phaser.Scene {
     const wys = oferty.length ? 336 : 200;
     const cx = MARGINES + this.oknoW / 2;
     const cy = GORA + this.oknoH / 2;
-    const poczatek = this.children.list.length;
+    const nowe = this.znacznik();
     this.oknoPergaminu(cx, cy, szer, wys, 0.66);
     wstazka(this, cx, cy - wys / 2 + 26, `AWANS NA POZIOM ${poziomPo}`).setDepth(Z.overlay + 2);
     this.add
@@ -2550,7 +2572,7 @@ export class AdventureScene extends Phaser.Scene {
       .setDepth(Z.overlay + 2);
 
     const zamknij = (opis?: string) => {
-      this.zamknijOkno(poczatek);
+      this.zamknijOkno(nowe());
       this.stan.bohater.poziomOdebrany = poziomPo;
       this.zajety = false;
       if (opis) this.napisUlotny(opis);
@@ -2567,7 +2589,7 @@ export class AdventureScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setDepth(Z.overlay + 2);
       this.guzikOkna(cx, cy + wys / 2 - 36, 180, 'Dalej', () => zamknij(), true);
-      this.naWierzchu(...this.children.list.slice(poczatek));
+      this.naWierzchu(...nowe());
       return;
     }
 
@@ -2624,7 +2646,7 @@ export class AdventureScene extends Phaser.Scene {
 
     // Okno musi trafić do kamery rysowanej PO planszy — inaczej mapa
     // zamalowuje je w tej samej klatce i gra wygląda na zawieszoną.
-    this.naWierzchu(...this.children.list.slice(poczatek));
+    this.naWierzchu(...nowe());
   }
 
   private pokazZamek(o: Obiekt) {
@@ -2734,7 +2756,7 @@ export class AdventureScene extends Phaser.Scene {
     if (wygrana) sfx(this, 'awans');
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
-    const przed = this.children.list.length;
+    const nowe = this.znacznik();
 
     const zaslona = this.add
       .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, wygrana ? 0.55 : 0.68)
@@ -2796,7 +2818,7 @@ export class AdventureScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setDepth(Z.overlay + 10)
       .setAlpha(0);
-    this.naWierzchu(...this.children.list.slice(przed));
+    this.naWierzchu(...nowe());
     this.tweens.add({
       targets: czern,
       alpha: 1,
@@ -2833,9 +2855,9 @@ export class AdventureScene extends Phaser.Scene {
     const cy = this.mapaY + this.oknoH / 2;
     const szer = 556;
     const wnetrze = szer - 80;
-    const przed = this.children.list.length;
+    const nowe = this.znacznik();
 
-    const zaslona = this.add
+    this.add
       .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.55)
       .setOrigin(0, 0)
       .setDepth(Z.overlay);
@@ -3025,7 +3047,7 @@ export class AdventureScene extends Phaser.Scene {
     k.setAlpha(0);
     this.tweens.add({ targets: k, alpha: 1, y: { from: gora + 14, to: gora }, duration: 280, ease: E.snap });
 
-    const przycisk = new Przycisk(this, {
+    new Przycisk(this, {
       x: cx,
       y: gora + przyciskY,
       w: 240,
@@ -3035,16 +3057,14 @@ export class AdventureScene extends Phaser.Scene {
       strzalka: pierwszyRaz,
       glebia: Z.overlay + 3,
       akcja: () => {
-        zaslona.destroy();
-        k.destroy();
-        przycisk.destroy();
+        this.zamknijOkno(nowe());
         s.warunkiPokazane = true;
         this.zajety = false;
         if (pierwszyRaz) this.napisUlotny('Powodzenia!');
         this.odswiezWszystko();
       },
     });
-    this.naWierzchu(...this.children.list.slice(przed));
+    this.naWierzchu(...nowe());
   }
 
   /**
@@ -3073,7 +3093,7 @@ export class AdventureScene extends Phaser.Scene {
     const razem = szerokosci.reduce((a, b) => a + b, 0) + ODSTEP * (szerokosci.length - 1);
     const szer = Math.max(500, razem + 64);
     const wys = 200;
-    const przed = this.children.list.length;
+    const nowe = this.znacznik();
     this.add
       .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.55)
       .setOrigin(0, 0)
@@ -3089,10 +3109,7 @@ export class AdventureScene extends Phaser.Scene {
       .setDepth(Z.overlay + 2);
 
     const zamknij = () => {
-      for (const o of this.children.list.slice(przed)) {
-        this.tweens.killTweensOf(o);
-        o.destroy();
-      }
+      this.zamknijOkno(nowe());
       this.zajety = false;
     };
     const wyjdz = (zapisac: boolean) => {
@@ -3125,7 +3142,7 @@ export class AdventureScene extends Phaser.Scene {
       });
       x += w + ODSTEP;
     });
-    this.naWierzchu(...this.children.list.slice(przed));
+    this.naWierzchu(...nowe());
   }
 
   /** Po powrocie z bitwy: zwycięstwo usuwa strażnika, porażka cofa do zamku. */
