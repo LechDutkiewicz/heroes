@@ -56,7 +56,9 @@ WSAD = KORZEN / 'tools' / 'wsad'
 DOKUMENTY = [
     KORZEN / 'tools' / 'PROMPTY-BUDYNKI.md',
     KORZEN / 'tools' / 'PROMPTY-MAPA-2.md',
+    KORZEN / 'tools' / 'PROMPTY-WYNIK.md',
     KORZEN / 'tools' / 'PROMPTY-MENU.md',
+    KORZEN / 'tools' / 'PROMPTY-KAMPANIA.md',
 ]
 
 API = 'https://generativelanguage.googleapis.com/v1beta'

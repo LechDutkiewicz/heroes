@@ -593,6 +593,12 @@ export interface StanMapy {
   mapa?: string;
   /** Misja kampanii, która się na tej planszy toczy. Brak = gra pojedyncza. */
   misja?: string;
+  /**
+   * Czy gracz widział już okno „Warunki misji". Siedzi w stanie, a nie
+   * w scenie: mapa buduje się od nowa po każdej bitwie i wizycie w mieście,
+   * a okno ma wyskoczyć raz — na starcie misji, nie po każdym powrocie.
+   */
+  warunkiPokazane?: boolean;
   szer: number;
   wys: number;
   teren: Teren[][];
