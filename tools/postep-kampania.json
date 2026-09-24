@@ -105,10 +105,23 @@
   },
   {
    "name": "HUD mapy przygody",
-   "status": "todo",
+   "status": "done",
    "bar": "Mapa przygody HoMM2 (tools/reference/homm2/mapa-przygody-640.png): prawy panel, pasek zasobów, przyciski w jednym złoto-kamiennym komplecie",
    "note": "Dwaj krytycy niezależnie wskazali, że błękitny HUD mapy z czcionką jak Arial gryzie się z nowymi pergaminowymi oknami. HUD przechodzi na wspólny komplet src/visual/zestaw.ts.",
-   "rounds": []
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Werdykt nieważny: narzędzie ucięło wzorzec HoMM2 z prawej i od dołu, więc krytyk ocenił brak paska zasobów i daty, których w oryginale nie brakuje.",
+     "blind": "tools/blind/hud-r1.png",
+     "note": "Błąd po mojej stronie, w tools/blind.mjs. Naprawiony, porównanie powtórzone."
+    },
+    {
+     "win": true,
+     "gap": "Słabość zwycięzcy: komplet jest cienki i zwyczajny obok ręcznie robionej ramy HoMM2. Minimapa jest płaska i granatowa, pole podpowiedzi prawie puste, a liczebności armii bardzo drobne.",
+     "blind": "tools/blind/hud-r1b.png",
+     "note": "Nasze wygrywa na pełnym kadrze. Zasoby, data, karta bohatera i duży przycisk Zakończ turę dziecko znajdzie od razu. Wzorzec ma piękniejszą ramę, ale nieopisane piktogramy i brak paska zasobów na ekranie."
+    }
+   ]
   }
  ]
 }
