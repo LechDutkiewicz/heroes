@@ -17,7 +17,7 @@ import { planszaPrzygody } from '../data/plansza';
 import { planszaPoId } from '../data/mapy';
 import { zywe } from '../data/armia';
 import { FACTIONS } from '../data/factions';
-import { POZIOMY, umiejetnoscPoId } from '../data/umiejetnosci';
+import { umiejetnoscPoId } from '../data/umiejetnosci';
 import { ILE_REKORDOW, dodajRekord, wczytajRekordy, type Rekord } from '../data/rekordy';
 import { LEGENDY } from '../visual/menuOkna';
 import {
@@ -419,8 +419,8 @@ export class WynikScene extends Phaser.Scene {
     const cien = this.add
       .image(x, y - 2, 'w-kulka')
       .setTint(C.shadow)
-      .setAlpha(0.45)
-      .setDisplaySize(wys * 0.8, wys * 0.16)
+      .setAlpha(0.6)
+      .setDisplaySize(wys * 0.9, wys * 0.18)
       .setDepth(glebia - 0.1);
     const im = this.obraz(x, y, `p-${sprite}`, wys).setOrigin(0.5, 1).setDepth(glebia);
     const s = im.scaleY;
@@ -598,6 +598,27 @@ export class WynikScene extends Phaser.Scene {
     return m.nr === 2 ? 'grota' : 'polana';
   }
 
+  /** „1 legenda", „3 legendy", „5 legend" wioski. */
+  private legend(n: number) {
+    const d = n % 10;
+    const nascie = n % 100 >= 12 && n % 100 <= 14;
+    if (n === 1) return '1 legenda wioski';
+    return d >= 2 && d <= 4 && !nascie ? `${n} legendy wioski` : `${n} legend wioski`;
+  }
+
+  /** „1 inna rzecz", „3 inne rzeczy", „5 innych rzeczy" — polska liczba mnoga. */
+  private innych(n: number) {
+    const d = n % 10;
+    const nascie = n % 100 >= 12 && n % 100 <= 14;
+    if (n === 1) return '1 inna rzecz';
+    return d >= 2 && d <= 4 && !nascie ? `${n} inne rzeczy` : `${n} innych rzeczy`;
+  }
+
+  /** Pasy nad lewym i prawym bokiem sceny — skąd spada konfetti, omijając tytuł i bohatera. */
+  private bokiSceny() {
+    return [new Phaser.Geom.Rectangle(10, 0, 250, 10), new Phaser.Geom.Rectangle(SZER - 260, 0, 250, 10)];
+  }
+
   /** Budowla w tle ze wbitą chorągwią gracza — znak, że jest już nasza. */
   private zdobyta(klucz: string, x: number, y: number, wys: number, maszt: { dx: number; dy: number }) {
     const im = this.obraz(x, y, klucz, wys).setOrigin(0.5, 1).setDepth(5);
@@ -739,40 +760,41 @@ export class WynikScene extends Phaser.Scene {
       });
       zBohaterem(466, 282);
       this.korona(SZER / 2, 160);
-      this.add
+      for (const pas of this.bokiSceny()) this.add
         .particles(0, -10, 'w-iskra', {
-          emitZone: { type: 'random', source: new Phaser.Geom.Rectangle(160, 0, SZER - 320, 10), quantity: 1 },
+          emitZone: { type: 'random', source: pas, quantity: 1 },
           speedY: { min: 60, max: 130 },
-          speedX: { min: -20, max: 20 },
+          speedX: { min: -8, max: 8 },
           lifespan: 5200,
-          frequency: 45,
+          frequency: 160,
           scale: { min: 0.25, max: 0.6 },
           alpha: { start: 1, end: 0.2 },
           rotate: { start: 0, end: 180 },
           tint: [C.goldLight, C.gold, C.white],
           blendMode: Phaser.BlendModes.ADD,
         })
-        .setDepth(34);
+        .setDepth(28);
     }
 
-    // Konfetti spada przez całą scenę, iskry mrugają wokół bohatera.
-    this.add
+    // Konfetti spada PO BOKACH sceny i za bohaterem (głębia 28 < 30): gęste
+    // konfetti na całą szerokość zasłaniało w finale tytuł i samego bohatera.
+    for (const pas of this.bokiSceny()) this.add
       .particles(0, -20, 'w-konfetti', {
-        emitZone: { type: 'random', source: new Phaser.Geom.Rectangle(0, 0, SZER, 10), quantity: 1 },
+        emitZone: { type: 'random', source: pas, quantity: 1 },
         speedY: { min: 70, max: 150 },
-        speedX: { min: -40, max: 40 },
+        speedX: { min: -12, max: 12 },
         lifespan: 7000,
-        frequency: final ? 30 : 55,
+        frequency: 110,
         rotate: { start: 0, end: 540 },
         scale: { min: 0.7, max: 1.3 },
         tint: [C.gold, C.ally, C.foe, C.hpHigh, C.white, 0xb57bff],
       })
-      .setDepth(35);
+      .setDepth(28);
     this.add
       .particles(SZER / 2, 300, 'w-iskra', {
         emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, 230), quantity: 1 },
         lifespan: 900,
-        frequency: 140,
+        frequency: 220,
         scale: { start: 0, end: 0.9, ease: 'Sine.easeOut' },
         alpha: { start: 1, end: 0 },
         tint: [C.goldLight, C.white],
@@ -860,8 +882,32 @@ export class WynikScene extends Phaser.Scene {
     const w2 = this.wiersz(lx, ky + 70, lw, ICON.star, 'Punkty', '0', 1);
     const w3 = this.wiersz(lx, ky + 106, lw, ICON.banner, 'Poziom bohatera', String(poziom(b.doswiadczenie)), 0);
     const st = statystyki(b);
-    const w4 = this.wiersz(lx, ky + 142, lw, ICON.sword, 'Atak i obrona', `${st.atak} / ${st.obrona}`, 1);
-    tresc.push(...w1.czesci, ...w2.czesci, ...w3.czesci, ...w4.czesci);
+    // Atak i obrona osobno, każde z własną ikoną — „6 / 2" bez podpisu
+    // wyglądało na ułamek.
+    const g4 = this.add.graphics().setDepth(45);
+    this.pasmo(g4, lx, ky + 142 - 15, lw, 30, 1);
+    // Liczba stoi tuż za swoim słowem, a nie przy prawej krawędzi połówki —
+    // „Obrona" jest dłuższa od „Atak" i przy krawędzi zlewała się z liczbą.
+    const polowa = (x: number, ikona: string, nazwa: string, ile: number) => {
+      const et = this.add.text(x + 32, ky + 142, nazwa, stylAtramentu(15, 'miekki')).setOrigin(0, 0.5).setDepth(46);
+      return [
+        medalion(this, x + 16, ky + 142, 12, BARWA.papierCiemny).setDepth(45.5),
+        this.obraz(x + 16, ky + 142, ikona, 15).setDepth(46),
+        et,
+        this.add
+          .text(et.x + et.width + 7, ky + 142, String(ile), stylEtykiety(19, BARWA.atrament))
+          .setOrigin(0, 0.5)
+          .setDepth(46),
+      ];
+    };
+    tresc.push(
+      ...w1.czesci,
+      ...w2.czesci,
+      ...w3.czesci,
+      g4,
+      ...polowa(lx, ICON.sword, 'Atak', st.atak),
+      ...polowa(lx + lw / 2, ICON.shield, 'Obrona', st.obrona)
+    );
     this.nabijaj(w2.wartosc, pkt, 1100);
 
     // Prawa kolumna: w kampanii — co przechodzi do następnej misji i „Dalej".
@@ -878,7 +924,7 @@ export class WynikScene extends Phaser.Scene {
         }),
         ...Object.entries(b.umiejetnosci ?? {}).map(([id, poz]) => ({
           ikona: ICON.banner as string,
-          napis: `${umiejetnoscPoId(id)?.nazwa ?? id} (${POZIOMY[(poz as number) - 1] ?? poz})`,
+          napis: `${umiejetnoscPoId(id)?.nazwa ?? id} — poziom ${poz}`,
         })),
       ];
       const miesci = 3;
@@ -896,7 +942,7 @@ export class WynikScene extends Phaser.Scene {
       if (wpisy.length > widac.length) {
         tresc.push(
           this.add
-            .text(px + 34, ky + 52 + widac.length * 26, `i jeszcze ${wpisy.length - widac.length} (ekran bohatera)`, stylAtramentu(13, 'miekki'))
+            .text(px + 34, ky + 52 + widac.length * 26, `…i ${this.innych(wpisy.length - widac.length)}`, stylAtramentu(13, 'miekki'))
             .setOrigin(0, 0.5)
             .setWordWrapWidth(pw - 36)
             .setDepth(46)
@@ -1367,9 +1413,13 @@ export class WynikScene extends Phaser.Scene {
     });
 
     // Jedno zdanie pod tabelą — mówi, co ten wynik znaczy.
-    const pobite = moj ? LEGENDY.filter((l) => l.punkty < moj.punkty).length : 0;
+    // Liczymy legendy z wierszy tabeli PONIŻEJ gracza — to, co dziecko
+    // widzi. Liczone z całej listy legend dawało „7 z 8" przy trzecim
+    // miejscu i trzech legendach pod spodem.
+    const pobite = moj ? wiersze.slice(wiersze.indexOf(moj) + 1).filter((r) => r.legenda).length : 0;
     const zdanie = moj
-      ? `${moj.imie}, jesteś na ${wiersze.indexOf(moj) + 1}. miejscu! Pokonane legendy: ${pobite} z ${LEGENDY.length}.`
+      ? `${moj.imie}, jesteś na ${wiersze.indexOf(moj) + 1}. miejscu!` +
+        (pobite ? ` Za tobą w tabeli: ${this.legend(pobite)}.` : ' Legendy wioski wciąż czekają!')
       : this.miejsceRekordu === null && this.nowyRekord
         ? 'Tym razem bez miejsca w tabeli — zagraj jeszcze raz i pobij legendy wioski!'
         : `Ukończ kampanię „${KAMPANIA.tytul}" i pobij legendy wioski!`;

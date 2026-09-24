@@ -2855,7 +2855,7 @@ export class AdventureScene extends Phaser.Scene {
     const przed = this.children.list.length;
 
     const zaslona = this.add
-      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, wygrana ? 0.35 : 0.55)
+      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, wygrana ? 0.55 : 0.68)
       .setOrigin(0, 0)
       .setDepth(Z.overlay)
       .setAlpha(0);
@@ -3179,7 +3179,17 @@ export class AdventureScene extends Phaser.Scene {
   private zbudujPytanieOWyjscie() {
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
-    const szer = 500;
+    // Szerokości tabliczek z ZMIERZONYCH napisów, a okno z ich sumy:
+    // na sztywno wpisane liczby dawały „Zapisz i wyjdź" dotykające lewej
+    // krawędzi i nierówne odstępy między przyciskami.
+    const opcjeNapisy = ['Zapisz i wyjdź', 'Wyjdź', 'Zostań'];
+    const ROZMIAR = 15;
+    const ODSTEP = 18;
+    const miarka = this.add.text(0, 0, '', { fontFamily: KROJ.tytul, fontSize: `${ROZMIAR}px` });
+    const szerokosci = opcjeNapisy.map((t) => Math.max(120, Math.ceil(miarka.setText(t).width) + 56));
+    miarka.destroy();
+    const razem = szerokosci.reduce((a, b) => a + b, 0) + ODSTEP * (szerokosci.length - 1);
+    const szer = Math.max(500, razem + 64);
     const wys = 200;
     const przed = this.children.list.length;
     this.add
@@ -3212,25 +3222,27 @@ export class AdventureScene extends Phaser.Scene {
     };
     // Złota tabliczka tylko dla bezpiecznego wyjścia — to jest „następny
     // krok", który warto podsunąć. Reszta drewniana.
-    const opcje: Array<[string, boolean, () => void]> = [
-      ['Zapisz i wyjdź', true, () => wyjdz(true)],
-      ['Wyjdź', false, () => wyjdz(false)],
-      ['Zostań', false, zamknij],
+    const akcje: Array<[boolean, () => void]> = [
+      [true, () => wyjdz(true)],
+      [false, () => wyjdz(false)],
+      [false, zamknij],
     ];
-    opcje.forEach(
-      ([tekst, glowny, akcja], i) =>
-        new Przycisk(this, {
-          x: cx + (i - 1) * 156,
-          y: cy + 50,
-          w: i === 0 ? 176 : 132,
-          h: 46,
-          tekst,
-          glowny,
-          rozmiar: 15,
-          glebia: Z.overlay + 3,
-          akcja,
-        })
-    );
+    let x = cx - razem / 2;
+    akcje.forEach(([glowny, akcja], i) => {
+      const w = szerokosci[i];
+      new Przycisk(this, {
+        x: x + w / 2,
+        y: cy + 50,
+        w,
+        h: 46,
+        tekst: opcjeNapisy[i],
+        glowny,
+        rozmiar: ROZMIAR,
+        glebia: Z.overlay + 3,
+        akcja,
+      });
+      x += w + ODSTEP;
+    });
     this.naWierzchu(...this.children.list.slice(przed));
   }
 
