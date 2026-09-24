@@ -208,3 +208,6 @@ USTAWIENIA = {
 
 #: Przejezdne pola, do których nie da się dojść, zarastają lasem (patrz silnik).
 ZASYP_ODCIETE = True
+
+#: Plac wokół zamków wolny od innych budowli (patrz silnik).
+ODSTEP_OD_ZAMKOW = 2

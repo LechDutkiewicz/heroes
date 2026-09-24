@@ -118,13 +118,19 @@ function zastosujOcalalych(
   const ocalali: Oddzial[] = [];
   for (const u of bitwa.units) {
     if (u.side !== 'player' || u.count <= 0) continue;
-    const oryginal = sprzedBitwa.find((o) => o.tier === u.def.tier) ?? sprzedBitwa[0];
+    // `def.tier` liczy się od JEDYNKI (tabela `TIERS` w factions.ts), a `tier`
+    // oddziału na mapie od zera — to indeks w `units` frakcji. Przepisanie
+    // wprost awansowało każdy ocalały stos o poziom po KAŻDEJ bitwie AI:
+    // po kilku starciach bohater wroga miał smoki narysowane jako drobnica,
+    // a stos z najwyższego poziomu wypadał z armii (indeks poza tablicą).
+    const tier = u.def.tier - 1;
+    const oryginal = sprzedBitwa.find((o) => o.tier === tier && o.sprite === u.def.sprite) ?? sprzedBitwa[0];
     ocalali.push({
       sprite: u.def.sprite,
       nazwa: u.def.name,
       ile: u.count,
       frakcja: oryginal?.frakcja ?? 'grota',
-      tier: u.def.tier,
+      tier,
     });
   }
   bohater.armia = bohater.armia.map(() => null);
@@ -219,6 +225,12 @@ function wartoscObiektu(o: Obiekt): number {
   if (o.rodzaj === 'budynek') {
     const b = budowlaPoId(o.budynek);
     if (b?.efekt.typ === 'gniazdo') return 150;
+    // Portal nie jest celem samym w sobie — to skrót, a AI nie planuje tras
+    // PRZEZ portale. Wyceniony jak zwykła budowla (40, bez odnowy) wciągał
+    // bohatera w pętlę: wejście, wyjście po drugiej stronie, portal znowu
+    // najbliższym „celem", wejście… Na Bagnach wróg stał tak w jednym miejscu
+    // przez trzydzieści dni z armią, która mogła zdobyć pół mapy.
+    if (b?.efekt.typ === 'portal') return 0;
     // Budowla, do której da się wracać co kilka dni (stajnia, wiatrak), nie
     // ma wygrywać z eksploracją: bez tego AI osiada w pętli między dwiema
     // odnawialnymi nagrodami zamiast iść dalej po mapie, którą jeszcze widzi
@@ -439,9 +451,69 @@ function wejdzNa(s: StanMapy, kto: Wlasciciel, o: Obiekt, ziarno: number) {
  */
 const lepkiCel = new WeakMap<Bohater, { x: number; y: number }>();
 
+/**
+ * Cel misji, jeśli jest widoczny, osiągalny i do wygrania — dla autopilota
+ * gracza. Wygrywa z zapamiętanym kierunkiem: bez tego autopilot, który po
+ * pokonaniu wodza stał trzy pola od Księżycowego Kamienia, szedł dalej
+ * w nieznane, bo rano obrał sobie odległy brzeg mgły — i wracał po Kamień
+ * dwanaście dni później. Gracz, który widzi cel misji, idzie po niego.
+ */
+function celMisji(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefined {
+  if (kto !== 'gracz') return undefined;
+  const mgla = odkryteOf(s, kto);
+  const o = s.obiekty.find(
+    (q) =>
+      !q.zebrany &&
+      q.rodzaj === 'artefakt' &&
+      artefaktPoId(q.artefakt ?? '')?.klasa === 'misja' &&
+      mgla[q.y]?.[q.x]
+  );
+  if (!o) return undefined;
+  const widok = widokStrony(s, kto);
+  const kroki = trasa(widok, o.x, o.y);
+  if (!kroki || kroki.length === 0) return undefined;
+  const straz = strzezoneProzez(widok, o.x, o.y);
+  if (straz && !wygramy(zywe(bohaterOf(s, kto).armia), straz.oddzialy ?? [], ziarno)) return undefined;
+  return { kroki };
+}
+
+/**
+ * Natarcie — plansza z `natarcie: true` (Twierdza): od dnia natarcia znany,
+ * osiągalny i możliwy do zdobycia zamek gracza jest celem ponad wszystko.
+ *
+ * Bez tego AI jest przede wszystkim odkrywcą: brzeg mgły wart jest 30,
+ * a zamek 400 PODZIELONE przez koszt drogi, więc dopóki jest co odkrywać,
+ * odkrywanie wygrywa zawsze. Na dużej planszy to znaczy tygodnie wędrówki
+ * po własnym kącie mapy — a opis misji obiecuje wroga, który „nie będzie
+ * czekał, aż do niego przyjdziesz".
+ */
+function celNatarcia(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefined {
+  if (kto !== 'wrog' || !s.natarcie) return undefined;
+  if (s.dzien < (s.dzienNatarcia ?? DZIEN_PIERWSZEGO_NATARCIA)) return undefined;
+  const mgla = odkryteOf(s, kto);
+  const widok = widokStrony(s, kto);
+  const armia = zywe(bohaterOf(s, kto).armia);
+  for (const z of s.obiekty) {
+    if (z.rodzaj !== 'zamek' || z.wlasciciel !== 'gracz' || !mgla[z.y]?.[z.x]) continue;
+    const kroki = trasa(widok, z.x, z.y);
+    if (!kroki || kroki.length === 0) continue;
+    const straz = strzezoneProzez(widok, z.x, z.y);
+    if (straz && !wygramy(armia, straz.oddzialy ?? [], ziarno)) continue;
+    if (!wygramy(armia, z.oddzialy ?? [], ziarno)) continue;
+    return { kroki };
+  }
+  return undefined;
+}
+
 function wybierzCel(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefined {
   const bohater = bohaterOf(s, kto);
   const widok = widokStrony(s, kto);
+  const misja = celMisji(s, kto, ziarno) ?? celNatarcia(s, kto, ziarno);
+  if (misja) {
+    const ostatni = misja.kroki[misja.kroki.length - 1];
+    lepkiCel.set(bohater, { x: ostatni.x, y: ostatni.y });
+    return misja;
+  }
   const zapamietany = lepkiCel.get(bohater);
   if (zapamietany) {
     const obiekt = obiektNa(s, zapamietany.x, zapamietany.y);

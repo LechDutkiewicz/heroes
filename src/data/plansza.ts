@@ -485,6 +485,7 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
     // Charakter przeciwnika na tej planszy — czyta go `turaAI` w `wrog-ai.ts`.
     wrogTryb: ust.wrog,
     dzienNatarcia: ust.dzienNatarcia,
+    natarcie: ust.natarcie,
     dzien: 1,
     klucze: [],
     // Przeciwnik startuje w krainie wroga — za OBOMA bramami, licząc od
@@ -504,6 +505,8 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
     wrogOdkryte: TEREN.map(() => new Array(TEREN[0].length).fill(false)),
   };
   odslon(stan);
+  for (const m of ust.odkryte ?? []) odslon(stan, m.promien, { x: m.x, y: m.y });
   odslon(stan, undefined, undefined, 'wrog');
+  for (const m of ust.wrogOdkryte ?? []) odslon(stan, m.promien, { x: m.x, y: m.y }, 'wrog');
   return stan;
 }

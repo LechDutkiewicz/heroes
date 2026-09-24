@@ -618,6 +618,11 @@ export interface StanMapy {
   wrogTryb?: 'aktywny' | 'obronca';
   /** Od którego dnia AI wolno wycelować w zamek gracza. Brak = wartość domyślna AI. */
   dzienNatarcia?: number;
+  /**
+   * Czy od dnia natarcia zamek gracza jest dla AI celem ponad wszystko
+   * (o ile go zna i da radę go zdobyć). Brak = AI najpierw odkrywa mapę.
+   */
+  natarcie?: boolean;
   szer: number;
   wys: number;
   teren: Teren[][];

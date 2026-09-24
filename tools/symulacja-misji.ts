@@ -56,6 +56,10 @@ interface Wynik {
   /** Siła załogi pierwszego zamku wroga (suma stworków) na starcie i na końcu. */
   zalogaStart: number;
   zalogaKoniec: number;
+  /** Dzień, w którym cel misji (artefakt albo zamek wroga) pierwszy raz wyszedł z mgły gracza. */
+  celWidac: number | null;
+  /** Dzień, w którym padła straż stojąca przy celu (wódz na grobli). */
+  strazPadla: number | null;
 }
 
 const zaloga = (s: StanMapy) => {
@@ -74,7 +78,17 @@ function przebieg(m: Misja, graj: boolean, ziarno: number, horyzont: number): Wy
     wymarsz: null,
     zalogaStart: zaloga(s),
     zalogaKoniec: 0,
+    celWidac: null,
+    strazPadla: null,
   };
+  const z = m.zwyciestwo;
+  const cel =
+    z.typ === 'artefakt'
+      ? s.obiekty.find((o) => o.rodzaj === 'artefakt' && o.artefakt === z.artefakt)
+      : zamekWroga;
+  const straz = cel
+    ? s.obiekty.filter((o) => o.rodzaj === 'potwor' && Math.max(Math.abs(o.x - cel.x), Math.abs(o.y - cel.y)) <= 9 && o.nazwa !== o.oddzialy?.[0]?.nazwa)
+    : [];
   for (let d = 1; d <= horyzont; d++) {
     nowaTura(s);
     if (graj) turaAI(s, 'gracz', ziarno * 2);
@@ -82,6 +96,8 @@ function przebieg(m: Misja, graj: boolean, ziarno: number, horyzont: number): Wy
     const odl = Math.max(Math.abs(s.wrogBohater.x - zamekWroga.x), Math.abs(s.wrogBohater.y - zamekWroga.y));
     wynik.zasiegWroga = Math.max(wynik.zasiegWroga, odl);
     if (odl > 5 && wynik.wymarsz === null) wynik.wymarsz = s.dzien;
+    if (cel && wynik.celWidac === null && s.odkryte[cel.y][cel.x]) wynik.celWidac = s.dzien;
+    if (straz.length && wynik.strazPadla === null && straz.every((o) => o.zebrany)) wynik.strazPadla = s.dzien;
     const r = ocenMisje(s, m);
     if (r) {
       wynik.rozstrzygniecie = r;
@@ -105,6 +121,9 @@ for (const m of KAMPANIA.misje) {
   const normalne: Wynik[] = [];
   for (let i = 0; i < PROB; i++) normalne.push(przebieg(m, true, 1000 + i, p.horyzont));
   console.log(`  gra normalna: ${lista(normalne)}`);
+  console.log(`  cel pierwszy raz widać dnia: ${normalne.map((w) => w.celWidac ?? '—').join('/')}`);
+  if (normalne.some((w) => w.strazPadla !== null))
+    console.log(`  imienna straż celu pada dnia: ${normalne.map((w) => w.strazPadla ?? '—').join('/')}`);
   const wygrane = normalne.filter((w) => w.rozstrzygniecie === 'wygrana');
   sprawdz(
     `autopilot wygrywa w każdym przebiegu do dnia ${p.wygranaDo}`,

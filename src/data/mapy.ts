@@ -1,5 +1,6 @@
 import * as dwieDoliny from './plansza-teren';
 import * as polana from './plansza-teren-polana';
+import * as bagna from './plansza-teren-bagna';
 
 /**
  * Rejestr plansz. Każda plansza to wynik generatora (teren, punkty, obiekty)
@@ -42,6 +43,14 @@ export interface UstawieniaPlanszy {
   /** Od którego dnia AI wolno wycelować w zamek gracza. */
   dzienNatarcia?: number;
   /**
+   * Od dnia natarcia zamek gracza jest celem ponad wszystko (o ile AI go zna
+   * i da radę go zdobyć). Bez tego AI najpierw odkrywa mapę — na dużej
+   * planszy przez tygodnie.
+   */
+  natarcie?: boolean;
+  /** Co przeciwnik wie od pierwszego dnia — np. gdzie stoi zamek gracza. */
+  wrogOdkryte?: Array<{ x: number; y: number; promien: number }>;
+  /**
    * Załoga każdego zamku wroga: poziomy oddziałów i ile tygodniowych
    * przyrostów każdego z nich (1 = jeden tydzień, jak na Dwóch Dolinach).
    */
@@ -54,6 +63,12 @@ export interface UstawieniaPlanszy {
   dostepneWroga?: number[];
   /** Mnożnik armii startowej bohatera wroga (1 = taka jak gracza). */
   armiaWroga?: number;
+  /**
+   * Miejsca odsłonięte na starcie — jak zaznaczenie na mapie od zleceniodawcy.
+   * Na Bagnach to Wyspa Księżyca: misja mówi „odnajdź Kamień", a ośmiolatek
+   * ma wiedzieć, w którą stronę jechać, zanim wyjedzie z doliny.
+   */
+  odkryte?: Array<{ x: number; y: number; promien: number }>;
   /** Skarbiec startowy gracza i przeciwnika. */
   skarbiec?: { pokeball: number; jagoda: number; kamien: number; odlamek: number };
   wrogSkarbiec?: { pokeball: number; jagoda: number; kamien: number; odlamek: number };
@@ -88,6 +103,12 @@ export const MAPY: Record<string, Plansza> = {
     nazwa: 'Polana',
     modul: polana as unknown as ModulPlanszy,
     tlo: 'mapa/polana/',
+  },
+  bagna: {
+    id: 'bagna',
+    nazwa: 'Bagna',
+    modul: bagna as unknown as ModulPlanszy,
+    tlo: 'mapa/bagna/',
   },
 };
 

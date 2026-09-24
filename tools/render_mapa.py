@@ -52,12 +52,14 @@ from teren_malowanie import (  # noqa: E402
     zmieszaj,
 )
 
-from generuj_mape import MAPY, katalog_tla, plik_ts  # noqa: E402
+from generuj_mape import MAPY, katalog_tla, konfiguracja, plik_ts  # noqa: E402
 
 KORZEN = Path(__file__).resolve().parent.parent
 #: Ustawiane przez `ustaw(mapa_id)` — plik planszy i katalog tła.
 KATALOG = KORZEN / 'public' / 'mapa'
 ZRODLO = KORZEN / 'src' / 'data' / 'plansza-teren.ts'
+#: Zabarwienie tekstur tej planszy — `BARWY_TERENU` z `tools/mapy/<id>.py`.
+BARWY: dict = {}
 
 KAFEL = 48                  # bok pola na ekranie
 #: Ile razy nadpróbkowujemy maskę drogi, zanim ją zmniejszymy. Rysowanie
@@ -111,8 +113,9 @@ def ustaw(mapa_id: str):
     """Przełącza moduł na planszę `mapa_id`. Funkcje niżej czytają rysunek
     i wymiary z globali — tak było, gdy plansza była jedna, i tak zostaje,
     bo każda z nich jest wołana raz na planszę."""
-    global KATALOG, ZRODLO, RYSUNEK, WYS, SZER, W, H
+    global KATALOG, ZRODLO, RYSUNEK, WYS, SZER, W, H, BARWY
     KATALOG = katalog_tla(mapa_id)
+    BARWY = getattr(konfiguracja(mapa_id), 'BARWY_TERENU', {})
     ZRODLO = plik_ts(mapa_id)
     RYSUNEK = wczytaj_rysunek()
     WYS, SZER = len(RYSUNEK), len(RYSUNEK[0])
@@ -200,6 +203,29 @@ def maska_gruntu() -> Image.Image:
     )
 
 
+def zabarw(im: Image.Image, nazwa: str) -> Image.Image:
+    """Przesuwa barwę tekstury terenu w stronę klimatu planszy.
+
+    Tekstury są jedne na wszystkie mapy, a plansza ma mieć własny charakter:
+    woda na bagnach jest mętna i zielonkawa, a nie turkusowa jak staw na
+    Polanie; trawa w Twierdzy jest wypłowiała od mrozu. Mnożymy przez barwę
+    znormalizowaną do jej średniej — odcień się zmienia, jasność zostaje —
+    a potem ewentualnie przyciemniamy. Rysunek tekstury (fale, źdźbła, kamienie)
+    zostaje nietknięty, więc to wciąż ta sama, spójna rodzina grafik.
+    """
+    if nazwa not in BARWY:
+        return im
+    u = BARWY[nazwa]
+    tab = np.asarray(im.convert('RGB'), dtype=np.float32)
+    # Najpierw nasycenie (mróz i muł odbierają kolor), potem odcień i jasność.
+    szary = tab.mean(axis=2, keepdims=True)
+    tab = szary + (tab - szary) * u.get('nasycenie', 1.0)
+    b = np.array(u.get('barwa', (128, 128, 128)), dtype=np.float32)
+    mnoznik = 1 + (b / b.mean() - 1) * u.get('moc', 0.0)
+    tab = (tab * mnoznik[None, None, :] * u.get('jasnosc', 1.0)).clip(0, 255)
+    return Image.fromarray(tab.astype(np.uint8), 'RGB')
+
+
 def klatka() -> tuple[Image.Image, Image.Image]:
     """Plansza i maska wody.
 
@@ -208,12 +234,12 @@ def klatka() -> tuple[Image.Image, Image.Image]:
     rozjechałaby się przy najmniejszej zmianie parametrów i na styku wody
     z lądem zostałby rąbek nienamalowanej wody albo nieruchomej tafli.
     """
-    plansza = zmieszaj(warianty('trawa'), W, H, (0, 0), ZIARNO)
+    plansza = zabarw(zmieszaj(warianty('trawa'), W, H, (0, 0), ZIARNO), 'trawa')
     maskaWody = Image.new('L', (W, H), 0)
     for n, (nazwa, znaki, wtapianie, poszarpanie) in enumerate(WARSTWY):
         if not any(c in znaki for wiersz in RYSUNEK for c in wiersz):
             continue
-        warstwa = zmieszaj(warianty(nazwa), W, H, (0, 0), ZIARNO + 50 + n)
+        warstwa = zabarw(zmieszaj(warianty(nazwa), W, H, (0, 0), ZIARNO + 50 + n), nazwa)
         # Każda warstwa dostaje własne ziarno, inaczej wszystkie granice
         # falowałyby w tym samym rytmie i widać by było jeden wzór.
         m = maska(pola(znaki), KAFEL, wtapianie, poszarpanie, ZIARNO + n)
@@ -221,7 +247,7 @@ def klatka() -> tuple[Image.Image, Image.Image]:
         if nazwa == 'woda':
             maskaWody = m
     plansza = plansza.convert('RGBA')
-    sciezka = kafelkuj(tekstura('sciezka'), W, H).convert('RGBA')
+    sciezka = zabarw(kafelkuj(tekstura('sciezka'), W, H), 'sciezka').convert('RGBA')
     # Place pod budowlami idą PRZED drogami: droga ma dobiegać do placu
     # i się z nim zlewać, a nie kończyć na jego brzegu.
     plansza.paste(sciezka, (0, 0), maska_gruntu())

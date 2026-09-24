@@ -764,6 +764,17 @@ class Generator:
         for nazwa, pole in k.PUNKTY.items():
             if nazwa.startswith('zamek'):
                 self.blokada.update(self.pola_bryly('zamek', None, pole))
+        # Wolny plac wokół zamków. Rysunek zamku jest większy niż jego bryła,
+        # więc kopalnia postawiona tuż przy murach wchodzi mu w dach — na
+        # ekranie dwie budowle zlewają się w jedną. „Dwie Doliny" tego odstępu
+        # nie mają (ich rozstawienie jest zamrożone), nowe plansze tak.
+        r = getattr(k, 'ODSTEP_OD_ZAMKOW', 0)
+        if r:
+            for nazwa, (zx, zy) in k.PUNKTY.items():
+                if nazwa.startswith('zamek'):
+                    for dy in range(-2 - r, r + 1):
+                        for dx in range(-1 - r, r + 2):
+                            self.zajete.append((zx + dx, zy + dy))
         self.stan_dostepnych = len(self.dostepnych())
         self.kieszenie = {}
         for szyjka, pola_kieszeni in self.znajdz_kieszenie(k.PUNKTY['start']):
