@@ -1,9 +1,9 @@
 {
- "updated": "2026-09-24, scalone: menu, kampania, wynik; wspólny komplet w budowie",
+ "updated": "2026-09-24, menu wygrywa ślepo (runda 3)",
  "pieces": [
   {
    "name": "Menu główne",
-   "status": "build",
+   "status": "done",
    "bar": "tools/reference/homm2/menu-glowne.png — prawdziwe menu HoMM2 (ulica miasteczka, przyciski jako szyldy sklepów)",
    "note": "Ilustracja tytułowa, przyciski, podmenu nowej gry, autorzy, rekordy.",
    "rounds": [
@@ -18,6 +18,12 @@
      "gap": "Menu i logo wciąż leżą na obrazie jako osobna warstwa: deski są oświetlone płasko i nie zgadzają się z kierunkiem słońca, sznury proporca giną w niebie, logo wygląda jak gotowy szablon, a kompozycja nie ma głównego motywu.",
      "blind": "tools/blind/menu-r2.png",
      "note": "Poprawione od rundy 1: wieczorne światło, latarnia, kłódka, jeden stworek z cieniem. Krytyk wciąż wybrał wzorzec. Następna runda: scena złożona z istniejących malowanych grafik, z dużym bohaterem w centrum uwagi i wszystkim oświetlonym z jednego źródła."
+    },
+    {
+     "win": true,
+     "gap": "Słabość zwycięzcy: drogowskaz wciąż ma trochę płaskie światło, szara deska Wczytaj jest z innego materiału, a napisy na niższych deskach są cienkie.",
+     "blind": "tools/blind/menu-r3.png",
+     "note": "Nasze wygrywa na ślepo. Trener z Cindro na pierwszym planie, kolejność czytania od sztandaru do Nowej gry, zablokowana opcja widoczna bez tekstu. Wzorzec przegrał, bo opcje są rozrzucone i słabo czytelne."
     }
    ]
   },
