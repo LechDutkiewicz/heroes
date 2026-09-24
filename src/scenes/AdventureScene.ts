@@ -122,7 +122,8 @@ const KLUCZ_TLA = 'tlo-planszy';
 const DOMYSLNA_PODPOWIEDZ =
   'Klik w pole pokazuje trasę, drugi klik w to samo miejsce — rusza.\n' +
   'Strzałki przesuwają mapę, spacja wraca do bohatera.\n' +
-  'Klik w bohatera otwiera jego ekran. F8 — dziennik do zgłoszenia błędu.';
+  'Klik w bohatera otwiera jego ekran.\n' +
+  'Klawisz C pokazuje cele misji.';
 
 export class AdventureScene extends Phaser.Scene {
   private stan!: StanMapy;
@@ -1501,7 +1502,8 @@ export class AdventureScene extends Phaser.Scene {
     this.poziomTekst = this.add
       .text(wnetrzeX + portretBok + 18, kartaY + 25, '', body(11, H.inkSoft))
       .setOrigin(0, 0)
-      .setDepth(Z.hud + 2);
+      .setDepth(Z.hud + 2)
+      .setData('maks', wnetrzeW - portretBok - 24);
 
     // Pasek do awansu. Sama liczba „190/384" mówi, ILE brakuje, ale nie mówi,
     // czy to blisko — a to jest jedyne pytanie, które gracz sobie przy niej
@@ -1775,10 +1777,16 @@ export class AdventureScene extends Phaser.Scene {
     // blisko jest, ani co da. Licznik do awansu robi z doświadczenia widoczny
     // pasek postępu, a co awans daje — mówi komunikat w chwili awansu.
     const p = postepPoziomu(b.doswiadczenie);
-    this.poziomTekst.setText(
-      `poziom ${p.poziom}  ·  ${p.wPoziomie}/${p.doAwansu} do awansu` +
-        (b.artefakty.length ? `  ·  art. ${b.artefakty.length}` : '')
-    );
+    // Licznik artefaktów wypadł z tej linijki: przy dwucyfrowym doświadczeniu
+    // wychodził za kartę („…do awansu · ar"). Artefakty widać na ekranie
+    // bohatera; tu zostaje to, czego pasek pod spodem nie mówi sam — liczby.
+    // Gdyby i to się nie zmieściło (duże liczby na wysokich poziomach),
+    // napis traci „do awansu", a nie ucina się w pół słowa.
+    const maks = this.poziomTekst.getData('maks') as number | undefined;
+    this.poziomTekst.setText(`poziom ${p.poziom} · ${p.wPoziomie}/${p.doAwansu} do awansu`);
+    if (maks && this.poziomTekst.width > maks) {
+      this.poziomTekst.setText(`poziom ${p.poziom} · ${p.wPoziomie}/${p.doAwansu}`);
+    }
     const pdX = this.doswPasek.getData('x') as number;
     const pdY = this.doswPasek.getData('y') as number;
     const pdW = this.doswPasek.getData('w') as number;
@@ -3052,8 +3060,72 @@ export class AdventureScene extends Phaser.Scene {
         return [...baza(x, yy), o];
       };
 
+    // Zamek rysowany wektorem, nie zmniejszaną ilustracją: przy 48 px
+    // obrazek z mapy robił się poszarpany, a zdobyty i stracony zamek
+    // wyglądały identycznie. Tu zdobyty dostaje naszą chorągiew z gwiazdą,
+    // stracony — pęknięcie, osunięte kamienie i opuszczoną szarą flagę.
+    const rysowanyZamek =
+      (zdobyty: boolean): Obrazek =>
+      (x, yy) => {
+        const g = this.add.graphics();
+        const mur = zdobyty ? 0xc9ccd6 : 0x9aa0ac;
+        const cien = zdobyty ? 0x7d8494 : 0x646a76;
+        const baza = yy + 20;
+        g.fillStyle(C.shadow, 0.25);
+        g.fillEllipse(x, baza + 2, 44, 7);
+        // Wieże boczne, mur i brama.
+        for (const dx of [-15, 15]) {
+          g.fillStyle(cien, 1);
+          g.fillRect(x + dx - 6, baza - 22, 12, 22);
+          g.fillStyle(mur, 1);
+          g.fillRect(x + dx - 6, baza - 22, 9, 22);
+          for (const zx of [-6, -1, 4]) g.fillRect(x + dx + zx, baza - 26, 3, 4);
+        }
+        g.fillStyle(mur, 1);
+        g.fillRect(x - 10, baza - 15, 20, 15);
+        for (const zx of [-10, -4, 2, 8]) g.fillRect(x + zx, baza - 18, 3, 3);
+        g.fillStyle(0x4a3524, 1);
+        g.fillRoundedRect(x - 4, baza - 9, 8, 9, { tl: 4, tr: 4, bl: 0, br: 0 });
+        g.fillStyle(cien, 1);
+        g.fillRect(x - 10, baza - 15, 20, 2);
+        if (zdobyty) {
+          // Maszt na środkowej wieży i niebieska chorągiew z gwiazdą.
+          g.fillStyle(0x8a5a2b, 1);
+          g.fillRect(x - 1, baza - 40, 2.5, 25);
+          g.fillStyle(C.allyDeep, 1);
+          g.fillTriangle(x + 1.5, baza - 40, x + 22, baza - 34, x + 1.5, baza - 27);
+          g.fillStyle(C.ally, 1);
+          g.fillTriangle(x + 1.5, baza - 40, x + 19, baza - 35, x + 1.5, baza - 30);
+          g.fillStyle(C.gold, 1);
+          g.fillCircle(x, baza - 41, 2.2);
+        } else {
+          // Pęknięcie przez mur, kamienie osunięte pod wieżą, szara flaga opuszczona.
+          g.lineStyle(2, 0x2a2f3a, 1);
+          g.beginPath();
+          g.moveTo(x + 3, baza - 18);
+          g.lineTo(x - 1, baza - 12);
+          g.lineTo(x + 4, baza - 8);
+          g.lineTo(x, baza - 2);
+          g.strokePath();
+          g.fillStyle(0x7a808c, 1);
+          g.fillRect(x + 12, baza - 26, 10, 7);
+          for (const [kx, ky, r] of [
+            [22, -2, 3.5],
+            [17, 0, 2.5],
+            [26, -1, 2],
+          ] as const) {
+            g.fillStyle(0x7a808c, 1);
+            g.fillCircle(x + kx, baza + ky, r);
+          }
+          g.fillStyle(0x8a5a2b, 1);
+          g.fillRect(x - 16, baza - 36, 2, 14);
+          g.fillStyle(0x8c8f98, 1);
+          g.fillTriangle(x - 14, baza - 30, x - 3, baza - 27, x - 14, baza - 23);
+        }
+        return [g];
+      };
+
     const z = w.zwyciestwo;
-    const wrogi = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel !== 'gracz');
     const obrazZwyciestwa: Obrazek =
       z.typ === 'artefakt'
         ? (x, yy) => [
@@ -3065,13 +3137,13 @@ export class AdventureScene extends Phaser.Scene {
           ? zamek(`m-${SUROWIEC_INFO[z.surowiec].ikona}`)
           : z.typ === 'pokonaj'
             ? (x, yy) => [this.add.image(x, yy, ICON.sword).setDisplaySize(40, 40)]
-            : zamek(wrogi ? this.grafikaObiektu(wrogi).klucz : 'm-zamek-ogien');
+            : rysowanyZamek(true);
     wierszWarunku(zOdznaka(obrazZwyciestwa, true), 'ZWYCIĘSTWO', C.goldDeep, celSlowami(z));
     for (const p of w.porazka) {
       wierszWarunku(
         p.typ === 'termin'
-          ? (x, yy) => [this.add.image(x, yy, ICON.hourglass).setDisplaySize(40, 40)]
-          : zOdznaka(zamek('m-zamek-las', true), false),
+          ? (x, yy) => [this.add.image(x, yy, ICON.hourglass).setDisplaySize(42, 42)]
+          : zOdznaka(rysowanyZamek(false), false),
         'PORAŻKA, JEŚLI…',
         C.foeDeep,
         p.typ === 'termin' ? `Minie ${p.dni} dni. Dziś jest dzień ${s.dzien}.` : 'Stracisz wszystkie swoje zamki.'
@@ -3085,20 +3157,20 @@ export class AdventureScene extends Phaser.Scene {
     if (bonus) {
       k.add(
         this.add
-          .text(0, y + 12, `Twój bonus na start: ${bonus.opis}`, { ...body(13, H.inkSoft), fontStyle: 'italic' })
+          .text(0, y + 14, `Twój bonus na start: ${bonus.opis}`, { ...body(15, H.ink), fontStyle: 'bold' })
           .setOrigin(0.5)
       );
-      y += 30;
+      y += 34;
     }
     y += 8;
     const przyciskY = y + 24;
     y += 52;
     k.add(
       this.add
-        .text(0, y + 8, 'Cele zawsze sprawdzisz przyciskiem „Cele" albo klawiszem C.', body(11, H.inkSoft))
+        .text(0, y + 8, 'Cele zawsze sprawdzisz przyciskiem „Cele" albo klawiszem C.', body(13, H.inkSoft))
         .setOrigin(0.5)
     );
-    y += 28;
+    y += 30;
 
     const wys = y;
     const gora = Math.round(cy - wys / 2);

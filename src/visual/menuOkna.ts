@@ -216,7 +216,7 @@ export function deseczka(
  * (4 misje, 4000 − 15 × (dni − 4)) — dziecko, które to sprawdzi,
  * nie znajdzie oszustwa.
  */
-const LEGENDY: Omit<Rekord, 'data'>[] = [
+export const LEGENDY: Omit<Rekord, 'data'>[] = [
   { imie: 'Stary Strażnik', punkty: 3100, dni: 64 },
   { imie: 'Leśna Ola', punkty: 2590, dni: 98 },
   { imie: 'Kapitan Tomek', punkty: 2200, dni: 124 },
