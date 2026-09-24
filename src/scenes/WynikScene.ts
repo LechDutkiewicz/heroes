@@ -29,9 +29,22 @@ import {
   sumaKampanii,
   tytulZaWynik,
 } from '../data/wynik';
-import { C, E, FONT, H, body, display } from '../visual/theme';
-import { gradientText, makeHudButton, mix, plate } from '../visual/hud';
-import { ICON, buildIcons, type IconKey } from '../visual/icons';
+import { C, E } from '../visual/theme';
+import { mix, plate } from '../visual/hud';
+import {
+  BARWA,
+  KROJ,
+  Przycisk,
+  krojeZestawu,
+  medalion,
+  napisTytulowy,
+  panelPergaminu,
+  stylAtramentu,
+  stylEtykiety,
+  wczytajZestaw,
+  wstazka,
+} from '../visual/zestaw';
+import { ICON, buildIcons } from '../visual/icons';
 import { buildArtefakty, kluczArtefaktu } from '../visual/artefakty';
 import { wersjonujZasoby } from '../visual/zasoby';
 
@@ -90,6 +103,7 @@ export class WynikScene extends Phaser.Scene {
 
   preload() {
     wersjonujZasoby(this);
+    wczytajZestaw(this);
     const b = import.meta.env.BASE_URL;
     for (const n of ['tlo-zwyciestwo', 'tlo-porazka', 'tlo-koniec', 'tlo-grota-zwyciestwo', 'tlo-final'])
       this.load.image(`w-${n}`, `${b}wynik/${n}.jpg`);
@@ -162,12 +176,19 @@ export class WynikScene extends Phaser.Scene {
       dzien: this.dane.stan.dzien,
     });
 
-    const etap = this.dane.etap ?? 'wynik';
-    if (etap === 'koniec') this.pokazKoniec();
-    else if (etap === 'rekordy') this.pokazRekordy();
-    else if (this.dane.rozstrzygniecie === 'wygrana') this.pokazZwyciestwo();
-    else this.pokazPorazke();
-    this.cameras.main.fadeIn(500, 0, 0, 0);
+    // Kroje zestawu (Cinzel, Lora) muszą być w przeglądarce, ZANIM powstanie
+    // pierwszy napis — inaczej Phaser zmierzy i narysuje go krojem zapasowym.
+    this.cameras.main.setAlpha(0);
+    void krojeZestawu().then(() => {
+      if (!this.scene.isActive()) return;
+      this.cameras.main.setAlpha(1);
+      const etap = this.dane.etap ?? 'wynik';
+      if (etap === 'koniec') this.pokazKoniec();
+      else if (etap === 'rekordy') this.pokazRekordy();
+      else if (this.dane.rozstrzygniecie === 'wygrana') this.pokazZwyciestwo();
+      else this.pokazPorazke();
+      this.cameras.main.fadeIn(500, 0, 0, 0);
+    });
   }
 
   // ————————————————————————————————————————————————— tekstury efektów
@@ -275,56 +296,45 @@ export class WynikScene extends Phaser.Scene {
   }
 
   /**
-   * Napis-logo w trzech warstwach (gruby cień, złoty obrys, lico
-   * z gradientem) — ten sam przepis co `drawTitle`, tyle że wyśrodkowany
-   * i z wejściem „na sprężynie".
+   * Tytuł ekranu: Cinzel pozłacany z zestawu, wchodzi „na sprężynie".
+   * Pod nim ciemna, miękka poświata, żeby złoto czytało się na jasnym
+   * niebie obrazu tak samo jak na zmierzchu.
    */
-  private tytul(x: number, y: number, tekst: string, rozmiar: number, gora: string, dol: string, obrys: number = C.goldDeep) {
-    const warstwa = (kolor: number, grubosc: number) =>
-      this.add
-        .text(x, y, tekst, {
-          fontFamily: FONT,
-          fontSize: `${rozmiar}px`,
-          fontStyle: 'bold',
-          color: H.goldLight,
-          stroke: `#${kolor.toString(16).padStart(6, '0')}`,
-          strokeThickness: grubosc,
-        })
-        .setOrigin(0.5)
-        .setDepth(50);
-    const tyl = warstwa(C.shadow, rozmiar * 0.42).setShadow(0, 4, '#00000088', 10, true, true);
-    const srodek = warstwa(obrys, rozmiar * 0.2);
-    const lico = warstwa(C.shadow, 0);
-    gradientText(lico, gora, dol);
-    const czesci = [tyl, srodek, lico];
-    for (const t of czesci) t.setScale(0.3).setAlpha(0);
-    this.tweens.add({ targets: czesci, scale: 1, alpha: 1, duration: 650, ease: E.out, delay: 250 });
-    return czesci;
+  private tytul(x: number, y: number, tekst: string, rozmiar: number) {
+    const poswiata = this.add
+      .image(x, y + 4, 'w-kulka')
+      .setTint(BARWA.cien)
+      .setAlpha(0.45)
+      .setDisplaySize(tekst.length * rozmiar * 0.62, rozmiar * 1.7)
+      .setDepth(49);
+    const t = napisTytulowy(this, x, y, tekst, rozmiar).setDepth(50);
+    for (const o of [t, poswiata]) o.setScale(o.scaleX * 0.3, o.scaleY * 0.3).setAlpha(0);
+    this.tweens.add({ targets: t, scale: 1, alpha: 1, duration: 650, ease: E.out, delay: 250 });
+    this.tweens.add({
+      targets: poswiata,
+      scaleX: poswiata.scaleX / 0.3,
+      scaleY: poswiata.scaleY / 0.3,
+      alpha: 0.45,
+      duration: 650,
+      delay: 250,
+    });
+    return t;
   }
 
-  /** Kapsułka pod tytułem: „Misja 1 · Pierwsze kroki". */
+  /** Wstążka z laku pod tytułem: „Misja 1 · Pierwsze kroki". */
   private podtytul(x: number, y: number, tekst: string) {
-    const t = this.add.text(0, 0, tekst, { ...display(16, H.white), strokeThickness: 4 }).setOrigin(0.5);
-    const w = t.width + 44;
-    const g = this.add.graphics();
-    plate(g, -w / 2, -17, w, 34, 17, C.panelDeep, C.gold, { light: 0.24, dark: 0.3, gloss: 0.2, edgeW: 2 });
-    const k = this.add.container(x, y, [g, t]).setDepth(50).setAlpha(0);
+    const k = wstazka(this, 0, 0, tekst.toUpperCase());
+    k.setPosition(x, y).setScale(1.3).setDepth(50).setAlpha(0);
     this.tweens.add({ targets: k, alpha: 1, y: { from: y + 10, to: y }, duration: 400, delay: 700 });
     return k;
   }
 
-  /** Karta z treścią u dołu ekranu — ta sama tabliczka co okna na mapie. */
-  private karta(x: number, y: number, w: number, h: number, krawedz: number = C.gold) {
-    // Płasko, bez gradientu z `plate`: na tabliczce tej wielkości gradient
-    // krojony na pasy widać jako prążki, a jego dolne pasma odsłaniają
-    // jaśniejsze kliny w zaokrąglonych rogach.
-    const g = this.add.graphics().setDepth(40);
-    plate(g, x, y, w, h, 16, C.panel, krawedz, { light: 0, dark: 0, gloss: 0, edgeW: 3, drop: 5 });
-    g.lineStyle(1.5, C.panelEdge, 0.9);
-    g.strokeRoundedRect(x + 6, y + 6, w - 12, h - 12, 11);
-    g.setAlpha(0);
-    this.tweens.add({ targets: g, alpha: 0.97, duration: 400, delay: 500 });
-    return g;
+  /** Pergamin w złotej ramie u dołu ekranu — jak karta misji na ekranie kampanii. */
+  private karta(x: number, y: number, w: number, h: number) {
+    const czesci = panelPergaminu(this, x, y, w, h);
+    czesci.forEach((c, i) => c.setDepth(40 + i * 0.1).setAlpha(0));
+    this.tweens.add({ targets: czesci, alpha: 1, duration: 400, delay: 500 });
+    return czesci;
   }
 
   /** Wszystko, co ma wejść razem z kartą, wchodzi z opóźnieniem karty. */
@@ -333,48 +343,57 @@ export class WynikScene extends Phaser.Scene {
     this.tweens.add({ targets: obiekty, alpha: 1, duration: 380, delay: opoznienie });
   }
 
+  /**
+   * Tabliczka z zestawu. Złota (`glowny`) tylko dla JEDNEGO następnego kroku
+   * na ekranie, reszta drewniana — tak czyta się, co kliknąć najpierw.
+   */
   private przycisk(
     x: number,
     y: number,
     w: number,
     napis: string,
     klik: () => void,
-    o: { ikona?: IconKey; zloty?: boolean; h?: number } = {}
+    o: { glowny?: boolean; h?: number; strzalka?: boolean } = {}
   ) {
-    const b = makeHudButton(this, {
+    const b = new Przycisk(this, {
       x,
       y,
       w,
-      h: o.h ?? 46,
-      icon: o.ikona,
-      tone: o.zloty === false ? C.ally : C.gold,
-      toneDeep: o.zloty === false ? C.allyDeep : C.goldDeep,
-      depth: 60,
-      onClick: () => {
+      h: o.h ?? 48,
+      tekst: napis,
+      glowny: o.glowny ?? true,
+      strzalka: o.strzalka,
+      glebia: 60,
+      akcja: () => {
         if (this.wyjscie) return;
         klik();
       },
     });
-    b.setLabel(napis);
     // Przycisk pojawia się ostatni: najpierw scena i tekst, dopiero potem
     // decyzja. Wcześniej dziecko klikało „Dalej", zanim cokolwiek przeczytało.
-    b.setVisible(false);
-    this.time.delayedCall(1300, () => b.setVisible(true));
+    b.kontener.setVisible(false);
+    this.time.delayedCall(1300, () => b.kontener.setVisible(true));
     return b;
   }
 
-  /** Wiersz tabeli jak w panelu oddziału: pasmo, ikona, etykieta, liczba z prawej. */
-  private wiersz(x: number, y: number, w: number, ikona: IconKey, etykieta: string, wartosc: string, i: number) {
+  /** Pasmo tabeli na pergaminie — ciemniejszy papier co drugi wiersz. */
+  private pasmo(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, i: number) {
+    g.fillStyle(0x8a5a2a, i % 2 ? 0.13 : 0.06);
+    g.fillRoundedRect(x, y, w, h, 7);
+  }
+
+  /** Wiersz liczb: ikona w medalionie, etykieta atramentem, liczba Cinzelem z prawej. */
+  private wiersz(x: number, y: number, w: number, ikona: string, etykieta: string, wartosc: string, i: number) {
     const g = this.add.graphics().setDepth(45);
-    g.fillStyle(i % 2 ? mix(C.panel, C.panelEdge, 0.55) : mix(C.panel, C.panelEdge, 0.25), 1);
-    g.fillRoundedRect(x, y - 15, w, 30, 8);
-    const ik = this.obraz(x + 18, y, ikona, 20).setDepth(46);
-    const e = this.add.text(x + 34, y, etykieta, body(14, H.inkSoft)).setOrigin(0, 0.5).setDepth(46);
+    this.pasmo(g, x, y - 15, w, 30, i);
+    const md = medalion(this, x + 16, y, 12, BARWA.papierCiemny).setDepth(45.5);
+    const ik = this.obraz(x + 16, y, ikona, 15).setDepth(46);
+    const e = this.add.text(x + 36, y, etykieta, stylAtramentu(15, 'miekki')).setOrigin(0, 0.5).setDepth(46);
     const v = this.add
-      .text(x + w - 12, y, wartosc, { ...display(18, H.white), strokeThickness: 4 })
+      .text(x + w - 12, y, wartosc, stylEtykiety(19, BARWA.atrament))
       .setOrigin(1, 0.5)
       .setDepth(46);
-    return { czesci: [g, ik, e, v], wartosc: v };
+    return { czesci: [g, md, ik, e, v], wartosc: v };
   }
 
   /** Licznik rosnący od zera — punkty „nabijają się" jak w Heroes 2. */
@@ -762,10 +781,10 @@ export class WynikScene extends Phaser.Scene {
       .setDepth(36);
 
     if (final) {
-      this.tytul(SZER / 2, 50, 'Wielkie zwycięstwo!', 56, H.white, H.gold);
+      this.tytul(SZER / 2, 50, 'Wielkie zwycięstwo!', 56);
       this.podtytul(SZER / 2, 106, `${this.nazwaGry()} · ostatnia misja`);
     } else {
-      this.tytul(SZER / 2, 58, 'Zwycięstwo!', 60, H.white, H.gold);
+      this.tytul(SZER / 2, 58, 'Zwycięstwo!', 60);
       this.podtytul(SZER / 2, 116, this.nazwaGry());
     }
 
@@ -780,9 +799,9 @@ export class WynikScene extends Phaser.Scene {
     const epilog =
       m?.epilog ?? 'Wszystkie zamki na mapie należą do ciebie. Stworki z całej krainy świętują razem z tobą!';
     tresc.push(
-      this.add.text(kx + 24, ky + 16, 'Misja wykonana', display(19, H.gold)).setDepth(45),
+      this.add.text(kx + 24, ky + 16, 'Misja wykonana', stylEtykiety(19)).setDepth(45),
       this.add
-        .text(kx + 24, ky + 46, epilog, { ...body(15, H.ink), lineSpacing: 4 })
+        .text(kx + 24, ky + 46, epilog, { ...stylAtramentu(15), lineSpacing: 4 })
         .setWordWrapWidth(372)
         .setDepth(45)
     );
@@ -792,9 +811,9 @@ export class WynikScene extends Phaser.Scene {
     const nastepna = m ? this.nastepnaMisja() : undefined;
     const dy = ky + kh - 44;
     const pasek = this.add.graphics().setDepth(44);
-    pasek.fillStyle(0xfff6d6, 1);
+    pasek.fillStyle(0x8a5a2a, 0.1);
     pasek.fillRoundedRect(kx + 18, dy - 28, 384, 56, 12);
-    pasek.lineStyle(1.5, C.goldDeep, 0.7);
+    pasek.lineStyle(1.5, BARWA.kreska, 0.55);
     pasek.strokeRoundedRect(kx + 18, dy - 28, 384, 56, 12);
     tresc.push(pasek);
     if (nastepna) {
@@ -808,11 +827,11 @@ export class WynikScene extends Phaser.Scene {
       }
       tresc.push(
         this.add
-          .text(kx + 108, dy - 11, `Odblokowana misja ${nastepna.nr}`, { ...display(14, H.gold), strokeThickness: 3 })
+          .text(kx + 108, dy - 11, `Odblokowana misja ${nastepna.nr}`, { ...stylEtykiety(14), strokeThickness: 3 })
           .setOrigin(0, 0.5)
           .setDepth(45),
         this.add
-          .text(kx + 108, dy + 12, nastepna.tytul, { ...body(17, H.ink), fontStyle: 'bold' })
+          .text(kx + 108, dy + 12, nastepna.tytul, stylEtykiety(17, BARWA.atrament))
           .setOrigin(0, 0.5)
           .setDepth(45)
       );
@@ -824,7 +843,7 @@ export class WynikScene extends Phaser.Scene {
             kx + 72,
             dy,
             m ? 'To była ostatnia misja kampanii!\nZa chwilę jej zakończenie.' : `Cel wykonany: ${celSlowami({ typ: 'zamki' }).toLowerCase()}`,
-            { ...body(14, H.ink), fontStyle: 'bold', lineSpacing: 2 }
+            stylEtykiety(14, BARWA.atrament)
           )
           .setOrigin(0, 0.5)
           .setWordWrapWidth(320)
@@ -850,7 +869,7 @@ export class WynikScene extends Phaser.Scene {
     const pw = kw - 652 - 20;
     const pcx = px + pw / 2;
     if (m) {
-      tresc.push(this.add.text(px + 4, ky + 14, 'Zabierasz dalej', display(15, H.gold)).setDepth(45));
+      tresc.push(this.add.text(px + 4, ky + 14, 'Zabierasz dalej', stylEtykiety(15)).setDepth(45));
       // Każda rzecz z PODPISEM: sama ikona artefaktu nic dziecku nie mówi.
       const wpisy: Array<{ ikona: string; napis: string }> = [
         ...b.artefakty.map((id) => {
@@ -869,7 +888,7 @@ export class WynikScene extends Phaser.Scene {
         tresc.push(
           this.obraz(px + 16, y, w.ikona, 24).setDepth(46),
           this.add
-            .text(px + 34, y, w.napis, body(13, H.ink))
+            .text(px + 34, y, w.napis, stylAtramentu(13))
             .setOrigin(0, 0.5)
             .setDepth(46)
         );
@@ -877,7 +896,7 @@ export class WynikScene extends Phaser.Scene {
       if (wpisy.length > widac.length) {
         tresc.push(
           this.add
-            .text(px + 34, ky + 52 + widac.length * 26, `i jeszcze ${wpisy.length - widac.length} (ekran bohatera)`, body(13, H.inkSoft))
+            .text(px + 34, ky + 52 + widac.length * 26, `i jeszcze ${wpisy.length - widac.length} (ekran bohatera)`, stylAtramentu(13, 'miekki'))
             .setOrigin(0, 0.5)
             .setWordWrapWidth(pw - 36)
             .setDepth(46)
@@ -886,19 +905,15 @@ export class WynikScene extends Phaser.Scene {
       if (!wpisy.length) {
         tresc.push(
           this.add
-            .text(px + 4, ky + 50, `${b.imie} i całe doświadczenie\nz tej misji.`, body(13, H.ink))
+            .text(px + 4, ky + 50, `${b.imie} i całe doświadczenie\nz tej misji.`, stylAtramentu(13))
             .setOrigin(0, 0.5)
             .setDepth(46)
         );
       }
-      this.przycisk(pcx, ky + kh - 30, pw - 8, nastepna ? 'Dalej' : 'Zakończenie', () => this.dalejPoWygranej(), {
-        ikona: ICON.banner,
-      });
+      this.przycisk(pcx, ky + kh - 30, pw - 8, nastepna ? 'Dalej' : 'Zakończenie', () => this.dalejPoWygranej(), { strzalka: true });
     } else {
-      this.przycisk(pcx, ky + 58, pw - 8, 'Zagraj jeszcze raz', () => this.nowaGraPojedyncza(), {
-        ikona: ICON.sword,
-      });
-      this.przycisk(pcx, ky + 124, pw - 8, 'Menu główne', () => this.wyjdz('menu'), { zloty: false });
+      this.przycisk(pcx, ky + 58, pw - 8, 'Zagraj jeszcze raz', () => this.nowaGraPojedyncza(), {});
+      this.przycisk(pcx, ky + 124, pw - 8, 'Menu główne', () => this.wyjdz('menu'), { glowny: false });
     }
     this.wejdz(tresc);
   }
@@ -1005,18 +1020,18 @@ export class WynikScene extends Phaser.Scene {
         .setDepth(3);
     });
 
-    this.tytul(SZER / 2, 58, 'Tym razem się nie udało', 46, H.white, '#bcd4ec', C.allyDeep);
+    this.tytul(SZER / 2, 58, 'Tym razem się nie udało', 46);
     this.podtytul(SZER / 2, 112, this.nazwaGry());
 
     const kx = 24;
     const ky = 486;
     const kw = SZER - 48;
     const kh = 186;
-    this.karta(kx, ky, kw, kh, C.panelEdge);
+    this.karta(kx, ky, kw, kh);
     const tresc: Phaser.GameObjects.GameObject[] = [
-      this.add.text(kx + 24, ky + 18, 'Co się stało?', display(19, H.panelEdge)).setDepth(45),
+      this.add.text(kx + 24, ky + 18, 'Co się stało?', stylEtykiety(19)).setDepth(45),
       this.add
-        .text(kx + 24, ky + 50, coSieStalo(przyczyna), { ...body(15, H.ink), fontStyle: 'bold' })
+        .text(kx + 24, ky + 50, coSieStalo(przyczyna), stylEtykiety(15, BARWA.atrament))
         .setWordWrapWidth(370)
         .setDepth(45),
       this.add
@@ -1024,7 +1039,7 @@ export class WynikScene extends Phaser.Scene {
           kx + 24,
           ky + 82,
           'Każdy wielki trener czasem przegrywa. Twoje stworki wciąż w ciebie wierzą — spróbujcie jeszcze raz!',
-          { ...body(14, H.ink), lineSpacing: 4 }
+          { ...stylAtramentu(14), lineSpacing: 4 }
         )
         .setWordWrapWidth(370)
         .setDepth(45),
@@ -1036,7 +1051,7 @@ export class WynikScene extends Phaser.Scene {
           kx + 54,
           ky + kh - 30,
           m ? 'Twój bohater i bonus zostają — zaczniesz misję od nowa.' : 'Nowa gra zacznie się na świeżej mapie.',
-          { ...body(14, H.inkSoft), fontStyle: 'italic' }
+          { ...stylAtramentu(14, 'miekki'), fontFamily: KROJ.kursywa }
         )
         .setOrigin(0, 0.5)
         .setDepth(45),
@@ -1046,13 +1061,17 @@ export class WynikScene extends Phaser.Scene {
     const rx = kx + 418;
     const rw = 214;
     const g = this.add.graphics().setDepth(44);
-    plate(g, rx, ky + 18, rw, kh - 36, 10, 0xfff6d6, C.goldDeep, { light: 0.1, dark: 0.1, gloss: 0.1, edgeW: 2, drop: 2 });
+    // Karteczka z radą: ciemniejszy papier z kreską, jak dopisek na marginesie.
+    g.fillStyle(0x8a5a2a, 0.1);
+    g.fillRoundedRect(rx, ky + 18, rw, kh - 36, 10);
+    g.lineStyle(1.5, BARWA.kreska, 0.55);
+    g.strokeRoundedRect(rx, ky + 18, rw, kh - 36, 10);
     tresc.push(
       g,
       this.obraz(rx + 22, ky + 40, ICON.star, 22).setDepth(45),
-      this.add.text(rx + 40, ky + 40, 'Rada', display(16, H.gold)).setOrigin(0, 0.5).setDepth(45),
+      this.add.text(rx + 40, ky + 40, 'Rada', stylEtykiety(16)).setOrigin(0, 0.5).setDepth(45),
       this.add
-        .text(rx + 14, ky + 60, rada(przyczyna), { ...body(15, H.ink), lineSpacing: 5 })
+        .text(rx + 14, ky + 60, rada(przyczyna), { ...stylAtramentu(15), lineSpacing: 5 })
         .setWordWrapWidth(rw - 26)
         .setDepth(45)
     );
@@ -1061,14 +1080,13 @@ export class WynikScene extends Phaser.Scene {
     const pw = kw - 652 - 20;
     const pcx = px + pw / 2;
     if (m) {
-      this.przycisk(pcx, ky + 58, pw - 8, 'Spróbuj jeszcze raz', () => this.powtorzMisje(), { ikona: ICON.sword, h: 50 });
+      this.przycisk(pcx, ky + 58, pw - 8, 'Spróbuj jeszcze raz', () => this.powtorzMisje(), { h: 50 });
     } else {
       this.przycisk(pcx, ky + 58, pw - 8, 'Zagraj jeszcze raz', () => this.nowaGraPojedyncza(), {
-        ikona: ICON.sword,
         h: 50,
       });
     }
-    this.przycisk(pcx, ky + 126, pw - 8, 'Menu główne', () => this.wyjdz('menu'), { zloty: false });
+    this.przycisk(pcx, ky + 126, pw - 8, 'Menu główne', () => this.wyjdz('menu'), { glowny: false });
     this.wejdz(tresc);
   }
 
@@ -1135,7 +1153,7 @@ export class WynikScene extends Phaser.Scene {
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(6);
 
-    this.tytul(SZER / 2, 52, 'Koniec kampanii!', 52, H.white, H.gold);
+    this.tytul(SZER / 2, 52, 'Koniec kampanii!', 52);
     this.podtytul(SZER / 2, 104, KAMPANIA.tytul);
 
     const kx = 24;
@@ -1144,9 +1162,9 @@ export class WynikScene extends Phaser.Scene {
     const kh = 292;
     this.karta(kx, ky, kw, kh);
     const tresc: Phaser.GameObjects.GameObject[] = [
-      this.add.text(kx + 24, ky + 18, 'Grota znów świeci', display(19, H.gold)).setDepth(45),
+      this.add.text(kx + 24, ky + 18, 'Grota znów świeci', stylEtykiety(19)).setDepth(45),
       this.add
-        .text(kx + 24, ky + 52, KAMPANIA.zakonczenie.join('\n\n'), { ...body(15, H.ink), lineSpacing: 5 })
+        .text(kx + 24, ky + 52, KAMPANIA.zakonczenie.join('\n\n'), { ...stylAtramentu(15), lineSpacing: 5 })
         .setWordWrapWidth(390)
         .setDepth(45),
     ];
@@ -1155,18 +1173,18 @@ export class WynikScene extends Phaser.Scene {
     const b = this.dane.stan.bohater;
     const hy = ky + kh - 52;
     const ramka = this.add.graphics().setDepth(44);
-    ramka.fillStyle(mix(C.panel, C.panelEdge, 0.35), 1);
+    ramka.fillStyle(0x8a5a2a, 0.1);
     ramka.fillRoundedRect(kx + 20, hy - 34, 396, 68, 12);
     const portret = this.obraz(kx + 52, hy + 31, this.bohaterKlucz(), 62).setOrigin(0.5, 1).setDepth(45);
     tresc.push(
       ramka,
       portret,
       this.add
-        .text(kx + 88, hy - 12, `${b.imie}, poziom ${poziom(b.doswiadczenie)}`, display(16, H.white))
+        .text(kx + 88, hy - 12, `${b.imie}, poziom ${poziom(b.doswiadczenie)}`, stylEtykiety(16, BARWA.atrament))
         .setOrigin(0, 0.5)
         .setDepth(45),
       this.add
-        .text(kx + 88, hy + 12, 'Cała kampania ukończona', body(13, H.inkSoft))
+        .text(kx + 88, hy + 12, 'Cała kampania ukończona', stylAtramentu(13, 'miekki'))
         .setOrigin(0, 0.5)
         .setDepth(45)
     );
@@ -1181,22 +1199,21 @@ export class WynikScene extends Phaser.Scene {
     const tx = kx + 440;
     const tw = kw - 440 - 22;
     tresc.push(
-      this.add.text(tx + 8, ky + 18, 'Twoja wyprawa', display(16, H.gold)).setDepth(45),
-      this.add.text(tx + tw - 96, ky + 24, 'dni', body(12, H.inkSoft)).setOrigin(1, 0).setDepth(45),
-      this.add.text(tx + tw - 10, ky + 24, 'punkty', body(12, H.inkSoft)).setOrigin(1, 0).setDepth(45)
+      this.add.text(tx + 8, ky + 18, 'Twoja wyprawa', stylEtykiety(16)).setDepth(45),
+      this.add.text(tx + tw - 96, ky + 24, 'dni', stylAtramentu(12, 'miekki')).setOrigin(1, 0).setDepth(45),
+      this.add.text(tx + tw - 10, ky + 24, 'punkty', stylAtramentu(12, 'miekki')).setOrigin(1, 0).setDepth(45)
     );
     KAMPANIA.misje.forEach((m, i) => {
       const y = ky + 60 + i * 30;
       const w = this.postep.wyniki[m.id];
       const g = this.add.graphics().setDepth(44);
-      g.fillStyle(i % 2 ? mix(C.panel, C.panelEdge, 0.55) : mix(C.panel, C.panelEdge, 0.25), 1);
-      g.fillRoundedRect(tx, y - 13, tw, 26, 7);
+      this.pasmo(g, tx, y - 13, tw, 26, i);
       tresc.push(
         g,
-        this.add.text(tx + 10, y, `${m.nr}. ${m.tytul}`, body(14, H.ink)).setOrigin(0, 0.5).setDepth(45),
-        this.add.text(tx + tw - 96, y, w ? String(w.dni) : '—', body(14, H.ink)).setOrigin(1, 0.5).setDepth(45),
+        this.add.text(tx + 10, y, `${m.nr}. ${m.tytul}`, stylAtramentu(14)).setOrigin(0, 0.5).setDepth(45),
+        this.add.text(tx + tw - 96, y, w ? String(w.dni) : '—', stylAtramentu(14)).setOrigin(1, 0.5).setDepth(45),
         this.add
-          .text(tx + tw - 10, y, w ? String(w.punkty) : '—', { ...body(14, H.ink), fontStyle: 'bold' })
+          .text(tx + tw - 10, y, w ? String(w.punkty) : '—', stylEtykiety(14, BARWA.atrament))
           .setOrigin(1, 0.5)
           .setDepth(45)
       );
@@ -1206,13 +1223,13 @@ export class WynikScene extends Phaser.Scene {
     kreska.lineStyle(2, C.goldDeep, 0.8);
     kreska.lineBetween(tx + 6, sy - 6, tx + tw - 6, sy - 6);
     const razem = this.add
-      .text(tx + tw - 10, sy + 14, '0', { ...display(22, H.white), strokeThickness: 5 })
+      .text(tx + tw - 10, sy + 14, '0', stylEtykiety(22, BARWA.atrament))
       .setOrigin(1, 0.5)
       .setDepth(45);
     tresc.push(
       kreska,
-      this.add.text(tx + 10, sy + 14, 'Razem', display(17, H.gold)).setOrigin(0, 0.5).setDepth(45),
-      this.add.text(tx + tw - 96, sy + 14, String(suma.dni), display(17, H.white)).setOrigin(1, 0.5).setDepth(45),
+      this.add.text(tx + 10, sy + 14, 'Razem', stylEtykiety(17)).setOrigin(0, 0.5).setDepth(45),
+      this.add.text(tx + tw - 96, sy + 14, String(suma.dni), stylEtykiety(17, BARWA.atrament)).setOrigin(1, 0.5).setDepth(45),
       razem
     );
     this.nabijaj(razem, suma.punkty, 1300);
@@ -1222,12 +1239,10 @@ export class WynikScene extends Phaser.Scene {
     const znak = this.obraz(tx + 34, ty, `p-${tytul.sprite}`, 54).setDepth(46);
     tresc.push(
       znak,
-      this.add.text(tx + 68, ty - 10, 'Twój tytuł', body(12, H.inkSoft)).setOrigin(0, 0.5).setDepth(45),
-      this.add.text(tx + 68, ty + 10, tytul.tytul, display(18, H.gold)).setOrigin(0, 0.5).setDepth(45)
+      this.add.text(tx + 68, ty - 10, 'Twój tytuł', stylAtramentu(12, 'miekki')).setOrigin(0, 0.5).setDepth(45),
+      this.add.text(tx + 68, ty + 10, tytul.tytul, stylEtykiety(18)).setOrigin(0, 0.5).setDepth(45)
     );
-    this.przycisk(kx + kw - 118, ky + kh - 34, 190, 'Sala sław', () => this.przejdz(() => this.pokazRekordy()), {
-      ikona: ICON.star,
-    });
+    this.przycisk(kx + kw - 118, ky + kh - 34, 190, 'Sala sław', () => this.przejdz(() => this.pokazRekordy()), {});
     this.wejdz(tresc);
   }
 
@@ -1255,7 +1270,7 @@ export class WynikScene extends Phaser.Scene {
       })
       .setDepth(2);
 
-    this.tytul(SZER / 2, 46, 'Sala sław', 50, H.white, H.gold);
+    this.tytul(SZER / 2, 46, 'Sala sław', 50);
 
     const prawdziwe = wczytajRekordy();
     // Nowy wpis rozpoznajemy po MIEJSCU, które oddał `dodajRekord` — data
@@ -1276,21 +1291,24 @@ export class WynikScene extends Phaser.Scene {
     this.karta(kx, ky, kw, kh);
     const kol = { miejsce: kx + 44, imie: kx + 84, dni: kx + 388, punkty: kx + 486, tytul: kx + 520 };
     const tresc: Phaser.GameObjects.GameObject[] = [
-      this.add.text(kol.imie, ky + 26, 'Trener', body(13, H.inkSoft)).setOrigin(0, 0.5).setDepth(45),
-      this.add.text(kol.dni, ky + 26, 'Dni', body(13, H.inkSoft)).setOrigin(1, 0.5).setDepth(45),
-      this.add.text(kol.punkty, ky + 26, 'Punkty', body(13, H.inkSoft)).setOrigin(1, 0.5).setDepth(45),
-      this.add.text(kol.tytul + 42, ky + 26, 'Tytuł', body(13, H.inkSoft)).setOrigin(0, 0.5).setDepth(45),
+      this.add.text(kol.imie, ky + 26, 'Trener', stylAtramentu(13, 'miekki')).setOrigin(0, 0.5).setDepth(45),
+      this.add.text(kol.dni, ky + 26, 'Dni', stylAtramentu(13, 'miekki')).setOrigin(1, 0.5).setDepth(45),
+      this.add.text(kol.punkty, ky + 26, 'Punkty', stylAtramentu(13, 'miekki')).setOrigin(1, 0.5).setDepth(45),
+      this.add.text(kol.tytul + 42, ky + 26, 'Tytuł', stylAtramentu(13, 'miekki')).setOrigin(0, 0.5).setDepth(45),
     ];
     wiersze.forEach((r, i) => {
       const y = ky + 64 + i * krok;
       const jaTo = r === moj;
-      const barwa = r.legenda ? H.inkSoft : H.ink;
+      const miekki = !!r.legenda;
       const g = this.add.graphics().setDepth(44);
       if (jaTo) {
-        plate(g, kx + 16, y - 19, kw - 32, 38, 10, C.goldLight, C.gold, { light: 0.2, dark: 0.1, gloss: 0.2, edgeW: 2, drop: 2 });
-      } else {
-        g.fillStyle(i % 2 ? mix(C.panel, C.panelEdge, 0.55) : mix(C.panel, C.panelEdge, 0.25), 1);
+        // Własny wiersz: złota poświata na papierze i złota obwódka.
+        g.fillStyle(C.gold, 0.35);
         g.fillRoundedRect(kx + 16, y - 19, kw - 32, 38, 9);
+        g.lineStyle(2, C.goldDeep, 0.9);
+        g.strokeRoundedRect(kx + 16, y - 19, kw - 32, 38, 9);
+      } else {
+        this.pasmo(g, kx + 16, y - 19, kw - 32, 38, i);
       }
       tresc.push(g);
       // Trzy pierwsze miejsca dostają medal zamiast gołej liczby.
@@ -1307,29 +1325,29 @@ export class WynikScene extends Phaser.Scene {
       }
       const t = tytulZaWynik(r.punkty);
       const imie = this.add
-        .text(kol.imie, y, r.imie, { ...body(17, barwa), fontStyle: r.legenda ? 'normal' : 'bold' })
+        .text(kol.imie, y, r.imie, stylAtramentu(18, miekki ? 'miekki' : 'zwykly'))
         .setOrigin(0, 0.5)
         .setDepth(45);
       const znak = this.obraz(kol.tytul + 18, y, `p-${t.sprite}`, 36).setDepth(46);
       if (r.legenda) znak.setAlpha(0.75);
       tresc.push(
         this.add
-          .text(kol.miejsce, y, String(i + 1), medal !== undefined ? display(15, H.white) : body(15, H.inkSoft))
+          .text(kol.miejsce, y, String(i + 1), medal !== undefined ? stylEtykiety(15, BARWA.krem) : stylAtramentu(15, 'miekki'))
           .setOrigin(0.5)
           .setDepth(46),
         imie,
-        this.add.text(kol.dni, y, String(r.dni), body(16, barwa)).setOrigin(1, 0.5).setDepth(45),
+        this.add.text(kol.dni, y, String(r.dni), stylAtramentu(16, miekki ? 'miekki' : 'zwykly')).setOrigin(1, 0.5).setDepth(45),
         this.add
-          .text(kol.punkty, y, r.punkty.toLocaleString('pl-PL'), { ...body(17, barwa), fontStyle: 'bold' })
+          .text(kol.punkty, y, r.punkty.toLocaleString('pl-PL'), stylEtykiety(17, miekki ? BARWA.atramentMiekki : BARWA.atrament))
           .setOrigin(1, 0.5)
           .setDepth(45),
         znak,
-        this.add.text(kol.tytul + 42, y, t.tytul, body(14, barwa)).setOrigin(0, 0.5).setDepth(45)
+        this.add.text(kol.tytul + 42, y, t.tytul, stylAtramentu(15, miekki ? 'miekki' : 'zwykly')).setOrigin(0, 0.5).setDepth(45)
       );
       if (r.legenda) {
         tresc.push(
           this.add
-            .text(kol.imie + imie.width + 8, y + 1, 'legenda wioski', { ...body(11, H.inkSoft), fontStyle: 'italic' })
+            .text(kol.imie + imie.width + 8, y + 1, 'legenda wioski', { ...stylAtramentu(11, 'miekki'), fontFamily: KROJ.kursywa })
             .setOrigin(0, 0.5)
             .setDepth(45)
         );
@@ -1338,9 +1356,9 @@ export class WynikScene extends Phaser.Scene {
         // Kapsułka „ty" przy imieniu i wirująca gwiazdka — dziecko ma
         // znaleźć siebie w tabeli jednym spojrzeniem.
         const nx = kol.imie + imie.width + 12;
-        const napis = this.add.text(nx + 10, y, 'NOWY', { ...body(11, H.white), fontStyle: 'bold' }).setOrigin(0, 0.5);
+        const napis = this.add.text(nx + 10, y, 'NOWY', stylEtykiety(11, '#fff4dc')).setOrigin(0, 0.5);
         const kaps = this.add.graphics();
-        plate(kaps, nx, y - 10, napis.width + 20, 20, 10, C.foe, C.foeDeep, {
+        plate(kaps, nx, y - 10, napis.width + 20, 20, 10, BARWA.lak, BARWA.lakCiemny, {
           light: 0.2,
           dark: 0.2,
           gloss: 0.25,
@@ -1365,11 +1383,11 @@ export class WynikScene extends Phaser.Scene {
         : `Ukończ kampanię „${KAMPANIA.tytul}" i pobij legendy wioski!`;
     tresc.push(
       this.add
-        .text(SZER / 2, ky + kh - 26, zdanie, { ...body(15, H.ink), fontStyle: 'bold' })
+        .text(SZER / 2, ky + kh - 26, zdanie, stylEtykiety(15, BARWA.atrament))
         .setOrigin(0.5)
         .setDepth(45)
     );
-    this.przycisk(SZER / 2, ky + kh + 40, 240, 'Menu główne', () => this.wyjdz('menu'), { ikona: ICON.banner });
+    this.przycisk(SZER / 2, ky + kh + 40, 240, 'Menu główne', () => this.wyjdz('menu'), {});
     this.wejdz(tresc, 450);
   }
 }
