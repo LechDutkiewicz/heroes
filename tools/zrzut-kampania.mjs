@@ -24,9 +24,9 @@ const KATALOG = 'tools/shots';
 const KLUCZ = 'heroes-kampania-v1';
 
 // Układ ekranu (współrzędne gry) — te same liczby co w KampaniaScene.ts.
-const KARTA_NAGRODY = (i) => ({ x: 28 + i * 200 + 94, y: 530 + 44 + 48 });
-const GRAJ = { x: 846, y: 650 };
-const KARTA_TRENERA = (i) => ({ x: 480 + (i === 0 ? -172 : 172), y: 382 });
+const KARTA_NAGRODY = (i) => ({ x: 22 + 18 + i * 190 + 92, y: 546 + 42 + 43 });
+const GRAJ = { x: 850, y: 650 };
+const KARTA_TRENERA = (i) => ({ x: 480 + (i === 0 ? -170 : 170), y: 382 });
 
 const WYNIKI = {
   'pierwsze-kroki': { dni: 12, punkty: 835 },
