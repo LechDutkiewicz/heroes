@@ -564,28 +564,105 @@ def zwoj():
 # ————————————————————————————————————————————————— figurki trenerów
 
 def figurki():
-    """Figurki na ekran wyboru trenera, z tych samych rysunków co na mapie.
+    """Figurki trenerów — OBIE jako pixel art tej samej gęstości.
 
-    Janek ma w wsadzie malowaną figurkę z prawdziwą alfą. Ola jest pixel
-    artem na magencie — wycinamy tło po barwie i zmniejszamy Lanczosem.
-    Sprawdzone obok siebie trzy drogi: `wygladzanie.py` rozmywa jej twarz
-    w plamę (postać ma ledwie 25 × 64 „pikseli"), sprowadzenie do siatki
-    i powiększenie najbliższym sąsiadem gubi uśmiech, bo siatka modelu nie
-    jest równa (co 11,3 px). Lanczos zostawia rysunek i nie rozmywa oczu.
-    Obie figurki mają tę samą wysokość: 2× tego, co na ekranie.
+    Pierwsza runda miała Janka malowanego (figurka z wsadu, gładka) obok Oli
+    w pixel arcie i krytyk wskazał to jako zgrzyt na trzech miejscach naraz:
+    ekran wyboru, medalion w nagłówku, figurka na mapie. Malowanej Oli nie ma
+    skąd wziąć (model graficzny niedostępny), więc wspólnym mianownikiem jest
+    pixel art — ten sam, w którym Heroes 2 rysuje swoich bohaterów.
+
+    Ola: model narysował ją „pikselami" po ~11,7 px, ale siatka nie jest
+    idealnie równa. Szukamy okresu i przesunięcia siatki, przy którym granice
+    komórek najlepiej pokrywają się z krawędziami barw, i z każdej komórki
+    bierzemy medianę środka — wychodzi czysty rysunek 22 × 60.
+
+    Janek: malowana figurka sprowadzona do tej samej gęstości. Najpierw płaskie
+    plamy (mediana + paleta 16 barw na pełnej rozdzielczości), potem w każdym
+    bloku NAJCZĘSTSZA barwa z lekką premią dla ciemnych — tak przeżywają oczy
+    i kontury, które uśrednienie (Lanczos, BOX) rozmywało w beż. Na koniec ten
+    sam ciemny kontur 1 px, który ma Ola.
+
+    Pliki są w 1× (piksel rysunku = piksel pliku); scena powiększa je
+    całkowitą wielokrotnością bez wygładzania.
     """
-    janek = Image.open(WSAD / 'bohater-dol.png').convert('RGBA')
-    janek = janek.crop(janek.getbbox())
-    janek = janek.resize((int(janek.width * 540 / janek.height), 540), Image.LANCZOS)
-    janek.save(CEL / 'janek.png', optimize=True)
+    from PIL import ImageEnhance
 
+    # ——— Ola: odtworzenie siatki
     a = np.asarray(Image.open(WSAD / 'bohaterka-dol.png').convert('RGB')).astype(np.int32)
     magenta = (a[..., 0] > 170) & (a[..., 1] < 110) & (a[..., 2] > 170)
-    ola = Image.fromarray(np.dstack([a, np.where(magenta, 0, 255)]).astype(np.uint8), 'RGBA')
-    ola = ola.crop(ola.getbbox())
-    ola = ola.resize((int(ola.width * 540 / ola.height), 540), Image.LANCZOS)
-    ola.save(CEL / 'ola.png', optimize=True)
-    print(f'zapisano: {CEL}/janek.png, ola.png')
+
+    def siatka(profil):
+        najlepsza = (-1.0, 11.7, 0.0)
+        for okres in np.arange(11.0, 12.4, 0.01):
+            for faza in np.arange(0, okres, 0.25):
+                idx = np.round(faza + np.arange(0, len(profil) / okres) * okres).astype(int)
+                idx = idx[idx < len(profil)]
+                wynik = profil[idx].mean()
+                if wynik > najlepsza[0]:
+                    najlepsza = (wynik, okres, faza)
+        return najlepsza[1], najlepsza[2]
+
+    px_, fx = siatka(np.concatenate([[0], np.abs(np.diff(a, axis=1)).sum(axis=(0, 2))]))
+    py_, fy = siatka(np.concatenate([[0], np.abs(np.diff(a, axis=0)).sum(axis=(1, 2))]))
+    xs = np.arange(fx + px_ / 2, a.shape[1] - 3, px_)
+    ys = np.arange(fy + py_ / 2, a.shape[0] - 3, py_)
+    ola = np.zeros((len(ys), len(xs), 4), np.uint8)
+    for j, y in enumerate(ys):
+        for i, x in enumerate(xs):
+            x0, y0 = int(x) - 2, int(y) - 2
+            blok = a[y0:y0 + 5, x0:x0 + 5].reshape(-1, 3)
+            m = magenta[y0:y0 + 5, x0:x0 + 5].reshape(-1)
+            if m.sum() > 12:
+                continue
+            ola[j, i, :3] = np.median(blok[~m], axis=0)
+            ola[j, i, 3] = 255
+    im = Image.fromarray(ola, 'RGBA')
+    im = im.crop(im.getbbox())
+    im.save(CEL / 'ola.png', optimize=True)
+    wys_oli = im.height
+
+    # ——— Janek: ta sama gęstość (głowa z czapką wyższa o kilka pikseli, jak w grze)
+    j = Image.open(WSAD / 'bohater-dol.png').convert('RGBA')
+    j = j.crop(j.getbbox())
+    H = wys_oli + 6
+    rgb = j.convert('RGB').filter(ImageFilter.MedianFilter(7))
+    rgb = ImageEnhance.Color(rgb).enhance(1.3)
+    rgb = ImageEnhance.Contrast(rgb).enhance(1.15)
+    kol = 16
+    q = rgb.quantize(colors=kol, method=Image.MEDIANCUT, dither=Image.Dither.NONE)
+    paleta = np.array(q.getpalette()[:kol * 3]).reshape(-1, 3)
+    idx = np.asarray(q)
+    alfa = np.asarray(j.getchannel('A')) > 128
+    krok = j.height / H
+    w = int(round(j.width / krok))
+    jas = paleta.sum(1)
+    o = np.zeros((H, w, 4), np.uint8)
+    for y in range(H):
+        for x in range(w):
+            y0, y1 = int(y * krok), int((y + 1) * krok)
+            x0, x1 = int(x * krok), int((x + 1) * krok)
+            m = alfa[y0:y1, x0:x1]
+            if m.mean() < 0.5:
+                continue
+            c = np.bincount(idx[y0:y1, x0:x1][m], minlength=kol).astype(float)
+            c *= 1 + (jas < 200) * 0.6
+            o[y, x, :3] = paleta[c.argmax()]
+            o[y, x, 3] = 255
+    pelne = o[..., 3] > 0
+    p = np.pad(pelne, 1)
+    kontur = (p[:-2, 1:-1] | p[2:, 1:-1] | p[1:-1, :-2] | p[1:-1, 2:]) & ~pelne
+    o[kontur] = (38, 24, 28, 255)
+    jim = Image.fromarray(o, 'RGBA')
+    # Przycięcie do rysunku: puste wiersze pod stopami podnosiły Janka nad
+    # cień, jakby unosił się nad trawą.
+    jim.crop(jim.getbbox()).save(CEL / 'janek.png', optimize=True)
+    # Głowy do medalionu w nagłówku: górne ~40% figurki, ten sam rysunek.
+    for imie in ('janek', 'ola'):
+        f = Image.open(CEL / f'{imie}.png')
+        g = f.crop((0, 0, f.width, int(f.height * 0.4)))
+        g.crop(g.getbbox()).save(CEL / f'glowa-{imie}.png', optimize=True)
+    print(f'zapisano: {CEL}/janek.png ({w}×{H}), ola.png ({im.width}×{im.height}), glowa-*.png')
 
 
 if __name__ == '__main__':
