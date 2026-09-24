@@ -42,14 +42,17 @@ def zaspy(warstwa: Image.Image, kafel: int, ziarno: int) -> Image.Image:
     słońcu i tak go rysują wszystkie gry, w których zima jest czytelna.
     """
     W, H = warstwa.size
-    h = szum(W, H, max(2, int(kafel * 1.6)), ziarno) * 1.0 + szum(W, H, max(2, int(kafel * 0.45)), ziarno + 1) * 0.35
+    h = szum(W, H, max(2, int(kafel * 1.2)), ziarno) * 1.0 + szum(W, H, max(2, int(kafel * 0.4)), ziarno + 1) * 0.3
+    # Zaspy mają grzbiet: wartość bezwzględna szumu daje ostre krawędzie
+    # (jak wydmy), a nie łagodne pagórki, które z daleka rozmywają się w mgłę.
+    h = 1 - np.abs(h)
     gy, gx = np.gradient(h)
-    swiatlo = -(gx + gy) * kafel * 0.55
+    swiatlo = -(gx + gy) * kafel * 0.9
     swiatlo = np.clip(swiatlo, -1, 1)[..., None]
     tab = _tab(warstwa)
-    jasne = tab + (255 - tab) * np.clip(swiatlo, 0, 1) * 0.55
-    cien = np.array([105, 140, 200], dtype=np.float32)
-    ciemne = tab * (1 + np.clip(swiatlo, -1, 0) * 0.35) + cien * (-np.clip(swiatlo, -1, 0)) * 0.28
+    jasne = tab + (255 - tab) * np.clip(swiatlo, 0, 1) * 0.7
+    cien = np.array([95, 135, 205], dtype=np.float32)
+    ciemne = tab * (1 + np.clip(swiatlo, -1, 0) * 0.5) + cien * (-np.clip(swiatlo, -1, 0)) * 0.45
     tab = np.where(swiatlo > 0, jasne, ciemne)
     # Iskry: pojedyncze jasne punkty na grzbietach zasp, nie wszędzie.
     rng = np.random.default_rng(ziarno + 2)

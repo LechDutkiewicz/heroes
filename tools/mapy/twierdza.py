@@ -62,11 +62,11 @@ SZKIC = [
     'js#jsj~~~j.sj~~jTj',
     'sTjj.sjT#jsjTjsj#j',
     '##################',
-    'Ts.Ts.j.sj.T.sj..T',
-    '.T.sT..#.sT.~~sT.T',
-    'T.s.ss.Ts.j.~~s.jT',
-    's.T.s~.T.s.Ts.T.sT',
-    'T#..s....T.#.sT.jT',
+    'Ts#Ts.jssj#T.sjs.T',
+    'sTssT.s#.sT.~~sTsT',
+    'T.s.ss.Tsjj.~~s#jT',
+    's#T.s~.Ts.sTs.T.sT',
+    'T#s.s.s.sT.#.sTsjT',
     'TTs.TTT#TT.TTTTsTT',
 ]
 
@@ -143,10 +143,20 @@ def rozstaw(g):
     g.postaw((34, 9), ('potwor', 'silny', 'Straż Przełęczy Twierdz'))
 
     # --- DOLINA GRACZA -------------------------------------------------------
-    g.dodaj(4, 'dom', (3, 10), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])))
-    g.dodaj(2, 'dom', (3, 10), lambda p: ('skrzynia', None))
-    g.dodaj(1, 'dom', (4, 10), lambda p: ('kopalnia', 'jagoda'))
-    g.dodaj(1, 'dom', (5, 14), lambda p: ('kopalnia', 'odlamek'))
+    # Pierwszy ekran: kopalnie, budowle, stosy i skarb pod strażą w widoku
+    # z dnia pierwszego (runda 1: „poza zamkiem dwie trzecie pustki").
+    kadr = g.kadr_startu()
+    sx, sy = PUNKTY['start']
+    dalej = [p for p in kadr if max(abs(p[0] - sx), abs(p[1] - sy)) >= 4]
+    g.dodaj(1, 'dom', (0, 999), lambda p: ('kopalnia', 'jagoda'), kandydaci=kadr)
+    g.dodaj(1, 'dom', (0, 999), lambda p: ('kopalnia', 'odlamek'), kandydaci=kadr)
+    g.dodaj(1, 'dom', (0, 999), lambda p: ('budynek', 'ognisko'), kandydaci=kadr)
+    g.dodaj(1, 'dom', (0, 999), lambda p: ('budynek', 'chatka'), kandydaci=kadr)
+    g.dodaj(3, 'dom', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kandydaci=kadr)
+    g.dodaj(1, 'dom', (0, 999), lambda p: ('skrzynia', None), kandydaci=kadr)
+    g.strzez(g.dodaj(1, 'dom', (0, 999), lambda p: ('artefakt', None), kandydaci=dalej), 'slaby')
+    g.dodaj(2, 'dom', (6, 14), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])))
+    g.dodaj(1, 'dom', (6, 14), lambda p: ('skrzynia', None))
     g.dodaj(8, 'dom', (10, 40), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])))
     kopalnie = ['odlamek', 'pokeball', 'jagoda', 'pokeball', 'kamien']
     polozone = []
@@ -243,8 +253,12 @@ USTAWIENIA = {
 
 #: Zima: łąka wypłowiała i chłodna, jeziora skute lodem, bór ciemny i sinawy.
 BARWY_TERENU = {
-    'trawa': {'nasycenie': 0.38, 'barwa': (150, 175, 185), 'moc': 0.55, 'jasnosc': 0.92},
-    'woda': {'nasycenie': 0.25, 'barwa': (200, 225, 245), 'moc': 0.6, 'jasnosc': 1.3},
+    'trawa': {'nasycenie': 0.28, 'barwa': (160, 180, 190), 'moc': 0.6, 'jasnosc': 0.98},
+    # „Woda" to tu LÓD: tekstura śniegu (patrz TEKSTURY) przebarwiona na
+    # błękit, z rysami pęknięć. Przebarwiona tekstura wody zostawiała jasne
+    # linie załamań światła, które w ślepym porównaniu czytały się jak
+    # „niebieska błyskawica przy krawędzi".
+    'woda': {'nasycenie': 1.0, 'barwa': (150, 195, 235), 'moc': 0.9, 'jasnosc': 0.88},
     'las': {'nasycenie': 0.75, 'barwa': (110, 140, 150), 'moc': 0.35, 'jasnosc': 0.85},
     'skaly': {'nasycenie': 0.6, 'barwa': (150, 160, 180), 'moc': 0.4, 'jasnosc': 0.95},
     'jalowa': {'nasycenie': 0.8, 'barwa': (160, 165, 180), 'moc': 0.3, 'jasnosc': 1.05},
@@ -253,3 +267,13 @@ BARWY_TERENU = {
 
 #: Jeziora są skute lodem — bez shadera wody (patrz `render_mapa.py`).
 WODA_ANIMOWANA = False
+
+#: Runda 2 po ślepym porównaniu ("śnieg to blada mgła, lód to błyskawica"):
+#: zaspy z niebieskim cieniem i iskrami, lód z rysami zamiast tafli wody,
+#: droga z brzegiem, las w zwartych masach, gęsty pierwszy ekran.
+EFEKTY = ['zaspy', 'lod', 'obwodka_drogi']
+TEKSTURY = {'woda': 'snieg'}
+SKUP_LAS = True
+RAMKA_STARTU = True
+#: Twardszy brzeg śniegu — granica ma być czytelna, a nie rozmyta w mgłę.
+WTAPIANIE = {'snieg': 0.35}
