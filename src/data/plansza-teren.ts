@@ -1,5 +1,5 @@
 // PLIK GENEROWANY — nie poprawiaj ręcznie.
-// Źródło: tools/generuj_mape.py (szkic krain jest w tamtym pliku).
+// Źródło: tools/mapy/dwie_doliny.py (szkic i rozstawienie), silnik: tools/generuj_mape.py.
 //
 // Plansza 72 × 72 („Dwie Doliny”, rozmiar M) — trzy pasy rozdzielone dwoma
 // grzbietami górskimi, każdy grzbiet z dwoma pilnowanymi przejściami:
@@ -377,3 +377,16 @@ export const ROZSTAWIENIE: Array<{
   { x: 21, y: 20, rodzaj: 'straznica', strefa: 'wroga', klucz: 'niebieski', nazwa: 'Strażnica Przełęczy Północnej' },
   { x: 57, y: 20, rodzaj: 'straznica', strefa: 'wroga', klucz: 'niebieski', nazwa: 'Strażnica Północnej Rubieży' },
 ];
+
+/** Ustawienia misji na tej planszy — patrz `UstawieniaPlanszy` w `src/data/mapy.ts`. */
+export const USTAWIENIA = {
+  "dzienNatarcia": 40,
+  "garnizonGracza": {
+    "poziomy": [
+      0,
+      1,
+      2
+    ],
+    "tygodnie": 5
+  }
+};

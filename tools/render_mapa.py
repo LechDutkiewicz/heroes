@@ -17,7 +17,9 @@ Poprzednia wersja składała teren z arkusza 16-pikselowego i powiększała go
 trzykrotnie; przy teksturach 768 × 768 ta droga wyrzuciłaby cały detal,
 po który po nie sięgnęliśmy.
 
-Woda ma cztery klatki animacji, więc i plansza ma cztery klatki.
+Każda plansza kampanii ma własne tło: „Dwie Doliny" leżą w `public/mapa/`,
+kolejne w `public/mapa/<id>/` (patrz `katalog_tla` w `generuj_mape.py`
+i `MAPY` w `src/data/mapy.ts`).
 
 Kontrola zgodności
 ------------------
@@ -25,7 +27,8 @@ Skrypt zapisuje obok obrazków odcisk rysunku mapy. `tools/probe-mapa.ts`
 sprawdza, czy odcisk zgadza się z bieżącym terenem — inaczej łatwo
 zmienić planszę w kodzie i oglądać stare tło, nie wiedząc o tym.
 
-    python3 tools/render_mapa.py
+    python3 tools/render_mapa.py              # wszystkie plansze
+    python3 tools/render_mapa.py bagna        # jedna
 """
 
 import hashlib
@@ -49,8 +52,14 @@ from teren_malowanie import (  # noqa: E402
     zmieszaj,
 )
 
+from generuj_mape import MAPY, katalog_tla, konfiguracja, plik_ts  # noqa: E402
+
 KORZEN = Path(__file__).resolve().parent.parent
+#: Ustawiane przez `ustaw(mapa_id)` — plik planszy i katalog tła.
 KATALOG = KORZEN / 'public' / 'mapa'
+ZRODLO = KORZEN / 'src' / 'data' / 'plansza-teren.ts'
+#: Zabarwienie tekstur tej planszy — `BARWY_TERENU` z `tools/mapy/<id>.py`.
+BARWY: dict = {}
 
 KAFEL = 48                  # bok pola na ekranie
 #: Ile razy nadpróbkowujemy maskę drogi, zanim ją zmniejszymy. Rysowanie
@@ -77,7 +86,7 @@ WARSTWY = [
 ]
 
 def wczytaj_rysunek():
-    src = (KORZEN / 'src' / 'data' / 'plansza-teren.ts').read_text(encoding='utf-8')
+    src = ZRODLO.read_text(encoding='utf-8')
     blok = re.search(r'export const TEREN = \[(.*?)\];', src, re.S).group(1)
     return re.findall(r"'([^']+)'", blok)
 
@@ -89,9 +98,10 @@ def wczytaj_budowle():
     zgadzać się z `BRYLA` w `src/data/mapa.ts`; tam decyduje o przejezdności,
     tu o tym, ile ziemi jest wydeptane.
     """
-    src = (KORZEN / 'src' / 'data' / 'plansza-teren.ts').read_text(encoding='utf-8')
+    src = ZRODLO.read_text(encoding='utf-8')
     lista = []
-    for m in re.finditer(r"'zamek (?:gracza|wroga)': \{ x: (\d+), y: (\d+) \}", src):
+    # Każdy punkt „zamek …" — plansze kampanii mają po dwa zamki wroga.
+    for m in re.finditer(r"'zamek [^']*': \{ x: (\d+), y: (\d+) \}", src):
         lista.append((int(m.group(1)), int(m.group(2)), 3, 2))
     blok = re.search(r'export const ROZSTAWIENIE.*?\n\];', src, re.S).group(0)
     for m in re.finditer(r"\{ x: (\d+), y: (\d+), rodzaj: 'kopalnia'", blok):
@@ -99,9 +109,17 @@ def wczytaj_budowle():
     return lista
 
 
-RYSUNEK = wczytaj_rysunek()
-WYS, SZER = len(RYSUNEK), len(RYSUNEK[0])
-W, H = SZER * KAFEL, WYS * KAFEL
+def ustaw(mapa_id: str):
+    """Przełącza moduł na planszę `mapa_id`. Funkcje niżej czytają rysunek
+    i wymiary z globali — tak było, gdy plansza była jedna, i tak zostaje,
+    bo każda z nich jest wołana raz na planszę."""
+    global KATALOG, ZRODLO, RYSUNEK, WYS, SZER, W, H, BARWY
+    KATALOG = katalog_tla(mapa_id)
+    BARWY = getattr(konfiguracja(mapa_id), 'BARWY_TERENU', {})
+    ZRODLO = plik_ts(mapa_id)
+    RYSUNEK = wczytaj_rysunek()
+    WYS, SZER = len(RYSUNEK), len(RYSUNEK[0])
+    W, H = SZER * KAFEL, WYS * KAFEL
 
 
 def pola(znaki: str) -> np.ndarray:
@@ -185,6 +203,29 @@ def maska_gruntu() -> Image.Image:
     )
 
 
+def zabarw(im: Image.Image, nazwa: str) -> Image.Image:
+    """Przesuwa barwę tekstury terenu w stronę klimatu planszy.
+
+    Tekstury są jedne na wszystkie mapy, a plansza ma mieć własny charakter:
+    woda na bagnach jest mętna i zielonkawa, a nie turkusowa jak staw na
+    Polanie; trawa w Twierdzy jest wypłowiała od mrozu. Mnożymy przez barwę
+    znormalizowaną do jej średniej — odcień się zmienia, jasność zostaje —
+    a potem ewentualnie przyciemniamy. Rysunek tekstury (fale, źdźbła, kamienie)
+    zostaje nietknięty, więc to wciąż ta sama, spójna rodzina grafik.
+    """
+    if nazwa not in BARWY:
+        return im
+    u = BARWY[nazwa]
+    tab = np.asarray(im.convert('RGB'), dtype=np.float32)
+    # Najpierw nasycenie (mróz i muł odbierają kolor), potem odcień i jasność.
+    szary = tab.mean(axis=2, keepdims=True)
+    tab = szary + (tab - szary) * u.get('nasycenie', 1.0)
+    b = np.array(u.get('barwa', (128, 128, 128)), dtype=np.float32)
+    mnoznik = 1 + (b / b.mean() - 1) * u.get('moc', 0.0)
+    tab = (tab * mnoznik[None, None, :] * u.get('jasnosc', 1.0)).clip(0, 255)
+    return Image.fromarray(tab.astype(np.uint8), 'RGB')
+
+
 def klatka() -> tuple[Image.Image, Image.Image]:
     """Plansza i maska wody.
 
@@ -193,12 +234,12 @@ def klatka() -> tuple[Image.Image, Image.Image]:
     rozjechałaby się przy najmniejszej zmianie parametrów i na styku wody
     z lądem zostałby rąbek nienamalowanej wody albo nieruchomej tafli.
     """
-    plansza = zmieszaj(warianty('trawa'), W, H, (0, 0), ZIARNO)
+    plansza = zabarw(zmieszaj(warianty('trawa'), W, H, (0, 0), ZIARNO), 'trawa')
     maskaWody = Image.new('L', (W, H), 0)
     for n, (nazwa, znaki, wtapianie, poszarpanie) in enumerate(WARSTWY):
         if not any(c in znaki for wiersz in RYSUNEK for c in wiersz):
             continue
-        warstwa = zmieszaj(warianty(nazwa), W, H, (0, 0), ZIARNO + 50 + n)
+        warstwa = zabarw(zmieszaj(warianty(nazwa), W, H, (0, 0), ZIARNO + 50 + n), nazwa)
         # Każda warstwa dostaje własne ziarno, inaczej wszystkie granice
         # falowałyby w tym samym rytmie i widać by było jeden wzór.
         m = maska(pola(znaki), KAFEL, wtapianie, poszarpanie, ZIARNO + n)
@@ -206,7 +247,7 @@ def klatka() -> tuple[Image.Image, Image.Image]:
         if nazwa == 'woda':
             maskaWody = m
     plansza = plansza.convert('RGBA')
-    sciezka = kafelkuj(tekstura('sciezka'), W, H).convert('RGBA')
+    sciezka = zabarw(kafelkuj(tekstura('sciezka'), W, H), 'sciezka').convert('RGBA')
     # Place pod budowlami idą PRZED drogami: droga ma dobiegać do placu
     # i się z nim zlewać, a nie kończyć na jego brzegu.
     plansza.paste(sciezka, (0, 0), maska_gruntu())
@@ -214,7 +255,9 @@ def klatka() -> tuple[Image.Image, Image.Image]:
     return plansza, maskaWody
 
 
-if __name__ == '__main__':
+def renderuj(mapa_id: str):
+    ustaw(mapa_id)
+    print(f'=== {mapa_id} ===')
     KATALOG.mkdir(parents=True, exist_ok=True)
     baza, maskaWody = klatka()
 
@@ -241,8 +284,12 @@ if __name__ == '__main__':
     for k in range(1, 4):
         (KATALOG / f'plansza-{k}.png').unlink(missing_ok=True)
 
-    woda_dane.zmarszczki()
-    woda_dane.maska(RYSUNEK, KAFEL, maskaWody)
+    # Plansza z jeziorami skutymi lodem (`WODA_ANIMOWANA = False` w jej
+    # konfiguracji) dostaje pustą maskę: shader przepisuje wtedy planszę bez
+    # zmian i lód stoi nieruchomo. Falujący lód wyglądałby jak usterka.
+    if not getattr(konfiguracja(mapa_id), 'WODA_ANIMOWANA', True):
+        maskaWody = Image.new('L', maskaWody.size, 0)
+    woda_dane.maska(RYSUNEK, KAFEL, maskaWody, KATALOG)
 
     odcisk = hashlib.sha256('\n'.join(RYSUNEK).encode('utf-8')).hexdigest()[:16]
     (KATALOG / 'plansza.json').write_text(
@@ -250,3 +297,11 @@ if __name__ == '__main__':
         encoding='utf-8',
     )
     print(f'  odcisk terenu: {odcisk}')
+
+
+if __name__ == '__main__':
+    # Zmarszczki są wspólne dla wszystkich plansz (`public/mapa/`) — to szum,
+    # nie rysunek, więc jedna tekstura starcza każdej wodzie.
+    woda_dane.zmarszczki()
+    for mapa_id in sys.argv[1:] or MAPY:
+        renderuj(mapa_id)

@@ -1,6 +1,94 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-09-15 (scalono AI przeciwnika z `claude/gauntlet-hero-adventure-view-cavkbx`).
+Ostatnia aktualizacja: 2026-09-24 (plansze kampanii: Polana, Bagna, Twierdza; silnik generatora).
+
+## Plansze kampanii: Polana, Bagna, Twierdza (2026-09-24)
+
+Generator był skryptem jednej mapy. Teraz `tools/generuj_mape.py` jest
+SILNIKIEM (szkic → rozmycie → zasklepienie murów → przejścia → drogi →
+rozstawienie ze sprawdzaniem każdego postawienia), a to, czym plansze się
+różnią, siedzi w `tools/mapy/<id>.py`: szkic, rozmiar, mury i zapory, punkty,
+strefy, kolejność stawiania, `USTAWIENIA` misji i barwy terenu. „Dwie Doliny"
+przeszły do `tools/mapy/dwie_doliny.py` z tym samym ziarnem i tą samą
+kolejnością losowań: TEREN, PUNKTY i ROZSTAWIENIE wychodzą identyczne, tło
+bajt w bajt (sprawdzone `md5sum` przed i po). Wynik: `src/data/plansza-teren-<id>.ts`
+i `public/mapa/<id>/`, rejestr w `src/data/mapy.ts`.
+
+| Plansza | Misja | Rozmiar | Układ | Przeciwnik |
+|---|---|---|---|---|
+| Polana | 1, samouczek | 36 × 36 | rzeka z dwoma brodami; zamek SW, Stary Fort E | `obronca`: nie wychodzi, co dzień werbuje do załogi |
+| Bagna | 3, Księżycowy Kamień | 54 × 54 | dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca w pierścieniu wody z jedną groblą i wodzem | aktywny |
+| Twierdza | 4, dwie twierdze | 72 × 72 | trzy pasy jak Dwie Doliny + skalny grzbiet między dolinami twierdz | aktywny, zna zamek gracza, naciera od dnia 18 |
+
+**Nowe w silniku i dlaczego:**
+
+- **Zapory** (`ZAPORY`): meandrująca rzeka i pierścień wody nie są murem
+  w wierszach, więc nie da się ich „zasklepić" ze szkicu. Maluje je
+  konfiguracja (`popraw_teren`), a silnik sprawdza WYNIK: po zamknięciu
+  przejść punkty za zaporą mają być nieosiągalne. Koryto zmienia środek
+  najwyżej o pole na wiersz — przy większym skoku brzegi stykają się po skosie
+  (ruch jest ośmiokierunkowy) i rzeka jest dziurawa, choć na obrazku szczelna.
+- **Zasypywanie odciętych kieszeni** (`ZASYP_ODCIETE`): łąka zamknięta
+  w pierścieniu gór wygląda jak teren, w który da się kliknąć. Dwie Doliny mają
+  325 takich pól i zostają (zamrożone) — `probe-mapy.ts` wypisuje je jako UWAGĘ.
+- **Plac wokół zamków** (`ODSTEP_OD_ZAMKOW`): kopalnia przy murach wchodziła
+  w dach zamku na ekranie.
+- **Barwy terenu per plansza** (`BARWY_TERENU`, `zabarw` w `render_mapa.py`):
+  tekstury są jedne, klimat nie. Na Bagnach woda jest mętna i zielonkawa, łąka
+  oliwkowa; w Twierdzy łąka wypłowiała, lód blady. Samo przemnożenie barwy
+  nie wystarczyło — trawa zostawała jaskrawozielona — trzeba było najpierw
+  ZDJĄĆ nasycenie. Jeziora Twierdzy nie mają shadera (`WODA_ANIMOWANA = False`):
+  falujący lód wyglądał jak usterka.
+
+**USTAWIENIA planszy** (`UstawieniaPlanszy` w `mapy.ts`, stosowane w
+`plansza.ts` i `wrog-ai.ts`, nie w scenie): tryb wroga, dzień natarcia,
+`natarcie`, `wrogBuduje`, załogi obu stron, budynki i skarbce, nazwy zamków,
+pola odsłonięte na starcie (dla gracza: Wyspa Księżyca, obie twierdze; dla
+wroga: zamek gracza w Twierdzy). `?mapa=<id>` w adresie wybiera planszę
+(`mapaZAdresu` w `plansza.ts`) — tak robią zrzuty.
+
+**Księżycowy Kamień** to artefakt klasy `misja`: `ARTEFAKTY_LOSOWE` go nie
+zawiera, więc nie wypada ze skrzyni, wozu, chaty ani artefaktu luzem
+(sprawdza `probe-mapy.ts`); przeciwnik wycenia go na 0. Na ekranie bohatera
+nie ma gniazda w siatce (siatka to osiem artefaktów do zbierania) — pokazuje
+go karta pod siatką, jako najważniejszą noszoną rzecz.
+
+### Znalezione w AI przy symulacji misji
+
+Trzy usterki `wrog-ai.ts`, żadna niewidoczna na Dwóch Doliniach z osobna:
+
+1. **Ocaleli po bitwie AI awansowali o poziom.** `def.tier` liczy się od
+   jedynki (`TIERS`), `tier` oddziału od zera. Po kilku bitwach bohater wroga
+   miał smoki narysowane jako drobnica, a stos z szóstego poziomu wypadał
+   z armii. Na Dwóch Doliniach po poprawce bierny gracz pada dnia 30 w 3/3
+   (wcześniej 2/3 do dnia 40), normalny dnia 31 (próg 25 spełniony).
+2. **Portal był celem** (40, bez odnowy): wejście, wyjście po drugiej stronie,
+   portal znowu „najbliższym celem"… Na Bagnach wróg stał tak trzydzieści dni.
+3. **Odkrywanie wygrywa ze wszystkim.** Brzeg mgły wart jest 30, obiekt
+   `wartość / koszt drogi` — czyli ułamek. Dopóki jest co odkrywać, AI nie
+   zbiera niczego, a na dużej planszy z bagnem czy śniegiem to tygodnie.
+   Nie przestrajałem tego globalnie (Dwie Doliny są na tym zestrojone);
+   Twierdza dostała `natarcie`: od dnia natarcia znany, zdobywalny zamek
+   gracza jest celem ponad wszystko. Autopilot gracza idzie po WIDOCZNY cel
+   misji (Kamień; zamki wroga — tylko na planszy bez artefaktu-celu).
+
+### Wyniki symulacji (`tools/symulacja-misji.ts`, bohater przechodzi z misji do misji)
+
+| Misja | Gra normalna (autopilot) | Gracz bierny | Przeciwnik |
+|---|---|---|---|
+| 1 Polana | wygrana dnia 14 (2/2) | fort nie wychodzi | załoga fortu 35 → 140 w pięć tygodni |
+| 2 Dwie Doliny | przegrana dnia 32 (2/2) | pada dnia 31 | wychodzi dnia 2 — patrz niżej |
+| 3 Bagna | wygrana dnia 29 z 56 (2/2; świeżym bohaterem też 29) | termin (zamek nie pada) | wychodzi dnia 2, najdalej 42 pola |
+| 4 Twierdza | wygrana dnia 30, twierdze 26 i 30 (2/2); świeżym bohaterem 46 | pada dnia 44–49 | wychodzi dnia 3, najdalej 59 pól |
+
+Misja 2 to niezmieniona plansza Dwóch Dolin: autopilot nie szuka namiotów
+klucznika celowo, a przeciwnik ma oba klucze od pierwszego dnia, więc w tej
+symulacji wróg dochodzi pierwszy. To jest ocena autopilota, nie planszy
+(`probe-mapa.ts` sprawdza, że akty kluczy dają się przejść), ale pokazuje, że
+na misji 2 dziecko ma na zamek gracza mniej więcej miesiąc.
+
+Autopilot jest słabym graczem (trzyma setki niewydanych pokeballi, wędruje za
+brzegiem mgły), więc jego wynik to górna granica czasu, a nie średnia.
 
 ## Przebieg misji: warunki, koniec gry, ekran wyniku (2026-09-24)
 
@@ -84,6 +172,8 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `node tools/capture.mjs` | komplet zrzutów, w tym paski czterech klatek dla animacji |
 | `npx tsx tools/probe-trasa.ts` | poprawność tras ruchu na ~128 tys. przypadków |
 | `npx tsx tools/probe-mapa.ts` | plansza przygody: kształt, okno, dostępność obiektów, odcisk tła |
+| `npx tsx tools/probe-mapy.ts` | KAŻDA plansza z `MAPY`: odcisk tła, dojścia, klucze po kolei, cele misji, zamknięte kieszenie |
+| `npx tsx tools/symulacja-misji.ts` | czy misje kampanii da się wygrać i czy przeciwnik gra (`MISJA=`, `PROB=`) |
 | `python3 tools/profil-mapy.py` | profil naszej planszy: gęstość, rozkład, schemat do porównań |
 | `python3 tools/profil-wzorca.py` | ten sam profil z oficjalnych map `.h3m` — poprzeczka |
 | `python3 tools/postep-mapa.py` | strona postępu: nasze liczby na tle wzorców i dziennik rund |
@@ -105,7 +195,7 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `node tools/probe-rozbudowa.mjs` | rozbudowa miasta klikaniem, od początku do końca |
 | `node tools/probe-zwis.mjs` | czy okno skrzyni naprawdę WIDAĆ i czy druga bitwa startuje |
 | `node tools/probe-dziennik.mjs` | dziennik diagnostyczny: ziarno, łapanie wyjątków, raport, F8 |
-| `node tools/zrzut-mapa.mjs` | zrzut mapy przygody (osobno, bo `capture.mjs` zna tylko bitwę) |
+| `node tools/zrzut-mapa.mjs` | zrzut mapy przygody (`--mapa <id>`, `--zwiad 12`, `--caly` — cała plansza z góry) |
 
 Grafiki mapy są generowane, nie wrzucane ręcznie. Po zmianie planszy albo
 palety trzeba puścić:
@@ -113,8 +203,8 @@ palety trzeba puścić:
 | Skrypt | Co robi |
 |---|---|
 | `python3 tools/kafelki_autotile.py` | odczytuje z arkusza tablicę kafelków przejściowych |
-| `python3 tools/generuj_mape.py` | składa planszę 36 × 36 ze szkicu krain i rozstawia obiekty |
-| `python3 tools/render_mapa.py` | składa tło planszy i dane dla shadera wody |
+| `python3 tools/generuj_mape.py [id]` | składa plansze ze szkiców w `tools/mapy/<id>.py` i rozstawia obiekty |
+| `python3 tools/render_mapa.py [id]` | składa tło planszy i dane dla shadera wody (`public/mapa/<id>/`) |
 | `python3 tools/prepare_mapa_obiekty.py` | wycina i wygładza drzewa, skały, zamki, bohatera |
 | `python3 tools/rysuj_obiekty_mapy.py` | rysuje surowce, budynki i ozdoby |
 | `python3 tools/rysuj_miasto.py` | rysuje panoramy trzech miast i bryły jedenastu budynków |
