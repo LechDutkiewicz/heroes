@@ -338,14 +338,14 @@ export function stworek(
   x: number,
   y: number,
   wys: number,
-  o: { flip?: boolean; glos?: () => void; depth?: number } = {}
+  o: { flip?: boolean; glos?: () => void; depth?: number; bezCienia?: boolean } = {}
 ) {
   // Cień kontaktowy: miękka plama, ciemniejsza w środku — twarda elipsa
   // czytała się jak podstawka pod figurką.
   const cien = scene.add
     .image(x + wys * 0.08, y - 2, TEX.cien)
     .setDisplaySize(wys * 0.95, wys * 0.22)
-    .setAlpha(0.75)
+    .setAlpha(o.bezCienia ? 0 : 0.75)
     .setDepth(o.depth ?? ZM.stworki);
   const s = scene.add
     .image(x, y, klucz)

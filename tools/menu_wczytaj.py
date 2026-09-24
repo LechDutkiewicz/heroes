@@ -281,6 +281,15 @@ def deska(
         l = rgb.mean(axis=2, keepdims=True)
         rgb = lerp(rgb, np.clip(l * 1.5, 0, 1) * kolor(214, 206, 194), 0.85)
 
+    # Jedno światło dla całego menu: latarnia i zachodnie niebo po lewej
+    # u góry. Druga runda: „deski oświetlone płasko i równo, z ostrymi
+    # wektorowymi brzegami". Deska jaśnieje ku lewemu-górnemu rogowi,
+    # dostaje ziarno malarskie i brzeg zmiękczony o pół piksela.
+    xs = np.linspace(0, 1, W3, dtype=np.float32)[None, :]
+    rgb *= ((1.14 - 0.32 * xs) * (1.06 - 0.16 * yy))[..., None]
+    faktura = szum(H3, W3, 2.2 * NS, 2.2 * NS, ziarno + 77, 2) - 0.5
+    rgb *= (1 + faktura * 0.1)[..., None]
+    maska = ndimage.gaussian_filter(maska, 0.5 * NS)
     im = zmniejsz(rgba(rgb, maska))
     if podswietlona:
         # Złota poświata dookoła — ten sam sygnał „to się klika", który
@@ -442,7 +451,8 @@ def sztandar() -> Image.Image:
       materiał swobodnie wisi) i splot (drobny szum w dwóch kierunkach);
     - litery są NAMALOWANE na suknie — cieniuje je ta sama funkcja fałd, co
       materiał, więc zginają się razem z nim, a nie leżą na wierzchu;
-    - drążek jest drewniany, z gałkami, a liny idą w górę poza kadr;
+    - drążek jest drewniany, z gałkami; liny do drzewa i do gniazda
+      rysuje scena, bo muszą trafiać w miejsca na tle;
     - dół sztandaru jest cięty w trzy ogony ze złotą lamówką.
     """
     Wn, Hn = SZTANDAR_W * NS, SZTANDAR_H * NS
@@ -521,20 +531,32 @@ def sztandar() -> Image.Image:
             lokal[y : y + h, x : x + w] = np.linspace(0, 1, h)[:, None]
         y += h + odstep * NS
 
-    # Obwódka i cień liter na suknie (farba ma grubość, materiał nie).
+    # Litery WYHAFTOWANE złotą nicią, nie odlane. Druga runda: „złota fazka
+    # wygląda jak szablon, a nie jak robione ręcznie". Haft ma trzy cechy,
+    # których szablon nie ma: nierówny brzeg (ścieg nie trafia idealnie
+    # w rysunek), kierunek nici (skośne prążki ściegu płaskiego) i lekkie
+    # wypukłości zamiast ostrej fazy. Do tego ciemny kontur ściegiem
+    # i przerywany ścieg złotej nici wokół, jak w prawdziwej chorągwi.
+    drg = szum(Hn, Wn, 5 * NS, 5 * NS, 31, 2) - 0.5
+    napisy = ndimage.map_coordinates(napisy, [yy + drg * 1.6 * NS, xx - drg * 1.6 * NS], order=1)
+    napisy = smooth((napisy - 0.35) / 0.3)
     zew = ndimage.distance_transform_edt(napisy < 0.5).astype(np.float32)
-    obw = smooth((3.2 * NS - zew) / (0.7 * NS))
-    cien_l = ndimage.gaussian_filter(ndimage.shift(obw, (3 * NS, 2 * NS), order=1), 2 * NS)
-    rgb *= (1 - 0.55 * cien_l)[..., None]
-    rgb = lerp(rgb, kolor(52, 16, 6) * swiatlo[..., None], obw[..., None])
+    obw = smooth((3.0 * NS - zew) / (0.7 * NS))
+    cien_l = ndimage.gaussian_filter(ndimage.shift(obw, (2 * NS, 1.5 * NS), order=1), 1.8 * NS)
+    rgb *= (1 - 0.5 * cien_l)[..., None]
+    przer = np.exp(-((zew - 5.6 * NS) / (0.7 * NS)) ** 2) * (np.sin((xx + yy) / (2.2 * NS) * math.pi) > 0.1)
+    rgb = lerp(rgb, kolor(214, 160, 70) * swiatlo[..., None], (przer * 0.75)[..., None])
+    rgb = lerp(rgb, kolor(48, 14, 6) * swiatlo[..., None], obw[..., None])
     wew = ndimage.distance_transform_edt(napisy > 0.5).astype(np.float32)
-    faz = oswietlenie(smooth(wew / (2.5 * NS)) * 2.5 * NS, 0.9)
-    zloto = paleta(lokal, [
-        (0.0, kolor(255, 240, 180)),
-        (0.45, kolor(246, 196, 84)),
-        (1.0, kolor(196, 110, 26)),
+    wyp = oswietlenie(ndimage.gaussian_filter(np.minimum(wew, 5 * NS), 1.5 * NS), 0.6)
+    scieg = 0.5 + 0.5 * np.sin((xx * 0.8 - yy * 0.6) / (1.1 * NS) * math.pi)
+    nitki = szum(Hn, Wn, 3 * NS, 3 * NS, 32, 2)
+    zloto = paleta(lokal * 0.6 + nitki * 0.4, [
+        (0.0, kolor(255, 232, 160)),
+        (0.5, kolor(232, 178, 72)),
+        (1.0, kolor(170, 104, 30)),
     ])
-    zloto = zloto * (0.7 + 0.45 * faz)[..., None] * swiatlo[..., None] * 1.08
+    zloto = zloto * (0.62 + 0.4 * wyp + 0.16 * scieg)[..., None] * swiatlo[..., None] * 1.12
     rgb = lerp(rgb, zloto, napisy[..., None])
 
     # Podtytuł kremowy, z ozdobnikami — rombami po bokach.
@@ -569,14 +591,10 @@ def sztandar() -> Image.Image:
     rgb = np.where(galki[..., None] > 0, rgb_g, rgb)
     alfa = np.maximum(alfa, np.maximum(walec, galki))
 
-    # — liny w górę, poza kadr
-    for x_dol, x_gora in ((70 * NS, 30 * NS), (Wn - 70 * NS, Wn - 30 * NS)):
-        u = np.clip(yy / dy, 0, 1)
-        xl = x_gora + (x_dol - x_gora) * u
-        lina = (np.abs(xx - xl) < 2.2 * NS) & (yy < dy)
-        skret = 0.7 + 0.3 * np.sin((yy + (xx - xl) * 2) / (2.2 * NS) * math.pi)
-        rgb = np.where(lina[..., None], kolor(150, 118, 76) * skret[..., None], rgb)
-        alfa = np.maximum(alfa, lina.astype(np.float32))
+    # Lin nie ma w obrazku: rysuje je scena od gałki drążka do gałęzi drzewa
+    # i do gniazda na pniu (MenuScene, `liny`). Liny „znikające w niebie"
+    # krytyk drugiej rundy wymienił jako dowód, że sztandar do niczego
+    # nie jest przywiązany.
 
     alfa = ndimage.gaussian_filter(alfa, 0.5 * NS)
     im = zmniejsz(rgba(rgb, np.clip(alfa * 1.2, 0, 1)))
@@ -770,64 +788,131 @@ def klodka() -> Image.Image:
     return cien(im, -2, 4, 2, 0.6, 6)
 
 
-def stworek() -> Image.Image:
-    """Towarzysz z wioski (Verdiko, `assets/pokemon/00096.png`) wmalowany w zmierzch.
+def wytnijZBialego(sciezka: Path) -> tuple[np.ndarray, np.ndarray]:
+    """Postać z białego tła: (rgb 0–1, alfa 0–1), przycięte do sylwetki.
 
-    Krytyk: „stworki to malutkie, wyblakłe, płaskie naklejki, które nie
-    pasują ani skalą, ani sposobem malowania". Rysunek stworka jest płaski
-    (kontur i dwa odcienie), a tło — malowane i o zmierzchu. Więc zanim
-    stworek trafi do gry, dostaje to samo światło co wioska:
-    - przygaszenie i ochłodzenie jak w `tlo()` — ten sam zmierzch;
-    - ciepłe światło krawędziowe od latarni (z lewej, z góry), policzone
-      z normalnych sylwetki;
-    - cień własny ku dołowi (okluzja przy ziemi);
-    - zmiękczone kontury — ostra czarna kreska to znak rozpoznawczy naklejki.
+    Tło to biel połączona z brzegiem obrazka (etykiety spójnych obszarów
+    zamiast zalewania piksel po pikselu) — biel w środku postaci (oczy,
+    koszulka) zostaje, bo nie dotyka brzegu.
     """
-    sys_path = str(KORZEN / 'tools')
-    import sys
-
-    if sys_path not in sys.path:
-        sys.path.insert(0, sys_path)
-    from process_sprites import background_mask
-
-    zrodlo = np.asarray(Image.open(KORZEN / 'assets' / 'pokemon' / '00096.png').convert('RGB'))
-    tlo_m = background_mask(zrodlo)
-    a = (~tlo_m).astype(np.float32)
-    ys, xs = np.nonzero(a)
+    im = Image.open(sciezka)
+    if im.mode == 'RGBA' and np.asarray(im)[..., 3].min() < 250:
+        arr = np.asarray(im, np.float32) / 255
+        rgb, a = arr[..., :3], arr[..., 3]
+    else:
+        rgb = np.asarray(im.convert('RGB'), np.float32) / 255
+        bialy = (1 - rgb.min(axis=2)) <= 26 / 255
+        etyk, _ = ndimage.label(bialy)
+        brzeg = np.unique(np.concatenate([etyk[0], etyk[-1], etyk[:, 0], etyk[:, -1]]))
+        tlo_m = np.isin(etyk, brzeg[brzeg > 0])
+        a = ndimage.gaussian_filter((~tlo_m).astype(np.float32), 0.8)
+        # Biała obwódka po wycięciu: brzegowe piksele przyciemniamy ku środkowi.
+        rgb = np.where((a < 0.95)[..., None], rgb * a[..., None], rgb)
+    ys, xs = np.nonzero(a > 0.05)
     y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
-    rgb = zrodlo[y0:y1, x0:x1].astype(np.float32) / 255
-    a = a[y0:y1, x0:x1]
-    a = ndimage.gaussian_filter(a, 0.7)
+    return rgb[y0:y1, x0:x1], a[y0:y1, x0:x1]
+
+
+def wmaluj(rgb: np.ndarray, a: np.ndarray, *, jasnosc: float, kontur: float = 0.3,
+           rys: float = 0.6, nasycenie: float = 1.15, dol: float = 0.32) -> np.ndarray:
+    """Postać w świetle menu: zmierzch, światło krawędziowe z lewej-góry, okluzja u dołu.
+
+    Jedno źródło światła dla wszystkiego, co leży na tle — latarnia
+    drogowskazu i zachodnie niebo są po lewej u góry (`SWIATLO_Z_LEWEJ`).
+    Krytyk drugiej rundy: „interfejs leży na obrazie jako osobna warstwa,
+    ignoruje kierunek światła". Tu postać dostaje:
+    - ogólne przygaszenie jak tło (`jasnosc`) i ciepło latarni;
+    - rim light tam, gdzie brzeg sylwetki patrzy w stronę światła;
+    - cień własny ku prawej-dołowi;
+    - zmiękczone ciemne kontury rysunku — ostra kreska to znak naklejki.
+    """
     h, w = a.shape
     yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
-
-    # Kontury: ciemne piksele rysunku rozjaśnione ku barwie sąsiedztwa.
-    lum = rgb @ np.array([0.3, 0.59, 0.11], np.float32)
-    rozm = np.dstack([ndimage.gaussian_filter(rgb[..., i], 2.0) for i in range(3)])
-    kreska = smooth((0.35 - lum) / 0.2)[..., None]
-    rgb = lerp(rgb, rozm * 0.6, kreska * 0.3)
-
-    # Bryła: ciemniej ku dołowi i ku prawej (od latarni).
-    bryla = 1.0 - 0.3 * (yy / h) ** 1.5 - 0.15 * (xx / w)
-    rgb *= bryla[..., None]
-    # Zmierzch — te same liczby co w tle.
-    szar = (rgb @ np.array([0.3, 0.59, 0.11], np.float32))[..., None]
-    # Jaśniej niż tło (0,5): stworek siedzi w plamie światła latarni.
-    rgb = np.clip(rgb * 1.25 - szar * 0.25, 0, 1)  # bledziutki rysunek: więcej nasycenia
-    rgb = rgb * 0.68 * np.array([1.0, 0.9, 0.8], np.float32)
-    # Światło krawędziowe z lewej-góry: normalne z rozmytej sylwetki.
-    gl = ndimage.gaussian_filter(a, 3.0)
+    waga = np.array([0.3, 0.59, 0.11], np.float32)
+    lum = rgb @ waga
+    rozm = np.dstack([ndimage.gaussian_filter(rgb[..., i], 2.0 * h / 400) for i in range(3)])
+    rgb = lerp(rgb, rozm * 0.6, smooth((0.35 - lum) / 0.2)[..., None] * kontur)
+    szar = (rgb @ waga)[..., None]
+    rgb = np.clip(szar + (rgb - szar) * nasycenie, 0, 1)
+    bryla = 1.0 - dol * (yy / h) ** 1.4 - 0.22 * (xx / w)
+    rgb = rgb * bryla[..., None] * jasnosc * np.array([1.0, 0.9, 0.8], np.float32)
+    gl = ndimage.gaussian_filter(a, 3.0 * h / 400)
     gy, gx = np.gradient(gl)
     n = np.hypot(gx, gy) + 1e-6
-    ku_swiatlu = np.clip((gx * 0.75 + gy * 0.66) / n, 0, 1)  # gradient rośnie do środka
-    brzeg = np.clip(n * 18, 0, 1)
-    rgb += kolor(255, 170, 70) * (ku_swiatlu * brzeg * a * 0.5)[..., None]
-    # Ogólne ciepło latarni na lewej połowie.
-    rgb *= 1 + 0.35 * np.clip(1 - xx / w, 0, 1)[..., None] * np.array([1, 0.75, 0.45], np.float32)
-    im = Image.fromarray((np.dstack([np.clip(rgb, 0, 1), a]) * 255).astype(np.uint8), 'RGBA')
-    # Lekkie rozmycie: stworek stoi w średnim planie, gdzie tło też jest
-    # już odrobinę miękkie — ostrzejszy od otoczenia wyglądał na doklejony.
-    return im.resize((int(w * 96 / h), 96), Image.LANCZOS).filter(ImageFilter.GaussianBlur(0.55))
+    ku = np.clip((gx * 0.78 + gy * 0.62) / n, 0, 1)
+    brzeg = np.clip(n * 18 * 400 / h, 0, 1)
+    rgb = rgb + kolor(255, 168, 72) * (ku ** 1.5 * brzeg * a * rys)[..., None]
+    # Ziarno: tło jest malowane, a malowane ma fakturę; gładki gradient
+    # z renderu 3D od razu mówi „inna technika".
+    ziarno = szum(h, w, 2.5, 2.5, 13, 2) - 0.5
+    rgb = rgb * (1 + ziarno[..., None] * 0.08)
+    return np.clip(rgb, 0, 1)
+
+
+def postac(rgb: np.ndarray, a: np.ndarray, wys: int, rozmycie: float) -> Image.Image:
+    im = Image.fromarray((np.dstack([rgb, a]) * 255 + 0.5).astype(np.uint8), 'RGBA')
+    im = im.resize((round(a.shape[1] * wys / a.shape[0]), wys), Image.LANCZOS)
+    return im.filter(ImageFilter.GaussianBlur(rozmycie)) if rozmycie else im
+
+
+def bohater() -> Image.Image:
+    """Trener widziany od tyłu, idący w stronę drogowskazu — główny bohater kadru.
+
+    Krytyk drugiej rundy: „brak tematu; oko ląduje na pustym stawie,
+    a jedyny stworek to malutka figurka zgubiona w średnim planie".
+    Wzorzec okładek przygodowych: postać na pierwszym planie, tyłem, patrzy
+    tam, dokąd gracz ma iść. To ten sam trener co na mapie przygody
+    (`tools/wsad/bohater-gora.png`), odbity w poziomie, żeby szedł w lewo —
+    ku drogowskazowi i sztandarowi. Plecy ma odwrócone od latarni, więc jest
+    ciemniejszy od desek, ze złotym konturem światła po lewej.
+    """
+    rgb, a = wytnijZBialego(WSAD / 'bohater-gora.png')
+    rgb, a = rgb[:, ::-1], a[:, ::-1]
+    # Nogi ciemniej niż ramiona: dół kadru jest w winiecie tła, a trener
+    # stoi plecami do światła — jasne od góry łapie tylko czapka i barki.
+    rgb = wmaluj(rgb, a, jasnosc=0.5, kontur=0.2, rys=1.1, nasycenie=0.95, dol=0.62)
+    return postac(rgb, a, 440, 0)
+
+
+def stworek() -> Image.Image:
+    """Towarzysz trenera (Cindro, `assets/pokemon/00263.png`, Pixmon Index —
+    domena publiczna), odwrócony do gracza i machający: „chodź!".
+
+    Rysunek stworka jest płaski (kontur i dwa odcienie), dlatego więcej
+    zmiękczenia konturu niż u trenera i lekkie rozmycie — stoi o krok za
+    ostrym pierwszym planem.
+    """
+    rgb, a = wytnijZBialego(KORZEN / 'assets' / 'pokemon' / '00263.png')
+    rgb = wmaluj(rgb, a, jasnosc=0.78, kontur=0.35, rys=0.6, nasycenie=1.2)
+    return postac(rgb, a, 124, 0.4)
+
+
+def kepaTrawy(szer: int, wys: int, ziarno: int) -> Image.Image:
+    """Kępa trawy do przykrycia podstawy słupa — słup ma stać W ziemi, nie na niej.
+
+    Źdźbła to zwężające się łuki w zmierzchowych zieleniach, ciemniejsze
+    u nasady; kilka jaśniejszych czubków łapie światło latarni.
+    """
+    rng = np.random.default_rng(ziarno)
+    W3, H3 = szer * NS, wys * NS
+    im = Image.new('RGBA', (W3, H3), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    for _ in range(90):
+        x = rng.normal(W3 / 2, W3 / 5)
+        h = rng.uniform(0.35, 1.0) * H3
+        wygiecie = rng.normal(0, W3 * 0.08)
+        t = rng.uniform(0, 1)
+        baza = np.array([40, 62, 30]) + t * np.array([40, 50, 18])
+        czub = baza + np.array([90, 70, 20]) * (0.4 + 0.6 * (x < W3 / 2))
+        kroki = 12
+        for k in range(kroki):
+            u0, u1 = k / kroki, (k + 1) / kroki
+            p0 = (x + wygiecie * u0 * u0, H3 - h * u0)
+            p1 = (x + wygiecie * u1 * u1, H3 - h * u1)
+            gr = max(1, int(3.2 * NS * (1 - u0)))
+            c = baza + (czub - baza) * u0
+            d.line([p0, p1], fill=(int(c[0]), int(c[1]), int(c[2]), 255), width=gr)
+    return zmniejsz(im.filter(ImageFilter.GaussianBlur(0.6 * NS)))
 
 
 # ————————————————————————————————————————————————————————— całość
@@ -842,6 +927,20 @@ DESKI = [
 ]
 
 
+def cienDeski(im: Image.Image, m: int = 18) -> Image.Image:
+    """Cień rzucony przez deskę na słup i tło: miękka czarna sylwetka.
+
+    Scena kładzie go przesuniętego w prawo-dół (od latarni) — deska bez
+    cienia to, słowami krytyka, „osobna warstwa na obrazie".
+    """
+    a = Image.new('L', (im.width + m * 2, im.height + m * 2), 0)
+    a.paste(im.split()[3], (m, m))
+    a = a.filter(ImageFilter.GaussianBlur(5)).point(lambda v: int(v * 0.62))
+    out = Image.new('RGBA', a.size, (14, 8, 4, 0))
+    out.putalpha(a)
+    return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--podglad', action='store_true', help='arkusz podglądu w tools/shots/')
@@ -851,10 +950,12 @@ def main() -> None:
     tlo().save(CEL / 'tlo.jpg', quality=88, optimize=True, progressive=True)
     sztandar().save(CEL / 'logo.png', optimize=True)
     for nazwa, w, h, z in DESKI:
-        deska(w, h, z).save(CEL / f'{nazwa}.png', optimize=True)
+        zwykla = deska(w, h, z)
+        zwykla.save(CEL / f'{nazwa}.png', optimize=True)
+        cienDeski(zwykla).save(CEL / f'{nazwa}-cien.png', optimize=True)
         deska(w, h, z, podswietlona=True).save(CEL / f'{nazwa}-jasna.png', optimize=True)
         deska(w, h, z, szara=True).save(CEL / f'{nazwa}-szara.png', optimize=True)
-    cien(slup(40, 520, 5), -5, 8, 6, 0.55, 16).save(CEL / 'slup.png', optimize=True)
+    cien(slup(40, 420, 5), -5, 8, 6, 0.55, 16).save(CEL / 'slup.png', optimize=True)
     pergamin(680, 540, 3).save(CEL / 'pergamin.png', optimize=True)
     for jasna in (False, True):
         t = tabliczka(34, 17, jasna)
@@ -862,6 +963,8 @@ def main() -> None:
     latarnia().save(CEL / 'latarnia.png', optimize=True)
     klodka().save(CEL / 'klodka.png', optimize=True)
     stworek().save(CEL / 'stworek.png', optimize=True)
+    bohater().save(CEL / 'bohater.png', optimize=True)
+    kepaTrawy(110, 46, 3).save(CEL / 'trawa.png', optimize=True)
     deska(176, 40, 51, ksztalt='prostokat', gwozdzie=()).save(CEL / 'deseczka.png', optimize=True)
     deska(176, 40, 51, ksztalt='prostokat', gwozdzie=(), podswietlona=True).save(
         CEL / 'deseczka-jasna.png', optimize=True

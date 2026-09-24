@@ -5,7 +5,8 @@ import { jestZapis, wczytajGre } from '../data/zapis';
 import { MUZYKA_MIASTO, initSfx, startMusic, stopMusic } from '../audio/mapSfx';
 import { gradientText } from '../visual/hud';
 import { TEX, ZM, ozywTlo, stworek, zbudujTekstury } from '../visual/menuZycie';
-import { KROJ, deseczka, pokazAutorow, pokazRekordy, type Zwoj } from '../visual/menuOkna';
+import { krojeZestawu } from '../visual/zestaw';
+import { KROJ, pokazAutorow, pokazRekordy, type Zwoj } from '../visual/menuOkna';
 
 /**
  * Menu główne — ulica wioski trenerów z drogowskazem.
@@ -40,7 +41,19 @@ const SLUP = { x: 104, y: 262 };
 const LATARNIA = { x: SLUP.x - 4, y: SLUP.y + 8, szybkaX: 76, szybkaY: 49 };
 
 /** Sztandar z logo: drążek na tej wysokości, skala tak, by odsłonić drzwi chaty. */
-const SZTANDAR = { x: 480, y: 22, skala: 0.8, drazekY: 64 };
+const SZTANDAR = { x: 480, y: 22, skala: 0.8, drazekY: 64, galka: 278 };
+
+/**
+ * Kotwice lin sztandaru na tle: lewa — obręcz gniazda na wysokim pniu,
+ * prawa — gałąź wielkiego drzewa. Zmierzone z `tlo.jpg`.
+ */
+const LINY = { lewa: [112, 124] as [number, number], prawa: [776, 30] as [number, number] };
+
+/**
+ * Trener na pierwszym planie, tyłem, idący ku drogowskazowi (stopy pod
+ * dolną krawędzią kadru), i stworek na jego ramieniu.
+ */
+const BOHATER = { x: 668, stopy: 770, ramieX: 736, ramieY: 522 };
 
 /**
  * Deski od góry. Kąty są drobne i różne — równiutko przybite deski wyglądają
@@ -59,10 +72,11 @@ const MARGINES_BLASKU = 14;
 const ZAKLADKA = 22;
 
 /** Tabliczka dźwięku: przybita do grubego słupka płotu po prawej. */
-const DZWIEK = { x: 667, y: 556 };
+const DZWIEK = { x: 908, y: 0, sznurek: 46 };
 
 const Z = {
   logo: 20,
+  bohater: 26,
   slup: 30,
   deski: 32,
   dzwiek: 34,
@@ -117,20 +131,19 @@ let kroje: Promise<void> | undefined;
  * Trebuchet), brzydziej, ale czytelnie.
  */
 function wczytajKroje(): Promise<void> {
-  kroje ??= Promise.all(
-    (
+  kroje ??= Promise.all([
+    krojeZestawu(),
+    ...(
       [
         ['MenuCinzel', 'cinzel-latin-900', LACINSKI, '900'],
         ['MenuCinzel', 'cinzel-latin-ext-900', ROZSZERZONY, '900'],
-        ['MenuFredoka', 'fredoka-latin-600', LACINSKI, '400'],
-        ['MenuFredoka', 'fredoka-latin-ext-600', ROZSZERZONY, '400'],
       ] as const
     ).map(async ([rodzina, plik, zakres, waga]) => {
       const f = new FontFace(rodzina, `url(${B}menu/${plik}.woff2)`, { unicodeRange: zakres, weight: waga });
       await f.load();
       document.fonts.add(f);
-    })
-  ).then(
+    }),
+  ]).then(
     () => undefined,
     () => undefined
   );
@@ -147,6 +160,10 @@ export class MenuScene extends Phaser.Scene {
   private zajety = false;
   private okno?: Zwoj;
   private zaproszenie?: Phaser.GameObjects.Image;
+  private dymek?: Phaser.GameObjects.Container;
+  /** Sztandar i liny, którymi jest przywiązany — liny przerysowujemy co klatkę. */
+  private sztandar?: Phaser.GameObjects.Image;
+  private liny?: Phaser.GameObjects.Graphics;
   /** Flaga dla narzędzi (tools/zrzut-menu.mjs): menu zbudowane i po wejściu. */
   gotowe = false;
 
@@ -167,7 +184,8 @@ export class MenuScene extends Phaser.Scene {
     }
     for (const n of ['tabliczka', 'tabliczka-jasna', 'deseczka', 'deseczka-jasna'])
       this.load.image(`menu-${n}`, `${m}${n}.png`);
-    for (const n of ['latarnia', 'klodka', 'stworek']) this.load.image(`menu-${n}`, `${m}${n}.png`);
+    for (const n of ['latarnia', 'klodka', 'stworek', 'bohater', 'trawa']) this.load.image(`menu-${n}`, `${m}${n}.png`);
+    for (const d of DESKI) this.load.image(`${d.tex}-cien`, `${m}${d.tex.slice(5)}-cien.png`);
     // Dwie krótkie próbki: stuknięcie deski i wejście. Muzyka dochodzi
     // później, w tle — 4 MB nie może trzymać czarnego ekranu.
     this.load.audio('wejscie', `${B}audio/wejscie.wav`);
@@ -182,6 +200,7 @@ export class MenuScene extends Phaser.Scene {
     this.wybor = -1;
     this.zajety = false;
     this.okno = undefined;
+    this.dymek = undefined;
     this.gotowe = false;
 
     this.jednaTeksturaNaRaz();
@@ -227,14 +246,38 @@ export class MenuScene extends Phaser.Scene {
     this.zbudujDrogowskaz();
     this.przelacznikDzwieku();
 
-    // Jeden towarzysz zamiast trzech naklejek: siedzi w plamie światła
-    // latarni i patrzy na drogowskaz — spojrzenie prowadzi oko do menu.
-    // Obrazek jest już wmalowany w zmierzch (tools/menu_wczytaj.py, `stworek`).
-    stworek(this, 'menu-stworek', 486, 516, 76, { glos: () => this.graj('krok', 0.5) });
+    this.bohater();
 
     this.pokazPoziom('glowne', false);
     this.klawiatura();
     this.wejscie();
+  }
+
+  /**
+   * Temat kadru: trener tyłem, na pierwszym planie, w drodze do wioski —
+   * i jego stworek na ramieniu, odwrócony do gracza, machający „chodź!".
+   * Krytyk drugiej rundy: „brak tematu, oko ląduje na pustym stawie".
+   * Obie postacie są wmalowane w zmierzch w tools/menu_wczytaj.py
+   * (`wmaluj`: to samo światło z lewej-góry co latarnia i deski).
+   */
+  private bohater() {
+    const b = this.add.image(BOHATER.x, BOHATER.stopy, 'menu-bohater').setOrigin(0.5, 1).setDepth(Z.bohater);
+    // Oddech: ledwie widoczny, ale bez niego postać na pierwszym planie
+    // wygląda jak wycinanka.
+    this.tweens.add({
+      targets: b,
+      scaleY: 1.008,
+      scaleX: 0.996,
+      duration: 1900,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    stworek(this, 'menu-stworek', BOHATER.ramieX, BOHATER.ramieY, 122, {
+      glos: () => this.graj('krok', 0.5),
+      depth: Z.bohater + 1,
+      bezCienia: true,
+    });
   }
 
   // ——————————————————————————————————————————————— logo
@@ -289,6 +332,46 @@ export class MenuScene extends Phaser.Scene {
     };
     this.time.addEvent({ delay: 900, loop: true, callback: blysk });
     this.data.set('logo', logo);
+    this.sztandar = logo;
+    this.liny = this.add.graphics().setDepth(Z.logo - 0.5);
+    this.events.on(Phaser.Scenes.Events.UPDATE, this.rysujLiny, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.events.off(Phaser.Scenes.Events.UPDATE, this.rysujLiny, this));
+  }
+
+  /**
+   * Liny sztandaru: od gałek drążka do gałęzi wielkiego drzewa (prawa)
+   * i do gniazda na pniu (lewa). Przerysowywane co klatkę, bo sztandar się
+   * kołysze i opada na starcie — lina przyklejona na sztywno do tła
+   * rozjechałaby się z gałką. Zwisają (krzywa z ugięciem w połowie), bo
+   * napięta jak struna lina wygląda na narysowaną linijką.
+   */
+  private rysujLiny() {
+    const s = this.sztandar;
+    const g = this.liny;
+    if (!s || !g) return;
+    const kat = Phaser.Math.DegToRad(s.angle);
+    const pol = SZTANDAR.galka * SZTANDAR.skala;
+    const konce: [number, number, number, number, number][] = [
+      // x gałki, y gałki, x kotwicy, y kotwicy, ugięcie
+      [s.x - Math.cos(kat) * pol, s.y - Math.sin(kat) * pol, ...LINY.lewa, 26],
+      [s.x + Math.cos(kat) * pol, s.y + Math.sin(kat) * pol, ...LINY.prawa, 14],
+    ];
+    g.clear();
+    for (const [grubosc, barwa] of [
+      [4.2, 0x1a0f06],
+      [2, 0x8f6e42],
+    ] as const) {
+      g.lineStyle(grubosc, barwa, 1);
+      for (const [x0, y0, x1, y1, ug] of konce) {
+        g.beginPath();
+        g.moveTo(x0, y0);
+        for (let i = 1; i <= 16; i++) {
+          const t = i / 16;
+          g.lineTo(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t + Math.sin(t * Math.PI) * ug);
+        }
+        g.strokePath();
+      }
+    }
   }
 
   // ——————————————————————————————————————————————— drogowskaz
@@ -298,6 +381,15 @@ export class MenuScene extends Phaser.Scene {
     // Czubek daszka w teksturze: środek w poziomie, 16 px od góry (margines
     // na cień z tools/menu_wczytaj.py).
     slup.setOrigin(0.5, 16 / slup.height);
+    // Słup stoi W ziemi: cień kontaktowy i kępa trawy na podstawie.
+    // Druga runda: „słup niczym nie jest związany z ziemią".
+    const podstawa = SLUP.y + slup.height - 16 - 24;
+    this.add
+      .image(SLUP.x + 16, podstawa + 2, TEX.cien)
+      .setDisplaySize(120, 26)
+      .setAlpha(0.7)
+      .setDepth(Z.slup - 0.2);
+    this.add.image(SLUP.x + 4, podstawa + 12, 'menu-trawa').setOrigin(0.5, 1).setDepth(Z.slup + 0.2);
     this.latarnia();
 
     // Zaproszenie: miękki złoty blask za „Nową grą", dopóki gracz niczego
@@ -313,6 +405,8 @@ export class MenuScene extends Phaser.Scene {
 
     DESKI.forEach((d, i) => {
       const x = SLUP.x - ZAKLADKA;
+      // Cień deski na słupie i na desce niżej: od latarni, czyli w prawo w dół.
+      const cienD = this.add.image(7, 11, `${d.tex}-cien`).setOrigin(18 / (d.w + 36), 0.5);
       const zwykla = this.add.image(0, 0, d.tex).setOrigin(0, 0.5);
       const jasna = this.add
         .image(0, 0, `${d.tex}-jasna`)
@@ -344,7 +438,7 @@ export class MenuScene extends Phaser.Scene {
       // od środka i wypadałoby pół deski w bok.
       const strefa = this.add.zone(d.w / 2, 0, d.w, d.h).setInteractive({ useHandCursor: true });
       const kont = this.add
-        .container(x, d.y, [zwykla, jasna, szara, napis, podpis, klodka, strefa])
+        .container(x, d.y, [cienD, zwykla, jasna, szara, napis, podpis, klodka, strefa])
         .setAngle(d.kat)
         .setDepth(Z.deski + (DESKI.length - i) * 0.01);
       strefa.on('pointerover', () => this.ustawWybor(i, true));
@@ -421,7 +515,7 @@ export class MenuScene extends Phaser.Scene {
       { napis: 'Nowa gra', wlaczona: true, akcja: () => this.pokazPoziom('nowa') },
       {
         napis: 'Wczytaj',
-        podpis: cos ? (kampania && mapa ? 'kampania albo mapa' : (kampania ?? `mapa, dzień ${mapa!.dzien}`)) : 'nic jeszcze nie zapisano',
+        podpis: cos ? (kampania && mapa ? 'kampania albo mapa' : (kampania ?? `mapa, dzień ${mapa!.dzien}`)) : 'Nic jeszcze nie zapisano — najpierw zagraj!',
         wlaczona: cos,
         akcja: () => {
           // Jedna rzecz do wczytania — od razu. Dwie — deski pytają, którą.
@@ -503,7 +597,8 @@ export class MenuScene extends Phaser.Scene {
     let rozmiar: number = cfg.kroj;
     d.napis.setFontSize(rozmiar);
     while (d.napis.width > miejsce && rozmiar > 14) d.napis.setFontSize(--rozmiar);
-    const zPodpisem = !!poz.podpis;
+    // Nieczynna deska nie ma podpisu: mówi kłódka, a zdanie pokazuje dymek.
+    const zPodpisem = !!poz.podpis && poz.wlaczona;
     // Pusty podpis się CHOWA, a nie tylko dostaje pusty napis: tekst
     // skrócony do "" ma teksturę szerokości 0, a taki kwadrat w partii
     // WebGL Phasera 4 rozsypywał wierzchołki sąsiadów — deska rysowała się
@@ -564,6 +659,10 @@ export class MenuScene extends Phaser.Scene {
       this.tweens.add({ targets: d.kont, x: d.x, duration: 120, ease: 'Quad.easeOut' });
     }
     const d = this.deski[i];
+    this.ukryjDymek();
+    if (d?.pozycja && !d.pozycja.wlaczona && zMyszy && d.pozycja.podpis) {
+      this.pokazDymek(d.x + DESKI[i].w + 8, d.y, d.pozycja.podpis);
+    }
     if (!d || !d.pozycja?.wlaczona) {
       this.przestawBlask(this.poziom === 'glowne' ? 0 : -1, false);
       return;
@@ -630,6 +729,7 @@ export class MenuScene extends Phaser.Scene {
       // dziecko odbiera jako zepsutą grę i klika dalej.
       this.tweens.add({ targets: d.kont, angle: DESKI[i].kat + 3, duration: 60, yoyo: true, repeat: 2 });
       this.tweens.add({ targets: d.klodka, angle: { from: 18, to: 0 }, duration: 700, ease: 'Elastic.easeOut' });
+      if (poz.podpis) this.pokazDymek(d.x + DESKI[i].w + 8, d.y, poz.podpis);
       this.graj('krok', 0.4);
       return;
     }
@@ -706,14 +806,38 @@ export class MenuScene extends Phaser.Scene {
    * ma czego zamykać, a rodzic przy dziecku bardzo chce mieć ciszę pod ręką.
    * Wycisza cały menedżer dźwięku gry (`sound.mute`), więc działa też na
    * mapie i w bitwie, a nie tylko tutaj.
+   *
+   * Okrągła tabliczka z nutą wisi na sznurku z gałęzi wielkiego drzewa.
+   * Bez napisu: w drugiej rundzie krytyk nie umiał przeczytać „Dźwięk: tak"
+   * na deseczce przybitej do płotu — nuta (i nuta przekreślona) mówi to
+   * samo każdemu dziecku, a pełne zdanie pokazuje dymek po wskazaniu.
    */
   private przelacznikDzwieku() {
-    const zwykla = this.add.image(0, 0, 'menu-tabliczka');
-    const jasna = this.add.image(0, 0, 'menu-tabliczka-jasna').setVisible(false);
-    const znak = this.add.graphics();
-    const k = this.add.container(DZWIEK.x, DZWIEK.y, [zwykla, jasna, znak]).setDepth(Z.dzwiek);
-    const podpis = deseczka(this, DZWIEK.x, DZWIEK.y + 46, '').setDepth(Z.dzwiek).setAngle(-2);
+    const sznurek = this.add.graphics();
+    sznurek.lineStyle(3, 0x1e1208, 1);
+    sznurek.lineBetween(-10, -6, -4, DZWIEK.sznurek);
+    sznurek.lineBetween(10, -6, 4, DZWIEK.sznurek);
+    sznurek.lineStyle(1.2, 0x9a7a4a, 1);
+    sznurek.lineBetween(-10, -6, -4, DZWIEK.sznurek);
+    sznurek.lineBetween(10, -6, 4, DZWIEK.sznurek);
+    const cienT = this.add.image(5, DZWIEK.sznurek + 38, 'menu-tabliczka').setTint(0x000000).setAlpha(0.35);
+    const zwykla = this.add.image(0, DZWIEK.sznurek + 32, 'menu-tabliczka');
+    const jasna = this.add.image(0, DZWIEK.sznurek + 32, 'menu-tabliczka-jasna').setVisible(false);
+    const znak = this.add.graphics().setPosition(0, DZWIEK.sznurek + 30);
+    const k = this.add
+      .container(DZWIEK.x, DZWIEK.y, [sznurek, cienT, zwykla, jasna, znak])
+      .setDepth(Z.dzwiek);
+    // Wisi, więc się kołysze — wolniej i szerzej niż sztandar, bo jest lżejsza.
+    this.tweens.add({
+      targets: k,
+      angle: { from: -3, to: 3 },
+      duration: 2600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
 
+    const opis = () => (this.sound.mute ? 'Dźwięk wyłączony — kliknij, żeby włączyć' : 'Dźwięk włączony — kliknij, żeby wyciszyć');
     const rysuj = () => {
       const cisza = this.sound.mute;
       znak.clear();
@@ -740,36 +864,65 @@ export class MenuScene extends Phaser.Scene {
         znak.lineTo(20, 18);
         znak.strokePath();
       }
-      podpis.ustawNapis(cisza ? 'Dźwięk: nie' : 'Dźwięk: tak');
     };
     rysuj();
 
-    k.setSize(64, 64).setInteractive({ useHandCursor: true });
-    podpis.setSize(176, 40).setInteractive({ useHandCursor: true });
-    for (const cel of [k, podpis]) {
-      cel.on('pointerover', () => {
-        jasna.setVisible(true);
-        zwykla.setVisible(false);
-      });
-      cel.on('pointerout', () => {
-        jasna.setVisible(false);
-        zwykla.setVisible(true);
-      });
-      cel.on('pointerdown', () => {
-        this.sound.mute = !this.sound.mute;
-        try {
-          localStorage.setItem(KLUCZ_DZWIEKU, this.sound.mute ? 'wyl' : 'wl');
-        } catch {
-          // bez pamięci — przełącznik działa do końca sesji
-        }
-        if (!this.sound.mute) {
-          this.graj('wejscie', 0.4);
-          startMusic(this, MUZYKA_MIASTO);
-        }
-        this.tweens.add({ targets: k, angle: { from: -12, to: 0 }, duration: 380, ease: 'Back.easeOut' });
-        rysuj();
-      });
-    }
+    const strefa = this.add.zone(0, DZWIEK.sznurek + 32, 70, 70).setInteractive({ useHandCursor: true });
+    k.add(strefa);
+    strefa.on('pointerover', () => {
+      jasna.setVisible(true);
+      zwykla.setVisible(false);
+      this.pokazDymek(DZWIEK.x - 40, DZWIEK.y + DZWIEK.sznurek + 32, opis(), 'lewo');
+    });
+    strefa.on('pointerout', () => {
+      jasna.setVisible(false);
+      zwykla.setVisible(true);
+      this.ukryjDymek();
+    });
+    strefa.on('pointerdown', () => {
+      this.sound.mute = !this.sound.mute;
+      try {
+        localStorage.setItem(KLUCZ_DZWIEKU, this.sound.mute ? 'wyl' : 'wl');
+      } catch {
+        // bez pamięci — przełącznik działa do końca sesji
+      }
+      if (!this.sound.mute) {
+        this.graj('wejscie', 0.4);
+        startMusic(this, MUZYKA_MIASTO);
+      }
+      this.tweens.add({ targets: znak, angle: { from: -25, to: 0 }, duration: 420, ease: 'Back.easeOut' });
+      rysuj();
+      this.pokazDymek(DZWIEK.x - 40, DZWIEK.y + DZWIEK.sznurek + 32, opis(), 'lewo');
+    });
+  }
+
+  /**
+   * Dymek z podpowiedzią — kartka pergaminu z pełnym zdaniem dużą czcionką.
+   * Zamiast drobnych podpisów na deskach, których krytyk nie umiał odczytać:
+   * pełne zdanie pokazuje się dopiero, gdy dziecko o coś „pyta" myszą.
+   */
+  private pokazDymek(x: number, y: number, tekst: string, strona: 'lewo' | 'prawo' = 'prawo') {
+    this.ukryjDymek();
+    const t = this.add
+      .text(0, 0, tekst, { fontFamily: KROJ.tekst, fontSize: '18px', color: '#3b2310' })
+      .setOrigin(strona === 'prawo' ? 0 : 1, 0.5);
+    const w = t.width + 24;
+    const h = t.height + 14;
+    const x0 = strona === 'prawo' ? -12 : -w + 12;
+    const g = this.add.graphics();
+    g.fillStyle(0x000000, 0.35);
+    g.fillRoundedRect(x0 + 3, -h / 2 + 4, w, h, 8);
+    g.fillStyle(0xf4e4bf, 1);
+    g.fillRoundedRect(x0, -h / 2, w, h, 8);
+    g.lineStyle(2, 0x7b3b12, 1);
+    g.strokeRoundedRect(x0, -h / 2, w, h, 8);
+    this.dymek = this.add.container(x, y, [g, t]).setDepth(Z.okno - 1).setAlpha(0);
+    this.tweens.add({ targets: this.dymek, alpha: 1, duration: 140 });
+  }
+
+  private ukryjDymek() {
+    this.dymek?.destroy();
+    this.dymek = undefined;
   }
 
   /**

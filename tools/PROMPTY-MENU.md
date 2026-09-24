@@ -20,7 +20,9 @@ szukanie szyldów po obrazku, a strzałka znaczy „tędy" bez słów).
 | `logo.png` | renderowany w `tools/menu_wczytaj.py` sztandar: sukno z fałdami, litery namalowane na suknie (Cinzel Decorative), drewniany drążek, liny |
 | `deska-*.png`, `slup.png`, `deseczka*.png`, `tabliczka*.png` | renderowane tamże: słoje z szumu, fazka, gwoździe |
 | `latarnia.png`, `klodka.png` | renderowane tamże: kute żelazo, szybka z płomieniem, mosiężna kłódka na łańcuszku |
-| `stworek.png` | Verdiko z `assets/pokemon/00096.png` (Pixmon Index, domena publiczna), przemalowany w zmierzch: nasycenie, światło krawędziowe od latarni, zmiękczone kontury |
+| `bohater.png` | trener z mapy przygody (`tools/wsad/bohater-gora.png`, tyłem), odbity i przemalowany w zmierzch (`wmaluj`: jedno światło z lewej-góry, rim light, ciemniejsze nogi, ziarno) |
+| `stworek.png` | Cindro z `assets/pokemon/00263.png` (Pixmon Index, domena publiczna), przemalowany tak samo, siedzi trenerowi na ramieniu |
+| `deska-*-cien.png`, `trawa.png` | cienie rzucane przez deski i kępa trawy na podstawę słupa |
 | `pergamin.png` | renderowany tamże: papier z przebarwieniami, wałki |
 | `*.woff2`, `OFL.txt` | kroje Cinzel i Fredoka (SIL OFL) z `tools/fonty/` |
 
@@ -36,6 +38,17 @@ Odpowiedzią nie było nic nowego do obrazka, tylko światło: zmierzch, w któr
 jasno jest przy drogowskazie (latarnia) i w oknach, logo jako przedmiot
 zawieszony nad wioską, jeden stworek wmalowany w to samo światło zamiast
 trzech naklejek i kłódka na nieczynnej desce.
+
+**Runda 3.** Kolejny ślepy krytyk: „brak tematu — oko ląduje na pustym
+stawie; interfejs leży na obrazie jako osobna warstwa, ignoruje światło;
+liny sztandaru znikają w niebie; logo jak szablon; drobne napisy
+nieczytelne". Zmiany: trener tyłem na pierwszym planie (ze stworkiem na
+ramieniu) patrzy w stronę drogowskazu i sztandaru; deski dostały światło
+z lewej-góry, ziarno, miękki brzeg i cień rzucany; słup stoi w trawie
+z cieniem kontaktowym; liny sztandaru idą do gałęzi drzewa i do gniazda na
+pniu; litery sztandaru są wyhaftowane (ścieg, nierówny brzeg, przerywany
+obrzeg) zamiast odlane; drobne podpisy zniknęły — nieczynną deskę tłumaczy
+kłódka i dymek po wskazaniu, dźwięk to tabliczka z nutą na sznurku z gałęzi.
 
 **Czemu logo i deski nie są z modelu.** Przy budowie menu (2026-09-24) konto
 API Gemini odpowiadało `RESOURCE_EXHAUSTED` („prepayment credits are
