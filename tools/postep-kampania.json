@@ -44,6 +44,12 @@
      "gap": "Pikselowe postacie trenerów i złoczyńców (mapa, wybór, wstęp) wyglądają na doklejone do malowanych teł. Ikony bonusów są w czterech różnych stylach. Ekrany wyboru i wstępu są ubogie.",
      "blind": "tools/blind/kampania-r2.png",
      "note": "Poprawione od rundy 1: jeden materiał (drewno, złoto, pergamin) na całym ekranie, jasny następny krok. Z tego powstał wspólny komplet src/visual/zestaw.ts."
+    },
+    {
+     "win": false,
+     "gap": "Wzorzec wygrywa nieznacznie. Główny ekran kampanii sam by przeszedł, ale we wstępie srebrne płaszcze to płaskie szare sylwetki z białą obwódką, a wóz unosi się nad własnym cieniem.",
+     "blind": "tools/blind/kampania-r3.png",
+     "note": "Postacie są już malowane, bonusy mają jeden styl, przy bieżącej misji stoi obóz. Krytyk uznał, że główny ekran czyta się lepiej niż w HoMM2."
     }
    ]
   },
