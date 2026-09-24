@@ -4,6 +4,7 @@ import {
   SUROWCE,
   SUROWIEC_INFO,
   TEREN_INFO,
+  artefaktPoId,
   brylaNa,
   brylaObiektu,
   budowlaPoId,
@@ -38,6 +39,8 @@ import { planszaPoId } from '../data/mapy';
 import { turaWroga } from '../data/wrog-ai';
 import { SLOTY_ARMII, dolacz, pustaArmia, zywe } from '../data/armia';
 import { jestZapis, wczytajGre, zapiszGre } from '../data/zapis';
+import { KAMPANIA, misjaPoId, wczytajPostep } from '../data/kampania';
+import { celSlowami, coSieStalo, ocenGre, przyczynaPorazki, warunkiGry } from '../data/wynik';
 import {
   efekt,
   ofertaAwansu,
@@ -47,7 +50,8 @@ import {
   umiejetnoscPoId,
 } from '../data/umiejetnosci';
 import { C, E, FONT, H, Z, body, display } from '../visual/theme';
-import { drawPanelBody, makeHudButton, mix, plate } from '../visual/hud';
+import { drawPanelBody, gradientText, makeHudButton, mix, plate } from '../visual/hud';
+import { buildArtefakty, kluczArtefaktu } from '../visual/artefakty';
 import { cienPod, listwa, naroznik, wneka } from '../visual/rama';
 import { ICON, buildIcons } from '../visual/icons';
 import { GORA, KAFEL, MARGINES, PANEL_W, PASEK_H } from '../visual/uklad';
@@ -183,6 +187,12 @@ export class AdventureScene extends Phaser.Scene {
   private trasaBiezaca: Krok[] | null = null;
   private zajety = false;
   /**
+   * Gra się rozstrzygnęła i scena odlicza do ekranu wyniku. Osobno od
+   * `zajety`, bo okna zamykane w tym czasie zdejmują `zajety` — a po
+   * rozstrzygnięciu nic już nie może oddać graczowi sterowania.
+   */
+  private rozstrzygnieta = false;
+  /**
    * Czy trwa właśnie animacja marszu — w odróżnieniu od `zajety`, który blokuje
    * kliknięcia też przy bitwach i innych animacjach. Tylko podczas marszu ma
    * sens przerywanie klikiem i zmiana trasy w locie, jak w Heroes 3.
@@ -301,6 +311,11 @@ export class AdventureScene extends Phaser.Scene {
     // włączone po wyjściu do bitwy i po powrocie nie dało się już sterować
     // bohaterem. Reszta to tablice trzymające obiekty, których Phaser już nie ma.
     this.zajety = false;
+    this.rozstrzygnieta = false;
+    // `rozstrzygnij` wyłącza wejście całej sceny, a obiekt sceny (i jego
+    // wtyczka wejścia) przeżywa do następnej gry — tu je włączamy z powrotem.
+    this.input.enabled = true;
+    if (this.input.keyboard) this.input.keyboard.enabled = true;
     this.wRuchu = false;
     this.przerwijRuch = false;
     this.celPoPrzerwaniu = null;
@@ -356,6 +371,15 @@ export class AdventureScene extends Phaser.Scene {
     this.zbudujKursor();
     this.odswiezWszystko();
     this.wysrodkujNaBohaterze(false);
+
+    // Warunki misji — raz, na starcie, jak okno „Scenario Information"
+    // w Heroes 2. Chwila zwłoki, żeby najpierw było widać mapę, na której
+    // to wszystko się rozegra.
+    if (this.stan.misja && !this.stan.warunkiPokazane) {
+      this.time.delayedCall(450, () => {
+        if (!this.stan.warunkiPokazane) this.pokazWarunki();
+      });
+    }
 
     // Wyciszenie, ten sam skrót i ten sam powód co w walce: dźwięku nie da
     // się przeczekać wzrokiem, więc kto go nie chce, musi mieć czym wyłączyć
@@ -572,6 +596,10 @@ export class AdventureScene extends Phaser.Scene {
       e.preventDefault();
       this.kontynuujTrase();
     }
+    if (e.key === 'c' || e.key === 'C') {
+      e.preventDefault();
+      this.pokazWarunki();
+    }
   }
 
   /**
@@ -599,10 +627,44 @@ export class AdventureScene extends Phaser.Scene {
     const g = this.add.graphics().setDepth(Z.sky);
     g.fillGradientStyle(C.skyTop, C.skyTop, C.skyBottom, C.skyBottom, 1);
     g.fillRect(0, 0, this.scale.width, this.scale.height);
+    // W misji nagłówek mówi, KTÓRA to misja — dziecko wraca do gry po
+    // tygodniu i pierwsze pytanie brzmi „gdzie ja jestem".
+    const m = misjaPoId(this.stan.misja);
     this.add
-      .text(MARGINES + 4, 10, 'MAPA PRZYGODY', display(19, H.goldLight))
+      .text(
+        MARGINES + 4,
+        10,
+        m ? `MISJA ${m.nr} · ${m.tytul.toUpperCase()}` : 'MAPA PRZYGODY',
+        display(19, H.goldLight)
+      )
       .setOrigin(0, 0)
       .setDepth(Z.hud);
+
+    // Cele i wyjście do menu w górnej belce nad panelem — jedyne wolne
+    // miejsce, które nie zabiera wysokości podpowiedziom ani minimapie.
+    const px = this.mapaX + this.oknoW + 14;
+    const polowa = (PANEL_W - 8) / 2;
+    const cele = makeHudButton(this, {
+      x: px + polowa / 2,
+      y: 20,
+      w: polowa,
+      h: 28,
+      icon: ICON.star,
+      tone: C.gold,
+      toneDeep: C.goldDeep,
+      onClick: () => this.pokazWarunki(),
+    });
+    cele.setLabel('Cele (C)');
+    const menu = makeHudButton(this, {
+      x: px + polowa + 8 + polowa / 2,
+      y: 20,
+      w: polowa,
+      h: 28,
+      tone: mix(C.panel, C.panelDeep, 0.1),
+      toneDeep: C.panelDeep,
+      onClick: () => this.zapytajOWyjscie(),
+    });
+    menu.setLabel('Menu');
   }
 
   private budujSwiat() {
@@ -1691,6 +1753,11 @@ export class AdventureScene extends Phaser.Scene {
    */
   private sprawdzAwans() {
     if (this.zajety) return;
+    // Na starcie misji pierwsze są warunki. Bohater przenoszony z poprzedniej
+    // misji potrafi mieć nieodebrany awans (ostatnia bitwa dała poziom, a gra
+    // skończyła się, zanim okno zdążyło wyskoczyć) — i to okno zajmowało
+    // miejsce warunków, które przepadały. Awans poczeka na „Do dzieła!".
+    if (this.stan.misja && !this.stan.warunkiPokazane) return;
     const b = this.stan.bohater;
     const teraz = poziom(b.doswiadczenie);
     const odebrany = b.poziomOdebrany ?? 1;
@@ -1753,6 +1820,12 @@ export class AdventureScene extends Phaser.Scene {
     // Nieodebrany awans na samym końcu odświeżania — po tym, jak panel
     // pokazał już nowe liczby. Okno ma być ostatnią rzeczą, którą gracz
     // zobaczy, a nie pierwszą.
+    //
+    // Przed nim — rozstrzygnięcie gry. Tędy przechodzi KAŻDE zdarzenie, które
+    // może je zmienić (krok, obiekt, okno, bitwa, koniec tury z ruchem
+    // przeciwnika), więc to jedno wywołanie zastępuje pilnowanie końca gry
+    // w dziesięciu miejscach naraz.
+    if (this.sprawdzRozstrzygniecie()) return;
     this.sprawdzAwans();
   }
 
@@ -2703,50 +2776,442 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   /**
-   * Koniec gry: wszystkie zamki na mapie są nasze.
-   *
-   * Warunek jest ten sam co w Heroes 3 — zwycięża ten, kto ma wszystkie miasta.
-   * Sprawdzamy go po zdobyciu zamku, a nie co turę, bo tylko wtedy może się
-   * zmienić.
+   * Czy gra się rozstrzygnęła — misja kampanii albo gra pojedyncza (wszystkie
+   * zamki / utrata ostatniego). Zwraca `true`, gdy tak, i od tej chwili scena
+   * już tylko odlicza do ekranu wyniku.
    */
-  private sprawdzKoniec() {
-    const cudze = this.stan.obiekty.filter((o) => o.rodzaj === 'zamek' && o.wlasciciel !== 'gracz');
-    if (cudze.length > 0) return;
-    this.zajety = true;
+  private sprawdzRozstrzygniecie(): boolean {
+    if (this.rozstrzygnieta) return true;
+    const r = ocenGre(this.stan);
+    if (!r) return false;
+    this.rozstrzygnij(r);
+    return true;
+  }
 
+  /**
+   * Koniec gry na mapie: blokada sterowania, krótka chwila z banerem nad
+   * mapą (fanfara, gwiazdy — albo cichy, szary baner porażki) i przejście
+   * do ekranu wyniku. Bez tej chwili gra przeskakiwała na inny ekran
+   * w połowie ruchu i dziecko nie wiedziało, CO się właściwie stało.
+   */
+  private rozstrzygnij(r: 'wygrana' | 'przegrana') {
+    this.rozstrzygnieta = true;
+    this.zajety = true;
+    if (this.wRuchu) this.przerwijRuch = true;
+    // Blokada wejścia całej sceny, nie tylko `zajety`: okno zamknięte
+    // w tej chwili zdjęłoby `zajety` i oddało graczowi mysz na trzy sekundy
+    // przed zmianą ekranu.
+    this.input.enabled = false;
+    if (this.input.keyboard) this.input.keyboard.enabled = false;
+    this.kursorZnak?.setVisible(false);
+    this.warstwaTrasy?.clear();
+    this.registry.set(KLUCZ_STANU, this.stan);
+    zapisz('mapa', `rozstrzygnięcie: ${r}`, { dzien: this.stan.dzien, misja: this.stan.misja ?? '(pojedyncza)' });
+    // Po zdobyciu zamku najpierw wzlatuje napis „…jest twoja!" (900 ms po
+    // powrocie z bitwy) — baner wchodzi dopiero po nim.
+    this.time.delayedCall(r === 'wygrana' ? 1500 : 800, () => this.banerKonca(r === 'wygrana'));
+  }
+
+  private banerKonca(wygrana: boolean) {
+    stopMusic(this);
+    stopAmbient(this);
+    if (wygrana) sfx(this, 'awans');
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
+    const przed = this.children.list.length;
+
     const zaslona = this.add
-      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.6)
+      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, wygrana ? 0.35 : 0.55)
+      .setOrigin(0, 0)
+      .setDepth(Z.overlay)
+      .setAlpha(0);
+    this.tweens.add({ targets: zaslona, alpha: 1, duration: 500 });
+
+    // Wstęga: tabliczka z dwoma „ogonami" po bokach, jak baner nad bramą.
+    const szer = 500;
+    const wys = 118;
+    const g = this.add.graphics();
+    const punkty = (pts: number[], dy = 0) =>
+      pts.reduce<Phaser.Math.Vector2[]>(
+        (a, v, i, t) => (i % 2 ? a : [...a, new Phaser.Math.Vector2(v, t[i + 1] + dy)]),
+        []
+      );
+    for (const s of [-1, 1]) {
+      const x0 = (s * szer) / 2;
+      const ksztalt = [x0 - s * 30, -26, x0 + s * 58, -26, x0 + s * 38, 6, x0 + s * 58, 38, x0 - s * 30, 38];
+      g.fillStyle(C.shadow, 0.35);
+      g.fillPoints(punkty(ksztalt, 4), true);
+      g.fillStyle(wygrana ? C.goldDeep : C.panelDeep, 1);
+      g.fillPoints(punkty(ksztalt), true);
+    }
+    plate(
+      g,
+      -szer / 2,
+      -wys / 2,
+      szer,
+      wys,
+      14,
+      wygrana ? C.panel : mix(C.panel, C.panelEdge, 0.5),
+      wygrana ? C.gold : C.panelDeep,
+      { light: 0.16, dark: 0, gloss: 0.22, edgeW: 4, drop: 5 }
+    );
+    const napis = this.add
+      .text(0, -18, wygrana ? 'Zwycięstwo!' : 'Koniec wyprawy', display(44, H.gold))
+      .setOrigin(0.5);
+    gradientText(napis, H.white, wygrana ? H.gold : H.panelEdge);
+    const pod = this.add
+      .text(
+        0,
+        32,
+        wygrana
+          ? this.stan.misja
+            ? 'Cel misji wykonany!'
+            : 'Wszystkie zamki należą do ciebie!'
+          : coSieStalo(przyczynaPorazki(this.stan)),
+        { ...body(16, H.ink), fontStyle: 'bold' }
+      )
+      .setOrigin(0.5);
+    const baner = this.add
+      .container(cx, cy, [g, napis, pod])
+      .setDepth(Z.overlay + 2)
+      .setScale(0.4)
+      .setAlpha(0);
+    this.tweens.add({ targets: baner, scale: 1, alpha: 1, duration: 520, ease: E.out });
+
+    if (wygrana) {
+      // Wybuch gwiazdek zza wstęgi — dwa, jeden po drugim, jak salwa.
+      const gwiazdy = this.add
+        .particles(cx, cy, ICON.star, {
+          speed: { min: 160, max: 420 },
+          angle: { min: 0, max: 360 },
+          scale: { start: 0.42, end: 0 },
+          rotate: { start: 0, end: 360 },
+          lifespan: 1500,
+          gravityY: 260,
+          emitting: false,
+        })
+        .setDepth(Z.overlay + 1);
+      this.time.delayedCall(260, () => gwiazdy.explode(36));
+      this.time.delayedCall(900, () => gwiazdy.explode(24));
+    }
+
+    // Ściemnienie do czerni i ekran wyniku. Stan idzie w danych sceny: ekran
+    // wyniku ma go pokazać i rozliczyć, a nie grać dalej.
+    const czern = this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 1)
+      .setOrigin(0, 0)
+      .setDepth(Z.overlay + 10)
+      .setAlpha(0);
+    this.naWierzchu(...this.children.list.slice(przed));
+    this.tweens.add({
+      targets: czern,
+      alpha: 1,
+      delay: wygrana ? 2700 : 2900,
+      duration: 550,
+      onComplete: () =>
+        this.scene.start('wynik', { rozstrzygniecie: wygrana ? 'wygrana' : 'przegrana', stan: this.stan }),
+    });
+  }
+
+  /**
+   * Okno „Warunki misji" — odpowiednik „Scenario Information" z Heroes 2:
+   * numer i tytuł misji, opis, warunek zwycięstwa i warunki porażki, każdy
+   * z obrazkiem. Pokazuje się samo na starcie misji, a potem pod przyciskiem
+   * „Cele" i klawiszem C — także w grze pojedynczej.
+   */
+  private pokazWarunki() {
+    if (this.zajety) return;
+    this.zajety = true;
+    buildArtefakty(this);
+    const s = this.stan;
+    const m = misjaPoId(s.misja);
+    const w = warunkiGry(s);
+    const pierwszyRaz = !!m && !s.warunkiPokazane;
+    const cx = this.mapaX + this.oknoW / 2;
+    const cy = this.mapaY + this.oknoH / 2;
+    const szer = 548;
+    const wnetrze = szer - 72;
+    const przed = this.children.list.length;
+
+    const zaslona = this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.5)
+      .setOrigin(0, 0)
+      .setDepth(Z.overlay);
+
+    // Treść w kontenerze o współrzędnych lokalnych: wysokość okna wychodzi
+    // dopiero z długości opisu, więc tło rysuje się na końcu, pod spodem.
+    const k = this.add.container(cx, 0).setDepth(Z.overlay + 1);
+    const tlo = this.add.graphics();
+    k.add(tlo);
+    let y = 28;
+
+    const znak = this.add
+      .text(0, y, m ? `MISJA ${m.nr} Z ${KAMPANIA.misje.length}` : 'GRA POJEDYNCZA', {
+        ...body(12, H.white),
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+    const znakTlo = this.add.graphics();
+    plate(znakTlo, -znak.width / 2 - 14, y - 12, znak.width + 28, 24, 12, C.panelDeep, C.goldDeep, {
+      light: 0.2,
+      dark: 0.3,
+      gloss: 0.2,
+      edgeW: 2,
+      drop: 2,
+    });
+    k.add([znakTlo, znak]);
+    y += 38;
+
+    const tytul = this.add.text(0, y, m ? m.tytul : planszaPoId(s.mapa).nazwa, display(30, H.gold)).setOrigin(0.5);
+    gradientText(tytul, H.white, H.gold);
+    k.add(tytul);
+    y += 30;
+
+    const opis = this.add
+      .text(
+        0,
+        y,
+        m
+          ? m.opis.join('\n')
+          : 'Dwie doliny, dwa zamki i przeciwnik, który też zbiera armię.\nKto pierwszy zdobędzie zamek rywala, ten wygrywa.',
+        { ...body(14, H.ink), align: 'center', lineSpacing: 5 }
+      )
+      .setOrigin(0.5, 0)
+      .setWordWrapWidth(wnetrze);
+    k.add(opis);
+    y += opis.height + 20;
+    const poleOd = y - 10;
+
+    // Kreska z gwiazdką — oddziela opowieść od zasad.
+    const kreska = this.add.graphics();
+    kreska.lineStyle(2, C.goldDeep, 0.55);
+    kreska.lineBetween(-wnetrze / 2, y, -16, y);
+    kreska.lineBetween(16, y, wnetrze / 2, y);
+    k.add([kreska, this.add.image(0, y, ICON.star).setDisplaySize(20, 20)]);
+    y += 22;
+
+    // Wiersz warunku: kafelek z obrazkiem, etykieta w barwie, zdanie.
+    type Obrazek = (x: number, y: number) => Phaser.GameObjects.GameObject[];
+    const wierszWarunku = (obrazek: Obrazek, etykieta: string, barwa: number, zdanie: string) => {
+      const x0 = -wnetrze / 2;
+      const kafel = this.add.graphics();
+      plate(kafel, x0, y, 58, 58, 12, mix(barwa, C.white, 0.78), barwa, {
+        light: 0.2,
+        dark: 0.12,
+        gloss: 0.18,
+        edgeW: 2,
+        drop: 2,
+      });
+      const pas = this.add.graphics();
+      pas.fillStyle(mix(barwa, C.white, 0.9), 1);
+      pas.fillRoundedRect(x0 + 68, y + 2, wnetrze - 68, 54, 10);
+      const et = this.add
+        .text(x0 + 82, y + 16, etykieta, {
+          ...display(13, `#${barwa.toString(16).padStart(6, '0')}`),
+          stroke: H.white,
+          strokeThickness: 3,
+        })
+        .setOrigin(0, 0.5);
+      const zd = this.add
+        .text(x0 + 82, y + 38, zdanie, { ...body(14, H.ink), fontStyle: 'bold' })
+        .setOrigin(0, 0.5)
+        .setWordWrapWidth(wnetrze - 92);
+      k.add([kafel, pas, ...obrazek(x0 + 29, y + 29), et, zd]);
+      y += 66;
+    };
+
+    const zamek =
+      (klucz: string, szary = false): Obrazek =>
+      (x, yy) => {
+        const im = this.add.image(x, yy + 2, klucz);
+        im.setScale(48 / Math.max(im.width, im.height));
+        if (szary) im.setTint(0xa4acb8);
+        return [im];
+      };
+    // Odznaka w rogu kafelka: zielony „ptaszek" przy celu, czerwony krzyżyk
+    // przy porażce — czytelne, zanim dziecko przeczyta etykietę.
+    const zOdznaka =
+      (baza: Obrazek, dobra: boolean): Obrazek =>
+      (x, yy) => {
+        const o = this.add.graphics();
+        o.fillStyle(C.shadow, 0.4);
+        o.fillCircle(x + 20, yy + 20, 11);
+        o.fillStyle(dobra ? C.hpHigh : C.foe, 1);
+        o.fillCircle(x + 20, yy + 18, 11);
+        o.lineStyle(3, C.white, 1);
+        if (dobra) {
+          o.beginPath();
+          o.moveTo(x + 14, yy + 18);
+          o.lineTo(x + 18.5, yy + 22.5);
+          o.lineTo(x + 26, yy + 13.5);
+          o.strokePath();
+        } else {
+          o.lineBetween(x + 15.5, yy + 13.5, x + 24.5, yy + 22.5);
+          o.lineBetween(x + 24.5, yy + 13.5, x + 15.5, yy + 22.5);
+        }
+        return [...baza(x, yy), o];
+      };
+
+    const z = w.zwyciestwo;
+    const wrogi = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel !== 'gracz');
+    const obrazZwyciestwa: Obrazek =
+      z.typ === 'artefakt'
+        ? (x, yy) => [
+            this.add
+              .image(x, yy, kluczArtefaktu(z.artefakt, artefaktPoId(z.artefakt)?.klasa ?? 'relikt'))
+              .setDisplaySize(44, 44),
+          ]
+        : z.typ === 'zbierz'
+          ? zamek(`m-${SUROWIEC_INFO[z.surowiec].ikona}`)
+          : z.typ === 'pokonaj'
+            ? (x, yy) => [this.add.image(x, yy, ICON.sword).setDisplaySize(40, 40)]
+            : zamek(wrogi ? this.grafikaObiektu(wrogi).klucz : 'm-zamek-ogien');
+    wierszWarunku(zOdznaka(obrazZwyciestwa, true), 'ZWYCIĘSTWO', C.goldDeep, celSlowami(z));
+    for (const p of w.porazka) {
+      wierszWarunku(
+        p.typ === 'termin'
+          ? (x, yy) => [this.add.image(x, yy, ICON.hourglass).setDisplaySize(40, 40)]
+          : zOdznaka(zamek('m-zamek-las', true), false),
+        'PORAŻKA, JEŚLI…',
+        C.foeDeep,
+        p.typ === 'termin' ? `Minie ${p.dni} dni. Dziś jest dzień ${s.dzien}.` : 'Stracisz wszystkie swoje zamki.'
+      );
+    }
+
+    const poleDo = y;
+    // Bonus wybrany na ekranie kampanii — przypomnienie, że już działa.
+    const postep = m ? wczytajPostep() : null;
+    const bonus = m && postep?.bonus !== undefined ? m.bonusy[postep.bonus] : undefined;
+    if (bonus) {
+      k.add(
+        this.add
+          .text(0, y + 12, `Twój bonus na start: ${bonus.opis}`, { ...body(13, H.inkSoft), fontStyle: 'italic' })
+          .setOrigin(0.5)
+      );
+      y += 30;
+    }
+    y += 8;
+    const przyciskY = y + 24;
+    y += 52;
+    k.add(
+      this.add
+        .text(0, y + 8, 'Cele zawsze sprawdzisz przyciskiem „Cele" albo klawiszem C.', body(11, H.inkSoft))
+        .setOrigin(0.5)
+    );
+    y += 28;
+
+    const wys = y;
+    const gora = Math.round(cy - wys / 2);
+    k.setY(gora);
+    // Płaska tabliczka: gradient z `plate` na oknie tej wysokości kroi się
+    // w widoczne prążki i odsłania jaśniejsze kliny w dolnych rogach.
+    plate(tlo, -szer / 2, 0, szer, wys, 16, C.panel, C.gold, { light: 0, dark: 0, gloss: 0, edgeW: 3, drop: 5 });
+    tlo.lineStyle(1.5, C.panelEdge, 0.9);
+    tlo.strokeRoundedRect(-szer / 2 + 7, 7, szer - 14, wys - 14, 11);
+    // Wpuszczone pole pod warunkami i dwa złote nity u góry — okno ma być
+    // dokumentem misji, a nie kolejnym dymkiem.
+    tlo.fillStyle(mix(C.panel, C.panelEdge, 0.3), 1);
+    tlo.fillRoundedRect(-szer / 2 + 18, poleOd, szer - 36, poleDo - poleOd, 12);
+    for (const sx of [-1, 1]) {
+      tlo.fillStyle(C.goldDeep, 1);
+      tlo.fillCircle(sx * (szer / 2 - 20), 20, 6);
+      tlo.fillStyle(C.gold, 1);
+      tlo.fillCircle(sx * (szer / 2 - 20), 19, 5);
+      tlo.fillStyle(C.white, 0.7);
+      tlo.fillCircle(sx * (szer / 2 - 20) - 1.5, 17.5, 1.8);
+    }
+    k.setAlpha(0);
+    this.tweens.add({ targets: k, alpha: 1, y: { from: gora + 14, to: gora }, duration: 280, ease: E.snap });
+
+    const przycisk = makeHudButton(this, {
+      x: cx,
+      y: gora + przyciskY,
+      w: 230,
+      h: 46,
+      icon: ICON.sword,
+      tone: C.gold,
+      toneDeep: C.goldDeep,
+      depth: Z.overlay + 3,
+      onClick: () => {
+        zaslona.destroy();
+        k.destroy();
+        przycisk.destroy();
+        s.warunkiPokazane = true;
+        this.zajety = false;
+        if (pierwszyRaz) this.napisUlotny('Powodzenia!');
+        this.odswiezWszystko();
+      },
+    });
+    przycisk.setLabel(pierwszyRaz ? 'Do dzieła!' : 'Graj dalej');
+    this.naWierzchu(...this.children.list.slice(przed));
+  }
+
+  /**
+   * Wyjście do menu głównego. Pyta, bo kasuje wszystko od ostatniego
+   * zapisu — i od razu daje „Zapisz i wyjdź", żeby nie trzeba było wracać
+   * do przycisku zapisu.
+   */
+  private zapytajOWyjscie() {
+    if (this.zajety) return;
+    this.zajety = true;
+    const cx = this.mapaX + this.oknoW / 2;
+    const cy = this.mapaY + this.oknoH / 2;
+    const szer = 480;
+    const wys = 190;
+    const przed = this.children.list.length;
+    this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.5)
       .setOrigin(0, 0)
       .setDepth(Z.overlay);
     const tlo = this.add.graphics().setDepth(Z.overlay + 1);
-    plate(tlo, cx - 250, cy - 110, 500, 220, 14, C.panel, C.gold, {
+    plate(tlo, cx - szer / 2, cy - wys / 2, szer, wys, 14, C.panel, C.gold, {
       light: 0.24,
       dark: 0.22,
       gloss: 0.2,
       edgeW: 3,
     });
-    const napisy = [
-      this.add
-        .text(cx, cy - 62, 'Zwycięstwo!', display(30, H.gold))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2),
-      this.add
-        .text(
-          cx,
-          cy - 6,
-          `Wszystkie miasta należą do ciebie.\nJanek zdobył je w ${data(this.stan.dzien).tydzien} tygodni.`,
-          { ...body(14, H.ink), align: 'center' }
-        )
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2),
-      this.add
-        .text(cx, cy + 62, 'Odśwież stronę, żeby zagrać jeszcze raz.', body(12, H.inkSoft))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2),
+    const tytul = this.add
+      .text(cx, cy - wys / 2 + 32, 'Wyjść do menu?', display(24, H.gold))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    gradientText(tytul, H.white, H.gold);
+    this.add
+      .text(cx, cy - 16, 'To, co zrobiłeś od ostatniego zapisu, przepadnie.', body(14, H.ink))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+
+    const zamknij = () => {
+      for (const o of this.children.list.slice(przed)) {
+        this.tweens.killTweensOf(o);
+        o.destroy();
+      }
+      this.zajety = false;
+    };
+    const wyjdz = (zapisac: boolean) => {
+      if (zapisac) zapiszGre(this.stan);
+      stopMusic(this);
+      stopAmbient(this);
+      this.registry.set(KLUCZ_STANU, this.stan);
+      this.scene.start('menu');
+    };
+    const opcje: Array<[string, number, number, () => void]> = [
+      ['Zapisz i wyjdź', C.gold, C.goldDeep, () => wyjdz(true)],
+      ['Wyjdź', C.foe, C.foeDeep, () => wyjdz(false)],
+      ['Zostań', C.ally, C.allyDeep, zamknij],
     ];
-    this.naWierzchu(zaslona, tlo, ...napisy);
+    opcje.forEach(([napis, ton, glebszy, klik], i) =>
+      makeHudButton(this, {
+        x: cx + (i - 1) * 150,
+        y: cy + 44,
+        w: 142,
+        h: 42,
+        tone: ton,
+        toneDeep: glebszy,
+        depth: Z.overlay + 3,
+        onClick: klik,
+      }).setLabel(napis)
+    );
+    this.naWierzchu(...this.children.list.slice(przed));
   }
 
   /** Po powrocie z bitwy: zwycięstwo usuwa strażnika, porażka cofa do zamku. */
@@ -2833,10 +3298,9 @@ export class AdventureScene extends Phaser.Scene {
         });
       }
 
-      // Zdobycie ostatniego cudzego zamku KOŃCZY grę. Bez tego wyprawa nie ma
-      // mety: dziecko przechodzi pół planszy, wygrywa najtrudniejszą bitwę
-      // w grze i nic się nie dzieje.
-      if (o?.rodzaj === 'zamek') this.time.delayedCall(1800, () => this.sprawdzKoniec());
+      // Zdobycie ostatniego cudzego zamku KOŃCZY grę — ale tego nie trzeba
+      // już pilnować tutaj: `create` woła `odswiezWszystko`, a ono sprawdza
+      // rozstrzygnięcie po każdym zdarzeniu, także po powrocie z bitwy.
 
     } else {
       // Przegrana nie kończy gry: bohater wraca do zamku i traci resztę dnia.
