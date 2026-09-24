@@ -191,6 +191,17 @@ NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 // T las, # skały, ~ woda.
 '''
 
+#: Misja 2 kampanii. Przeciwnik ma oba klucze od pierwszego dnia (patrz
+#: `wrogKlucze` w `plansza.ts`), a gracz musi dopiero znaleźć dwa namioty
+#: klucznika — przy domyślnym dniu natarcia (27) wróg stał pod zamkiem, zanim
+#: dziecko otworzyło pierwszą bramę (symulacja: zamek padał dnia 31–32 także
+#: przy grze normalnej). Natarcie od dnia 40 i mocniejsza załoga zamku dają
+#: czas na szukanie kluczy; bierny gracz dalej przegrywa, tylko później.
+USTAWIENIA = {
+    'dzienNatarcia': 40,
+    'garnizonGracza': {'poziomy': [0, 1, 2], 'tygodnie': 5},
+}
+
 GRANICA_POLUDNIOWA = GRZBIETY[1][1][1]   # 46 — ostatni wiersz rdzenia południowego
 GRANICA_POLNOCNA = GRZBIETY[0][1][0]     # 21 — pierwszy wiersz rdzenia północnego
 
