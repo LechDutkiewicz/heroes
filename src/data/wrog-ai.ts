@@ -461,20 +461,28 @@ const lepkiCel = new WeakMap<Bohater, { x: number; y: number }>();
 function celMisji(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefined {
   if (kto !== 'gracz') return undefined;
   const mgla = odkryteOf(s, kto);
-  const o = s.obiekty.find(
+  const widok = widokStrony(s, kto);
+  const armia = zywe(bohaterOf(s, kto).armia);
+  // Najpierw artefakt-cel misji, potem zamki wroga — też cel misji („zdobądź
+  // wszystkie zamki"), ale tylko taki, którego załogę autopilot pobije.
+  // Zamek bez tego przegrywał z odkrywaniem mapy tak samo jak Kamień: w Twierdzy
+  // autopilot widział twierdzę i szedł zwiedzać tundrę.
+  const cele = s.obiekty.filter(
     (q) =>
       !q.zebrany &&
-      q.rodzaj === 'artefakt' &&
-      artefaktPoId(q.artefakt ?? '')?.klasa === 'misja' &&
-      mgla[q.y]?.[q.x]
+      mgla[q.y]?.[q.x] &&
+      ((q.rodzaj === 'artefakt' && artefaktPoId(q.artefakt ?? '')?.klasa === 'misja') ||
+        (q.rodzaj === 'zamek' && q.wlasciciel === 'wrog'))
   );
-  if (!o) return undefined;
-  const widok = widokStrony(s, kto);
-  const kroki = trasa(widok, o.x, o.y);
-  if (!kroki || kroki.length === 0) return undefined;
-  const straz = strzezoneProzez(widok, o.x, o.y);
-  if (straz && !wygramy(zywe(bohaterOf(s, kto).armia), straz.oddzialy ?? [], ziarno)) return undefined;
-  return { kroki };
+  for (const o of cele) {
+    const kroki = trasa(widok, o.x, o.y);
+    if (!kroki || kroki.length === 0) continue;
+    const straz = strzezoneProzez(widok, o.x, o.y);
+    if (straz && !wygramy(armia, straz.oddzialy ?? [], ziarno)) continue;
+    if (o.rodzaj === 'zamek' && !wygramy(armia, o.oddzialy ?? [], ziarno)) continue;
+    return { kroki };
+  }
+  return undefined;
 }
 
 /**
@@ -598,8 +606,9 @@ function rozbudujIWerbuj(s: StanMapy, kto: Wlasciciel) {
   // Obrońca nie rozbudowuje fortu — umacnia się samym werbunkiem, więc tempo,
   // w jakim rośnie załoga, wynika wprost z budynków, które plansza mu dała.
   // Przy rozbudowie przyrost podwajałby się co kilka dni i misja samouczkowa
-  // przestałaby być samouczkiem.
-  const buduje = !(kto === 'wrog' && s.wrogTryb === 'obronca');
+  // przestałaby być samouczkiem. To samo robi `wrogBuduje: false` planszy,
+  // która chce wroga aktywnego, ale o z góry znanym tempie wzrostu armii.
+  const buduje = !(kto === 'wrog' && (s.wrogTryb === 'obronca' || s.wrogBuduje === false));
   const kandydaci = profil.budynki
     .filter((b) => buduje && !postawione.includes(b.id) && moznaBudowac(b, postawione))
     .sort((a, b) => priorytetBudowy(a.id) - priorytetBudowy(b.id));

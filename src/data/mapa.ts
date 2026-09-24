@@ -623,6 +623,11 @@ export interface StanMapy {
    * (o ile go zna i da radę go zdobyć). Brak = AI najpierw odkrywa mapę.
    */
   natarcie?: boolean;
+  /**
+   * `false` — przeciwnik nie stawia nowych budynków; jego armia rośnie tylko
+   * z tego, co plansza postawiła w zamkach. Brak = buduje jak gracz.
+   */
+  wrogBuduje?: boolean;
   szer: number;
   wys: number;
   teren: Teren[][];

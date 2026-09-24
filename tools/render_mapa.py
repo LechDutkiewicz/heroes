@@ -284,6 +284,11 @@ def renderuj(mapa_id: str):
     for k in range(1, 4):
         (KATALOG / f'plansza-{k}.png').unlink(missing_ok=True)
 
+    # Plansza z jeziorami skutymi lodem (`WODA_ANIMOWANA = False` w jej
+    # konfiguracji) dostaje pustą maskę: shader przepisuje wtedy planszę bez
+    # zmian i lód stoi nieruchomo. Falujący lód wyglądałby jak usterka.
+    if not getattr(konfiguracja(mapa_id), 'WODA_ANIMOWANA', True):
+        maskaWody = Image.new('L', maskaWody.size, 0)
     woda_dane.maska(RYSUNEK, KAFEL, maskaWody, KATALOG)
 
     odcisk = hashlib.sha256('\n'.join(RYSUNEK).encode('utf-8')).hexdigest()[:16]

@@ -371,7 +371,12 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
     // linia obrony gracza, dopóki jego bohater akurat gdzie indziej eksploruje
     // albo buduje, więc ma reprezentować całą miejską straż, nie jeden
     // tygodniowy przyrost.
-    oddzialy: garnizonZamku('bor', [0, 1]).map((o) => ({ ...o, ile: o.ile * 5 })),
+    // Plansza może dać mocniejszą załogę: w Twierdzy przeciwnik naciera od
+    // trzeciego tygodnia, a bohater gracza jest wtedy daleko na północy.
+    oddzialy: garnizonZamku('bor', ust.garnizonGracza?.poziomy ?? [0, 1]).map((o) => ({
+      ...o,
+      ile: o.ile * (ust.garnizonGracza?.tygodnie ?? 5),
+    })),
   });
   // Każdy punkt zaczynający się od „zamek wroga" stawia zamek przeciwnika —
   // plansze kampanii mają ich po kilka. Pierwszy (bez przyrostka) jest stolicą.
@@ -486,6 +491,7 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
     wrogTryb: ust.wrog,
     dzienNatarcia: ust.dzienNatarcia,
     natarcie: ust.natarcie,
+    wrogBuduje: ust.wrogBuduje,
     dzien: 1,
     klucze: [],
     // Przeciwnik startuje w krainie wroga — za OBOMA bramami, licząc od

@@ -3,7 +3,7 @@
 // mapa się w ogóle wczytała.
 //
 //   node tools/zrzut-mapa.mjs [--url http://localhost:4173] [--out tools/shots/mapa.png]
-//                             [--mapa polana] [--caly]
+//                             [--mapa polana] [--caly] [--zwiad 12]
 //
 // `--mapa` wybiera planszę z rejestru `MAPY` (adres `?ekran=mapa&mapa=<id>`).
 // `--caly` robi PODGLĄD CAŁEJ PLANSZY: mgła zdjęta, kamera planszy
@@ -23,7 +23,12 @@ const arg = (n, d) => {
 const BASE = arg('--url', 'http://localhost:4173');
 const MAPA = arg('--mapa', null);
 const CALY = process.argv.includes('--caly');
-const OUT = arg('--out', `tools/shots/mapa${MAPA ? `-${MAPA}` : ''}${CALY ? '-caly' : ''}.png`);
+/** `--zwiad 12` — mgła zdjęta w promieniu 12 pól od bohatera. */
+const ZWIAD = Number(arg('--zwiad', 0));
+const OUT = arg(
+  '--out',
+  `tools/shots/mapa${MAPA ? `-${MAPA}` : ''}${CALY ? '-caly' : ''}${ZWIAD ? '-zwiad' : ''}.png`
+);
 /** Bok podglądu całej planszy w pikselach. */
 const BOK_PODGLADU = Number(arg('--bok', 1152));
 

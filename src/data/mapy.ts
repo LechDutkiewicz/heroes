@@ -1,6 +1,7 @@
 import * as dwieDoliny from './plansza-teren';
 import * as polana from './plansza-teren-polana';
 import * as bagna from './plansza-teren-bagna';
+import * as twierdza from './plansza-teren-twierdza';
 
 /**
  * Rejestr plansz. Każda plansza to wynik generatora (teren, punkty, obiekty)
@@ -48,6 +49,12 @@ export interface UstawieniaPlanszy {
    * planszy przez tygodnie.
    */
   natarcie?: boolean;
+  /**
+   * `false` — przeciwnik nie rozbudowuje zamków, więc tempo wzrostu jego armii
+   * wynika wprost z `budynkiWroga`. W Twierdzy to jest pokrętło trudności:
+   * wróg naciera wcześnie, ale nie rośnie wykładniczo.
+   */
+  wrogBuduje?: boolean;
   /** Co przeciwnik wie od pierwszego dnia — np. gdzie stoi zamek gracza. */
   wrogOdkryte?: Array<{ x: number; y: number; promien: number }>;
   /**
@@ -55,6 +62,8 @@ export interface UstawieniaPlanszy {
    * przyrostów każdego z nich (1 = jeden tydzień, jak na Dwóch Dolinach).
    */
   garnizonWroga?: { poziomy: number[]; tygodnie: number };
+  /** Załoga zamku gracza (domyślnie poziomy 0–1, pięć tygodni przyrostu). */
+  garnizonGracza?: { poziomy: number[]; tygodnie: number };
   /** Nazwy zamków wroga, w kolejności punktów 'zamek wroga', 'zamek wroga 2'… */
   nazwyZamkowWroga?: string[];
   /** Budynki stojące w zamkach wroga od pierwszego dnia. */
@@ -109,6 +118,12 @@ export const MAPY: Record<string, Plansza> = {
     nazwa: 'Bagna',
     modul: bagna as unknown as ModulPlanszy,
     tlo: 'mapa/bagna/',
+  },
+  twierdza: {
+    id: 'twierdza',
+    nazwa: 'Twierdza',
+    modul: twierdza as unknown as ModulPlanszy,
+    tlo: 'mapa/twierdza/',
   },
 };
 
