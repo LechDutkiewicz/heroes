@@ -1,5 +1,5 @@
 {
- "updated": "2026-09-24, kampania i wynik wygrywają; nowy kawałek: HUD mapy",
+ "updated": "2026-09-24, wygrywają: menu, kampania, wynik, HUD; plansze w poprawkach",
  "pieces": [
   {
    "name": "Menu główne",
@@ -24,6 +24,12 @@
      "gap": "Słabość zwycięzcy: drogowskaz wciąż ma trochę płaskie światło, szara deska Wczytaj jest z innego materiału, a napisy na niższych deskach są cienkie.",
      "blind": "tools/blind/menu-r3.png",
      "note": "Nasze wygrywa na ślepo. Trener z Cindro na pierwszym planie, kolejność czytania od sztandaru do Nowej gry, zablokowana opcja widoczna bez tekstu. Wzorzec przegrał, bo opcje są rozrzucone i słabo czytelne."
+    },
+    {
+     "win": true,
+     "gap": "Słabość zwycięzcy: deski są ostrzejsze niż rozmyte tło, odstępy między nimi są nierówne, a kępka trawy u stóp słupa wygląda jak naklejka.",
+     "blind": "tools/blind/menu-r3b.png",
+     "note": "Powtórka na pełnym kadrze, bo w rundzie 3 narzędzie ucinało wzorzec. Nasze menu wygrywa ponownie, więc wygrana się utrzymuje."
     }
    ]
   },
