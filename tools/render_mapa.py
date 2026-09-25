@@ -257,6 +257,8 @@ def klatka() -> tuple[Image.Image, Image.Image]:
         m = maska(pola(znaki), KAFEL, wtapianie, poszarpanie, ZIARNO + n)
         if nazwa == 'snieg' and 'zaspy' in EFEKTY:
             warstwa = teren_efekty.zaspy(warstwa, KAFEL, ZIARNO + 700)
+        if nazwa == 'skaly' and ('relief' in EFEKTY or 'relief_sniezny' in EFEKTY):
+            warstwa = teren_efekty.relief(warstwa, m, KAFEL, ZIARNO + 730, 'relief_sniezny' in EFEKTY)
         if nazwa == 'woda' and 'lod' in EFEKTY:
             warstwa = teren_efekty.lod(warstwa, m, KAFEL, ZIARNO + 710)
         plansza.paste(warstwa, (0, 0), m)
@@ -271,7 +273,12 @@ def klatka() -> tuple[Image.Image, Image.Image]:
     sciezka = zabarw(kafelkuj(tekstura('sciezka'), W, H), 'sciezka').convert('RGBA')
     # Place pod budowlami idą PRZED drogami: droga ma dobiegać do placu
     # i się z nim zlewać, a nie kończyć na jego brzegu.
-    plansza.paste(sciezka, (0, 0), maska_gruntu())
+    # Plac pod budowlami: na Dwóch Dolinach zostaje; plansze kampanii go nie
+    # mają (`bez_placow`) — w ślepym porównaniu „identyczne okrągłe
+    # piaskowe placki pod każdym obiektem" wyglądały na naklejki i robiły z
+    # bagna i śniegu tę samą łąkę w innym kolorze.
+    if 'bez_placow' not in EFEKTY:
+        plansza.paste(sciezka, (0, 0), maska_gruntu())
     droga = maska_drogi()
     plansza.paste(sciezka, (0, 0), droga)
     if 'obwodka_drogi' in EFEKTY:

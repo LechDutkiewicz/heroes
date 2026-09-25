@@ -52,7 +52,7 @@ SZKIC = [
     'T..T#....#..',
     'T.,.....T..T',
     'TT.T.#..T.,T',
-    'T....T.....T',
+    'T.##.T.....T',
     'T.T.,...T#.T',
     'T..#....TT.T',
     'TTTTT#TTTT#T',
@@ -79,8 +79,8 @@ ZAPORY = {
 }
 
 PUNKTY = {
-    'start': (9, 29),
-    'zamek gracza': (6, 31),
+    'start': (12, 29),
+    'zamek gracza': (9, 31),
     'rozstaje': (12, 24),
     'polnocna laka': (9, 10),
     'brod zachod': (rzeka_x(26) - 4, 27),
@@ -152,16 +152,19 @@ def rozstaw(g):
     # skarb pod strażą, wszystko w widoku z dnia pierwszego (runda 1 ślepego
     # porównania: „obiektów mało, rozrzucone, nic nie pilnowane").
     kadr = g.kadr_startu()
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('kopalnia', 'jagoda'), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('kopalnia', 'odlamek'), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('budynek', 'wiatrak'), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('budynek', 'oboz-treningowy'), kandydaci=kadr)
-    g.dodaj(3, 'dom', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('skrzynia', None), kandydaci=kadr)
+    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'jagoda'), kadr, None, (3, 14))
+    # Kopalnia odłamków wcięta w skalne zbocze, jeśli pierwszy ekran je ma.
+    w_skale = [p for p in g.pod_skala('dom') if p in kadr]
+    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'odlamek'), w_skale, kadr)
+    g.dodaj_najpierw('dom', lambda p: ('budynek', 'wiatrak'), kadr, None, (2, 16))
+    g.dodaj_najpierw('dom', lambda p: ('budynek', 'oboz-treningowy'), kadr, None, (2, 16))
+    for _ in range(3):
+        g.dodaj_najpierw('dom', lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kadr, None, (2, 12))
+    g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), kadr, None, (2, 12))
     # Skarb pod strażą co najmniej cztery pola od startu — straż stoi od
     # strony gracza, a na progu startu stać jej nie wolno.
     dalej = [p for p in kadr if max(abs(p[0] - PUNKTY['start'][0]), abs(p[1] - PUNKTY['start'][1])) >= 4]
-    g.strzez(g.dodaj(1, 'dom', (0, 999), lambda p: ('skrzynia', None), kandydaci=dalej), 'slaby')
+    g.strzez(g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), dalej, None, (5, 14)), 'slaby')
     # Obóz łowców (złoto) pod słabą strażą — pierwsza bitwa, której stawkę
     # widać: kopalnia daje codziennie.
     g.strzez(g.dodaj(1, 'dom', (8, 20), lambda p: ('kopalnia', 'pokeball')), 'slaby')
@@ -179,7 +182,7 @@ def rozstaw(g):
     g.postaw((rzeka_x(7), 8), ('potwor', 'sredni'))
 
     g.dodaj(7, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
-    g.strzez(g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('kopalnia', 'kamien')), 'slaby')
+    g.strzez(g.dodaj_najpierw('pogranicze', lambda p: ('kopalnia', 'kamien'), g.pod_skala('pogranicze')), 'slaby')
     g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('kopalnia', 'odlamek'))
     g.dodaj(3, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
     g.strzez(g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('artefakt', None)), 'sredni')
@@ -228,4 +231,10 @@ SKUP_LAS = True
 RAMKA_STARTU = True
 
 #: Droga z brzegiem (runda 1: „jedna ścieżka ginie w trawie").
-EFEKTY = ['obwodka_drogi']
+EFEKTY = ['obwodka_drogi', 'relief', 'bez_placow']
+
+#: Runda 2 („krainy rozmywają się w jedną"): twardsze brzegi terenów.
+WTAPIANIE = {'las': 0.3, 'skaly': 0.28, 'piasek': 0.3, 'woda': 0.25}
+
+#: Budowle pierwszego ekranu co najmniej trzy pola od siebie (silnik).
+ODSTEP_KADRU = 3

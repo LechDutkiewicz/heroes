@@ -67,6 +67,30 @@ def zaspy(warstwa: Image.Image, kafel: int, ziarno: int) -> Image.Image:
     return _obraz(tab)
 
 
+def relief(warstwa: Image.Image, maska: Image.Image, kafel: int, ziarno: int, sniezny: bool = False) -> Image.Image:
+    """Pasmo skał jako BRYŁA: strona oświetlona, strona w cieniu, grań.
+
+    Werdykt rundy 2: „nie ma rzeźby terenu, nie ma pasm gór". Tekstura skał
+    jest płaska jak kamienny chodnik. Wysokość bierzemy z samej maski skał
+    (rozmytej — środek pasma najwyżej, brzeg nisko) plus szum, a światło
+    z pochodnej, jak na mapie fizycznej: lewy górny stok jaśnieje, prawy dolny
+    ciemnieje. W Twierdzy (`sniezny`) grań i oświetlone stoki bieleją — śnieg
+    leży tam, gdzie pada światło, cień zostaje skalny.
+    """
+    W, H = warstwa.size
+    m = np.asarray(maska.filter(ImageFilter.GaussianBlur(kafel * 0.9)), dtype=np.float32) / 255.0
+    h = m * 1.6 + szum(W, H, max(2, int(kafel * 0.6)), ziarno) * 0.25 * m
+    gy, gx = np.gradient(h)
+    swiatlo = np.clip(-(gx + gy) * kafel * 2.2, -1, 1)[..., None]
+    tab = _tab(warstwa)
+    tab = np.where(swiatlo > 0, tab + (255 - tab) * swiatlo * 0.35, tab * (1 + swiatlo * 0.55))
+    if sniezny:
+        grzbiet = np.clip((h[..., None] - 1.0) * 2.5, 0, 1) + np.clip(swiatlo, 0, 1) * 0.8
+        snieg = np.array([235, 242, 250], dtype=np.float32)
+        tab = tab * (1 - np.clip(grzbiet, 0, 0.85)) + snieg * np.clip(grzbiet, 0, 0.85)
+    return _obraz(tab)
+
+
 def lod(warstwa: Image.Image, maska: Image.Image, kafel: int, ziarno: int) -> Image.Image:
     """Skuta lodem tafla: rysy pęknięć i jaśniejszy szron przy brzegu."""
     W, H = warstwa.size

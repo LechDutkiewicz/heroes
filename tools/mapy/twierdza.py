@@ -148,13 +148,14 @@ def rozstaw(g):
     kadr = g.kadr_startu()
     sx, sy = PUNKTY['start']
     dalej = [p for p in kadr if max(abs(p[0] - sx), abs(p[1] - sy)) >= 4]
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('kopalnia', 'jagoda'), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('kopalnia', 'odlamek'), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('budynek', 'ognisko'), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('budynek', 'chatka'), kandydaci=kadr)
-    g.dodaj(3, 'dom', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('skrzynia', None), kandydaci=kadr)
-    g.strzez(g.dodaj(1, 'dom', (0, 999), lambda p: ('artefakt', None), kandydaci=dalej), 'slaby')
+    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'jagoda'), kadr, None, (3, 14))
+    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'odlamek'), kadr, None, (3, 14))
+    g.dodaj_najpierw('dom', lambda p: ('budynek', 'ognisko'), kadr, None, (2, 16))
+    g.dodaj_najpierw('dom', lambda p: ('budynek', 'chatka'), kadr, None, (2, 16))
+    for _ in range(3):
+        g.dodaj_najpierw('dom', lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kadr, None, (2, 12))
+    g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), kadr, None, (2, 12))
+    g.strzez(g.dodaj_najpierw('dom', lambda p: ('artefakt', None), dalej, None, (5, 14)), 'slaby')
     g.dodaj(2, 'dom', (6, 14), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])))
     g.dodaj(1, 'dom', (6, 14), lambda p: ('skrzynia', None))
     g.dodaj(8, 'dom', (10, 40), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])))
@@ -277,3 +278,6 @@ SKUP_LAS = True
 RAMKA_STARTU = True
 #: Twardszy brzeg śniegu — granica ma być czytelna, a nie rozmyta w mgłę.
 WTAPIANIE = {'snieg': 0.35}
+
+#: Budowle pierwszego ekranu co najmniej trzy pola od siebie (silnik).
+ODSTEP_KADRU = 3
