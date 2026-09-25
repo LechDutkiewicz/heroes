@@ -3,8 +3,12 @@
  * dniu, bez przeglądarki, tak jak `tools/balance.ts` rozgrywa bitwy.
  *
  * Próg jest dwuliczbowy i obie liczby trzeba trafić naraz:
- *   1) gracz BIERNY (zero akcji) przez 40 dni → MA PRZEGRAĆ (jego zamek
- *      startowy ma zmienić właściciela na 'wrog').
+ *   1) gracz BIERNY (zero akcji) przez 55 dni → MA PRZEGRAĆ (jego zamek
+ *      startowy ma zmienić właściciela na 'wrog'). Do 2026-09-24 było to
+ *      40 dni; od kiedy „Dwie Doliny" są misją 2 kampanii, mają własne
+ *      USTAWIENIA (natarcie od dnia 40, mocniejsza załoga zamku), żeby
+ *      dziecko zdążyło znaleźć namioty klucznika — bierny gracz pada teraz
+ *      dnia 45 zamiast 30.
  *   2) gracz grający NORMALNIE (ten sam silnik decyzji co AI, z `turaAI`,
  *      więc "normalnie" znaczy "rozsądnie, ale bez przewagi wiedzy") NIE MA
  *      zostać zmieciony przed dniem ~25.
@@ -25,8 +29,8 @@ import { turaAI } from '../src/data/wrog-ai';
 
 declare const process: { env: Record<string, string | undefined>; exitCode?: number };
 const PROB = Number(process.env.PROB ?? 40);
-const DNI_BIERNY = Number(process.env.DNI ?? 40);
-const DNI_NORMALNY = DNI_BIERNY + 20; // margines, żeby zobaczyć, CZY w ogóle pada, nie tylko czy pada do 40
+const DNI_BIERNY = Number(process.env.DNI ?? 55);
+const DNI_NORMALNY = DNI_BIERNY + 20; // margines, żeby zobaczyć, CZY w ogóle pada, nie tylko czy pada w progu
 
 let bledy = 0;
 const sprawdz = (co: string, ok: boolean, szczegol = '') => {

@@ -81,11 +81,45 @@ Trzy usterki `wrog-ai.ts`, żadna niewidoczna na Dwóch Doliniach z osobna:
 | 3 Bagna | wygrana dnia 29 z 56 (2/2; świeżym bohaterem też 29) | termin (zamek nie pada) | wychodzi dnia 2, najdalej 42 pola |
 | 4 Twierdza | wygrana dnia 30, twierdze 26 i 30 (2/2); świeżym bohaterem 46 | pada dnia 44–49 | wychodzi dnia 3, najdalej 59 pól |
 
-Misja 2 to niezmieniona plansza Dwóch Dolin: autopilot nie szuka namiotów
+Misja 2 to niezmieniony TEREN Dwóch Dolin: autopilot nie szuka namiotów
 klucznika celowo, a przeciwnik ma oba klucze od pierwszego dnia, więc w tej
-symulacji wróg dochodzi pierwszy. To jest ocena autopilota, nie planszy
-(`probe-mapa.ts` sprawdza, że akty kluczy dają się przejść), ale pokazuje, że
-na misji 2 dziecko ma na zamek gracza mniej więcej miesiąc.
+symulacji wróg dochodzi pierwszy. To ocena autopilota, nie planszy
+(`probe-mapa.ts` sprawdza, że akty kluczy dają się przejść) — ale znaczyło,
+że dziecko miało na klucze mniej więcej miesiąc. Dlatego Dwie Doliny dostały
+własne USTAWIENIA (w `tools/mapy/dwie_doliny.py`; teren i obiekty bez zmian,
+odcisk ten sam): natarcie dopiero od dnia 40 i załoga zamku z trzech poziomów.
+
+| Dwie Doliny (`wrog-symulacja.ts`) | przed | po USTAWIENIACH |
+|---|---|---|
+| bierny gracz traci zamek | dnia 30 (3/3) | dnia 45 (3/3) |
+| grający normalnie traci zamek | dnia 31 (3/3) | dnia 46 (3/3) |
+| misja 2 w `symulacja-misji.ts` | przegrana dnia 32 | przegrana dnia 47 |
+
+Próg `wrog-symulacja.ts` przesunął się razem z tym: bierny gracz ma przegrać
+do dnia 55 (było 40), grający normalnie dalej nie może paść przed dniem 25
+(w `symulacja-misji.ts` dla misji 2 — przed dniem 40).
+
+### Runda 2 po ślepym porównaniu z Heroes 2
+
+Werdykt rundy 1 (trzy razy wzorzec): „przegrywa ziemia, nie sprite'y — jeden
+rozmyty grunt na scenę, za mało rzeczy do zrobienia". Poprawki, wszystkie
+włączane per plansza, więc Dwie Doliny zostają bajt w bajt:
+
+- `tools/teren_efekty.py`: bagno z oczkami zielonoczarnej wody, trzciną
+  i grążelami; zaspy z ostrym grzbietem, niebieskim cieniem i iskrami; lód
+  z tekstury śniegu z rysami (przebarwiona tekstura wody dawała jasne linie
+  załamań — „błyskawica przy krawędzi"); droga z ciemną obwódką i jaśniejszą
+  jezdnią (na bagnie droga ginęła, ma prawie kolor trzęsawiska).
+- `SKUP_LAS`: automat komórkowy robi z lasu zwarte bryły z polanami.
+  Scena stawia drzewo na każdym polu lasu, więc pojedyncze pola lasu
+  rozsiane przez rozmycie dawały „tapetę", w której nie widać, którędy iść.
+- Pierwszy ekran (`kadr_startu`, `RAMKA_STARTU`): dwie kopalnie, dwie
+  budowle, stosy, skrzynia i skarb pod strażą w widoku z dnia pierwszego,
+  pusty pas przy ramie (obiekt na ramie wychodził na zrzucie ucięty).
+- Czego NIE da się zrobić po stronie planszy: drzewa i krzaki rysuje scena,
+  jednym zestawem sprite'ów na wszystkie klimaty — zielone sosny na śniegu
+  i krzaki na łące Twierdzy zostają, dopóki `AdventureScene` nie dostanie
+  zabarwienia elementów per plansza.
 
 Autopilot jest słabym graczem (trzyma setki niewydanych pokeballi, wędruje za
 brzegiem mgły), więc jego wynik to górna granica czasu, a nie średnia.

@@ -45,16 +45,16 @@ ZIARNO = 20260924
 # planszy prawie zawsze jest lasem albo górą, a nie urwaną łąką.
 SZKIC = [
     'TTT#TT.TT#TT',
-    'T~~...T.....',
-    'T~~.T.....T#',
-    'T...T..T....',
-    '#T.......T.T',
-    'T..T#.......',
-    'T.......T..T',
-    'TT.T....T.,T',
+    'T~~.,.T..#..',
+    'T~~.T..,..T#',
+    'T..#T..T....',
+    '#T....,..T.T',
+    'T..T#....#..',
+    'T.,.....T..T',
+    'TT.T.#..T.,T',
     'T....T.....T',
-    'T.T.....T#.T',
-    'T.......TT.T',
+    'T.T.,...T#.T',
+    'T..#....TT.T',
     'TTTTT#TTTT#T',
 ]
 
@@ -148,16 +148,26 @@ def rozstaw(g):
     # Pierwsze dwa dni: stosy przy zamku, skrzynia i dwie kopalnie podstawowe
     # bez straży. Dziecko ma zobaczyć nagrodę za każdy krok, zanim zobaczy
     # pierwszego stwora.
-    g.dodaj(3, 'dom', (2, 8), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])))
-    g.dodaj(1, 'dom', (3, 8), lambda p: ('skrzynia', None))
-    g.dodaj(1, 'dom', (3, 9), lambda p: ('kopalnia', 'jagoda'))
-    g.dodaj(1, 'dom', (6, 14), lambda p: ('kopalnia', 'odlamek'))
+    # PIERWSZY EKRAN — dwie kopalnie, dwie budowle, stosy, skrzynia i pierwszy
+    # skarb pod strażą, wszystko w widoku z dnia pierwszego (runda 1 ślepego
+    # porównania: „obiektów mało, rozrzucone, nic nie pilnowane").
+    kadr = g.kadr_startu()
+    g.dodaj(1, 'dom', (0, 999), lambda p: ('kopalnia', 'jagoda'), kandydaci=kadr)
+    g.dodaj(1, 'dom', (0, 999), lambda p: ('kopalnia', 'odlamek'), kandydaci=kadr)
+    g.dodaj(1, 'dom', (0, 999), lambda p: ('budynek', 'wiatrak'), kandydaci=kadr)
+    g.dodaj(1, 'dom', (0, 999), lambda p: ('budynek', 'oboz-treningowy'), kandydaci=kadr)
+    g.dodaj(3, 'dom', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kandydaci=kadr)
+    g.dodaj(1, 'dom', (0, 999), lambda p: ('skrzynia', None), kandydaci=kadr)
+    # Skarb pod strażą co najmniej cztery pola od startu — straż stoi od
+    # strony gracza, a na progu startu stać jej nie wolno.
+    dalej = [p for p in kadr if max(abs(p[0] - PUNKTY['start'][0]), abs(p[1] - PUNKTY['start'][1])) >= 4]
+    g.strzez(g.dodaj(1, 'dom', (0, 999), lambda p: ('skrzynia', None), kandydaci=dalej), 'slaby')
     # Obóz łowców (złoto) pod słabą strażą — pierwsza bitwa, której stawkę
     # widać: kopalnia daje codziennie.
     g.strzez(g.dodaj(1, 'dom', (8, 20), lambda p: ('kopalnia', 'pokeball')), 'slaby')
-    g.budowle(5, 'dom', ['wiatrak', 'oboz-treningowy', 'ognisko', 'drzewo-wiedzy', 'zrodlo'], (4, 30))
-    g.dodaj(3, 'dom', (8, 30), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])))
-    g.dodaj(1, 'dom', (8, 30), lambda p: ('skrzynia', None))
+    g.budowle(6, 'dom', ['ognisko', 'drzewo-wiedzy', 'zrodlo', 'chatka', 'gniazdo', 'woz'], (4, 30))
+    g.dodaj(5, 'dom', (8, 30), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])))
+    g.dodaj(2, 'dom', (8, 30), lambda p: ('skrzynia', None))
     g.strzez(g.dodaj(1, 'dom', (10, 30), lambda p: ('artefakt', None)), 'slaby')
     g.dodaj(1, 'dom', (7, 30), lambda p: ('potwor', 'slaby'))
     g.skarb_w_kieszeni('dom', 'slaby', 2, lambda p: ('skrzynia', None))
@@ -168,12 +178,13 @@ def rozstaw(g):
     g.postaw((rzeka_x(26), 26), ('potwor', 'slaby'))
     g.postaw((rzeka_x(7), 8), ('potwor', 'sredni'))
 
-    g.dodaj(4, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
+    g.dodaj(7, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
     g.strzez(g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('kopalnia', 'kamien')), 'slaby')
     g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('kopalnia', 'odlamek'))
-    g.dodaj(2, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
+    g.dodaj(3, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
     g.strzez(g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('artefakt', None)), 'sredni')
-    g.budowle(4, 'pogranicze', ['wieza-obserwacyjna', 'gniazdo', 'chatka', 'woz'])
+    g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('potwor', 'slaby'))
+    g.budowle(7, 'pogranicze', ['wieza-obserwacyjna', 'gniazdo', 'chatka', 'woz', 'arena', 'ognisko', 'ranczo'])
     g.skarb_w_kieszeni('pogranicze', 'sredni', 3, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'kamien')]))
 
     # --- OKOLICE FORTU -----------------------------------------------------
@@ -211,3 +222,10 @@ ZASYP_ODCIETE = True
 
 #: Plac wokół zamków wolny od innych budowli (patrz silnik).
 ODSTEP_OD_ZAMKOW = 2
+
+#: Las w zwarte masy z polanami, pusty pas przy ramie pierwszego ekranu.
+SKUP_LAS = True
+RAMKA_STARTU = True
+
+#: Droga z brzegiem (runda 1: „jedna ścieżka ginie w trawie").
+EFEKTY = ['obwodka_drogi']

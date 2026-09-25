@@ -216,10 +216,20 @@ def rozstaw(g):
     g.dodaj(1, 'wroga', (0, 999), lambda p: ('surowiec', 'kamien'), kandydaci=wyspa)
 
     # --- DOLINA GRACZA -------------------------------------------------------
-    g.dodaj(4, 'dom', (2, 9), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])))
-    g.dodaj(2, 'dom', (3, 10), lambda p: ('skrzynia', None))
-    g.dodaj(1, 'dom', (3, 10), lambda p: ('kopalnia', 'jagoda'))
-    g.dodaj(1, 'dom', (4, 14), lambda p: ('kopalnia', 'odlamek'))
+    # Pierwszy ekran: dwie kopalnie, budowle, stosy i skarb pod strażą w widoku
+    # z dnia pierwszego (runda 1 ślepego porównania: „mało rzeczy do zrobienia").
+    kadr = g.kadr_startu()
+    sx, sy = PUNKTY['start']
+    dalej = [p for p in kadr if max(abs(p[0] - sx), abs(p[1] - sy)) >= 4]
+    g.dodaj(1, 'dom', (0, 999), lambda p: ('kopalnia', 'jagoda'), kandydaci=kadr)
+    g.dodaj(1, 'dom', (0, 999), lambda p: ('kopalnia', 'odlamek'), kandydaci=kadr)
+    g.dodaj(1, 'dom', (0, 999), lambda p: ('budynek', 'drzewo-wiedzy'), kandydaci=kadr)
+    g.dodaj(1, 'dom', (0, 999), lambda p: ('budynek', 'zrodlo'), kandydaci=kadr)
+    g.dodaj(3, 'dom', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kandydaci=kadr)
+    g.dodaj(1, 'dom', (0, 999), lambda p: ('skrzynia', None), kandydaci=kadr)
+    g.strzez(g.dodaj(1, 'dom', (0, 999), lambda p: ('artefakt', None), kandydaci=dalej), 'slaby')
+    g.dodaj(2, 'dom', (6, 14), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])))
+    g.dodaj(1, 'dom', (6, 14), lambda p: ('skrzynia', None))
     g.strzez(g.dodaj(1, 'dom', (8, 30), lambda p: ('kopalnia', 'pokeball')), 'slaby')
     g.dodaj(1, 'dom', (8, 30), lambda p: ('kopalnia', 'jagoda'))
     g.dodaj(4, 'dom', (8, 30), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])))
@@ -237,19 +247,19 @@ def rozstaw(g):
     # --- TRZĘSAWISKO -----------------------------------------------------------
     # Najgęstszy kawałek. Kopalnie drogie (kamień, pokeballe) pod strażą; tanie
     # otworem — to gospodarka, nie nagroda.
-    g.dodaj(16, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
+    g.dodaj(24, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
     kopalnie = ['kamien', 'odlamek', 'pokeball', 'jagoda', 'kamien', 'pokeball', 'odlamek']
     polozone = []
     for co in kopalnie:
         polozone += g.dodaj(1, 'pogranicze', (0, 999), lambda p, co=co: ('kopalnia', co))
     g.strzez([p for p, co in zip(polozone, kopalnie) if co in ('kamien', 'pokeball')], 'sredni')
-    g.dodaj(9, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
+    g.dodaj(12, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
     g.strzez(g.dodaj(4, 'pogranicze', (0, 999), lambda p: ('artefakt', None)), 'sredni')
     g.dodaj(3, 'pogranicze', (0, 999), lambda p: ('potwor', 'sredni'))
     g.skarb_w_kieszeni('pogranicze', 'sredni', 4, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'kamien'), ('artefakt', None)]))
     g.skarb_w_kieszeni('pogranicze', 'silny', 4, lambda p: rng.choice([('artefakt', None), ('skrzynia', None)]))
     g.skarb_w_kieszeni('pogranicze', 'sredni', 3, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'pokeball')]))
-    g.budowle(18, 'pogranicze', [
+    g.budowle(24, 'pogranicze', [
         'wieza-obserwacyjna', 'ranczo', 'gniazdo', 'arena', 'wiatrak', 'zrodlo',
         'chatka', 'woz', 'drzewo-wiedzy', 'kamienna-wieza', 'ognisko', 'oboz-treningowy',
     ])
@@ -300,8 +310,17 @@ BARWY_TERENU = {
     'woda': {'nasycenie': 0.45, 'barwa': (90, 120, 80), 'moc': 0.7, 'jasnosc': 0.72},
     'trawa': {'nasycenie': 0.62, 'barwa': (140, 140, 80), 'moc': 0.5, 'jasnosc': 0.8},
     'las': {'nasycenie': 0.7, 'barwa': (90, 110, 75), 'moc': 0.4, 'jasnosc': 0.82},
-    'sciezka': {'nasycenie': 0.8, 'barwa': (140, 120, 90), 'moc': 0.3, 'jasnosc': 0.88},
+    'sciezka': {'nasycenie': 0.75, 'barwa': (175, 150, 110), 'moc': 0.3, 'jasnosc': 1.08},
 }
+
+#: Po rundzie 1 ślepego porównania („bagno to brązowa plama w kolorze drogi"):
+#: oczka ciemnej wody, trzcina i grążele na bagnie, obwódka i jaśniejsza
+#: jezdnia na grobli (`tools/teren_efekty.py`).
+EFEKTY = ['bagno', 'obwodka_drogi']
 
 #: Plac wokół zamków wolny od innych budowli (patrz silnik).
 ODSTEP_OD_ZAMKOW = 2
+
+#: Las w zwarte masy z polanami, pusty pas przy ramie pierwszego ekranu.
+SKUP_LAS = True
+RAMKA_STARTU = True

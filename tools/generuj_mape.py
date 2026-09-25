@@ -158,6 +158,37 @@ class Generator:
             mapa = nowa
         return mapa
 
+    def skup_las(self, mapa, przebiegi=2):
+        """Las w ZWARTE masy z polanami, a nie w sito pojedynczych drzew.
+
+        Rozmycie granic sypie po łące pojedyncze pola lasu i wycina dziury
+        w borze. Scena stawia drzewo na KAŻDYM polu lasu, więc z daleka wychodzi
+        tapeta: drzewa wszędzie po trochu i nie widać, którędy da się przejść
+        (werdykt ślepego porównania, runda 1). W Heroes las to bryła z wyraźnym
+        brzegiem, a między bryłami jest wolna ziemia. Automat komórkowy: drzewo
+        z mniej niż trzema leśnymi sąsiadami znika (dostaje teren, którego wokół
+        najwięcej), a pole otoczone lasem z co najmniej sześciu stron zarasta.
+        """
+        B = self.BOK
+        for _ in range(przebiegi):
+            nowa = [w[:] for w in mapa]
+            for y in range(B):
+                for x in range(B):
+                    sasiedzi = [
+                        mapa[y + dy][x + dx]
+                        for dy in (-1, 0, 1)
+                        for dx in (-1, 0, 1)
+                        if (dx or dy) and 0 <= x + dx < B and 0 <= y + dy < B
+                    ]
+                    lesnych = sasiedzi.count('T')
+                    if mapa[y][x] == 'T' and lesnych < 3:
+                        inne = [s for s in sasiedzi if s in PRZEJEZDNE]
+                        if inne:
+                            nowa[y][x] = max(sorted(set(inne)), key=inne.count)
+                    elif mapa[y][x] in PRZEJEZDNE and lesnych >= 6:
+                        nowa[y][x] = 'T'
+            mapa[:] = nowa
+
     def pola_rdzenia(self, mur):
         """Pola rdzenia muru — tam mur ma być NIEPRZERWANY."""
         a0, a1 = mur['rdzen']
@@ -320,6 +351,8 @@ class Generator:
         k = self.k
         rng = random.Random(k.ZIARNO)
         mapa = self.szkic_na_mape(rng)
+        if getattr(k, 'SKUP_LAS', False):
+            self.skup_las(mapa)
         self.zasklep(mapa)
         self.wytnij_przejscia(mapa)
         self.udroznij_wyloty(mapa)
@@ -668,6 +701,22 @@ class Generator:
         self.obiekty.append((pole, wpis))
         return pole
 
+    def kadr_startu(self):
+        """Wolne pola PIERWSZEGO EKRANU — tego, co gracz widzi w dniu pierwszym.
+
+        W Heroes 2 pierwszy ekran ma kilkanaście rzeczy do zrobienia: kopalnie,
+        budowle, skarb pod strażą. U nas rozstawianie po strefach sypało je
+        równo po całej dolinie i na starcie widać było zamek, skrzynię i jagody.
+        Okno planszy ma ok. 14 × 12 pól, a kamera stoi na bohaterze; bierzemy
+        wnętrze bez pasa przy krawędzi (patrz `RAMKA_STARTU`).
+        """
+        sx, sy = self.k.PUNKTY['start']
+        return [
+            p
+            for p in self.wolne_pola(self.k.strefa(sx, sy), (1, 999))
+            if abs(p[0] - sx) <= 5 and -3 <= p[1] - sy <= 5
+        ]
+
     def para_portali(self, ktora, min_odl=20):
         """Dwa końce jednego portalu, MUSZĄ stać daleko od siebie.
 
@@ -775,6 +824,15 @@ class Generator:
                     for dy in range(-2 - r, r + 1):
                         for dx in range(-1 - r, r + 2):
                             self.zajete.append((zx + dx, zy + dy))
+        # Krawędź pierwszego ekranu. Obiekt stojący na samej ramce widoku
+        # startowego jest na zrzucie ucięty w pół — „skrzynia wklejona w ramę"
+        # w werdykcie ślepego porównania. Pas przy krawędzi zostaje pusty.
+        if getattr(k, 'RAMKA_STARTU', False):
+            sx, sy = k.PUNKTY['start']
+            for dy in range(-8, 9):
+                for dx in range(-9, 10):
+                    if abs(dx) >= 6 and abs(dx) <= 8 and -7 <= dy <= 7 or dy in (-6, -5, 6, 7) and abs(dx) <= 8:
+                        self.zajete.append((sx + dx, sy + dy))
         self.stan_dostepnych = len(self.dostepnych())
         self.kieszenie = {}
         for szyjka, pola_kieszeni in self.znajdz_kieszenie(k.PUNKTY['start']):

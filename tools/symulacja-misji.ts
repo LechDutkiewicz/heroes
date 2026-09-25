@@ -65,7 +65,9 @@ const PROGI: Record<
   'pierwsze-kroki': { wygranaDo: 21, wygranych: 1, bezpiecznyDo: 99, wrogWychodzi: false, horyzont: 35 },
   // „Dwie Doliny" są zamrożone i strojone osobno (`tools/wrog-symulacja.ts`):
   // tu liczy się tylko to, żeby przeciwnik grał i żeby nie wygrywał w dwa tygodnie.
-  'klucze-do-przeleczy': { wygranaDo: 84, wygranych: 0, bezpiecznyDo: 25, wrogWychodzi: true, horyzont: 60 },
+  // Od USTAWIEŃ misji 2 (natarcie od dnia 40) grający normalnie ma mieć
+  // zamek co najmniej do tego dnia — czas na szukanie namiotów klucznika.
+  'klucze-do-przeleczy': { wygranaDo: 84, wygranych: 0, bezpiecznyDo: 40, wrogWychodzi: true, horyzont: 60 },
   'bagienny-szlak': { wygranaDo: 56, wygranych: 1, bezpiecznyDo: 25, wrogWychodzi: true, horyzont: 60 },
   // Najtrudniejsza misja: wystarczy, że autopilot wygrywa w większości przebiegów.
   'oblezenie-groty': { wygranaDo: 84, wygranych: 0.6, bezpiecznyDo: 20, wrogWychodzi: true, horyzont: 84 },

@@ -53,6 +53,7 @@ from teren_malowanie import (  # noqa: E402
 )
 
 from generuj_mape import MAPY, katalog_tla, konfiguracja, plik_ts  # noqa: E402
+import teren_efekty  # noqa: E402
 
 KORZEN = Path(__file__).resolve().parent.parent
 #: Ustawiane przez `ustaw(mapa_id)` — plik planszy i katalog tła.
@@ -60,6 +61,11 @@ KATALOG = KORZEN / 'public' / 'mapa'
 ZRODLO = KORZEN / 'src' / 'data' / 'plansza-teren.ts'
 #: Zabarwienie tekstur tej planszy — `BARWY_TERENU` z `tools/mapy/<id>.py`.
 BARWY: dict = {}
+#: Efekty terenu tej planszy — `EFEKTY` z konfiguracji (patrz `teren_efekty.py`),
+#: podmiany tekstur (`TEKSTURY`, np. lód zamiast wody) i wtapiania warstw.
+EFEKTY: set = set()
+TEKSTURY: dict = {}
+WTAPIANIE: dict = {}
 
 KAFEL = 48                  # bok pola na ekranie
 #: Ile razy nadpróbkowujemy maskę drogi, zanim ją zmniejszymy. Rysowanie
@@ -113,9 +119,13 @@ def ustaw(mapa_id: str):
     """Przełącza moduł na planszę `mapa_id`. Funkcje niżej czytają rysunek
     i wymiary z globali — tak było, gdy plansza była jedna, i tak zostaje,
     bo każda z nich jest wołana raz na planszę."""
-    global KATALOG, ZRODLO, RYSUNEK, WYS, SZER, W, H, BARWY
+    global KATALOG, ZRODLO, RYSUNEK, WYS, SZER, W, H, BARWY, EFEKTY, TEKSTURY, WTAPIANIE
     KATALOG = katalog_tla(mapa_id)
-    BARWY = getattr(konfiguracja(mapa_id), 'BARWY_TERENU', {})
+    k = konfiguracja(mapa_id)
+    BARWY = getattr(k, 'BARWY_TERENU', {})
+    EFEKTY = set(getattr(k, 'EFEKTY', ()))
+    TEKSTURY = getattr(k, 'TEKSTURY', {})
+    WTAPIANIE = getattr(k, 'WTAPIANIE', {})
     ZRODLO = plik_ts(mapa_id)
     RYSUNEK = wczytaj_rysunek()
     WYS, SZER = len(RYSUNEK), len(RYSUNEK[0])
@@ -236,22 +246,36 @@ def klatka() -> tuple[Image.Image, Image.Image]:
     """
     plansza = zabarw(zmieszaj(warianty('trawa'), W, H, (0, 0), ZIARNO), 'trawa')
     maskaWody = Image.new('L', (W, H), 0)
+    maski = {}
     for n, (nazwa, znaki, wtapianie, poszarpanie) in enumerate(WARSTWY):
         if not any(c in znaki for wiersz in RYSUNEK for c in wiersz):
             continue
-        warstwa = zabarw(zmieszaj(warianty(nazwa), W, H, (0, 0), ZIARNO + 50 + n), nazwa)
+        wtapianie = WTAPIANIE.get(nazwa, wtapianie)
+        warstwa = zabarw(zmieszaj(warianty(TEKSTURY.get(nazwa, nazwa)), W, H, (0, 0), ZIARNO + 50 + n), nazwa)
         # Każda warstwa dostaje własne ziarno, inaczej wszystkie granice
         # falowałyby w tym samym rytmie i widać by było jeden wzór.
         m = maska(pola(znaki), KAFEL, wtapianie, poszarpanie, ZIARNO + n)
+        if nazwa == 'snieg' and 'zaspy' in EFEKTY:
+            warstwa = teren_efekty.zaspy(warstwa, KAFEL, ZIARNO + 700)
+        if nazwa == 'woda' and 'lod' in EFEKTY:
+            warstwa = teren_efekty.lod(warstwa, m, KAFEL, ZIARNO + 710)
         plansza.paste(warstwa, (0, 0), m)
+        maski[nazwa] = m
         if nazwa == 'woda':
             maskaWody = m
+        # Bagno dostaje oczka i trzcinę ZARAZ po namalowaniu, przed lasem
+        # i wodą: drzewo i staw leżą na nim, nie pod nim.
+        if nazwa == 'bagno' and 'bagno' in EFEKTY:
+            plansza = teren_efekty.bagno(plansza, m, KAFEL, ZIARNO + 720)
     plansza = plansza.convert('RGBA')
     sciezka = zabarw(kafelkuj(tekstura('sciezka'), W, H), 'sciezka').convert('RGBA')
     # Place pod budowlami idą PRZED drogami: droga ma dobiegać do placu
     # i się z nim zlewać, a nie kończyć na jego brzegu.
     plansza.paste(sciezka, (0, 0), maska_gruntu())
-    plansza.paste(sciezka, (0, 0), maska_drogi())
+    droga = maska_drogi()
+    plansza.paste(sciezka, (0, 0), droga)
+    if 'obwodka_drogi' in EFEKTY:
+        plansza = teren_efekty.obwodka_drogi(plansza, droga, KAFEL).convert('RGBA')
     return plansza, maskaWody
 
 
