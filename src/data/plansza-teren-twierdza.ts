@@ -133,7 +133,7 @@ export const ROZSTAWIENIE: Array<{
   { x: 20, y: 55, rodzaj: 'budynek', strefa: 'dom', budynek: 'zrodlo' },
   { x: 24, y: 57, rodzaj: 'budynek', strefa: 'dom', budynek: 'woz' },
   { x: 12, y: 65, rodzaj: 'budynek', strefa: 'dom', budynek: 'ognisko' },
-  { x: 15, y: 63, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'odlamek' },
+  { x: 22, y: 61, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'odlamek' },
   { x: 19, y: 67, rodzaj: 'skrzynia', strefa: 'dom' },
   { x: 17, y: 63, rodzaj: 'budynek', strefa: 'dom', budynek: 'oboz-treningowy' },
   { x: 20, y: 58, rodzaj: 'potwor', strefa: 'dom', sila: 'slaby' },
@@ -419,7 +419,7 @@ export const USTAWIENIA = {
   ],
   "znajdzki": 0.55,
   "skalaZamku": 1.8,
-  "skalaKepLasu": 0.8,
+  "skalaKepLasu": 0.76,
   "cienBudowli": {
     "szer": 0.7,
     "krycie": 0.6

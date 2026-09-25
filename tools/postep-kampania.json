@@ -394,7 +394,8 @@
    ],
    "live": {
     "round": 9,
-    "stage": "builder pracuje"
+    "stage": "zrzut i ślepe zestawienie",
+    "build": "W tej rundzie domknąłem lukę ze skalą z rundy 8. Zamek jest teraz 1,8 raza większy (`skalaZamku`, ok. 5,5 pola wysokości) i wyraźnie dominuje. Zamiast owalnego wejścia w śniegu brama ma własny zjazd na trakt. Znajdźki zmniejszyłem do około pół kafla (`znajdzki` z 0,9 na 0,55). Cztery kępy boru z zestawu `zima` wygenerowałem od nowa w OpenAI jako zwarte masywy małych świerków. Dotąd kępa to były dwa do pięciu olbrzymich drzew, wyższych od zamku. Kępy rysuję też mniejsze (nowe ustawienie `skalaKepLasu` = 0,76, tylko dla Twierdzy). Teraz w kadrze skala idzie od największego do najmniejszego: zamek, wiatrak i chaty, drzewa, a na końcu znajdźki. Kupkę odłamków przeniosłem ze skraju boru (15,63) na (22,61), bo wyglądała, jakby leżała na koronach drzew."
    }
   },
   {

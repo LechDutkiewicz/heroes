@@ -255,7 +255,9 @@ PIERWSZY_EKRAN = [
     ([(24, 57), (23, 57), (23, 56)], ('budynek', 'woz')),
     # Wylot korytarza przy zamku: ognisko, kupka odłamków przy trakcie.
     ([(12, 65), (11, 65), (12, 66)], ('budynek', 'ognisko')),
-    ([(15, 63), (14, 63), (16, 63)], ('surowiec', 'odlamek')),
+    # (Runda 9: kupka odłamków nie leży już na skraju boru — rysunek kępy
+    # sięga rzędu wyżej i kupka czytała się jak położona na koronach drzew.)
+    ([(22, 61), (22, 60)], ('surowiec', 'odlamek')),
     # Zatoczka na końcu korytarza, pod borem.
     ([(19, 67), (18, 67), (20, 67)], ('skrzynia', None)),
     # Runda 8 (HotA): „pola śniegu między jeziorem a zamkiem i pas od ścieżki
@@ -502,7 +504,7 @@ USTAWIENIA = {
     # Runda 9 (HotA): „świerki w prawej dolnej ćwiartce wyższe od zamku i młyna
     # — drzewa do skali kafla". Kępy boru (nowe rysunki: zwarty masyw małych
     # świerków, PROMPTY-PLANSZE §3) rysowane mniejsze, stopa na miejscu.
-    'skalaKepLasu': 0.8,
+    'skalaKepLasu': 0.76,
     # Runda 8 (HotA): „wiatrak, chata nad jeziorem i chatka wiszą na śniegu
     # jak naklejki". Szeroka plama cienia spod śnieżnej podstawki przyciemniała
     # sinawy śnieg wokół budynku, a jasna podstawka nad nią czytała się jak

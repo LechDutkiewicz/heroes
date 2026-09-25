@@ -1940,3 +1940,77 @@ right, two small shelf mushrooms and a few ferns growing on it, a little
 murky water and reeds around its middle. Low and long, about three times as
 wide as tall.
 ```
+
+## 23. Bagna — szuwary i grążele na oczkach mokradła (runda 12, wzorzec HotA)
+
+Werdykt rundy 11: „rozlewiska to blade, zamazane plamy bez wody, błota
+i szuwarów". Oczka mokradła maluje teraz `DOMALUJ` (`tools/mapy/bagna.py`)
+jako ciemną, mętną toń z ostrym brzegiem i pasem błota; te naklejki stoją na
+ich brzegach i taflach. Jedno `trzcinowisko-1` powtórzone kilkanaście razy
+czytało się jak stempel, a kępy z §8 i `trzcinowisko-2` mają z API okrągłą
+podstawkę (talerzyk wody lub ziemi pod kępą). Tu każda kępa BEZ podstawki.
+Obiera i skaluje je `bagna.przygotuj_naklejki_mokradla()`.
+
+<!-- plik: bagno-szuwar-1.png | styl: obiekt -->
+```
+A single tall clump of fresh green bulrushes growing in a swamp, seen from
+above at a three-quarter angle like vegetation on a Heroes of Might and Magic
+3 adventure map: about fifteen long slender bright green and olive-green
+leaves and stalks fanning upward and outward, four dark brown velvety cattail
+heads on thin stems at different heights, a couple of blades bent over. The
+stalks simply end at the bottom in a small tight point, with NO ground, NO
+water, NO mud patch and NO shadow under them. Taller than wide.
+```
+
+<!-- plik: bagno-szuwar-2.png | styl: obiekt | proporcje: 3:2 -->
+```
+A low, wide tussock of marsh sedge grass seen from above at a three-quarter
+angle like vegetation on a Heroes of Might and Magic 3 adventure map: dense
+arching blades of yellow-green, olive and a few straw-coloured sedge leaves
+spilling outward in all directions like a fountain, a few thin green rushes
+poking up from the middle, three small yellow marsh marigold flowers at the
+front. NO ground, NO water, NO mud patch and NO shadow under it — only the
+plant. About twice as wide as tall, soft irregular silhouette.
+```
+
+<!-- plik: bagno-grazele.png | styl: obiekt | proporcje: 3:2 -->
+```
+A small floating group of water lily pads seen almost straight from above,
+like decoration on the water of a Heroes of Might and Magic 3 adventure map:
+five round glossy dark green lily pads of different sizes, each with the
+typical narrow notch, overlapping a little, one pad slightly curled at the
+edge showing a reddish underside, one open white water lily flower with a
+yellow centre and one closed pink bud. Only the pads and flowers, NO water
+surface around them, NO ripples, NO shadow. Wider than tall, flat.
+```
+
+<!-- plik: bagno-szuwar-3.png | styl: obiekt | proporcje: 3:2 -->
+```
+A wide low bank of mixed swamp plants seen from above at a three-quarter
+angle like vegetation on a Heroes of Might and Magic 3 adventure map: on the
+left a few tall green reeds with two brown cattail heads, in the middle a
+clump of broad bright green arrowhead leaves, on the right a tuft of fine
+yellow-green sedge and two purple marsh iris flowers. The plants end at the
+bottom in a ragged line of stems, with NO ground, NO water, NO mud patch and
+NO shadow under them. About twice as wide as tall.
+```
+
+Środek dolnej krawędzi kadru — werdykt rundy 11: „góry w lewym dolnym rogu
+i na środku dolnej krawędzi to powielone, identyczne stożki wstawione jak
+stemple" (`gora-9` i `gora-10` to ten sam kłąb szarych szpiców). Tu inna
+bryła: skalny próg z półkami i urwiskami, wyrastający z mokradła.
+
+<!-- plik: bagno-gora-11.png | styl: obiekt | proporcje: 3:2 -->
+```
+A broad rocky outcrop rising out of a swamp, for a swampland adventure map,
+seen from high above at a steep three-quarter top-down angle exactly like the
+rock formations on a Heroes of Might and Magic 3 adventure map: NOT pointed
+cone peaks, but a wide heavy mass of layered dark grey-brown rock with flat
+mossy tops, stepped ledges and short vertical cliffs, split by a deep cleft in
+the middle where a thin white waterfall drops into a small dark pool at the
+foot. Three or four dead grey swamp trees with bare twisted branches and
+hanging moss stand on the ledges. Rock lit from the upper left, cool blue-grey
+shadows, thick dark green moss on every ledge. Around the whole foot: a skirt
+of grey scree and tumbled mossy boulders sinking into reeds, cattails and
+patches of murky water, the edge soft and irregular. Much wider than tall.
+```
