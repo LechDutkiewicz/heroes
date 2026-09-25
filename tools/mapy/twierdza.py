@@ -160,9 +160,9 @@ def rozstaw(g):
     kadr = g.kadr_startu()
     sx, sy = PUNKTY['start']
     dalej = [p for p in kadr if max(abs(p[0] - sx), abs(p[1] - sy)) >= 4]
-    # Sad nie rośnie w zaspie: kopalnię jagód stawiamy tylko tam, gdzie
-    # wokół nie ma śniegu (runda 2: „jabłonie obok zasp").
-    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'jagoda'), bez_sniegu(g, kadr), bez_sniegu(g, g.wolne_pola('dom', (3, 20))))
+    # Runda 2: „jabłonie obok zasp" — dziś sad w zestawie `zima` to
+    # zaśnieżony spichlerz jagód bez liści, więc może stać w śniegu, w kadrze.
+    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'jagoda'), kadr, bez_sniegu(g, g.wolne_pola('dom', (3, 20))))
     g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'odlamek'), kadr, None, (3, 14))
     g.dodaj_najpierw('dom', lambda p: ('budynek', 'ognisko'), kadr, None, (2, 16))
     g.dodaj_najpierw('dom', lambda p: ('budynek', 'chatka'), kadr, None, (2, 16))
@@ -301,7 +301,9 @@ WODA_ANIMOWANA = False
 #: Runda 2 po ślepym porównaniu ("śnieg to blada mgła, lód to błyskawica"):
 #: zaspy z niebieskim cieniem i iskrami, lód z rysami zamiast tafli wody,
 #: droga z brzegiem, las w zwartych masach, gęsty pierwszy ekran.
-EFEKTY = ['zaspy', 'lod', 'obwodka_drogi', 'relief_sniezny', 'bez_placow']
+#: Runda 3: bez efektu `lod` — jego rysy na turkusowym lodzie (`lod-2`) znów
+#: czytały się jak „błyskawice"; tekstura ma własne, delikatne pęknięcia.
+EFEKTY = ['zaspy', 'obwodka_drogi', 'relief_sniezny', 'bez_placow']
 TEKSTURY = {'woda': ['lod-2', 'lod', 'snieg'], 'trawa': ['snieg-2', 'snieg'], 'las': ['snieg']}
 SKUP_LAS = True
 RAMKA_STARTU = True
@@ -315,6 +317,6 @@ ODSTEP_KADRU = 3
 NAKLEJKI = [
     (['glaz-sniezny-1', 'glaz-sniezny-2', 'glaz-sniezny-3'], 's', 0.06),
     (['zaspa-1', 'zaspa-2'], 's', 0.08),
-    (['kra-lodu-1', 'kra-lodu-2'], '~', 0.10),
+    (['kra-lodu-2'], '~', 0.04),
     (['krzak-zimowy-1'], 'j', 0.08),
 ]
