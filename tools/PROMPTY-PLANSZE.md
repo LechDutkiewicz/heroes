@@ -1772,3 +1772,21 @@ red and dark blue berries, one woven wicker basket on the jetty, cattails and
 reeds at the water's edge. Organic irregular shapes, no straight boxes. Mostly
 green, brown and dark water, with only small touches of red. Wider than tall.
 ```
+
+Lewy dolny róg kadru — `bagno-gora-8` wyszła za zielona (z daleka omszały
+pagórek, nie skały); zamiast niej drugi zwarty masyw w skali `bagno-gora-7`:
+
+<!-- plik: bagno-gora-10.png | styl: obiekt | proporcje: 3:2 -->
+```
+A dense rocky mountain massif for a swampland adventure map, seen from high
+above at a steep three-quarter top-down angle exactly like the mountains on a
+Heroes of Might and Magic 3 adventure map: a crowded cluster of about ten
+sharp jagged rock peaks in three overlapping rows receding into depth, the
+tallest and thickest group at the back left, the peaks getting lower toward
+the front right where the massif ends in a spur of broken crags and big
+boulders. All joined by jagged ridgelines into one solid impassable mass.
+Cool grey and grey-brown rock with pale sunlit faces lit from the upper left,
+deep blue-grey shadowed faces, dark crevices, only small patches of dark green
+moss in the hollows. Grey scree, mossy boulders, two small dark fir trees and
+ferns along the soft irregular foot. Much wider than tall.
+```

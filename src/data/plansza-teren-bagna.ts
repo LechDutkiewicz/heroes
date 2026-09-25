@@ -103,32 +103,24 @@ export const ROZSTAWIENIE: Array<{
   { x: 43, y: 5, rodzaj: 'skrzynia', strefa: 'wroga' },
   { x: 47, y: 4, rodzaj: 'artefakt', strefa: 'wroga' },
   { x: 48, y: 11, rodzaj: 'surowiec', strefa: 'wroga', surowiec: 'kamien' },
-  { x: 11, y: 51, rodzaj: 'kopalnia', strefa: 'dom', surowiec: 'jagoda' },
+  { x: 11, y: 51, rodzaj: 'kopalnia', strefa: 'dom', surowiec: 'kamien' },
   { x: 14, y: 45, rodzaj: 'kopalnia', strefa: 'dom', surowiec: 'odlamek' },
   { x: 4, y: 46, rodzaj: 'budynek', strefa: 'dom', budynek: 'drzewo-wiedzy' },
   { x: 16, y: 34, rodzaj: 'budynek', strefa: 'dom', budynek: 'zrodlo' },
-  { x: 16, y: 45, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'pokeball' },
-  { x: 16, y: 46, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'jagoda' },
   { x: 14, y: 46, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'jagoda' },
-  { x: 15, y: 47, rodzaj: 'skrzynia', strefa: 'dom' },
   { x: 18, y: 34, rodzaj: 'artefakt', strefa: 'dom' },
   { x: 18, y: 35, rodzaj: 'potwor', strefa: 'dom', sila: 'slaby' },
   { x: 13, y: 37, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'odlamek' },
   { x: 2, y: 43, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'odlamek' },
-  { x: 17, y: 36, rodzaj: 'skrzynia', strefa: 'dom' },
   { x: 11, y: 37, rodzaj: 'kopalnia', strefa: 'dom', surowiec: 'pokeball' },
   { x: 11, y: 38, rodzaj: 'potwor', strefa: 'dom', sila: 'slaby' },
   { x: 15, y: 39, rodzaj: 'kopalnia', strefa: 'dom', surowiec: 'jagoda' },
   { x: 18, y: 38, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'pokeball' },
-  { x: 15, y: 36, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'pokeball' },
   { x: 14, y: 34, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'jagoda' },
-  { x: 14, y: 35, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'pokeball' },
-  { x: 16, y: 36, rodzaj: 'skrzynia', strefa: 'dom' },
   { x: 3, y: 47, rodzaj: 'skrzynia', strefa: 'dom' },
   { x: 17, y: 39, rodzaj: 'artefakt', strefa: 'dom' },
   { x: 4, y: 47, rodzaj: 'potwor', strefa: 'dom', sila: 'slaby' },
   { x: 17, y: 37, rodzaj: 'potwor', strefa: 'dom', sila: 'slaby' },
-  { x: 3, y: 42, rodzaj: 'skrzynia', strefa: 'dom' },
   { x: 3, y: 45, rodzaj: 'potwor', strefa: 'dom', sila: 'slaby' },
   { x: 17, y: 42, rodzaj: 'budynek', strefa: 'dom', budynek: 'wiatrak' },
   { x: 11, y: 33, rodzaj: 'potwor', strefa: 'pogranicze', sila: 'sredni' },
@@ -309,7 +301,7 @@ export const USTAWIENIA = {
       "promien": 4
     }
   ],
-  "znajdzki": 0.7,
+  "znajdzki": 0.44,
   "masywy": [
     {
       "plik": "gora-2",
@@ -324,9 +316,9 @@ export const USTAWIENIA = {
       ]
     },
     {
-      "plik": "gora-1",
-      "x": 6.3,
-      "y": 45.4,
+      "plik": "gora-7",
+      "x": 6.0,
+      "y": 45.6,
       "szer": 9.0,
       "pokrywa": [
         4,
@@ -336,10 +328,10 @@ export const USTAWIENIA = {
       ]
     },
     {
-      "plik": "gora-6",
-      "x": 6.3,
-      "y": 54.4,
-      "szer": 7.8,
+      "plik": "gora-8",
+      "x": 5.3,
+      "y": 54.15,
+      "szer": 8.0,
       "pokrywa": [
         4,
         50,
@@ -348,11 +340,10 @@ export const USTAWIENIA = {
       ]
     },
     {
-      "plik": "gora-5",
-      "x": 16.9,
-      "y": 54.4,
-      "szer": 5.8,
-      "odbij": true,
+      "plik": "gora-9",
+      "x": 17.1,
+      "y": 54.15,
+      "szer": 5.6,
       "pokrywa": [
         15,
         50,

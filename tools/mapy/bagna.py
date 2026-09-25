@@ -622,7 +622,8 @@ USTAWIENIA = {
     # na omszałym kamieniu), nie ikony z paska — i są drobniejsze, z cieniem
     # kontaktowym, jak skarby na mapie Heroes 3.
     # Runda 9: 0,8 → 0,7 — czerwone stosy pokeballi zagłuszały budowle.
-    'znajdzki': 0.7,
+    # Runda 10 („znajdźki za duże — zmniejszyć o około 40%"): 0,7 → 0,44.
+    'znajdzki': 0.44,
     # Runda 8 (HotA: „góry to osobne stożki skał wklejone jak sprite'y — nie
     # łączą się w grzbiety ani pasma i nie mają podnóży przechodzących
     # w trawę"): skały pierwszego ekranu rysują WIELOPOLOWE pasma
@@ -633,11 +634,17 @@ USTAWIENIA = {
     # `x`, `y` — stopa rysunku w polach (krawędzie pól), `szer` w polach.
     'masywy': [
         {'plik': 'gora-2', 'x': 6.0, 'y': 41.5, 'szer': 7.0, 'pokrywa': [4, 37, 9, 40]},
-        {'plik': 'gora-1', 'x': 6.3, 'y': 45.4, 'szer': 9.0, 'pokrywa': [4, 41, 9, 44]},
-        {'plik': 'gora-6', 'x': 6.3, 'y': 54.4, 'szer': 7.8, 'pokrywa': [4, 50, 8, 53]},
+        # Runda 10 (HotA: „góry to pojedyncze, odizolowane stożki — lewy dolny
+        # róg i lewa krawędź nad zamkiem"): rząd stożków widziany z boku
+        # (`gora-1`, `gora-6`, `gora-5`) zastąpiły zwarte masywy widziane
+        # z góry — kilka rzędów szczytów połączonych granią, usypiska i głazy
+        # u stóp (PROMPTY-PLANSZE §19). Masyw nad zamkiem zachodzi na podnóże
+        # wodospadu, więc lewa krawędź to jedno pasmo.
+        {'plik': 'gora-7', 'x': 6.0, 'y': 45.6, 'szer': 9.0, 'pokrywa': [4, 41, 9, 44]},
+        {'plik': 'gora-10', 'x': 5.3, 'y': 54.15, 'szer': 8.0, 'pokrywa': [4, 50, 8, 53]},
         # Runda 9: węższa i w lewo — prawe zbocze wchodziło na Strugę
         # i rzeka płynęła „pod górą".
-        {'plik': 'gora-5', 'x': 16.9, 'y': 54.4, 'szer': 5.8, 'odbij': True, 'pokrywa': [15, 50, 18, 53]},
+        {'plik': 'gora-9', 'x': 17.1, 'y': 54.15, 'szer': 5.6, 'pokrywa': [15, 50, 18, 53]},
     ],
     # Runda 6 (HotA: „obiekty interaktywne są mniejsze od drzew i krzaków,
     # bez cienia, konturu i kontrastu"): budowle większe i obrys wokół

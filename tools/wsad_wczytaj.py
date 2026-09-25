@@ -667,7 +667,7 @@ ZESTAWY = {
         # Bagna, runda 10 (HotA: „pojedyncze stożki"): zwarte masywy widziane
         # z góry, kilka rzędów szczytów (PROMPTY-PLANSZE §19), i sad jagód
         # jako chata zbieracza na torfowisku zamiast jabłoni z koszami.
-        'gora-7': 380, 'gora-8': 340, 'gora-9': 380, 'sad': 160,
+        'gora-7': 380, 'gora-8': 340, 'gora-9': 380, 'gora-10': 380, 'sad': 160,
     },
     # Polana: trawiaste góry z brązowymi urwiskami zamiast omszałych głazów
     # (runda 3 ślepego porównania: „bez pasma gór w kadrze").

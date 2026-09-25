@@ -112,7 +112,10 @@ GRUPY = [
 
 
 def miniatura(plik: Path, bok: int = 132) -> str:
-    im = Image.open(plik).convert('RGBA')
+    try:
+        im = Image.open(plik).convert('RGBA')
+    except OSError:
+        return ''  # plik w trakcie zapisu (generator albo builder) — następnym razem
     im.thumbnail((bok, bok), Image.LANCZOS)
     tlo = Image.new('RGBA', im.size, (40, 54, 78, 255))
     tlo.alpha_composite(im)
