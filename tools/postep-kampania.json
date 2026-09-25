@@ -95,33 +95,39 @@
      "win": false,
      "gap": "Polana: prawie cała zielona, jeden rodzaj terenu i garść rozrzuconych drobiazgów. Brak kopalń i budowli do zajęcia w kadrze, a gęste drzewa wyglądają jak tapeta, więc nie widać, gdzie da się przejść.",
      "blind": "tools/blind/mapa-polana-r1.png",
-     "note": "Trzy plansze w ślepym porównaniu z prawdziwą mapą przygody HoMM2: wszystkie trzy przegrały. Sondy i symulacja przechodzą, misje 1, 3 i 4 da się wygrać."
+     "note": "Trzy plansze w ślepym porównaniu z prawdziwą mapą przygody HoMM2: wszystkie trzy przegrały. Sondy i symulacja przechodzą, misje 1, 3 i 4 da się wygrać.",
+     "label": "Runda 1 · Polana"
     },
     {
      "win": false,
      "gap": "Bagna: bagno, droga i ziemia mają ten sam mętny oliwkowo-brązowy kolor, więc nie widać, gdzie da się iść, a co spowalnia. Obiekty są wciśnięte w krawędzie kadru.",
-     "blind": "tools/blind/mapa-bagna-r1.png"
+     "blind": "tools/blind/mapa-bagna-r1.png",
+     "label": "Runda 1 · Bagna"
     },
     {
      "win": false,
      "gap": "Twierdza: śnieg to bezkształtna blada mgiełka bez zasp i ośnieżonych drzew, na śniegu i trawie rosną te same zielone krzaki, a dwie trzecie ekranu jest puste.",
-     "blind": "tools/blind/mapa-twierdza-r1.png"
+     "blind": "tools/blind/mapa-twierdza-r1.png",
+     "label": "Runda 1 · Twierdza"
     },
     {
      "win": false,
      "gap": "Polana r2: wciąż jednolity dywan trawy i lasu, bez rzeki i pasma gór w kadrze. Obiekty stoją na miękkich placach ziemi i wyglądają na doklejone.",
      "blind": "tools/blind/mapa-polana-r2.png",
-     "note": "Runda 2, porównania już pełnym kadrem. Wszystkie trzy mapy przegrywają. Wspólna przyczyna: ten sam zestaw obiektów na tych samych okrągłych placach piasku i brak rzeźby terenu."
+     "note": "Runda 2, porównania już pełnym kadrem. Wszystkie trzy mapy przegrywają. Wspólna przyczyna: ten sam zestaw obiektów na tych samych okrągłych placach piasku i brak rzeźby terenu.",
+     "label": "Runda 2 · Polana"
     },
     {
      "win": false,
      "gap": "Bagna r2: ciemna oliwkowa ziemia z trzciną, bez stojącej wody i błota. Wygląda jak ciemny las, a nie trzęsawisko.",
-     "blind": "tools/blind/mapa-bagna-r2.png"
+     "blind": "tools/blind/mapa-bagna-r2.png",
+     "label": "Runda 2 · Bagna"
     },
     {
      "win": false,
      "gap": "Twierdza r2: śnieg to białe plamy na zielonej trawie, obok zasp rosną liściaste drzewa i sad, nie ma ośnieżonych gór ani lodu.",
-     "blind": "tools/blind/mapa-twierdza-r2.png"
+     "blind": "tools/blind/mapa-twierdza-r2.png",
+     "label": "Runda 2 · Twierdza"
     }
    ]
   },
