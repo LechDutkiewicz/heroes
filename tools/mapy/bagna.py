@@ -419,3 +419,11 @@ NAKLEJKI = [
     # kwiaty rosną tylko na suchym.
     (['kwiaty-1', 'kwiaty-2'], '.', 0.07),
 ]
+
+#: Runda 5 („ścieżki to sztywne beżowe pasy o stałej szerokości, zgięte pod
+#: kątami jak na siatce, na zupełnie płaskim terenie"): droga meandruje
+#: i zmienia szerokość (`teren_efekty.droga_kreta`), a teren dostaje rzeźbę —
+#: pagórki na suchym, skarpy wysepek nad bagnem, groblę jako wał z cieniem
+#: (`teren_efekty.rzezba`).
+DROGA_KRETA = {'szerokosc': 0.34, 'zmiennosc': 0.42, 'meander': 0.22}
+RZEZBA = {'pagorki': 0.55}

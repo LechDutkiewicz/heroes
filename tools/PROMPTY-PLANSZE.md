@@ -630,3 +630,77 @@ front edge, and below the deck the front face with two squat grey fieldstone
 piers. Both ends are flat and open so a dirt road can run onto them. Much
 wider than tall. No water, no river banks, no grass, no ground.
 ```
+
+## 7. Bagna — omszałe wzgórza w pierwszym ekranie (runda 5 ślepego porównania)
+
+Werdykt rundy 5: „zupełnie płaski teren bez wzniesień, skarp i cieni". Poza
+rzeźbą w tle (`teren_efekty.rzezba`) Bagna dostają pasmo wzgórz na lewym
+skraju pierwszego ekranu. Podstawowe `kepa-skaly` to szare głazy — na bagnie
+wzgórze jest omszałe, z urwiskami torfu i ciemnej ziemi. Zestaw `bagno`.
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `bagno-kepa-skaly-1..4.png` | `public/mapa/bagno/kepa-skaly-N.png` | 216 px |
+| `bagno-skala.png`, `bagno-skala-2.png` | `public/mapa/bagno/skala*.png` | 67 px |
+| `bagno-kopiec.png`, `bagno-kopiec-2.png` | `public/mapa/bagno/kopiec*.png` | 37 px (kopie `bagno-skala*.png`) |
+
+<!-- plik: bagno-kepa-skaly-1.png | styl: obiekt | proporcje: 3:2 -->
+```
+A segment of a mossy swamp hill range in the style of Heroes of Might and
+Magic 2: two rounded hills covered in deep green moss and short marsh grass,
+steep dark brown peat-and-earth cliffs and ravines cut into the slopes, sharp
+ridge lines running down from each top, a small crooked willow and a few
+cattails in the folds. Lit from the upper left: bright yellow-green sunlit
+slopes on the left, deep olive and brown shadowed folds on the right. Clearly
+an impassable hill, not a pile of boulders. Wider than tall; the foot of the
+hill spreads across the whole width of the picture so that pieces placed side
+by side join into one continuous range.
+```
+
+<!-- plik: bagno-kepa-skaly-2.png | styl: obiekt | proporcje: 3:2 -->
+```
+A long mossy ridge above a swamp in the style of Heroes of Might and Magic 2:
+one high green crest with a saddle and a smaller second hump, grey-green
+mossy rock ledges and vertical brown gullies on the steep faces, one bare
+dead tree on the crest, moss hanging over the ledges. Strong sculpted relief
+lit from the upper left: bright slopes on the left, deep olive-brown shadow
+folds on the right. Wider than tall; the foot spreads across the whole width
+of the picture.
+```
+
+<!-- plik: bagno-kepa-skaly-3.png | styl: obiekt | proporcje: 3:2 -->
+```
+A broad massive mossy hill in the style of Heroes of Might and Magic 2: one
+big rounded summit overgrown with dark green moss and marsh grass, the whole
+front face cut by many parallel dark brown peat gullies and ridges running
+down the slope like folds of cloth, a tiny waterfall trickling down one
+gully, a few cattails at the foot. Lit from the upper left, shadows on the
+right. One solid landform, no separate spires or loose rocks. Wider than tall;
+the foot spreads across the whole width of the picture.
+```
+
+<!-- plik: bagno-kepa-skaly-4.png | styl: obiekt | proporcje: 3:2 -->
+```
+Low broad mossy foothills in the style of Heroes of Might and Magic 2: three
+soft knolls covered in moss and marsh grass packed together, dark brown earth
+scarps and mossy grey outcrops breaking the slopes, a couple of small dark
+green bushes and a willow sapling in the hollows. Lit from the upper left.
+Reads as foothills of a hill chain, clearly impassable. Wider than tall; the
+foot spreads across the whole width of the picture.
+```
+
+<!-- plik: bagno-skala.png | styl: obiekt -->
+```
+A single small mossy hilltop in the style of Heroes of Might and Magic 2: a
+rounded top of deep green moss, steep dark brown peat faces with one gully,
+a few cattails at the foot, lit from the upper left, shaded on the right.
+Slightly wider than tall.
+```
+
+<!-- plik: bagno-skala-2.png | styl: obiekt -->
+```
+A small craggy outcrop in a swamp in the style of Heroes of Might and Magic 2:
+two grey rocks thickly overgrown with green moss and hanging lichen, a tuft
+of marsh grass on the ledge, dark wet mud at the foot, lit from the upper
+left. Slightly wider than tall.
+```

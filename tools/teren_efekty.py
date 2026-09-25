@@ -390,3 +390,195 @@ def mosty(plansza: Image.Image, maska_wody: Image.Image, kafel: int, mosty_plans
         alfa[y0:y1, x0:x1] = np.asarray(n.getchannel('A'), dtype=np.float32)[y0 - py:y1 - py, x0 - px:x1 - px] / 255.0
         woda = woda * (1 - alfa)
     return im, Image.fromarray(woda.clip(0, 255).astype(np.uint8), 'L')
+
+
+def _szum1d(n: int, okres: float, ziarno: int) -> np.ndarray:
+    """Gładki szum wzdłuż krzywej (−1…1): suma trzech sinusów o losowych fazach."""
+    rng = np.random.default_rng(ziarno)
+    s = np.arange(n, dtype=np.float32)
+    w = np.zeros(n, dtype=np.float32)
+    for mnoz, waga in ((1.0, 0.6), (2.3, 0.3), (5.1, 0.1)):
+        w += waga * np.sin(s * 2 * np.pi / (okres / mnoz) + rng.uniform(0, 6.28))
+    return w
+
+
+def droga_kreta(rysunek: list, kafel: int, ziarno: int, szerokosc: float = 0.36, zmiennosc: float = 0.4,
+                meander: float = 0.2, nad: int = 3):
+    """Droga, która MEANDRUJE i zmienia szerokość (Bagna, runda 5).
+
+    Werdykt: „ścieżki to sztywne beżowe pasy o stałej szerokości, zgięte pod
+    kątami jak na siatce". `render_mapa.maska_drogi` łączy środki pól odcinkami
+    tej samej grubości, więc każdy krok po skosie jest widoczny jako kolano.
+    Tutaj: pola drogi składamy w łańcuchy między rozwidleniami, łańcuch
+    wygładzamy (Chaikin), odsuwamy w bok łagodną falą (zerową przy
+    rozwidleniach, żeby odnogi się spotykały) i rysujemy kółkami o promieniu
+    zmiennym wzdłuż drogi. Brzeg dostaje szum — ubita ziemia nie ma krawędzi
+    od linijki. Fala jest mniejsza niż pół pola, więc droga na ekranie wciąż
+    leży na polach, po których idzie się taniej.
+
+    Zwraca `(maska, koleiny)`: koleiny to dwie ciemniejsze smugi po wozach,
+    przerywane — ślad, że tędy się jeździ.
+    """
+    wys, szer = len(rysunek), len(rysunek[0])
+    W, H = szer * kafel, wys * kafel
+    jest = lambda x, y: 0 <= x < szer and 0 <= y < wys and rysunek[y][x] == '='
+    pola_drogi = [(x, y) for y in range(wys) for x in range(szer) if jest(x, y)]
+
+    def sasiedzi(x, y):
+        wynik = []
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            if jest(x + dx, y + dy):
+                wynik.append((x + dx, y + dy))
+        # Skos tylko wtedy, gdy nie da się dojść dwoma prostymi krokami —
+        # inaczej każde kolano robi trójkąt i łańcuch się rozpada.
+        for dx, dy in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
+            if jest(x + dx, y + dy) and not jest(x + dx, y) and not jest(x, y + dy):
+                wynik.append((x + dx, y + dy))
+        return wynik
+
+    sas = {p: sasiedzi(*p) for p in pola_drogi}
+    wezly = {p for p in pola_drogi if len(sas[p]) != 2}
+    uzyte = set()
+    lancuchy = []
+    for w in list(wezly) + pola_drogi:
+        for n in sas[w]:
+            if frozenset((w, n)) in uzyte:
+                continue
+            lan = [w, n]
+            uzyte.add(frozenset((w, n)))
+            while lan[-1] not in wezly and lan[-1] != w:
+                nast = [q for q in sas[lan[-1]] if frozenset((lan[-1], q)) not in uzyte]
+                if not nast:
+                    break
+                uzyte.add(frozenset((lan[-1], nast[0])))
+                lan.append(nast[0])
+            lancuchy.append(lan)
+
+    im = Image.new('L', (W * nad, H * nad), 0)
+    kol = Image.new('L', (W * nad, H * nad), 0)
+    d = ImageDraw.Draw(im)
+    dk = ImageDraw.Draw(kol)
+    k = kafel * nad
+    for i, lan in enumerate(lancuchy):
+        pkt = np.array([((x + 0.5) * k, (y + 0.5) * k) for x, y in lan], dtype=np.float32)
+        # Wylot za krawędź planszy: droga ma wychodzić z kadru, a nie kończyć się
+        # zaokrąglonym kikutem na ramie.
+        for koniec in (0, -1):
+            x, y = lan[koniec]
+            if len(sas[lan[koniec]]) == 1 and (x in (0, szer - 1) or y in (0, wys - 1)):
+                sasiad = pkt[1] if koniec == 0 else pkt[-2]
+                wyd = pkt[koniec] + (pkt[koniec] - sasiad)
+                pkt = np.vstack([wyd[None], pkt]) if koniec == 0 else np.vstack([pkt, wyd[None]])
+        for _ in range(4):
+            if len(pkt) < 3:
+                break
+            q = pkt[:-1] * 0.75 + pkt[1:] * 0.25
+            r = pkt[:-1] * 0.25 + pkt[1:] * 0.75
+            srodek = np.empty((len(q) * 2, 2), dtype=np.float32)
+            srodek[0::2], srodek[1::2] = q, r
+            pkt = np.vstack([pkt[:1], srodek, pkt[-1:]])
+        # Równe próbkowanie co ~2 piksele ekranu.
+        odc = np.linalg.norm(np.diff(pkt, axis=0), axis=1)
+        s = np.concatenate([[0], np.cumsum(odc)])
+        dl = s[-1]
+        if dl <= 0:
+            continue
+        n = max(2, int(dl / (2 * nad)))
+        ss = np.linspace(0, dl, n)
+        px = np.interp(ss, s, pkt[:, 0])
+        py = np.interp(ss, s, pkt[:, 1])
+        tx, ty = np.gradient(px), np.gradient(py)
+        dlt = np.hypot(tx, ty) + 1e-6
+        nx, ny = -ty / dlt, tx / dlt
+        # Fala w bok — zero na rozwidleniach (odnogi mają się spotkać), pełna
+        # w środku odcinka.
+        do_konca = np.minimum(ss, dl - ss) / (k * 1.1)
+        zwez = np.clip(do_konca, 0, 1)
+        zwez = zwez * zwez * (3 - 2 * zwez)
+        fala = _szum1d(n, 5.5 * k / (2 * nad), ziarno + i * 31) * meander * k * zwez
+        px, py = px + nx * fala, py + ny * fala
+        pr = szerokosc * k / 2 * (1 + zmiennosc * _szum1d(n, 3.2 * k / (2 * nad), ziarno + i * 31 + 7))
+        for x, y, r in zip(px, py, pr):
+            d.ellipse([x - r, y - r, x + r, y + r], fill=255)
+        # Koleiny: dwie smugi po bokach osi, przerywane szumem.
+        przerwa = _szum1d(n, 2.1 * k / (2 * nad), ziarno + i * 31 + 13)
+        for strona in (-0.34, 0.34):
+            for x, y, r, p, nnx, nny in zip(px, py, pr, przerwa, nx, ny):
+                if p < -0.15:
+                    continue
+                cx, cy = x + nnx * r * strona * 2 * 0.62, y + nny * r * strona * 2 * 0.62
+                rr = max(1.0, nad * 1.3)
+                dk.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], fill=255)
+    # Rozwidlenia: mały plac, żeby odnogi zlewały się w jedno.
+    for (x, y) in wezly:
+        if len(sas[(x, y)]) >= 3:
+            cx, cy, r = (x + 0.5) * k, (y + 0.5) * k, szerokosc * k * 0.62
+            d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=255)
+    maska = np.asarray(im.resize((W, H), Image.LANCZOS).filter(ImageFilter.GaussianBlur(kafel * 0.07)),
+                       dtype=np.float32) / 255.0
+    # Postrzępiony brzeg: trawa wchodzi w drogę, droga wyjada trawę.
+    maska = maska + szum(W, H, max(2, int(kafel * 0.35)), ziarno + 3) * 0.16 + szum(W, H, max(2, int(kafel * 0.12)), ziarno + 4) * 0.1
+    maska = np.clip((maska - 0.5) * 3.2 + 0.5, 0, 1)
+    koleiny = np.asarray(kol.resize((W, H), Image.LANCZOS).filter(ImageFilter.GaussianBlur(1.2)), dtype=np.float32) / 255.0
+    koleiny = koleiny * np.clip(maska * 1.5 - 0.5, 0, 1)
+    return (Image.fromarray((maska * 255).astype(np.uint8), 'L'),
+            Image.fromarray((koleiny * 255).astype(np.uint8), 'L'))
+
+
+def rzezba(plansza: Image.Image, maski: dict, droga: Image.Image, kafel: int, ziarno: int,
+           wysokosci: dict | None = None, pagorki: float = 0.55, sila: float = 1.0) -> Image.Image:
+    """Rzeźba terenu: pagórki, skarpy i grobla nad bagnem (Bagna, runda 5).
+
+    Werdykt: „zupełnie płaski teren bez wzniesień, skarp i cieni". Budujemy
+    mapę wysokości z masek warstw: woda najniżej, bagno trochę wyżej, sucha
+    łąka i las wyżej, skały najwyżej, a droga przez bagno to GROBLA — wał nad
+    trzęsawiskiem. Na suchym lądzie dochodzą łagodne pagórki (szum w skali
+    kilku pól). Światło z lewej góry, jak w całej grze: stok ku światłu
+    jaśnieje, odwrotny ciemnieje, a za każdą skarpą (brzeg suchej wysepki,
+    wał grobli) pada krótki cień na niższy teren.
+    """
+    W, H = plansza.size
+    wys = {'woda': -1.0, 'bagno': -0.45, 'las': 0.25, 'skaly': 0.9, 'piasek': 0.0}
+    wys.update(wysokosci or {})
+    h = np.zeros((H, W), dtype=np.float32)
+    # Trawa jest podkładem (wysokość 0); każda warstwa przesuwa grunt ku swojej.
+    for nazwa in ('bagno', 'las', 'skaly', 'piasek', 'woda'):
+        if nazwa in maski:
+            m = np.asarray(maski[nazwa], dtype=np.float32) / 255.0
+            h = h * (1 - m) + wys[nazwa] * m
+    d = np.asarray(droga, dtype=np.float32) / 255.0
+    # Grobla: droga nigdy nie leży niżej niż wał nad bagnem.
+    walek = np.asarray(droga.filter(ImageFilter.MaxFilter(max(3, (kafel // 5) | 1))).filter(
+        ImageFilter.GaussianBlur(kafel * 0.08)), dtype=np.float32) / 255.0
+    h = np.maximum(h, walek * 0.05 + (h - 0.0) * (1 - walek))
+    # Pagórki tylko na suchym: im wyżej grunt, tym pełniejszy pagórek.
+    sucho = np.clip(h + 0.3, 0, 1)
+    wzg = szum(W, H, max(2, int(kafel * 3.2)), ziarno) * 0.7 + szum(W, H, max(2, int(kafel * 1.3)), ziarno + 1) * 0.3
+    h = h + np.clip(wzg, -0.2, 1) * pagorki * sucho * (1 - d * 0.6)
+    # Skarpy: lekko wygładzona wysokość — brzeg ostry, ale nie schodkowy.
+    # Rozmycie na liczbach zmiennoprzecinkowych: przez 8-bitowy obrazek
+    # wysokość robiła się schodkami i wychodziły z tego poziomice.
+    from scipy.ndimage import gaussian_filter
+    hs = gaussian_filter(h, kafel * 0.1)
+    gy, gx = np.gradient(hs)
+    swiatlo = np.clip(-(gx + gy * 1.2) * kafel * 1.5 * sila, -1, 1)
+    stromo = np.clip(np.hypot(gx, gy) * kafel * 0.9 - 0.35, 0, 1)
+    woda_m = np.asarray(maski['woda'], dtype=np.float32) / 255.0 if 'woda' in maski else np.zeros_like(h)
+    # Na wodzie cieniowanie słabsze (tafla jest płaska), a skarpa to odsłonięta
+    # ziemia tylko po stronie lądu.
+    lad = 1 - woda_m * 0.7
+    swiatlo = swiatlo * lad
+    # Cień rzucany: wyższy grunt na lewo-górę zasłania niższy.
+    przes = max(1, int(kafel * 0.18))
+    wyzej = np.zeros_like(hs)
+    wyzej[przes:, przes:] = hs[:-przes, :-przes]
+    cien = gaussian_filter(np.clip((wyzej - hs - 0.1) * 2.0, 0, 1), kafel * 0.07)
+    tab = _tab(plansza)
+    ziemia = (stromo * (1 - woda_m) * np.clip(hs + 0.6, 0, 1))[..., None] * 0.35
+    tab = tab * (1 - ziemia) + np.array([112, 86, 52]) * ziemia
+    S = swiatlo[..., None]
+    jasne = tab + (np.array([255, 240, 190]) - tab) * np.clip(S, 0, 1) * 0.22
+    ciemne = tab * (1 + np.clip(S, -1, 0) * 0.45) + np.array([10, 20, 40]) * (-np.clip(S, -1, 0)) * 0.12
+    tab = np.where(S > 0, jasne, ciemne)
+    tab = tab * (1 - cien[..., None] * 0.4 * sila)
+    return _obraz(tab)

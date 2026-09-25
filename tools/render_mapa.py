@@ -71,6 +71,10 @@ NAKLEJKI: list = []
 MOSTY: list = []
 #: Parametry efektu `trzesawisko` (barwa oczek) — `TRZESAWISKO` z konfiguracji.
 TRZESAWISKO: dict = {}
+#: Kręta droga (`DROGA_KRETA` z konfiguracji, patrz `teren_efekty.droga_kreta`)
+#: i rzeźba terenu (`RZEZBA`, `teren_efekty.rzezba`). Brak wpisu — jak dotąd.
+DROGA_KRETA = None
+RZEZBA = None
 
 KAFEL = 48                  # bok pola na ekranie
 #: Ile razy nadpróbkowujemy maskę drogi, zanim ją zmniejszymy. Rysowanie
@@ -125,6 +129,7 @@ def ustaw(mapa_id: str):
     i wymiary z globali — tak było, gdy plansza była jedna, i tak zostaje,
     bo każda z nich jest wołana raz na planszę."""
     global KATALOG, ZRODLO, RYSUNEK, WYS, SZER, W, H, BARWY, EFEKTY, TEKSTURY, WTAPIANIE, NAKLEJKI, TRZESAWISKO, MOSTY
+    global DROGA_KRETA, RZEZBA
     KATALOG = katalog_tla(mapa_id)
     k = konfiguracja(mapa_id)
     BARWY = getattr(k, 'BARWY_TERENU', {})
@@ -133,6 +138,8 @@ def ustaw(mapa_id: str):
     WTAPIANIE = getattr(k, 'WTAPIANIE', {})
     NAKLEJKI = getattr(k, 'NAKLEJKI', [])
     TRZESAWISKO = getattr(k, 'TRZESAWISKO', {})
+    DROGA_KRETA = getattr(k, 'DROGA_KRETA', None)
+    RZEZBA = getattr(k, 'RZEZBA', None)
     ZRODLO = plik_ts(mapa_id)
     RYSUNEK = wczytaj_rysunek()
     # Mosty (`MOSTY` planszy): pola pod mostem są w grze drogą, ale w tle
@@ -315,8 +322,16 @@ def klatka() -> tuple[Image.Image, Image.Image]:
     # bagna i śniegu tę samą łąkę w innym kolorze.
     if 'bez_placow' not in EFEKTY:
         plansza.paste(sciezka, (0, 0), maska_gruntu())
-    droga = maska_drogi()
-    plansza.paste(sciezka, (0, 0), droga)
+    if DROGA_KRETA is not None:
+        droga, koleiny = teren_efekty.droga_kreta(RYSUNEK, KAFEL, ZIARNO + 760, **DROGA_KRETA)
+        plansza.paste(sciezka, (0, 0), droga)
+        # Koleiny: ta sama ziemia, tylko ciemniejsza i chłodniejsza.
+        plansza.paste(Image.new('RGBA', plansza.size, (70, 52, 34, 255)), (0, 0), koleiny.point(lambda v: int(v * 0.42)))
+    else:
+        droga = maska_drogi()
+        plansza.paste(sciezka, (0, 0), droga)
+    if RZEZBA is not None:
+        plansza = teren_efekty.rzezba(plansza, maski, droga, KAFEL, ZIARNO + 780, **RZEZBA).convert('RGBA')
     if 'obwodka_drogi' in EFEKTY:
         plansza = teren_efekty.obwodka_drogi(plansza, droga, KAFEL).convert('RGBA')
     # Naklejki terenu (trzcina, grążele, zaśnieżone głazy…) z `public/mapa/tlo/`
