@@ -467,8 +467,17 @@ export class Przycisk {
     return this;
   }
 
-  setLabel(tekst: string) {
+  /** Nowy napis; `rozmiar` zmienia krój, `strzalka` dokłada albo zdejmuje grot. */
+  setLabel(tekst: string, o: { rozmiar?: number; strzalka?: boolean } = {}) {
     this.napis.setText(tekst);
+    if (o.rozmiar) this.napis.setFontSize(o.rozmiar);
+    const zGrotem = o.strzalka ?? !!this.grot;
+    this.grot?.destroy();
+    this.grot = undefined;
+    this.napis.x = 0;
+    if (zGrotem) this.strzalka();
+    else this.maluj();
+    return this;
   }
 
   destroy() {

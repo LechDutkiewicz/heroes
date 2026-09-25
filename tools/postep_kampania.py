@@ -51,7 +51,7 @@ def runda(r: dict, i: int) -> str:
     fig = f'<img src="{img}" alt="Ślepe porównanie, runda {i}" loading="lazy">' if img else ''
     return f'''
       <li class="runda">
-        <div class="runda-glowa"><span class="nr">Runda {i}</span><span class="werdykt {klasa}">{wynik}</span></div>
+        <div class="runda-glowa"><span class="nr">{e(r.get('label') or f'Runda {i}')}</span><span class="werdykt {klasa}">{wynik}</span></div>
         {fig}
         <p class="luka"><b>Największa luka:</b> {e(r.get('gap', ''))}</p>
         {f'<p class="notka">{e(r["note"])}</p>' if r.get('note') else ''}

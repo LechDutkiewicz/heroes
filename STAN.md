@@ -151,6 +151,24 @@ krainy rozmyte w jedną". Poprawki:
 Autopilot jest słabym graczem (trzyma setki niewydanych pokeballi, wędruje za
 brzegiem mgły), więc jego wynik to górna granica czasu, a nie średnia.
 
+## HUD mapy przygody na wspólnym zestawie (2026-09-24)
+
+- Mapa stoi na tym samym materiale co kampania i okna misji
+  (`src/visual/zestaw.ts`): drewno z belką, gruba złota rama wokół planszy,
+  prawa kolumna jako wpuszczone pole w cienkiej ramie, karta bohatera
+  i podpowiedź na pergaminie, pasek surowców jak rachunek, tabliczki
+  przycisków (złota tylko „Zakończ turę"). Okna mapy (skrzynia, budowle,
+  awans) — pergamin w złotej ramie. Geometria kliknięć się nie zmieniła.
+- **Okna znaczą swoje obiekty zbiorem, nie indeksem** (`znacznik()`):
+  lista sceny jest sortowana po głębokości, więc `children.list.slice(n)`
+  potrafił zgarnąć znak kursora (głębokość 205) i skasować go razem
+  z oknem, a zostawić kawałek okna. Wszystkie okna mapy idą teraz przez
+  `znacznik()` + `zamknijOkno()`.
+- Kroje zestawu dochodzą czasem po zbudowaniu HUD-u (wejście `?ekran=mapa`)
+  — `przerysujNapisy()` odświeża wtedy wszystkie napisy.
+- `sh tools/sondy-mapy.sh <url>` puszcza wszystkie sondy mapy po kolei,
+  `node tools/zrzut-hud.mjs` robi zrzuty HUD-u.
+
 ## Przebieg misji: warunki, koniec gry, ekran wyniku (2026-09-24)
 
 - **Okno „Warunki misji"** (`pokazWarunki` w `AdventureScene`) wyskakuje raz
@@ -243,6 +261,7 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `node tools/probe-kopalnia.mjs` | czy budynek produkcyjny się ZAJMUJE, a nie zbiera |
 | `npx tsx tools/probe-budowle.ts` | czy każda budowla odwiedzana coś daje, i to raz |
 | `python3 tools/generuj_grafiki.py --lista` | które grafiki z promptów są, a których brak |
+| `python3 tools/generuj_grafiki.py plik.png` | generuje grafikę z promptu — OpenAI (prawdziwa przezroczystość obiektów), gdy jest `OPENAI_API_KEY` i dostęp do `api.openai.com`; inaczej Gemini z tłem magenty do wycięcia |
 | `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia, artefakt, bitwa, zamek, powrót |
 | `node tools/probe-klik.mjs` | czy KLIKNIĘCIE prowadzi bohatera tam, gdzie się kliknęło |
 | `npx tsx tools/probe-armia.ts` | arytmetyka slotów armii: 40 tys. losowych ruchów z niezmiennikami |

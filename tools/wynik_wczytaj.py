@@ -98,6 +98,40 @@ def tla() -> None:
         t = winieta(t, 0.4)
     zapisz(t, 'tlo-koniec.jpg')
 
+    # Zwycięstwo w Grocie (misja 2): ta sama jaskinia, ale rozjaśniona —
+    # przez otwór w sklepieniu wpada świt i wypiera fiolet złotem.
+    g = np.asarray(okladka(Image.open(WSAD / 'tlo-grota.png'))).astype(np.float32) / 255
+    t = np.clip(g * 1.18 + 0.03, 0, 1)
+    t = promienie(t, 0.52, -0.05, (255, 222, 160), 0.32)
+    t = poswiata(t, 0.52, 0.0, 0.7, (255, 214, 150), 0.5)
+    t = winieta(t, 0.35)
+    zapisz(t, 'tlo-grota-zwyciestwo.jpg')
+
+    # Finał kampanii (ostatnia misja): Grota w pełnym słońcu. Mocniejsze
+    # promienie, cieplejsza całość i złota łuna pod sklepieniem — to ma być
+    # najjaśniejszy obraz całej gry, bo to jej szczyt.
+    t = np.clip(g * 1.3 + 0.05, 0, 1)
+    szary = t.mean(axis=2, keepdims=True)
+    t = np.clip(szary + (t - szary) * 1.1, 0, 1) * np.array([1.18, 1.02, 0.8], np.float32)
+    t = promienie(t, 0.5, -0.08, (255, 220, 140), 0.75, ile=11)
+    t = poswiata(t, 0.5, 0.0, 1.0, (255, 190, 100), 0.75)
+    t = poswiata(t, 0.5, 0.45, 0.5, (255, 230, 170), 0.35)
+    t = winieta(t, 0.3)
+    zapisz(t, 'tlo-final.jpg')
+
+
+def promienie(tab: np.ndarray, cx: float, cy: float, barwa, moc: float, ile: int = 9) -> np.ndarray:
+    """Snopy światła z punktu nad kadrem, rozchodzące się w dół — tryb „screen"."""
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    kat = np.arctan2(yy - cy * H, xx - cx * W)
+    odl = np.sqrt((yy - cy * H) ** 2 + (xx - cx * W) ** 2) / H
+    pasy = (0.5 + 0.5 * np.cos(kat * ile * 2 + 0.6)) ** 6
+    zanik = np.clip(1.15 - odl, 0, 1) ** 1.5
+    m = Image.fromarray((pasy * zanik * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(10))
+    m = (np.asarray(m).astype(np.float32) / 255 * moc)[:, :, None]
+    b = np.array(barwa, np.float32)[None, None, :] / 255
+    return 1 - (1 - tab) * (1 - b * m)
+
 
 def postacie() -> None:
     CEL.mkdir(parents=True, exist_ok=True)
@@ -108,6 +142,13 @@ def postacie() -> None:
         ('m-zamek', 'zamek', 320),
     ]:
         dopasuj(wczytaj(zrodlo_), wys).save(CEL / f'{nazwa}.png', optimize=True)
+        print(f'  wynik/{nazwa}.png')
+
+    # Twierdze Groty na zwycięstwo w jaskini — te same bryły, które gracz
+    # widzi w mieście Groty, tylko zmniejszone (są już wycięte, bez tła).
+    for zrodlo_, nazwa, wys in [('grota-fort', 'grota-fort', 300), ('grota-ratusz3', 'grota-twierdza', 360)]:
+        im = Image.open(KORZEN / 'public' / 'miasto' / f'{zrodlo_}.png').convert('RGBA')
+        dopasuj(im.crop(im.getbbox()), wys).save(CEL / f'{nazwa}.png', optimize=True)
         print(f'  wynik/{nazwa}.png')
 
     # Zamek srebrnych płaszczy na porażkę: ten sam zamek, wyprany z barw

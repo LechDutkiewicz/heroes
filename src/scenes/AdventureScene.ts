@@ -49,10 +49,27 @@ import {
   przyznaj,
   umiejetnoscPoId,
 } from '../data/umiejetnosci';
-import { C, E, FONT, H, Z, body, display } from '../visual/theme';
-import { drawPanelBody, gradientText, makeHudButton, mix, plate } from '../visual/hud';
+import { C, E, Z } from '../visual/theme';
 import { buildArtefakty, kluczArtefaktu } from '../visual/artefakty';
-import { cienPod, listwa, naroznik, wneka } from '../visual/rama';
+import {
+  BARWA,
+  KROJ,
+  Przycisk,
+  cienPanelu,
+  tloDrewna,
+  krojeZestawu,
+  latki,
+  medalion,
+  napisNaDrewnie,
+  napisTytulowy,
+  ozdobnik,
+  panelPergaminu,
+  ramaZlota,
+  stylAtramentu,
+  stylEtykiety,
+  wczytajZestaw,
+  wstazka,
+} from '../visual/zestaw';
 import { ICON, buildIcons } from '../visual/icons';
 import { GORA, KAFEL, MARGINES, PANEL_W, PASEK_H } from '../visual/uklad';
 import { dodajWode } from '../visual/woda';
@@ -120,9 +137,10 @@ const KLUCZ_WYNIKU = 'wynik-bitwy';
 const KLUCZ_TLA = 'tlo-planszy';
 
 const DOMYSLNA_PODPOWIEDZ =
-  'Klik w pole pokazuje trasę, drugi klik w to samo miejsce — rusza.\n' +
+  'Kliknij pole — zobaczysz trasę.\n' +
+  'Kliknij drugi raz — bohater rusza.\n' +
   'Strzałki przesuwają mapę, spacja wraca do bohatera.\n' +
-  'Klik w bohatera otwiera jego ekran. F8 — dziennik do zgłoszenia błędu.';
+  'C — cele misji.';
 
 export class AdventureScene extends Phaser.Scene {
   private stan!: StanMapy;
@@ -213,6 +231,9 @@ export class AdventureScene extends Phaser.Scene {
 
   preload() {
     wersjonujZasoby(this);
+    // Zestaw okien „między bitwami" — warunki misji, baner końca, pytanie
+    // o wyjście. Wczytywany raz, kolejne wejścia na mapę go pomijają.
+    wczytajZestaw(this);
     loadSfx(this, MUZYKA_MAPA);
     const b = import.meta.env.BASE_URL;
     // Tło zależy od planszy, a klucze tekstur zostają te same (`plansza-0`,
@@ -371,6 +392,10 @@ export class AdventureScene extends Phaser.Scene {
     this.zbudujKursor();
     this.odswiezWszystko();
     this.wysrodkujNaBohaterze(false);
+    // Kroje zestawu (Cinzel, Lora) wczytują się raz na grę. Przy wejściu
+    // prosto na mapę (np. `?ekran=mapa`) potrafią dojść po zbudowaniu HUD-u —
+    // wtedy przerysowujemy wszystkie napisy, które powstały krojem zapasowym.
+    void krojeZestawu().then(() => this.przerysujNapisy());
 
     // Warunki misji — raz, na starcie, jak okno „Scenario Information"
     // w Heroes 2. Chwila zwłoki, żeby najpierw było widać mapę, na której
@@ -623,61 +648,63 @@ export class AdventureScene extends Phaser.Scene {
 
   // ---------- świat ----------
 
+  /** Przerysowuje każdy napis sceny, także w kontenerach — po wczytaniu krojów. */
+  private przerysujNapisy() {
+    if (!this.sys.isActive()) return;
+    const przejdz = (lista: Phaser.GameObjects.GameObject[]) => {
+      for (const o of lista) {
+        if (o instanceof Phaser.GameObjects.Text) o.updateText();
+        else if (o instanceof Phaser.GameObjects.Container) przejdz(o.list);
+      }
+    };
+    przejdz(this.children.list);
+  }
+
   private rysujTlo() {
-    const g = this.add.graphics().setDepth(Z.sky);
-    g.fillGradientStyle(C.skyTop, C.skyTop, C.skyBottom, C.skyBottom, 1);
-    g.fillRect(0, 0, this.scale.width, this.scale.height);
+    // Drewno na całe okno z belką nagłówka u góry — ten sam materiał co
+    // ekran kampanii i okna misji. Niebo z bitwy zostało w bitwie.
+    tloDrewna(this).setDepth(Z.sky);
     // W misji nagłówek mówi, KTÓRA to misja — dziecko wraca do gry po
     // tygodniu i pierwsze pytanie brzmi „gdzie ja jestem".
     const m = misjaPoId(this.stan.misja);
-    this.add
-      .text(
-        MARGINES + 4,
-        10,
-        m ? `MISJA ${m.nr} · ${m.tytul.toUpperCase()}` : 'MAPA PRZYGODY',
-        display(19, H.goldLight)
-      )
-      .setOrigin(0, 0)
+    napisNaDrewnie(this, MARGINES + 6, 20, m ? `Misja ${m.nr} · ${m.tytul}` : 'Mapa przygody', 19)
+      .setOrigin(0, 0.5)
       .setDepth(Z.hud);
 
     // Cele i wyjście do menu w górnej belce nad panelem — jedyne wolne
     // miejsce, które nie zabiera wysokości podpowiedziom ani minimapie.
     const px = this.mapaX + this.oknoW + 14;
     const polowa = (PANEL_W - 8) / 2;
-    const cele = makeHudButton(this, {
+    new Przycisk(this, {
       x: px + polowa / 2,
-      y: 20,
+      y: 19,
       w: polowa,
-      h: 28,
-      icon: ICON.star,
-      tone: C.gold,
-      toneDeep: C.goldDeep,
-      onClick: () => this.pokazWarunki(),
+      h: 30,
+      tekst: 'Cele (C)',
+      rozmiar: 13,
+      glebia: Z.hud + 2,
+      akcja: () => this.pokazWarunki(),
     });
-    cele.setLabel('Cele (C)');
-    const menu = makeHudButton(this, {
+    new Przycisk(this, {
       x: px + polowa + 8 + polowa / 2,
-      y: 20,
+      y: 19,
       w: polowa,
-      h: 28,
-      tone: mix(C.panel, C.panelDeep, 0.1),
-      toneDeep: C.panelDeep,
-      onClick: () => this.zapytajOWyjscie(),
+      h: 30,
+      tekst: 'Menu',
+      rozmiar: 13,
+      glebia: Z.hud + 2,
+      akcja: () => this.zapytajOWyjscie(),
     });
-    menu.setLabel('Menu');
   }
 
   private budujSwiat() {
     // Rama idzie NAD światem, nie pod nim. Pod spodem przykrywała ją mapa
     // (maska tnie równo z ramą, więc na styku nie zostawało miejsca na złotą
     // kreskę) — a w HotA rama i tak nachodzi na krawędź planszy.
-    const rama = this.add.graphics().setDepth(Z.hud - 1);
-    rama.fillStyle(C.shadow, 0.5);
-    rama.fillRoundedRect(this.mapaX - 8, this.mapaY - 8, this.oknoW + 16, this.oknoH + 16, 10);
-    rama.lineStyle(4, C.goldDeep, 1);
-    rama.strokeRoundedRect(this.mapaX - 6, this.mapaY - 6, this.oknoW + 12, this.oknoH + 12, 9);
-    rama.lineStyle(2, C.gold, 1);
-    rama.strokeRoundedRect(this.mapaX - 3, this.mapaY - 3, this.oknoW + 6, this.oknoH + 6, 7);
+    // Gruba złota rama z rozetami w rogach — jak obraz, bo w Heroes 2 mapa
+    // też siedzi w ozdobnej ramie, a nie w kresce.
+    cienPanelu(this, this.mapaX, this.mapaY, this.oknoW, this.oknoH, 0.8).setDepth(Z.hud - 2);
+    ramaZlota(this, this.mapaX, this.mapaY, this.oknoW, this.oknoH, true).setDepth(Z.hud - 1);
 
     this.swiat = this.add.container(0, 0).setDepth(Z.board);
     // Maska przycina świat do ramy. Bez niej mapa wychodzi na panel i na pasek
@@ -779,7 +806,13 @@ export class AdventureScene extends Phaser.Scene {
     tlo.strokeCircle(16, 16, 13);
     const ikona = this.add.image(16, 16, ICON.sword).setDisplaySize(16, 16).setVisible(false);
     const tekst = this.add
-      .text(31, 28, '', { ...display(12, H.goldLight), fontStyle: 'bold' })
+      .text(31, 28, '', {
+        fontFamily: KROJ.tytul,
+        fontSize: '13px',
+        color: BARWA.krem,
+        stroke: BARWA.braz,
+        strokeThickness: 3.5,
+      })
       .setOrigin(0, 0.5);
     this.kursorZnak = this.add
       .container(0, 0, [grot, tlo, ikona, tekst])
@@ -1428,7 +1461,15 @@ export class AdventureScene extends Phaser.Scene {
     const px = this.mapaX + this.oknoW + 14;
     const py = this.mapaY - 8;
     const ph = this.oknoH + 16;
-    drawPanelBody(this, px, py, PANEL_W, ph, 8);
+    // Prawa kolumna jak w Heroes 2: wpuszczone w drewno pole w cienkiej
+    // złotej ramie, a w nim minimapa, karta bohatera i przyciski — ten sam
+    // materiał co okna warunków i ekran kampanii. Wcześniej był tu mleczny
+    // panel z bitwy i mapa wyglądała jak inna gra niż jej własne okna.
+    cienPanelu(this, px, py, PANEL_W, ph, 0.7).setDepth(Z.hud - 2);
+    const tloPanelu = this.add.graphics().setDepth(Z.hud - 1);
+    tloPanelu.fillStyle(0x1c1006, 0.55);
+    tloPanelu.fillRect(px, py, PANEL_W, ph);
+    ramaZlota(this, px, py, PANEL_W, ph, false).setDepth(Z.hud - 1);
 
     const wnetrzeX = px + 16;
     const wnetrzeW = PANEL_W - 32;
@@ -1440,10 +1481,9 @@ export class AdventureScene extends Phaser.Scene {
     const mmX = wnetrzeX + (wnetrzeW - mmBok) / 2;
     const mmY = py + 26;
     const ramka = this.add.graphics().setDepth(Z.hud);
-    ramka.fillStyle(C.panelDeep, 1);
-    ramka.fillRoundedRect(mmX - 5, mmY - 5, mmBok + 10, mmBok + 10, 5);
-    ramka.lineStyle(2, C.gold, 0.95);
-    ramka.strokeRoundedRect(mmX - 5, mmY - 5, mmBok + 10, mmBok + 10, 5);
+    ramka.fillStyle(0x0d0904, 1);
+    ramka.fillRect(mmX, mmY, mmBok, mmBok);
+    ramaZlota(this, mmX, mmY, mmBok, mmBok, false).setDepth(Z.hud + 3);
     for (const [lit, dx, dy] of [
       ['N', mmBok / 2, -14],
       ['S', mmBok / 2, mmBok + 14],
@@ -1451,7 +1491,13 @@ export class AdventureScene extends Phaser.Scene {
       ['E', mmBok + 15, mmBok / 2],
     ] as Array<[string, number, number]>) {
       this.add
-        .text(mmX + dx, mmY + dy, lit, { ...body(11, H.goldLight), fontStyle: 'bold' })
+        .text(mmX + dx, mmY + dy, lit, {
+          fontFamily: KROJ.tytul,
+          fontSize: '12px',
+          color: BARWA.krem,
+          stroke: BARWA.braz,
+          strokeThickness: 3,
+        })
         .setOrigin(0.5)
         .setDepth(Z.hud);
     }
@@ -1474,55 +1520,48 @@ export class AdventureScene extends Phaser.Scene {
 
     const kartaY = this.rysujPasekWlasnosci(wnetrzeX, mmY + mmBok + 22, wnetrzeW) + 10;
     const kartaH = 134;
-    const karta = this.add.graphics().setDepth(Z.hud);
-    plate(karta, wnetrzeX, kartaY, wnetrzeW, kartaH, 9, C.panel, C.panelDeep, {
-      light: 0.2,
-      dark: 0.2,
-      gloss: 0.16,
-      edgeW: 2,
-    });
+    panelPergaminu(this, wnetrzeX, kartaY, wnetrzeW, kartaH).forEach((c) => c.setDepth(Z.hud));
 
     const b = this.stan.bohater;
     const portretBok = 50;
-    const ram = this.add.graphics().setDepth(Z.hud + 1);
-    ram.fillStyle(mix(C.panel, C.panelDeep, 0.35), 1);
-    ram.fillRoundedRect(wnetrzeX + 8, kartaY + 8, portretBok, portretBok, 6);
-    ram.lineStyle(2, C.goldDeep, 1);
-    ram.strokeRoundedRect(wnetrzeX + 8, kartaY + 8, portretBok, portretBok, 6);
+    medalion(this, wnetrzeX + 8 + portretBok / 2, kartaY + 8 + portretBok / 2, portretBok / 2, BARWA.papierCiemny).setDepth(
+      Z.hud + 1
+    );
     const portret = this.add
       .image(wnetrzeX + 8 + portretBok / 2, kartaY + 6 + portretBok / 2, 'bohater', 0)
       .setDepth(Z.hud + 2);
-    portret.setScale((portretBok - 4) / portret.height);
+    portret.setScale((portretBok - 8) / portret.height);
 
     this.add
-      .text(wnetrzeX + portretBok + 18, kartaY + 8, b.imie, display(15))
+      .text(wnetrzeX + portretBok + 18, kartaY + 7, b.imie, stylEtykiety(17, BARWA.atrament))
       .setOrigin(0, 0)
       .setDepth(Z.hud + 2);
     this.poziomTekst = this.add
-      .text(wnetrzeX + portretBok + 18, kartaY + 25, '', body(11, H.inkSoft))
+      .text(wnetrzeX + portretBok + 18, kartaY + 28, '', stylAtramentu(12, 'miekki'))
       .setOrigin(0, 0)
-      .setDepth(Z.hud + 2);
+      .setDepth(Z.hud + 2)
+      .setData('maks', wnetrzeW - portretBok - 24);
 
     // Pasek do awansu. Sama liczba „190/384" mówi, ILE brakuje, ale nie mówi,
     // czy to blisko — a to jest jedyne pytanie, które gracz sobie przy niej
     // zadaje. Pasek odpowiada na nie bez czytania.
     const pdX = wnetrzeX + portretBok + 18;
     const pdW = wnetrzeW - portretBok - 26;
-    const pdY = kartaY + 40;
+    const pdY = kartaY + 46;
     const rowek = this.add.graphics().setDepth(Z.hud + 1);
-    rowek.fillStyle(C.hpTrack, 1);
+    rowek.fillStyle(0x3a2410, 1);
     rowek.fillRoundedRect(pdX, pdY, pdW, 8, 4);
-    rowek.lineStyle(1.5, C.shadow, 0.5);
+    rowek.lineStyle(1.5, BARWA.kreska, 0.8);
     rowek.strokeRoundedRect(pdX, pdY, pdW, 8, 4);
     this.doswPasek = this.add.graphics().setDepth(Z.hud + 2);
     this.doswPasek.setData('x', pdX).setData('y', pdY).setData('w', pdW);
 
-    const statY = kartaY + 60;
+    const statY = kartaY + 70;
     [ICON.sword, ICON.shield, ICON.boot].forEach((klucz, i) => {
-      const sx = wnetrzeX + portretBok + 24 + i * 46;
-      this.add.image(sx, statY, klucz).setDisplaySize(17, 17).setDepth(Z.hud + 2);
+      const sx = wnetrzeX + 20 + i * 64;
+      this.add.image(sx, statY, klucz).setDisplaySize(18, 18).setDepth(Z.hud + 2);
       this.statTeksty[i] = this.add
-        .text(sx + 12, statY, '', display(14, i === 2 ? H.gold : H.white))
+        .text(sx + 13, statY, '', stylEtykiety(16, i === 2 ? BARWA.atramentZielony : BARWA.atrament))
         .setOrigin(0, 0.5)
         .setDepth(Z.hud + 2);
     });
@@ -1546,13 +1585,22 @@ export class AdventureScene extends Phaser.Scene {
     const rzadY = kartaY + 86;
     for (let i = 0; i < SLOTY_ARMII; i++) {
       const sx = rzadX + i * (slotBok + odstep);
+      // Gniazdo: ciemniejszy papier z kreską atramentu, jak kratka w księdze.
       const g = this.add.graphics();
-      g.fillStyle(mix(C.panel, C.panelDeep, 0.3), 1);
+      g.fillStyle(0x8a5a2a, 0.16);
       g.fillRoundedRect(0, 0, slotBok, slotBok + 12, 4);
-      g.lineStyle(1.5, C.panelDeep, 0.7);
+      g.lineStyle(1.2, BARWA.kreska, 0.6);
       g.strokeRoundedRect(0, 0, slotBok, slotBok + 12, 4);
       const im = this.add.image(slotBok / 2, slotBok / 2 - 1, 'bohater').setVisible(false);
-      const licznik = this.add.text(slotBok / 2, slotBok + 4, '', display(10)).setOrigin(0.5);
+      const licznik = this.add
+        .text(slotBok / 2, slotBok + 4, '', {
+          fontFamily: KROJ.tytul,
+          fontSize: '11px',
+          color: BARWA.krem,
+          stroke: BARWA.braz,
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5);
       const slot = this.add.container(sx, rzadY, [g, im, licznik]).setDepth(Z.hud + 1);
       slot.setData('licznik', licznik).setData('rysunek', im);
       this.slotyArmii.push(slot);
@@ -1567,59 +1615,42 @@ export class AdventureScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.otworzBohatera());
 
-    // Rząd zapisu stoi NAD „Zakończ turę" i zabiera panelowi podpowiedzi
-    // 37 px wysokości — tyle, ile zajmują przyciski (28) plus odstępy z obu
-    // stron (8 i 1) od sąsiadów. Zmiana tej liczby bez przeliczenia niżej
-    // rozjeżdża odstępy, tak jak już raz się zdarzyło z tekstem podpowiedzi.
-    const podY = kartaY + kartaH + 10;
-    const podH = py + ph - 56 - 27 - podY;
-    const ramkaPod = this.add.graphics().setDepth(Z.hud);
-    plate(ramkaPod, wnetrzeX, podY, wnetrzeW, podH, 9, mix(C.panel, C.panelDeep, 0.16), C.panelDeep, {
-      light: 0.14,
-      dark: 0.16,
-      gloss: 0.1,
-      edgeW: 2,
-    });
+    // Pole podpowiedzi kończy się nad rzędem zapisu; rząd zapisu (30 px)
+    // i „Zakończ turę" (40 px) stoją od dołu panelu. Liczby idą z jednego
+    // miejsca — przestawienie któregokolwiek bez reszty rozjeżdża odstępy.
+    const turaY = py + ph - 28;
+    const wierszAkcjiY = turaY - 40;
+    const podY = kartaY + kartaH + 12;
+    const podH = wierszAkcjiY - 21 - podY;
+    panelPergaminu(this, wnetrzeX, podY, wnetrzeW, podH).forEach((c) => c.setDepth(Z.hud));
     this.podpowiedz = this.add
-      .text(wnetrzeX + 10, podY + 6, DOMYSLNA_PODPOWIEDZ, { ...body(10, H.ink), lineSpacing: 1 })
+      .text(wnetrzeX + 9, podY + 6, DOMYSLNA_PODPOWIEDZ, { ...stylAtramentu(12), lineSpacing: 0 })
       .setOrigin(0, 0)
       .setDepth(Z.hud + 2)
-      .setWordWrapWidth(wnetrzeW - 20);
+      .setWordWrapWidth(wnetrzeW - 18);
+    // Lora jest szersza od dawnego kroju, a opisy obiektów bywają długie.
+    // Każdy nowy tekst podpowiedzi najpierw próbuje 12 px; dopiero gdy nie
+    // mieści się w polu, schodzi o piksel — zamiast wychodzić na przyciski.
+    const pp = this.podpowiedz;
+    const zwykly = pp.setText.bind(pp);
+    pp.setText = ((t: string | string[]) => {
+      pp.setFontSize(12);
+      zwykly(t);
+      for (const r of [11, 10]) {
+        if (pp.height <= podH - 8) break;
+        pp.setFontSize(r);
+      }
+      return pp;
+    }) as typeof pp.setText;
 
-    const wierszAkcjiY = py + ph - 65;
-    const polowaW = (wnetrzeW - 6) / 2;
-    const zapiszBtn = makeHudButton(this, {
-      x: wnetrzeX + polowaW / 2,
-      y: wierszAkcjiY,
-      w: polowaW,
-      h: 24,
-      tone: mix(C.panel, C.panelDeep, 0.1),
-      toneDeep: C.panelDeep,
-      onClick: () => this.zapiszStanGry(),
-    });
-    zapiszBtn.setLabel('Zapisz');
-    const wczytajBtn = makeHudButton(this, {
-      x: wnetrzeX + polowaW + 6 + polowaW / 2,
-      y: wierszAkcjiY,
-      w: polowaW,
-      h: 24,
-      tone: mix(C.panel, C.panelDeep, 0.1),
-      toneDeep: C.panelDeep,
-      onClick: () => this.wczytajStanGry(),
-    });
-    wczytajBtn.setLabel('Wczytaj');
-
-    const przycisk = makeHudButton(this, {
-      x: px + PANEL_W / 2,
-      y: py + ph - 30,
-      w: wnetrzeW,
-      h: 38,
-      icon: ICON.hourglass,
-      tone: C.gold,
-      toneDeep: C.goldDeep,
-      onClick: () => this.koniecTury(),
-    });
-    przycisk.setLabel('Zakończ turę');
+    const polowaW = (wnetrzeW - 8) / 2;
+    const guzik = (x: number, y: number, w: number, h: number, tekst: string, akcja: () => void, glowny = false) =>
+      new Przycisk(this, { x, y, w, h, tekst, glowny, rozmiar: glowny ? 17 : 13, glebia: Z.hud + 2, akcja });
+    guzik(wnetrzeX + polowaW / 2, wierszAkcjiY, polowaW, 30, 'Zapisz', () => this.zapiszStanGry());
+    guzik(wnetrzeX + polowaW + 8 + polowaW / 2, wierszAkcjiY, polowaW, 30, 'Wczytaj', () => this.wczytajStanGry());
+    // „Zakończ turę" jest JEDYNĄ złotą tabliczką na mapie — to jedyny krok,
+    // który zawsze da się zrobić, kiedy dziecko nie wie, co dalej.
+    guzik(px + PANEL_W / 2, turaY, wnetrzeW, 40, 'Zakończ turę', () => this.koniecTury(), true);
   }
 
   /** Zapis gry w przeglądarce — jeden slot, żeby dało się wrócić do planszy później. */
@@ -1690,10 +1721,9 @@ export class AdventureScene extends Phaser.Scene {
     for (const [i, w] of wpisy.entries()) {
       const sx = rzadX + i * (bok + odstep);
       const g = this.add.graphics().setDepth(Z.hud);
-      g.fillStyle(mix(C.panel, C.panelDeep, 0.3), 1);
-      g.fillRoundedRect(sx, y, bok, bok, 5);
-      g.lineStyle(2, C.goldDeep, 1);
-      g.strokeRoundedRect(sx, y, bok, bok, 5);
+      g.fillStyle(BARWA.papierCiemny, 1);
+      g.fillRect(sx, y, bok, bok);
+      ramaZlota(this, sx, y, bok, bok, false).setDepth(Z.hud + 2);
       const im = this.add.image(sx + bok / 2, y + bok / 2, w.klucz).setDepth(Z.hud + 1);
       im.setScale(Math.min((bok - 8) / im.width, (bok - 6) / im.height));
       this.add
@@ -1710,11 +1740,9 @@ export class AdventureScene extends Phaser.Scene {
     const y = this.mapaY + this.oknoH + 14;
     const x0 = this.mapaX - 8;
     const szer = this.oknoW + 16;
-    const g = this.add.graphics().setDepth(Z.hud);
-    g.fillStyle(C.panelDeep, 1);
-    g.fillRoundedRect(x0, y, szer, PASEK_H, 7);
-    g.lineStyle(2, C.goldDeep, 1);
-    g.strokeRoundedRect(x0, y, szer, PASEK_H, 7);
+    // Pergamin w cienkiej złotej ramie — surowce czyta się jak rachunek
+    // w księdze skarbnika, ciemnym atramentem na jasnym papierze.
+    panelPergaminu(this, x0, y, szer, PASEK_H).forEach((c) => c.setDepth(Z.hud));
 
     const krok = (szer - 24) / SUROWCE.length;
     SUROWCE.forEach((s, i) => {
@@ -1723,17 +1751,16 @@ export class AdventureScene extends Phaser.Scene {
       const im = this.add.image(sx, sy, `m-${SUROWIEC_INFO[s].ikona}`).setDepth(Z.hud + 1);
       im.setScale(Math.min(1, (PASEK_H - 10) / im.height));
       this.podpisy[s] = this.add
-        .text(sx + 17, sy, '0', display(15))
+        .text(sx + 17, sy, '0', stylEtykiety(17, BARWA.atrament))
         .setOrigin(0, 0.5)
         .setDepth(Z.hud + 1);
       this.dochody[s] = this.add
-        .text(sx + 17, sy, '', body(10, H.goldLight))
+        .text(sx + 17, sy + 1, '', { ...stylAtramentu(12, 'zielony'), fontStyle: 'bold' })
         .setOrigin(0, 0.5)
         .setDepth(Z.hud + 1);
     });
 
-    this.dataTekst = this.add
-      .text(this.mapaX + this.oknoW + 14 + PANEL_W / 2, y + PASEK_H / 2, '', display(13, H.goldLight))
+    this.dataTekst = napisNaDrewnie(this, this.mapaX + this.oknoW + 14 + PANEL_W / 2, y + PASEK_H / 2, '', 15)
       .setOrigin(0.5)
       .setDepth(Z.hud + 1);
   }
@@ -1775,10 +1802,16 @@ export class AdventureScene extends Phaser.Scene {
     // blisko jest, ani co da. Licznik do awansu robi z doświadczenia widoczny
     // pasek postępu, a co awans daje — mówi komunikat w chwili awansu.
     const p = postepPoziomu(b.doswiadczenie);
-    this.poziomTekst.setText(
-      `poziom ${p.poziom}  ·  ${p.wPoziomie}/${p.doAwansu} do awansu` +
-        (b.artefakty.length ? `  ·  art. ${b.artefakty.length}` : '')
-    );
+    // Licznik artefaktów wypadł z tej linijki: przy dwucyfrowym doświadczeniu
+    // wychodził za kartę („…do awansu · ar"). Artefakty widać na ekranie
+    // bohatera; tu zostaje to, czego pasek pod spodem nie mówi sam — liczby.
+    // Gdyby i to się nie zmieściło (duże liczby na wysokich poziomach),
+    // napis traci „do awansu", a nie ucina się w pół słowa.
+    const maks = this.poziomTekst.getData('maks') as number | undefined;
+    this.poziomTekst.setText(`poziom ${p.poziom} · ${p.wPoziomie}/${p.doAwansu} do awansu`);
+    if (maks && this.poziomTekst.width > maks) {
+      this.poziomTekst.setText(`poziom ${p.poziom} · ${p.wPoziomie}/${p.doAwansu}`);
+    }
     const pdX = this.doswPasek.getData('x') as number;
     const pdY = this.doswPasek.getData('y') as number;
     const pdW = this.doswPasek.getData('w') as number;
@@ -2307,85 +2340,87 @@ export class AdventureScene extends Phaser.Scene {
    */
   private zapytajOSkrzynie(w: WyborSkrzyni) {
     this.zajety = true;
-    const szer = 360;
+    const szer = 380;
     const wys = 176;
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
     // Okno nie należy ani do planszy (jechałoby razem z mapą), ani do HUD-u
     // (plansza rysuje się po nim i by je zakryła) — idzie do kamery okien.
-    const doOkna: Phaser.GameObjects.GameObject[] = [];
-
-    const zaslona = this.add
-      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.45)
-      .setOrigin(0, 0)
-      .setDepth(Z.overlay);
-    const tlo = this.add.graphics().setDepth(Z.overlay + 1);
-    plate(tlo, cx - szer / 2, cy - wys / 2, szer, wys, 12, C.panel, C.gold, {
-      light: 0.24,
-      dark: 0.22,
-      gloss: 0.2,
-      edgeW: 3,
-    });
-    const napisy = [
-      this.add
-        .text(cx, cy - wys / 2 + 24, 'Skrzynia!', display(20, H.gold))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2),
-      this.add
-        .text(cx, cy - wys / 2 + 54, 'Co wolisz?', body(13, H.ink))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2),
-    ];
-
-    doOkna.push(zaslona, tlo, ...napisy);
-    this.naWierzchu(...doOkna);
+    // Wszystko, co przybyło na liście sceny od tej chwili, jest oknem.
+    const nowe = this.znacznik();
+    this.oknoPergaminu(cx, cy, szer, wys);
+    this.add
+      .text(cx, cy - wys / 2 + 30, 'Skrzynia!', stylEtykiety(26))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    this.add
+      .text(cx, cy - wys / 2 + 62, 'Co wolisz?', stylAtramentu(17))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
 
     const zamknij = (co: 'pokeballe' | 'doswiadczenie') => {
       const opis = wezZeSkrzyni(this.stan, w, co);
-      [zaslona, tlo, ...napisy].forEach((x) => x.destroy());
-      przyciski.forEach((p) => p.destroy());
+      this.zamknijOkno(nowe());
       sfx(this, 'zbior');
       this.znikaj(w.obiekt);
       this.napisUlotny(opis);
       this.zajety = false;
       this.odswiezWszystko();
     };
+    // Dwie równorzędne odpowiedzi — obie drewniane; złota tabliczka
+    // podpowiadałaby, że jedna jest „tą właściwą".
+    this.guzikOkna(cx - 86, cy + 36, 160, `${w.pokeballe} pokeballi`, () => zamknij('pokeballe'));
+    this.guzikOkna(cx + 86, cy + 36, 160, `${w.doswiadczenie} dośw.`, () => zamknij('doswiadczenie'));
+    this.naWierzchu(...nowe());
+  }
 
-    // Przyciski powstają jako osobne obiekty sceny, więc trzeba je oddać
-    // kamerze okien tak samo jak tło. Notujemy, co przybyło na liście sceny,
-    // i przekazujemy dokładnie to.
-    const przedPrzyciskami = this.children.list.length;
-    const przyciski = [
-      makeHudButton(this, {
-        x: cx - 86,
-        y: cy + 36,
-        w: 156,
-        h: 42,
-        icon: ICON.star,
-        tone: C.gold,
-        toneDeep: C.goldDeep,
-        // Przyciski HUD siedzą domyślnie na głębokości 62, czyli POD zasłoną
-        // okna (100). Dlatego okno skrzyni wyglądało na puste: tło i napisy
-        // były, a jedyne, co miało w nim znaczenie — przyciski — chowało się
-        // pod przyciemnieniem.
-        depth: Z.overlay + 3,
-        onClick: () => zamknij('pokeballe'),
-      }),
-      makeHudButton(this, {
-        x: cx + 86,
-        y: cy + 36,
-        w: 156,
-        h: 42,
-        icon: ICON.banner,
-        tone: C.ally,
-        toneDeep: C.panelDeep,
-        depth: Z.overlay + 3,
-        onClick: () => zamknij('doswiadczenie'),
-      }),
-    ];
-    this.naWierzchu(...this.children.list.slice(przedPrzyciskami));
-    przyciski[0].setLabel(`${w.pokeballe} pokeballi`);
-    przyciski[1].setLabel(`${w.doswiadczenie} dośw.`);
+  /**
+   * Tło okna na mapie: przyciemnienie i pergamin w złotej ramie z zestawu.
+   * Wszystkie okna mapy (skrzynia, budowle, awans) stoją na tym samym
+   * papierze co okno warunków — jedna gra, jeden materiał.
+   */
+  private oknoPergaminu(cx: number, cy: number, szer: number, wys: number, zaciemnienie = 0.5) {
+    this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, zaciemnienie)
+      .setOrigin(0, 0)
+      .setDepth(Z.overlay)
+      .setInteractive();
+    panelPergaminu(this, cx - szer / 2, cy - wys / 2, szer, wys).forEach((c) => c.setDepth(Z.overlay + 1));
+  }
+
+  /** Drewniana (albo złota) tabliczka okna — nad zasłoną, dla kamery okien. */
+  private guzikOkna(x: number, y: number, w: number, tekst: string, akcja: () => void, glowny = false, h = 44) {
+    return new Przycisk(this, { x, y, w, h, tekst, glowny, rozmiar: 15, glebia: Z.overlay + 3, akcja });
+  }
+
+  /**
+   * Znacznik okna: zapamiętuje, co JUŻ jest na liście sceny, i zwraca
+   * funkcję oddającą wszystko, co przybyło później.
+   *
+   * Wcześniej okna liczyły to indeksem (`children.list.slice(n)`), ale lista
+   * sceny jest sortowana po głębokości — znak kursora (głębokość 205) potrafił
+   * wskoczyć za indeks okna i zniknąć razem z nim, a kawałek okna zostawał
+   * na ekranie. Porównanie z zapamiętanym zbiorem nie zależy od kolejności.
+   */
+  private znacznik(): () => Phaser.GameObjects.GameObject[] {
+    const byly = new Set(this.children.list);
+    return () => this.children.list.filter((o) => !byly.has(o));
+  }
+
+  /**
+   * Zamyka okno. Tweeny gasimy także na dzieciach kontenerów: tabliczka
+   * z zestawu przy kliknięciu podskakuje napisem, a okno zamyka się w tym
+   * samym kliknięciu — tween sięgał potem do zniszczonego napisu.
+   */
+  private zamknijOkno(obiekty: Phaser.GameObjects.GameObject[]) {
+    const zgas = (o: Phaser.GameObjects.GameObject) => {
+      this.tweens.killTweensOf(o);
+      if (o instanceof Phaser.GameObjects.Container) o.list.forEach(zgas);
+    };
+    for (const o of obiekty) {
+      zgas(o);
+      o.destroy();
+    }
   }
 
   /**
@@ -2412,38 +2447,24 @@ export class AdventureScene extends Phaser.Scene {
    */
   private zapytajOBudowle(p: Pytanie) {
     this.zajety = true;
-    const szer = 380;
+    const szer = 400;
     const wys = 176;
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
-
-    const zaslona = this.add
-      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.45)
-      .setOrigin(0, 0)
-      .setDepth(Z.overlay);
-    const tlo = this.add.graphics().setDepth(Z.overlay + 1);
-    plate(tlo, cx - szer / 2, cy - wys / 2, szer, wys, 12, C.panel, C.gold, {
-      light: 0.24,
-      dark: 0.22,
-      gloss: 0.2,
-      edgeW: 3,
-    });
-    const napisy = [
-      this.add
-        .text(cx, cy - wys / 2 + 24, p.tytul, display(20, H.gold))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2),
-      this.add
-        .text(cx, cy - wys / 2 + 56, p.tresc, body(13, H.ink))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2),
-    ];
-    this.naWierzchu(zaslona, tlo, ...napisy);
+    const nowe = this.znacznik();
+    this.oknoPergaminu(cx, cy, szer, wys);
+    this.add
+      .text(cx, cy - wys / 2 + 30, p.tytul, stylEtykiety(24))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    this.add
+      .text(cx, cy - wys / 2 + 64, p.tresc, { ...stylAtramentu(15, 'zwykly', szer - 40), align: 'center' })
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
 
     const zamknij = (klucz: string) => {
       const opis = odpowiedzNaPytanie(this.stan, p, klucz);
-      [zaslona, tlo, ...napisy].forEach((x) => x.destroy());
-      przyciski.forEach((b) => b.destroy());
+      this.zamknijOkno(nowe());
       if (p.obiekt.zebrany) {
         sfx(this, 'zbior');
         this.znikaj(p.obiekt);
@@ -2453,26 +2474,19 @@ export class AdventureScene extends Phaser.Scene {
       this.odswiezWszystko();
     };
 
-    // Przyciski powstają jako osobne obiekty sceny i trzeba je oddać kamerze
-    // okien tak samo jak tło — inaczej okno wygląda na puste, bo jedyne, co
-    // się w nim klika, chowa się pod przyciemnieniem.
-    const przedPrzyciskami = this.children.list.length;
+    // Pierwsza opcja to zwykle „tak" — złota; reszta drewniana.
     const odstep = 172;
-    const przyciski = p.opcje.map((opcja, i) =>
-      makeHudButton(this, {
-        x: cx + (i - (p.opcje.length - 1) / 2) * odstep,
-        y: cy + 36,
-        w: 160,
-        h: 42,
-        icon: i === 0 ? ICON.star : ICON.banner,
-        tone: i === 0 ? C.gold : C.ally,
-        toneDeep: i === 0 ? C.goldDeep : C.panelDeep,
-        depth: Z.overlay + 3,
-        onClick: () => zamknij(opcja.klucz),
-      })
+    p.opcje.forEach((opcja, i) =>
+      this.guzikOkna(
+        cx + (i - (p.opcje.length - 1) / 2) * odstep,
+        cy + 36,
+        164,
+        opcja.etykieta,
+        () => zamknij(opcja.klucz),
+        i === 0 && p.opcje.length > 1
+      )
     );
-    this.naWierzchu(...this.children.list.slice(przedPrzyciskami));
-    przyciski.forEach((b, i) => b.setLabel(p.opcje[i].etykieta));
+    this.naWierzchu(...nowe());
   }
 
   /**
@@ -2543,54 +2557,22 @@ export class AdventureScene extends Phaser.Scene {
     const oferty = ofertaAwansu(this.stan.bohater, (n) => Phaser.Math.RND.between(0, n - 1));
 
     const szer = 560;
-    const wys = oferty.length ? 330 : 190;
+    const wys = oferty.length ? 336 : 200;
     const cx = MARGINES + this.oknoW / 2;
     const cy = GORA + this.oknoH / 2;
-    const zaslona = this.add
-      .rectangle(0, 0, this.scale.width, this.scale.height, 0x04101a, 0.72)
-      .setOrigin(0, 0)
-      .setDepth(Z.overlay)
-      .setInteractive();
-    const tlo = this.add.graphics().setDepth(Z.overlay + 1);
-    cienPod(tlo, cx - szer / 2, cy - wys / 2, szer, wys, 16, 1);
-    plate(tlo, cx - szer / 2, cy - wys / 2, szer, wys, 16, C.panel, C.goldDeep, {
-      light: 0.2,
-      dark: 0.2,
-      gloss: 0.14,
-      drop: 0,
-      edgeW: 3,
-    });
-    listwa(tlo, cx - szer / 2 + 8, cy - wys / 2 + 8, szer - 16, 38, 10, C.panelDeep, C.gold);
-    naroznik(tlo, cx - szer / 2 + 14, cy - wys / 2 + 14, 1, 1, 24);
-    naroznik(tlo, cx + szer / 2 - 14, cy - wys / 2 + 14, -1, 1, 24);
-    naroznik(tlo, cx - szer / 2 + 14, cy + wys / 2 - 14, 1, -1, 24);
-    naroznik(tlo, cx + szer / 2 - 14, cy + wys / 2 - 14, -1, -1, 24);
+    const nowe = this.znacznik();
+    this.oknoPergaminu(cx, cy, szer, wys, 0.66);
+    wstazka(this, cx, cy - wys / 2 + 26, `AWANS NA POZIOM ${poziomPo}`).setDepth(Z.overlay + 2);
+    this.add
+      .text(cx, cy - wys / 2 + 62, zyski.join('   ·   ') || 'Statystyki bez zmian', {
+        ...stylAtramentu(17, 'zielony'),
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
 
-    const czesci: Phaser.GameObjects.GameObject[] = [zaslona, tlo];
-    const dodaj = <X extends Phaser.GameObjects.GameObject>(x: X) => {
-      czesci.push(x);
-      return x;
-    };
-    dodaj(
-      this.add
-        .text(cx, cy - wys / 2 + 27, `AWANS NA POZIOM ${poziomPo}`, {
-          ...display(19, H.goldLight),
-          letterSpacing: 1.5,
-        })
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2)
-    );
-    dodaj(
-      this.add
-        .text(cx, cy - wys / 2 + 60, zyski.join('   ·   ') || 'Statystyki bez zmian', body(13, H.ink))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2)
-    );
-
-    const przyciski: ReturnType<typeof makeHudButton>[] = [];
     const zamknij = (opis?: string) => {
-      czesci.forEach((x) => x.destroy());
-      przyciski.forEach((b) => b.destroy());
+      this.zamknijOkno(nowe());
       this.stan.bohater.poziomOdebrany = poziomPo;
       this.zajety = false;
       if (opis) this.napisUlotny(opis);
@@ -2602,118 +2584,69 @@ export class AdventureScene extends Phaser.Scene {
     if (!oferty.length) {
       // Cztery gniazda pełne, wszystko mistrzowskie — nie ma czego proponować.
       // Mówimy to wprost, zamiast pokazywać puste okno wyboru.
-      dodaj(
-        this.add
-          .text(cx, cy + 10, 'Wszystkie umiejętności na mistrzowskim poziomie.', body(12, H.inkSoft))
-          .setOrigin(0.5)
-          .setDepth(Z.overlay + 2)
-      );
-      const ok = makeHudButton(this, {
-        x: cx,
-        y: cy + wys / 2 - 34,
-        w: 180,
-        h: 40,
-        icon: ICON.star,
-        tone: C.gold,
-        toneDeep: C.goldDeep,
-        depth: Z.overlay + 3,
-        onClick: () => zamknij(),
-      });
-      ok.setLabel('Dalej');
-      przyciski.push(ok);
-      this.naWierzchu(...this.children.list.slice(this.children.list.length - 40));
+      this.add
+        .text(cx, cy + 10, 'Wszystkie umiejętności na mistrzowskim poziomie.', stylAtramentu(15, 'miekki'))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 2);
+      this.guzikOkna(cx, cy + wys / 2 - 36, 180, 'Dalej', () => zamknij(), true);
+      this.naWierzchu(...nowe());
       return;
     }
 
-    dodaj(
-      this.add
-        .text(cx, cy - wys / 2 + 84, 'WYBIERZ UMIEJĘTNOŚĆ', {
-          ...body(11, H.inkSoft),
-          fontStyle: 'bold',
-          letterSpacing: 1.2,
-        })
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2)
-    );
+    this.add
+      .text(cx, cy - wys / 2 + 90, 'Wybierz umiejętność', stylEtykiety(14, BARWA.atramentMiekki))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
 
     const kartaW = 236;
-    const kartaH = 150;
-    const kartaY = cy - wys / 2 + 104;
+    const kartaH = 156;
+    const kartaY = cy - wys / 2 + 106;
     oferty.forEach((oferta, i) => {
       const u = umiejetnoscPoId(oferta.id)!;
       const kx = cx + (i - (oferty.length - 1) / 2) * (kartaW + 20) - kartaW / 2;
-      const g = dodaj(this.add.graphics().setDepth(Z.overlay + 2)) as Phaser.GameObjects.Graphics;
-      wneka(g, kx, kartaY, kartaW, kartaH, 10, mix(C.panelDeep, C.shadow, 0.3), 1);
-      // Nowa umiejętność dostaje złotą wstążkę, ulepszenie — niebieską.
-      // Gracz ma widzieć różnicę „dokładam coś" kontra „podbijam coś",
-      // zanim przeczyta obie karty.
-      listwa(
-        g,
-        kx + 8,
-        kartaY + 8,
-        kartaW - 16,
-        24,
-        7,
-        oferta.nowa ? C.goldDeep : C.allyDeep,
-        oferta.nowa ? C.gold : C.ally
+      // Karta: ciemniejszy papier w cienkiej złotej ramce. Nowa umiejętność
+      // dostaje wstęgę z laku, ulepszenie — zieloną: gracz ma widzieć różnicę
+      // „dokładam coś" kontra „podbijam coś", zanim przeczyta obie karty.
+      const g = this.add.graphics().setDepth(Z.overlay + 2);
+      g.fillStyle(0x8a5a2a, 0.12);
+      g.fillRect(kx, kartaY, kartaW, kartaH);
+      ramaZlota(this, kx, kartaY, kartaW, kartaH, false).setDepth(Z.overlay + 2);
+      g.fillStyle(oferta.nowa ? BARWA.lak : 0x3f7a42, 1);
+      g.fillRect(kx + 10, kartaY + 9, kartaW - 20, 22);
+      g.fillStyle(0xffffff, 0.14);
+      g.fillRect(kx + 10, kartaY + 11, kartaW - 20, 3);
+      this.add
+        .text(kx + kartaW / 2, kartaY + 20, oferta.nowa ? 'NOWA' : 'ULEPSZENIE', stylEtykiety(12, '#fff4dc'))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      this.add
+        .text(kx + kartaW / 2, kartaY + 50, u.nazwa, stylEtykiety(20, BARWA.atrament))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      this.add
+        .text(kx + kartaW / 2, kartaY + 72, POZIOMY[oferta.poziom - 1], {
+          ...stylAtramentu(13, 'miekki'),
+          fontFamily: KROJ.kursywa,
+        })
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      this.add
+        .text(kx + kartaW / 2, kartaY + 96, opisWartosci(u, oferta.poziom), stylEtykiety(18, BARWA.atramentZielony))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      this.add
+        .text(kx + kartaW / 2, kartaY + 128, u.opis, { ...stylAtramentu(13, 'zwykly', kartaW - 24), align: 'center' })
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      // Dwie karty to dwie równorzędne decyzje — obie tabliczki drewniane.
+      this.guzikOkna(kx + kartaW / 2, cy + wys / 2 - 32, kartaW - 20, oferta.nowa ? 'Naucz się' : 'Ulepsz', () =>
+        zamknij(przyznaj(this.stan.bohater, oferta))
       );
-      dodaj(
-        this.add
-          .text(kx + kartaW / 2, kartaY + 20, oferta.nowa ? 'NOWA' : 'ULEPSZENIE', {
-            ...body(10, H.white),
-            fontStyle: 'bold',
-            letterSpacing: 1.2,
-          })
-          .setOrigin(0.5)
-          .setDepth(Z.overlay + 3)
-      );
-      dodaj(
-        this.add
-          .text(kx + kartaW / 2, kartaY + 52, u.nazwa, display(17, H.goldLight))
-          .setOrigin(0.5)
-          .setDepth(Z.overlay + 3)
-      );
-      dodaj(
-        this.add
-          .text(kx + kartaW / 2, kartaY + 74, POZIOMY[oferta.poziom - 1], body(11, '#9dc3d6'))
-          .setOrigin(0.5)
-          .setDepth(Z.overlay + 3)
-      );
-      dodaj(
-        this.add
-          .text(kx + kartaW / 2, kartaY + 96, opisWartosci(u, oferta.poziom), display(18, H.gold))
-          .setOrigin(0.5)
-          .setDepth(Z.overlay + 3)
-      );
-      dodaj(
-        this.add
-          .text(kx + kartaW / 2, kartaY + 124, u.opis, {
-            ...body(10.5, '#dff2fb'),
-            align: 'center',
-          })
-          .setOrigin(0.5)
-          .setDepth(Z.overlay + 3)
-          .setWordWrapWidth(kartaW - 24)
-      );
-
-      const b = makeHudButton(this, {
-        x: kx + kartaW / 2,
-        y: cy + wys / 2 - 32,
-        w: kartaW - 20,
-        h: 38,
-        icon: oferta.nowa ? ICON.star : ICON.banner,
-        tone: oferta.nowa ? C.gold : C.ally,
-        toneDeep: oferta.nowa ? C.goldDeep : C.allyDeep,
-        depth: Z.overlay + 3,
-        onClick: () => zamknij(przyznaj(this.stan.bohater, oferta)),
-      });
-      b.setLabel(oferta.nowa ? 'Naucz się' : 'Ulepsz');
-      przyciski.push(b);
     });
 
     // Okno musi trafić do kamery rysowanej PO planszy — inaczej mapa
     // zamalowuje je w tej samej klatce i gra wygląda na zawieszoną.
-    this.naWierzchu(...czesci);
+    this.naWierzchu(...nowe());
   }
 
   private pokazZamek(o: Obiekt) {
@@ -2812,74 +2745,57 @@ export class AdventureScene extends Phaser.Scene {
     this.time.delayedCall(r === 'wygrana' ? 1500 : 800, () => this.banerKonca(r === 'wygrana'));
   }
 
+  /**
+   * Baner końca gry nad mapą: drewniana deska w grubej złotej ramie, jak
+   * szyld nad bramą, z pozłacanym napisem z zestawu. Zwycięstwo sypie
+   * gwiazdami, porażka jest cicha i przygaszona.
+   */
   private banerKonca(wygrana: boolean) {
     stopMusic(this);
     stopAmbient(this);
     if (wygrana) sfx(this, 'awans');
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
-    const przed = this.children.list.length;
+    const nowe = this.znacznik();
 
     const zaslona = this.add
-      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, wygrana ? 0.35 : 0.55)
+      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, wygrana ? 0.55 : 0.68)
       .setOrigin(0, 0)
       .setDepth(Z.overlay)
       .setAlpha(0);
     this.tweens.add({ targets: zaslona, alpha: 1, duration: 500 });
 
-    // Wstęga: tabliczka z dwoma „ogonami" po bokach, jak baner nad bramą.
-    const szer = 500;
-    const wys = 118;
-    const g = this.add.graphics();
-    const punkty = (pts: number[], dy = 0) =>
-      pts.reduce<Phaser.Math.Vector2[]>(
-        (a, v, i, t) => (i % 2 ? a : [...a, new Phaser.Math.Vector2(v, t[i + 1] + dy)]),
-        []
-      );
-    for (const s of [-1, 1]) {
-      const x0 = (s * szer) / 2;
-      const ksztalt = [x0 - s * 30, -26, x0 + s * 58, -26, x0 + s * 38, 6, x0 + s * 58, 38, x0 - s * 30, 38];
-      g.fillStyle(C.shadow, 0.35);
-      g.fillPoints(punkty(ksztalt, 4), true);
-      g.fillStyle(wygrana ? C.goldDeep : C.panelDeep, 1);
-      g.fillPoints(punkty(ksztalt), true);
-    }
-    plate(
-      g,
-      -szer / 2,
-      -wys / 2,
-      szer,
-      wys,
-      14,
-      wygrana ? C.panel : mix(C.panel, C.panelEdge, 0.5),
-      wygrana ? C.gold : C.panelDeep,
-      { light: 0.16, dark: 0, gloss: 0.22, edgeW: 4, drop: 5 }
-    );
-    const napis = this.add
-      .text(0, -18, wygrana ? 'Zwycięstwo!' : 'Koniec wyprawy', display(44, H.gold))
-      .setOrigin(0.5);
-    gradientText(napis, H.white, wygrana ? H.gold : H.panelEdge);
-    const pod = this.add
-      .text(
-        0,
-        32,
-        wygrana
-          ? this.stan.misja
-            ? 'Cel misji wykonany!'
-            : 'Wszystkie zamki należą do ciebie!'
-          : coSieStalo(przyczynaPorazki(this.stan)),
-        { ...body(16, H.ink), fontStyle: 'bold' }
-      )
+    const szer = 520;
+    const wys = 128;
+    const cien = cienPanelu(this, -szer / 2, -wys / 2, szer, wys);
+    const deska = latki(this, 'z-tabliczka-drewno', -szer / 2, -wys / 2, szer, wys, 40, 40, 30, 30);
+    const rama = ramaZlota(this, -szer / 2, -wys / 2, szer, wys, true);
+    const napis = wygrana
+      ? napisTytulowy(this, 0, -16, 'Zwycięstwo!', 44)
+      : napisNaDrewnie(this, 0, -16, 'Koniec wyprawy', 40).setOrigin(0.5);
+    const pod = napisNaDrewnie(
+      this,
+      0,
+      32,
+      wygrana
+        ? this.stan.misja
+          ? 'Cel misji wykonany!'
+          : 'Wszystkie zamki należą do ciebie!'
+        : coSieStalo(przyczynaPorazki(this.stan)),
+      17
+    )
+      .setFontFamily(KROJ.tekst)
       .setOrigin(0.5);
     const baner = this.add
-      .container(cx, cy, [g, napis, pod])
+      .container(cx, cy, [cien, deska, rama, napis, pod])
       .setDepth(Z.overlay + 2)
       .setScale(0.4)
       .setAlpha(0);
+    if (!wygrana) deska.setTint(0xb0a8b8);
     this.tweens.add({ targets: baner, scale: 1, alpha: 1, duration: 520, ease: E.out });
 
     if (wygrana) {
-      // Wybuch gwiazdek zza wstęgi — dwa, jeden po drugim, jak salwa.
+      // Wybuch gwiazdek zza szyldu — dwa, jeden po drugim, jak salwa.
       const gwiazdy = this.add
         .particles(cx, cy, ICON.star, {
           speed: { min: 160, max: 420 },
@@ -2902,7 +2818,7 @@ export class AdventureScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setDepth(Z.overlay + 10)
       .setAlpha(0);
-    this.naWierzchu(...this.children.list.slice(przed));
+    this.naWierzchu(...nowe());
     this.tweens.add({
       targets: czern,
       alpha: 1,
@@ -2916,12 +2832,20 @@ export class AdventureScene extends Phaser.Scene {
   /**
    * Okno „Warunki misji" — odpowiednik „Scenario Information" z Heroes 2:
    * numer i tytuł misji, opis, warunek zwycięstwa i warunki porażki, każdy
-   * z obrazkiem. Pokazuje się samo na starcie misji, a potem pod przyciskiem
-   * „Cele" i klawiszem C — także w grze pojedynczej.
+   * z własnym obrazkiem. Pergamin w złotej ramie z zestawu — ten sam papier,
+   * na którym ekran kampanii opisuje misję, więc okno czyta się jak jego
+   * dalszy ciąg. Pokazuje się samo na starcie misji, a potem pod „Cele"
+   * i klawiszem C — także w grze pojedynczej.
    */
   private pokazWarunki() {
     if (this.zajety) return;
     this.zajety = true;
+    // Kroje zestawu ładują się raz na całą grę; zwykle już są. Okno czeka
+    // na nie, żeby nie zmierzyć napisów krojem zapasowym.
+    void krojeZestawu().then(() => this.zbudujWarunki());
+  }
+
+  private zbudujWarunki() {
     buildArtefakty(this);
     const s = this.stan;
     const m = misjaPoId(s.misja);
@@ -2929,43 +2853,29 @@ export class AdventureScene extends Phaser.Scene {
     const pierwszyRaz = !!m && !s.warunkiPokazane;
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
-    const szer = 548;
-    const wnetrze = szer - 72;
-    const przed = this.children.list.length;
+    const szer = 556;
+    const wnetrze = szer - 80;
+    const nowe = this.znacznik();
 
-    const zaslona = this.add
-      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.5)
+    this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.55)
       .setOrigin(0, 0)
       .setDepth(Z.overlay);
 
     // Treść w kontenerze o współrzędnych lokalnych: wysokość okna wychodzi
-    // dopiero z długości opisu, więc tło rysuje się na końcu, pod spodem.
+    // dopiero z długości opisu, więc pergamin kładzie się na końcu, pod spodem.
     const k = this.add.container(cx, 0).setDepth(Z.overlay + 1);
-    const tlo = this.add.graphics();
-    k.add(tlo);
-    let y = 28;
+    let y = 34;
 
-    const znak = this.add
-      .text(0, y, m ? `MISJA ${m.nr} Z ${KAMPANIA.misje.length}` : 'GRA POJEDYNCZA', {
-        ...body(12, H.white),
-        fontStyle: 'bold',
-      })
+    const wst = wstazka(this, 0, y, m ? `MISJA ${m.nr} Z ${KAMPANIA.misje.length}` : 'GRA POJEDYNCZA');
+    k.add(wst);
+    y += 40;
+
+    const tytul = this.add
+      .text(0, y, m ? m.tytul : planszaPoId(s.mapa).nazwa, stylEtykiety(30))
       .setOrigin(0.5);
-    const znakTlo = this.add.graphics();
-    plate(znakTlo, -znak.width / 2 - 14, y - 12, znak.width + 28, 24, 12, C.panelDeep, C.goldDeep, {
-      light: 0.2,
-      dark: 0.3,
-      gloss: 0.2,
-      edgeW: 2,
-      drop: 2,
-    });
-    k.add([znakTlo, znak]);
-    y += 38;
-
-    const tytul = this.add.text(0, y, m ? m.tytul : planszaPoId(s.mapa).nazwa, display(30, H.gold)).setOrigin(0.5);
-    gradientText(tytul, H.white, H.gold);
     k.add(tytul);
-    y += 30;
+    y += 26;
 
     const opis = this.add
       .text(
@@ -2974,176 +2884,187 @@ export class AdventureScene extends Phaser.Scene {
         m
           ? m.opis.join('\n')
           : 'Dwie doliny, dwa zamki i przeciwnik, który też zbiera armię.\nKto pierwszy zdobędzie zamek rywala, ten wygrywa.',
-        { ...body(14, H.ink), align: 'center', lineSpacing: 5 }
+        { ...stylAtramentu(15, 'zwykly', wnetrze), align: 'center', lineSpacing: 4 }
       )
-      .setOrigin(0.5, 0)
-      .setWordWrapWidth(wnetrze);
+      .setOrigin(0.5, 0);
     k.add(opis);
-    y += opis.height + 20;
-    const poleOd = y - 10;
+    y += opis.height + 16;
+    k.add(ozdobnik(this, -wnetrze / 2, y, wnetrze));
+    y += 16;
 
-    // Kreska z gwiazdką — oddziela opowieść od zasad.
-    const kreska = this.add.graphics();
-    kreska.lineStyle(2, C.goldDeep, 0.55);
-    kreska.lineBetween(-wnetrze / 2, y, -16, y);
-    kreska.lineBetween(16, y, wnetrze / 2, y);
-    k.add([kreska, this.add.image(0, y, ICON.star).setDisplaySize(20, 20)]);
-    y += 22;
-
-    // Wiersz warunku: kafelek z obrazkiem, etykieta w barwie, zdanie.
+    // Wiersz warunku: obrazek w medalionie, etykieta Cinzelem, zdanie atramentem.
     type Obrazek = (x: number, y: number) => Phaser.GameObjects.GameObject[];
-    const wierszWarunku = (obrazek: Obrazek, etykieta: string, barwa: number, zdanie: string) => {
+    const wierszWarunku = (obrazek: Obrazek, etykieta: string, barwa: string, zdanie: string) => {
       const x0 = -wnetrze / 2;
-      const kafel = this.add.graphics();
-      plate(kafel, x0, y, 58, 58, 12, mix(barwa, C.white, 0.78), barwa, {
-        light: 0.2,
-        dark: 0.12,
-        gloss: 0.18,
-        edgeW: 2,
-        drop: 2,
-      });
       const pas = this.add.graphics();
-      pas.fillStyle(mix(barwa, C.white, 0.9), 1);
-      pas.fillRoundedRect(x0 + 68, y + 2, wnetrze - 68, 54, 10);
-      const et = this.add
-        .text(x0 + 82, y + 16, etykieta, {
-          ...display(13, `#${barwa.toString(16).padStart(6, '0')}`),
-          stroke: H.white,
-          strokeThickness: 3,
-        })
-        .setOrigin(0, 0.5);
+      pas.fillStyle(0x8a5a2a, 0.09);
+      pas.fillRoundedRect(x0, y + 4, wnetrze, 58, 10);
+      const md = medalion(this, x0 + 34, y + 33, 29, BARWA.papier);
+      const et = this.add.text(x0 + 76, y + 20, etykieta, stylEtykiety(15, barwa)).setOrigin(0, 0.5);
       const zd = this.add
-        .text(x0 + 82, y + 38, zdanie, { ...body(14, H.ink), fontStyle: 'bold' })
+        .text(x0 + 76, y + 44, zdanie, { ...stylAtramentu(16), fontStyle: 'bold' })
         .setOrigin(0, 0.5)
-        .setWordWrapWidth(wnetrze - 92);
-      k.add([kafel, pas, ...obrazek(x0 + 29, y + 29), et, zd]);
-      y += 66;
+        .setWordWrapWidth(wnetrze - 88);
+      k.add([pas, md, ...obrazek(x0 + 34, y + 33), et, zd]);
+      y += 68;
     };
 
-    const zamek =
-      (klucz: string, szary = false): Obrazek =>
+    const obrazek =
+      (klucz: string, bok = 40): Obrazek =>
       (x, yy) => {
-        const im = this.add.image(x, yy + 2, klucz);
-        im.setScale(48 / Math.max(im.width, im.height));
-        if (szary) im.setTint(0xa4acb8);
+        const im = this.add.image(x, yy, klucz);
+        im.setScale(bok / Math.max(im.width, im.height));
         return [im];
       };
-    // Odznaka w rogu kafelka: zielony „ptaszek" przy celu, czerwony krzyżyk
+    // Odznaka na medalionie: zielony „ptaszek" przy celu, czerwony krzyżyk
     // przy porażce — czytelne, zanim dziecko przeczyta etykietę.
     const zOdznaka =
       (baza: Obrazek, dobra: boolean): Obrazek =>
       (x, yy) => {
         const o = this.add.graphics();
         o.fillStyle(C.shadow, 0.4);
-        o.fillCircle(x + 20, yy + 20, 11);
-        o.fillStyle(dobra ? C.hpHigh : C.foe, 1);
-        o.fillCircle(x + 20, yy + 18, 11);
-        o.lineStyle(3, C.white, 1);
+        o.fillCircle(x + 22, yy + 22, 10);
+        o.fillStyle(dobra ? 0x3f8a4a : BARWA.lak, 1);
+        o.fillCircle(x + 22, yy + 20, 10);
+        o.lineStyle(2.5, 0xfff4dc, 1);
         if (dobra) {
           o.beginPath();
-          o.moveTo(x + 14, yy + 18);
-          o.lineTo(x + 18.5, yy + 22.5);
-          o.lineTo(x + 26, yy + 13.5);
+          o.moveTo(x + 17, yy + 20);
+          o.lineTo(x + 21, yy + 24);
+          o.lineTo(x + 27, yy + 16);
           o.strokePath();
         } else {
-          o.lineBetween(x + 15.5, yy + 13.5, x + 24.5, yy + 22.5);
-          o.lineBetween(x + 24.5, yy + 13.5, x + 15.5, yy + 22.5);
+          o.lineBetween(x + 18, yy + 16, x + 26, yy + 24);
+          o.lineBetween(x + 26, yy + 16, x + 18, yy + 24);
         }
         return [...baza(x, yy), o];
       };
 
+    // Zamek rysowany wektorem, nie zmniejszaną ilustracją: przy 48 px
+    // obrazek z mapy robił się poszarpany, a zdobyty i stracony zamek
+    // wyglądały identycznie. Tu zdobyty dostaje naszą chorągiew z gwiazdą,
+    // stracony — pęknięcie, osunięte kamienie i opuszczoną szarą flagę.
+    const rysowanyZamek =
+      (zdobyty: boolean): Obrazek =>
+      (x, yy) => {
+        const g = this.add.graphics();
+        const mur = zdobyty ? 0xd6d2c8 : 0xa4a2a0;
+        const cien = zdobyty ? 0x8a8478 : 0x6a6664;
+        const baza = yy + 17;
+        for (const dx of [-14, 14]) {
+          g.fillStyle(cien, 1);
+          g.fillRect(x + dx - 6, baza - 22, 12, 22);
+          g.fillStyle(mur, 1);
+          g.fillRect(x + dx - 6, baza - 22, 9, 22);
+          for (const zx of [-6, -1, 4]) g.fillRect(x + dx + zx, baza - 26, 3, 4);
+        }
+        g.fillStyle(mur, 1);
+        g.fillRect(x - 9, baza - 15, 18, 15);
+        for (const zx of [-9, -3, 3]) g.fillRect(x + zx, baza - 18, 3, 3);
+        g.fillStyle(0x4a3524, 1);
+        g.fillRoundedRect(x - 4, baza - 9, 8, 9, { tl: 4, tr: 4, bl: 0, br: 0 });
+        if (zdobyty) {
+          g.fillStyle(0x8a5a2b, 1);
+          g.fillRect(x - 1, baza - 38, 2.5, 23);
+          g.fillStyle(C.allyDeep, 1);
+          g.fillTriangle(x + 1.5, baza - 38, x + 21, baza - 32, x + 1.5, baza - 26);
+          g.fillStyle(C.ally, 1);
+          g.fillTriangle(x + 1.5, baza - 38, x + 18, baza - 33, x + 1.5, baza - 29);
+          g.fillStyle(C.gold, 1);
+          g.fillCircle(x, baza - 39, 2.2);
+        } else {
+          g.lineStyle(2, 0x2a1606, 1);
+          g.beginPath();
+          g.moveTo(x + 3, baza - 18);
+          g.lineTo(x - 1, baza - 12);
+          g.lineTo(x + 4, baza - 8);
+          g.lineTo(x, baza - 2);
+          g.strokePath();
+          g.fillStyle(0x7a7672, 1);
+          g.fillRect(x + 10, baza - 26, 10, 6);
+          for (const [kx, ky, r] of [
+            [20, -2, 3.5],
+            [15, 0, 2.5],
+            [24, -1, 2],
+          ] as const) g.fillCircle(x + kx, baza + ky, r);
+          g.fillStyle(0x8a5a2b, 1);
+          g.fillRect(x - 15, baza - 34, 2, 13);
+          g.fillStyle(0x8c8f98, 1);
+          g.fillTriangle(x - 13, baza - 28, x - 3, baza - 25, x - 13, baza - 21);
+        }
+        return [g];
+      };
+
     const z = w.zwyciestwo;
-    const wrogi = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel !== 'gracz');
     const obrazZwyciestwa: Obrazek =
       z.typ === 'artefakt'
-        ? (x, yy) => [
-            this.add
-              .image(x, yy, kluczArtefaktu(z.artefakt, artefaktPoId(z.artefakt)?.klasa ?? 'relikt'))
-              .setDisplaySize(44, 44),
-          ]
+        ? obrazek(kluczArtefaktu(z.artefakt, artefaktPoId(z.artefakt)?.klasa ?? 'relikt'), 42)
         : z.typ === 'zbierz'
-          ? zamek(`m-${SUROWIEC_INFO[z.surowiec].ikona}`)
+          ? obrazek(`m-${SUROWIEC_INFO[z.surowiec].ikona}`)
           : z.typ === 'pokonaj'
-            ? (x, yy) => [this.add.image(x, yy, ICON.sword).setDisplaySize(40, 40)]
-            : zamek(wrogi ? this.grafikaObiektu(wrogi).klucz : 'm-zamek-ogien');
-    wierszWarunku(zOdznaka(obrazZwyciestwa, true), 'ZWYCIĘSTWO', C.goldDeep, celSlowami(z));
+            ? obrazek(ICON.sword, 36)
+            : rysowanyZamek(true);
+    wierszWarunku(zOdznaka(obrazZwyciestwa, true), 'Zwycięstwo', BARWA.atramentZielony, celSlowami(z));
     for (const p of w.porazka) {
       wierszWarunku(
-        p.typ === 'termin'
-          ? (x, yy) => [this.add.image(x, yy, ICON.hourglass).setDisplaySize(40, 40)]
-          : zOdznaka(zamek('m-zamek-las', true), false),
-        'PORAŻKA, JEŚLI…',
-        C.foeDeep,
+        p.typ === 'termin' ? obrazek(ICON.hourglass, 38) : zOdznaka(rysowanyZamek(false), false),
+        'Porażka, jeśli…',
+        BARWA.atramentCzerwony,
         p.typ === 'termin' ? `Minie ${p.dni} dni. Dziś jest dzień ${s.dzien}.` : 'Stracisz wszystkie swoje zamki.'
       );
     }
 
-    const poleDo = y;
     // Bonus wybrany na ekranie kampanii — przypomnienie, że już działa.
     const postep = m ? wczytajPostep() : null;
     const bonus = m && postep?.bonus !== undefined ? m.bonusy[postep.bonus] : undefined;
     if (bonus) {
       k.add(
         this.add
-          .text(0, y + 12, `Twój bonus na start: ${bonus.opis}`, { ...body(13, H.inkSoft), fontStyle: 'italic' })
+          .text(0, y + 14, `Twoja nagroda na start: ${bonus.opis}`, { ...stylAtramentu(16, 'zielony'), fontStyle: 'bold' })
           .setOrigin(0.5)
       );
-      y += 30;
+      y += 32;
     }
-    y += 8;
-    const przyciskY = y + 24;
-    y += 52;
+    y += 10;
+    const przyciskY = y + 26;
+    y += 58;
     k.add(
       this.add
-        .text(0, y + 8, 'Cele zawsze sprawdzisz przyciskiem „Cele" albo klawiszem C.', body(11, H.inkSoft))
+        .text(0, y + 6, 'Cele zawsze sprawdzisz przyciskiem „Cele" albo klawiszem C.', {
+          ...stylAtramentu(14, 'miekki'),
+          fontFamily: KROJ.kursywa,
+        })
         .setOrigin(0.5)
     );
-    y += 28;
+    y += 34;
 
     const wys = y;
     const gora = Math.round(cy - wys / 2);
     k.setY(gora);
-    // Płaska tabliczka: gradient z `plate` na oknie tej wysokości kroi się
-    // w widoczne prążki i odsłania jaśniejsze kliny w dolnych rogach.
-    plate(tlo, -szer / 2, 0, szer, wys, 16, C.panel, C.gold, { light: 0, dark: 0, gloss: 0, edgeW: 3, drop: 5 });
-    tlo.lineStyle(1.5, C.panelEdge, 0.9);
-    tlo.strokeRoundedRect(-szer / 2 + 7, 7, szer - 14, wys - 14, 11);
-    // Wpuszczone pole pod warunkami i dwa złote nity u góry — okno ma być
-    // dokumentem misji, a nie kolejnym dymkiem.
-    tlo.fillStyle(mix(C.panel, C.panelEdge, 0.3), 1);
-    tlo.fillRoundedRect(-szer / 2 + 18, poleOd, szer - 36, poleDo - poleOd, 12);
-    for (const sx of [-1, 1]) {
-      tlo.fillStyle(C.goldDeep, 1);
-      tlo.fillCircle(sx * (szer / 2 - 20), 20, 6);
-      tlo.fillStyle(C.gold, 1);
-      tlo.fillCircle(sx * (szer / 2 - 20), 19, 5);
-      tlo.fillStyle(C.white, 0.7);
-      tlo.fillCircle(sx * (szer / 2 - 20) - 1.5, 17.5, 1.8);
-    }
+    // Pergamin pod treścią — na sam spód kontenera.
+    const papier = panelPergaminu(this, -szer / 2, 0, szer, wys);
+    k.addAt(papier, 0);
     k.setAlpha(0);
     this.tweens.add({ targets: k, alpha: 1, y: { from: gora + 14, to: gora }, duration: 280, ease: E.snap });
 
-    const przycisk = makeHudButton(this, {
+    new Przycisk(this, {
       x: cx,
       y: gora + przyciskY,
-      w: 230,
-      h: 46,
-      icon: ICON.sword,
-      tone: C.gold,
-      toneDeep: C.goldDeep,
-      depth: Z.overlay + 3,
-      onClick: () => {
-        zaslona.destroy();
-        k.destroy();
-        przycisk.destroy();
+      w: 240,
+      h: 50,
+      tekst: pierwszyRaz ? 'Do dzieła!' : 'Graj dalej',
+      glowny: true,
+      strzalka: pierwszyRaz,
+      glebia: Z.overlay + 3,
+      akcja: () => {
+        this.zamknijOkno(nowe());
         s.warunkiPokazane = true;
         this.zajety = false;
         if (pierwszyRaz) this.napisUlotny('Powodzenia!');
         this.odswiezWszystko();
       },
     });
-    przycisk.setLabel(pierwszyRaz ? 'Do dzieła!' : 'Graj dalej');
-    this.naWierzchu(...this.children.list.slice(przed));
+    this.naWierzchu(...nowe());
   }
 
   /**
@@ -3154,37 +3075,41 @@ export class AdventureScene extends Phaser.Scene {
   private zapytajOWyjscie() {
     if (this.zajety) return;
     this.zajety = true;
+    void krojeZestawu().then(() => this.zbudujPytanieOWyjscie());
+  }
+
+  private zbudujPytanieOWyjscie() {
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
-    const szer = 480;
-    const wys = 190;
-    const przed = this.children.list.length;
+    // Szerokości tabliczek z ZMIERZONYCH napisów, a okno z ich sumy:
+    // na sztywno wpisane liczby dawały „Zapisz i wyjdź" dotykające lewej
+    // krawędzi i nierówne odstępy między przyciskami.
+    const opcjeNapisy = ['Zapisz i wyjdź', 'Wyjdź', 'Zostań'];
+    const ROZMIAR = 15;
+    const ODSTEP = 18;
+    const miarka = this.add.text(0, 0, '', { fontFamily: KROJ.tytul, fontSize: `${ROZMIAR}px` });
+    const szerokosci = opcjeNapisy.map((t) => Math.max(120, Math.ceil(miarka.setText(t).width) + 56));
+    miarka.destroy();
+    const razem = szerokosci.reduce((a, b) => a + b, 0) + ODSTEP * (szerokosci.length - 1);
+    const szer = Math.max(500, razem + 64);
+    const wys = 200;
+    const nowe = this.znacznik();
     this.add
-      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.5)
+      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.55)
       .setOrigin(0, 0)
       .setDepth(Z.overlay);
-    const tlo = this.add.graphics().setDepth(Z.overlay + 1);
-    plate(tlo, cx - szer / 2, cy - wys / 2, szer, wys, 14, C.panel, C.gold, {
-      light: 0.24,
-      dark: 0.22,
-      gloss: 0.2,
-      edgeW: 3,
-    });
-    const tytul = this.add
-      .text(cx, cy - wys / 2 + 32, 'Wyjść do menu?', display(24, H.gold))
+    panelPergaminu(this, cx - szer / 2, cy - wys / 2, szer, wys).forEach((c) => c.setDepth(Z.overlay + 1));
+    this.add
+      .text(cx, cy - wys / 2 + 38, 'Wyjść do menu?', stylEtykiety(26))
       .setOrigin(0.5)
       .setDepth(Z.overlay + 2);
-    gradientText(tytul, H.white, H.gold);
     this.add
-      .text(cx, cy - 16, 'To, co zrobiłeś od ostatniego zapisu, przepadnie.', body(14, H.ink))
+      .text(cx, cy - 12, 'To, co zrobiłeś od ostatniego zapisu, przepadnie.', stylAtramentu(16))
       .setOrigin(0.5)
       .setDepth(Z.overlay + 2);
 
     const zamknij = () => {
-      for (const o of this.children.list.slice(przed)) {
-        this.tweens.killTweensOf(o);
-        o.destroy();
-      }
+      this.zamknijOkno(nowe());
       this.zajety = false;
     };
     const wyjdz = (zapisac: boolean) => {
@@ -3194,24 +3119,30 @@ export class AdventureScene extends Phaser.Scene {
       this.registry.set(KLUCZ_STANU, this.stan);
       this.scene.start('menu');
     };
-    const opcje: Array<[string, number, number, () => void]> = [
-      ['Zapisz i wyjdź', C.gold, C.goldDeep, () => wyjdz(true)],
-      ['Wyjdź', C.foe, C.foeDeep, () => wyjdz(false)],
-      ['Zostań', C.ally, C.allyDeep, zamknij],
+    // Złota tabliczka tylko dla bezpiecznego wyjścia — to jest „następny
+    // krok", który warto podsunąć. Reszta drewniana.
+    const akcje: Array<[boolean, () => void]> = [
+      [true, () => wyjdz(true)],
+      [false, () => wyjdz(false)],
+      [false, zamknij],
     ];
-    opcje.forEach(([napis, ton, glebszy, klik], i) =>
-      makeHudButton(this, {
-        x: cx + (i - 1) * 150,
-        y: cy + 44,
-        w: 142,
-        h: 42,
-        tone: ton,
-        toneDeep: glebszy,
-        depth: Z.overlay + 3,
-        onClick: klik,
-      }).setLabel(napis)
-    );
-    this.naWierzchu(...this.children.list.slice(przed));
+    let x = cx - razem / 2;
+    akcje.forEach(([glowny, akcja], i) => {
+      const w = szerokosci[i];
+      new Przycisk(this, {
+        x: x + w / 2,
+        y: cy + 50,
+        w,
+        h: 46,
+        tekst: opcjeNapisy[i],
+        glowny,
+        rozmiar: ROZMIAR,
+        glebia: Z.overlay + 3,
+        akcja,
+      });
+      x += w + ODSTEP;
+    });
+    this.naWierzchu(...nowe());
   }
 
   /** Po powrocie z bitwy: zwycięstwo usuwa strażnika, porażka cofa do zamku. */
@@ -3319,12 +3250,15 @@ export class AdventureScene extends Phaser.Scene {
     const { x, y } = this.naEkran(this.stan.bohater.x, this.stan.bohater.y);
     const t = this.add
       .text(x, y - KAFEL * 0.7, tekst, {
-        fontFamily: FONT,
-        fontSize: '15px',
+        // Lora pogrubiona, kremowa z brązowym konturem — ta sama para co
+        // napisy na drewnie, tylko krojem tekstu: ulotny napis bywa zdaniem
+        // („Porażka. Wracasz do zamku."), a zdanie kapitałami czyta się gorzej.
+        fontFamily: KROJ.tekst,
+        fontSize: '17px',
         fontStyle: 'bold',
-        color: H.goldLight,
-        stroke: H.shadow,
-        strokeThickness: 4,
+        color: BARWA.krem,
+        stroke: BARWA.braz,
+        strokeThickness: 5,
         align: 'center',
       })
       .setOrigin(0.5, 1)
@@ -3356,7 +3290,7 @@ export class AdventureScene extends Phaser.Scene {
         this.mapaX + this.oknoW / 2,
         this.mapaY + this.oknoH / 2,
         'Przetwarzanie tury…',
-        display(18, H.goldLight)
+        { fontFamily: KROJ.tytul, fontSize: '20px', color: BARWA.krem, stroke: BARWA.braz, strokeThickness: 4 }
       )
       .setOrigin(0.5)
       .setDepth(Z.overlay + 1);

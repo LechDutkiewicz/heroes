@@ -127,6 +127,15 @@ await klikPrzycisk(page, 'wynik', 'Sala sław');
 await page.waitForTimeout(3000);
 await zrzut('rekordy-koniec');
 
+// 5. Pytanie o wyjście do menu z mapy (gra pojedyncza).
+await page.goto(`${BASE}/?ekran=mapa`, { waitUntil: 'domcontentloaded' });
+await scena(page, 'adventure');
+await page.waitForTimeout(800);
+await klikPrzycisk(page, 'adventure', 'Menu');
+await czekajNaNapis(page, 'adventure', 'Wyjść do menu?');
+await page.waitForTimeout(300);
+await zrzut('menu-wyjscie');
+
 if (bledy.length) {
   console.log('BŁĘDY W KONSOLI:');
   for (const b of bledy) console.log('  ' + b);

@@ -38,6 +38,27 @@ await page.goto(`${BASE}/?ekran=mapa`, { waitUntil: 'domcontentloaded' });
 await scena('adventure');
 await page.waitForTimeout(700);
 
+// Napisy okien leżą czasem w kontenerach (wstążka z nagłówkiem awansu to
+// kontener z zestawu), więc szukamy ich w całym drzewie sceny, a o tym, czy
+// je widać, decyduje kamera dla KORZENIA — kontenera na liście sceny.
+await page.evaluate(() => {
+  window.__teksty = (s) => {
+    const wynik = [];
+    const przejdz = (lista) => {
+      for (const o of lista) {
+        if (o.type === 'Text') wynik.push(o);
+        else if (o.type === 'Container') przejdz(o.list);
+      }
+    };
+    przejdz(s.children.list);
+    return wynik;
+  };
+  window.__korzen = (o) => {
+    let k = o;
+    while (k.parentContainer) k = k.parentContainer;
+    return k;
+  };
+});
 // Ustawiamy doświadczenie tuż pod progiem, żeby jedna wygrana bitwa na pewno
 // dała awans. Progi rosną, więc liczenie „ile bitew" na sztywno rozjechałoby
 // się przy pierwszej zmianie wzoru.
@@ -72,7 +93,7 @@ const okno = await page.evaluate(() => {
   // Szukamy napisów okna wśród obiektów sceny — i sprawdzamy, czy trafiają do
   // kamery rysowanej PO planszy. Samo istnienie obiektu nic nie znaczy, jeśli
   // mapa go zamalowuje.
-  const teksty = s.children.list.filter((o) => o.type === 'Text' && o.text);
+  const teksty = window.__teksty(s).filter((o) => o.text);
   const naglowek = teksty.find((t) => t.text.startsWith('AWANS NA POZIOM'));
   const karty = teksty.filter((t) => t.text === 'NOWA' || t.text === 'ULEPSZENIE');
   // Okno musi trafić do kamery rysowanej PO planszy. Kamera okien powstaje
@@ -85,7 +106,7 @@ const okno = await page.evaluate(() => {
   // zamalowywała je w tej samej klatce.
   const kamery = s.cameras.cameras;
   const oknowa = kamery[kamery.length - 1];
-  const ignorowany = naglowek ? (naglowek.cameraFilter & oknowa.id) !== 0 : true;
+  const ignorowany = naglowek ? (window.__korzen(naglowek).cameraFilter & oknowa.id) !== 0 : true;
   return {
     zajety: s.zajety,
     naglowek: naglowek?.text ?? null,
@@ -143,7 +164,7 @@ await page.waitForTimeout(700);
 const naEkranie = await page.evaluate(() => {
   const s = window.__game.scene.getScene('bohater');
   const u = Object.keys(s.stan.bohater.umiejetnosci ?? {})[0];
-  const nazwy = s.children.list.filter((o) => o.type === 'Text').map((t) => t.text);
+  const nazwy = window.__teksty(s).map((t) => t.text);
   return { u, pustych: nazwy.filter((t) => t === 'MIEJSCE NA UMIEJĘTNOŚĆ').length, nazwy };
 });
 sprawdz(
@@ -181,7 +202,7 @@ const poSkrzyni = await page.evaluate(() => {
 await page.waitForTimeout(1200);
 const oknoZeSkrzyni = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
-  const teksty = s.children.list.filter((o) => o.type === 'Text' && o.text);
+  const teksty = window.__teksty(s).filter((o) => o.text);
   return {
     naglowek: teksty.find((t) => t.text.startsWith('AWANS NA POZIOM'))?.text ?? null,
     zajety: s.zajety,
@@ -207,7 +228,7 @@ if (punkt2) {
 }
 const poDrugim = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
-  const teksty = s.children.list.filter((o) => o.type === 'Text' && o.text);
+  const teksty = window.__teksty(s).filter((o) => o.text);
   return {
     kolejneOkno: !!teksty.find((t) => t.text.startsWith('AWANS NA POZIOM')),
     poziomOdebrany: s.stan.bohater.poziomOdebrany,

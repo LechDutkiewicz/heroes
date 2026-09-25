@@ -1,5 +1,5 @@
 {
- "updated": "2026-09-24, menu wygrywa ślepo (runda 3)",
+ "updated": "2026-09-24, wygrywają: menu, kampania, wynik, HUD; plansze w poprawkach",
  "pieces": [
   {
    "name": "Menu główne",
@@ -24,12 +24,18 @@
      "gap": "Słabość zwycięzcy: drogowskaz wciąż ma trochę płaskie światło, szara deska Wczytaj jest z innego materiału, a napisy na niższych deskach są cienkie.",
      "blind": "tools/blind/menu-r3.png",
      "note": "Nasze wygrywa na ślepo. Trener z Cindro na pierwszym planie, kolejność czytania od sztandaru do Nowej gry, zablokowana opcja widoczna bez tekstu. Wzorzec przegrał, bo opcje są rozrzucone i słabo czytelne."
+    },
+    {
+     "win": true,
+     "gap": "Słabość zwycięzcy: deski są ostrzejsze niż rozmyte tło, odstępy między nimi są nierówne, a kępka trawy u stóp słupa wygląda jak naklejka.",
+     "blind": "tools/blind/menu-r3b.png",
+     "note": "Powtórka na pełnym kadrze, bo w rundzie 3 narzędzie ucinało wzorzec. Nasze menu wygrywa ponownie, więc wygrana się utrzymuje."
     }
    ]
   },
   {
    "name": "Ekran kampanii",
-   "status": "build",
+   "status": "done",
    "bar": "Ekran kampanii HoMM2: mapa krainy ze znacznikami misji, opis, trzy bonusy do wyboru",
    "note": "Wybór trenera, mapa kampanii, opis misji, bonusy, start. Prawdziwego zrzutu ekranu kampanii HoMM2 jeszcze nie ma — trwa próba uruchomienia fheroes2 z darmowym demem.",
    "rounds": [
@@ -44,12 +50,24 @@
      "gap": "Pikselowe postacie trenerów i złoczyńców (mapa, wybór, wstęp) wyglądają na doklejone do malowanych teł. Ikony bonusów są w czterech różnych stylach. Ekrany wyboru i wstępu są ubogie.",
      "blind": "tools/blind/kampania-r2.png",
      "note": "Poprawione od rundy 1: jeden materiał (drewno, złoto, pergamin) na całym ekranie, jasny następny krok. Z tego powstał wspólny komplet src/visual/zestaw.ts."
+    },
+    {
+     "win": false,
+     "gap": "Wzorzec wygrywa nieznacznie. Główny ekran kampanii sam by przeszedł, ale we wstępie srebrne płaszcze to płaskie szare sylwetki z białą obwódką, a wóz unosi się nad własnym cieniem.",
+     "blind": "tools/blind/kampania-r3.png",
+     "note": "Postacie są już malowane, bonusy mają jeden styl, przy bieżącej misji stoi obóz. Krytyk uznał, że główny ekran czyta się lepiej niż w HoMM2."
+    },
+    {
+     "win": true,
+     "gap": "Słabość zwycięzcy: wstęp i wybór trenera są złożone z istniejących grafik (sylwetki, wóz, naklejkowe postacie) zamiast jednej malowanej sceny. Poprawimy to, gdy będą środki na generowanie grafik.",
+     "blind": "tools/blind/kampania-r4.png",
+     "note": "Nasze wygrywa, nieznacznie, dzięki głównemu ekranowi. Jest czytelniejszy niż w HoMM2: odhaczone misje, kłódki, strzałka, jeden komplet drewno, złoto i pergamin, wybór nagrody, który mówi, co zrobić dalej."
     }
    ]
   },
   {
    "name": "Warunki misji, wygrana i porażka",
-   "status": "build",
+   "status": "done",
    "bar": "Okno „Scenario Information” oraz ekrany zwycięstwa i porażki z HoMM2",
    "note": "Okno warunków na starcie misji, rozstrzygnięcie misji, ekran wyniku, przejście do kolejnej misji, rekordy.",
    "rounds": [
@@ -58,15 +76,96 @@
      "gap": "Panele i przyciski wyglądają jak zwykła strona internetowa (bladoniebieskie ramki, błyszczące pigułki, bezszeryfowe litery z czarnym konturem) i psują malowane sceny. Finał kampanii powtarza scenę z misji 1. Obok siebie są dwa style grafiki.",
      "blind": "tools/blind/wynik-r1.png",
      "note": "Sceny zwycięstwa i porażki mają ładunek emocjonalny, a porażka jest łagodna. Komplet paneli i przycisków powstaje raz, wspólnie dla wszystkich ekranów. Sonda misji: 38/38 OK."
+    },
+    {
+     "win": true,
+     "gap": "Słabość zwycięzcy: bohater i stworki to statyczne wycinki bez cieni, na trzech ekranach jest ta sama poza, a pergaminowe okna gryzą się z niebieskim HUD-em mapy.",
+     "blind": "tools/blind/wynik-r2.png",
+     "note": "Nasze wygrywa, nieznacznie. Sceny wygranej i porażki mają więcej emocji i czytelności niż krótkie klipy HoMM2, a porażka jest łagodna dla dziecka. Builder poprawia jeszcze trzy wskazane usterki."
     }
    ]
   },
   {
-   "name": "Plansze misji",
+   "name": "Plansza: Polana (misja 1)",
    "status": "build",
    "bar": "Mapy kampanii HoMM2 (mapa przygody), grywalne od początku do końca",
-   "note": "Cztery misje na trzech nowych planszach i jednej istniejącej.",
-   "rounds": []
+   "note": "Mapa 36 × 36: rzeka z dwoma pilnowanymi brodami, zamek gracza na południowym zachodzie, Stary Fort na wschodzie. Sondy i symulacja przechodzą.",
+   "rounds": [
+    {
+     "win": false,
+     "gap": "prawie cała zielona, jeden rodzaj terenu i garść rozrzuconych drobiazgów. Brak kopalń i budowli do zajęcia w kadrze, a gęste drzewa wyglądają jak tapeta, więc nie widać, gdzie da się przejść.",
+     "blind": "tools/blind/mapa-polana-r1.png",
+     "note": "Trzy plansze w ślepym porównaniu z prawdziwą mapą przygody HoMM2: wszystkie trzy przegrały. Sondy i symulacja przechodzą, misje 1, 3 i 4 da się wygrać.",
+     "label": "Runda 1"
+    },
+    {
+     "win": false,
+     "gap": "wciąż jednolity dywan trawy i lasu, bez rzeki i pasma gór w kadrze. Obiekty stoją na miękkich placach ziemi i wyglądają na doklejone.",
+     "blind": "tools/blind/mapa-polana-r2.png",
+     "note": "Runda 2, porównania już pełnym kadrem. Wszystkie trzy mapy przegrywają. Wspólna przyczyna: ten sam zestaw obiektów na tych samych okrągłych placach piasku i brak rzeźby terenu.",
+     "label": "Runda 2"
+    }
+   ]
+  },
+  {
+   "name": "Plansza: Bagna (misja 3)",
+   "status": "build",
+   "bar": "Mapy kampanii HoMM2 (mapa przygody), grywalne od początku do końca",
+   "note": "Mapa 54 × 54: trzęsawisko z groblami, Księżycowy Kamień na wyspie pod strażą wodza. Sondy i symulacja przechodzą.",
+   "rounds": [
+    {
+     "win": false,
+     "gap": "bagno, droga i ziemia mają ten sam mętny oliwkowo-brązowy kolor, więc nie widać, gdzie da się iść, a co spowalnia. Obiekty są wciśnięte w krawędzie kadru.",
+     "blind": "tools/blind/mapa-bagna-r1.png",
+     "label": "Runda 1"
+    },
+    {
+     "win": false,
+     "gap": "ciemna oliwkowa ziemia z trzciną, bez stojącej wody i błota. Wygląda jak ciemny las, a nie trzęsawisko.",
+     "blind": "tools/blind/mapa-bagna-r2.png",
+     "label": "Runda 2"
+    }
+   ]
+  },
+  {
+   "name": "Plansza: Twierdza (misja 4)",
+   "status": "build",
+   "bar": "Mapy kampanii HoMM2 (mapa przygody), grywalne od początku do końca",
+   "note": "Mapa 72 × 72: śnieg i tundra, dwie twierdze wroga w osobnych dolinach, natarcie wroga. Sondy i symulacja przechodzą.",
+   "rounds": [
+    {
+     "win": false,
+     "gap": "śnieg to bezkształtna blada mgiełka bez zasp i ośnieżonych drzew, na śniegu i trawie rosną te same zielone krzaki, a dwie trzecie ekranu jest puste.",
+     "blind": "tools/blind/mapa-twierdza-r1.png",
+     "label": "Runda 1"
+    },
+    {
+     "win": false,
+     "gap": "śnieg to białe plamy na zielonej trawie, obok zasp rosną liściaste drzewa i sad, nie ma ośnieżonych gór ani lodu.",
+     "blind": "tools/blind/mapa-twierdza-r2.png",
+     "label": "Runda 2"
+    }
+   ]
+  },
+  {
+   "name": "HUD mapy przygody",
+   "status": "done",
+   "bar": "Mapa przygody HoMM2 (tools/reference/homm2/mapa-przygody-640.png): prawy panel, pasek zasobów, przyciski w jednym złoto-kamiennym komplecie",
+   "note": "Dwaj krytycy niezależnie wskazali, że błękitny HUD mapy z czcionką jak Arial gryzie się z nowymi pergaminowymi oknami. HUD przechodzi na wspólny komplet src/visual/zestaw.ts.",
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Werdykt nieważny: narzędzie ucięło wzorzec HoMM2 z prawej i od dołu, więc krytyk ocenił brak paska zasobów i daty, których w oryginale nie brakuje.",
+     "blind": "tools/blind/hud-r1.png",
+     "note": "Błąd po mojej stronie, w tools/blind.mjs. Naprawiony, porównanie powtórzone."
+    },
+    {
+     "win": true,
+     "gap": "Słabość zwycięzcy: komplet jest cienki i zwyczajny obok ręcznie robionej ramy HoMM2. Minimapa jest płaska i granatowa, pole podpowiedzi prawie puste, a liczebności armii bardzo drobne.",
+     "blind": "tools/blind/hud-r1b.png",
+     "note": "Nasze wygrywa na pełnym kadrze. Zasoby, data, karta bohatera i duży przycisk Zakończ turę dziecko znajdzie od razu. Wzorzec ma piękniejszą ramę, ale nieopisane piktogramy i brak paska zasobów na ekranie."
+    }
+   ]
   }
  ]
 }
