@@ -42,15 +42,18 @@ await page.waitForTimeout(900);
 
 const plotno = await page.locator('canvas').boundingBox();
 
-/** Gdzie na ekranie leży ŚRODEK danego pola — liczone przez samą scenę. */
+/**
+ * Gdzie na ekranie leży ŚRODEK danego pola. Liczone macierzą, którą kamera
+ * planszy NAPRAWDĘ rysuje (`matrixCombined`: róg ramy, zoom, przewinięcie),
+ * a nie wzorem sceny — pole ma w świecie 48 px, a na ekranie tyle, ile da
+ * zoom kamery (32 px), i sonda nie może tego zakładać na sztywno.
+ */
 const naEkranie = (x, y) =>
   page.evaluate(
     ([px, py]) => {
       const s = window.__game.scene.getScene('adventure');
-      return {
-        x: px * 48 + 24 - s.kamera.scrollX + s.mapaX,
-        y: py * 48 + 24 - s.kamera.scrollY + s.mapaY,
-      };
+      const e = s.kamera.matrixCombined.transformPoint(px * 48 + 24, py * 48 + 24, { x: 0, y: 0 });
+      return { x: e.x, y: e.y };
     },
     [x, y]
   );
@@ -90,19 +93,29 @@ const zgodnosc = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   // Lewy górny róg tła planszy tak, jak leży na scenie.
   const rog = s.plansza.getBounds();
+  // Bok pola w świecie wynika z narysowanego tła: plansza ma `szer` pól.
+  const bok = rog.width / s.stan.szer;
+  const m = s.kamera.matrixCombined;
   const zle = [];
   for (const [px, py] of [[3, 3], [12, 20], [30, 31], [17, 8]]) {
-    const ex = rog.x + px * 48 + 24 - s.kamera.scrollX + s.kamera.x;
-    const ey = rog.y + py * 48 + 24 - s.kamera.scrollY + s.kamera.y;
-    const pole = s.zEkranu(ex, ey);
+    const e = m.transformPoint(rog.x + (px + 0.5) * bok, rog.y + (py + 0.5) * bok, { x: 0, y: 0 });
+    const pole = s.zEkranu(e.x, e.y);
     if (pole.x !== px || pole.y !== py) zle.push(`${px},${py} → ${pole.x},${pole.y}`);
   }
-  return zle;
+  // Ile pikseli EKRANU ma narysowane pole — ma być 32, jak w Heroes 3.
+  const a = m.transformPoint(rog.x, rog.y, { x: 0, y: 0 });
+  const b = m.transformPoint(rog.x + bok, rog.y + bok, { x: 0, y: 0 });
+  return { zle, poleNaEkranie: [b.x - a.x, b.y - a.y] };
 });
 sprawdz(
   'środek narysowanego pola wraca jako to samo pole',
-  zgodnosc.length === 0,
-  zgodnosc.join('; ')
+  zgodnosc.zle.length === 0,
+  zgodnosc.zle.join('; ')
+);
+sprawdz(
+  'pole mapy ma na ekranie 32 × 32 px',
+  zgodnosc.poleNaEkranie.every((v) => Math.abs(v - 32) < 0.01),
+  zgodnosc.poleNaEkranie.map((v) => v.toFixed(2)).join(' × ')
 );
 
 console.log('\n=== klik prowadzi tam, gdzie się kliknęło ===');
@@ -183,10 +196,8 @@ const wRysunek = async () => {
     const kont = s.ikonyObiektow[window.__cel.id];
     const im = kont.list.find((o) => o.type === 'Image');
     const b = im.getBounds();
-    return {
-      x: b.centerX - s.kamera.scrollX + s.mapaX,
-      y: b.centerY - s.kamera.scrollY + s.mapaY,
-    };
+    const e = s.kamera.matrixCombined.transformPoint(b.centerX, b.centerY, { x: 0, y: 0 });
+    return { x: e.x, y: e.y };
   });
   await page.mouse.click(plotno.x + p.x, plotno.y + p.y);
   await odsunKursor();
@@ -249,7 +260,8 @@ await page.waitForTimeout(300);
 const naBrame = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   const c = s.naEkran(window.__cel.x, window.__cel.y);
-  return { x: c.x - s.kamera.scrollX + s.mapaX, y: c.y - s.kamera.scrollY + s.mapaY };
+  const e = s.kamera.matrixCombined.transformPoint(c.x, c.y, { x: 0, y: 0 });
+  return { x: e.x, y: e.y };
 });
 await page.mouse.click(plotno.x + naBrame.x, plotno.y + naBrame.y);
 await odsunKursor();
@@ -275,7 +287,8 @@ const wMury = await page.evaluate(() => {
   const z = window.__cel;
   // Pole nad bramą to mur — należy do bryły zamku i jest nieprzejezdne.
   const c = s.naEkran(z.x, z.y - 1);
-  return { x: c.x - s.kamera.scrollX + s.mapaX, y: c.y - s.kamera.scrollY + s.mapaY };
+  const e = s.kamera.matrixCombined.transformPoint(c.x, c.y, { x: 0, y: 0 });
+  return { x: e.x, y: e.y };
 });
 await page.mouse.click(plotno.x + wMury.x, plotno.y + wMury.y);
 await odsunKursor();
@@ -317,6 +330,39 @@ sprawdz(
   'kursor przy krawędzi przewija mapę bez ruszania bohaterem',
   poPrzewinieciu > przewiniecie,
   `${Math.round(przewiniecie)} → ${Math.round(poPrzewinieciu)}`
+);
+
+// --- granice przewijania przy oddalonej kamerze ---
+// Kamera widzi `rama / zoom` pikseli świata, więc granica przewijania też
+// musi być liczona z zoomu. Z wzorem „na 48 px" mapa albo nie dojeżdżała
+// do brzegu, albo wyjeżdżała za niego i pokazywała czerń.
+console.log('\n=== granice przewijania przy oddalonej kamerze ===');
+await odsunKursor();
+const granice = await page.evaluate(async () => {
+  const s = window.__game.scene.getScene('adventure');
+  const klatka = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const k = s.kamera;
+  const rama = { l: k.x, g: k.y, p: k.x + k.width, d: k.y + k.height };
+  s.przewin(-1e6, -1e6, false);
+  await klatka();
+  const prawyDolny = k.matrixCombined.transformPoint(s.mapaW, s.mapaH, { x: 0, y: 0 });
+  s.przewin(1e6, 1e6, false);
+  await klatka();
+  const lewyGorny = k.matrixCombined.transformPoint(0, 0, { x: 0, y: 0 });
+  s.wysrodkujNaBohaterze(false);
+  await klatka();
+  return { rama, prawyDolny, lewyGorny };
+});
+const blisko = (a, b) => Math.abs(a - b) < 0.5;
+sprawdz(
+  'przewinięta do końca plansza kończy się równo z prawym dolnym rogiem ramy',
+  blisko(granice.prawyDolny.x, granice.rama.p) && blisko(granice.prawyDolny.y, granice.rama.d),
+  `róg planszy (${granice.prawyDolny.x.toFixed(1)}, ${granice.prawyDolny.y.toFixed(1)}), róg ramy (${granice.rama.p}, ${granice.rama.d})`
+);
+sprawdz(
+  'przewinięta do początku plansza zaczyna się równo z lewym górnym rogiem ramy',
+  blisko(granice.lewyGorny.x, granice.rama.l) && blisko(granice.lewyGorny.y, granice.rama.g),
+  `róg planszy (${granice.lewyGorny.x.toFixed(1)}, ${granice.lewyGorny.y.toFixed(1)}), róg ramy (${granice.rama.l}, ${granice.rama.g})`
 );
 
 await page.locator('canvas').screenshot({ path: 'tools/shots/mapa-klik.png' });

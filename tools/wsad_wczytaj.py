@@ -632,6 +632,11 @@ ZESTAWY = {
         'kopiec': 37, 'kopiec-2': 37,
         # Twierdza, runda 3 (HotA): stosy surowców na śniegu (`USTAWIENIA.znajdzki`).
         'stos-pokeball': 72, 'stos-jagody': 72, 'stos-odlamki': 72, 'stos-kamien-ewolucji': 72,
+        # Twierdza, runda 3 (HotA, kamera 32 px): budowle odwiedzane w śniegu
+        # zamiast omszałych i łąkowych (PROMPTY-PLANSZE §10b).
+        'oboz-treningowy': 154, 'kamienna-wieza': 192, 'arena': 144, 'drzewo-wiedzy': 230,
+        'wieza-obserwacyjna': 250, 'ranczo': 144, 'zrodlo': 106, 'gniazdo': 134,
+        'chata-jasnowidza': 154,
     },
     'bagno': {
         'drzewo': 144, 'drzewo-b': 144, 'krzak': 84, 'krzak-2': 84,

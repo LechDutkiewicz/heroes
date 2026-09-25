@@ -89,15 +89,18 @@ if (CALY) {
     gra.scale.resize(bok, bok);
     const k = scena.kamera;
     k.setViewport(0, 0, bok, bok);
+    // W grze kamera planszy ma origin (0, 0) i własny zoom mapy (32 px na
+    // pole). `setBounds` i `centerOn` Phasera liczą za to od środka kamery,
+    // więc na czas podglądu wracamy do originu 0,5 — inaczej plansza
+    // wyjeżdżała z kadru o pół okna.
+    k.setOrigin(0.5, 0.5);
     k.setBounds(0, 0, scena.mapaW, scena.mapaH);
     k.setZoom(bok / Math.max(scena.mapaW, scena.mapaH));
     k.centerOn(scena.mapaW / 2, scena.mapaH / 2);
     // Pasek HUD-u i okna nie należą do podglądu mapy.
     scena.cameras.main.setVisible(false);
-    // Shader wody liczy współrzędne z kamery w zwykłym oknie gry; po
-    // oddaleniu kamery rysowałby wodę w złym miejscu. Pod nim leży woda
-    // namalowana w tle (patrz `render_mapa.py`) — ta sama, tylko nieruchoma.
-    scena.woda?.setVisible(false);
+    // Shader wody liczy współrzędne z originu, zoomu i przewinięcia kamery,
+    // więc i w tym podglądzie rysuje wodę tam, gdzie leży tło.
     scena.kameraOkien?.setVisible(false);
   }, BOK_PODGLADU);
   await page.waitForTimeout(800);

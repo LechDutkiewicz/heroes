@@ -168,6 +168,18 @@ def popraw_teren(g, mapa):
             mapa[y][x] = '#'
 
 
+def kadr_szeroki(g):
+    """Wolne pola CAŁEGO pierwszego ekranu po oddaleniu kamery (`ZOOM_MAPY`,
+    32 px na pole): 21 × 18 pól wokół startu, bez skrajnego pasa, w którym
+    obiekt wychodziłby na zrzucie ucięty ramą."""
+    sx, sy = PUNKTY['start']
+    return [
+        p
+        for p in g.wolne_pola(strefa(sx, sy), (1, 999))
+        if abs(p[0] - sx) <= 8 and -7 <= p[1] - sy <= 8
+    ]
+
+
 def bez_sniegu(g, pola):
     """Pola, wokół których (3 × 3) nie ma śniegu — na sad i łąkowe budowle."""
     return [
@@ -213,6 +225,18 @@ def rozstaw(g):
         g.dodaj_najpierw('dom', lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kadr, None, (2, 12))
     g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), kadr, None, (2, 12))
     g.strzez(g.dodaj_najpierw('dom', lambda p: ('artefakt', None), dalej, None, (5, 14)), 'slaby')
+    # Runda 3 (wzorzec HotA, kamera oddalona do 32 px na pole): pierwszy ekran
+    # to już 21 × 18 pól, a `kadr_startu` pokrywa jego środek. Pierścień
+    # wokół (`kadr_szeroki`) dostaje własne rzeczy — zimowe budowle, strzeżoną
+    # kopalnię, kupki i skrzynie — żeby brzegi ekranu nie były pustym śniegiem.
+    pierscien = [p for p in kadr_szeroki(g) if p not in set(kadr)]
+    for budynek in ('kamienna-wieza', 'zrodlo', 'woz'):
+        g.dodaj_najpierw('dom', lambda p, b=budynek: ('budynek', b), pierscien, None, (3, 24))
+    g.strzez(g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'pokeball'), pierscien, None, (4, 24)), 'slaby')
+    for _ in range(4):
+        g.dodaj_najpierw('dom', lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), pierscien, None, (3, 20))
+    for _ in range(2):
+        g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), pierscien, None, (3, 20))
     g.dodaj(2, 'dom', (6, 14), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])))
     g.dodaj(1, 'dom', (6, 14), lambda p: ('skrzynia', None))
     g.dodaj(8, 'dom', (10, 40), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])))
@@ -319,7 +343,13 @@ USTAWIENIA = {
     'wrogOdkryte': [{'x': 10, 'y': 64, 'promien': 5}],
     # I odwrotnie: gracz wie, gdzie stoją obie twierdze — misja mówi „na
     # północy", a mapa to pokazuje. Zagadką jest droga, nie szukanie celu.
-    'odkryte': [{'x': 58, 'y': 8, 'promien': 4}, {'x': 13, 'y': 10, 'promien': 4}],
+    # Dolina gracza jest mu znana — to jego ziemia od trzech misji — więc na
+    # starcie widać cały pierwszy ekran, a nie wyspę w czarnej mgle.
+    'odkryte': [
+        {'x': 58, 'y': 8, 'promien': 4},
+        {'x': 13, 'y': 10, 'promien': 4},
+        {'x': 13, 'y': 62, 'promien': 13},
+    ],
     # Runda 3 (wzorzec HotA): znajdźki na pół pola z cieniem i rysunkiem stosu
     # leżącego w śniegu (`public/mapa/zima/stos-*.png`) zamiast ikon z paska.
     'znajdzki': 0.5,
@@ -358,7 +388,10 @@ WODA_ANIMOWANA = False
 EFEKTY = ['zaspy', 'obwodka_drogi', 'relief_sniezny', 'bez_placow']
 TEKSTURY = {'woda': ['lod-2', 'lod', 'snieg'], 'trawa': ['snieg-2', 'snieg'], 'las': ['snieg']}
 SKUP_LAS = True
-RAMKA_STARTU = True
+#: Pas przy ramie liczony dla dawnej kamery (14 × 12 pól) leżał po oddaleniu
+#: w środku ekranu i zostawiał w nim pusty pierścień — brzeg pilnuje teraz
+#: `kadr_szeroki`.
+RAMKA_STARTU = False
 #: Twardszy brzeg śniegu — granica ma być czytelna, a nie rozmyta w mgłę.
 WTAPIANIE = {'snieg': 0.3, 'skaly': 0.28, 'las': 0.3, 'jalowa': 0.3, 'woda': 0.12}
 

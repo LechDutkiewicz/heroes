@@ -92,9 +92,29 @@ WASKA_OD = 20
 #: drugie w prawym dolnym rogu kadru.
 PASMA = [
     (0, 23, 8, 24),
-    (0, 25, 5, 26),
-    (18, 28, 20, 29),
+    # Runda 6 (HotA): „wzgórza to pojedyncze kopce — połączyć w pasma, które
+    # wyznaczą przejścia". Zachodnie pasmo schodzi drugim piętrem aż pod
+    # rzekę i zostawia PRZEŁĘCZ dwa pola szeroką (kolumny 11–12) — tędy idzie
+    # droga na północną łąkę; w jego zboczu siedzi kuźnia kryształów.
+    # Kolumny 0–1 to las, żeby kępy 3 × 2 zaczynały się od kolumny 2
+    # i ostatnia wypadła na 8–10, a nie rozsypała się w pojedyncze głazy.
+    (2, 25, 10, 26),
+    # Wschodnie pasmo: masyw z kopalnią kamienia ciągnie się na wschód i skręca
+    # na południe aż do kopca w rogu — za rzeką powstaje zamknięta kieszeń
+    # (kopalnia, skrzynia, ognisko) z jednym wejściem wzdłuż brzegu, które
+    # pilnuje straż.
+    (18, 28, 23, 29),
+    (21, 30, 23, 31),
+    (20, 32, 22, 33),
     (19, 34, 21, 35),
+]
+
+#: Runda 6: ubita ziemia (`j`, tekstura `teren-ziemia`) pod skarpami pasm
+#: i na dnie kieszeni za rzeką — przejście terenu zamiast jednolitej zieleni.
+ZIEMIA = [
+    (11, 27), (12, 27),
+    (18, 30), (19, 31), (20, 31), (18, 31), (19, 32),
+    (16, 23), (17, 22),
 ]
 
 #: Most (runda 4). Pola pod nim są w grze DROGĄ, a render maluje pod nimi
@@ -178,8 +198,24 @@ def popraw_teren(g, mapa):
         for x in range(6, 22):
             if mapa[y][x] == ',':
                 mapa[y][x] = '.'
+    # Runda 6: kadr po oddaleniu kamery sięga od wiersza 18 — piaszczysta
+    # łata przy drodze na północ czytała się jak jasny plac.
+    for y in range(17, 22):
+        for x in range(3, 12):
+            if mapa[y][x] == ',':
+                mapa[y][x] = '.'
             if mapa[y][x] == 'T' and y <= 31 and (x >= 7 or x > rzeka_x(y)):
                 mapa[y][x] = '.'
+    # Runda 6: lewy dolny róg kadru to już nie „las bez niczego": ściana
+    # lasu zostaje przy krawędzi mapy (kolumny 0–5 i dwa dolne wiersze),
+    # a między nią a rzeką jest polana z wiatrakiem, sadem i obozem.
+    for y in range(25, 27):
+        for x in (0, 1):
+            mapa[y][x] = 'T'
+    for y in range(32, BOK):
+        for x in range(0, rzeka_x(y) - 1):
+            brzeg = 6 if y <= 33 else (7 if y == 34 else 9)
+            mapa[y][x] = 'T' if x < brzeg else '.'
     # Pojedyncze pola skał (z rozmycia szkicu) scena rysuje jako głaz
     # na łące — „garść drobiazgów". Góra ma być pasmem albo jej nie ma.
     for y in range(BOK):
@@ -196,6 +232,15 @@ def popraw_teren(g, mapa):
             if skal < 2 or (not w_pasmie and 19 <= y <= 35 and x <= 22):
                 # …a w pierwszym ekranie nie ma żadnych luźnych skał.
                 mapa[y][x] = '.'
+    # Runda 6: kępa lasu na drugim brzegu nad pasmem — łąka za mostem była
+    # jedną zieloną połacią; las zamyka ją od wschodu, droga idzie dołem.
+    for y in range(20, 24):
+        for x in range(21, 24):
+            if mapa[y][x] in '.,':
+                mapa[y][x] = 'T'
+    for x, y in ZIEMIA:
+        if mapa[y][x] in '.,':
+            mapa[y][x] = 'j'
     # Most: pola przeprawy przejezdne (droga wytyczy się po nich sama),
     # przyczółki po obu stronach wolne na dwa pola w głąb.
     x0, y0, x1, y1 = MOST
@@ -274,6 +319,70 @@ def strzez_pewnie(g, pola, sila):
                 return
 
 
+#: Kadr pierwszego ekranu (x0, y0, x1, y1): kamera oddalona do 32 px na pole
+#: (`ZOOM_MAPY`) widzi 21 × 18 pól wokół startu, przyciśnięte do dołu mapy.
+KADR = (3, 18, 24, 35)
+
+#: Pierwszy ekran, brzeg domu: (kolejne miejsca do wyboru, obiekt).
+PIERWSZY_EKRAN_DOM = [
+    ([(9, 27), (8, 27), (10, 27)], ('kopalnia', 'odlamek')),
+    ([(12, 33), (11, 33), (13, 33)], ('kopalnia', 'jagoda')),
+    ([(7, 33), (8, 33), (7, 32)], ('budynek', 'wiatrak')),
+    ([(15, 33), (14, 34), (15, 32)], ('budynek', 'oboz-treningowy')),
+    ([(13, 30), (14, 30), (12, 31)], ('budynek', 'zrodlo')),
+    ([(5, 28), (6, 28), (6, 29)], ('budynek', 'ognisko')),
+    ([(11, 24), (10, 24)], ('surowiec', 'odlamek')),
+    ([(14, 31), (14, 32)], ('surowiec', 'pokeball')),
+    ([(6, 30), (5, 30), (6, 31)], ('surowiec', 'jagoda')),
+    ([(11, 29), (10, 28)], ('surowiec', 'kamien')),
+    ([(14, 27), (13, 26)], ('skrzynia', None)),
+    ([(9, 34), (10, 34)], ('skrzynia', None)),
+    ([(10, 33), (9, 33)], ('potwor', 'slaby')),
+    ([(4, 31), (5, 32)], ('artefakt', None)),
+    ([(5, 31), (4, 30)], ('potwor', 'slaby')),
+    ([(9, 21), (8, 20), (10, 21)], ('budynek', 'chatka')),
+    ([(4, 21), (5, 21)], ('surowiec', 'pokeball')),
+    ([(10, 19), (9, 19)], ('skrzynia', None)),
+]
+
+#: Pierwszy ekran, drugi brzeg.
+PIERWSZY_EKRAN_BRZEG = [
+    ([(19, 30), (20, 30), (18, 30)], ('kopalnia', 'kamien')),
+    ([(17, 30), (17, 29)], ('potwor', 'slaby')),
+    ([(19, 32), (18, 32)], ('skrzynia', None)),
+    ([(20, 31), (18, 31)], ('budynek', 'ognisko')),
+    ([(18, 23), (17, 23)], ('budynek', 'wieza-obserwacyjna')),
+    ([(20, 23), (21, 23), (20, 22)], ('budynek', 'gniazdo')),
+    ([(19, 24), (18, 24)], ('surowiec', 'jagoda')),
+    ([(22, 25), (22, 26), (23, 24)], ('surowiec', 'kamien')),
+    ([(18, 20), (17, 20), (19, 19)], ('skrzynia', None)),
+    ([(19, 21), (18, 21)], ('potwor', 'slaby')),
+    ([(22, 20), (21, 19)], ('budynek', 'woz')),
+]
+
+
+def postaw_kadr(g, miejsca, wpis):
+    """Obiekt pierwszego ekranu na pierwszym pasującym polu z listy."""
+    sx, sy = PUNKTY['start']
+    zajete = {q for q, _ in g.obiekty} | g.blokada | set(PUNKTY.values())
+    for x, y in miejsca:
+        if not g.w(x, y) or g.mapa[y][x] not in '.,j' or (x, y) in zajete:
+            continue
+        if max(abs(x - sx), abs(y - sy)) <= (2 if wpis[0] == 'potwor' else 1):
+            continue
+        bryla = g.pola_bryly(wpis[0], wpis[1], (x, y))
+        if any(q in zajete or g.mapa[q[1]][q[0]] == '=' for q in bryla):
+            continue
+        if wpis[0] == 'potwor' and g.koliduje_ze_straza((x, y), wpis):
+            continue
+        try:
+            return g.postaw((x, y), wpis)
+        except SystemExit:
+            continue
+    print(f'  pierwszy ekran: brak miejsca na {wpis} w {miejsca}')
+    return None
+
+
 def rozstaw(g):
     rng = g.rng
 
@@ -281,40 +390,20 @@ def rozstaw(g):
     # Pierwsze dwa dni: stosy przy zamku, skrzynia i dwie kopalnie podstawowe
     # bez straży. Dziecko ma zobaczyć nagrodę za każdy krok, zanim zobaczy
     # pierwszego stwora.
-    # PIERWSZY EKRAN — dwie kopalnie, dwie budowle, stosy, skrzynia i pierwszy
-    # skarb pod strażą, wszystko w widoku z dnia pierwszego (runda 1 ślepego
-    # porównania: „obiektów mało, rozrzucone, nic nie pilnowane").
-    # Kadr o rząd wyższy niż `kadr_startu` (dy od −4): górę ekranu zajmuje
-    # pasmo gór, więc plac pod nim to jedyne miejsce na budowle nad zamkiem.
+    # PIERWSZY EKRAN (runda 6, wzorzec HotA) — rozstawiony RĘCZNIE, pole po
+    # polu. Werdykt rundy 5: „środek i lewy dół to pusta zieleń, prawie nie
+    # ma obiektów do zebrania i odwiedzenia — każdy ekran ma dawać kilka
+    # wyborów trasy". Losowanie z odstępami dawało garść rzeczy rozrzuconych
+    # po łące; tu każde miejsce kadru ma swoją rzecz: kuźnia w zboczu pasma,
+    # sad i wiatrak na polanie przy lesie, źródło i skrzynie przy rzece,
+    # skarb pod strażą w lewym dole. `postaw_kadr` bierze pierwsze wolne
+    # miejsce z listy (droga, bryła i próg startu odpadają).
     sx, sy = PUNKTY['start']
-    kadr_pelny = [p for p in g.wolne_pola('dom', (1, 999)) if abs(p[0] - sx) <= 5 and -4 <= p[1] - sy <= 5]
-    # Runda 4: nic tuż przy bohaterze — kuźnia postawiona pole nad startem
-    # zakrywała go dachem.
-    kadr = [p for p in kadr_pelny if not pod_gora(g, p) and not (abs(p[0] - sx) <= 1 and -2 <= p[1] - sy <= 1)]
-    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'jagoda'), kadr, None, (3, 14))
-    # Kopalnia odłamków wcięta w skalne zbocze, jeśli pierwszy ekran je ma.
-    w_skale = [p for p in g.pod_skala('dom') if p in kadr_pelny]
-    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'odlamek'), w_skale, kadr)
-    g.dodaj_najpierw('dom', lambda p: ('budynek', 'wiatrak'), kadr, None, (2, 16))
-    g.dodaj_najpierw('dom', lambda p: ('budynek', 'oboz-treningowy'), kadr, None, (2, 16))
-    for co in ('odlamek', 'pokeball', 'jagoda'):
-        g.dodaj_najpierw('dom', lambda p, co=co: ('surowiec', co), kadr, None, (2, 12))
-    g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), kadr, None, (2, 12))
-    # Skarb pod strażą co najmniej cztery pola od startu — straż stoi od
-    # strony gracza, a na progu startu stać jej nie wolno.
-    # Runda 4: i co najmniej trzy pola od budowli — straż stojąca przy
-    # skrzyni wchodziła w rysunek wiatraka.
-    budowle_kadru = [q for q, co in g.obiekty if co[0] in ('kopalnia', 'budynek')]
-    dalej = [
-        p
-        for p in kadr
-        if max(abs(p[0] - sx), abs(p[1] - sy)) >= 4
-        and all(max(abs(p[0] - q[0]), abs(p[1] - q[1])) >= 2 for q in budowle_kadru)
-    ]
-    strzez_pewnie(g, g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), dalej, None, (5, 14)), 'slaby')
+    for miejsca, wpis in PIERWSZY_EKRAN_DOM:
+        postaw_kadr(g, miejsca, wpis)
     # Pierwszy ekran jest skończony: reszta rozstawienia (budowle i stosy
     # całej doliny) idzie poza kadr, inaczej trzy budowle stawały dach w dach.
-    kadr_calego_ekranu = [(x, y) for y in range(sy - 6, sy + 7) for x in range(sx - 7, sx + 8)]
+    kadr_calego_ekranu = [(x, y) for y in range(KADR[1], KADR[3] + 1) for x in range(KADR[0], KADR[2] + 1)]
     g.zajete += [p for p in kadr_calego_ekranu if strefa(*p) == 'dom']
     # Obóz łowców (złoto) pod słabą strażą — pierwsza bitwa, której stawkę
     # widać: kopalnia daje codziennie.
@@ -337,41 +426,11 @@ def rozstaw(g):
     g.postaw((MOST[2] + 1, MOST[1]), ('potwor', 'slaby'))
     g.postaw((rzeka_x(7), 8), ('potwor', 'sredni'))
 
-    # DRUGI BRZEG W PIERWSZYM EKRANIE (runda 4: „za rzeką nie ma obiektów,
-    # nie widać, czy za wodą da się iść"). Kopalnia kamienia w zboczu
-    # wschodniego pasma, strażnica przy drodze za mostem, stos i skrzynia pod
-    # strażą — wszystko w widoku z dnia pierwszego. Kolumna sx+6 jest w kadrze
-    # cała (pas ramki jest ostrożny, bo liczy się z szerokimi budowlami), więc
-    # na czas tego rozstawienia wolno w niej stawiać.
-    ramka = {(sx + 6, y) for y in range(sy - 4, sy + 5)}
-    zdjete = [p for p in g.zajete if p in ramka]
-    g.zajete = [p for p in g.zajete if p not in ramka]
-    brzeg = [
-        p
-        for p in g.wolne_pola('pogranicze', (1, 999))
-        if p[0] - sx <= 6 and -4 <= p[1] - sy <= 5 and not pod_gora(g, p)
-    ]
-    # Kopalnia ma szeroki rysunek — nie w ostatniej kolumnie kadru.
-    w_zboczu = [p for p in g.pod_skala('pogranicze') if p[0] - sx <= 5 and -4 <= p[1] - sy <= 5]
-    def wolne(lista):
-        return [p for p in lista if p in brzeg]
-
-    kopalnia = g.dodaj_najpierw('pogranicze', lambda p: ('kopalnia', 'kamien'), w_zboczu, g.pod_skala('pogranicze'))
-    # Straż kopalni w przesmyku między rzeką a zboczem — tędy się do niej
-    # dochodzi od mostu. Gdy układ się zmieni, straż staje jak zwykle.
-    kx, ky = kopalnia[0]
-    przesmyk = (kx - 1, ky)
-    if g.w(*przesmyk) and g.mapa[ky][kx - 1] in '.,' and przesmyk not in g.zajete:
-        g.postaw(przesmyk, ('potwor', 'slaby'))
-    else:
-        g.strzez(kopalnia, 'slaby')
-    g.dodaj_najpierw('pogranicze', lambda p: ('budynek', 'wieza-obserwacyjna'), wolne([(sx + 5, sy - 4), (sx + 4, sy - 4)]) or [p for p in brzeg if p[0] - sx <= 5])
-    g.dodaj_najpierw('pogranicze', lambda p: ('skrzynia', None), wolne([(kx + 1, ky + 1), (kx + 1, ky)]) or brzeg)
-    g.dodaj_najpierw('pogranicze', lambda p: ('surowiec', 'kamien'), wolne([(sx + 3, sy - 1), (sx + 3, sy - 2)]) or brzeg)
-    g.dodaj_najpierw('pogranicze', lambda p: ('surowiec', 'jagoda'), wolne([(sx + 6, sy - 4), (sx + 3, sy - 5)]) or brzeg)
-    g.zajete += zdjete
-    # Drugi brzeg w kadrze też jest skończony: reszta pogranicza poza kadr
-    # (wóz postawiony losowo stanął na trawiastym ramieniu góry jak doklejony).
+    # DRUGI BRZEG W PIERWSZYM EKRANIE: kieszeń za pasmem (kopalnia kamienia
+    # wcięta w zbocze, skrzynia, ognisko, stos) z jednym wejściem wzdłuż
+    # brzegu i strażą w nim; nad pasmem strażnica, gniazdo i stosy przy drodze.
+    for miejsca, wpis in PIERWSZY_EKRAN_BRZEG:
+        postaw_kadr(g, miejsca, wpis)
     g.zajete += kadr_calego_ekranu
 
     g.dodaj(5, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
@@ -421,7 +480,28 @@ USTAWIENIA = {
     # (ok. 45–50% wysokości bohatera), cień kontaktowy i rysunek STOSU leżącego
     # na ziemi (`public/mapa/polana/stos-*.png`) zamiast ikony z paska.
     'znajdzki': 0.42,
+    # Runda 6 (HotA): „zamek, młyn i most zajmują po kilka kafli". Budowle
+    # odwiedzane stoją na jednym polu, więc mniejszy rysunek niczego nie psuje.
+    'skalaBudowli': 0.8,
+    # Runda 6: rogi pierwszego kadru (21 × 18 pól po oddaleniu kamery)
+    # odsłonięte od startu — czarne zęby mgły w rogach ekranu wyglądały jak
+    # dziura w mapie. Tylko rogi: sonda pilnuje, żeby na starcie było
+    # odsłonięte mniej niż 20% planszy.
+    'odkryte': [
+        {'x': 4, 'y': 19, 'promien': 3},
+        {'x': 23, 'y': 20, 'promien': 4},
+        {'x': 24, 'y': 34, 'promien': 2},
+        {'x': 3, 'y': 35, 'promien': 2},
+    ],
 }
+
+#: Runda 6: ziemia pod skarpami to ubita brązowa ziemia z kamykami
+#: (`teren-ziemia`, PROMPTY-PLANSZE §11), a nie spękana szara jałowa ziemia.
+TEKSTURY = {'jalowa': ['ziemia', 'jalowa']}
+
+#: Runda 6 („płaska, jednolita zieleń bez wzniesień"): łagodne pagórki
+#: i skarpy z cieniem na łące (`teren_efekty.rzezba`, jak na Bagnach).
+RZEZBA = {'pagorki': 0.6, 'czolo': 0.4}
 
 #: Przejezdne pola, do których nie da się dojść, zarastają lasem (patrz silnik).
 ZASYP_ODCIETE = True
@@ -458,6 +538,11 @@ NAKLEJKI = [
     (['kamienie-mech'], '.', 0.022),
     (['paproc'], '.', 0.03),
     (['grzyby-bagienne'], '.T', 0.015),
+    # Runda 6: drobiazgi łąki (PROMPTY-PLANSZE §11) — pniaki, głazy, kępy
+    # polnych kwiatów; ziemia pod skarpą dostaje głazy.
+    (['pniak-lakowy'], '.', 0.012),
+    (['glazy-lakowe'], '.j', 0.02),
+    (['kepa-kwiatow'], '.', 0.03),
 ]
 
 #: Runda 4: most przez rzekę w pierwszym ekranie (`teren_efekty.mosty`).

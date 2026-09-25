@@ -61,7 +61,9 @@ const skrzynia = await page.evaluate(() => {
 await page.waitForTimeout(500);
 const punkt = await page.evaluate((p) => {
   const s = window.__game.scene.getScene('adventure');
-  return { x: 8 + p.x * 48 + 24 - s.kamera.scrollX, y: 44 + p.y * 48 + 24 - s.kamera.scrollY };
+  // Środek pola na ekranie macierzą kamery planszy (uwzględnia jej zoom).
+  const e = s.kamera.matrixCombined.transformPoint(p.x * 48 + 24, p.y * 48 + 24, { x: 0, y: 0 });
+  return { x: e.x, y: e.y };
 }, skrzynia);
 await plotno(punkt.x, punkt.y);
 await page.waitForTimeout(300);

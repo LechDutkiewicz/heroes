@@ -72,7 +72,7 @@ import {
   wstazka,
 } from '../visual/zestaw';
 import { ICON, buildIcons } from '../visual/icons';
-import { GORA, KAFEL, MARGINES, PANEL_W, PASEK_H } from '../visual/uklad';
+import { GORA, KAFEL, MARGINES, PANEL_W, PASEK_H, RAMA_MAPY_H, RAMA_MAPY_W, ZOOM_MAPY } from '../visual/uklad';
 import { dodajWode } from '../visual/woda';
 import { wersjonujZasoby } from '../visual/zasoby';
 import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
@@ -96,17 +96,20 @@ import {
  * i polem komunikatu, na dole pasek surowców.
  *
  * Plansza ma 36 × 36 pól — rozmiar małej mapy z Heroes 3 — a w okno mieści się
- * 14 × 12. Dlatego wszystko, co leży na mapie, siedzi w jednym kontenerze
- * `swiat`, przyciętym maską do ramy i przesuwanym; HUD zostaje nieruchomy na
- * zewnątrz. To jedyne miejsce w tej scenie, gdzie współrzędne pola i piksela
- * się rozjeżdżają, więc przeliczenia idą wyłącznie przez `naEkran`/`zEkranu`.
+ * 21 × 18. Dlatego wszystko, co leży na mapie, siedzi w jednym kontenerze
+ * `swiat`, który rysuje osobna kamera przycięta do ramy i przewijana; HUD
+ * zostaje nieruchomy na zewnątrz. Kamera jest przy tym oddalona (`ZOOM_MAPY`):
+ * pole ma w świecie `KAFEL` = 48 px, a na ekranie 32 px, jak w Heroes 3.
+ * To jedyne miejsce w tej scenie, gdzie współrzędne pola i piksela się
+ * rozjeżdżają, więc przeliczenia idą wyłącznie przez `naEkran`/`zEkranu`/
+ * `swiatZEkranu`.
  *
  * Zasady siedzą w `src/data/mapa.ts` i `src/data/zasady-h3.ts`; scena je pokazuje.
  */
 
 /**
- * Prędkość przewijania kursorem przy krawędzi, w pikselach na sekundę.
- * Dobrane tak, żeby przejechanie całej planszy zajmowało jakieś trzy sekundy:
+ * Prędkość przewijania kursorem przy krawędzi, w pikselach ŚWIATA na sekundę
+ * (na ekranie to `ZOOM_MAPY` razy mniej). Dobrane tak, żeby przejechanie całej planszy zajmowało jakieś trzy sekundy:
  * szybciej gubi się orientację, wolniej łatwiej sięgnąć po minimapę.
  */
 const PREDKOSC_PRZEWIJANIA = 560;
@@ -516,12 +519,27 @@ export class AdventureScene extends Phaser.Scene {
   private get mapaH() {
     return this.stan.wys * KAFEL;
   }
-  /** Ile mieści się w ramie — stąd wiadomo, o ile wolno przewinąć. */
+  /**
+   * Rama mapy na EKRANIE, w pikselach ekranu (672 × 576). Tyle zajmuje
+   * prostokąt kamery planszy — i tylko do rysowania ramy, HUD-u obok niej
+   * i do trafiania kursorem w ramę wolno tych liczb używać.
+   */
   private get oknoW() {
-    return 14 * KAFEL;
+    return RAMA_MAPY_W;
   }
   private get oknoH() {
-    return 12 * KAFEL;
+    return RAMA_MAPY_H;
+  }
+  /**
+   * Ile ŚWIATA widać w ramie, w pikselach świata — rama podzielona przez
+   * zoom kamery (21 × 18 pól po `KAFEL`). Stąd wiadomo, o ile wolno
+   * przewinąć i gdzie jest środek widoku.
+   */
+  private get widokW() {
+    return this.oknoW / ZOOM_MAPY;
+  }
+  private get widokH() {
+    return this.oknoH / ZOOM_MAPY;
   }
 
   /** Środek pola w układzie świata (bez przewinięcia). */
@@ -529,16 +547,23 @@ export class AdventureScene extends Phaser.Scene {
     return { x: x * KAFEL + KAFEL / 2, y: y * KAFEL + KAFEL / 2 };
   }
 
-  /** Pole pod kursorem. Uwzględnia i ramę, i przewinięcie. */
-  private zEkranu(px: number, py: number) {
-    // Punkt na ekranie → punkt świata: odejmujemy początek prostokąta kamery
-    // i dodajemy jej przewinięcie.
+  /**
+   * Punkt ekranu → punkt świata. Kamera planszy ma origin (0, 0), więc
+   * wystarczy odjąć róg ramy, podzielić przez zoom i dodać przewinięcie.
+   * Liczone z bieżącego stanu kamery, a nie z macierzy z ostatniej klatki —
+   * w trakcie płynnego przewijania macierz bywa o klatkę spóźniona.
+   */
+  private swiatZEkranu(px: number, py: number) {
     const sx = this.kamera?.scrollX ?? 0;
     const sy = this.kamera?.scrollY ?? 0;
-    return {
-      x: Math.floor((px - this.mapaX + sx) / KAFEL),
-      y: Math.floor((py - this.mapaY + sy) / KAFEL),
-    };
+    const zoom = this.kamera?.zoom ?? ZOOM_MAPY;
+    return { x: (px - this.mapaX) / zoom + sx, y: (py - this.mapaY) / zoom + sy };
+  }
+
+  /** Pole pod kursorem. Uwzględnia ramę, oddalenie i przewinięcie. */
+  private zEkranu(px: number, py: number) {
+    const s = this.swiatZEkranu(px, py);
+    return { x: Math.floor(s.x / KAFEL), y: Math.floor(s.y / KAFEL) };
   }
 
   private wGranicach(x: number, y: number) {
@@ -556,9 +581,14 @@ export class AdventureScene extends Phaser.Scene {
 
   // ---------- przewijanie ----------
 
+  /**
+   * `x`, `y` to przesunięcie świata względem ramy w pikselach ŚWIATA (≤ 0),
+   * czyli minus przewinięcie kamery. Granica: prawy/dolny brzeg planszy nie
+   * może odjechać od prawego/dolnego brzegu widoku (`widokW × widokH`).
+   */
   private przewin(x: number, y: number, plynnie = true) {
-    this.przewX = Phaser.Math.Clamp(x, this.oknoW - this.mapaW, 0);
-    this.przewY = Phaser.Math.Clamp(y, this.oknoH - this.mapaH, 0);
+    this.przewX = Phaser.Math.Clamp(x, Math.min(0, this.widokW - this.mapaW), 0);
+    this.przewY = Phaser.Math.Clamp(y, Math.min(0, this.widokH - this.mapaH), 0);
     if (!this.kamera) return;
     if (plynnie) {
       this.tweens.add({
@@ -576,7 +606,7 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   private wysrodkujNa(x: number, y: number, plynnie = true) {
-    this.przewin(this.oknoW / 2 - (x + 0.5) * KAFEL, this.oknoH / 2 - (y + 0.5) * KAFEL, plynnie);
+    this.przewin(this.widokW / 2 - (x + 0.5) * KAFEL, this.widokH / 2 - (y + 0.5) * KAFEL, plynnie);
   }
 
   private wysrodkujNaBohaterze(plynnie = true) {
@@ -589,13 +619,14 @@ export class AdventureScene extends Phaser.Scene {
    * i po kilku krokach nie wiadomo, gdzie się jest.
    */
   private dosunDoBohatera() {
-    // Margines to niemal trzecia część okna. Przy trzech polach trzeba było
-    // dojść niemal do samej krawędzi, żeby kadr drgnął — a wtedy człowiek
-    // idzie w ciemno, bo nie widzi, dokąd.
-    const margines = 4.5 * KAFEL;
+    // Margines to trzecia część widoku (ok. 6 pól przy 21 × 18). Przy trzech
+    // polach trzeba było dojść niemal do samej krawędzi, żeby kadr drgnął —
+    // a wtedy człowiek idzie w ciemno, bo nie widzi, dokąd. Wszystko tu jest
+    // w pikselach świata: pozycja bohatera, przesunięcie i rozmiar widoku.
+    const margines = Math.min(this.widokW, this.widokH) / 3;
     const ex = this.stan.bohater.x * KAFEL + this.przewX;
     const ey = this.stan.bohater.y * KAFEL + this.przewY;
-    if (ex < margines || ey < margines || ex > this.oknoW - margines || ey > this.oknoH - margines) {
+    if (ex < margines || ey < margines || ex > this.widokW - margines || ey > this.widokH - margines) {
       this.wysrodkujNaBohaterze();
     }
   }
@@ -604,7 +635,7 @@ export class AdventureScene extends Phaser.Scene {
    * Przewijanie kursorem przy krawędzi ramy — jak w Heroes 3.
    *
    * Strzałki i minimapa już były, ale obie wymagają oderwania się od tego,
-   * co się właśnie ogląda. Przy planszy 36 × 36, z której widać jedną trzecią,
+   * co się właśnie ogląda. Przy planszy 36 × 36, z której widać ledwie część,
    * zerknięcie „co jest kawałek dalej" to najczęstszy ruch w całej grze.
    *
    * Prędkość jest liczona z czasu klatki, a nie stała na klatkę: gra chodzi
@@ -616,7 +647,9 @@ export class AdventureScene extends Phaser.Scene {
     const { x, y } = this.kursor;
     // Pas jest liczony od ramy mapy, nie od okna: po prawej stronie leży panel
     // i przewijanie miało się włączać nad mapą, a nie nad portretem bohatera.
-    const pas = KAFEL * 0.75;
+    // Pas ma 36 px EKRANU — to odległość dla ręki, a nie ułamek pola, więc
+    // nie maleje razem z oddaleniem kamery.
+    const pas = 36;
     const lewo = this.mapaX;
     const gora = this.mapaY;
     const prawo = this.mapaX + this.oknoW;
@@ -772,8 +805,14 @@ export class AdventureScene extends Phaser.Scene {
     this.rysujBohatera();
     this.rysujMgle();
 
+    // Kamera oddalona do 32 px na pole, z originem (0, 0): wtedy `scrollX/Y`
+    // to wprost lewy górny róg widocznego wycinka świata, a zoom skaluje
+    // od rogu ramy — tak liczą `swiatZEkranu`, `przewin` i shader wody.
+    // Bez `setBounds`: Phaser przycina przewinięcie wzorem zakładającym
+    // origin 0,5, który przy oddaleniu i originie (0, 0) odcinał brzegi
+    // planszy. Granice pilnuje `przewin`.
     this.kamera = this.cameras.add(this.mapaX, this.mapaY, this.oknoW, this.oknoH);
-    this.kamera.setBounds(0, 0, this.mapaW, this.mapaH);
+    this.kamera.setOrigin(0, 0).setZoom(ZOOM_MAPY);
   }
 
   /**
@@ -1984,14 +2023,18 @@ export class AdventureScene extends Phaser.Scene {
     const mx = this.minimapa.getData('x') as number;
     const my = this.minimapa.getData('y') as number;
     const bok = this.minimapa.getData('bok') as number;
-    const skala = bok / this.mapaW;
+    // Osobno w poziomie i w pionie, tak jak kafelki minimapy (`kw`, `kh`).
+    // Ramka obejmuje WIDOK w pikselach świata (21 × 18 pól), a nie ramę
+    // na ekranie — ta jest mniejsza o zoom kamery.
+    const skalaX = bok / this.mapaW;
+    const skalaY = bok / this.mapaH;
     g.clear();
     g.lineStyle(1.5, C.white, 0.9);
     g.strokeRect(
-      mx - this.przewX * skala,
-      my - this.przewY * skala,
-      this.oknoW * skala,
-      this.oknoH * skala
+      mx - this.przewX * skalaX,
+      my - this.przewY * skalaY,
+      Math.min(this.widokW, this.mapaW) * skalaX,
+      Math.min(this.widokH, this.mapaH) * skalaY
     );
   }
 
@@ -2172,7 +2215,9 @@ export class AdventureScene extends Phaser.Scene {
    * więc to on ma pierwszeństwo, tak jak przy rysowaniu.
    */
   private obiektPodKursorem(p: Phaser.Input.Pointer) {
-    const swiatowy = this.kamera.getWorldPoint(p.x, p.y);
+    // Ten sam przelicznik co dla pola pod kursorem — z zoomem i przewinięciem
+    // z bieżącej chwili — żeby rysunek i pole nigdy nie liczyły się inaczej.
+    const swiatowy = this.swiatZEkranu(p.x, p.y);
     let najlepszy: Obiekt | undefined;
     for (const { o, im } of this.trafienia) {
       if (o.zebrany || !im.active) continue;
@@ -3332,11 +3377,14 @@ export class AdventureScene extends Phaser.Scene {
         align: 'center',
       })
       .setOrigin(0.5, 1)
+      // Napis leży w świecie, który kamera oddala — powiększamy go o tyle,
+      // o ile kamera zmniejsza, żeby na ekranie wciąż miał swoje 17 px.
+      .setScale(1 / ZOOM_MAPY)
       .setDepth(this.stan.wys + 100);
     this.swiat.add(t);
     this.tweens.add({
       targets: t,
-      y: t.y - 30,
+      y: t.y - 30 / ZOOM_MAPY,
       alpha: 0,
       duration: 1500,
       onComplete: () => t.destroy(),

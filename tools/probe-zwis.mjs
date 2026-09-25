@@ -81,10 +81,10 @@ const skrzynia = await page.evaluate(() => {
 await page.waitForTimeout(400);
 const punkt = await page.evaluate((p) => {
   const s = window.__game.scene.getScene('adventure');
-  return {
-    x: 8 + p.x * 48 + 24 - (s.kamera?.scrollX ?? 0),
-    y: 44 + p.y * 48 + 24 - (s.kamera?.scrollY ?? 0),
-  };
+  // Środek pola na ekranie — macierzą, którą kamera planszy rysuje (róg ramy,
+  // zoom, przewinięcie). Pole ma w świecie 48 px, na ekranie mniej.
+  const e = s.kamera.matrixCombined.transformPoint(p.x * 48 + 24, p.y * 48 + 24, { x: 0, y: 0 });
+  return { x: e.x, y: e.y };
 }, skrzynia);
 await klikNaPlotnie(page, punkt.x, punkt.y); // pierwszy klik: trasa
 await page.waitForTimeout(250);
@@ -232,10 +232,12 @@ const wejdzNaBudowle = async (id) => {
   // idzie po rysunku od dołu do góry i bierze pierwsze trafienie.
   const p = await page.evaluate((c) => {
     const s = window.__game.scene.getScene('adventure');
-    const naEkran = (wx, wy) => ({
-      x: wx - s.kamera.scrollX + s.kamera.x,
-      y: wy - s.kamera.scrollY + s.kamera.y,
-    });
+    // Punkt świata → ekran tą samą macierzą, którą kamera planszy rysuje
+    // (uwzględnia jej zoom), a nie wzorem zakładającym 48 px na pole.
+    const naEkran = (wx, wy) => {
+      const e = s.kamera.matrixCombined.transformPoint(wx, wy, { x: 0, y: 0 });
+      return { x: e.x, y: e.y };
+    };
     const t = s.trafienia.find((z) => z.o.x === c.x && z.o.y === c.y);
     if (t) {
       const b = t.im.getBounds();

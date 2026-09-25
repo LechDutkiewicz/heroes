@@ -60,8 +60,11 @@ uniform float uCzas;
 uniform vec2 uKafelki;
 // Rozmiar planszy w pikselach świata.
 uniform vec2 uPlanszaPx;
-// Lewy górny róg ramy mapy na ekranie, a po nim przesunięcie kamery.
+// Punkt zaczepienia kamery na ekranie (róg ramy + origin), a po nim ten sam
+// punkt w świecie (przewinięcie + origin). Patrz ustaw('uWidok', …) niżej.
 uniform vec4 uWidok;
+// Zoom kamery: ile pikseli ekranu przypada na piksel świata.
+uniform vec2 uZoom;
 // Wysokość bufora: gl_FragCoord liczy od DOŁU, a scena od góry.
 uniform float uWysokoscBufora;
 
@@ -82,8 +85,11 @@ void main() {
   // kamerą i przycinany maską — współrzędne kwadratu tego nie odwzorowują.
   // Droga przez ekran jest dłuższa, ale liczy dokładnie to, co widać: piksel
   // ramy mapy przeliczony na piksel świata i dopiero potem na teksturę.
+  // Kamera planszy jest oddalona, więc odległość na ekranie dzielimy przez
+  // zoom — bez tego woda przesuwała się szybciej niż tło i rozjeżdżała z nim
+  // tym bardziej, im dalej od rogu ramy.
   vec2 ekran = vec2(gl_FragCoord.x, uWysokoscBufora - gl_FragCoord.y);
-  vec2 swiat = ekran - uWidok.xy + uWidok.zw;
+  vec2 swiat = (ekran - uWidok.xy) / uZoom + uWidok.zw;
   vec2 uv = swiat / uPlanszaPx;
   // Phaser wgrywa obrazy do karty odwrócone w pionie, więc próbkowanie planszy
   // i maski idzie po odbitej współrzędnej. Bez tego shader czytał teren
@@ -193,8 +199,15 @@ export function dodajWode(
           ustaw('uCzas', (scena.time.now / 1000) % 3600);
           ustaw('uKafelki', [szer / BOK_ZMARSZCZEK, wys / BOK_ZMARSZCZEK]);
           ustaw('uPlanszaPx', [szer, wys]);
+          // Macierz kamery Phasera: ekran = róg + o + zoom · (świat − scroll − o),
+          // gdzie o = rozmiar × origin. Mapa ma origin (0, 0), więc o = 0,
+          // ale podgląd całej planszy (`zrzut-mapa.mjs --caly`) ustawia
+          // origin 0,5 — wzór ogólny obsługuje oba przypadki.
           const k = kamera();
-          ustaw('uWidok', [k.x, k.y, k.scrollX, k.scrollY]);
+          const ox = k.width * k.originX;
+          const oy = k.height * k.originY;
+          ustaw('uWidok', [k.x + ox, k.y + oy, k.scrollX + ox, k.scrollY + oy]);
+          ustaw('uZoom', [k.zoomX, k.zoomY]);
           // Phaser trzyma płótno w rozmiarze gry (skalowanie idzie stylami CSS),
           // więc wysokość gry jest tu zarazem wysokością bufora karty.
           ustaw('uWysokoscBufora', scena.scale.height);

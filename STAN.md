@@ -216,6 +216,26 @@ podstawki; we wsadzie leżą już obrane. Próba osobnej tekstury „omszałej
 dokładnie ten zarzut, który zamykamy. Układ planszy bez zmian (ten sam
 TEREN i ROZSTAWIENIE, odcisk `f78c3bdd2f50d3be`).
 
+### Polana, runda 6 (HotA)
+
+Werdykt rundy 5: „brak barier budujących korytarze, pusta płaska zieleń
+z okrągłymi krzakami, prawie nic do zebrania". Kadr po oddaleniu kamery
+(`ZOOM_MAPY`, 21 × 18 pól: kolumny 3–24, wiersze 18–35) jest rozstawiony
+RĘCZNIE (`PIERWSZY_EKRAN_DOM`, `PIERWSZY_EKRAN_BRZEG`, `postaw_kadr`
+w `tools/mapy/polana.py`; reszta planszy dalej losowana poza `KADR`).
+Pasma: zachodnie w dwóch piętrach z przełęczą przy rzece i kuźnią w zboczu,
+wschodnie od kopalni kamienia w dół do kopca — za rzeką zamknięta kieszeń
+(kopalnia, skrzynia, ognisko) z jednym wejściem wzdłuż brzegu i strażą.
+Lewy dół to polana z wiatrakiem, sadem, obozem i skrzynią pod strażą.
+Nowe ustawienia: `USTAWIENIA.skalaBudowli` (mnożnik rysunku `budynek`
+w scenie; Polana 0,8), `odkryte` w rogach kadru (mgła rysowała czarne zęby
+w rogach zrzutu; sonda pilnuje < 20% planszy), `RZEZBA` (pagórki),
+`TEKSTURY = {'jalowa': ['ziemia', 'jalowa']}` z nową `teren-ziemia`,
+krzewy `polana/krzak*.png` (dwa różne, nieregularne) i naklejki
+`pniak-lakowy`, `glazy-lakowe`, `kepa-kwiatow` (PROMPTY-PLANSZE §11; surowe
+z API miały kremowe/jasnozielone podstawki — we wsadzie obrane). Symulacja
+misji 1: wygrana dnia 7 (2/2).
+
 ## HUD mapy przygody na wspólnym zestawie (2026-09-24)
 
 - Mapa stoi na tym samym materiale co kampania i okna misji
@@ -310,8 +330,11 @@ postaciami bez jednej malowanej ilustracji.
 w `tools/reference/homm3/` (poza gitem; źródła i URL-e w `ZRODLA.md` tamże —
 wszystkie z `raw.githubusercontent.com/vcmi-mods/*/screenshots/`, VCMI
 z oryginalnymi grafikami, część z modem HotA; czystego HotA proxy nie
-przepuszcza). Do plansz: `ref-trawa.png` (1280×720 z 3840×2160),
-`ref-bagno.png` (960×720 z 1280×960), `ref-snieg.png` (1280×719). Runda to
+przepuszcza). Do plansz trzy kadry wyglądające jak ZAPROJEKTOWANA mapa kampanii
+(gracz odrzucił zrzuty z generatora — chaotyczne, turniejowe): rzeka
+z zrzutu trawy w skali 32 px na pole oraz dwa oficjalne zrzuty moda HotA
+(zamek z pasmami gór i wodospadami, wybrzeże). Pliki i URL-e: tabela
+„Zestaw porównawczy" w `tools/reference/homm3/ZRODLA.md`. Runda to
 trzy ślepe zestawienia (nasz zrzut przeciw każdemu wzorcowi), trzech
 krytyków ze świeżym kontekstem, wygrana przy 2 z 3.
 

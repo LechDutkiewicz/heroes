@@ -1008,3 +1008,96 @@ A small loose patch of wild meadow flowers: tall stems of blue cornflowers,
 white daisies and a few red poppies with grass blades between them, uneven
 outline. Painted soft shading. Wider than tall.
 ```
+
+### 10b. Twierdza — zimowe budowle odwiedzane (runda 3, wzorzec HotA)
+
+Po oddaleniu kamery do 32 px na pole (`ZOOM_MAPY`) pierwszy ekran ma
+21 × 18 pól i wchodzą do niego budowle, które dotąd stały dalej: omszała
+wieża, łąkowe źródło, zielone gniazdo, drzewo wiedzy w pełnym listowiu —
+na śniegu wyglądały na „doklejone". Zestaw `zima` podmienia je pod tymi
+samymi kluczami; wysokości jak oryginały (`ZESTAWY` w `wsad_wczytaj.py`).
+
+<!-- plik: zima-kamienna-wieza.png -->
+```
+A short round stone watchtower in deep winter, two storeys tall, grey blocks
+with frost in the joints, a conical blue slate roof under a thick cap of snow
+with icicles on the rim, one small arched window glowing warm yellow, a wooden
+door and three worn stone steps half buried in snow, a shield hanging beside
+the door, a small snow drift against the wall. No moss, no ivy, no grass.
+Taller than wide.
+```
+
+<!-- plik: zima-wieza-obserwacyjna.png -->
+```
+A tall slender wooden lookout tower on a snowy grey rock outcrop in deep
+winter, four legs with cross bracing, a railed observation platform at the top
+with a small shingled canopy covered in snow, icicles on the canopy edge, a
+brass telescope on the platform pointing outward, a ladder up one side, snow
+on the rocks and on every beam. No grass, no moss, no green bushes. Taller
+than wide.
+```
+
+<!-- plik: zima-oboz-treningowy.png -->
+```
+A small winter training camp: two beige canvas tents with red pennants and
+snow on their ridges, a wooden weapon rack holding wooden practice swords and
+shields dusted with snow, a straw training dummy with a snow cap, a round
+campfire ring with grey stones and a small bright fire, trampled snow between
+them. No grass, no green plants. Slightly wider than tall.
+```
+
+<!-- plik: zima-zrodlo.png -->
+```
+A small magical warm spring in deep winter: steaming clear turquoise water
+welling out of a ring of smooth grey stones capped with snow into a shallow
+round pool, a thin ring of ice at the rim, soft white steam rising, sparkling
+droplets in the air, snow all around the stones. No grass, no flowers, no
+moss. Wider than tall.
+```
+
+<!-- plik: zima-gniazdo.png -->
+```
+A large woven nest of dark branches and dry straw built on a wooden platform
+between two snow-capped tree stumps in deep winter, the rim of the nest
+dusted with snow, soft grey down lining inside, three pale speckled eggs in
+the middle, a small wooden sign post with a snow cap beside it, icicles under
+the platform. No green moss, no leaves, no grass. Wider than tall.
+```
+
+<!-- plik: zima-ranczo.png -->
+```
+A horse ranch in deep winter: a long low red barn with a wide open doorway and
+hay bales inside, the roof under a thick layer of snow with icicles on the
+eaves, a white wooden paddock fence in front with snow on the rails, a water
+trough with a sheet of ice and a bucket, horseshoes nailed above the barn
+door, no animals visible. No grass, no green plants. Wider than tall.
+```
+
+<!-- plik: zima-arena.png -->
+```
+A small round open-air arena in deep winter: a circle of trampled snow ringed
+by pale stone benches with snow on them and short wooden posts with snow caps,
+two crossed training staves standing in the middle, colourful pennants on
+poles around the rim, seen from a raised three-quarter angle so the circle is
+visible. No grass, no sand, no green plants. Wider than tall.
+```
+
+<!-- plik: zima-chata-jasnowidza.png -->
+```
+A witch's cottage in deep winter: crooked wooden walls, a steep shingle roof
+buried under a thick pillow of snow with icicles, a bent stone chimney with a
+thin curl of smoke, one round window glowing warm yellow, a porch with a small
+table holding a glowing crystal ball, bundles of dried herbs and a lantern
+hanging from the eaves, a wooden signboard with a painted eye, snow drifts
+against the walls. No moss, no grass, no green leaves. Slightly wider than tall.
+```
+
+<!-- plik: zima-drzewo-wiedzy.png -->
+```
+An ancient wise tree in deep winter: a thick gnarled trunk with a friendly
+face suggested by the bark knots, a broad round crown of bare twisting
+branches heavily covered in white snow and silver hoarfrost, a few glittering
+golden leaves still clinging among the snow, a few open books resting in a
+hollow at the base of the trunk, a small snow drift around the roots. No
+green leaves, no grass. Taller than wide.
+```

@@ -68,6 +68,8 @@ export const ZESTAWY_KLIMATU: Record<string, readonly string[]> = {
     "kepa-skaly-4",
     "kopiec",
     "kopiec-2",
+    "krzak",
+    "krzak-2",
     "skala",
     "skala-2",
     "stos-jagody",

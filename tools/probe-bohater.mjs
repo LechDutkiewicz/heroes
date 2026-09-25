@@ -110,11 +110,11 @@ const punktBohatera = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   const b = window.__game.registry.get('stan-mapy').bohater;
   const kam = s.cameras.cameras.find((c) => c.width < 900 && c.width > 300);
+  // Pole ma w świecie 48 px; na ekranie mniej, bo kamera planszy jest
+  // oddalona — więc środek pola przeliczamy macierzą, którą ta kamera rysuje.
   const KAFEL = 48;
-  return {
-    x: kam.x + (b.x + 0.5) * KAFEL - kam.scrollX,
-    y: kam.y + (b.y + 0.5) * KAFEL - kam.scrollY,
-  };
+  const e = kam.matrixCombined.transformPoint((b.x + 0.5) * KAFEL, (b.y + 0.5) * KAFEL, { x: 0, y: 0 });
+  return { x: e.x, y: e.y };
 });
 await page.mouse.click(punktBohatera.x, punktBohatera.y);
 await page.waitForTimeout(700);
