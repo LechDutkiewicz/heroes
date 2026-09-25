@@ -370,7 +370,8 @@
    ],
    "live": {
     "round": 8,
-    "stage": "builder pracuje"
+    "stage": "zrzut i ślepe zestawienie",
+    "build": "Runda 8 Twierdzy celowała w ostatni werdykt: puste białe pola, budynki „jak naklejki” i świat urwany na ramce. Na pierwszym ekranie płaski pagór `gora-8` zamieniłem na zwarty bór 6 × 2 pól. Druga ściana boru stoi teraz za kopalnią odłamków. Doszło też 8 obiektów: obóz szkoleniowy, relikt za strażnikiem na brzegu stawu, trzy skrzynie (jedna w zaułku za wąwozem), kamień ewolucji i kupka kul. Surowce leżące luzem powiększyłem do 0,9 pola. Sondą (chowa po kolei cienie i pasy gruntu) sprawdziłem, skąd biorą się „wysepki” pod budowlami. Robiły je trzy rzeczy: ciemne zimowe krzaki, które scena sadzi przy podstawie kopalni i zamków; za szeroki cień spod jasnej podstawki; naklejka głazu w tle pod spichlerzem. Zimowe krzaki podmieniłem na miękkie zaspy z OpenAI. Doszły dwa ustawienia per plansza (węższy i słabszy cień pod budowlami, żadnych naklejek tła pod obiektami), a śnieżne podstawki zimowych budowli mają teraz barwę sinego śniegu tła. Na starcie odsłonięta jest zachodnia część doliny gracza, więc w kadrze nie ma winiety, a na minimapie widać dolinę. Wszystkie nowe opcje w kodzie wspólnym działają tylko po ustawieniu per plansza, a zrzut Polany wygląda jak przed zmianami."
    }
   },
   {

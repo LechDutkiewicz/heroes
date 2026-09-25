@@ -478,11 +478,11 @@ USTAWIENIA = {
         {'x': 13, 'y': 10, 'promien': 4},
         # Runda 8 (HotA): „świat kończy się na ramce — rogi i prawy brzeg kadru
         # w ciemnej winiecie mgły; minimapa to sam granat z jednym rogiem".
-        # Cała dolina gracza (y 47–71) jest mu znana, z zapasem na miękki brzeg
-        # mgły poza kadrem; północ — tundra i twierdze — zostaje do odkrycia.
-        {'x': 13, 'y': 62, 'promien': 19},
-        {'x': 34, 'y': 60, 'promien': 13},
-        {'x': 56, 'y': 60, 'promien': 13},
+        # Zachodnia połowa doliny gracza jest mu znana, z zapasem na miękki
+        # brzeg mgły poza kadrem, aż po wyjazd na przełęcz (x 29). Reszta —
+        # wschód doliny, tundra, twierdze — do odkrycia (sonda: < 20% planszy).
+        {'x': 13, 'y': 62, 'promien': 16},
+        {'x': 34, 'y': 62, 'promien': 9},
     ],
     # Runda 3 (wzorzec HotA): znajdźki na pół pola z cieniem i rysunkiem stosu
     # leżącego w śniegu (`public/mapa/zima/stos-*.png`) zamiast ikon z paska.

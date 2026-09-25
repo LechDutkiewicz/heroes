@@ -332,6 +332,32 @@ plansza, zestaw `bagno`):
   strażą; dolny sad (11,51) to kopalnia kamieni (dwa sady w kadrze =
   pieczątka). `znajdzki` 0,7 → 0,44.
 
+### Bagna, runda 11 (HotA)
+
+Słabość zwycięzcy rundy 10: „nic nie przypomina bagna — stawy małe, brak
+trzcin, błota i mokradeł, prawie jednolita zieleń; gęste korony w górnym
+środku zasłaniają przejście". Zmiany (per plansza):
+
+- `mokradla_kadru` na końcu `rozstaw` (losowania i obiekty bez zmian):
+  pola `MOKRADLA_BAGNO` w kadrze to trzęsawisko `b` (przejezdne, droższe),
+  kępa wierzb w górnym środku to staw (`MOKRADLA_WODA`; (16,40), (17,40)
+  zostają wodą — artefakt (17,39) dalej tylko przez straż).
+- `TLO`: pola `b` pierwszego ekranu → `m` (żadna warstwa, pod spodem łąka),
+  (17,40) w tle łąką (`TLO_PRZESMYK`) — staw nie jest zatoką Strugi.
+- Nowy hak `DOMALUJ(plansza, rysunek, kafel, droga=, maska_wody=)`
+  w `render_mapa.py` (po naklejkach; brak = jak dotąd). Na Bagnach maluje
+  mokradło: maska pól rozmyta i progowana z szumem, OSTRY brzeg (1 px), bez
+  ciemnej obwódki w kształcie kafli; grunt `bagno/teren-mokradlo.png`
+  (turzyca z oczkami oliwkowo-brunatnej wody, przygaszona); nie wchodzi na
+  trakt ani na piaszczysty brzeg Strugi. Stawy kadru niepołączone ze Strugą
+  są mętne, oliwkowe i nieruchome (zdjęte z maski wody shadera), Struga
+  zostaje łupkowa. Trzcinowiska, martwe drzewa, powalone pnie na mokradle
+  i kępy trzciny na brzegach wody w kadrze (`KADR_TRZCINY`).
+- Grafiki (PROMPTY-PLANSZE §22, ≈ $0,27): `teren-mokradlo`,
+  `bagno-trzcinowisko-1/2`, `bagno-martwe-drzewo-3`, `bagno-powalony-pien`;
+  nie idą przez `wsad_wczytaj.py` — obiera i skaluje je
+  `bagna.przygotuj_naklejki_mokradla()` do `public/mapa/bagno/tlo-*.png`.
+
 ### Polana, runda 7 (HotA)
 
 Werdykt rundy 6: „wzgórza to ta sama zielono-brązowa stożkowa pieczątka,
@@ -408,6 +434,35 @@ płasko niebieska". Zmiany:
   `trawy-snieg`, `nawis-sniezny` (§15b; surowe z API kremowe — we wsadzie
   przestudzone). `lata-ziemi-snieg` odrzucona: szare „przeręble".
 - Obrazki „high" z OpenAI kończyły się 502 (upstream) — wszystko medium.
+
+### Twierdza, runda 8 (HotA)
+
+Werdykt rundy 7: „obiekty za małe i za rzadkie — środek i prawa część to
+puste białe plamy"; „wiatrak, spichlerz, chatka wiszą jak naklejki";
+„świat kończy się na ramce, minimapa to sam granat". Zmiany:
+
+- **Przyczyna „wysepek" pod budowlami** (sprawdzone sondą, która chowa
+  po kolei cienie i pasy gruntu): 1) scena sadzi przy podstawie każdej
+  kopalni i zamku `m-krzak*` (`zaroslaPrzyPodstawie`), a zimowy `krzak-2` to
+  kopczyk z ciemnym, sinym spodem — pod budynkiem czytał się jak półka
+  z kamieniami; 2) szeroka plama cienia spod jasnej podstawki przyciemniała
+  sinawy śnieg dookoła; 3) pod spichlerzem leżała naklejka głazu. Teraz:
+  `zima/krzak*` to miękkie zaspy z suchymi źdźbłami (PROMPTY-PLANSZE §21,
+  po generacji przestudzone i przyciemnione ku dołowi, kopiowane ręcznie do
+  `tools/wsad/zima-krzak*.png`); `USTAWIENIA.cienBudowli` (nowe, scena:
+  mnożnik szerokości i krycia cienia pod budowlami, kopalniami i zamkami;
+  Twierdza 0,7 / 0,6); `NAKLEJKI_OMIN(źródło .ts)` w konfiguracji planszy
+  (nowe, `render_mapa` → `teren_efekty.naklejki(omin=…)`, losowania bez
+  zmian); `WTOP_PARAMY['zima']` w `wsad_wczytaj.py` — krótsza zaspa przy
+  ścianach i barwa sinawego śniegu tła zamiast bieli. Bez ustawień — jak dotąd.
+- Pierwszy ekran: zalesiony pagór (`gora-8`, płaski płat śniegu) zamieniony
+  na zwarty bór 6 × 2 pól, druga ściana boru za kopalnią odłamków; nowe
+  obiekty: obóz szkoleniowy na placu pod traktem, relikt za strażnikiem na
+  wschodnim brzegu stawu, dwie skrzynie, kamień ewolucji, kupka kul, skrzynia
+  w zaułku za wąwozem. Znajdźki 0,9 pola.
+- Na starcie odsłonięta zachodnia połowa doliny gracza (sonda: < 20%
+  planszy) — cały kadr bez winiety, minimapa pokazuje dolinę.
+- Grafiki: 2 obrazki medium, ≈ $0,10.
 
 ## HUD mapy przygody na wspólnym zestawie (2026-09-24)
 

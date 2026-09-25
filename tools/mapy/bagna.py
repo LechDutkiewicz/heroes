@@ -583,6 +583,8 @@ MOKRADLA_BAGNO = [
     (22, 52), (23, 52), (24, 52), (22, 53), (23, 53), (24, 53), (25, 53),
     # staw w przełęczy pod zamkiem
     (11, 52), (9, 53), (10, 53), (11, 53),
+    # łąka między zamkiem a pasmem w lewym dole
+    (5, 48), (6, 48), (7, 48), (5, 49), (6, 49), (7, 49), (8, 49),
 ]
 
 
@@ -1072,7 +1074,7 @@ def DOMALUJ(plansza, rysunek, kafel, droga=None, maska_wody=None):
     for i in rng.permutation(len(brzeg)):
         py, px = brzeg[i]
         fx, fy = (px + X0) / kafel, (py + Y0) / kafel
-        if not (fx0k <= fx < fx1k and fy0k <= fy < fy1k) or rng.random() > 0.4:
+        if not (fx0k <= fx < fx1k and fy0k <= fy < fy1k) or rng.random() > 0.3:
             continue
         n = (duze + male[:3])[int(rng.integers(0, len(duze) + 3))]
         r = kafel * 0.75
