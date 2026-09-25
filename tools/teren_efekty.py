@@ -67,6 +67,30 @@ def zaspy(warstwa: Image.Image, kafel: int, ziarno: int) -> Image.Image:
     return _obraz(tab)
 
 
+def relief(warstwa: Image.Image, maska: Image.Image, kafel: int, ziarno: int, sniezny: bool = False) -> Image.Image:
+    """Pasmo skał jako BRYŁA: strona oświetlona, strona w cieniu, grań.
+
+    Werdykt rundy 2: „nie ma rzeźby terenu, nie ma pasm gór". Tekstura skał
+    jest płaska jak kamienny chodnik. Wysokość bierzemy z samej maski skał
+    (rozmytej — środek pasma najwyżej, brzeg nisko) plus szum, a światło
+    z pochodnej, jak na mapie fizycznej: lewy górny stok jaśnieje, prawy dolny
+    ciemnieje. W Twierdzy (`sniezny`) grań i oświetlone stoki bieleją — śnieg
+    leży tam, gdzie pada światło, cień zostaje skalny.
+    """
+    W, H = warstwa.size
+    m = np.asarray(maska.filter(ImageFilter.GaussianBlur(kafel * 0.9)), dtype=np.float32) / 255.0
+    h = m * 1.6 + szum(W, H, max(2, int(kafel * 0.6)), ziarno) * 0.25 * m
+    gy, gx = np.gradient(h)
+    swiatlo = np.clip(-(gx + gy) * kafel * 2.2, -1, 1)[..., None]
+    tab = _tab(warstwa)
+    tab = np.where(swiatlo > 0, tab + (255 - tab) * swiatlo * 0.35, tab * (1 + swiatlo * 0.55))
+    if sniezny:
+        grzbiet = np.clip((h[..., None] - 1.0) * 2.5, 0, 1) + np.clip(swiatlo, 0, 1) * 0.8
+        snieg = np.array([235, 242, 250], dtype=np.float32)
+        tab = tab * (1 - np.clip(grzbiet, 0, 0.85)) + snieg * np.clip(grzbiet, 0, 0.85)
+    return _obraz(tab)
+
+
 def lod(warstwa: Image.Image, maska: Image.Image, kafel: int, ziarno: int) -> Image.Image:
     """Skuta lodem tafla: rysy pęknięć i jaśniejszy szron przy brzegu."""
     W, H = warstwa.size
@@ -149,6 +173,48 @@ def bagno(plansza: Image.Image, maska: Image.Image, kafel: int, ziarno: int) -> 
         d.pieslice([x - r, y - r * 0.7, x + r, y + r * 0.7], 300, 330, fill=(22, 38, 30, 255))
         if rng.random() < 0.25:
             d.ellipse([x - 2, y - 2, x + 2, y + 2], fill=(245, 225, 235, 255))
+    return im
+
+
+#: Katalog naklejek terenu — ozdób malowanych w TLE planszy (nie blokują
+#: ruchu, nie są obiektami gry). Pliki kładzie tam `wsad_wczytaj.py`
+#: (`NAKLEJKI`), prompty są w `tools/PROMPTY-PLANSZE.md`.
+KATALOG_NAKLEJEK = __import__('pathlib').Path(__file__).resolve().parent.parent / 'public' / 'mapa' / 'tlo'
+
+
+def naklejki(plansza: Image.Image, rysunek: list, kafel: int, zasady: list, ziarno: int) -> Image.Image:
+    """Rozsiewa naklejki z `public/mapa/tlo/` po polach danego terenu.
+
+    `zasady` to lista `(pliki, znaki_terenu, gęstość)` z konfiguracji planszy
+    (`NAKLEJKI`), np. `(['trzcina-1', 'trzcina-2'], 'b', 0.25)` — na co czwartym
+    polu bagna kępa trzciny. Brakujący plik jest pomijany bez błędu: to jest
+    ścieżka na grafiki, których jeszcze nie ma, i plansza ma się renderować
+    tak samo dobrze przed ich dostawą, jak po niej. Losowanie jest
+    deterministyczne (ziarno planszy), więc odcisk tła się nie zmienia, dopóki
+    nie zmieni się rysunek albo zestaw plików.
+    """
+    rng = np.random.default_rng(ziarno)
+    im = plansza.convert('RGBA')
+    wys, szer = len(rysunek), len(rysunek[0])
+    for pliki, znaki, gestosc in zasady:
+        obrazy = [
+            Image.open(KATALOG_NAKLEJEK / f'{p}.png').convert('RGBA')
+            for p in pliki
+            if (KATALOG_NAKLEJEK / f'{p}.png').exists()
+        ]
+        for y in range(wys):
+            for x in range(szer):
+                los = rng.random()
+                wybor = int(rng.integers(0, max(1, len(obrazy))))
+                dx, dy = rng.uniform(-0.3, 0.3, 2)
+                if not obrazy or rysunek[y][x] not in znaki or los > gestosc:
+                    continue
+                n = obrazy[wybor]
+                if rng.random() < 0.5:
+                    n = n.transpose(Image.FLIP_LEFT_RIGHT)
+                px = int((x + 0.5 + dx) * kafel - n.width / 2)
+                py = int((y + 0.8 + dy) * kafel - n.height)
+                im.alpha_composite(n, (max(0, px), max(0, py)))
     return im
 
 

@@ -58,7 +58,7 @@ SZKIC = [
     'T.bbbbbbbbb~Tbb.bT',
     'bb.bbbbbbbbbb~~bbT',
     'Tb.Tb.Tbb~bbbbbbbT',
-    'T.bb.Tbbb~.Tbb~bbT',
+    'T.#b.Tbbb~.Tbb~bbT',
     'Tbb.T.bbbb.bbbb~~T',
     'T.bb.bT~bb.T~bb~bT',
     'Tb.Tbbbbb~.bbb~b.T',
@@ -99,8 +99,8 @@ ZAPORY = {
 }
 
 PUNKTY = {
-    'start': (10, 45),
-    'zamek gracza': (7, 48),
+    'start': (13, 46),
+    'zamek gracza': (10, 48),
     'rozstaje doliny': (12, 40),
     'grobla poludnie': (12, 38),
     'grobla polnoc': (12, 28),
@@ -163,6 +163,22 @@ def popraw_teren(g, mapa):
                 # Wyspa jest SUCHA: łąka i kępy lasu, bez bagna — wraca się
                 # z niej z Kamieniem, a nie brnie dalej.
                 mapa[y][x] = 'T' if (x * 7 + y * 13) % 11 == 0 and d > 2.5 else '.'
+    # Stojąca woda w trzęsawisku. Runda 2 ślepego porównania: „bagno to ciemna
+    # ziemia z rozmytym cieniem — ani kałuży, ani oczka wody, czyta się jak
+    # ciemny las". Rozsiewamy więc prawdziwe oczka WODY (pola `~`, z shaderem
+    # i odbiciami) po bagnie: od jednego do czterech pól, z dala od punktów
+    # orientacyjnych, żeby nie zatkać grobli. Oczko, które odetnie kawałek
+    # lądu, zasypie `ZASYP_ODCIETE`, a drogi i tak omijają wodę.
+    punkty = list(PUNKTY.values())
+    for y in range(2, BOK - 2):
+        for x in range(2, BOK - 2):
+            if mapa[y][x] != 'b' or rng.random() > 0.025:
+                continue
+            if any(max(abs(x - px), abs(y - py)) <= 3 for px, py in punkty):
+                continue
+            for dx, dy in [(0, 0)] + rng.sample([(1, 0), (0, 1), (1, 1), (-1, 0)], rng.randint(0, 3)):
+                if mapa[y + dy][x + dx] == 'b':
+                    mapa[y + dy][x + dx] = '~'
     # Przeprawy: grobla przez Strugę, bród, grobla na wyspę.
     for (x0, y0, x1, y1), teren in ((GROBLA_PN, '.'), (BROD_WSCH, ','), (GROBLA_WYSPY, ',')):
         for y in range(y0, y1 + 1):
@@ -221,13 +237,14 @@ def rozstaw(g):
     kadr = g.kadr_startu()
     sx, sy = PUNKTY['start']
     dalej = [p for p in kadr if max(abs(p[0] - sx), abs(p[1] - sy)) >= 4]
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('kopalnia', 'jagoda'), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('kopalnia', 'odlamek'), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('budynek', 'drzewo-wiedzy'), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('budynek', 'zrodlo'), kandydaci=kadr)
-    g.dodaj(3, 'dom', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('skrzynia', None), kandydaci=kadr)
-    g.strzez(g.dodaj(1, 'dom', (0, 999), lambda p: ('artefakt', None), kandydaci=dalej), 'slaby')
+    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'jagoda'), kadr, None, (3, 14))
+    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'odlamek'), kadr, None, (3, 14))
+    g.dodaj_najpierw('dom', lambda p: ('budynek', 'drzewo-wiedzy'), kadr, None, (2, 16))
+    g.dodaj_najpierw('dom', lambda p: ('budynek', 'zrodlo'), kadr, None, (2, 16))
+    for _ in range(3):
+        g.dodaj_najpierw('dom', lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kadr, None, (2, 12))
+    g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), kadr, None, (2, 12))
+    g.strzez(g.dodaj_najpierw('dom', lambda p: ('artefakt', None), dalej, None, (5, 14)), 'slaby')
     g.dodaj(2, 'dom', (6, 14), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])))
     g.dodaj(1, 'dom', (6, 14), lambda p: ('skrzynia', None))
     g.strzez(g.dodaj(1, 'dom', (8, 30), lambda p: ('kopalnia', 'pokeball')), 'slaby')
@@ -296,6 +313,8 @@ NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 USTAWIENIA = {
     'wrog': 'aktywny',
     'nazwyZamkowWroga': ['Warownia na Grobli'],
+    # Zestaw sprite'ów klimatu dla sceny (`public/mapa/bagno/`) — patrz STAN.md.
+    'zestaw': 'bagno',
     # Wyspa Księżyca odsłonięta od pierwszego dnia: gracz ma wiedzieć, DOKĄD
     # jedzie — zagadką jest droga i wódz, a nie szukanie igły w trzęsawisku.
     'odkryte': [{'x': WYSPA[0], 'y': WYSPA[1], 'promien': 7}],
@@ -307,7 +326,7 @@ USTAWIENIA = {
 #: spojrzenie na ekran ma mówić „bagno", zanim dziecko zobaczy choć jedno pole
 #: trzęsawiska.
 BARWY_TERENU = {
-    'woda': {'nasycenie': 0.45, 'barwa': (90, 120, 80), 'moc': 0.7, 'jasnosc': 0.72},
+    'woda': {'nasycenie': 0.55, 'barwa': (80, 125, 95), 'moc': 0.65, 'jasnosc': 0.8},
     'trawa': {'nasycenie': 0.62, 'barwa': (140, 140, 80), 'moc': 0.5, 'jasnosc': 0.8},
     'las': {'nasycenie': 0.7, 'barwa': (90, 110, 75), 'moc': 0.4, 'jasnosc': 0.82},
     'sciezka': {'nasycenie': 0.75, 'barwa': (175, 150, 110), 'moc': 0.3, 'jasnosc': 1.08},
@@ -316,7 +335,12 @@ BARWY_TERENU = {
 #: Po rundzie 1 ślepego porównania („bagno to brązowa plama w kolorze drogi"):
 #: oczka ciemnej wody, trzcina i grążele na bagnie, obwódka i jaśniejsza
 #: jezdnia na grobli (`tools/teren_efekty.py`).
-EFEKTY = ['bagno', 'obwodka_drogi']
+EFEKTY = ['bagno', 'obwodka_drogi', 'relief', 'bez_placow']
+#: Błoto z dostawy (`tools/PROMPTY-PLANSZE.md`), do tego czasu zwykłe bagno.
+TEKSTURY = {'bagno': ['bloto', 'bagno']}
+
+#: Runda 2 („krainy rozmywają się w jedną"): twardsze brzegi terenów.
+WTAPIANIE = {'bagno': 0.3, 'las': 0.3, 'skaly': 0.28, 'woda': 0.22}
 
 #: Plac wokół zamków wolny od innych budowli (patrz silnik).
 ODSTEP_OD_ZAMKOW = 2
@@ -324,3 +348,16 @@ ODSTEP_OD_ZAMKOW = 2
 #: Las w zwarte masy z polanami, pusty pas przy ramie pierwszego ekranu.
 SKUP_LAS = True
 RAMKA_STARTU = True
+
+#: Budowle pierwszego ekranu co najmniej trzy pola od siebie (silnik).
+ODSTEP_KADRU = 3
+
+#: Naklejki terenu (`public/mapa/tlo/`, prompty w `tools/PROMPTY-PLANSZE.md`):
+#: `(pliki, znaki terenu, gęstość)`. Do czasu dostawy grafik plików nie ma
+#: i render po prostu ich nie rysuje.
+NAKLEJKI = [
+    (['trzcina-1', 'trzcina-2', 'trzcina-3'], 'b', 0.22),
+    (['grazel-1', 'grazel-2'], '~', 0.10),
+    (['martwe-drzewo-1', 'martwe-drzewo-2'], 'b', 0.04),
+    (['pniak-bagienny'], 'b', 0.03),
+]

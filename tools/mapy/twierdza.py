@@ -62,12 +62,12 @@ SZKIC = [
     'js#jsj~~~j.sj~~jTj',
     'sTjj.sjT#jsjTjsj#j',
     '##################',
-    'Ts#Ts.jssj#T.sjs.T',
-    'sTssT.s#.sT.~~sTsT',
-    'T.s.ss.Tsjj.~~s#jT',
-    's#T.s~.Ts.sTs.T.sT',
-    'T#s.s.s.sT.#.sTsjT',
-    'TTs.TTT#TT.TTTTsTT',
+    'Ts#s#.jssj#T.sjs.T',
+    'sTss#.s#.sT.~~sTsT',
+    's.s.~~s#sjj.~~s#jT',
+    '##sss..#s.sTs.T.sT',
+    's#sss.s.sT.#.sTsjT',
+    'T##sTTs#TT.TTTTsTT',
 ]
 
 #: Mury: dwa grzbiety poziome jak na Dwóch Dolinach i skalny „kręgosłup"
@@ -128,6 +128,16 @@ def strefa(x, y):
     return 'dom'
 
 
+def bez_sniegu(g, pola):
+    """Pola, wokół których (3 × 3) nie ma śniegu — na sad i łąkowe budowle."""
+    return [
+        (x, y)
+        for x, y in pola
+        if all(g.mapa[y + dy][x + dx] != 's' for dy in (-1, 0, 1) for dx in (-1, 0, 1)
+               if 0 <= x + dx < BOK and 0 <= y + dy < BOK)
+    ]
+
+
 def rozstaw(g):
     rng = g.rng
 
@@ -138,7 +148,9 @@ def rozstaw(g):
     # północnego — brama do twierdz.
     g.postaw((29, 46), ('potwor', 'straznik', 'Strażnik Mroźnej Przełęczy'))
     g.postaw((55, 46), ('potwor', 'straznik', 'Strażnik Tundry'))
-    g.postaw((12, 21), ('potwor', 'wodz', 'Wódz Zachodniej Przełęczy'))
+    # Zachodnia przełęcz prowadzi do słabszej twierdzy — pilnuje jej strażnik,
+    # nie wódz; symulacja z wodzem po obu stronach nigdy nie zdobywała drugiej.
+    g.postaw((12, 21), ('potwor', 'straznik', 'Strażnik Zachodniej Przełęczy'))
     g.postaw((57, 21), ('potwor', 'wodz', 'Wódz Wschodniej Przełęczy'))
     g.postaw((34, 9), ('potwor', 'silny', 'Straż Przełęczy Twierdz'))
 
@@ -148,21 +160,27 @@ def rozstaw(g):
     kadr = g.kadr_startu()
     sx, sy = PUNKTY['start']
     dalej = [p for p in kadr if max(abs(p[0] - sx), abs(p[1] - sy)) >= 4]
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('kopalnia', 'jagoda'), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('kopalnia', 'odlamek'), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('budynek', 'ognisko'), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('budynek', 'chatka'), kandydaci=kadr)
-    g.dodaj(3, 'dom', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kandydaci=kadr)
-    g.dodaj(1, 'dom', (0, 999), lambda p: ('skrzynia', None), kandydaci=kadr)
-    g.strzez(g.dodaj(1, 'dom', (0, 999), lambda p: ('artefakt', None), kandydaci=dalej), 'slaby')
+    # Sad nie rośnie w zaspie: kopalnię jagód stawiamy tylko tam, gdzie
+    # wokół nie ma śniegu (runda 2: „jabłonie obok zasp").
+    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'jagoda'), bez_sniegu(g, kadr), bez_sniegu(g, g.wolne_pola('dom', (3, 20))))
+    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'odlamek'), kadr, None, (3, 14))
+    g.dodaj_najpierw('dom', lambda p: ('budynek', 'ognisko'), kadr, None, (2, 16))
+    g.dodaj_najpierw('dom', lambda p: ('budynek', 'chatka'), kadr, None, (2, 16))
+    for _ in range(3):
+        g.dodaj_najpierw('dom', lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kadr, None, (2, 12))
+    g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), kadr, None, (2, 12))
+    g.strzez(g.dodaj_najpierw('dom', lambda p: ('artefakt', None), dalej, None, (5, 14)), 'slaby')
     g.dodaj(2, 'dom', (6, 14), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])))
     g.dodaj(1, 'dom', (6, 14), lambda p: ('skrzynia', None))
     g.dodaj(8, 'dom', (10, 40), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])))
-    kopalnie = ['odlamek', 'pokeball', 'jagoda', 'pokeball', 'kamien']
+    kopalnie = ['odlamek', 'pokeball', 'odlamek', 'pokeball', 'kamien']
     polozone = []
     for co in kopalnie:
         polozone += g.dodaj(1, 'dom', (10, 40), lambda p, co=co: ('kopalnia', co))
     g.strzez([p for p, co in zip(polozone, kopalnie) if co in ('pokeball', 'kamien')], 'slaby')
+    # Drugi sad doliny — jagodami płaci się za siedliska, a symulacja bez
+    # niego nie zdobywała drugiej twierdzy. Też tylko poza śniegiem.
+    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'jagoda'), bez_sniegu(g, g.wolne_pola('dom', (8, 40))), None, (8, 40))
     g.dodaj(5, 'dom', (10, 40), lambda p: ('skrzynia', None))
     g.dodaj(3, 'dom', (12, 40), lambda p: ('potwor', 'slaby'))
     g.strzez(g.dodaj(2, 'dom', (14, 40), lambda p: ('artefakt', None)), 'slaby')
@@ -175,11 +193,13 @@ def rozstaw(g):
 
     # --- TUNDRA --------------------------------------------------------------
     g.dodaj(18, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
-    kopalnie = ['odlamek', 'kamien', 'pokeball', 'odlamek', 'kamien', 'jagoda', 'pokeball']
+    kopalnie = ['odlamek', 'kamien', 'pokeball', 'odlamek', 'kamien', 'odlamek', 'pokeball']
     polozone = []
     for co in kopalnie:
         polozone += g.dodaj(1, 'pogranicze', (0, 999), lambda p, co=co: ('kopalnia', co))
     g.strzez([p for p, co in zip(polozone, kopalnie) if co in ('kamien', 'pokeball')], 'sredni')
+    # Sad w tundrze — na ziemi jałowej albo łące, nigdy przy zaspie.
+    g.dodaj_najpierw('pogranicze', lambda p: ('kopalnia', 'jagoda'), bez_sniegu(g, g.wolne_pola('pogranicze')), None)
     g.dodaj(10, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
     g.strzez(g.dodaj(5, 'pogranicze', (0, 999), lambda p: ('artefakt', None)), 'sredni')
     g.dodaj(4, 'pogranicze', (0, 999), lambda p: ('potwor', 'sredni'))
@@ -198,7 +218,7 @@ def rozstaw(g):
     # Prawie wszystko pod silną strażą. Nagroda rośnie z odległością: relikty
     # i kopalnie kamienia leżą w najdalszych kątach obu dolin.
     g.dodaj(14, 'wroga', (0, 999), lambda p: ('surowiec', rng.choice(['kamien', 'odlamek', 'pokeball'])))
-    kopalnie = ['kamien', 'pokeball', 'odlamek', 'kamien', 'pokeball', 'jagoda']
+    kopalnie = ['kamien', 'pokeball', 'odlamek', 'kamien', 'pokeball', 'odlamek']
     polozone = []
     for co in kopalnie:
         polozone += g.dodaj(1, 'wroga', (0, 999), lambda p, co=co: ('kopalnia', co))
@@ -234,17 +254,19 @@ NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 USTAWIENIA = {
     'wrog': 'aktywny',
     'natarcie': True,
-    'dzienNatarcia': 18,
+    'dzienNatarcia': 21,
     'nazwyZamkowWroga': ['Lodowa Twierdza', 'Srebrna Strażnica'],
+    # Zestaw sprite'ów klimatu dla sceny (`public/mapa/zima/`) — patrz STAN.md.
+    'zestaw': 'zima',
     'garnizonWroga': {'poziomy': [0, 1, 2, 3], 'tygodnie': 1},
     # Twierdze bez fortu: przyrost bez premii o połowę. Z fortem armia wroga
     # rosła szybciej, niż jakikolwiek gracz zdążyłby dojść do pierwszej z nich.
-    'budynkiWroga': ['ratusz1', 'ratusz2', 'siedlisko1', 'siedlisko2'],
+    'budynkiWroga': ['ratusz1', 'siedlisko1', 'siedlisko2'],
     'wrogBuduje': False,
     # Zamek gracza z mocniejszą załogą — bohater jest wtedy daleko na północy,
     # a opis misji obiecuje, że wróg przyjdzie. Ma przyjść i ma to być groźne,
     # ale nie wyrok w trzecim tygodniu.
-    'garnizonGracza': {'poziomy': [0, 1, 2], 'tygodnie': 5},
+    'garnizonGracza': {'poziomy': [0, 1, 2], 'tygodnie': 8},
     'wrogOdkryte': [{'x': 10, 'y': 64, 'promien': 5}],
     # I odwrotnie: gracz wie, gdzie stoją obie twierdze — misja mówi „na
     # północy", a mapa to pokazuje. Zagadką jest droga, nie szukanie celu.
@@ -271,9 +293,20 @@ WODA_ANIMOWANA = False
 #: Runda 2 po ślepym porównaniu ("śnieg to blada mgła, lód to błyskawica"):
 #: zaspy z niebieskim cieniem i iskrami, lód z rysami zamiast tafli wody,
 #: droga z brzegiem, las w zwartych masach, gęsty pierwszy ekran.
-EFEKTY = ['zaspy', 'lod', 'obwodka_drogi']
-TEKSTURY = {'woda': 'snieg'}
+EFEKTY = ['zaspy', 'lod', 'obwodka_drogi', 'relief_sniezny', 'bez_placow']
+TEKSTURY = {'woda': ['lod', 'snieg']}
 SKUP_LAS = True
 RAMKA_STARTU = True
 #: Twardszy brzeg śniegu — granica ma być czytelna, a nie rozmyta w mgłę.
-WTAPIANIE = {'snieg': 0.35}
+WTAPIANIE = {'snieg': 0.3, 'skaly': 0.28, 'las': 0.3, 'jalowa': 0.3, 'woda': 0.22}
+
+#: Budowle pierwszego ekranu co najmniej trzy pola od siebie (silnik).
+ODSTEP_KADRU = 3
+
+#: Naklejki terenu (`public/mapa/tlo/`, prompty w `tools/PROMPTY-PLANSZE.md`).
+NAKLEJKI = [
+    (['glaz-sniezny-1', 'glaz-sniezny-2', 'glaz-sniezny-3'], 's', 0.06),
+    (['zaspa-1', 'zaspa-2'], 's', 0.08),
+    (['kra-lodu-1', 'kra-lodu-2'], '~', 0.10),
+    (['krzak-zimowy-1'], 'j', 0.08),
+]

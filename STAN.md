@@ -53,6 +53,42 @@ zawiera, więc nie wypada ze skrzyni, wozu, chaty ani artefaktu luzem
 nie ma gniazda w siatce (siatka to osiem artefaktów do zbierania) — pokazuje
 go karta pod siatką, jako najważniejszą noszoną rzecz.
 
+### Grafiki plansz kampanii — jak wchodzą do gry
+
+Prompty: `tools/PROMPTY-PLANSZE.md` (zarejestrowany w `DOKUMENTY`
+`generuj_grafiki.py`; style `obiekt` i `teren` z `PROMPTY-MAPA-2.md`).
+Następna sesja z kluczem OpenAI robi tylko:
+
+    python3 tools/generuj_grafiki.py        # czego brak w tools/wsad/
+    python3 tools/wsad_wczytaj.py           # → public/mapa/tlo/, public/mapa/<zestaw>/, public/mapa/teren/
+    python3 tools/render_mapa.py polana bagna twierdza
+    npx tsx tools/probe-mapy.ts             # odciski teł (rysunek się nie zmienia, więc przechodzą)
+
+Trzy rodzaje grafik, trzy różne drogi:
+
+| Rodzaj | Plik we wsadzie | Ląduje w | Kto rysuje | Co trzeba zrobić |
+|---|---|---|---|---|
+| naklejki terenu (trzcina, grążele, martwe drzewa, zaśnieżone głazy, zaspy, kry, kwiaty) | `trzcina-1.png` … | `public/mapa/tlo/<nazwa>.png` | `render_mapa.py` w tle (`NAKLEJKI` w `tools/mapy/<id>.py`) | nic — gotowe, bez plików render je pomija |
+| tereny (lód, błoto) | `teren-lod.png`, `teren-bloto.png` (+ `…2`) | `public/mapa/teren/` | `render_mapa.py` (`TEKSTURY` z listą zapasową) | nic — gotowe, pierwsza istniejąca tekstura wygrywa |
+| zestawy klimatu dla sceny (zaśnieżone sosny, nagie drzewa, skały ze śniegiem, kopalnie w skale, drzewa bagienne) | `zima-sosna.png`, `bagno-drzewo.png` … | `public/mapa/<zestaw>/<nazwa>.png` | `AdventureScene` | **scena musi zacząć je czytać** — patrz niżej |
+
+**Kontrakt dla sceny (właściciel `AdventureScene`).** Plansza podaje
+`USTAWIENIA.zestaw` (`'zima'` w Twierdzy, `'bagno'` na Bagnach). W `preload`
+dla każdej nazwy z listy poniżej: jeśli istnieje
+`mapa/<zestaw>/<nazwa>.png`, wczytać ją pod tym samym kluczem `m-<nazwa>`
+zamiast `mapa/<nazwa>.png` (i usuwać teksturę przy zmianie planszy — tak jak
+dziś `plansza-0`). Nazwy i wymiary są identyczne z sprite'ami, które
+zastępują, więc reszta sceny nie zmienia się wcale:
+
+| Zestaw | Nazwy (`m-…`) | Wymiary oryginału |
+|---|---|---|
+| `zima` | `sosna`, `sosna-b` (90 × 144), `sosna-mala` (60 × 96), `drzewo`, `drzewo-b` (147 × 144), `krzak`, `krzak-2` (97 × 84), `skala`, `skala-2` (76 × 67), `kepa-las-1..4`, `kepa-skaly-1..4` (240 × 216), `kopalnia-kamien` (173 × 160), `kopalnia-odlamek` (146 × 160), `kopalnia-pokeball` (140 × 160), `sad` (178 × 160) | |
+| `bagno` | `drzewo`, `drzewo-b`, `krzak`, `krzak-2`, `kepa-las-1..4`, `kopalnia-kamien`, `kopalnia-odlamek`, `kopalnia-pokeball` | jak wyżej |
+
+Wysokości docelowe siedzą w `ZESTAWY` w `wsad_wczytaj.py` i odpowiadają
+wysokościom oryginałów. Do czasu zmiany w scenie pliki leżą w `public/`
+i nie są wczytywane — nic się nie psuje.
+
 ### Znalezione w AI przy symulacji misji
 
 Trzy usterki `wrog-ai.ts`, żadna niewidoczna na Dwóch Doliniach z osobna:
@@ -116,6 +152,33 @@ włączane per plansza, więc Dwie Doliny zostają bajt w bajt:
 - Pierwszy ekran (`kadr_startu`, `RAMKA_STARTU`): dwie kopalnie, dwie
   budowle, stosy, skrzynia i skarb pod strażą w widoku z dnia pierwszego,
   pusty pas przy ramie (obiekt na ramie wychodził na zrzucie ucięty).
+### Runda 3 — geografia w pierwszym ekranie
+
+Werdykt rundy 2 (znów trzy razy wzorzec): „ten sam zestaw obiektów na tych
+samych okrągłych piaskowych plackach, żadnej wody ani rzeźby w widoku,
+krainy rozmyte w jedną". Poprawki:
+
+- **Geografia w pierwszym ekranie każdej mapy**: Polana — rzeka i skalny
+  grzbiet (zamek i start przesunięte bliżej rzeki); Bagna — Czarna Struga
+  i skałki; Twierdza — skuty lodem staw i skalne zbocze.
+- **Relief skał** (`relief`, `relief_sniezny` w `teren_efekty.py`): pasmo
+  skał ma stronę oświetloną i cień; w Twierdzy grań i jasne stoki bieleją.
+- **Bez placków** (`bez_placow`): plansze kampanii nie mają wydeptanego
+  placu z tekstury drogi pod zamkami i kopalniami — budowla stoi na swoim
+  terenie. Dwie Doliny place zachowują (ich tło jest zamrożone).
+- **Stojąca woda na Bagnach**: prawdziwe oczka `~` rozsiane po trzęsawisku
+  (z shaderem), obok malowanych oczek i trzciny.
+- **Twierdza bez łąki**: dolina gracza w śniegu (scena stawia krzaki tylko
+  na łące), sad tylko tam, gdzie wokół nie ma śniegu, pozostałe sady
+  w strefach śnieżnych zamienione na kopalnie odłamków.
+- **Kopalnie w zboczach** (`pod_skala`): tam, gdzie się da, kopalnia stoi
+  pod skałą, a jej bryła wchodzi w zbocze.
+- **Twardsze brzegi** (`WTAPIANIE` per plansza) i budowle pierwszego ekranu
+  co najmniej trzy pola od siebie (`ODSTEP_KADRU`).
+- Wyszło przy okazji: po przesunięciu startu mur kopalni stanął na polu
+  startu — bohater zaczynał w murze. Złapała to `probe-mapy.ts`; silnik
+  odrzuca teraz takie postawienie.
+
 - Czego NIE da się zrobić po stronie planszy: drzewa i krzaki rysuje scena,
   jednym zestawem sprite'ów na wszystkie klimaty — zielone sosny na śniegu
   i krzaki na łące Twierdzy zostają, dopóki `AdventureScene` nie dostanie

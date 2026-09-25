@@ -481,7 +481,28 @@ function celMisji(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefined
   );
   for (const o of cele) {
     const kroki = trasa(widok, o.x, o.y);
-    if (!kroki || kroki.length === 0) continue;
+    if (!kroki || kroki.length === 0) {
+      // Drogę do celu zamyka potwór. Autopilot szedł wtedy zwiedzać, a stado
+      // w przełęczy zostawało nietknięte do końca gry — w Twierdzy słaba straż
+      // na drodze pod przełęcz trzymała drugą twierdzę zamkniętą przez
+      // osiemdziesiąt dni. Liczymy drogę tak, jakby potworów nie było, i bierzemy
+      // na cel pierwszego, który na niej stoi — jeśli da się go pokonać.
+      const bezStrazy: StanMapy = {
+        ...widok,
+        bryly: undefined,
+        obiekty: widok.obiekty.filter((q) => q.rodzaj !== 'potwor' || q.zebrany),
+      };
+      const droga = trasa(bezStrazy, o.x, o.y);
+      for (const k of droga ?? []) {
+        const straz = strzezoneProzez(widok, k.x, k.y);
+        if (!straz) continue;
+        if (!wygramy(armia, straz.oddzialy ?? [], ziarno)) break;
+        const doStrazy = trasa(widok, straz.x, straz.y);
+        if (doStrazy && doStrazy.length > 0) return { kroki: doStrazy };
+        break;
+      }
+      continue;
+    }
     const straz = strzezoneProzez(widok, o.x, o.y);
     if (straz && !wygramy(armia, straz.oddzialy ?? [], ziarno)) continue;
     if (o.rodzaj === 'zamek' && !wygramy(armia, o.oddzialy ?? [], ziarno)) continue;

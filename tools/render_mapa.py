@@ -66,6 +66,7 @@ BARWY: dict = {}
 EFEKTY: set = set()
 TEKSTURY: dict = {}
 WTAPIANIE: dict = {}
+NAKLEJKI: list = []
 
 KAFEL = 48                  # bok pola na ekranie
 #: Ile razy nadpróbkowujemy maskę drogi, zanim ją zmniejszymy. Rysowanie
@@ -119,13 +120,14 @@ def ustaw(mapa_id: str):
     """Przełącza moduł na planszę `mapa_id`. Funkcje niżej czytają rysunek
     i wymiary z globali — tak było, gdy plansza była jedna, i tak zostaje,
     bo każda z nich jest wołana raz na planszę."""
-    global KATALOG, ZRODLO, RYSUNEK, WYS, SZER, W, H, BARWY, EFEKTY, TEKSTURY, WTAPIANIE
+    global KATALOG, ZRODLO, RYSUNEK, WYS, SZER, W, H, BARWY, EFEKTY, TEKSTURY, WTAPIANIE, NAKLEJKI
     KATALOG = katalog_tla(mapa_id)
     k = konfiguracja(mapa_id)
     BARWY = getattr(k, 'BARWY_TERENU', {})
     EFEKTY = set(getattr(k, 'EFEKTY', ()))
     TEKSTURY = getattr(k, 'TEKSTURY', {})
     WTAPIANIE = getattr(k, 'WTAPIANIE', {})
+    NAKLEJKI = getattr(k, 'NAKLEJKI', [])
     ZRODLO = plik_ts(mapa_id)
     RYSUNEK = wczytaj_rysunek()
     WYS, SZER = len(RYSUNEK), len(RYSUNEK[0])
@@ -236,6 +238,21 @@ def zabarw(im: Image.Image, nazwa: str) -> Image.Image:
     return Image.fromarray(tab.astype(np.uint8), 'RGB')
 
 
+def tekstura_warstwy(nazwa: str) -> str:
+    """Tekstura dla warstwy: pierwsza ISTNIEJĄCA z `TEKSTURY` planszy.
+
+    `TEKSTURY = {'woda': ['lod', 'snieg']}` znaczy: lód, jeśli już jest
+    `public/mapa/teren/teren-lod.png` (dostawa z `tools/PROMPTY-PLANSZE.md`),
+    a do tego czasu śnieg. Dzięki temu nowa grafika wchodzi samym
+    `wsad_wczytaj.py` i ponownym renderem, bez ruszania konfiguracji.
+    """
+    wybor = TEKSTURY.get(nazwa, nazwa)
+    for t in [wybor] if isinstance(wybor, str) else wybor:
+        if (KORZEN / 'public' / 'mapa' / 'teren' / f'teren-{t}.png').exists():
+            return t
+    return nazwa
+
+
 def klatka() -> tuple[Image.Image, Image.Image]:
     """Plansza i maska wody.
 
@@ -251,12 +268,14 @@ def klatka() -> tuple[Image.Image, Image.Image]:
         if not any(c in znaki for wiersz in RYSUNEK for c in wiersz):
             continue
         wtapianie = WTAPIANIE.get(nazwa, wtapianie)
-        warstwa = zabarw(zmieszaj(warianty(TEKSTURY.get(nazwa, nazwa)), W, H, (0, 0), ZIARNO + 50 + n), nazwa)
+        warstwa = zabarw(zmieszaj(warianty(tekstura_warstwy(nazwa)), W, H, (0, 0), ZIARNO + 50 + n), nazwa)
         # Każda warstwa dostaje własne ziarno, inaczej wszystkie granice
         # falowałyby w tym samym rytmie i widać by było jeden wzór.
         m = maska(pola(znaki), KAFEL, wtapianie, poszarpanie, ZIARNO + n)
         if nazwa == 'snieg' and 'zaspy' in EFEKTY:
             warstwa = teren_efekty.zaspy(warstwa, KAFEL, ZIARNO + 700)
+        if nazwa == 'skaly' and ('relief' in EFEKTY or 'relief_sniezny' in EFEKTY):
+            warstwa = teren_efekty.relief(warstwa, m, KAFEL, ZIARNO + 730, 'relief_sniezny' in EFEKTY)
         if nazwa == 'woda' and 'lod' in EFEKTY:
             warstwa = teren_efekty.lod(warstwa, m, KAFEL, ZIARNO + 710)
         plansza.paste(warstwa, (0, 0), m)
@@ -271,11 +290,21 @@ def klatka() -> tuple[Image.Image, Image.Image]:
     sciezka = zabarw(kafelkuj(tekstura('sciezka'), W, H), 'sciezka').convert('RGBA')
     # Place pod budowlami idą PRZED drogami: droga ma dobiegać do placu
     # i się z nim zlewać, a nie kończyć na jego brzegu.
-    plansza.paste(sciezka, (0, 0), maska_gruntu())
+    # Plac pod budowlami: na Dwóch Dolinach zostaje; plansze kampanii go nie
+    # mają (`bez_placow`) — w ślepym porównaniu „identyczne okrągłe
+    # piaskowe placki pod każdym obiektem" wyglądały na naklejki i robiły z
+    # bagna i śniegu tę samą łąkę w innym kolorze.
+    if 'bez_placow' not in EFEKTY:
+        plansza.paste(sciezka, (0, 0), maska_gruntu())
     droga = maska_drogi()
     plansza.paste(sciezka, (0, 0), droga)
     if 'obwodka_drogi' in EFEKTY:
         plansza = teren_efekty.obwodka_drogi(plansza, droga, KAFEL).convert('RGBA')
+    # Naklejki terenu (trzcina, grążele, zaśnieżone głazy…) z `public/mapa/tlo/`
+    # — po drogach, żeby kępa trzciny nie znikała pod groblą, ale pod
+    # sprite'ami sceny. Bez plików nic się nie dzieje (patrz `naklejki`).
+    if NAKLEJKI:
+        plansza = teren_efekty.naklejki(plansza, RYSUNEK, KAFEL, NAKLEJKI, ZIARNO + 740)
     return plansza, maskaWody
 
 

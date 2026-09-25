@@ -626,6 +626,11 @@ class Generator:
                     kandydat = rng.choice(wolne)
                     proba = buduj(kandydat)
                     zajmowane = [kandydat] + self.pola_bryly(proba[0], proba[1], kandydat)
+                    # Mur kopalni nie może stanąć na polu startu — bohater
+                    # zaczynałby grę w murze (złapała to `probe-mapy.ts`
+                    # na Polanie po przesunięciu startu).
+                    if self.k.PUNKTY['start'] in zajmowane:
+                        continue
                     widziane = self.dostepnych(zajmowane)
                     if len(widziane) < self.stan_dostepnych - len(zajmowane):
                         continue
@@ -716,6 +721,50 @@ class Generator:
             for p in self.wolne_pola(self.k.strefa(sx, sy), (1, 999))
             if abs(p[0] - sx) <= 5 and -3 <= p[1] - sy <= 5
         ]
+
+    def pod_skala(self, ktora, zakres=(0, 999)):
+        """Wolne pola z SKAŁĄ tuż nad sobą — miejsce na kopalnię wciętą w zbocze.
+
+        W Heroes kopalnia siedzi w wycięciu skalnej ściany, a nie na środku
+        łąki. Bryła kopalni stoi w rzędzie nad wejściem; gdy tam jest skała,
+        mur nie blokuje niczego nowego, a rysunek wchodzi w zbocze. Pusta
+        lista znaczy „nie ma takiego miejsca" — wtedy stawia się jak zwykle.
+        """
+        return [
+            (x, y)
+            for x, y in self.wolne_pola(ktora, zakres)
+            if y > 0 and self.mapa[y - 1][x] == '#'
+        ]
+
+    def dodaj_najpierw(self, ktora, buduj, preferowane, reszta=None, zakres=(0, 999), budowla=None):
+        """Jeden obiekt — najpierw w preferowanych polach, a gdy żadne się nie
+        nadaje (zatyka drogę, brak miejsca), tam gdzie zwykle.
+
+        Preferowane pola trzymają ODSTĘP od postawionych już budowli
+        (`ODSTEP_KADRU`, domyślnie 0): na pierwszym ekranie sad, kuźnia
+        i wiatrak stawały dach w dach i zlewały się w jedną plamę.
+        """
+        odstep = getattr(self.k, 'ODSTEP_KADRU', 0)
+        if budowla is None:
+            # Budowla = kopalnia albo budynek; pytamy BEZ losowania — lambdy
+            # stosów losują surowiec, a dodatkowe losowanie przesunęłoby planszę.
+            stale = []
+            for c in buduj.__code__.co_consts:
+                stale += list(c) if isinstance(c, tuple) else [c]
+            budowla = 'kopalnia' in stale or 'budynek' in stale
+        if odstep and budowla:
+            budowle = [p for p, co in self.obiekty if co[0] in ('kopalnia', 'budynek')]
+            daleko = lambda lista: [p for p in lista if all(odleglosc(p, q) >= odstep for q in budowle)]
+            if preferowane:
+                preferowane = daleko(preferowane)
+            if reszta:
+                reszta = daleko(reszta) or reszta
+        if preferowane:
+            try:
+                return self.dodaj(1, ktora, zakres, buduj, kandydaci=preferowane)
+            except SystemExit:
+                pass
+        return self.dodaj(1, ktora, zakres, buduj, kandydaci=reszta)
 
     def para_portali(self, ktora, min_odl=20):
         """Dwa końce jednego portalu, MUSZĄ stać daleko od siebie.
