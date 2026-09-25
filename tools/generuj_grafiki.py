@@ -337,6 +337,10 @@ def zapytajOpenAI(sciezka: str, dane: dict | None = None) -> dict:
                 return json.loads(odp.read())
         except urllib.error.HTTPError as e:
             tresc = e.read().decode(errors='replace')[:400]
+            if e.code in (500, 502, 503, 504) and proba < 5:
+                print(f'[{e.code}, ponawiam za 15 s] ', end='', flush=True)
+                time.sleep(15)
+                continue
             if e.code == 429 and proba < 39:
                 m = re.search(r'try again in ([\d.]+)s', tresc)
                 czekaj = float(m.group(1)) + 2 if m else 20
