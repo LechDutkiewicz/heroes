@@ -495,9 +495,9 @@ export const USTAWIENIA = {
     },
     {
       "plik": "gora-14",
-      "x": 2.4,
-      "y": 71.8,
-      "szer": 4.0,
+      "x": 3.4,
+      "y": 71.45,
+      "szer": 4.6,
       "pokrywa": [
         0,
         64,
@@ -507,8 +507,8 @@ export const USTAWIENIA = {
     },
     {
       "plik": "gora-8",
-      "x": 9.0,
-      "y": 71.9,
+      "x": 9.4,
+      "y": 71.6,
       "szer": 3.6,
       "odbij": true,
       "pokrywa": [

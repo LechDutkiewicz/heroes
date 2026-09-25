@@ -641,8 +641,8 @@ USTAWIENIA = {
         # Lewy dolny róg: z tyłu pasmo (nie zasłania doliny przełęczy
         # z kopalnią), z przodu pagóry i urwisko z borem jako przedgórze.
         {'plik': 'gora-13', 'x': 5.2, 'y': 70.4, 'szer': 7.6, 'pokrywa': [0, 64, 10, 71]},
-        {'plik': 'gora-14', 'x': 2.4, 'y': 71.8, 'szer': 4.0, 'pokrywa': [0, 64, 10, 71]},
-        {'plik': 'gora-8', 'x': 9.0, 'y': 71.9, 'szer': 3.6, 'odbij': True, 'pokrywa': [0, 64, 10, 71]},
+        {'plik': 'gora-14', 'x': 3.4, 'y': 71.45, 'szer': 4.6, 'pokrywa': [0, 64, 10, 71]},
+        {'plik': 'gora-8', 'x': 9.4, 'y': 71.6, 'szer': 3.6, 'odbij': True, 'pokrywa': [0, 64, 10, 71]},
         # (Runda 6: bez skalnego pagóra `gora-5` w rogu — stał na wąwozie.)
         # Skalny garb nad stawem (górna krawędź ekranu) zamiast rzędu kęp.
         {'plik': 'gora-10', 'x': 17.4, 'y': 56.0, 'szer': 7.0, 'pokrywa': [15, 50, 20, 55]},

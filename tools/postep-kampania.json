@@ -1,6 +1,28 @@
 {
- "updated": "Poprzeczka dla plansz zmieniona na HoMM3 HotA (trzy wzorce, trzech krytyków, 2 z 3). HoMM2 zostaje wzorcem tylko dla ekranu kampanii.",
+ "updated": "Plansze Polana, Bagna i Twierdza wygrywają ślepo z mapami kampanii HoMM3/HotA. Etap 2: wstęp kampanii i sceny wyniku z nowymi ilustracjami.",
  "pieces": [
+  {
+   "name": "Sceny wyniku: zwycięstwo, porażka, koniec kampanii (grafiki OpenAI)",
+   "status": "build",
+   "bar": "Ekrany zwycięstwa i porażki Heroes. Wzorce: w przygotowaniu.",
+   "note": "Słabość zwycięzcy z poprzedniej sesji: wycięte postacie bez jednej malowanej ilustracji, ta sama poza na trzech ekranach. Teraz: 3 malowane ilustracje z OpenAI.",
+   "rounds": [],
+   "live": {
+    "round": 1,
+    "stage": "builder wpina ilustracje"
+   }
+  },
+  {
+   "name": "Kampania: wstęp, wybór trenera, mapa, zakończenie (grafiki OpenAI)",
+   "status": "build",
+   "bar": "Ekrany kampanii Heroes (HoMM2 The Succession Wars — przebieg kampanii; HoMM3/HotA — malowane tła). Wzorce: w przygotowaniu.",
+   "note": "Słabość zwycięzcy z poprzedniej sesji: wstęp i wybór trenera złożone z istniejących grafik zamiast jednej malowanej sceny. Teraz: 6 malowanych ilustracji z OpenAI (mapa krainy, Janek, Ola, wstęp, zakończenie, zwój).",
+   "rounds": [],
+   "live": {
+    "round": 1,
+    "stage": "builder wpina ilustracje"
+   }
+  },
   {
    "name": "Menu główne",
    "status": "done",
