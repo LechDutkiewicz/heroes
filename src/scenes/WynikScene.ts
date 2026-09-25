@@ -935,7 +935,9 @@ export class WynikScene extends Phaser.Scene {
         speed: { min: 70, max: 220 },
         lifespan: 1400,
         gravityY: 80,
-        scale: { start: 0.9, end: 0.1 },
+        // Mała skala na starcie: w pierwszej klatce wszystkie cząstki stoją
+        // w jednym punkcie i w trybie ADD sumowały się w białą plamę.
+        scale: { start: 0.35, end: 0.08 },
         alpha: { start: 0.9, end: 0 },
         blendMode: Phaser.BlendModes.ADD,
         emitting: false,
@@ -945,7 +947,7 @@ export class WynikScene extends Phaser.Scene {
     const wybuch = () => {
       ogien.setParticleTint(Phaser.Utils.Array.GetRandom([C.gold, C.ally, C.foe, C.hpHigh, 0xc890ff]));
       const x = Phaser.Math.Between(70, 300);
-      ogien.explode(48, Math.random() < 0.5 ? x : SZER - x, Phaser.Math.Between(60, 200));
+      ogien.explode(32, Math.random() < 0.5 ? x : SZER - x, Phaser.Math.Between(60, 200));
     };
     this.time.addEvent({ delay: 1100, loop: true, callback: wybuch });
     wybuch();
