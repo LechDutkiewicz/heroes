@@ -176,6 +176,9 @@ def rozstaw(g):
     for co in kopalnie:
         polozone += g.dodaj(1, 'dom', (10, 40), lambda p, co=co: ('kopalnia', co))
     g.strzez([p for p, co in zip(polozone, kopalnie) if co in ('pokeball', 'kamien')], 'slaby')
+    # Drugi sad doliny — jagodami płaci się za siedliska, a symulacja bez
+    # niego nie zdobywała drugiej twierdzy. Też tylko poza śniegiem.
+    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'jagoda'), bez_sniegu(g, g.wolne_pola('dom', (8, 40))), None, (8, 40))
     g.dodaj(5, 'dom', (10, 40), lambda p: ('skrzynia', None))
     g.dodaj(3, 'dom', (12, 40), lambda p: ('potwor', 'slaby'))
     g.strzez(g.dodaj(2, 'dom', (14, 40), lambda p: ('artefakt', None)), 'slaby')
@@ -193,6 +196,8 @@ def rozstaw(g):
     for co in kopalnie:
         polozone += g.dodaj(1, 'pogranicze', (0, 999), lambda p, co=co: ('kopalnia', co))
     g.strzez([p for p, co in zip(polozone, kopalnie) if co in ('kamien', 'pokeball')], 'sredni')
+    # Sad w tundrze — na ziemi jałowej albo łące, nigdy przy zaspie.
+    g.dodaj_najpierw('pogranicze', lambda p: ('kopalnia', 'jagoda'), bez_sniegu(g, g.wolne_pola('pogranicze')), None)
     g.dodaj(10, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
     g.strzez(g.dodaj(5, 'pogranicze', (0, 999), lambda p: ('artefakt', None)), 'sredni')
     g.dodaj(4, 'pogranicze', (0, 999), lambda p: ('potwor', 'sredni'))
