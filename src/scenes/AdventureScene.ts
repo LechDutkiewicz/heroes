@@ -134,29 +134,8 @@ const KLUCZ_ZESTAWU = 'zestaw-planszy';
 /** Tekstura miękkiego cienia kontaktowego — patrz `zbudujCien`. */
 const CIEN_KONTAKTOWY = 't-cien-miekki';
 /** Krycie cienia kontaktowego: pod znajdźką, stworkiem i bohaterem / pod dużą bryłą. */
-const KRYCIE_CIENIA = 0.46;
-const KRYCIE_CIENIA_BRYLY = 0.36;
-
-/**
- * NAJMNIEJSZA wysokość znajdziek na mapie, w polach — jedno miejsce, które
- * pilnuje czytelności niezależnie od `USTAWIENIA.znajdzki` planszy.
- *
- * Pole ma na ekranie 32 px (`ZOOM_MAPY`); w Heroes 3 kupka surowca zajmuje
- * 60–80% pola. Przy znajdźkach 0,5 pola stos wychodził na 16 px, a kamień
- * artefaktu — wąski, o proporcjach 2 : 3 — na 11 px szerokości: ginął w każdej
- * dekoracji. Tu liczy się sama wysokość rysunku; pole, na którym obiekt
- * stoi, i jego podstawa zostają te same (rysunek rośnie w górę), a trafienia
- * liczą się z granic rysunku, więc idą za nim same.
- */
-const WYS_ZNAJDZKI: Record<'surowiec' | 'skrzynia' | 'artefakt', number> = {
-  // Stosy są szersze niż wyższe (1,15–1,4 : 1) — 0,64 pola wysokości daje
-  // 23–29 px szerokości na ekranie, czyli 70–90% pola.
-  surowiec: 0.64,
-  skrzynia: 0.7,
-  // Kamień ewolucji ma 2 : 3, więc dopiero 0,86 pola wysokości daje 60% pola
-  // szerokości; artefakt ma się czytać jako cel wyprawy, nie jako okruch.
-  artefakt: 0.86,
-};
+const KRYCIE_CIENIA = 0.48;
+const KRYCIE_CIENIA_BRYLY = 0.38;
 
 
 const DOMYSLNA_PODPOWIEDZ =
@@ -540,13 +519,16 @@ export class AdventureScene extends Phaser.Scene {
     // Środek podstawy względem osi rysunku (origin 0,5).
     const srodek = ((p.lewo + p.prawo) / 2 - 0.5) * szerRysunku;
     const szer = Math.max(
-      (p.prawo - p.lewo) * szerRysunku * 1.15,
+      (p.prawo - p.lewo) * szerRysunku * 1.2,
       (p.widocznaSzer ?? 1) * szerRysunku * 0.6,
       KAFEL * 0.34
     );
     const wysC = Math.max(szer * 0.36, KAFEL * 0.14);
+    // Środek plamy trochę w prawo i w dół od środka podstawy: rysunek zasłania
+    // jej lewą-górną część, spod niego wychodzi prawy-dolny sierp — tak jak
+    // w Heroes 3. Plama dokładnie pod spodem chowała się pod rysunkiem cała.
     return this.add
-      .image(x + srodek + szer * 0.1, spod + wysC * 0.12, CIEN_KONTAKTOWY)
+      .image(x + srodek + szer * 0.14, spod + wysC * 0.2, CIEN_KONTAKTOWY)
       .setDisplaySize(szer, wysC)
       .setAlpha(krycie);
   }
