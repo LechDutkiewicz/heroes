@@ -167,6 +167,63 @@ brzegiem mgły), więc jego wynik to górna granica czasu, a nie średnia.
 - `probe-zwis.mjs` liczyła znak-kursor (głębokość 205) jako resztkę okna
   i zgłaszała dwa fałszywe błędy także na czystej gałęzi — poprawione.
 
+## Kampania — stan pętli „gauntlet" (przekazanie, 2026-09-25)
+
+Cel: gra ma wyglądać jak pełnoprawna gra, a nie jedna plansza. Poprzeczka:
+Heroes of Might and Magic II „The Succession Wars". Każdy kawałek budował
+osobny builder, a oceniał go osobny, bezwzględny krytyk ze świeżym
+kontekstem, na ślepo (A/B bez podpisów). Kawałek jest skończony dopiero
+wtedy, gdy krytyk wybierze nasz.
+
+| Kawałek | Stan | Rundy |
+|---|---|---|
+| Menu główne (`MenuScene`) | wygrywa ślepo | 4 (w tym powtórka na pełnym kadrze) |
+| Ekran kampanii (`KampaniaScene`, `src/visual/zestaw.ts`) | wygrywa | 4 |
+| Warunki misji, wygrana, porażka (`WynikScene`, okno warunków) | wygrywa | 2 |
+| HUD mapy przygody na wspólnym zestawie | wygrywa | 1b |
+| Plansza Polana (misja 1) | PRZEGRYWA | 2, runda 3 w toku |
+| Plansza Bagna (misja 3) | PRZEGRYWA | 2, runda 3 w toku |
+| Plansza Twierdza (misja 4) | PRZEGRYWA | 2, runda 3 w toku |
+
+**Co blokowało plansze:** brak nowych grafik (Gemini bez środków). Krytyk
+chce geografii w pierwszym ekranie (rzeka, pasmo gór z rzeźbą), bagna ze
+stojącą wodą, śniegu z ośnieżonymi drzewami i skałami, różnych obiektów
+per biom zamiast tych samych na okrągłych plackach piasku. Prompty tych
+grafik są w `tools/PROMPTY-PLANSZE.md`, a droga do gry opisana niżej przez
+buildera plansz. Generator ma silnik OpenAI (prawdziwa alfa):
+`python3 tools/generuj_grafiki.py --modele` sprawdza dostęp, potem
+`--wszystko` albo konkretne pliki, potem `python3 tools/wsad_wczytaj.py`.
+
+**Słabości zwycięzców do poprawy, gdy będą grafiki:** wstęp kampanii i wybór
+trenera złożone z istniejących grafik (sylwetki, wóz); sceny wyniku z wyciętymi
+postaciami bez jednej malowanej ilustracji.
+
+**Jak się robi rundę krytyka:**
+1. zrzut: `node tools/zrzut-mapa.mjs --url http://localhost:4173 --mapa <id> --zwiad 12`
+   (menu: `tools/zrzut-menu.mjs`, kampania: `tools/zrzut-kampania.mjs`,
+   wynik: `tools/zrzut-wynik.mjs`, HUD: `tools/zrzut-hud.mjs`);
+2. ślepe zestawienie: `node tools/blind.mjs --ours tools/shots/mapa-<id>-zwiad.png
+   --ref tools/reference/homm2/mapa-przygody-x15.png --name mapa-<id>-r<N>`
+   (klucz A/B w `tools/blind/*.klucz.json` — krytyk NIE może go czytać);
+3. krytyk: osobny subagent ze świeżym kontekstem, dostaje tylko obraz
+   zestawienia i każe mu się wybrać A albo B, uzasadnić i nazwać jedną
+   największą lukę przegranego oraz słabość zwycięzcy;
+4. wpis: `python3 tools/postep_runda.py "Plansza: Bagna (misja 3)" tools/blind/…png 0|1 "luka" "notka" [--status=done]`,
+   potem `python3 tools/postep_kampania.py <plik.html>` i publikacja strony
+   postępu (artefakt https://claude.ai/artifact/Mq8R94QKJxB89A1p69pW8E —
+   z nowej sesji aktualizuje się, podając jego adres jako `url`).
+
+Wzorce HoMM2 leżą w `tools/reference/homm2/` (katalog poza gitem — w nowym
+kontenerze trzeba je ściągnąć ponownie; źródła w `ZRODLA.md` tamże, a
+najważniejsze: `raw.githubusercontent.com/ihhub/fheroes2/master/docs/images/screenshots/screenshot_world_map.webp`,
+`raw.githubusercontent.com/PortsMaster/PortMaster-New/main/ports/fheroes2/screenshot.jpg`
+dla mapy przygody, oraz libretro-thumbnails/DOS `Named_Titles/Heroes of Might and Magic II (Deluxe Edition).png`
+dla menu). Mapę przygody powiększa się ×1,5 metodą najbliższego sąsiada do
+960 × 720 (`mapa-przygody-x15.png`), menu ×3.
+
+PR: https://github.com/LechDutkiewicz/heroes/pull/5 (szkic, gałąź
+`claude/relaxed-archimedes-dddvar`).
+
 ## Scalenie z AI przeciwnika (2026-09-15)
 
 Ta gałąź (mapa „Dwie Doliny") i osobna praca nad AI przeciwnika rozjechały
