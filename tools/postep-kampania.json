@@ -1,5 +1,5 @@
 {
- "updated": "Plansze Polana, Bagna i Twierdza wygrywają ślepo z mapami kampanii HoMM3/HotA. Etap 2: wstęp kampanii i sceny wyniku z nowymi ilustracjami.",
+ "updated": "Wszystko wygrywa ślepo: plansze Polana, Bagna, Twierdza przeciw mapom kampanii HoMM3/HotA; ekran kampanii (3/3) i sceny wyniku (2/3) z nowymi ilustracjami OpenAI przeciw prawdziwym ekranom HoMM2/HotA.",
  "pieces": [
   {
    "name": "Sceny wyniku: zwycięstwo, porażka, koniec kampanii (grafiki OpenAI)",
@@ -23,14 +23,23 @@
   },
   {
    "name": "Kampania: wstęp, wybór trenera, mapa, zakończenie (grafiki OpenAI)",
-   "status": "build",
+   "status": "done",
    "bar": "Prawdziwe ekrany kampanii: HoMM2 (kampania Rolanda z fheroes2) i HoMM3/HotA (wybór kampanii, ekran scenariusza z VCMI). Trzech krytyków na ślepo, wygrana przy 2 z 3.",
    "note": "Słabość zwycięzcy z poprzedniej sesji: wstęp i wybór trenera złożone z istniejących grafik zamiast jednej malowanej sceny. Teraz: 6 malowanych ilustracji z OpenAI (mapa krainy, Janek, Ola, wstęp, zakończenie, zwój).",
-   "rounds": [],
-   "live": {
-    "round": 1,
-    "stage": "builder wpina ilustracje"
-   }
+   "rounds": [
+    {
+     "win": true,
+     "label": "Runda 1 (3/3)",
+     "gap": "A: rząd nagród na dole po lewej łamie spójność stylu. „POKEBALLE” to błyszcząca, wektorowa ikona Pokéballa, rozpoznawalna cudza marka i IP nie do wydania. Obok niej kreskówkowy „Flamir”, a na mapie przy misji 1 postać chibi przypominająca trenera z Pokémonów. Wszystko to gryzie się z malarską fantasy. Do tego nieaktywny przycisk „WYBIERZ NAGRODĘ” w prawym dolnym rogu to szara, rozmyta plama z niemal nieczytelnym tekstem, obca dla palety drewna i złota. | A: najpoważniejszy problem to zapożyczenia z Pokémonów w panelu nagród w lewym dolnym rogu. Jest tam czerwono-biała ikona „Pokeballe” z licznikiem 30, a przy startowym węźle mapy stoi postać trenera w czapce z daszkiem. To łamie spójność świata fantasy (reszta to zamki, groty i fantastyczne stworzenia) i jest blokerem prawnym dla komercyjnej gry. Ikonę i przedmiot trzeba zastąpić własnym artefaktem, np. „kryształy przywołania”, a bohatera przerysować w stylu świata gry. Drugorzędna słabość: główny przycisk CTA „Wybierz nagrodę” w prawym dolnym rogu jest wyszarzony i ma najniższy kontrast na całym ekranie. Nie widać też podpowiedzi, że najpierw trzeba zaznaczyć nagrodę, więc akcja wygląda na zepsutą. | A: Ola trzyma w ręce rozpoznawalnego Poké Balla (środek prawej karty), a instrukcja na dole mówi „Kliknij trenera”. To bezpośrednie zapożyczenie cudzej marki (Pokémon), niedopuszczalne prawnie w produkcie komercyjnym. Przy okazji ekran przestaje wyglądać na autorską grę fantasy i czyta się jak fanowska podróbka. Trzeba zastąpić ten przedmiot własnym rekwizytem ze świata gry (np. sakiewką, kompasem, kamieniem runicznym) i zmienić słowo „trener”. Drugorzędnie: opisy postaci na kartach mają za mały, cienki font kursywą, więc przy mniejszej rozdzielczości są słabo czytelne.",
+     "blinds": [
+      "tools/postep-obrazy/kampania-r1-w1.jpg",
+      "tools/postep-obrazy/kampania-r1-w2.jpg",
+      "tools/postep-obrazy/kampania-r1-w3.jpg"
+     ],
+     "note": "Krytyk 1: nasze — A lepiej działa jako ekran kampanii współczesnej, komercyjnej gry. Ilustracja mapy jest malowana z głębią: góry, zamek w świetle księżyca, rzeka i ścieżki. Rzeczywiście pokazuje świat, a przebieg kampanii (misje 1–4 połączone kropkowaną trasą, kłódki na misjach zablokowanych) wynika z samej geografii. Hierarchia informacji jest czytelna. Na górze pasek z nazwą kampanii, postępem, bohaterem i dniami. Na zwoju tytuł misji, opis, cel i warunek porażki, wyróżnione ikonami gwiazdy i czaszki. Na dole osobny panel wyboru nagrody. Tekst w A to czysty szeryf na pergaminie, dobrze czytelny. Rama, drewno i złoto są spójne z paletą. B to autentyczny ekran z epoki i jest wewnętrznie spójny, ale: (1) opis w gotyckim fontcie bitmapowym jest ciasny i męczący w czytaniu; (2) przyciski na dole to tłoczony tekst na beżu o niskim kontraście, bez wyraźnego wyróżnienia akcji głównej (OKAY wygląda prawie tak samo jak pozostałe); (3) połowę ekranu zajmuje abstrakcyjny graf identycznych tarcz na płaskim brązie. Klimat retro nie nadrabia braku ilustracji i gęstości UI. Krytyk 2: nasze — A wygrywa rzemiosłem i czytelnością. Ilustracja mapy jest w całości malowana w jednym stylu: góry, zamki, księżyc, bagno i jaskinia mają spójne światło i paletę. Kompozycja ma jasną hierarchię. U góry jest pasek stanu (tytuł kampanii, postęp 1/4, bohater, dni). Po lewej mapa z czytelną ścieżką kropek i numerowanymi węzłami z kłódkami. Po prawej zwój z tytułem misji, miniaturą, opisem, celem (gwiazdka) i warunkiem porażki (czaszka). Na dole wybór nagrody i przyciski. Gracz od razu wie, gdzie jest, co ma zrobić i co dalej. Ramy z drewna i pergaminu, złote okucia i kapitaliki stanowią jedną oprawę. B to autentyczny, ale archaiczny ekran z lat 90. Mniej więcej 60% powierzchni zajmuje płaska wyspa z grubymi żółtymi konturami, bez punktów orientacyjnych. Drobny szeryfowy tekst na granatowym tle jest męczący w czytaniu. Pola Allies/Enemies są puste. Przyciski BEGIN/BACK to surowe prostokąty z pogrubionym fontem. B działa jako gra, ale jako ekran dzisiejszej komercyjnej produkcji przegrywa z A w klimacie, kompozycji i czytelności. Krytyk 3: nasze — A wygląda jak gotowy, spójny produkt. Oba portrety są namalowane w jednej stylistyce: to samo ciepłe, malarskie oświetlenie i to samo zielone, leśne tło. Kolorystycznie łączą się z drewnianym panelem i złotymi ramkami. Hierarchia jest czytelna: nagłówek u góry, dwie symetryczne karty, pod nimi tabliczki z imionami na czerwono i krótkim opisem, a na dole instrukcja. Przycisk MENU wygląda jak część tego samego zestawu UI, bo ma to samo złoto i ten sam kształt. Gracz od razu wie, co kliknąć.\n\nB to kolaż z niepasujących do siebie materiałów. Miniatury kampanii (dżungla, tawerna, zachód słońca, nocne jezioro, statek) to zrzuty lub rendery o różnym oświetleniu, stylu i jakości. Obok jest fotograficzna tekstura kamienia, wklejony clipart sztyletu i czaszki. Złoty napis „SELECT A CAMPAIGN” ma tanią fakturę i twardy cień. Przycisk BACK nachodzi na tarczę i jest źle wyrównany. Całość przypomina amatorski mod z 2003 roku, a nie aktualną grę komercyjną.",
+     "build": ""
+    }
+   ]
   },
   {
    "name": "Menu główne",

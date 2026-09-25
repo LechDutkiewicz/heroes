@@ -564,6 +564,36 @@ Zmiany (wszystkie per plansza, układ i rozstawienie bez zmian):
 - `probe-zwis.mjs` liczyła znak-kursor (głębokość 205) jako resztkę okna
   i zgłaszała dwa fałszywe błędy także na czystej gałęzi — poprawione.
 
+## Pętla „gauntlet" — stan po sesji 2026-09-25 (wieczór)
+
+Wszystkie kawałki wygrywają ślepo:
+
+| Kawałek | Wzorzec | Wynik |
+|---|---|---|
+| Polana | 3 kadry map kampanii HoMM3/HotA (`tools/reference/homm3/wzor-*.png`) | 3/3 (r10, ponowne sprawdzenie po zmianach sceny) |
+| Bagna | jw. | 3/3 (r12, z charakterem bagna) |
+| Twierdza | jw. | 2/3 (r12) |
+| Ekran kampanii (wybór trenera, mapa, wstęp, zakończenie — ilustracje OpenAI) | kampania Rolanda HoMM2 (fheroes2), scenariusz i wybór kampanii HotA (VCMI) | 3/3 |
+| Sceny wyniku (zwycięstwo, porażka, koniec — ilustracje OpenAI) | Victory!/Defeat!/Legendary Heroes HoMM2 (fheroes2) | 2/3 |
+
+Zmiany sceny mapy wspólne dla wszystkich plansz: kamera 32 px na pole
+(`ZOOM_MAPY`, 21×18 pól), miękka mgła (`src/visual/mgla.ts`), cienie
+kontaktowe, bohater 1,5 pola i strażnicy 1,2 pola (`uklad.ts`), złoty
+znacznik wejścia tylko po najechaniu, malowana minimapa z kryjącą mgłą.
+Grafiki: OpenAI (`generuj_grafiki.py`, dziennik `tools/wsad/koszty-openai.jsonl`,
+jakość `medium` — `high` przy dużych kadrach dostaje 502 od proxy; limit 5
+obrazków/min). Wzorce HoMM2/HoMM3 (poza gitem, `tools/reference/`): źródła
+w `ZRODLA.md`; ekrany HoMM2 zrobione z fheroes2 na darmowym demie.
+
+Słabości zwycięzców do ewentualnej poprawki: znajdźki na Polanie rozsiane
+jak konfetti; drobny tekst w panelu podsumowania wyniku; w ilustracjach
+i ekranie kampanii widać zapożyczenia z Pokemonów (pokeball, czapka
+trenera) — krytycy piszą, że to ryzyko prawne w produkcie komercyjnym.
+
+Narzędzia pętli: `tools/blind.mjs` (zestawienie A/B), `tools/postep_kampania.py`
+(strona postępu; obrazy rund w `tools/postep-obrazy/`), porty 5200–5229
+w `vite.config.ts` bez HMR (etap zrzutów).
+
 ## Kampania — stan pętli „gauntlet" (przekazanie, 2026-09-25)
 
 Cel: gra ma wyglądać jak pełnoprawna gra, a nie jedna plansza. Poprzeczka:
