@@ -1586,3 +1586,32 @@ leaves, the dark pointed pine a little behind on the left, sunlit tips on the
 right, deep shadows inside the crowns, brown trunks, a few ferns at the foot.
 About as wide as tall.
 ```
+
+Dół doliny (pasmo od lasu do Strugi z przełęczą) — dwa grzbiety w tej samej
+skale co `bagno-gora-1`, żeby łańcuch był jednym pasmem, a nie zbiorem brył.
+
+<!-- plik: bagno-gora-5.png | styl: obiekt | proporcje: 3:2 -->
+```
+A mountain ridge segment for a swampland adventure map, in the style of Heroes
+of Might and Magic 3: one continuous crest running across the whole width of
+the picture, four sharp peaks of different heights joined by rocky saddles,
+highest on the left, stepping down to the right. Warm light grey-brown rock
+with pale sunlit faces lit from the upper left and deep brown shadowed faces,
+dark crevices, ledges and gullies covered in dark green moss. Mossy green
+foothills with two small dark pines, ferns and mossy boulders on the lower
+slopes; the foot is a soft irregular edge of moss and grass tufts. Much wider
+than tall.
+```
+
+<!-- plik: bagno-gora-6.png | styl: obiekt | proporcje: 3:2 -->
+```
+A mountain ridge segment for a swampland adventure map, in the style of Heroes
+of Might and Magic 3: one continuous crest running across the whole width of
+the picture, three sharp peaks joined by rocky saddles, the highest in the
+middle, the right end dropping in a steep rocky cliff. Warm light grey-brown
+rock with pale sunlit faces lit from the upper left and deep brown shadowed
+faces, dark crevices, ledges covered in dark green moss and hanging vines.
+Mossy green foothills with a small twisted swamp willow, a dark pine, ferns and
+mossy boulders; the foot is a soft irregular edge of moss and grass tufts.
+Much wider than tall.
+```

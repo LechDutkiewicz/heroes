@@ -496,8 +496,8 @@ USTAWIENIA = {
     'masywy': [
         {'plik': 'gora-2', 'x': 6.0, 'y': 41.5, 'szer': 7.0, 'pokrywa': [4, 37, 9, 40]},
         {'plik': 'gora-1', 'x': 6.3, 'y': 45.4, 'szer': 9.0, 'pokrywa': [4, 41, 9, 44]},
-        {'plik': 'gora-4', 'x': 6.3, 'y': 54.4, 'szer': 7.4, 'pokrywa': [4, 50, 8, 53]},
-        {'plik': 'gora-3', 'x': 17.4, 'y': 54.4, 'szer': 6.0, 'odbij': True, 'pokrywa': [15, 50, 18, 53]},
+        {'plik': 'gora-6', 'x': 6.3, 'y': 54.4, 'szer': 7.8, 'pokrywa': [4, 50, 8, 53]},
+        {'plik': 'gora-5', 'x': 17.4, 'y': 54.4, 'szer': 6.4, 'odbij': True, 'pokrywa': [15, 50, 18, 53]},
     ],
     # Runda 6 (HotA: „obiekty interaktywne są mniejsze od drzew i krzaków,
     # bez cienia, konturu i kontrastu"): budowle większe i obrys wokół

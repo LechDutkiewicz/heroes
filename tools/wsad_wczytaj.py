@@ -661,7 +661,7 @@ ZESTAWY = {
         'stos-pokeball': 72, 'stos-jagody': 72, 'stos-odlamki': 72, 'stos-kamien-ewolucji': 72,
         # Bagna, runda 8 (HotA): pasma gór rozstawiane ręcznie
         # (`USTAWIENIA.masywy`) zamiast osobnych stożków kęp.
-        'gora-1': 340, 'gora-2': 380, 'gora-3': 280, 'gora-4': 320,
+        'gora-1': 340, 'gora-2': 380, 'gora-3': 280, 'gora-4': 320, 'gora-5': 320, 'gora-6': 340,
     },
     # Polana: trawiaste góry z brązowymi urwiskami zamiast omszałych głazów
     # (runda 3 ślepego porównania: „bez pasma gór w kadrze").
