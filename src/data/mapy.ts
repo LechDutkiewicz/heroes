@@ -110,6 +110,12 @@ export interface UstawieniaPlanszy {
    */
   kepySkal?: Record<string, number>;
   /**
+   * Mnożnik rysunków kęp lasu (`m-kepa-las-N`, 3 × 2 pola). Stopa kępy
+   * zostaje na dolnym rzędzie, rysunek jest niższy i węższy. Twierdza,
+   * runda 9: „choinki kilka razy wyższe od zamku". Brak = 1.
+   */
+  skalaKepLasu?: number;
+  /**
    * Góry rozstawione ręcznie: duże, wielopolowe rysunki `m-<plik>` z zestawu
    * klimatu (`public/mapa/<zestaw>/<plik>.png`, nazwa zaczyna się od `gora-`).
    * `x`, `y` — punkt stopy rysunku w polach (środek w poziomie, dół), `szer` —

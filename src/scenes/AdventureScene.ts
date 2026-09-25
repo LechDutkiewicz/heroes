@@ -1255,6 +1255,10 @@ export class AdventureScene extends Phaser.Scene {
           .setFlipX(reczna ? reczna < 0 : this.wariant(y, x, 2) === 1)
           // Głębia z DOLNEGO rzędu kępy: to on decyduje, co ją zasłoni.
           .setDepth(y + 1);
+        // `USTAWIENIA.skalaKepLasu` (per plansza): mniejsze kępy lasu.
+        // Twierdza, runda 9: „choinki wyższe od zamku". Brak = 1.
+        const skalaKep = t === 'las' ? planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaKepLasu : undefined;
+        if (skalaKep) im.setScale(skalaKep);
         this.swiat.add(im);
       }
     }

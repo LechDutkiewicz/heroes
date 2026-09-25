@@ -73,7 +73,7 @@ export const TEREN = [
   '#########ssss=ssssss.=.##...###sssss.....sssTTT~ssss~...TTTT..ssssssTTTT',
   '#########sss=========..##.s..##sssss.....ssTTTTssss.s...TTTT...jssssTTTT',
   '#########ss=s=sssss=......s.s.#.ssss....ss..TT#sss......sTT.s...jsssTTTT',
-  '#########s=ss=TTTTTT=..TTTs.s..sssssTs......#.##ss.....ssTTssssjjjjjTTTT',
+  '#########s====TTTTTT=..TTTs.s..sssssTs......#.##ss.....ssTTssssjjjjjTTTT',
   '#########ssss=TTTTTTs..TTTss.s..sssTTT.......##....s.sssTTTTssssjjjjTTTT',
   '#########sss=s====sssTTTsssss....sssTTT.....#####..s.sTTTTTTTsssjjjjTTTT',
   'TTTT####ssss=#####=s.TTTssss.#..#ssssTTT...#####.#.ssTTTTTTTTsssjjjTTTTT',
@@ -419,6 +419,7 @@ export const USTAWIENIA = {
   ],
   "znajdzki": 0.55,
   "skalaZamku": 1.8,
+  "skalaKepLasu": 0.8,
   "cienBudowli": {
     "szer": 0.7,
     "krycie": 0.6

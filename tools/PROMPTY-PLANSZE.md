@@ -275,30 +275,62 @@ A pair of angular grey rocks leaning together, thick snow cap across both
 tops, frosted edges, a small drift at the base.
 ```
 
-<!-- plik: zima-kepa-las-1.png -->
+<!-- Twierdza, runda 9 (HotA): „gigantyczne choinki w prawym dolnym rogu są
+kilka razy wyższe od zamku — drzewa do skali kafla". Dawne kępy to dwa–pięć
+wielkich drzew na śnieżnej wysepce; kępa ma 4,5 pola wysokości, więc jedno
+drzewo wychodziło wyższe od twierdzy. Teraz zwarty masyw MAŁYCH świerków
+w kilku rzędach, bez podstawki — jak bór w HotA. -->
+<!-- plik: zima-kepa-las-1.png | styl: obiekt -->
 ```
-A dense grove of six to eight snow-laden pine and spruce trees of different
-heights growing close together, seen from a slightly elevated angle, white
-snow shelves on every branch, blue shadows between the trees. Reads as a
-single impassable block of winter forest. Wider than tall.
+A dense block of snowy winter forest for a fantasy adventure map, in the style
+of Heroes of Might and Magic 3 seen from a high three-quarter angle: about
+twenty SMALL dark blue-green spruces and firs packed tightly together in five
+staggered rows, each tree only a small part of the picture, crowns overlapping
+so that no ground shows between them, every tree with white snow caps on its
+branches, deep blue shadows between the trees, sunlit snow on the right side.
+The back rows peek above the front rows. Reads as one solid impassable mass of
+forest, not a few big trees. No snow platform or island under it: the front
+row of small trees and a few snowy bushes spreads across the whole width of
+the picture. About as wide as tall.
 ```
 
-<!-- plik: zima-kepa-las-2.png -->
+<!-- plik: zima-kepa-las-2.png | styl: obiekt -->
 ```
-A winter forest clump mixing snowy spruces with two bare snow-dusted
-deciduous trees, compact, wider than tall, reads as one block of forest.
+A thick stand of snowy northern forest for a fantasy adventure map, in the
+style of Heroes of Might and Magic 3 seen from a high three-quarter angle:
+some eighteen small snow-laden spruces of slightly different heights crowded
+in several staggered rows, two small bare birch trees with white trunks
+between them, crowns overlapping into one dense dark blue-green mass with
+white snow on every tier, cold blue shadows inside, warm sunlit snow on the
+right edges. Each tree small; clearly one impassable block of forest. No snow
+platform under it; low snowy bushes and young firs along the bottom edge
+across the whole width. About as wide as tall.
 ```
 
-<!-- plik: zima-kepa-las-3.png -->
+<!-- plik: zima-kepa-las-3.png | styl: obiekt -->
 ```
-A tight cluster of young snowy firs and one tall old pine, snow drifted
-between the trunks, wider than tall.
+A compact mass of young snowy fir trees for a fantasy adventure map, in the
+style of Heroes of Might and Magic 3 seen from a high three-quarter angle:
+twenty to twenty-five small pointed firs packed tightly in five rows, the
+middle trees a little taller, the front row small and half buried in snow,
+heavy white snow on the branches, dark blue-green needles showing in the
+shadows, one small grey rock with snow at the front left. One solid block of
+winter forest, no ground visible between the trees and no snow island under
+it; the front row spreads across the whole width. About as wide as tall.
 ```
 
-<!-- plik: zima-kepa-las-4.png -->
+<!-- plik: zima-kepa-las-4.png | styl: obiekt -->
 ```
-A low wide belt of snow-covered conifers of even height, like the edge of a
-northern forest, wider than tall.
+The ragged edge of a snowy spruce forest for a fantasy adventure map, in the
+style of Heroes of Might and Magic 3 seen from a high three-quarter angle:
+a tight mass of about eighteen small snow-covered spruces with deep dark
+blue-green needles (cold teal and slate green, never yellow or olive), dense
+and taller at the back and on the left, stepping down to smaller young firs
+at the front right, crowns overlapping, thick white snow on every tier, deep
+cold blue shadows inside, sunlit snow on the right. Each tree small. One solid
+block of forest; along the foot only a thin soft layer of trodden snow and
+two low snowy juniper bushes, no snowballs, no platform. A little wider than
+tall.
 ```
 
 <!-- plik: zima-kepa-skaly-1.png -->

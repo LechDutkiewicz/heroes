@@ -434,7 +434,10 @@ def rozstaw(g):
     for x, y in [(13, 63), (13, 64), (13, 65), (14, 66), (15, 66), (16, 66), (17, 66), (18, 67),  # korytarz
                  (12, 66), (12, 67),                    # → wąwóz
                  (13, 61), (12, 60), (11, 60),          # plac: chata, wiatrak
-                 (19, 63), (20, 64)]:                   # → kopalnia odłamków
+                 (19, 63), (20, 64),                    # → kopalnia odłamków
+                 # Runda 9: zamek jest teraz 1,8 raza większy — brama
+                 # dostaje własny zjazd na trakt, zamiast wejścia w śniegu.
+                 (11, 64), (12, 64)]:
         if g.mapa[y][x] in 's.j':
             g.mapa[y][x] = '='
 
@@ -496,6 +499,10 @@ USTAWIENIA = {
     # Runda 9 (HotA): „zamek ledwie większy od chaty i młyna — powiększyć
     # co najmniej dwa razy; twierdza ma dominować nad lasem jak siedziba".
     'skalaZamku': 1.8,
+    # Runda 9 (HotA): „świerki w prawej dolnej ćwiartce wyższe od zamku i młyna
+    # — drzewa do skali kafla". Kępy boru (nowe rysunki: zwarty masyw małych
+    # świerków, PROMPTY-PLANSZE §3) rysowane mniejsze, stopa na miejscu.
+    'skalaKepLasu': 0.8,
     # Runda 8 (HotA): „wiatrak, chata nad jeziorem i chatka wiszą na śniegu
     # jak naklejki". Szeroka plama cienia spod śnieżnej podstawki przyciemniała
     # sinawy śnieg wokół budynku, a jasna podstawka nad nią czytała się jak
