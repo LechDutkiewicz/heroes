@@ -328,7 +328,7 @@ export const USTAWIENIA = {
       ]
     },
     {
-      "plik": "gora-8",
+      "plik": "gora-10",
       "x": 5.3,
       "y": 54.15,
       "szer": 8.0,

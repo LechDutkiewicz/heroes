@@ -450,7 +450,11 @@ USTAWIENIA = {
     # giną na śniegu — powiększyć 1,5–2 razy". Trzy czwarte pola i ciemny
     # obrys obiektów gry (jak Bagna/Polana) — odróżnia je od zasp i głazów.
     'znajdzki': 0.78,
-    'obrysObiektow': 0.45,
+    # Runda 7 (HotA): „budynki jak naklejki na owalnych wysepkach śniegu
+    # z twardą krawędzią". Podstawki budowli rozpływają się teraz w tle
+    # (`wtopPodstawe` w `wsad_wczytaj.py`), a ciemny obrys — osiem
+    # przyciemnionych kopii sylwetki — zamieniał ten miękki brzeg z powrotem
+    # w ciemny owal. Bez obrysu; obiekty odcina od śniegu cień kontaktowy.
     # Runda 4 (HotA): „pasmo gór po lewej to ten sam ośnieżony szczyt wklejony
     # w siatkę rzędami — tapeta, a nie masyw". W pierwszym ekranie góry stoją
     # ręcznie, pięć różnych rysunków w różnej skali (`public/mapa/zima/gora-N`,
@@ -498,7 +502,8 @@ BARWY_TERENU = {
     # pomarańczowego piasku i zielonych kępek.
     # Runda 5: „droga to ledwo widoczna beżowa smuga" — ciemniejszy,
     # cieplejszy brąz ubitej ziemi, czytelny na bieli z daleka.
-    'sciezka': {'nasycenie': 0.6, 'barwa': (150, 120, 95), 'moc': 0.45, 'jasnosc': 0.74},
+    # Runda 7: jezdnia ma własną teksturę zmarzniętej ziemi — lekkie przygaszenie.
+    'sciezka': {'nasycenie': 0.85, 'barwa': (150, 128, 108), 'moc': 0.2, 'jasnosc': 0.92},
 }
 
 #: Jeziora są skute lodem — bez shadera wody (patrz `render_mapa.py`).
@@ -509,8 +514,9 @@ WODA_ANIMOWANA = False
 #: droga z brzegiem, las w zwartych masach, gęsty pierwszy ekran.
 #: Runda 3: bez efektu `lod` — jego rysy na turkusowym lodzie (`lod-2`) znów
 #: czytały się jak „błyskawice"; tekstura ma własne, delikatne pęknięcia.
-EFEKTY = ['zaspy', 'zaspy_zmienne', 'obwodka_drogi', 'relief_sniezny', 'bez_placow', 'lod_tafla']
-TEKSTURY = {'woda': ['lod-2', 'lod', 'snieg'], 'trawa': ['snieg-2', 'snieg'], 'las': ['snieg']}
+EFEKTY = ['zaspy', 'zaspy_zmienne', 'relief_sniezny', 'bez_placow', 'lod_tafla', 'droga_obrzeze']
+TEKSTURY = {'woda': ['lod-2', 'lod', 'snieg'], 'trawa': ['snieg-2', 'snieg'], 'las': ['snieg'],
+            'sciezka': ['droga-snieg', 'sciezka']}
 SKUP_LAS = True
 #: Runda 4 (HotA): „pole śniegu to jednolita płaska biała tekstura — bez
 #: uskoków, zmian odcienia i cieni". Rzeźba z silnika (`teren_efekty.rzezba`):
@@ -577,4 +583,18 @@ def TLO(rysunek):
 #: Runda 6: kręty trakt z koleinami (jak na Polanie) zamiast prostych
 #: odcinków od środka do środka pola — sieć dróg ma się wić między pagórem,
 #: skarpą i stawem, a nie iść po linijce.
-DROGA_KRETA = {'szerokosc': 0.5, 'zmiennosc': 0.2, 'meander': 0.12}
+DROGA_KRETA = {'szerokosc': 0.5, 'zmiennosc': 0.35, 'meander': 0.14}
+
+#: Runda 7 (HotA): „drogi to płaskie beżowe pasy o jednolitej szerokości, bez
+#: krawędzi, kolein i przejścia w śnieg". Zamiast ciemnej obwódki
+#: (`obwodka_drogi`) obrzeże jak na Polanie, ale zimowe: rozdeptane szare
+#: pobocze, suche źdźbła zamiast zielonej trawy, kamyki i wał odgarniętego
+#: śniegu z sinym cieniem; jezdnia z teksturą zmarzniętej ziemi z koleinami
+#: i łatami śniegu (`teren-droga-snieg`, PROMPTY-PLANSZE §20).
+DROGA_OBRZEZE = {
+    'pobocze': (120, 112, 108),
+    'barwy_trawy': [(176, 150, 96), (150, 122, 74), (196, 176, 128), (120, 100, 70)],
+    'trawa': 0.7,
+    'kamyki': 1.2,
+    'wal': 1.0,
+}

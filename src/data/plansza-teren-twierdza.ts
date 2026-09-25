@@ -403,7 +403,6 @@ export const USTAWIENIA = {
     }
   ],
   "znajdzki": 0.78,
-  "obrysObiektow": 0.45,
   "masywy": [
     {
       "plik": "gora-4",

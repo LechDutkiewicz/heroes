@@ -72,7 +72,19 @@ import {
   wstazka,
 } from '../visual/zestaw';
 import { ICON, buildIcons } from '../visual/icons';
-import { GORA, KAFEL, MARGINES, PANEL_W, PASEK_H, RAMA_MAPY_H, RAMA_MAPY_W, ZOOM_MAPY } from '../visual/uklad';
+import {
+  GORA,
+  KAFEL,
+  MARGINES,
+  PANEL_W,
+  PASEK_H,
+  RAMA_MAPY_H,
+  RAMA_MAPY_W,
+  SZER_STRAZNIKA_MAX,
+  WYS_BOHATERA,
+  WYS_STRAZNIKA,
+  ZOOM_MAPY,
+} from '../visual/uklad';
 import { dodajWode } from '../visual/woda';
 import { MGLA_GESTOSC, MalarzMgly } from '../visual/mgla';
 import { wersjonujZasoby } from '../visual/zasoby';
@@ -120,6 +132,19 @@ const PREDKOSC_PRZEWIJANIA = 560;
 const BOHATER_KLATKA = 96;
 const KIERUNEK_WIERSZ = { dol: 0, lewo: 1, prawo: 2, gora: 3 } as const;
 type Kierunek = keyof typeof KIERUNEK_WIERSZ;
+
+/**
+ * Widoczne piksele rysunku, w ułamkach wymiarów pliku (`podstawaRysunku`):
+ * pas podstawy w poziomie oraz szerokość i wysokość całej sylwetki.
+ */
+type PodstawaRysunku = { lewo: number; prawo: number; widocznaSzer?: number; widocznaWys?: number };
+
+/**
+ * Położenie rysunku bohatera względem środka jego pola, w pikselach świata
+ * (`sylwetkaBohatera`): skala arkusza, dół klatki (`kotwica`), stopy, czubek
+ * głowy i pół szerokości.
+ */
+type SylwetkaBohatera = { skala: number; kotwica: number; stopy: number; glowa: number; polSzer: number };
 
 
 /** Klucze, pod którymi stan przeżywa przejście do bitwy i z powrotem. */
@@ -207,7 +232,9 @@ export class AdventureScene extends Phaser.Scene {
   /** Kanały alfa tekstur — do marginesów i do trafiania kliknięciem. */
   private alfy = new Map<string, { w: number; h: number; dane: Uint8Array } | null>();
   /** Spód rysunku w poziomie, per tekstura — patrz `podstawaRysunku`. */
-  private podstawy = new Map<string, { lewo: number; prawo: number; widocznaSzer?: number }>();
+  private podstawy = new Map<string, PodstawaRysunku>();
+  /** Zmierzona raz sylwetka bohatera — patrz `sylwetkaBohatera`. */
+  private sylwetka?: SylwetkaBohatera;
 
   private trasaBiezaca: Krok[] | null = null;
   private zajety = false;
@@ -538,10 +565,10 @@ export class AdventureScene extends Phaser.Scene {
    * pikseli w najniższym pasie rysunku (ułamki szerokości pliku) oraz
    * szerokość całej sylwetki. Liczone z alfy i zapamiętane, jak margines.
    */
-  private podstawaRysunku(klucz: string): { lewo: number; prawo: number; widocznaSzer?: number } {
+  private podstawaRysunku(klucz: string): PodstawaRysunku {
     const znane = this.podstawy.get(klucz);
     if (znane) return znane;
-    let wynik: { lewo: number; prawo: number; widocznaSzer?: number } = { lewo: 0.2, prawo: 0.8 };
+    let wynik: PodstawaRysunku = { lewo: 0.2, prawo: 0.8 };
     const a = this.alfa(klucz);
     if (a) {
       let dol = -1;
@@ -567,7 +594,12 @@ export class AdventureScene extends Phaser.Scene {
               if (x < l) l = x;
               if (x > r) r = x;
             }
-        wynik = { lewo: l / a.w, prawo: (r + 1) / a.w, widocznaSzer: (maxX - minX + 1) / a.w };
+        wynik = {
+          lewo: l / a.w,
+          prawo: (r + 1) / a.w,
+          widocznaSzer: (maxX - minX + 1) / a.w,
+          widocznaWys: (dol - gora + 1) / a.h,
+        };
       }
     }
     this.podstawy.set(klucz, wynik);
@@ -1357,8 +1389,22 @@ export class AdventureScene extends Phaser.Scene {
     const znajdzki = this.znajdzki();
     if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: KAFEL * (znajdzki ? znajdzki * 1.1 : 0.78) };
     if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: KAFEL * (znajdzki ?? 0.72) };
-    if (o.rodzaj === 'potwor')
-      return { klucz: `p-${o.oddzialy?.[0].sprite ?? '00002'}`, wys: KAFEL * 1.05 };
+    if (o.rodzaj === 'potwor') {
+      // Strażnik ma mieć `WYS_STRAZNIKA` pola WIDOCZNEJ sylwetki, nie pliku:
+      // stworki mają różny przezroczysty margines, a przy jednej wysokości
+      // pliku część wychodziła na plamkę. Szerokie sylwetki przycina
+      // `SZER_STRAZNIKA_MAX`. Zwracana `wys` to nadal wysokość PLIKU, więc
+      // cień kontaktowy, spód rysunku i trafienia kliknięciem idą za nią same.
+      const klucz = `p-${o.oddzialy?.[0].sprite ?? '00002'}`;
+      const p = this.podstawaRysunku(klucz);
+      const zrodlo = this.textures.get(klucz).getSourceImage() as { width: number; height: number };
+      const proporcja = (zrodlo.width || 1) / (zrodlo.height || 1);
+      const wys = Math.min(
+        WYS_STRAZNIKA / (p.widocznaWys ?? 1),
+        SZER_STRAZNIKA_MAX / ((p.widocznaSzer ?? 1) * proporcja)
+      );
+      return { klucz, wys: KAFEL * wys };
+    }
     const ikona = SUROWIEC_INFO[o.surowiec ?? 'pokeball'].ikona;
     if (znajdzki && this.textures.exists(`m-stos-${ikona}`))
       return { klucz: `m-stos-${ikona}`, wys: KAFEL * znajdzki };
@@ -1469,7 +1515,13 @@ export class AdventureScene extends Phaser.Scene {
         });
       }
 
-      if (o.rodzaj === 'potwor') kont.add(this.chorag(C.foe));
+      if (o.rodzaj === 'potwor') {
+        // Chorągiewka NAD głową strażnika: stopka masztu wchodzi na czubek
+        // sylwetki o 0,1 pola, proporczyk jest cały nad nim. Liczone od
+        // widocznego spodu i wysokości sylwetki, więc idzie za skalą stworka.
+        const glowa = spod - (this.podstawaRysunku(klucz).widocznaWys ?? 1) * wys;
+        kont.add(this.chorag(C.foe).setY(glowa + KAFEL * 0.38));
+      }
       const doZajecia =
         o.rodzaj === 'kopalnia' ||
         o.rodzaj === 'zamek' ||
@@ -1606,23 +1658,85 @@ export class AdventureScene extends Phaser.Scene {
     this.bohaterObj = this.add.container(x, y).setDepth(this.stan.bohater.y + 0.8);
 
     // Ten sam miękki cień co pod obiektami (`cienKontaktowy`), tylko z ręki:
-    // rysunek bohatera to arkusz klatek, więc spodu nie da się zmierzyć z alfy
-    // całego pliku. Stopy są ok. 0,36 pola pod środkiem pola, sylwetka ma
-    // 0,4 pola szerokości; plama wychodzi w prawo-dół, od światła.
+    // rysunek bohatera to arkusz klatek, więc `cienKontaktowy` zmierzyłby cały
+    // plik zamiast jednej klatki. Wymiary idą za sylwetką (`sylwetkaBohatera`):
+    // plama 1,35 szerokości postaci, spłaszczona jak pod obiektami, wychodzi
+    // w prawo-dół, od światła.
+    const s = this.sylwetkaBohatera();
+    const szerC = s.polSzer * 2 * 1.35;
+    const wysC = szerC * 0.37;
     const cien = this.add
-      .image(KAFEL * 0.05, KAFEL * 0.375, CIEN_KONTAKTOWY)
-      .setDisplaySize(KAFEL * 0.54, KAFEL * 0.2)
+      .image(szerC * 0.09, s.stopy - wysC * 0.125, CIEN_KONTAKTOWY)
+      .setDisplaySize(szerC, wysC)
       .setAlpha(KRYCIE_CIENIA);
     this.bohaterObj.add(cien);
 
-    this.bohaterSprite = this.add.sprite(0, KAFEL * 0.4, 'bohater', 0).setOrigin(0.5, 1);
-    this.bohaterSprite.setScale((KAFEL * 1.15) / this.bohaterSprite.height);
+    // Punkt zaczepienia to dół KLATKI, a stopy stoją nad nim o przezroczysty
+    // margines — schodzimy o niego, żeby na `stopy` stały same stopy.
+    this.bohaterSprite = this.add.sprite(0, s.kotwica, 'bohater', 0).setOrigin(0.5, 1).setScale(s.skala);
     this.bohaterObj.add(this.bohaterSprite);
-    // Chorągiewka OBOK głowy, nie na niej. Domyślne położenie `chorag`
-    // wypadało dokładnie na wysokości twarzy sprite'a i wyglądało, jakby
-    // bohater miał wetknięty maszt w oko.
-    this.bohaterObj.add(this.chorag(C.ally).setPosition(KAFEL * 0.26, -KAFEL * 0.36));
+    // Chorągiewka OBOK głowy, nie na niej: maszt stoi tuż za prawym brzegiem
+    // sylwetki, proporczyk na wysokości czubka głowy, stopka przy uchu.
+    // Domyślne położenie `chorag` wypadało na twarzy i bohater wyglądał, jakby
+    // miał wetknięty maszt w oko; wyżej flaga wisiała w powietrzu.
+    this.bohaterObj.add(this.chorag(C.ally).setPosition(s.polSzer + KAFEL * 0.04, s.glowa + KAFEL * 0.5));
     this.swiat.add(this.bohaterObj);
+  }
+
+  /**
+   * Skala i położenie rysunku bohatera — z `WYS_BOHATERA` i alfy arkusza.
+   *
+   * Arkusz ma 16 klatek, każda z innym przezroczystym marginesem (idąc w dół
+   * postać jest niższa niż z boku, przy kroku podskakuje). Skalę bierzemy ze
+   * ŚREDNIEJ widocznej wysokości klatek — jedna skala dla wszystkich, bo inna
+   * na klatkę pompowałaby postać w rytm chodu. Stopy (`stopy`) leżą 0,4 pola
+   * pod środkiem pola, jak wcześniej, więc trasa, kamera i klik w pole
+   * bohatera (to pole, nie rysunek — bohater nie jest w `trafienia`) się nie
+   * zmieniają; rośnie tylko to, co nad nimi.
+   */
+  private sylwetkaBohatera(): SylwetkaBohatera {
+    if (this.sylwetka) return this.sylwetka;
+    const K = BOHATER_KLATKA;
+    let wysSuma = 0;
+    let klatek = 0;
+    let szerMax = 0;
+    let pustka = K;
+    const a = this.alfa('bohater');
+    if (a)
+      for (let ky = 0; ky + K <= a.h; ky += K)
+        for (let kx = 0; kx + K <= a.w; kx += K) {
+          let gora = K;
+          let dol = -1;
+          let lewo = K;
+          let prawo = -1;
+          for (let y = 0; y < K; y++)
+            for (let x = 0; x < K; x++)
+              if (a.dane[(ky + y) * a.w + kx + x] > 40) {
+                if (y < gora) gora = y;
+                if (y > dol) dol = y;
+                if (x < lewo) lewo = x;
+                if (x > prawo) prawo = x;
+              }
+          if (dol < 0) continue;
+          wysSuma += dol - gora + 1;
+          klatek++;
+          szerMax = Math.max(szerMax, prawo - lewo + 1);
+          pustka = Math.min(pustka, K - 1 - dol);
+        }
+    // Bez alfy (np. zepsuty plik) — proporcje dzisiejszego arkusza.
+    const wys = klatek ? wysSuma / klatek : K * 0.84;
+    const szer = klatek ? szerMax : K * 0.35;
+    if (!klatek) pustka = 0;
+    const skala = (WYS_BOHATERA * KAFEL) / wys;
+    const stopy = KAFEL * 0.4;
+    this.sylwetka = {
+      skala,
+      kotwica: stopy + pustka * skala,
+      stopy,
+      glowa: stopy - WYS_BOHATERA * KAFEL,
+      polSzer: (szer * skala) / 2,
+    };
+    return this.sylwetka;
   }
 
   /**
@@ -3468,7 +3582,8 @@ export class AdventureScene extends Phaser.Scene {
   private napisUlotny(tekst: string) {
     const { x, y } = this.naEkran(this.stan.bohater.x, this.stan.bohater.y);
     const t = this.add
-      .text(x, y - KAFEL * 0.7, tekst, {
+      // Nad głową bohatera, nie na niej — głowa idzie za `WYS_BOHATERA`.
+      .text(x, y + this.sylwetkaBohatera().glowa - KAFEL * 0.07, tekst, {
         // Lora pogrubiona, kremowa z brązowym konturem — ta sama para co
         // napisy na drewnie, tylko krojem tekstu: ulotny napis bywa zdaniem
         // („Porażka. Wracasz do zamku."), a zdanie kapitałami czyta się gorzej.

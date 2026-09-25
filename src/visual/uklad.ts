@@ -35,6 +35,25 @@ export const ZOOM_MAPY = 32 / 48;
 /** Bok pola mapy przygody na EKRANIE, w pikselach. */
 export const KAFEL_EKRAN = KAFEL * ZOOM_MAPY;
 
+/**
+ * Skala RUCHOMYCH postaci na mapie przygody — jedyne miejsce z tymi liczbami.
+ *
+ * Wysokości to WIDOCZNA sylwetka (od stóp do czubka głowy, bez przezroczystego
+ * marginesu pliku), w polach. Hierarchia jak w Heroes 3: bohater jest
+ * największą ruchomą rzeczą na mapie (~1,5 pola), strażnik ~1,2 pola — zawsze
+ * wyraźnie większy od kupki surowca (0,45–0,8 pola, `USTAWIENIA.znajdzki`
+ * planszy), a mniejszy od budowli. Wcześniej bohater miał 0,9 pola, czyli
+ * mniej niż kryształ przy drodze, a strażnik 1,0 — oba ginęły między
+ * znajdźkami. Znajdźek i budowli te liczby nie dotyczą.
+ */
+export const WYS_BOHATERA = 1.5;
+export const WYS_STRAZNIKA = 1.2;
+/**
+ * Szerokie stworki (węże, płaszczki) przy 1,2 pola wysokości rozlewałyby się
+ * na trzy pola i zasłaniały sąsiadów — ich sylwetkę ograniczamy szerokością.
+ */
+export const SZER_STRAZNIKA_MAX = 1.6;
+
 export const PANEL_W = 250;
 export const PASEK_H = 34;
 export const MARGINES = 8;

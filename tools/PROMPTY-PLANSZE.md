@@ -1790,3 +1790,26 @@ deep blue-grey shadowed faces, dark crevices, only small patches of dark green
 moss in the hollows. Grey scree, mossy boulders, two small dark fir trees and
 ferns along the soft irregular foot. Much wider than tall.
 ```
+
+## 20. Twierdza — zimowy trakt z koleinami (runda 7, wzorzec HotA)
+
+Werdykt rundy 6: „drogi to płaskie beżowe pasy o jednolitej szerokości, bez
+krawędzi, kolein i przejścia w śnieg — narysowane na wierzchu obrazka".
+Trakt dostaje własną teksturę ubitej, zmarzniętej ziemi przyprószonej śniegiem
+(`TEKSTURY = {'sciezka': ['droga-snieg', …]}` w `tools/mapy/twierdza.py`);
+kręty kształt, koleiny i śnieżne obrzeże maluje `teren_efekty`.
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `teren-droga-snieg.png` | `public/mapa/teren/` (kopiowany ręcznie, zmniejszony do 768) | tekstura 768 |
+
+<!-- plik: teren-droga-snieg.png | styl: teren -->
+```
+The ground is a frozen, well-trodden winter dirt road surface seen from above:
+packed cold dark-brown earth mixed with grey slush, fine grey gravel and many
+small pebbles, a few flat grey stones pressed into the frozen soil, small
+patches of dirty trampled snow and thin white frost in the cracks, tiny hoof
+and boot prints. Cool muted palette: umber brown, slate grey, touches of
+white. The surface fills the WHOLE picture evenly with no direction, no edges,
+no verge, no grass, no clean white snow areas larger than a pebble cluster.
+```

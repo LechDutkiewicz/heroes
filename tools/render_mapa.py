@@ -74,6 +74,9 @@ TRZESAWISKO: dict = {}
 #: Kręta droga (`DROGA_KRETA` z konfiguracji, patrz `teren_efekty.droga_kreta`)
 #: i rzeźba terenu (`RZEZBA`, `teren_efekty.rzezba`). Brak wpisu — jak dotąd.
 DROGA_KRETA = None
+#: Barwy obrzeża drogi (`DROGA_OBRZEZE` z konfiguracji, argumenty
+#: `teren_efekty.droga_obrzeze`); brak = jak na Polanie.
+DROGA_OBRZEZE: dict = {}
 RZEZBA = None
 #: Parametry `teren_efekty.brzeg_wody` planszy (`BRZEG_WODY`). Brak — domyślne.
 BRZEG_WODY: dict = {}
@@ -131,7 +134,7 @@ def ustaw(mapa_id: str):
     i wymiary z globali — tak było, gdy plansza była jedna, i tak zostaje,
     bo każda z nich jest wołana raz na planszę."""
     global KATALOG, ZRODLO, RYSUNEK, WYS, SZER, W, H, BARWY, EFEKTY, TEKSTURY, WTAPIANIE, NAKLEJKI, TRZESAWISKO, MOSTY
-    global DROGA_KRETA, RZEZBA, BRZEG_WODY
+    global DROGA_KRETA, RZEZBA, BRZEG_WODY, DROGA_OBRZEZE
     KATALOG = katalog_tla(mapa_id)
     k = konfiguracja(mapa_id)
     BARWY = getattr(k, 'BARWY_TERENU', {})
@@ -143,6 +146,7 @@ def ustaw(mapa_id: str):
     DROGA_KRETA = getattr(k, 'DROGA_KRETA', None)
     RZEZBA = getattr(k, 'RZEZBA', None)
     BRZEG_WODY = getattr(k, 'BRZEG_WODY', {})
+    DROGA_OBRZEZE = getattr(k, 'DROGA_OBRZEZE', {})
     ZRODLO = plik_ts(mapa_id)
     RYSUNEK = wczytaj_rysunek()
     # Mosty (`MOSTY` planszy): pola pod mostem są w grze drogą, ale w tle
@@ -354,7 +358,9 @@ def klatka() -> tuple[Image.Image, Image.Image]:
     # Polana, runda 8: malowane obrzeże traktu (kamyki, trawa, wydeptane
     # pobocze) — tylko plansze z `droga_obrzeze` w `EFEKTY`.
     if 'droga_obrzeze' in EFEKTY:
-        plansza = teren_efekty.droga_obrzeze(plansza, droga, KAFEL, ZIARNO + 800).convert('RGBA')
+        # Twierdza, runda 7: barwy pobocza i traw per plansza (`DROGA_OBRZEZE`).
+        plansza = teren_efekty.droga_obrzeze(plansza, droga, KAFEL, ZIARNO + 800,
+                                             **DROGA_OBRZEZE).convert('RGBA')
     # Naklejki terenu (trzcina, grążele, zaśnieżone głazy…) z `public/mapa/tlo/`
     # — po drogach, żeby kępa trzciny nie znikała pod groblą, ale pod
     # sprite'ami sceny. Bez plików nic się nie dzieje (patrz `naklejki`).

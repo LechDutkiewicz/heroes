@@ -697,6 +697,70 @@ ZESTAWY = {
 WARIANTY = [2, 3, 4]
 
 
+#: Budowle zestawu, których śnieżna „podstawka" ma się rozpłynąć w tle
+#: (`wtopPodstawe`). Twierdza, runda 7 (HotA): „budynki jak naklejki — każdy
+#: na owalnej wysepce śniegu z twardą krawędzią". Tylko zestaw 'zima'.
+WTOP_PODSTAWY = {
+    'zima': {
+        'wiatrak', 'sad', 'kopalnia-odlamek', 'kopalnia-pokeball', 'kamienna-wieza', 'chatka',
+        'oboz-treningowy', 'ranczo', 'gniazdo', 'chata-jasnowidza', 'wieza-obserwacyjna',
+        'drzewo-wiedzy', 'zamek-las', 'zamek-ogien',
+        'stos-jagody', 'stos-pokeball', 'stos-odlamki', 'stos-kamien-ewolucji', 'ognisko',
+    },
+}
+
+#: To samo dla naklejek tła, które mają śnieżny płat pod spodem (tylko Twierdza
+#: ich używa — `NAKLEJKI` w `tools/mapy/twierdza.py`).
+WTOP_NAKLEJKI = {
+    'trawy-snieg', 'glaz-sniezny-1', 'glaz-sniezny-2', 'glaz-sniezny-3',
+    'swierczek-sniezny-1', 'swierczek-sniezny-2', 'skalki-snieg',
+}
+
+
+def wtopPodstawe(im: Image.Image, ziarno: int = 0) -> Image.Image:
+    """Rozpuszcza śnieżną podstawkę pod budowlą w przezroczystość.
+
+    Model rysuje każdą budowlę na owalnym płacie śniegu z twardym, cieniowanym
+    brzegiem — na śnieżnym tle planszy to wysepka, a nie budynek w terenie.
+    W dolnej części sylwetki jasne, mało nasycone piksele (i sinawy brzeg
+    płata) to śnieg; ściany, drewno i rzeczy przy budowli to „ciało". Śnieg
+    gaśnie z odległością od ciała (z szumem — brzeg zaspy jest nierówny)
+    i chłodnieje ku bieli tła, więc przy ścianach zostają zaspy, a owal znika.
+    """
+    from scipy import ndimage as ndi
+    t = np.asarray(im.convert('RGBA')).astype(np.float32)
+    rgb, a = t[:, :, :3], t[:, :, 3] / 255.0
+    H, W = a.shape
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    lum = rgb.mean(-1)
+    sat = (rgb.max(-1) - rgb.min(-1)) / np.maximum(rgb.max(-1), 1)
+    wid = a > 0.05
+    wiersze = np.where(wid.any(1))[0]
+    if len(wiersze) == 0:
+        return im
+    y0, y1 = wiersze[0], wiersze[-1]
+    dolna = (np.arange(H)[:, None] >= y0 + 0.68 * (y1 - y0)) & np.ones((1, W), bool)
+    dout = ndi.distance_transform_edt(wid)
+    snieg = wid & dolna & (((lum > 190) & (sat < 0.4))
+                           | ((dout < H * 0.05) & (sat < 0.45) & (lum > 90))
+                           | ((dout < H * 0.035) & (b > r + 6) & (lum > 80) & (sat < 0.45)))
+    cialo = ndi.binary_opening(wid & ~snieg & (a > 0.5), iterations=max(2, round(H * 0.012)))
+    lab, n = ndi.label(cialo)
+    if n:
+        pola = ndi.sum(cialo, lab, range(1, n + 1))
+        cialo = np.isin(lab, 1 + np.where(pola > H * W * 0.002)[0])
+    cialo = ndi.binary_fill_holes(cialo | (wid & ~dolna))
+    d = ndi.distance_transform_edt(~cialo)
+    szum = ndi.gaussian_filter(np.random.default_rng(ziarno).standard_normal((H, W)), H * 0.03)
+    szum /= np.abs(szum).max() + 1e-6
+    x = np.clip((d + szum * H * 0.025 - H * 0.008) / (H * 0.055), 0, 1)
+    t[:, :, 3] = np.where(cialo, a, a * (1 - x * x * (3 - 2 * x))) * 255
+    zimny = np.array([226, 234, 246], np.float32) * (lum[..., None] / 215.0)
+    w = np.where(cialo, 0.0, 0.7 * np.clip(x * 2.5, 0, 1))[..., None]
+    t[:, :, :3] = rgb * (1 - w) + zimny * w
+    return Image.fromarray(t.clip(0, 255).astype(np.uint8), 'RGBA')
+
+
 def warianty(nazwa: str):
     """Ścieżki wariantów danego terenu, w kolejności numerów, tylko istniejące."""
     for n in WARIANTY:
@@ -739,6 +803,8 @@ def mapa():
         if not zrodlo.exists():
             continue
         im = dopasuj(wczytaj(nazwa), wys)
+        if nazwa in WTOP_NAKLEJKI:
+            im = wtopPodstawe(im)
         im.save(TLO / f'{nazwa}.png')
         print(f'  tlo/{nazwa}.png  {im.width} × {im.height}')
 
@@ -752,6 +818,8 @@ def mapa():
             if not zrodlo.exists():
                 continue
             im = dopasuj(wczytaj(f'{zestaw}-{nazwa}'), wys)
+            if nazwa in WTOP_PODSTAWY.get(zestaw, ()):
+                im = wtopPodstawe(im)
             ostrzezOTle(f'{zestaw}-{nazwa}', im)
             im.save(MAPA / zestaw / f'{nazwa}.png')
             print(f'  {zestaw}/{nazwa}.png  {im.width} × {im.height}')

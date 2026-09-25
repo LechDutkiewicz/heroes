@@ -660,7 +660,8 @@ def brzeg_wody(plansza: Image.Image, maska_wody: Image.Image, kafel: int, ziarno
 
 
 def droga_obrzeze(plansza: Image.Image, maska_drogi: Image.Image, kafel: int, ziarno: int,
-                  kamyki: float = 1.0, trawa: float = 1.0) -> Image.Image:
+                  kamyki: float = 1.0, trawa: float = 1.0, pobocze=(92, 78, 40),
+                  barwy_trawy=None, wal: float = 0.0) -> Image.Image:
     """Malowane obrzeże traktu: przygaszony skraj jezdni, wydeptana trawa
     z ciemnym konturem, kamyki i kępki trawy wchodzące na drogę (Polana,
     runda 8).
@@ -689,7 +690,16 @@ def droga_obrzeze(plansza: Image.Image, maska_drogi: Image.Image, kafel: int, zi
     pob = gaussian_filter(((~droga) & (d_out <= szer)).astype(np.float32), 1.2)
     pob = pob * np.clip(1 - d_out / (szer + 1e-3), 0, 1) ** 0.6
     P = pob[..., None]
-    tab = tab * (1 - P * 0.38) + np.array([92, 78, 40]) * P * 0.16
+    tab = tab * (1 - P * 0.38) + np.array(pobocze) * P * 0.16
+    # Twierdza, runda 7: za poboczem wał odgarniętego śniegu — jaśniejszy
+    # grzbiet z sinym cieniem od strony drogi (`wal` > 0; domyślnie brak).
+    if wal > 0:
+        waly = np.clip(1 - np.abs(d_out - szer * 2.2) / (szer * 1.4 + 1e-3), 0, 1) * (~droga)
+        waly = gaussian_filter(waly.astype(np.float32), 1.5)[..., None] * wal
+        tab = tab * (1 - waly * 0.25) + np.array([250, 252, 255]) * waly * 0.25
+        cien = np.clip(1 - np.abs(d_out - szer * 1.1) / (szer * 0.7 + 1e-3), 0, 1) * (~droga)
+        cien = gaussian_filter(cien.astype(np.float32), 1.2)[..., None] * wal
+        tab = tab * (1 - cien * 0.16) + np.array([110, 125, 160]) * cien * 0.1
     # Ciemny kontur tuż przy krawędzi — to on odcina drogę od łąki.
     kont = gaussian_filter(((~droga) & (d_out <= max(1.5, kafel * 0.035))).astype(np.float32), 0.7)[..., None]
     tab = tab * (1 - kont * 0.45)
@@ -714,9 +724,13 @@ def droga_obrzeze(plansza: Image.Image, maska_drogi: Image.Image, kafel: int, zi
                 kat = np.arctan2(vy, vx) + rng.normal(0, 0.55) - 0.35
                 L = kafel * rng.uniform(0.08, 0.16)
                 x1, y1 = x + np.cos(kat) * L, y + np.sin(kat) * L - L * 0.35
-                barwa = (int(rng.uniform(48, 80)), int(rng.uniform(100, 140)), int(rng.uniform(24, 44)), 235) \
-                    if rng.random() < 0.55 else \
-                    (int(rng.uniform(120, 160)), int(rng.uniform(170, 205)), int(rng.uniform(50, 80)), 235)
+                if barwy_trawy is not None:
+                    c = barwy_trawy[int(rng.integers(len(barwy_trawy)))]
+                    barwa = tuple(int(v * rng.uniform(0.85, 1.1)) for v in c) + (235,)
+                else:
+                    barwa = (int(rng.uniform(48, 80)), int(rng.uniform(100, 140)), int(rng.uniform(24, 44)), 235) \
+                        if rng.random() < 0.55 else \
+                        (int(rng.uniform(120, 160)), int(rng.uniform(170, 205)), int(rng.uniform(50, 80)), 235)
                 d.line([(x, y), (x1, y1)], fill=barwa, width=2 if rng.random() < 0.4 else 1)
 
     # Kamyki: na skraju jezdni i tuż za nim.
