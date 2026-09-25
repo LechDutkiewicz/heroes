@@ -86,48 +86,64 @@
    ]
   },
   {
-   "name": "Plansze misji",
+   "name": "Plansza: Polana (misja 1)",
    "status": "build",
    "bar": "Mapy kampanii HoMM2 (mapa przygody), grywalne od początku do końca",
-   "note": "Cztery misje na trzech nowych planszach i jednej istniejącej.",
+   "note": "Mapa 36 × 36: rzeka z dwoma pilnowanymi brodami, zamek gracza na południowym zachodzie, Stary Fort na wschodzie. Sondy i symulacja przechodzą.",
    "rounds": [
     {
      "win": false,
-     "gap": "Polana: prawie cała zielona, jeden rodzaj terenu i garść rozrzuconych drobiazgów. Brak kopalń i budowli do zajęcia w kadrze, a gęste drzewa wyglądają jak tapeta, więc nie widać, gdzie da się przejść.",
+     "gap": "prawie cała zielona, jeden rodzaj terenu i garść rozrzuconych drobiazgów. Brak kopalń i budowli do zajęcia w kadrze, a gęste drzewa wyglądają jak tapeta, więc nie widać, gdzie da się przejść.",
      "blind": "tools/blind/mapa-polana-r1.png",
      "note": "Trzy plansze w ślepym porównaniu z prawdziwą mapą przygody HoMM2: wszystkie trzy przegrały. Sondy i symulacja przechodzą, misje 1, 3 i 4 da się wygrać.",
-     "label": "Runda 1 · Polana"
+     "label": "Runda 1"
     },
     {
      "win": false,
-     "gap": "Bagna: bagno, droga i ziemia mają ten sam mętny oliwkowo-brązowy kolor, więc nie widać, gdzie da się iść, a co spowalnia. Obiekty są wciśnięte w krawędzie kadru.",
-     "blind": "tools/blind/mapa-bagna-r1.png",
-     "label": "Runda 1 · Bagna"
-    },
-    {
-     "win": false,
-     "gap": "Twierdza: śnieg to bezkształtna blada mgiełka bez zasp i ośnieżonych drzew, na śniegu i trawie rosną te same zielone krzaki, a dwie trzecie ekranu jest puste.",
-     "blind": "tools/blind/mapa-twierdza-r1.png",
-     "label": "Runda 1 · Twierdza"
-    },
-    {
-     "win": false,
-     "gap": "Polana r2: wciąż jednolity dywan trawy i lasu, bez rzeki i pasma gór w kadrze. Obiekty stoją na miękkich placach ziemi i wyglądają na doklejone.",
+     "gap": "wciąż jednolity dywan trawy i lasu, bez rzeki i pasma gór w kadrze. Obiekty stoją na miękkich placach ziemi i wyglądają na doklejone.",
      "blind": "tools/blind/mapa-polana-r2.png",
      "note": "Runda 2, porównania już pełnym kadrem. Wszystkie trzy mapy przegrywają. Wspólna przyczyna: ten sam zestaw obiektów na tych samych okrągłych placach piasku i brak rzeźby terenu.",
-     "label": "Runda 2 · Polana"
+     "label": "Runda 2"
+    }
+   ]
+  },
+  {
+   "name": "Plansza: Bagna (misja 3)",
+   "status": "build",
+   "bar": "Mapy kampanii HoMM2 (mapa przygody), grywalne od początku do końca",
+   "note": "Mapa 54 × 54: trzęsawisko z groblami, Księżycowy Kamień na wyspie pod strażą wodza. Sondy i symulacja przechodzą.",
+   "rounds": [
+    {
+     "win": false,
+     "gap": "bagno, droga i ziemia mają ten sam mętny oliwkowo-brązowy kolor, więc nie widać, gdzie da się iść, a co spowalnia. Obiekty są wciśnięte w krawędzie kadru.",
+     "blind": "tools/blind/mapa-bagna-r1.png",
+     "label": "Runda 1"
     },
     {
      "win": false,
-     "gap": "Bagna r2: ciemna oliwkowa ziemia z trzciną, bez stojącej wody i błota. Wygląda jak ciemny las, a nie trzęsawisko.",
+     "gap": "ciemna oliwkowa ziemia z trzciną, bez stojącej wody i błota. Wygląda jak ciemny las, a nie trzęsawisko.",
      "blind": "tools/blind/mapa-bagna-r2.png",
-     "label": "Runda 2 · Bagna"
+     "label": "Runda 2"
+    }
+   ]
+  },
+  {
+   "name": "Plansza: Twierdza (misja 4)",
+   "status": "build",
+   "bar": "Mapy kampanii HoMM2 (mapa przygody), grywalne od początku do końca",
+   "note": "Mapa 72 × 72: śnieg i tundra, dwie twierdze wroga w osobnych dolinach, natarcie wroga. Sondy i symulacja przechodzą.",
+   "rounds": [
+    {
+     "win": false,
+     "gap": "śnieg to bezkształtna blada mgiełka bez zasp i ośnieżonych drzew, na śniegu i trawie rosną te same zielone krzaki, a dwie trzecie ekranu jest puste.",
+     "blind": "tools/blind/mapa-twierdza-r1.png",
+     "label": "Runda 1"
     },
     {
      "win": false,
-     "gap": "Twierdza r2: śnieg to białe plamy na zielonej trawie, obok zasp rosną liściaste drzewa i sad, nie ma ośnieżonych gór ani lodu.",
+     "gap": "śnieg to białe plamy na zielonej trawie, obok zasp rosną liściaste drzewa i sad, nie ma ośnieżonych gór ani lodu.",
      "blind": "tools/blind/mapa-twierdza-r2.png",
-     "label": "Runda 2 · Twierdza"
+     "label": "Runda 2"
     }
    ]
   },
