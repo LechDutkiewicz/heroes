@@ -37,9 +37,13 @@ alfa, a Gemini maluje kryjące tło, które trzeba potem wycinać z magenty
 mapy (styl `obiekt`) idą więc do OpenAI z przezroczystym tłem, a akapit
 o magencie znika z promptu; reszta stylów dostaje tło kryjące.
 
-Klucz OpenAI: zmienna `OPENAI_API_KEY` w ustawieniach środowiska, a host
-`api.openai.com` musi być dopuszczony w dostępie do sieci. Model zmienia
-`OPENAI_IMAGE_MODEL` (domyślnie `gpt-image-1`).
+Klucz OpenAI najlepiej trzymać jako „API credential" środowiska na host
+`api.openai.com` (nagłówek `Authorization`, przedrostek `Bearer`): proxy
+dokleja go samo, klucz nie trafia do sesji, a host jest wtedy osiągalny bez
+zmiany dostępu do sieci. Skryptowi wystarczy wtedy zmienna
+`OPENAI_API_KEY=proxy` — nie wysyła własnego nagłówka. Można też podać
+prawdziwy klucz w `OPENAI_API_KEY`. Model zmienia `OPENAI_IMAGE_MODEL`
+(domyślnie `gpt-image-1`).
 
 Klucz Gemini
 ------------
@@ -234,18 +238,28 @@ def kluczOpenAI() -> str:
     k = os.environ.get('OPENAI_API_KEY')
     if not k:
         sys.exit(
-            'Brak OPENAI_API_KEY. W sesji w chmurze dodaj zmienną w ustawieniach\n'
-            'środowiska (i host api.openai.com w dostępie do sieci), potem otwórz\n'
-            'NOWĄ sesję — zmienne są czytane przy starcie.'
+            'Brak OPENAI_API_KEY. Dodaj w ustawieniach środowiska „API credential"\n'
+            'na host api.openai.com i zmienną OPENAI_API_KEY=proxy (albo prawdziwy\n'
+            'klucz w tej zmiennej), potem otwórz NOWĄ sesję.'
         )
     return k
+
+
+def naglowkiOpenAI() -> dict[str, str]:
+    """Przy `OPENAI_API_KEY=proxy` klucz dokleja proxy środowiska — własny
+    nagłówek z napisem „proxy" by go tylko zasłonił."""
+    k = kluczOpenAI()
+    naglowki = {'Content-Type': 'application/json'}
+    if k != 'proxy':
+        naglowki['Authorization'] = f'Bearer {k}'
+    return naglowki
 
 
 def zapytajOpenAI(sciezka: str, dane: dict | None = None) -> dict:
     req = urllib.request.Request(
         f'{API_OPENAI}/{sciezka}',
         data=json.dumps(dane).encode() if dane else None,
-        headers={'Authorization': f'Bearer {kluczOpenAI()}', 'Content-Type': 'application/json'},
+        headers=naglowkiOpenAI(),
         method='POST' if dane else 'GET',
     )
     try:
