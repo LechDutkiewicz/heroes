@@ -150,6 +150,11 @@ def popraw_teren(g, mapa):
         prawy = 20 - (1 if y == 56 and rng.random() < 0.5 else 0)
         for x in range(lewy, prawy + 1):
             mapa[y][x] = '~'
+    # Runda 3 (wzorzec HotA): tafla na trzecią część kadru była jedną płaską
+    # plamą. Wysepka z kilkoma ośnieżonymi świerkami (bez kształtu 3 × 2 —
+    # scena stawia wtedy pojedyncze drzewa, a nie wielką kępę lasu).
+    for x, y in [(15, 57), (16, 57), (17, 57), (16, 58)]:
+        mapa[y][x] = 'T'
     # Skalny próg nad zamkiem łączy staw z pasmem gór na zachodzie.
     for y, (od, do) in zip(range(56, 60), [(5, 8), (5, 9), (6, 9), (6, 8)]):
         for x in range(od, do + 1):
@@ -201,7 +206,10 @@ def rozstaw(g):
     g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'odlamek'), kadr, None, (3, 14))
     g.dodaj_najpierw('dom', lambda p: ('budynek', 'ognisko'), kadr, None, (2, 16))
     g.dodaj_najpierw('dom', lambda p: ('budynek', 'chatka'), kadr, None, (2, 16))
-    for _ in range(3):
+    # Runda 3 (wzorzec HotA): „dwie trzecie ekranu puste" — zimowy wiatrak
+    # i dwie kupki więcej w widoku z dnia pierwszego.
+    g.dodaj_najpierw('dom', lambda p: ('budynek', 'wiatrak'), kadr, None, (2, 16))
+    for _ in range(5):
         g.dodaj_najpierw('dom', lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kadr, None, (2, 12))
     g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), kadr, None, (2, 12))
     g.strzez(g.dodaj_najpierw('dom', lambda p: ('artefakt', None), dalej, None, (5, 14)), 'slaby')
@@ -312,6 +320,9 @@ USTAWIENIA = {
     # I odwrotnie: gracz wie, gdzie stoją obie twierdze — misja mówi „na
     # północy", a mapa to pokazuje. Zagadką jest droga, nie szukanie celu.
     'odkryte': [{'x': 58, 'y': 8, 'promien': 4}, {'x': 13, 'y': 10, 'promien': 4}],
+    # Runda 3 (wzorzec HotA): znajdźki na pół pola z cieniem i rysunkiem stosu
+    # leżącego w śniegu (`public/mapa/zima/stos-*.png`) zamiast ikon z paska.
+    'znajdzki': 0.5,
 }
 
 #: Zima: łąka wypłowiała i chłodna, jeziora skute lodem, bór ciemny i sinawy.
@@ -364,4 +375,10 @@ NAKLEJKI = [
     # stoi gdzieniegdzie nagi, martwy pień — mniej pustych połaci bieli.
     (['zaspa-1', 'zaspa-2', 'glaz-sniezny-2'], '.', 0.07),
     (['martwe-drzewo-1'], 's', 0.012),
+    # Runda 3 (wzorzec HotA): „śnieg to białe plamy, dwie trzecie ekranu
+    # puste". W HotA między obiektami stoją pojedyncze ośnieżone świerczki
+    # i kępki — gęściej kry na lodzie i młode świerki na śniegu i darni.
+    (['kra-lodu-1', 'kra-lodu-2'], '~', 0.09),
+    (['swierczek-sniezny-1', 'swierczek-sniezny-2'], 's', 0.05),
+    (['swierczek-sniezny-1'], '.', 0.03),
 ]

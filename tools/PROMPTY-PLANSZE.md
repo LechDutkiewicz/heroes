@@ -234,15 +234,19 @@ ends showing dark green, round snow cap on top. Small.
 
 <!-- plik: zima-drzewo.png -->
 ```
-A bare deciduous tree in deep winter: no leaves at all, a thick grey-brown
-trunk and a wide crown of bare twisting branches, each branch outlined with a
-thin line of snow, a few dried brown leaves still clinging. Wide crown.
+A broad old fir tree heavily laden with snow, wider and fuller than a pine:
+thick drooping tiers of dark blue-green branches, each tier carrying a heavy
+white shelf of snow, a pointed snowy top, cool blue shadows under the snow
+layers, a short brown trunk at the bottom with a small snow mound. No leafy
+or bare deciduous branches. Wide conical crown.
 ```
 
 <!-- plik: zima-drzewo-b.png -->
 ```
-A bare winter birch with a white-and-black bark trunk, thin drooping bare
-branches dusted with snow and hoarfrost, delicate and silvery. Wide crown.
+A pair of snow-laden spruces growing close together, one tall and one
+shorter in front of it, dark blue-green needles showing only under thick
+white snow caps on every branch tier, pointed snowy tops, a shared small
+snow mound at their base. No leafy or bare deciduous trees. Wide crown.
 ```
 
 <!-- plik: zima-krzak.png -->
@@ -314,14 +318,26 @@ than tall.
 
 <!-- plik: zima-kepa-skaly-3.png -->
 ```
-A cluster of big snow-capped boulders and a small crag, heavy snow pillows,
-scattered small rocks around, wider than tall.
+A snowy mountain massif piece like the mountains on a classic fantasy
+strategy adventure map: a tight group of four or five jagged rocky peaks of
+warm tan-brown and grey stone with sharp crags and deep vertical cracks,
+thick white snow on every summit, crest and upper ledge, snow streaming down
+the gullies between the rock ribs, sunlit faces on the right, cool blue-grey
+shadowed faces on the left, a skirt of small snow-capped scree at the foot.
+Reads as an impassable mountain range segment. No trees, no grass, no moss,
+no flat table tops, no cake-like snow pillows. Wider than tall, fills the
+frame.
 ```
 
 <!-- plik: zima-kepa-skaly-4.png -->
 ```
-A low broad rocky outcrop half buried in snow, flat snowy tops, dark rock
-visible on the steep sides, wider than tall.
+A long jagged mountain ridge segment: a row of three sharp rocky spires of
+brown-grey stone of different heights rising from a craggy shoulder, every
+ledge, crest and summit covered in white snow, snow-filled couloirs between
+the spires, a few icicles in the crevices, sunlit faces on the right, cool
+blue-grey shadowed faces on the left, snow-capped boulders at the foot.
+Reads as an impassable mountain range segment. No trees, no grass, no moss,
+no flat plateau, no cake-like snow pillows. Wider than tall, fills the frame.
 ```
 
 <!-- plik: zima-kopalnia-kamien.png -->
@@ -844,4 +860,151 @@ A low pile of four smooth rounded magic stones glowing violet and lilac with
 a faint swirl pattern inside, lying heaped together, one small stone rolled
 beside them. Painted soft shading and highlights. Much wider than tall, a low
 compact pile that reads as "magic stones to pick up" at 30 pixels tall.
+```
+
+## 10. Twierdza — stosy na śniegu i świerczki (runda 3, wzorzec HoMM3 HotA)
+
+Werdykt: „śnieg to białe plamy, dwie trzecie ekranu jest puste". HotA ma
+na śniegu gęsto: kępy ośnieżonych świerków, kupki surowców z cieniem, skały
+z czapami śniegu. Stosy idą do zestawu `zima` (`USTAWIENIA.znajdzki`),
+świerczki to naklejki tła (`NAKLEJKI` w `tools/mapy/twierdza.py`) — nie
+blokują ruchu, a wypełniają puste połacie bieli między obiektami.
+
+Tego samego dnia góry zestawu (`zima-kepa-skaly-3`, `-4`, §3) straciły
+płaskie kremowe blaty: w kadrze czytały się jak „tort", a nie jak pasmo gór.
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `zima-stos-pokeball.png` … `zima-stos-kamien-ewolucji.png` | `public/mapa/zima/stos-*.png` | 72 px |
+| `swierczek-sniezny-1.png`, `-2` | `public/mapa/tlo/` | 46–50 px |
+
+Też w tej rundzie: `zima-drzewo`, `zima-drzewo-b` (§3) z nagiego drzewa
+i oszronionej brzozy na ośnieżone jodły — werdykt: „obok zasp rosną
+liściaste drzewa". Surowe `zima-kepa-skaly-3`, `-4` z API wyszły
+pomarańczowe; we wsadzie zdjęto im ok. 45% nasycenia (szarobrązowa skała
+jak w HotA), przy ponownym generowaniu trzeba to powtórzić.
+
+<!-- plik: zima-stos-pokeball.png -->
+```
+A low heap of five red-and-white capture balls (red top half, white bottom
+half, dark band with a small round white button) piled in and around a small
+open wooden crate half buried in snow, a little snow on the crate edges and
+on top of the balls, one ball rolled out in front. Painted with soft shading
+and glossy highlights, not a flat icon. Much wider than tall, a low compact
+pile that reads as "a pile of balls to pick up" at 30 pixels tall.
+```
+
+<!-- plik: zima-stos-jagody.png -->
+```
+A low heap of glossy dark red frozen berries spilling out of a small round
+wicker basket tipped on its side, frost crystals and a dusting of snow on the
+berries and the basket rim, no green leaves. Painted soft shading and bright
+highlights. Much wider than tall, a low compact pile that reads as "berries
+to pick up" at 30 pixels tall.
+```
+
+<!-- plik: zima-stos-odlamki.png -->
+```
+A low heap of pale-blue crystal shards of different sizes jutting out of a
+small mound of snow at angles, crisp facets with bright white highlights and
+a soft cyan inner glow, a few grey pebbles and snow crumbs among them. Much
+wider than tall, a low compact pile that reads as "crystal shards to pick up"
+at 30 pixels tall.
+```
+
+<!-- plik: zima-stos-kamien-ewolucji.png -->
+```
+A low pile of four smooth rounded magic stones glowing violet and lilac with
+a faint swirl pattern inside, lying heaped together in a shallow hollow of
+snow, a little snow on their tops, one small stone rolled beside them.
+Painted soft shading and highlights. Much wider than tall, a low compact pile
+that reads as "magic stones to pick up" at 30 pixels tall.
+```
+
+<!-- plik: swierczek-sniezny-1.png -->
+```
+A small young spruce tree heavily laden with snow: dark blue-green needles
+peeking out under thick white snow caps on every tier of branches, a pointed
+snowy top, a short brown trunk sunk into a small snow mound. No grass, no
+leaves. Taller than wide.
+```
+
+<!-- plik: swierczek-sniezny-2.png -->
+```
+Two small snow-laden spruce saplings of different heights growing side by
+side from one small snow mound, dark blue-green needles under thick white
+snow on each branch tier, pointed snowy tops. No grass, no leaves. Slightly
+taller than wide.
+```
+
+
+## 11. Polana — łąka z przejściami terenu (runda 6, wzorzec HoMM3 HotA)
+
+Werdykt rundy 5: „środek i lewy dół mapy to płaska, jednolita zieleń
+z powtarzalnymi okrągłymi kępkami krzaków: brak przejść terenu (ziemi, skał,
+wzniesień) i drobnych obiektów". Krzak sceny (`m-krzak`, `m-krzak-2`) był
+jednym rysunkiem w dwóch kopiach — okrągła kula z czerwonymi jagodami,
+powtórzona na co trzecim polu łąki. Polana dostaje w zestawie dwa RÓŻNE,
+nieregularne krzewy, teksturę ubitej ziemi pod skarpami gór i przy brzegu
+(`TEKSTURY = {'jalowa': 'ziemia'}` — spękana szara jałowa ziemia nie pasuje
+do łąki) i trzy naklejki drobiazgów łąki.
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `polana-krzak.png`, `polana-krzak-2.png` | `public/mapa/polana/krzak*.png` | 84 px |
+| `teren-ziemia.png` (+ `teren-ziemia2.png`) | `public/mapa/teren/teren-ziemia*.png` | 768 px |
+| `pniak-lakowy.png`, `glazy-lakowe.png`, `kepa-kwiatow.png` | `public/mapa/tlo/*.png` | 30–36 px |
+
+<!-- plik: polana-krzak.png -->
+```
+A small irregular wild meadow shrub seen from above at a slight angle: a loose
+cluster of long arching leafy stems of different lengths, light fresh green
+leaves with a few white and pale yellow blossoms, one side taller than the
+other so the silhouette is uneven and NOT round. No berries. Painted soft
+shading, light from the top right. Wider than tall.
+```
+
+<!-- plik: polana-krzak-2.png -->
+```
+A low clump of wild vegetation growing against a small mossy grey boulder:
+a few spiky fern fronds and tall grass blades sticking out on one side of the
+stone, a couple of purple thistle flowers. Uneven, asymmetric silhouette,
+clearly different from a round bush. Painted soft shading, light from the top
+right. Wider than tall.
+```
+
+<!-- plik: teren-ziemia.png | styl: teren -->
+```
+The ground is bare packed earth at the foot of grassy hills: warm brown soil
+with small grey and ochre pebbles, a few flat stones half buried, thin
+cracks, scattered tufts of short grass and tiny clover patches. Warm, sunny,
+clearly dry walkable earth, not mud and not sand.
+```
+
+<!-- plik: teren-ziemia2.png | styl: teren -->
+```
+The ground is rough stony earth: medium brown soil with more small rocks and
+gravel, a few larger flat grey stones, sparse sprouts of grass along the
+edges of the stones. Warm and sunny, the same brown as packed earth.
+```
+
+<!-- plik: pniak-lakowy.png -->
+```
+An old cut tree stump on a meadow, bark on the sides, pale rings on the top,
+a small cluster of orange mushrooms growing at its base and a patch of moss.
+Painted soft shading, light from the top right. Wider than tall.
+```
+
+<!-- plik: glazy-lakowe.png -->
+```
+A small group of three rounded grey boulders of different sizes lying
+together, patches of green moss on top, a few blades of grass between them.
+Painted soft shading, light from the top right. Much wider than tall.
+```
+
+<!-- plik: kepa-kwiatow.png -->
+```
+A small loose patch of wild meadow flowers: tall stems of blue cornflowers,
+white daisies and a few red poppies with grass blades between them, uneven
+outline. Painted soft shading. Wider than tall.
 ```

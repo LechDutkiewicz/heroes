@@ -408,7 +408,7 @@ USTAWIENIA = {
 #: trzęsawiska.
 BARWY_TERENU = {
     'woda': {'nasycenie': 0.5, 'barwa': (85, 125, 90), 'moc': 0.6, 'jasnosc': 0.72},
-    'trawa': {'nasycenie': 0.62, 'barwa': (140, 140, 80), 'moc': 0.5, 'jasnosc': 0.8},
+    'trawa': {'nasycenie': 0.6, 'barwa': (100, 140, 112), 'moc': 0.55, 'jasnosc': 0.8},
     'las': {'nasycenie': 0.7, 'barwa': (90, 110, 75), 'moc': 0.4, 'jasnosc': 0.82},
     'sciezka': {'nasycenie': 0.75, 'barwa': (175, 150, 110), 'moc': 0.3, 'jasnosc': 1.08},
 }

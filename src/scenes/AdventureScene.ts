@@ -1166,7 +1166,10 @@ export class AdventureScene extends Phaser.Scene {
     const bryla = brylaObiektu(o);
     if (o.rodzaj === 'budynek') {
       const b = budowlaPoId(o.budynek);
-      return { klucz: `m-${b?.plik ?? 'skrzynia'}`, wys: KAFEL * (b?.wys ?? 1) };
+      // `USTAWIENIA.skalaBudowli` (per plansza): Polana, runda 6 — „wiatrak
+      // i wieża zajmują po kilka kafli". Brak ustawienia = dawne rozmiary.
+      const skala = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaBudowli ?? 1;
+      return { klucz: `m-${b?.plik ?? 'skrzynia'}`, wys: KAFEL * (b?.wys ?? 1) * skala };
     }
     if (o.rodzaj === 'zamek')
       return {

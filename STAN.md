@@ -201,6 +201,21 @@ stosy `polana-stos-*` (PROMPTY-PLANSZE §9) — surowe z API miały kremowy
 talerzyk pod spodem, we wsadzie leżą już obrane z niego. Naklejka `kwiaty-1`
 ma jasną kępę mchu jak podstawkę, więc Polana jej nie używa.
 
+### Bagna, runda 5 (HotA)
+
+Werdykt rundy 4: „drogi jak sztywne pasy na płaskim terenie" — domknięte już
+przez poprzedniego buildera (`DROGA_KRETA`, `RZEZBA`, omszałe wzgórza
+`bagno/kepa-skaly-*`). Ta runda dołożyła to, czym HotA wygrywa gęstością:
+`znajdzki: 0.58` ze stosami `bagno/stos-*` (kosz jagód, piramidka pokeballi
+— w koszu czytały się jak jagody, kryształy i kamienie ewolucji na omszałym
+kamieniu), naklejki tła `grzyby-bagienne`, `kloda-mech`, `kamienie-mech`,
+`paproc`, `irysy` (PROMPTY-PLANSZE §8), dwa razy gęstsze grążele na wodzie
+i chłodniejsza, mniej limonkowa łąka. Surowe obrazki z API miały kremowe
+podstawki; we wsadzie leżą już obrane. Próba osobnej tekstury „omszałej
+łąki" (`teren-trawa-bagienna`) odrzucona: wyszła płaska i rozmyta, a to
+dokładnie ten zarzut, który zamykamy. Układ planszy bez zmian (ten sam
+TEREN i ROZSTAWIENIE, odcisk `f78c3bdd2f50d3be`).
+
 ## HUD mapy przygody na wspólnym zestawie (2026-09-24)
 
 - Mapa stoi na tym samym materiale co kampania i okna misji

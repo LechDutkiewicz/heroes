@@ -591,6 +591,8 @@ TERENY = [
     # Plansze kampanii (`tools/PROMPTY-PLANSZE.md`): lód zamiast przebarwionej
     # wody w Twierdzy, błoto bagienne pod oczkami wody.
     'teren-lod', 'teren-bloto',
+    # Polana, runda 6: ubita brązowa ziemia pod skarpami (`TEKSTURY` Polany).
+    'teren-ziemia',
 ]
 
 #: Naklejki terenu (`tools/PROMPTY-PLANSZE.md`) → `public/mapa/tlo/<nazwa>.png`,
@@ -607,7 +609,11 @@ NAKLEJKI = {
     'krzak-zimowy-1': 30,
     'kwiaty-1': 20, 'kwiaty-2': 22,
     # Bagna, runda 5 (wzorzec HotA): drobiazgi trzęsawiska.
-    'grzyby-bagienne': 22, 'kloda-mech': 30, 'kamienie-mech': 24, 'paproc': 28, 'irysy': 30,
+    'grzyby-bagienne': 22, 'kloda-mech': 24, 'kamienie-mech': 24, 'paproc': 28, 'irysy': 30,
+    # Twierdza, runda 3 (wzorzec HotA): ośnieżone świerczki na pustym śniegu.
+    'swierczek-sniezny-1': 46, 'swierczek-sniezny-2': 50,
+    # Polana, runda 6 (wzorzec HotA): drobiazgi łąki.
+    'pniak-lakowy': 30, 'glazy-lakowe': 26, 'kepa-kwiatow': 30,
 }
 
 #: Zestawy klimatu dla SCENY: `tools/wsad/<zestaw>-<nazwa>.png` →
@@ -624,6 +630,8 @@ ZESTAWY = {
         # („obok zasp rosną liściaste drzewa") — zimowe wersje.
         'zamek-las': 384, 'zamek-ogien': 336, 'chatka': 115, 'ognisko': 86, 'wiatrak': 211,
         'kopiec': 37, 'kopiec-2': 37,
+        # Twierdza, runda 3 (HotA): stosy surowców na śniegu (`USTAWIENIA.znajdzki`).
+        'stos-pokeball': 72, 'stos-jagody': 72, 'stos-odlamki': 72, 'stos-kamien-ewolucji': 72,
     },
     'bagno': {
         'drzewo': 144, 'drzewo-b': 144, 'krzak': 84, 'krzak-2': 84,
@@ -649,6 +657,9 @@ ZESTAWY = {
         # Scena rysuje je na pół pola (`USTAWIENIA.znajdzki`), plik dwa razy
         # większy — przy dużym zmniejszeniu w scenie krawędzie migotały.
         'stos-pokeball': 48, 'stos-jagody': 48, 'stos-odlamki': 48, 'stos-kamien-ewolucji': 48,
+        # Polana, runda 6: dwa RÓŻNE nieregularne krzewy zamiast jednej
+        # okrągłej kuli z jagodami na co trzecim polu łąki.
+        'krzak': 84, 'krzak-2': 84,
     },
 }
 

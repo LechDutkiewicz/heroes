@@ -77,6 +77,12 @@ export interface UstawieniaPlanszy {
    * mała rzecz bez cienia wygląda na ikonę wklejoną w tło.
    */
   znajdzki?: number;
+  /**
+   * Mnożnik wysokości rysunków budowli odwiedzanych (`budynek`: wiatrak,
+   * wieża, obóz…) na tej planszy. Budowle zajmują jedno pole, więc rysunek
+   * mniejszy niż w `BUDOWLE` niczego nie odsłania. Brak = 1.
+   */
+  skalaBudowli?: number;
   /** Załoga zamku gracza (domyślnie poziomy 0–1, pięć tygodni przyrostu). */
   garnizonGracza?: { poziomy: number[]; tygodnie: number };
   /** Nazwy zamków wroga, w kolejności punktów 'zamek wroga', 'zamek wroga 2'… */
