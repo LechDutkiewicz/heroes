@@ -313,6 +313,8 @@ NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 USTAWIENIA = {
     'wrog': 'aktywny',
     'nazwyZamkowWroga': ['Warownia na Grobli'],
+    # Zestaw sprite'ów klimatu dla sceny (`public/mapa/bagno/`) — patrz STAN.md.
+    'zestaw': 'bagno',
     # Wyspa Księżyca odsłonięta od pierwszego dnia: gracz ma wiedzieć, DOKĄD
     # jedzie — zagadką jest droga i wódz, a nie szukanie igły w trzęsawisku.
     'odkryte': [{'x': WYSPA[0], 'y': WYSPA[1], 'promien': 7}],
@@ -347,3 +349,13 @@ RAMKA_STARTU = True
 
 #: Budowle pierwszego ekranu co najmniej trzy pola od siebie (silnik).
 ODSTEP_KADRU = 3
+
+#: Naklejki terenu (`public/mapa/tlo/`, prompty w `tools/PROMPTY-PLANSZE.md`):
+#: `(pliki, znaki terenu, gęstość)`. Do czasu dostawy grafik plików nie ma
+#: i render po prostu ich nie rysuje.
+NAKLEJKI = [
+    (['trzcina-1', 'trzcina-2', 'trzcina-3'], 'b', 0.22),
+    (['grazel-1', 'grazel-2'], '~', 0.10),
+    (['martwe-drzewo-1', 'martwe-drzewo-2'], 'b', 0.04),
+    (['pniak-bagienny'], 'b', 0.03),
+]

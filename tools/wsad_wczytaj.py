@@ -587,7 +587,43 @@ TERENY = [
     # Krainy z drugiej dostawy. Kosztów ruchu jeszcze nie mają — tekstura
     # musi być pierwsza, bo bez niej nie ma czego postawić na planszy.
     'teren-bagno', 'teren-jalowa', 'teren-snieg',
+    # Plansze kampanii (`tools/PROMPTY-PLANSZE.md`): lód zamiast przebarwionej
+    # wody w Twierdzy, błoto bagienne pod oczkami wody.
+    'teren-lod', 'teren-bloto',
 ]
+
+#: Naklejki terenu (`tools/PROMPTY-PLANSZE.md`) → `public/mapa/tlo/<nazwa>.png`,
+#: wysokość w pikselach (pole ma 48). Rysuje je `render_mapa.py` w tle planszy.
+TLO = MAPA / 'tlo'
+NAKLEJKI = {
+    'trzcina-1': 40, 'trzcina-2': 44, 'trzcina-3': 36,
+    'grazel-1': 22, 'grazel-2': 24,
+    'martwe-drzewo-1': 70, 'martwe-drzewo-2': 64,
+    'pniak-bagienny': 30,
+    'glaz-sniezny-1': 34, 'glaz-sniezny-2': 40, 'glaz-sniezny-3': 30,
+    'zaspa-1': 26, 'zaspa-2': 30,
+    'kra-lodu-1': 26, 'kra-lodu-2': 30,
+    'krzak-zimowy-1': 30,
+    'kwiaty-1': 20, 'kwiaty-2': 22,
+}
+
+#: Zestawy klimatu dla SCENY: `tools/wsad/<zestaw>-<nazwa>.png` →
+#: `public/mapa/<zestaw>/<nazwa>.png`. Nazwy i wysokości jak sprite'y, które
+#: zastępują (patrz STAN.md, „Grafiki plansz kampanii").
+ZESTAWY = {
+    'zima': {
+        'sosna': 144, 'sosna-b': 144, 'sosna-mala': 96, 'drzewo': 144, 'drzewo-b': 144,
+        'krzak': 84, 'krzak-2': 84, 'skala': 67, 'skala-2': 67,
+        'kepa-las-1': 216, 'kepa-las-2': 216, 'kepa-las-3': 216, 'kepa-las-4': 216,
+        'kepa-skaly-1': 216, 'kepa-skaly-2': 216, 'kepa-skaly-3': 216, 'kepa-skaly-4': 216,
+        'kopalnia-kamien': 160, 'kopalnia-odlamek': 160, 'kopalnia-pokeball': 160, 'sad': 160,
+    },
+    'bagno': {
+        'drzewo': 144, 'drzewo-b': 144, 'krzak': 84, 'krzak-2': 84,
+        'kepa-las-1': 216, 'kepa-las-2': 216, 'kepa-las-3': 216, 'kepa-las-4': 216,
+        'kopalnia-kamien': 160, 'kopalnia-odlamek': 160, 'kopalnia-pokeball': 160,
+    },
+}
 
 #: Warianty tego samego terenu — druga i trzecia trawa, drugie skały i tak dalej.
 #: Nazwy z wsadu bywają pisane raz z łącznikiem, raz bez („teren-trawa2" obok
@@ -628,6 +664,31 @@ def mapa():
         ostrzezOTle(nazwa, im)
         im.save(MAPA / f'{nazwa}.png')
         print(f'  {nazwa}.png  {im.width} × {im.height}')
+
+    # Naklejki terenu: ozdoby malowane w tle planszy przez `render_mapa.py`
+    # (`NAKLEJKI` w `tools/mapy/<id>.py`), bez cienia — tło ma własne światło.
+    TLO.mkdir(parents=True, exist_ok=True)
+    for nazwa, wys in NAKLEJKI.items():
+        zrodlo = WSAD / f'{nazwa}.png'
+        if not zrodlo.exists():
+            continue
+        im = dopasuj(wczytaj(nazwa), wys)
+        im.save(TLO / f'{nazwa}.png')
+        print(f'  tlo/{nazwa}.png  {im.width} × {im.height}')
+
+    # Zestawy klimatu: te same nazwy co sprite'y sceny, w podkatalogu klimatu
+    # (`public/mapa/zima/sosna.png` obok `public/mapa/sosna.png`). Czyta je
+    # scena dla planszy, która ma `zestaw` w USTAWIENIACH — patrz STAN.md.
+    for zestaw, pliki in ZESTAWY.items():
+        (MAPA / zestaw).mkdir(parents=True, exist_ok=True)
+        for nazwa, wys in pliki.items():
+            zrodlo = WSAD / f'{zestaw}-{nazwa}.png'
+            if not zrodlo.exists():
+                continue
+            im = dopasuj(wczytaj(f'{zestaw}-{nazwa}'), wys)
+            ostrzezOTle(f'{zestaw}-{nazwa}', im)
+            im.save(MAPA / zestaw / f'{nazwa}.png')
+            print(f'  {zestaw}/{nazwa}.png  {im.width} × {im.height}')
 
     TEREN.mkdir(parents=True, exist_ok=True)
     for nazwa in TERENY:

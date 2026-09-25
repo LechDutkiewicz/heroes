@@ -62,6 +62,14 @@ export interface UstawieniaPlanszy {
    * przyrostów każdego z nich (1 = jeden tydzień, jak na Dwóch Dolinach).
    */
   garnizonWroga?: { poziomy: number[]; tygodnie: number };
+  /**
+   * Zestaw sprite'ów klimatu: scena, która go zna, bierze drzewa, krzaki,
+   * skały i kopalnie z `public/mapa/<zestaw>/<nazwa>.png` zamiast
+   * `public/mapa/<nazwa>.png`, gdy taki plik istnieje (zaśnieżone sosny
+   * w Twierdzy, martwe drzewa na Bagnach). Kontrakt i lista plików: STAN.md,
+   * „Grafiki plansz kampanii". Brak = zestaw podstawowy.
+   */
+  zestaw?: 'zima' | 'bagno';
   /** Załoga zamku gracza (domyślnie poziomy 0–1, pięć tygodni przyrostu). */
   garnizonGracza?: { poziomy: number[]; tygodnie: number };
   /** Nazwy zamków wroga, w kolejności punktów 'zamek wroga', 'zamek wroga 2'… */

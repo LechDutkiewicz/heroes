@@ -176,6 +176,48 @@ def bagno(plansza: Image.Image, maska: Image.Image, kafel: int, ziarno: int) -> 
     return im
 
 
+#: Katalog naklejek terenu — ozdób malowanych w TLE planszy (nie blokują
+#: ruchu, nie są obiektami gry). Pliki kładzie tam `wsad_wczytaj.py`
+#: (`NAKLEJKI`), prompty są w `tools/PROMPTY-PLANSZE.md`.
+KATALOG_NAKLEJEK = __import__('pathlib').Path(__file__).resolve().parent.parent / 'public' / 'mapa' / 'tlo'
+
+
+def naklejki(plansza: Image.Image, rysunek: list, kafel: int, zasady: list, ziarno: int) -> Image.Image:
+    """Rozsiewa naklejki z `public/mapa/tlo/` po polach danego terenu.
+
+    `zasady` to lista `(pliki, znaki_terenu, gęstość)` z konfiguracji planszy
+    (`NAKLEJKI`), np. `(['trzcina-1', 'trzcina-2'], 'b', 0.25)` — na co czwartym
+    polu bagna kępa trzciny. Brakujący plik jest pomijany bez błędu: to jest
+    ścieżka na grafiki, których jeszcze nie ma, i plansza ma się renderować
+    tak samo dobrze przed ich dostawą, jak po niej. Losowanie jest
+    deterministyczne (ziarno planszy), więc odcisk tła się nie zmienia, dopóki
+    nie zmieni się rysunek albo zestaw plików.
+    """
+    rng = np.random.default_rng(ziarno)
+    im = plansza.convert('RGBA')
+    wys, szer = len(rysunek), len(rysunek[0])
+    for pliki, znaki, gestosc in zasady:
+        obrazy = [
+            Image.open(KATALOG_NAKLEJEK / f'{p}.png').convert('RGBA')
+            for p in pliki
+            if (KATALOG_NAKLEJEK / f'{p}.png').exists()
+        ]
+        for y in range(wys):
+            for x in range(szer):
+                los = rng.random()
+                wybor = int(rng.integers(0, max(1, len(obrazy))))
+                dx, dy = rng.uniform(-0.3, 0.3, 2)
+                if not obrazy or rysunek[y][x] not in znaki or los > gestosc:
+                    continue
+                n = obrazy[wybor]
+                if rng.random() < 0.5:
+                    n = n.transpose(Image.FLIP_LEFT_RIGHT)
+                px = int((x + 0.5 + dx) * kafel - n.width / 2)
+                py = int((y + 0.8 + dy) * kafel - n.height)
+                im.alpha_composite(n, (max(0, px), max(0, py)))
+    return im
+
+
 def obwodka_drogi(plansza: Image.Image, maska_drogi: Image.Image, kafel: int) -> Image.Image:
     """Brzeg drogi: ciemny, wydeptany pas po obu stronach i jaśniejsza jezdnia.
 

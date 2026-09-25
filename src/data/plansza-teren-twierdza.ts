@@ -340,6 +340,7 @@ export const USTAWIENIA = {
     "Lodowa Twierdza",
     "Srebrna Strażnica"
   ],
+  "zestaw": "zima",
   "garnizonWroga": {
     "poziomy": [
       0,

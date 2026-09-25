@@ -256,6 +256,8 @@ USTAWIENIA = {
     'natarcie': True,
     'dzienNatarcia': 21,
     'nazwyZamkowWroga': ['Lodowa Twierdza', 'Srebrna Strażnica'],
+    # Zestaw sprite'ów klimatu dla sceny (`public/mapa/zima/`) — patrz STAN.md.
+    'zestaw': 'zima',
     'garnizonWroga': {'poziomy': [0, 1, 2, 3], 'tygodnie': 1},
     # Twierdze bez fortu: przyrost bez premii o połowę. Z fortem armia wroga
     # rosła szybciej, niż jakikolwiek gracz zdążyłby dojść do pierwszej z nich.
@@ -300,3 +302,11 @@ WTAPIANIE = {'snieg': 0.3, 'skaly': 0.28, 'las': 0.3, 'jalowa': 0.3, 'woda': 0.2
 
 #: Budowle pierwszego ekranu co najmniej trzy pola od siebie (silnik).
 ODSTEP_KADRU = 3
+
+#: Naklejki terenu (`public/mapa/tlo/`, prompty w `tools/PROMPTY-PLANSZE.md`).
+NAKLEJKI = [
+    (['glaz-sniezny-1', 'glaz-sniezny-2', 'glaz-sniezny-3'], 's', 0.06),
+    (['zaspa-1', 'zaspa-2'], 's', 0.08),
+    (['kra-lodu-1', 'kra-lodu-2'], '~', 0.10),
+    (['krzak-zimowy-1'], 'j', 0.08),
+]

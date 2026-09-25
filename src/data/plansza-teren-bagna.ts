@@ -273,6 +273,7 @@ export const USTAWIENIA = {
   "nazwyZamkowWroga": [
     "Warownia na Grobli"
   ],
+  "zestaw": "bagno",
   "odkryte": [
     {
       "x": 46,

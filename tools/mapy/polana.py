@@ -238,3 +238,8 @@ WTAPIANIE = {'las': 0.3, 'skaly': 0.28, 'piasek': 0.3, 'woda': 0.25}
 
 #: Budowle pierwszego ekranu co najmniej trzy pola od siebie (silnik).
 ODSTEP_KADRU = 3
+
+#: Naklejki terenu (`public/mapa/tlo/`, prompty w `tools/PROMPTY-PLANSZE.md`).
+NAKLEJKI = [
+    (['kwiaty-1', 'kwiaty-2'], '.', 0.06),
+]
