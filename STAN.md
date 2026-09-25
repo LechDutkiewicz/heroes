@@ -234,6 +234,7 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `node tools/probe-kopalnia.mjs` | czy budynek produkcyjny się ZAJMUJE, a nie zbiera |
 | `npx tsx tools/probe-budowle.ts` | czy każda budowla odwiedzana coś daje, i to raz |
 | `python3 tools/generuj_grafiki.py --lista` | które grafiki z promptów są, a których brak |
+| `python3 tools/generuj_grafiki.py plik.png` | generuje grafikę z promptu — OpenAI (prawdziwa przezroczystość obiektów), gdy jest `OPENAI_API_KEY` i dostęp do `api.openai.com`; inaczej Gemini z tłem magenty do wycięcia |
 | `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia, artefakt, bitwa, zamek, powrót |
 | `node tools/probe-klik.mjs` | czy KLIKNIĘCIE prowadzi bohatera tam, gdzie się kliknęło |
 | `npx tsx tools/probe-armia.ts` | arytmetyka slotów armii: 40 tys. losowych ruchów z niezmiennikami |

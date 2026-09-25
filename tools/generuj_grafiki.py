@@ -27,8 +27,22 @@ Nie dotyka `public/`. Zapisuje wyłącznie do `tools/wsad/`, bo to jest źródł
 z którego `wsad_wczytaj.py` robi sprite'y gry — i bo wygenerowany obrazek
 trzeba najpierw obejrzeć.
 
-Klucz
------
+Silniki: OpenAI albo Gemini
+---------------------------
+Domyślnie OpenAI, gdy jest `OPENAI_API_KEY`, inaczej Gemini (`--silnik`
+wymusza wybór). OpenAI jest pierwszym wyborem nie dla stylu, tylko dla
+PRZEZROCZYSTOŚCI: jego model obrazkowy oddaje PNG z prawdziwym kanałem
+alfa, a Gemini maluje kryjące tło, które trzeba potem wycinać z magenty
+— i przy tym wycinaniu powstają obwódki na krawędziach sylwetek. Obiekty
+mapy (styl `obiekt`) idą więc do OpenAI z przezroczystym tłem, a akapit
+o magencie znika z promptu; reszta stylów dostaje tło kryjące.
+
+Klucz OpenAI: zmienna `OPENAI_API_KEY` w ustawieniach środowiska, a host
+`api.openai.com` musi być dopuszczony w dostępie do sieci. Model zmienia
+`OPENAI_IMAGE_MODEL` (domyślnie `gpt-image-1`).
+
+Klucz Gemini
+------------
 Zmienna `GEMINI_API_KEY` (albo `GOOGLE_API_KEY`). W sesji w chmurze dodaje się
 ją w ustawieniach środowiska; sesja czyta zmienne przy starcie, więc po dodaniu
 trzeba otworzyć nową. Można też trzymać klucz poza kontenerem jako „API
@@ -37,6 +51,7 @@ nagłówek samo i skryptowi wystarczy `GEMINI_API_KEY=proxy`.
 
     python3 tools/generuj_grafiki.py --lista            # co jest do zrobienia
     python3 tools/generuj_grafiki.py --modele           # do czego klucz ma dostęp
+    python3 tools/generuj_grafiki.py --silnik gemini x.png   # wymuś silnik
     python3 tools/generuj_grafiki.py straznica.png      # jeden plik
     python3 tools/generuj_grafiki.py --wszystko         # wszystko, czego brak
 """
@@ -195,6 +210,88 @@ def generuj(model: str, tresc: str, proporcje: str | None = None) -> tuple[bytes
     raise SystemExit(f'Odpowiedź bez obrazka:\n{powod}')
 
 
+# ————————————————————————————————————————————————————————— OpenAI
+
+API_OPENAI = 'https://api.openai.com/v1'
+MODEL_OPENAI = os.environ.get('OPENAI_IMAGE_MODEL', 'gpt-image-1')
+
+#: Style, których obrazki są OBIEKTAMI do wycięcia i dostają przezroczyste
+#: tło. Ilustracje (tła menu, kampanii, wyniku) i kafle terenu mają tło
+#: kryjące — przezroczystość by im tylko zaszkodziła.
+PRZEZROCZYSTE = {'obiekt'}
+
+#: Dolary za milion tokenów obrazu na wyjściu. Liczone z tego, co API
+#: zwraca w `usage`, tak samo jak przy Gemini. Stawka z cennika OpenAI dla
+#: gpt-image-1 w chwili pisania — przy zmianie modelu warto ją sprawdzić.
+CENA_OPENAI_ZA_MILION = 40.0
+
+#: Akapit o tle chromakey w bloku stylu `obiekt`. Przy prawdziwej alfie jest
+#: szkodliwy: model posłusznie namalowałby magentę zamiast ją pominąć.
+AKAPIT_CHROMY = re.compile(r'Background: a single FLAT.*?exact colour\.', re.S)
+
+
+def kluczOpenAI() -> str:
+    k = os.environ.get('OPENAI_API_KEY')
+    if not k:
+        sys.exit(
+            'Brak OPENAI_API_KEY. W sesji w chmurze dodaj zmienną w ustawieniach\n'
+            'środowiska (i host api.openai.com w dostępie do sieci), potem otwórz\n'
+            'NOWĄ sesję — zmienne są czytane przy starcie.'
+        )
+    return k
+
+
+def zapytajOpenAI(sciezka: str, dane: dict | None = None) -> dict:
+    req = urllib.request.Request(
+        f'{API_OPENAI}/{sciezka}',
+        data=json.dumps(dane).encode() if dane else None,
+        headers={'Authorization': f'Bearer {kluczOpenAI()}', 'Content-Type': 'application/json'},
+        method='POST' if dane else 'GET',
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=300) as odp:
+            return json.loads(odp.read())
+    except urllib.error.HTTPError as e:
+        tresc = e.read().decode(errors='replace')[:400]
+        raise SystemExit(f'OpenAI odpowiedziało {e.code}:\n{tresc}')
+
+
+def rozmiarOpenAI(proporcje: str | None) -> str:
+    """OpenAI zna trzy kadry: kwadrat, poziomy 3:2 i pionowy 2:3."""
+    if not proporcje:
+        return '1024x1024'
+    w, h = (int(x) for x in proporcje.split(':'))
+    if w > h:
+        return '1536x1024'
+    if h > w:
+        return '1024x1536'
+    return '1024x1024'
+
+
+def generujOpenAI(tresc: str, proporcje: str | None, przezroczyste: bool) -> tuple[bytes, int]:
+    if przezroczyste:
+        tresc = AKAPIT_CHROMY.sub(
+            'Transparent background: only the object itself, nothing around it.', tresc
+        )
+    odp = zapytajOpenAI(
+        'images/generations',
+        {
+            'model': MODEL_OPENAI,
+            'prompt': tresc,
+            'size': rozmiarOpenAI(proporcje),
+            'quality': 'high',
+            'background': 'transparent' if przezroczyste else 'opaque',
+            'output_format': 'png',
+            'n': 1,
+        },
+    )
+    tokeny = int(odp.get('usage', {}).get('output_tokens') or 0)
+    for wpis in odp.get('data', []):
+        if wpis.get('b64_json'):
+            return base64.b64decode(wpis['b64_json']), tokeny
+    raise SystemExit(f'Odpowiedź bez obrazka:\n{json.dumps(odp)[:400]}')
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('pliki', nargs='*', help='nazwy plików do wygenerowania')
@@ -204,10 +301,13 @@ def main() -> None:
                     help='wypisz gotowe prompty do wklejenia w kliencie, nic nie generuj')
     ap.add_argument('--wszystko', action='store_true', help='wygeneruj wszystko, czego brak')
     ap.add_argument('--nadpisz', action='store_true', help='nie omijaj istniejących plików')
-    ap.add_argument('--model', help='wymuś model zamiast wyboru z listy')
+    ap.add_argument('--model', help='wymuś model zamiast wyboru z listy (tylko Gemini)')
+    ap.add_argument('--silnik', choices=['openai', 'gemini'],
+                    help='domyślnie openai, gdy jest OPENAI_API_KEY, inaczej gemini')
     args = ap.parse_args()
 
     style, zadania = czytajPrompty()
+    silnik = args.silnik or ('openai' if os.environ.get('OPENAI_API_KEY') else 'gemini')
 
     if args.lista:
         print(f'{len(zadania)} zadań z {len([d for d in DOKUMENTY if d.exists()])} dokumentów:')
@@ -230,6 +330,12 @@ def main() -> None:
             print(pelnyPrompt(style, prompt, styl))
         return
 
+    if args.modele and silnik == 'openai':
+        dane = zapytajOpenAI('models')
+        for m in sorted(x['id'] for x in dane.get('data', []) if 'image' in x['id']):
+            print(' ', m)
+        return
+
     if args.modele:
         dane = zapytaj('models')
         for m in sorted(x['name'].split('/')[-1] for x in dane.get('models', [])):
@@ -247,8 +353,12 @@ def main() -> None:
     if nieznane:
         sys.exit(f'Nie ma promptu dla: {", ".join(nieznane)}. Zobacz --lista.')
 
-    model = args.model or dostepnyModel()
-    print(f'model: {model}')
+    if silnik == 'openai':
+        kluczOpenAI()
+        model, cena = MODEL_OPENAI, CENA_OPENAI_ZA_MILION
+    else:
+        model, cena = args.model or dostepnyModel(), CENA_ZA_MILION
+    print(f'silnik: {silnik}  ·  model: {model}')
     WSAD.mkdir(parents=True, exist_ok=True)
     razem = 0
     for nazwa in doZrobienia:
@@ -258,14 +368,18 @@ def main() -> None:
             continue
         prompt, styl = zadania[nazwa]
         print(f'  {nazwa} … ', end='', flush=True)
-        obraz, tokeny = generuj(model, pelnyPrompt(style, prompt, styl), PROPORCJE.get(nazwa))
+        tresc = pelnyPrompt(style, prompt, styl)
+        if silnik == 'openai':
+            obraz, tokeny = generujOpenAI(tresc, PROPORCJE.get(nazwa), styl in PRZEZROCZYSTE)
+        else:
+            obraz, tokeny = generuj(model, tresc, PROPORCJE.get(nazwa))
         cel.write_bytes(obraz)
         razem += tokeny
-        koszt = tokeny * CENA_ZA_MILION / 1_000_000
+        koszt = tokeny * cena / 1_000_000
         print(f'{cel.stat().st_size // 1024} kB  ·  {tokeny} tok.  ·  ${koszt:.3f}')
 
     if razem:
-        print(f'\nRazem: {razem} tokenów wyjścia ≈ ${razem * CENA_ZA_MILION / 1_000_000:.2f}')
+        print(f'\nRazem: {razem} tokenów wyjścia ≈ ${razem * cena / 1_000_000:.2f}')
     print('\nGotowe. Obejrzyj pliki w tools/wsad/, potem: python3 tools/wsad_wczytaj.py')
 
 
