@@ -64,6 +64,10 @@ if (ZWIAD > 0) {
     const scena = window.__game.scene.getScene('adventure');
     const stan = window.__game.registry.get('stan-mapy');
     const { x, y } = stan.bohater;
+    // Promień dobrany był do widoku 14 × 12 pól. Po oddaleniu kamery
+    // (ZOOM_MAPY) widok jest szerszy, więc promień rośnie razem z nim —
+    // inaczej rogi kadru zostają w mgle, a wzorce HotA mgły w kadrze nie mają.
+    r = r / (scena.kamera?.zoom || 1);
     stan.odkryte = stan.odkryte.map((w, wy) => w.map((v, wx) => v || (wx - x) ** 2 + (wy - y) ** 2 <= r * r));
     scena.scene.restart();
   }, ZWIAD);
