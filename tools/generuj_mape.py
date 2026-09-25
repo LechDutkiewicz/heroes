@@ -626,6 +626,11 @@ class Generator:
                     kandydat = rng.choice(wolne)
                     proba = buduj(kandydat)
                     zajmowane = [kandydat] + self.pola_bryly(proba[0], proba[1], kandydat)
+                    # Mur kopalni nie może stanąć na polu startu — bohater
+                    # zaczynałby grę w murze (złapała to `probe-mapy.ts`
+                    # na Polanie po przesunięciu startu).
+                    if self.k.PUNKTY['start'] in zajmowane:
+                        continue
                     widziane = self.dostepnych(zajmowane)
                     if len(widziane) < self.stan_dostepnych - len(zajmowane):
                         continue
