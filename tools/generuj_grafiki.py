@@ -230,6 +230,71 @@ PRZEZROCZYSTE = {'obiekt'}
 #: gpt-image-1 w chwili pisania — przy zmianie modelu warto ją sprawdzić.
 CENA_OPENAI_ZA_MILION = 40.0
 
+#: Cennik per model: (wejście tekstowe, wyjście obrazowe) w $ za milion
+#: tokenów. Model spoza tabeli liczy się stawką gpt-image-1 — to szacunek
+#: z góry, a nie rachunek; rachunek jest w panelu OpenAI.
+CENNIK_OPENAI = {
+    'gpt-image-1': (5.0, 40.0),
+    'gpt-image-1-mini': (2.0, 8.0),
+    'gpt-image-1.5': (5.0, 32.0),
+}
+
+#: Jakość obrazka OpenAI (`low`, `medium`, `high`). `high` kosztuje ~4×
+#: więcej niż `medium`; naklejka terenu malowana na 30 px różnicy nie pokaże.
+JAKOSC_OPENAI = os.environ.get('OPENAI_IMAGE_QUALITY', 'high')
+
+#: Dziennik wydatków: jedna linia JSON na obrazek. Trzymany w repozytorium,
+#: żeby suma przeżyła kontener — API z kluczem projektu nie podaje salda
+#: (`/organization/costs` wymaga klucza administratora).
+DZIENNIK_KOSZTOW = Path(__file__).resolve().parent / 'wsad' / 'koszty-openai.jsonl'
+
+#: Twardy limit łącznych wydatków z dziennika. Skrypt nie wyśle zapytania,
+#: które mogłoby go przekroczyć (zakłada najdroższy obrazek, ~$0.40).
+LIMIT_USD = float(os.environ.get('OPENAI_LIMIT_USD', '20'))
+NAJDROZSZY_OBRAZEK = 0.40
+
+
+def kosztOpenAI(model: str, usage: dict) -> float:
+    wej, wyj = CENNIK_OPENAI.get(model, CENNIK_OPENAI['gpt-image-1'])
+    return (int(usage.get('input_tokens') or 0) * wej
+            + int(usage.get('output_tokens') or 0) * wyj) / 1_000_000
+
+
+def wydaneDotad() -> float:
+    if not DZIENNIK_KOSZTOW.exists():
+        return 0.0
+    return sum(json.loads(l)['usd'] for l in DZIENNIK_KOSZTOW.read_text().splitlines() if l.strip())
+
+
+def zapiszKoszt(plik: str, model: str, jakosc: str, rozmiar: str, usage: dict) -> float:
+    import datetime
+    usd = kosztOpenAI(model, usage)
+    wpis = {
+        'czas': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds'),
+        'plik': plik, 'model': model, 'jakosc': jakosc, 'rozmiar': rozmiar,
+        'wej': int(usage.get('input_tokens') or 0), 'wyj': int(usage.get('output_tokens') or 0),
+        'usd': round(usd, 4),
+    }
+    DZIENNIK_KOSZTOW.parent.mkdir(parents=True, exist_ok=True)
+    with DZIENNIK_KOSZTOW.open('a') as f:
+        f.write(json.dumps(wpis) + '\n')
+    return usd
+
+
+def pokazKoszty() -> None:
+    if not DZIENNIK_KOSZTOW.exists():
+        print('Dziennik pusty: nic jeszcze nie wygenerowano przez OpenAI.')
+        return
+    wpisy = [json.loads(l) for l in DZIENNIK_KOSZTOW.read_text().splitlines() if l.strip()]
+    razem = sum(w['usd'] for w in wpisy)
+    po_modelu: dict[str, list] = {}
+    for w in wpisy:
+        po_modelu.setdefault(f"{w['model']} {w['jakosc']}", []).append(w['usd'])
+    for k, v in sorted(po_modelu.items()):
+        print(f'  {k:28s} {len(v):4d} obr.  ${sum(v):7.2f}')
+    print(f'Razem: {len(wpisy)} obrazków ≈ ${razem:.2f}  ·  limit ${LIMIT_USD:.2f}'
+          f'  ·  zostaje ${LIMIT_USD - razem:.2f}')
+
 #: Akapit o tle chromakey w bloku stylu `obiekt`. Przy prawdziwej alfie jest
 #: szkodliwy: model posłusznie namalowałby magentę zamiast ją pominąć.
 AKAPIT_CHROMY = re.compile(r'Background: a single FLAT.*?exact colour\.', re.S)
@@ -263,12 +328,23 @@ def zapytajOpenAI(sciezka: str, dane: dict | None = None) -> dict:
         headers=naglowkiOpenAI(),
         method='POST' if dane else 'GET',
     )
-    try:
-        with urllib.request.urlopen(req, timeout=300) as odp:
-            return json.loads(odp.read())
-    except urllib.error.HTTPError as e:
-        tresc = e.read().decode(errors='replace')[:400]
-        raise SystemExit(f'OpenAI odpowiedziało {e.code}:\n{tresc}')
+    # Limit organizacji to kilka obrazków na minutę: przy 429 czekamy,
+    # ile każe odpowiedź, zamiast przerywać całą partię.
+    import time
+    for proba in range(40):
+        try:
+            with urllib.request.urlopen(req, timeout=300) as odp:
+                return json.loads(odp.read())
+        except urllib.error.HTTPError as e:
+            tresc = e.read().decode(errors='replace')[:400]
+            if e.code == 429 and proba < 39:
+                m = re.search(r'try again in ([\d.]+)s', tresc)
+                czekaj = float(m.group(1)) + 2 if m else 20
+                print(f'[429, czekam {czekaj:.0f} s] ', end='', flush=True)
+                time.sleep(czekaj)
+                continue
+            raise SystemExit(f'OpenAI odpowiedziało {e.code}:\n{tresc}')
+    raise SystemExit('OpenAI: limit zapytań nie ustąpił')
 
 
 def rozmiarOpenAI(proporcje: str | None) -> str:
@@ -283,7 +359,10 @@ def rozmiarOpenAI(proporcje: str | None) -> str:
     return '1024x1024'
 
 
-def generujOpenAI(tresc: str, proporcje: str | None, przezroczyste: bool) -> tuple[bytes, int]:
+def generujOpenAI(tresc: str, proporcje: str | None, przezroczyste: bool, plik: str = '?') -> tuple[bytes, int]:
+    wydane = wydaneDotad()
+    if wydane + NAJDROZSZY_OBRAZEK > LIMIT_USD:
+        raise SystemExit(f'Limit wydatków: ${wydane:.2f} z ${LIMIT_USD:.2f} (OPENAI_LIMIT_USD). Nie wysyłam.')
     if przezroczyste:
         tresc = AKAPIT_CHROMY.sub(
             'Transparent background: only the object itself, nothing around it.', tresc
@@ -294,13 +373,15 @@ def generujOpenAI(tresc: str, proporcje: str | None, przezroczyste: bool) -> tup
             'model': MODEL_OPENAI,
             'prompt': tresc,
             'size': rozmiarOpenAI(proporcje),
-            'quality': 'high',
+            'quality': JAKOSC_OPENAI,
             'background': 'transparent' if przezroczyste else 'opaque',
             'output_format': 'png',
             'n': 1,
         },
     )
-    tokeny = int(odp.get('usage', {}).get('output_tokens') or 0)
+    usage = odp.get('usage', {})
+    tokeny = int(usage.get('output_tokens') or 0)
+    zapiszKoszt(plik, MODEL_OPENAI, JAKOSC_OPENAI, rozmiarOpenAI(proporcje), usage)
     for wpis in odp.get('data', []):
         if wpis.get('b64_json'):
             return base64.b64decode(wpis['b64_json']), tokeny
@@ -312,6 +393,7 @@ def main() -> None:
     ap.add_argument('pliki', nargs='*', help='nazwy plików do wygenerowania')
     ap.add_argument('--lista', action='store_true', help='pokaż zadania i ich stan')
     ap.add_argument('--modele', action='store_true', help='pokaż modele dostępne dla klucza')
+    ap.add_argument('--koszty', action='store_true', help='podsumuj dziennik wydatków OpenAI')
     ap.add_argument('--drukuj', action='store_true',
                     help='wypisz gotowe prompty do wklejenia w kliencie, nic nie generuj')
     ap.add_argument('--wszystko', action='store_true', help='wygeneruj wszystko, czego brak')
@@ -323,6 +405,10 @@ def main() -> None:
 
     style, zadania = czytajPrompty()
     silnik = args.silnik or ('openai' if os.environ.get('OPENAI_API_KEY') else 'gemini')
+
+    if args.koszty:
+        pokazKoszty()
+        return
 
     if args.lista:
         print(f'{len(zadania)} zadań z {len([d for d in DOKUMENTY if d.exists()])} dokumentów:')
@@ -370,7 +456,7 @@ def main() -> None:
 
     if silnik == 'openai':
         kluczOpenAI()
-        model, cena = MODEL_OPENAI, CENA_OPENAI_ZA_MILION
+        model, cena = MODEL_OPENAI, CENNIK_OPENAI.get(MODEL_OPENAI, (0, CENA_OPENAI_ZA_MILION))[1]
     else:
         model, cena = args.model or dostepnyModel(), CENA_ZA_MILION
     print(f'silnik: {silnik}  ·  model: {model}')
@@ -385,7 +471,7 @@ def main() -> None:
         print(f'  {nazwa} … ', end='', flush=True)
         tresc = pelnyPrompt(style, prompt, styl)
         if silnik == 'openai':
-            obraz, tokeny = generujOpenAI(tresc, PROPORCJE.get(nazwa), styl in PRZEZROCZYSTE)
+            obraz, tokeny = generujOpenAI(tresc, PROPORCJE.get(nazwa), styl in PRZEZROCZYSTE, nazwa)
         else:
             obraz, tokeny = generuj(model, tresc, PROPORCJE.get(nazwa))
         cel.write_bytes(obraz)
@@ -395,6 +481,8 @@ def main() -> None:
 
     if razem:
         print(f'\nRazem: {razem} tokenów wyjścia ≈ ${razem * cena / 1_000_000:.2f}')
+    if silnik == 'openai':
+        pokazKoszty()
     print('\nGotowe. Obejrzyj pliki w tools/wsad/, potem: python3 tools/wsad_wczytaj.py')
 
 

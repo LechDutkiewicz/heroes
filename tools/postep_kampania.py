@@ -76,12 +76,74 @@ def kawalek(k: dict) -> str:
     </section>'''
 
 
+KOSZTY = KORZEN / 'tools' / 'wsad' / 'koszty-openai.jsonl'
+WSAD = KORZEN / 'tools' / 'wsad'
+
+#: Grupy galerii po przedrostku nazwy pliku — kolejność to kolejność na stronie.
+GRUPY = [
+    ('Twierdza: zestaw zimowy dla sceny', ('zima-',)),
+    ('Bagna: zestaw bagienny dla sceny', ('bagno-',)),
+    ('Tereny (tekstury tła)', ('teren-',)),
+    ('Bagna: naklejki terenu', ('trzcina', 'grazel', 'martwe-drzewo', 'pniak')),
+    ('Twierdza: naklejki terenu', ('glaz-sniezny', 'zaspa', 'kra-lodu', 'krzak-zimowy')),
+    ('Polana: naklejki terenu', ('kwiaty',)),
+    ('Kampania i ekrany wyniku', ('kampania-', 'wynik-')),
+]
+
+
+def miniatura(plik: Path, bok: int = 132) -> str:
+    im = Image.open(plik).convert('RGBA')
+    im.thumbnail((bok, bok), Image.LANCZOS)
+    tlo = Image.new('RGBA', im.size, (40, 54, 78, 255))
+    tlo.alpha_composite(im)
+    buf = io.BytesIO()
+    tlo.convert('RGB').save(buf, 'JPEG', quality=82, optimize=True)
+    return 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode()
+
+
+def grafiki() -> str:
+    """Galeria i rachunek grafik z OpenAI — z dziennika generatora."""
+    if not KOSZTY.exists():
+        return ''
+    wpisy = [json.loads(l) for l in KOSZTY.read_text(encoding='utf-8').splitlines() if l.strip()]
+    ostatni: dict[str, dict] = {}
+    for w in wpisy:
+        ostatni[w['plik']] = w  # przy ponownym generowaniu liczy się najnowsza wersja
+    razem = sum(w['usd'] for w in wpisy)
+    grupy: dict[str, list] = {n: [] for n, _ in GRUPY}
+    grupy['Inne'] = []
+    for plik, w in ostatni.items():
+        nazwa = next((n for n, pref in GRUPY if plik.startswith(pref)), 'Inne')
+        grupy[nazwa].append(w)
+    sekcje = ''
+    for nazwa, lista in grupy.items():
+        if not lista:
+            continue
+        kafle = ''.join(
+            f'<figure><img src="{miniatura(WSAD / w["plik"])}" alt="{e(w["plik"])}" loading="lazy">'
+            f'<figcaption>{e(w["plik"].removesuffix(".png"))}<span>${w["usd"]:.2f}</span></figcaption></figure>'
+            for w in sorted(lista, key=lambda w: w['plik']) if (WSAD / w['plik']).exists()
+        )
+        koszt = sum(w['usd'] for w in lista)
+        sekcje += f'<h3>{e(nazwa)} <span>{len(lista)} · ${koszt:.2f}</span></h3><div class="galeria">{kafle}</div>'
+    modele = sorted({f"{w['model']} ({w['jakosc']})" for w in wpisy})
+    return f'''
+    <section class="kawalek grafiki">
+      <header><h2>Grafiki z OpenAI</h2><span class="pill st-critic">${razem:.2f} wydane</span></header>
+      <p class="opis">Pierwsza sesja z generatorem OpenAI. Każdy obrazek jest zapisany w dzienniku
+      <code>tools/wsad/koszty-openai.jsonl</code> z tokenami z odpowiedzi API; koszt liczony według cennika,
+      rachunek w panelu OpenAI. Modele: {e(', '.join(modele))}.</p>
+      <p class="licznik">{len(wpisy)} wywołań · {len(ostatni)} plików · ${razem:.2f} z salda $25</p>
+      {sekcje}
+    </section>'''
+
+
 def main():
     dane = json.loads(DANE.read_text(encoding='utf-8'))
     wyjscie = Path(sys.argv[1]) if len(sys.argv) > 1 else KORZEN / 'tools' / 'postep-kampania.html'
     kawalki = dane['pieces']
     gotowe = sum(1 for k in kawalki if k.get('status') == 'done')
-    tresc = ''.join(kawalek(k) for k in kawalki)
+    tresc = grafiki() + ''.join(kawalek(k) for k in kawalki)
     strona = f'''<title>Kampania Pokemon Heroes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
@@ -113,6 +175,12 @@ def main():
   .runda img {{ width: 100%; border-radius: 6px; border: 1px solid var(--linia); }}
   .luka, .notka {{ margin: 0; max-width: 75ch; }} .notka {{ color: var(--miekki); font-size: 14px; }}
   .pusto {{ color: var(--miekki); }}
+  .grafiki h3 {{ margin: 10px 0 0; font-size: 15px; }} .grafiki h3 span {{ font: 500 12px 'IBM Plex Mono', monospace; color: var(--miekki); margin-left: 6px; }}
+  .galeria {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 10px; }}
+  .galeria figure {{ margin: 0; display: grid; gap: 4px; }}
+  .galeria img {{ width: 100%; aspect-ratio: 1; object-fit: contain; background: #28364e; border-radius: 6px; border: 1px solid var(--linia); }}
+  .galeria figcaption {{ font: 500 11px 'IBM Plex Mono', monospace; color: var(--miekki); display: flex; justify-content: space-between; gap: 4px; overflow-wrap: anywhere; }}
+  code {{ font-family: 'IBM Plex Mono', monospace; font-size: 13px; }}
 </style>
 <div class="strona">
   <div class="glowa">

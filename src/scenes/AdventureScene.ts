@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ZESTAWY_KLIMATU } from '../data/zestawy-klimatu';
 import {
   BUDOWLE,
   SUROWCE,
@@ -135,6 +136,9 @@ const KLUCZ_PRZED_BITWA = 'armia-przed-bitwa';
 const KLUCZ_WYNIKU = 'wynik-bitwy';
 /** Katalog tła, z którego wczytano `plansza-0` — patrz `preload`. */
 const KLUCZ_TLA = 'tlo-planszy';
+/** Zestaw klimatu, z którego wczytano sprite'y `m-…` — patrz `preload`. */
+const KLUCZ_ZESTAWU = 'zestaw-planszy';
+
 
 const DOMYSLNA_PODPOWIEDZ =
   'Kliknij pole — zobaczysz trasę.\n' +
@@ -246,6 +250,18 @@ export class AdventureScene extends Phaser.Scene {
       this.textures.remove('woda-maska');
       this.registry.set(KLUCZ_TLA, tlo);
     }
+    // Zestaw klimatu podmienia sprite'y pod tymi samymi kluczami `m-…`,
+    // więc przy zmianie planszy trzeba zdjąć te z poprzedniego zestawu —
+    // inaczej Phaser zostawi zaśnieżone sosny na następnej misji.
+    const zestaw = planszaPoId(this.wczytajStan().mapa).modul.USTAWIENIA?.zestaw ?? '';
+    const zestawDotad = (this.registry.get(KLUCZ_ZESTAWU) as string | undefined) ?? '';
+    if (zestawDotad !== zestaw) {
+      for (const n of new Set([...(ZESTAWY_KLIMATU[zestawDotad] ?? []), ...(ZESTAWY_KLIMATU[zestaw] ?? [])])) {
+        this.textures.remove(`m-${n}`);
+      }
+      this.registry.set(KLUCZ_ZESTAWU, zestaw);
+    }
+    const zKlimatu = new Set(ZESTAWY_KLIMATU[zestaw] ?? []);
     this.load.image('plansza-0', `${tlo}plansza-0.jpg`);
     this.load.image('woda-maska', `${tlo}woda-maska.png`);
     this.load.image('woda-zmarszczki', `${b}mapa/woda-zmarszczki.png`);
@@ -295,7 +311,7 @@ export class AdventureScene extends Phaser.Scene {
       'namiot-klucznika-niebieski',
       'chata-jasnowidza',
     ]) {
-      this.load.image(`m-${n}`, `${b}mapa/${n}.png`);
+      this.load.image(`m-${n}`, `${b}mapa/${zKlimatu.has(n) ? `${zestaw}/` : ''}${n}.png`);
     }
     const stan = this.wczytajStan();
     const potrzebne = new Set<string>();

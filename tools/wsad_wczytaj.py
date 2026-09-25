@@ -24,6 +24,7 @@ się powtórzyć po urwanej sesji.
     python3 tools/wsad_wczytaj.py
 """
 
+import json
 from collections import deque
 from pathlib import Path
 
@@ -689,6 +690,18 @@ def mapa():
             ostrzezOTle(f'{zestaw}-{nazwa}', im)
             im.save(MAPA / zestaw / f'{nazwa}.png')
             print(f'  {zestaw}/{nazwa}.png  {im.width} × {im.height}')
+
+    # Scena podmienia tylko sprite'y, które w zestawie naprawdę są —
+    # brakujący plik dałby na serwerze deweloperskim stronę HTML zamiast
+    # obrazka (Phaser nie zgłasza tego jako błędu ładowania, sprite znika).
+    spis = {z: sorted(n for n in pliki if (MAPA / z / f'{n}.png').exists())
+            for z, pliki in ZESTAWY.items()}
+    (KORZEN / 'src' / 'data' / 'zestawy-klimatu.ts').write_text(
+        '// Generowany przez tools/wsad_wczytaj.py — nie edytować ręcznie.\n'
+        '// Sprite\'y `m-<nazwa>`, które plansza z `USTAWIENIA.zestaw` bierze z\n'
+        '// `public/mapa/<zestaw>/<nazwa>.png` zamiast `public/mapa/<nazwa>.png`.\n'
+        'export const ZESTAWY_KLIMATU: Record<string, readonly string[]> = '
+        + json.dumps(spis, indent=2) + ';\n', encoding='utf-8')
 
     TEREN.mkdir(parents=True, exist_ok=True)
     for nazwa in TERENY:
