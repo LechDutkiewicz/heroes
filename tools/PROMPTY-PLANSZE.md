@@ -2067,3 +2067,24 @@ rim and on the berries, the drift covers the bottom of the basket. Detailed
 painted game object, bright highlights, soft shading. Wider than tall,
 compact.
 ```
+
+## 25. Twierdza — tundra: strefa przejściowa pod stawem (runda 10, wzorzec HotA)
+
+Werdykt rundy 9: „śnieżne pola pod jeziorem są martwe; dodać drugi biom albo
+strefę przejściową". Zmarznięta darń (`.` w Twierdzy) miała teksturę śniegu
+z kilkoma źdźbłami — z daleka ten sam biały śnieg. Teraz to wywiana tundra:
+suche płowe trawy i kępy borówek przez cienką warstwę śniegu. Kopiowana
+ręcznie do `public/mapa/teren/teren-tundra.png` (768 × 768), `TEKSTURY`
+Twierdzy: `'trawa': ['tundra', …]`.
+
+<!-- plik: teren-tundra.png | styl: teren -->
+```
+The ground is wind-swept winter tundra seen from above: low tussocks of dry
+straw-coloured and pale ochre grass, small dark olive-green patches of
+lingonberry and moss with a few tiny red berries, scattered small grey
+stones with lichen, all lightly dusted with thin patchy snow and white frost
+between the tussocks so that roughly a third of the surface is thin snow.
+Cool muted palette: straw, ochre, olive, slate grey, white. The surface fills
+the WHOLE picture evenly with no direction, no edges, no paths, no large
+clean snow areas, no trees.
+```
