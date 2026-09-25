@@ -95,6 +95,13 @@ export interface UstawieniaPlanszy {
    */
   obrysObiektow?: number;
   /**
+   * Cień kontaktowy pod budowlami, kopalniami i zamkami: mnożnik szerokości
+   * i krycia (`cienKontaktowy` w scenie). Twierdza, runda 8: szeroka plama
+   * spod śnieżnej podstawki przyciemniała śnieg dookoła budynku i jasna
+   * podstawka czytała się jak wysepka. Brak = jak dotąd (1, 1).
+   */
+  cienBudowli?: { szer?: number; krycie?: number };
+  /**
    * Kępy skał wybrane ręcznie: `"x,y"` lewego górnego pola kępy 3 × 2 →
    * numer rysunku `m-kepa-skaly-N` (1–4), ujemny = odbity w poziomie.
    * Bez wpisu kępa bierze wariant z hasza pola, jak dotąd. Polana, runda 7:

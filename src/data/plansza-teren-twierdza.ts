@@ -423,6 +423,10 @@ export const USTAWIENIA = {
     }
   ],
   "znajdzki": 0.9,
+  "cienBudowli": {
+    "szer": 0.7,
+    "krycie": 0.6
+  },
   "masywy": [
     {
       "plik": "gora-4",

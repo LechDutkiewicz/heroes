@@ -491,6 +491,12 @@ USTAWIENIA = {
     # obrys obiektów gry (jak Bagna/Polana) — odróżnia je od zasp i głazów.
     # Runda 8 (HotA): „obiekty są za małe" — stosy prawie na całe pole.
     'znajdzki': 0.9,
+    # Runda 8 (HotA): „wiatrak, chata nad jeziorem i chatka wiszą na śniegu
+    # jak naklejki". Szeroka plama cienia spod śnieżnej podstawki przyciemniała
+    # sinawy śnieg wokół budynku, a jasna podstawka nad nią czytała się jak
+    # półka. Cień węższy (pod samymi ścianami) i słabszy; zaspy przy ścianach
+    # to teraz `zima/krzak*` (PROMPTY-PLANSZE §21).
+    'cienBudowli': {'szer': 0.7, 'krycie': 0.6},
     # Runda 7 (HotA): „budynki jak naklejki na owalnych wysepkach śniegu
     # z twardą krawędzią". Podstawki budowli rozpływają się teraz w tle
     # (`wtopPodstawe` w `wsad_wczytaj.py`), a ciemny obrys — osiem

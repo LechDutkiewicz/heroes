@@ -537,7 +537,8 @@ export class AdventureScene extends Phaser.Scene {
     wys: number,
     x: number,
     spod: number,
-    krycie: number
+    krycie: number,
+    mnoznikSzer = 1
   ): Phaser.GameObjects.Image {
     const zrodlo = this.textures.get(klucz).getSourceImage() as { width: number; height: number };
     const skala = wys / (zrodlo.height || 1);
@@ -545,11 +546,12 @@ export class AdventureScene extends Phaser.Scene {
     const szerRysunku = zrodlo.width * skala;
     // Środek podstawy względem osi rysunku (origin 0,5).
     const srodek = ((p.lewo + p.prawo) / 2 - 0.5) * szerRysunku;
-    const szer = Math.max(
-      (p.prawo - p.lewo) * szerRysunku * 1.2,
-      (p.widocznaSzer ?? 1) * szerRysunku * 0.6,
-      KAFEL * 0.34
-    );
+    const szer =
+      Math.max(
+        (p.prawo - p.lewo) * szerRysunku * 1.2,
+        (p.widocznaSzer ?? 1) * szerRysunku * 0.6,
+        KAFEL * 0.34
+      ) * mnoznikSzer;
     const wysC = Math.max(szer * 0.36, KAFEL * 0.14);
     // Środek plamy trochę w prawo i w dół od środka podstawy: rysunek zasłania
     // jej lewą-górną część, spod niego wychodzi prawy-dolny sierp — tak jak
@@ -1447,7 +1449,22 @@ export class AdventureScene extends Phaser.Scene {
       // Cień nie trafia do `trafienia`, więc nie łapie kliknięć — liczą się
       // tylko widoczne piksele samego rysunku.
       const spod = (bryla ? -KAFEL * 0.5 : KAFEL * 0.46) - this.pustkaPodRysunkiem(klucz, wys);
-      kont.add(this.cienKontaktowy(klucz, wys, 0, spod, bryla ? KRYCIE_CIENIA_BRYLY : KRYCIE_CIENIA));
+      // `USTAWIENIA.cienBudowli` (per plansza): węższy i słabszy cień pod
+      // budowlami — bez ustawienia mnożniki 1, jak dotąd.
+      const cb =
+        bryla || o.rodzaj === 'budynek'
+          ? planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienBudowli
+          : undefined;
+      kont.add(
+        this.cienKontaktowy(
+          klucz,
+          wys,
+          0,
+          spod,
+          (bryla ? KRYCIE_CIENIA_BRYLY : KRYCIE_CIENIA) * (cb?.krycie ?? 1),
+          cb?.szer ?? 1
+        )
+      );
       // Wejście do budowli z bryłą (zamek, kopalnia) nie ma żadnego
       // odrębnego oznaczenia na gruncie — z daleka wygląda jak zwykła
       // ścieżka POD budynkiem, więc nie widać, gdzie naprawdę trzeba

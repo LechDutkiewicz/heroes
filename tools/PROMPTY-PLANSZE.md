@@ -1845,3 +1845,66 @@ tuft of straw-coloured grass sticking out between them. Pure white and pale
 blue snow only, no dark rocks, no dark outline, no dark underside, no green.
 About two and a half times as wide as tall.
 ```
+
+## 22. Bagna — mokradła w pierwszym ekranie (runda 11, wzorzec HotA)
+
+Werdykt zwycięzcy rundy 10: „nic nie przypomina bagna — stawy małe, brak
+trzcin, błota i mokradeł, prawie jednolita zieleń". Pierwszy ekran dostaje
+płachty mokradła malowane w tle (`DOMALUJ` w `tools/mapy/bagna.py`): grunt
+z tekstury `teren-mokradlo` o ostrym, nieregularnym brzegu, oczka mętnej
+wody, a na nich te naklejki — większe niż dawne kępki z §8, bo w kamerze
+32 px na pole tamte znikały. Nie idą przez `wsad_wczytaj.py`: obiera je
+i skaluje `bagna.py` (`NAKLEJKI_MOKRADLA`) do `public/mapa/bagno/tlo-*.png`.
+
+<!-- plik: teren-mokradlo.png | styl: teren -->
+```
+The ground is a wet marsh meadow seen straight from above: soft mossy
+olive-green and yellow-green sedge ground, covered with many irregular
+shallow puddles of murky olive-brown standing water with a faint sky sheen,
+each puddle with a thin wet darker rim and a lighter muddy edge, little
+floating duckweed specks, tufts of coarse sedge and a few tiny reeds between
+the puddles. Puddles of very different sizes, from small to large, never in a
+grid. Bright, clean, friendly colours, not dark or gloomy.
+```
+
+<!-- plik: bagno-trzcinowisko-1.png | styl: obiekt | proporcje: 3:2 -->
+```
+A wide dense bed of marsh reeds and cattails, the kind that grows along the
+shore of a swamp pond on a Heroes of Might and Magic 3 adventure map, seen
+from above at a three-quarter angle: dozens of tall thin olive-green and
+straw-yellow reed stalks of different heights packed together, eight or ten
+brown velvety cattail heads, some blades bent and crossing, a few broad sedge
+leaves at the front, the base disappearing into shallow water. Much wider than
+tall, about three times as wide as tall, soft irregular silhouette.
+```
+
+<!-- plik: bagno-trzcinowisko-2.png | styl: obiekt | proporcje: 3:2 -->
+```
+A low wide belt of swamp rushes and sedge growing out of shallow water, seen
+from above at a three-quarter angle like vegetation on a Heroes of Might and
+Magic 3 adventure map: a mix of bright green rushes, yellow-green sedge
+tussocks and a few purple-blue marsh iris flowers, three brown cattail heads
+on the left, two round lily pads with a white flower at the front edge. Much
+wider than tall, about three times as wide as tall, soft irregular silhouette.
+```
+
+<!-- plik: bagno-martwe-drzewo-3.png | styl: obiekt -->
+```
+A large dead swamp tree for a children's fantasy adventure map: a thick
+gnarled grey-brown trunk leaning slightly, split at the top into three twisted
+bare branches reaching up like crooked fingers, long strands of grey-green
+hanging moss dripping from the branches, a hollow knot in the trunk, big
+exposed arching roots at the bottom standing in a small patch of dark water
+with a few reeds. Eerie but friendly, soft painted shading, taller than wide.
+```
+
+<!-- plik: bagno-powalony-pien.png | styl: obiekt | proporcje: 3:2 -->
+```
+A long fallen tree trunk lying on the ground in a swamp, seen from above at a
+three-quarter angle like a map decoration on a Heroes of Might and Magic 3
+adventure map: old dark brown bark covered with thick bright green moss on
+top, a tangle of torn-out roots at the left end, a broken jagged end at the
+right, two small shelf mushrooms and a few ferns growing on it, a little
+murky water and reeds around its middle. Low and long, about three times as
+wide as tall.
+```
