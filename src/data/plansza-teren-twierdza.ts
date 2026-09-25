@@ -417,7 +417,8 @@ export const USTAWIENIA = {
       "promien": 9
     }
   ],
-  "znajdzki": 0.9,
+  "znajdzki": 0.55,
+  "skalaZamku": 1.8,
   "cienBudowli": {
     "szer": 0.7,
     "krycie": 0.6
