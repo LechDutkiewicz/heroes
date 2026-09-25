@@ -171,6 +171,12 @@ SCIEZKA_DOLU = [(13, 47), (13, 48), (14, 49), (14, 50), (13, 51), (13, 52), (13,
 def po_drogach(g, mapa):
     for x, y in SCIEZKA_DOLU:
         mapa[y][x] = '='
+    # Runda 9: rozstaje pod polem startu były blokiem 2 × 2 pól drogi — kręta
+    # droga rysowała z niego pierścień z kwadratową wysepką trawy w środku.
+    # Odnoga do zamku odchodzi teraz od ścieżki w dół, jedno pole niżej.
+    if mapa[46][12] == '=' and mapa[47][11] == '=':
+        mapa[46][12] = '.'
+        mapa[47][12] = '='
 
 
 def przy_drodze(g, pola, zasieg=2):
@@ -299,6 +305,35 @@ def popraw_teren(g, mapa):
         for x in range(ostatnia + 1, ostatnia + 5):
             if mapa[y][x] == 'b':
                 mapa[y][x] = '.'
+    # Runda 9 (HotA, 0/3: „brudne, ciemne, rozmyte przejścia — schodkowe
+    # obwódki w kształcie kratki kafli wokół ścieżek i łąk, ciemnozielone
+    # rozlane plamy przy rozwidleniu i oczkach, szarozielona smuga wzdłuż
+    # rzeki"): wszystkie te obwódki to łaty trzęsawiska `b` rozsiane po
+    # dolinie przez rozmycie szkicu — pojedyncze pola błota z czołem skarpy
+    # i mokrą obwódką, każda w kształcie swoich kafli. Dolina jest SUCHA
+    # (tak ją opisuje ta plansza), więc w pierwszym ekranie nie ma już
+    # ani jednego pola bagna: łąka, droga, Struga z brzegiem, jedno oczko
+    # z trzciną w przełęczy, las i góry. Trzęsawisko zaczyna się za kadrem.
+    for y in range(34, BOK):
+        cx = struga_x(y)
+        for x in range(0, min(BOK, cx + 7)):
+            if mapa[y][x] == 'b':
+                mapa[y][x] = '.'
+    # Wschodni brzeg pod mostem: ze szkicu zostało tu oczko przyklejone do
+    # Strugi i pojedyncze pole lasu między nimi — z bliska jedna rozmyta
+    # smuga. Brzeg ma być jedną czystą linią: rzeka, pas piasku, łąka.
+    for y in range(MOST_WSCH[1] + 1, BOK):
+        cx = struga_x(y)
+        for x in range(cx + 1, min(BOK, cx + 6)):
+            if mapa[y][x] in '~T':
+                mapa[y][x] = '.'
+    # Za to prawy skraj kadru zamyka ściana wierzb (las), jak masyw lasu na
+    # brzegu kadru we wzorcu HotA — łąka za Strugą przestaje być pustą
+    # połacią urwaną ramą. Wolne zostają trakt za mostem i pas przy rzece.
+    for y in list(range(37, 42)) + list(range(47, 53)):
+        for x in range(struga_x(y) + 4, struga_x(y) + 7):
+            if mapa[y][x] in '.b':
+                mapa[y][x] = 'T'
 
 
 def w_dolinie(x, y):
@@ -482,6 +517,9 @@ USTAWIENIA = {
         # nad wiatrakiem) — czarne zęby mgły ucinały góry w pół.
         {'x': 2, 'y': 52, 'promien': 3},
         {'x': 2, 'y': 40, 'promien': 4},
+        # Runda 9: prawy skraj kadru za Strugą (miękki brzeg mgły kładł
+        # ciemny klin na łące przy ramie).
+        {'x': 26, 'y': 44, 'promien': 4},
     ],
     # Runda 5 (wzorzec HotA; wcześniej runda 3: „płaska ikona pokeballa
     # wygląda na wklejoną z innej gry"): znajdźki to STOSY leżące na ziemi
@@ -501,12 +539,18 @@ USTAWIENIA = {
         {'plik': 'gora-2', 'x': 6.0, 'y': 41.5, 'szer': 7.0, 'pokrywa': [4, 37, 9, 40]},
         {'plik': 'gora-1', 'x': 6.3, 'y': 45.4, 'szer': 9.0, 'pokrywa': [4, 41, 9, 44]},
         {'plik': 'gora-6', 'x': 6.3, 'y': 54.4, 'szer': 7.8, 'pokrywa': [4, 50, 8, 53]},
-        {'plik': 'gora-5', 'x': 17.4, 'y': 54.4, 'szer': 6.4, 'odbij': True, 'pokrywa': [15, 50, 18, 53]},
+        # Runda 9: węższa i w lewo — prawe zbocze wchodziło na Strugę
+        # i rzeka płynęła „pod górą".
+        {'plik': 'gora-5', 'x': 16.9, 'y': 54.4, 'szer': 5.8, 'odbij': True, 'pokrywa': [15, 50, 18, 53]},
     ],
     # Runda 6 (HotA: „obiekty interaktywne są mniejsze od drzew i krzaków,
     # bez cienia, konturu i kontrastu"): budowle większe i obrys wokół
     # wszystkiego, co da się odwiedzić albo podnieść.
-    'skalaBudowli': 1.2,
+    # Runda 9 („niespójna skala: domki wielkości drzew, zamek wielkości
+    # chaty"): budowle o ton mniejsze, zamek o jedną trzecią większy — zamek
+    # ma być największą budowlą w kadrze, jak miasto na mapie Heroes 3.
+    'skalaBudowli': 1.05,
+    'skalaZamku': 1.35,
     'obrysObiektow': 0.55,
     # Runda 6 („turkusowa, czysta woda — tropikalna zatoka"): tafla w shaderze
     # mętna, oliwkowo-brunatna, bez białej piany i z przygaszonymi iskrami.
@@ -544,13 +588,17 @@ BARWY_TERENU = {
     # i cieplejsze — czarnobrunatne łaty przy dolinie czytały się jak dziury.
     'bagno': {'nasycenie': 0.95, 'barwa': (130, 118, 80), 'moc': 0.2, 'jasnosc': 1.18},
     # Bruk grobli (runda 6): prawie bez zmian, lekko ciepły.
-    'sciezka': {'nasycenie': 0.85, 'barwa': (160, 145, 120), 'moc': 0.2, 'jasnosc': 1.05},
+    # Runda 9: bez jaśniejszej jezdni z `obwodka_drogi` bruk jaśniejszy tu.
+    'sciezka': {'nasycenie': 0.85, 'barwa': (160, 145, 120), 'moc': 0.2, 'jasnosc': 1.2},
 }
 
 #: Po rundzie 1 ślepego porównania („bagno to brązowa plama w kolorze drogi"):
 #: oczka ciemnej wody, trzcina i grążele na bagnie, obwódka i jaśniejsza
 #: jezdnia na grobli (`tools/teren_efekty.py`).
-EFEKTY = ['trzesawisko', 'obwodka_drogi', 'relief', 'bez_placow', 'brzeg_wody']
+# Runda 9 („ciemne obwódki wokół ścieżek"): zamiast rozlanej ciemnej
+#: obwódki (`obwodka_drogi`) malowane obrzeże traktu jak na Polanie — ostry
+#: kontur, kamyki i kępki trawy na krawędzi (`droga_obrzeze`).
+EFEKTY = ['trzesawisko', 'droga_obrzeze', 'relief', 'bez_placow', 'brzeg_wody']
 #: Runda 3 („ciemna ziemia z trzciną, wygląda jak ciemny las"): oczka stojącej
 #: wody w barwie jezior tej planszy, mokre błoto wokół, jaśniejszy grunt.
 #: Runda 8: oczka w barwie jaśniejszej, łupkowej wody Strugi.
@@ -596,11 +644,13 @@ NAKLEJKI = [
     (['pniak-bagienny'], 'b', 0.03),
     # Runda 4: sucha łąka w dole doliny ma być czytelnie INNA niż bagno —
     # kwiaty rosną tylko na suchym.
-    (['kwiaty-1', 'kwiaty-2'], '.', 0.07),
+    (['kwiaty-1', 'kwiaty-2'], '.', 0.05),
     # Runda 5 (wzorzec HotA: gęsto od drobiazgów na każdym polu): grzyby,
     # omszałe kłody, kamienie w mchu, paprocie i bagienne irysy — na suchym
     # i na bagnie, żeby żadna połać nie była gołą teksturą.
-    (['grzyby-bagienne', 'kamienie-mech', 'paproc'], '.', 0.16),
+    # Runda 9 („te same czerwone grzyby rozsypane po całej mapie zagłuszają
+    # obiekty"): na łące tylko kamienie w mchu i paprocie, rzadziej.
+    (['kamienie-mech', 'paproc'], '.', 0.08),
     (['kloda-mech', 'irysy', 'paproc', 'grzyby-bagienne'], 'b', 0.14),
 ]
 
@@ -611,7 +661,9 @@ NAKLEJKI = [
 #: (`teren_efekty.rzezba`).
 #: Runda 6 („drogi to rozmyte beżowe smugi — potrzebna utwardzona droga"):
 #: bruk (`TEKSTURY`), szerszy i równiejszy trakt.
-DROGA_KRETA = {'szerokosc': 0.46, 'zmiennosc': 0.25, 'meander': 0.14}
+# Runda 9: obrzeże (`droga_obrzeze`) przygasza skraj jezdni, więc trakt
+#: o pole szerszy w odczuciu — 0,56 zamiast 0,46.
+DROGA_KRETA = {'szerokosc': 0.56, 'zmiennosc': 0.22, 'meander': 0.14}
 RZEZBA = {'pagorki': 0.9, 'czolo': 0.7}
 
 #: Runda 7: most nad Czarną Strugą w kadrze startu (`teren_efekty.mosty`).
@@ -620,3 +672,23 @@ MOSTY = [
     {'plik': 'bagno/most.png', 'pola': [(MOST_WSCH[0], MOST_WSCH[1]), (MOST_WSCH[2], MOST_WSCH[3])],
      'srodek': (MOST_WSCH[0] + 1.0, MOST_WSCH[1] + 0.62), 'szer': 3.3},
 ]
+
+
+def TLO(rysunek):
+    """Podmiany znaków tylko w TLE planszy (`render_mapa.ustaw`), runda 9.
+
+    Werdykt rundy 8: „wokół gór w lewym dolnym rogu rozmyta, półprzezroczysta
+    ciemna maska zamiast przejścia trawa–skała". Pod dużymi górami z `masywy`
+    tło malowało skały teksturą ściółki z reliefem, a rysunek góry ma miękkie,
+    omszałe podnóże — przez nie prześwitywała ciemna, rozmyta plama wystająca
+    za górę. Jak w Heroes 3: góra stoi NA łące, więc pod pierwszym ekranem
+    skały (`#`) są w tle łąką; w grze dalej są skałami. Tak samo las
+    w kadrze: drzewa stoją na trawie, a nie na rozlanej plamie ściółki,
+    której brzeg biegł schodkami kafli.
+    """
+    wynik = [list(w) for w in rysunek]
+    for y in range(34, BOK):
+        for x in range(0, 29):
+            if wynik[y][x] in '#T':
+                wynik[y][x] = '.'
+    return [''.join(w) for w in wynik]

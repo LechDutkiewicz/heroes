@@ -84,6 +84,11 @@ export interface UstawieniaPlanszy {
    */
   skalaBudowli?: number;
   /**
+   * Mnożnik wysokości rysunku zamków na tej planszy (bryła i przejezdność
+   * bez zmian). Bagna, runda 9: „zamek wielkości chaty". Brak = 1.
+   */
+  skalaZamku?: number;
+  /**
    * Krycie ciemnego obrysu wokół obiektów gry (budowle, kopalnie, znajdźki,
    * zamki — bez stworków). Odcina to, co da się odwiedzić, od drzew i skał.
    * Brak = bez obrysu.

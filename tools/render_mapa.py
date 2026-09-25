@@ -152,6 +152,12 @@ def ustaw(mapa_id: str):
     for most in MOSTY:
         for x, y in most['pola']:
             RYSUNEK[y] = RYSUNEK[y][:x] + '~' + RYSUNEK[y][x + 1:]
+    # Bagna, runda 9: `TLO(rysunek)` planszy podmienia znaki tylko w TLE
+    # (np. łąka pod dużymi górami z `masywy`, żeby miękkie podnóże rysunku
+    # wchodziło w trawę, a nie w rozmytą plamę ściółki). Brak — jak dotąd.
+    tlo = getattr(k, 'TLO', None)
+    if tlo is not None:
+        RYSUNEK = tlo(RYSUNEK)
     WYS, SZER = len(RYSUNEK), len(RYSUNEK[0])
     W, H = SZER * KAFEL, WYS * KAFEL
 

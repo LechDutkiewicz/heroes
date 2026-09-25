@@ -1326,7 +1326,9 @@ export class AdventureScene extends Phaser.Scene {
     if (o.rodzaj === 'zamek')
       return {
         klucz: o.wlasciciel === 'gracz' ? 'm-zamek-las' : 'm-zamek-ogien',
-        wys: KAFEL * (bryla ? 3.1 : 1.9),
+        // `USTAWIENIA.skalaZamku` (per plansza; Bagna, runda 9: „zamek
+        // wielkości chaty"). Brak = 1.
+        wys: KAFEL * (bryla ? 3.1 : 1.9) * (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaZamku ?? 1),
       };
     if (o.rodzaj === 'kopalnia')
       return {
