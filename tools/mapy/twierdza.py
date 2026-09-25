@@ -218,9 +218,10 @@ def rozstaw(g):
     g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'odlamek'), kadr, None, (3, 14))
     g.dodaj_najpierw('dom', lambda p: ('budynek', 'ognisko'), kadr, None, (2, 16))
     g.dodaj_najpierw('dom', lambda p: ('budynek', 'chatka'), kadr, None, (2, 16))
-    # Runda 3 (wzorzec HotA): „dwie trzecie ekranu puste" — zimowy wiatrak
-    # i dwie kupki więcej w widoku z dnia pierwszego.
-    g.dodaj_najpierw('dom', lambda p: ('budynek', 'wiatrak'), kadr, None, (2, 16))
+    # Runda 3 (wzorzec HotA): „dwie trzecie ekranu puste" — zimowa wieża
+    # obserwacyjna i dwie kupki więcej w widoku z dnia pierwszego. (Wiatrak
+    # dolina ma z `budowle` niżej; drugi w kadrze wyglądał na kopiuj-wklej.)
+    g.dodaj_najpierw('dom', lambda p: ('budynek', 'wieza-obserwacyjna'), kadr, None, (2, 16))
     for _ in range(5):
         g.dodaj_najpierw('dom', lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kadr, None, (2, 12))
     g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), kadr, None, (2, 12))
@@ -253,11 +254,11 @@ def rozstaw(g):
     g.strzez(g.dodaj(2, 'dom', (14, 40), lambda p: ('artefakt', None)), 'slaby')
     g.skarb_w_kieszeni('dom', 'slaby', 3, lambda p: ('skrzynia', None))
     g.skarb_w_kieszeni('dom', 'sredni', 3, lambda p: rng.choice([('artefakt', None), ('skrzynia', None), ('surowiec', 'odlamek')]))
-    # Runda 3: bez drugiego wiatraka i ogniska — po oddaleniu kamery stawały
-    # w pierwszym ekranie obok tych z kadru i czytały się jak kopiuj-wklej.
+    # Lista jak przed rundą 3: wiatraki i ogniska to dochód doliny. Bez nich
+    # (próba w rundzie 3) autopilot nie zdobywał drugiej twierdzy do dnia 84.
     g.budowle(14, 'dom', [
-        'oboz-treningowy', 'ranczo', 'drzewo-wiedzy', 'chatka', 'wieza-obserwacyjna',
-        'gniazdo', 'woz', 'zrodlo', 'kamienna-wieza',
+        'ognisko', 'wiatrak', 'oboz-treningowy', 'zrodlo', 'ranczo', 'gniazdo',
+        'drzewo-wiedzy', 'chatka', 'woz', 'kamienna-wieza',
     ])
 
     # --- TUNDRA --------------------------------------------------------------

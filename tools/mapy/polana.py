@@ -104,10 +104,20 @@ PASMA = [
     # (kopalnia, skrzynia, ognisko) z jednym wejściem wzdłuż brzegu, które
     # pilnuje straż.
     (18, 28, 23, 29),
-    (21, 30, 23, 31),
-    (20, 32, 22, 33),
-    (19, 34, 21, 35),
+    # Runda 7 (HotA): „wzgórza w prawym dolnym rogu to klony zielonych kopców,
+    # złamać to drugim terenem (skalisty rough) na wschodnim brzegu". Ściana
+    # gór odsunięta pod prawą krawędź kadru (kolumny 23–25): kieszeń za
+    # rzeką jest dwa razy większa i ma dno z ubitej, kamienistej ziemi
+    # (`KIESZEN_ROUGH`), a nie trzy kopce zachodzące na skrzynię i ognisko.
+    (23, 30, 25, 31),
+    (23, 32, 25, 33),
+    (23, 34, 25, 35),
 ]
+
+#: Runda 7: dno kieszeni za rzeką (x0, y0, x1, y1) — „rough" z HotA,
+#: pomarańczowobrązowa ziemia z kamieniami (`teren-ziemia`) od brzegu po
+#: ścianę gór, z językiem wychodzącym korytarzem wzdłuż brzegu.
+KIESZEN_ROUGH = (17, 30, 22, 35)
 
 #: Runda 6: ubita ziemia (`j`, tekstura `teren-ziemia`) pod skarpami pasm
 #: i na dnie kieszeni za rzeką — przejście terenu zamiast jednolitej zieleni.
@@ -115,6 +125,11 @@ ZIEMIA = [
     (11, 27), (12, 27),
     (18, 30), (19, 31), (20, 31), (18, 31), (19, 32),
     (16, 23), (17, 22),
+    # Runda 7: język rough z kieszeni korytarzem wzdłuż brzegu i pod skarpą.
+    (17, 28), (17, 29), (17, 27), (18, 27), (19, 27),
+    # …i pas ubitej ziemi u stóp zachodniego pasma (przejście terenu pod
+    # skałami, nie zielony dywan do samej skały).
+    (3, 27), (4, 27), (5, 27), (7, 27), (8, 27), (10, 27), (6, 28),
 ]
 
 #: Most (runda 4). Pola pod nim są w grze DROGĄ, a render maluje pod nimi
@@ -241,6 +256,13 @@ def popraw_teren(g, mapa):
     for x, y in ZIEMIA:
         if mapa[y][x] in '.,':
             mapa[y][x] = 'j'
+    # Runda 7: kieszeń za rzeką to rough od brzegu po ściane gór (las,
+    # który tu rósł z rozmycia szkicu, zasłaniał dno kieszeni).
+    x0, y0, x1, y1 = KIESZEN_ROUGH
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            if x > rzeka_x(y) and mapa[y][x] in '.,T':
+                mapa[y][x] = 'j'
     # Most: pola przeprawy przejezdne (droga wytyczy się po nich sama),
     # przyczółki po obu stronach wolne na dwa pola w głąb.
     x0, y0, x1, y1 = MOST
@@ -350,7 +372,10 @@ PIERWSZY_EKRAN_BRZEG = [
     ([(19, 30), (20, 30), (18, 30)], ('kopalnia', 'kamien')),
     ([(17, 30), (17, 29)], ('potwor', 'slaby')),
     ([(19, 32), (18, 32)], ('skrzynia', None)),
-    ([(20, 31), (18, 31)], ('budynek', 'ognisko')),
+    # Runda 7: kieszeń jest większa — ognisko głębiej, dwa stosy na roughu.
+    ([(21, 33), (20, 33), (20, 32)], ('budynek', 'ognisko')),
+    ([(21, 31), (22, 31)], ('surowiec', 'odlamek')),
+    ([(19, 34), (20, 34)], ('surowiec', 'kamien')),
     ([(18, 23), (17, 23)], ('budynek', 'wieza-obserwacyjna')),
     ([(20, 23), (21, 23), (20, 22)], ('budynek', 'gniazdo')),
     ([(19, 24), (18, 24)], ('surowiec', 'jagoda')),

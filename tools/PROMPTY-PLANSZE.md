@@ -1173,3 +1173,70 @@ slight angle: a round mound of wet dark mud crowned with a shaggy tuft of
 olive-green sedge and three cattails, a ring of murky olive water ripples
 around its base. Small and compact, slightly wider than tall.
 ```
+
+## 12. Polana — skaliste granie zamiast zielonych kopców (runda 7, wzorzec HotA)
+
+Werdykt rundy 6 (trzech krytyków): „wzgórza to ta sama zielono-brązowa
+stożkowa pieczątka, powtórzona kilka razy; gładkie zielone kopce ucięte jak
+nożem, bez skał; potrzebne skaliste grzbiety o nieregularnym obrysie
+i prawdziwe góry o innej sylwetce". W HotA góra na trawie to szaro-brązowa
+skała z ostrymi szczytami, żlebami i piargiem, zielona tylko u podnóża.
+Cztery RÓŻNE sylwetki (grań z zębami, masyw z wodospadem, dwa szczyty
+z przełęczą, niskie skałki podnóża), każda o podstawie na całą szerokość
+obrazka — scena kładzie je co trzy pola i zachodzą na siebie w pasmo.
+
+Generowane pod nazwą `polana-gran-N.png`; po obróbce (przycięcie, zdjęcie
+jasnego rąbka u podstawy) zapisane we wsadzie jako `polana-kepa-skaly-N.png`
+(`public/mapa/polana/kepa-skaly-N.png`, 216 px). Stare zielone kopce leżą
+w historii gita.
+
+<!-- plik: polana-gran-1.png | styl: obiekt | proporcje: 3:2 -->
+```
+A segment of a jagged rocky mountain range in the style of Heroes of Might
+and Magic 3: a long ridge of sharp grey and warm tan rock peaks of uneven
+heights, like broken teeth, with one tall summit left of centre and a row of
+smaller crags stepping down to the right. Deep dark vertical crevices and
+gullies, rock ledges, pale grey scree fans spilling down, a few small dark
+green pines and tufts of grass clinging to the lower ledges; only the very
+foot is grassy green. Strong sculpted relief: bright sunlit faces on the
+right, deep blue-grey shadows on the left. Clearly an impassable mountain.
+Much wider than tall; the foot spreads across the whole width of the picture
+so that pieces placed side by side join into one continuous range.
+```
+
+<!-- plik: polana-gran-2.png | styl: obiekt | proporcje: 3:2 -->
+```
+A craggy grey rock massif with a waterfall in the style of Heroes of Might
+and Magic 3: two sharp rocky summits of different height with a notch
+between them, a thin white waterfall falling from the notch down a dark cleft
+in the front cliff into a small blue pool at the foot, wet dark rock beside
+it, mossy green ledges, a few small pines on the shoulders, grey scree and
+boulders around the base. Strong sculpted relief lit from the right, deep
+shadows on the left. One solid impassable landform. Wider than tall; the
+rocky foot spreads across the whole width of the picture.
+```
+
+<!-- plik: polana-gran-3.png | styl: obiekt | proporcje: 3:2 -->
+```
+A long low rocky mountain ridge in the style of Heroes of Might and Magic 3,
+seen from the side: a jagged grey and warm tan stone crest running across the
+whole picture from left to right, with a saddle in the middle and two uneven
+rocky humps, many small sharp crags and broken rock teeth along the top, deep
+shadowed gullies running down the front face, grey scree fans and a few
+boulders at the foot, a handful of tiny dark pines and green grass patches
+only on the lowest slopes. Sunlit faces on the right, cool blue-grey shadow
+on the left. Clearly an impassable mountain wall, about twice as wide as tall;
+the foot spreads across the whole width of the picture.
+```
+
+<!-- plik: polana-gran-4.png | styl: obiekt | proporcje: 3:2 -->
+```
+Low rugged rocky foothills of a mountain chain in the style of Heroes of
+Might and Magic 3: a tight cluster of five or six low sharp grey-tan rock
+outcrops and big angular boulders of different sizes packed together, cracked
+faces with dark crevices, grey scree and gravel between them, a few tufts of
+green grass and two small dark green bushes in the gaps. Lower and flatter
+than a mountain but clearly impassable rough rocky ground. Lit from the
+right. Much wider than tall; the foot spreads across the whole width of the
+picture.
+```
