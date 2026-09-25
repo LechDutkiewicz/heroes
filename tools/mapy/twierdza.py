@@ -123,8 +123,8 @@ ODSTEP_OD_ZAMKOW = 2
 
 
 #: Przesunięcia ziaren tundry i dolin twierdz (patrz `rozstaw`).
-TUNDRA_ZIARNO = 40
-TWIERDZE_ZIARNO = 41
+TUNDRA_ZIARNO = 60
+TWIERDZE_ZIARNO = 61
 
 
 def strefa(x, y):

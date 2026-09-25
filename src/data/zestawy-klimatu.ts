@@ -39,11 +39,19 @@ export const ZESTAWY_KLIMATU: Record<string, readonly string[]> = {
     "kepa-las-2",
     "kepa-las-3",
     "kepa-las-4",
+    "kepa-skaly-1",
+    "kepa-skaly-2",
+    "kepa-skaly-3",
+    "kepa-skaly-4",
     "kopalnia-kamien",
     "kopalnia-odlamek",
     "kopalnia-pokeball",
+    "kopiec",
+    "kopiec-2",
     "krzak",
-    "krzak-2"
+    "krzak-2",
+    "skala",
+    "skala-2"
   ],
   "polana": [
     "kepa-skaly-1",

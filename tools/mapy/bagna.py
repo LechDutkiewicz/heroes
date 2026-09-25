@@ -144,6 +144,12 @@ DOLINA_DOL = [
     'TTT.T.......Tb',
 ]
 
+#: Omszałe wzgórza na lewym skraju pierwszego ekranu, x 4–9, y 37–44 (runda 5:
+#: „płaski teren bez wzniesień i skarp"). Sześć pól na szerokość i osiem na
+#: wysokość to cztery rzędy po dwie kępy 3 × 2 — scena kładzie je w zwarte
+#: pasmo, a nie w pojedyncze głazy.
+WZGORZA = (4, 37, 9, 44)
+
 #: Ścieżka z pola startu w dół doliny — do kopalń i skrzyni, dalej za kadr.
 SCIEZKA_DOLU = [(13, 47), (13, 48), (14, 49), (14, 50), (13, 51), (13, 52), (13, 53)]
 
@@ -239,6 +245,10 @@ def popraw_teren(g, mapa):
     # dolnej krawędzi zasłaniały trzy rzędy łąki nad sobą. Zostaje sucha łąka
     # (tu stoją kopalnie i skrzynia), oczko wody z trzcinowym brzegiem, bagno
     # przy Strudze i pojedyncze drzewa — żadnej kępy w kadrze.
+    x0, y0, x1, y1 = WZGORZA
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            mapa[y][x] = '#'
     for dy, wiersz in enumerate(DOLINA_DOL):
         y = 47 + dy
         for dx, znak in enumerate(wiersz):
@@ -306,7 +316,20 @@ def rozstaw(g):
     g.strzez(g.dodaj(1, 'dom', (10, 30), lambda p: ('artefakt', None)), 'slaby')
     g.dodaj(2, 'dom', (7, 30), lambda p: ('potwor', 'slaby'))
     g.skarb_w_kieszeni('dom', 'slaby', 3, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'odlamek')]))
-    g.budowle(9, 'dom', ['wiatrak', 'oboz-treningowy', 'ognisko', 'drzewo-wiedzy', 'zrodlo', 'ranczo', 'gniazdo', 'chatka', 'woz'], (4, 40))
+    # Budowle doliny nie przy samej drodze (runda 5: wiatrak na skraju ścieżki
+    # w dół doliny zasłaniał ją całą i dół kadru znów był ścianą obiektów).
+    def z_dala_od_drogi(p):
+        if abs(p[0] - sx) > 7 or not -5 <= p[1] - sy <= 7:
+            return True
+        return not any(
+            0 <= p[1] + dy < BOK and 0 <= p[0] + dx < BOK and g.mapa[p[1] + dy][p[0] + dx] == '='
+            for dy in (-1, 0, 1)
+            for dx in (-1, 0, 1)
+        )
+
+    for b in ['wiatrak', 'oboz-treningowy', 'ognisko', 'drzewo-wiedzy', 'zrodlo', 'ranczo', 'gniazdo', 'chatka', 'woz']:
+        kand = [p for p in g.wolne_pola('dom', (4, 40)) if z_dala_od_drogi(p)]
+        g.dodaj(1, 'dom', (4, 40), lambda p, b=b: ('budynek', b), kandydaci=kand)
 
     # Straże przepraw przez Strugę. Obie średnie: pierwszy tydzień w dolinie
     # jest bezpieczny, a wyjście z niej to pierwsza poważna bitwa.
@@ -425,5 +448,5 @@ NAKLEJKI = [
 #: i zmienia szerokość (`teren_efekty.droga_kreta`), a teren dostaje rzeźbę —
 #: pagórki na suchym, skarpy wysepek nad bagnem, groblę jako wał z cieniem
 #: (`teren_efekty.rzezba`).
-DROGA_KRETA = {'szerokosc': 0.34, 'zmiennosc': 0.42, 'meander': 0.22}
-RZEZBA = {'pagorki': 0.55}
+DROGA_KRETA = {'szerokosc': 0.34, 'zmiennosc': 0.5, 'meander': 0.26}
+RZEZBA = {'pagorki': 0.9, 'czolo': 0.7}

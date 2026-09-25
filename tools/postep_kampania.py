@@ -47,8 +47,12 @@ e = html.escape
 def runda(r: dict, i: int) -> str:
     wynik = 'nasze wygrywa' if r.get('win') else 'wzorzec wygrywa'
     klasa = 'win' if r.get('win') else 'loss'
-    img = obraz(r['blind']) if r.get('blind') else ''
-    fig = f'<img src="{img}" alt="Ślepe porównanie, runda {i}" loading="lazy">' if img else ''
+    sciezki = r.get('blinds') or ([r['blind']] if r.get('blind') else [])
+    fig = ''.join(
+        f'<img src="{obraz(s)}" alt="Ślepe porównanie, runda {i}" loading="lazy">' for s in sciezki if obraz(s)
+    )
+    if len(sciezki) > 1:
+        fig = f'<div class="trzy">{fig}</div>'
     return f'''
       <li class="runda">
         <div class="runda-glowa"><span class="nr">{e(r.get('label') or f'Runda {i}')}</span><span class="werdykt {klasa}">{wynik}</span></div>
@@ -198,6 +202,7 @@ def main():
   .runda img {{ width: 100%; border-radius: 6px; border: 1px solid var(--linia); }}
   .luka, .notka {{ margin: 0; max-width: 75ch; }} .notka {{ color: var(--miekki); font-size: 14px; }}
   .pusto {{ color: var(--miekki); }}
+  .trzy {{ display: grid; gap: 8px; }}
   .builder {{ margin: 0; max-width: 75ch; font-size: 14px; }}
   .werdykt.toku {{ color: var(--bud); }}
   .w-toku {{ border-top-style: dashed; }}

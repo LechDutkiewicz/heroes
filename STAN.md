@@ -276,6 +276,16 @@ postaciami bez jednej malowanej ilustracji.
    postępu (artefakt https://claude.ai/artifact/Mq8R94QKJxB89A1p69pW8E —
    z nowej sesji aktualizuje się, podając jego adres jako `url`).
 
+**Od 2026-09-25 poprzeczką mapy przygody i całej gry jest HoMM3 HotA**
+(HoMM2 zostaje wzorcem tylko dla przebiegu kampanii). Zrzuty HoMM3 leżą
+w `tools/reference/homm3/` (poza gitem; źródła i URL-e w `ZRODLA.md` tamże —
+wszystkie z `raw.githubusercontent.com/vcmi-mods/*/screenshots/`, VCMI
+z oryginalnymi grafikami, część z modem HotA; czystego HotA proxy nie
+przepuszcza). Do plansz: `ref-trawa.png` (1280×720 z 3840×2160),
+`ref-bagno.png` (960×720 z 1280×960), `ref-snieg.png` (1280×719). Runda to
+trzy ślepe zestawienia (nasz zrzut przeciw każdemu wzorcowi), trzech
+krytyków ze świeżym kontekstem, wygrana przy 2 z 3.
+
 Wzorce HoMM2 leżą w `tools/reference/homm2/` (katalog poza gitem — w nowym
 kontenerze trzeba je ściągnąć ponownie; źródła w `ZRODLA.md` tamże, a
 najważniejsze: `raw.githubusercontent.com/ihhub/fheroes2/master/docs/images/screenshots/screenshot_world_map.webp`,

@@ -526,7 +526,8 @@ def droga_kreta(rysunek: list, kafel: int, ziarno: int, szerokosc: float = 0.36,
 
 
 def rzezba(plansza: Image.Image, maski: dict, droga: Image.Image, kafel: int, ziarno: int,
-           wysokosci: dict | None = None, pagorki: float = 0.55, sila: float = 1.0) -> Image.Image:
+           wysokosci: dict | None = None, pagorki: float = 0.55, sila: float = 1.0,
+           czolo: float = 0.0) -> Image.Image:
     """Rzeźba terenu: pagórki, skarpy i grobla nad bagnem (Bagna, runda 5).
 
     Werdykt: „zupełnie płaski teren bez wzniesień, skarp i cieni". Budujemy
@@ -576,6 +577,19 @@ def rzezba(plansza: Image.Image, maski: dict, droga: Image.Image, kafel: int, zi
     tab = _tab(plansza)
     ziemia = (stromo * (1 - woda_m) * np.clip(hs + 0.6, 0, 1))[..., None] * 0.35
     tab = tab * (1 - ziemia) + np.array([112, 86, 52]) * ziemia
+    if czolo > 0:
+        # Czoło skarpy: kamera patrzy z południa, więc spadek ku dołowi ekranu
+        # (wyżej na północy, niżej na południu) pokazuje ścianę ziemi — pas
+        # ciemnego torfu, a nad nim jasna krawędź murawy. Tak w Heroes
+        # czyta się uskok, zanim zobaczy się cień.
+        spadek = np.clip(gy * kafel * 1.4 - 0.15, 0, 1) * (1 - woda_m)
+        spadek = gaussian_filter(spadek, 1.0)
+        rant = np.clip(-np.gradient(spadek, axis=0) * kafel * 0.5, 0, 1)
+        C = (spadek * czolo)[..., None]
+        sciana = tab.mean(axis=2, keepdims=True) * np.array([0.72, 0.56, 0.36]) + np.array([30, 22, 10])
+        tab = tab * (1 - C) + sciana * C
+        R = (rant * czolo)[..., None] * 0.5
+        tab = tab + (np.array([215, 225, 150]) - tab) * R
     S = swiatlo[..., None]
     jasne = tab + (np.array([255, 240, 190]) - tab) * np.clip(S, 0, 1) * 0.22
     ciemne = tab * (1 + np.clip(S, -1, 0) * 0.45) + np.array([10, 20, 40]) * (-np.clip(S, -1, 0)) * 0.12

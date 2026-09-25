@@ -1,5 +1,5 @@
 {
- "updated": "Runda 3 plansz: 54 nowe grafiki z OpenAI wpięte, builderzy pracują, krytyk ocenia na ślepo po każdej rundzie.",
+ "updated": "Poprzeczka dla plansz zmieniona na HoMM3 HotA (trzy wzorce, trzech krytyków, 2 z 3). HoMM2 zostaje wzorcem tylko dla ekranu kampanii.",
  "pieces": [
   {
    "name": "Menu główne",
@@ -88,7 +88,7 @@
   {
    "name": "Plansza: Polana (misja 1)",
    "status": "build",
-   "bar": "Mapy kampanii HoMM2 (mapa przygody), grywalne od początku do końca",
+   "bar": "Mapa przygody Heroes 3 / Horn of the Abyss: trzy zrzuty (trawa, bagno, śnieg). Trzech krytyków na ślepo, każdy przeciw innemu, wygrana przy 2 z 3. Rundy 1–4 były jeszcze przeciw HoMM2.",
    "note": "Mapa 36 × 36: rzeka z dwoma pilnowanymi brodami, zamek gracza na południowym zachodzie, Stary Fort na wschodzie. Sondy i symulacja przechodzą.",
    "rounds": [
     {
@@ -124,7 +124,7 @@
   {
    "name": "Plansza: Bagna (misja 3)",
    "status": "build",
-   "bar": "Mapy kampanii HoMM2 (mapa przygody), grywalne od początku do końca",
+   "bar": "Mapa przygody Heroes 3 / Horn of the Abyss: trzy zrzuty (trawa, bagno, śnieg). Trzech krytyków na ślepo, każdy przeciw innemu, wygrana przy 2 z 3. Rundy 1–4 były jeszcze przeciw HoMM2.",
    "note": "Mapa 54 × 54: trzęsawisko z groblami, Księżycowy Kamień na wyspie pod strażą wodza. Sondy i symulacja przechodzą.",
    "rounds": [
     {
@@ -162,7 +162,7 @@
   {
    "name": "Plansza: Twierdza (misja 4)",
    "status": "build",
-   "bar": "Mapy kampanii HoMM2 (mapa przygody), grywalne od początku do końca",
+   "bar": "Mapa przygody Heroes 3 / Horn of the Abyss: trzy zrzuty (trawa, bagno, śnieg). Trzech krytyków na ślepo, każdy przeciw innemu, wygrana przy 2 z 3. Rundy 1–4 były jeszcze przeciw HoMM2.",
    "note": "Mapa 72 × 72: śnieg i tundra, dwie twierdze wroga w osobnych dolinach, natarcie wroga. Sondy i symulacja przechodzą.",
    "rounds": [
     {
