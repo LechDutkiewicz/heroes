@@ -264,7 +264,10 @@ def klatka() -> tuple[Image.Image, Image.Image]:
     rozjechałaby się przy najmniejszej zmianie parametrów i na styku wody
     z lądem zostałby rąbek nienamalowanej wody albo nieruchomej tafli.
     """
-    plansza = zabarw(zmieszaj(warianty('trawa'), W, H, (0, 0), ZIARNO), 'trawa')
+    # Podkład też słucha `TEKSTURY` planszy: w Twierdzy spod śniegu na
+    # brzegach warstw prześwitywała zielona trawa (runda 2: „śnieg to białe
+    # plamy na zielonej trawie"). Bez wpisu 'trawa' — jak dotąd, bajt w bajt.
+    plansza = zabarw(zmieszaj(warianty(tekstura_warstwy('trawa')), W, H, (0, 0), ZIARNO), 'trawa')
     maskaWody = Image.new('L', (W, H), 0)
     maski = {}
     for n, (nazwa, znaki, wtapianie, poszarpanie) in enumerate(WARSTWY):

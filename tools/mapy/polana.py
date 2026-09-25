@@ -66,6 +66,18 @@ def rzeka_x(y):
     return 19 + round(2.2 * math.sin((y + 3) / 6.0))
 
 
+#: Od którego wiersza koryto jest wąskie (pierwszy ekran).
+WASKA_OD = 20
+
+#: Pasma gór malowane na sztywno: (x0, y0, x1, y1).
+PASMA = [
+    (2, 23, 10, 24),
+    (1, 25, 9, 26),
+    (19, 28, 21, 29),
+    (20, 31, 22, 32),
+    (19, 33, 22, 34),
+]
+
 #: Brody. `(x0, y0, x1, y1)` — dwa wiersze wysokości, na całą szerokość koryta.
 BROD_POLUDNIOWY = (rzeka_x(26) - 2, 26, rzeka_x(26) + 2, 27)
 BROD_POLNOCNY = (rzeka_x(7) - 2, 7, rzeka_x(7) + 2, 8)
@@ -79,7 +91,7 @@ ZAPORY = {
 }
 
 PUNKTY = {
-    'start': (12, 29),
+    'start': (13, 28),
     'zamek gracza': (9, 31),
     'rozstaje': (12, 24),
     'polnocna laka': (9, 10),
@@ -111,10 +123,49 @@ def popraw_teren(g, mapa):
     rng = random.Random(ZIARNO + 7)
     for y in range(BOK):
         cx = rzeka_x(y)
+        if y >= WASKA_OD:
+            # Runda 3: na południu, w pierwszym ekranie, koryto ma DWA pola.
+            # Trzy pola z poszarpanym brzegiem zajmowały trzecią część kadru
+            # i nie było widać drugiego brzegu — rzeka czytała się jak morze.
+            for x in (cx - 1, cx):
+                mapa[y][x] = '~'
+            if rng.random() < 0.25:
+                mapa[y][cx + (1 if rng.random() < 0.5 else -2)] = '~'
+            continue
         for x in range(cx - 1, cx + 2):
             mapa[y][x] = '~'
         if rng.random() < 0.35:
             mapa[y][cx + (2 if rng.random() < 0.5 else -2)] = '~'
+    # Pasmo gór w pierwszym ekranie (runda 3: „jednolity dywan trawy i lasu,
+    # bez pasma gór w kadrze"). Zwarty blok skał, żeby scena położyła na nim
+    # KĘPY 3 × 2 (trawiaste masywy z zestawu `polana`), a nie rozsypała
+    # pojedyncze głazy. Drugie, mniejsze pasmo za rzeką, w prawym dolnym rogu.
+    for x0, y0, x1, y1 in PASMA:
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                mapa[y][x] = '#'
+    # Piaszczyste łaty ze szkicu w dolinie domu czytały się jak „miękkie
+    # place ziemi" pod obiektami. Piasek zostaje tylko przy brodach.
+    for y in range(27, 33):
+        for x in range(0, rzeka_x(y) - 2):
+            if mapa[y][x] == ',':
+                mapa[y][x] = '.'
+    # Pojedyncze pola skał (z rozmycia szkicu) scena rysuje jako głaz
+    # na łące — „garść drobiazgów". Góra ma być pasmem albo jej nie ma.
+    for y in range(BOK):
+        for x in range(BOK):
+            if mapa[y][x] != '#':
+                continue
+            skal = sum(
+                1
+                for dy in (-1, 0, 1)
+                for dx in (-1, 0, 1)
+                if (dx or dy) and 0 <= x + dx < BOK and 0 <= y + dy < BOK and mapa[y + dy][x + dx] == '#'
+            )
+            w_pasmie = any(x0 <= x <= x1 and y0 <= y <= y1 for x0, y0, x1, y1 in PASMA)
+            if skal < 2 or (not w_pasmie and 19 <= y <= 32 and x < rzeka_x(y) - 1):
+                # …a w dolinie domu pod pasmem nie ma żadnych luźnych skał.
+                mapa[y][x] = '.'
     for x0, y0, x1, y1 in (BROD_POLUDNIOWY, BROD_POLNOCNY):
         for y in range(y0, y1 + 1):
             for x in range(x0, x1 + 1):
@@ -151,7 +202,10 @@ def rozstaw(g):
     # PIERWSZY EKRAN — dwie kopalnie, dwie budowle, stosy, skrzynia i pierwszy
     # skarb pod strażą, wszystko w widoku z dnia pierwszego (runda 1 ślepego
     # porównania: „obiektów mało, rozrzucone, nic nie pilnowane").
-    kadr = g.kadr_startu()
+    # Kadr o rząd wyższy niż `kadr_startu` (dy od −4): górę ekranu zajmuje
+    # pasmo gór, więc plac pod nim to jedyne miejsce na budowle nad zamkiem.
+    sx, sy = PUNKTY['start']
+    kadr = [p for p in g.wolne_pola('dom', (1, 999)) if abs(p[0] - sx) <= 5 and -4 <= p[1] - sy <= 5]
     g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'jagoda'), kadr, None, (3, 14))
     # Kopalnia odłamków wcięta w skalne zbocze, jeśli pierwszy ekran je ma.
     w_skale = [p for p in g.pod_skala('dom') if p in kadr]
@@ -218,13 +272,16 @@ USTAWIENIA = {
     'dostepneWroga': [0, 0, 0, 0, 0, 0],
     'garnizonWroga': {'poziomy': [0, 1], 'tygodnie': 1},
     'wrogSkarbiec': {'pokeball': 0, 'jagoda': 0, 'kamien': 0, 'odlamek': 0},
+    # Trawiaste góry z brązowymi urwiskami zamiast omszałych głazów
+    # (`public/mapa/polana/kepa-skaly-*.png`, prompty: PROMPTY-PLANSZE.md §4).
+    'zestaw': 'polana',
 }
 
 #: Przejezdne pola, do których nie da się dojść, zarastają lasem (patrz silnik).
 ZASYP_ODCIETE = True
 
 #: Plac wokół zamków wolny od innych budowli (patrz silnik).
-ODSTEP_OD_ZAMKOW = 2
+ODSTEP_OD_ZAMKOW = 1
 
 #: Las w zwarte masy z polanami, pusty pas przy ramie pierwszego ekranu.
 SKUP_LAS = True
@@ -237,7 +294,13 @@ EFEKTY = ['obwodka_drogi', 'relief', 'bez_placow']
 WTAPIANIE = {'las': 0.3, 'skaly': 0.28, 'piasek': 0.3, 'woda': 0.25}
 
 #: Budowle pierwszego ekranu co najmniej trzy pola od siebie (silnik).
-ODSTEP_KADRU = 3
+ODSTEP_KADRU = 2
+
+#: Runda 3: rzeka głębsza i ciemniejsza — turkus świecił jak laguna
+#: i razem z trzema polami szerokości robił z rzeki morze.
+BARWY_TERENU = {
+    'woda': {'nasycenie': 0.85, 'barwa': (70, 120, 200), 'moc': 0.35, 'jasnosc': 0.86},
+}
 
 #: Naklejki terenu (`public/mapa/tlo/`, prompty w `tools/PROMPTY-PLANSZE.md`).
 NAKLEJKI = [

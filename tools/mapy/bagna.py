@@ -343,7 +343,7 @@ TRZESAWISKO = {'woda': (60, 116, 98)}
 TEKSTURY = {'bagno': ['bloto', 'bagno']}
 
 #: Runda 2 („krainy rozmywają się w jedną"): twardsze brzegi terenów.
-WTAPIANIE = {'bagno': 0.3, 'las': 0.3, 'skaly': 0.28, 'woda': 0.22}
+WTAPIANIE = {'bagno': 0.22, 'las': 0.3, 'skaly': 0.28, 'woda': 0.22}
 
 #: Plac wokół zamków wolny od innych budowli (patrz silnik).
 ODSTEP_OD_ZAMKOW = 2

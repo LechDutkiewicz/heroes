@@ -69,7 +69,7 @@ export interface UstawieniaPlanszy {
    * w Twierdzy, martwe drzewa na Bagnach). Kontrakt i lista plików: STAN.md,
    * „Grafiki plansz kampanii". Brak = zestaw podstawowy.
    */
-  zestaw?: 'zima' | 'bagno';
+  zestaw?: 'zima' | 'bagno' | 'polana';
   /** Załoga zamku gracza (domyślnie poziomy 0–1, pięć tygodni przyrostu). */
   garnizonGracza?: { poziomy: number[]; tygodnie: number };
   /** Nazwy zamków wroga, w kolejności punktów 'zamek wroga', 'zamek wroga 2'… */

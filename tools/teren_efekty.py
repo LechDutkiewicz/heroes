@@ -211,6 +211,10 @@ def trzesawisko(plansza: Image.Image, maska: Image.Image, kafel: int, ziarno: in
     grunt = jas * np.array([1.02, 0.98, 0.62]) * 0.62 + np.array([52, 50, 26])
     grunt = grunt + (tab - jas) * 0.45
     tab = tab * (1 - M * 0.8) + grunt * M * 0.8
+    # Kępy: na suchszych garbach między oczkami przebija zieleń turzycy.
+    k = szum(W, H, max(2, int(kafel * 0.45)), ziarno + 17)
+    kepy = (np.clip(k * 2.2, 0, 1) * m)[..., None] * 0.55
+    tab = tab * (1 - kepy) + (tab.mean(axis=2, keepdims=True) * np.array([0.78, 1.0, 0.42]) + np.array([12, 30, 4])) * kepy
     # Mokre błoto przy wodzie.
     B = brzeg[..., None]
     tab = tab * (1 - B * 0.75) + np.array([58, 44, 26]) * B * 0.75
@@ -221,7 +225,7 @@ def trzesawisko(plansza: Image.Image, maska: Image.Image, kafel: int, ziarno: in
     G = np.clip(glebia * 1.3 - 0.15, 0, 1)[..., None]
     barwa = plytka * (1 - G) + gleboka * G
     # Odbicie nieba: miękkie poziome smugi, jak na stojącej tafli.
-    smugi = szum(W, max(2, H // 4), max(2, int(kafel * 0.7)), ziarno + 13)
+    smugi = szum(max(2, W // 4), H, max(2, int(kafel * 0.35)), ziarno + 13)
     smugi = np.asarray(
         Image.fromarray(((smugi * 0.5 + 0.5) * 255).astype(np.uint8), 'L').resize((W, H), Image.BICUBIC),
         dtype=np.float32,

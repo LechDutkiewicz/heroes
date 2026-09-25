@@ -618,11 +618,24 @@ ZESTAWY = {
         'kepa-las-1': 216, 'kepa-las-2': 216, 'kepa-las-3': 216, 'kepa-las-4': 216,
         'kepa-skaly-1': 216, 'kepa-skaly-2': 216, 'kepa-skaly-3': 216, 'kepa-skaly-4': 216,
         'kopalnia-kamien': 160, 'kopalnia-odlamek': 160, 'kopalnia-pokeball': 160, 'sad': 160,
+        # Twierdza, runda 3: zielone budowle i omszałe kopce na śniegu
+        # („obok zasp rosną liściaste drzewa") — zimowe wersje.
+        'zamek-las': 384, 'zamek-ogien': 336, 'chatka': 115, 'ognisko': 86,
+        'kopiec': 37, 'kopiec-2': 37,
     },
     'bagno': {
         'drzewo': 144, 'drzewo-b': 144, 'krzak': 84, 'krzak-2': 84,
         'kepa-las-1': 216, 'kepa-las-2': 216, 'kepa-las-3': 216, 'kepa-las-4': 216,
         'kopalnia-kamien': 160, 'kopalnia-odlamek': 160, 'kopalnia-pokeball': 160,
+    },
+    # Polana: trawiaste góry z brązowymi urwiskami zamiast omszałych głazów
+    # (runda 3 ślepego porównania: „bez pasma gór w kadrze").
+    'polana': {
+        'kepa-skaly-1': 216, 'kepa-skaly-2': 216, 'kepa-skaly-3': 216, 'kepa-skaly-4': 216,
+        'skala': 67, 'skala-2': 67,
+        # Drobne kopce przy skałach: bez nich scena dokłada podstawowe
+        # omszałe głazy, obce obok trawiastych gór.
+        'kopiec': 37, 'kopiec-2': 37,
     },
 }
 

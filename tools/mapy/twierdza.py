@@ -64,7 +64,7 @@ SZKIC = [
     '##################',
     'Ts#s#.jssj#T.sjs.T',
     'sTss#.s#.sT.~~sTsT',
-    's.s.~~s#sjj.~~s#jT',
+    's#s~~~s#sjj.~~s#jT',
     '##sss..#s.sTs.T.sT',
     's#sss.s.sT.#.sTsjT',
     'T##sTTs#TT.TTTTsTT',
@@ -275,16 +275,24 @@ USTAWIENIA = {
 
 #: Zima: łąka wypłowiała i chłodna, jeziora skute lodem, bór ciemny i sinawy.
 BARWY_TERENU = {
-    'trawa': {'nasycenie': 0.28, 'barwa': (160, 180, 190), 'moc': 0.6, 'jasnosc': 0.98},
+    # „Łąka" to tu zmarznięta, zasypana darń: tekstura śniegu z wystającymi
+    # źdźbłami (TEKSTURY), lekko płowa — odróżnia się od zasp, ale nie jest
+    # zielona. Runda 2: „śnieg to białe plamy na zielonej trawie".
+    'trawa': {'nasycenie': 0.9, 'barwa': (215, 212, 200), 'moc': 0.35, 'jasnosc': 0.97},
     # „Woda" to tu LÓD: tekstura śniegu (patrz TEKSTURY) przebarwiona na
     # błękit, z rysami pęknięć. Przebarwiona tekstura wody zostawiała jasne
     # linie załamań światła, które w ślepym porównaniu czytały się jak
     # „niebieska błyskawica przy krawędzi".
-    'woda': {'nasycenie': 1.0, 'barwa': (150, 195, 235), 'moc': 0.9, 'jasnosc': 0.88},
-    'las': {'nasycenie': 0.75, 'barwa': (110, 140, 150), 'moc': 0.35, 'jasnosc': 0.85},
+    # Runda 3: jasny lód zlewał się ze śniegiem w „mgiełkę" — tafla jest
+    # teraz głębsza i chłodniejsza, a jasny szron zostaje tylko przy brzegu.
+    'woda': {'nasycenie': 1.1, 'barwa': (120, 170, 225), 'moc': 0.6, 'jasnosc': 0.86},
+    # Pod borem śnieg w cieniu drzew, nie zielona ściółka.
+    'las': {'nasycenie': 1.0, 'barwa': (150, 175, 215), 'moc': 0.35, 'jasnosc': 0.86},
     'skaly': {'nasycenie': 0.6, 'barwa': (150, 160, 180), 'moc': 0.4, 'jasnosc': 0.95},
     'jalowa': {'nasycenie': 0.8, 'barwa': (160, 165, 180), 'moc': 0.3, 'jasnosc': 1.05},
-    'sciezka': {'nasycenie': 0.75, 'barwa': (160, 150, 150), 'moc': 0.25, 'jasnosc': 0.95},
+    # Ubity, zmarznięty trakt: brąz ziemi przyprószony szronem, bez
+    # pomarańczowego piasku i zielonych kępek.
+    'sciezka': {'nasycenie': 0.45, 'barwa': (170, 158, 150), 'moc': 0.3, 'jasnosc': 0.88},
 }
 
 #: Jeziora są skute lodem — bez shadera wody (patrz `render_mapa.py`).
@@ -294,7 +302,7 @@ WODA_ANIMOWANA = False
 #: zaspy z niebieskim cieniem i iskrami, lód z rysami zamiast tafli wody,
 #: droga z brzegiem, las w zwartych masach, gęsty pierwszy ekran.
 EFEKTY = ['zaspy', 'lod', 'obwodka_drogi', 'relief_sniezny', 'bez_placow']
-TEKSTURY = {'woda': ['lod', 'snieg']}
+TEKSTURY = {'woda': ['lod-2', 'lod', 'snieg'], 'trawa': ['snieg-2', 'snieg'], 'las': ['snieg']}
 SKUP_LAS = True
 RAMKA_STARTU = True
 #: Twardszy brzeg śniegu — granica ma być czytelna, a nie rozmyta w mgłę.

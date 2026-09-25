@@ -1,5 +1,5 @@
 {
- "updated": "2026-09-24, wygrywają: menu, kampania, wynik, HUD; plansze w poprawkach",
+ "updated": "Runda 3 plansz: 54 nowe grafiki z OpenAI wpięte, builderzy pracują, krytyk ocenia na ślepo po każdej rundzie.",
  "pieces": [
   {
    "name": "Menu główne",
@@ -105,7 +105,12 @@
      "note": "Runda 2, porównania już pełnym kadrem. Wszystkie trzy mapy przegrywają. Wspólna przyczyna: ten sam zestaw obiektów na tych samych okrągłych placach piasku i brak rzeźby terenu.",
      "label": "Runda 2"
     }
-   ]
+   ],
+   "live": {
+    "round": 3,
+    "stage": "builder skończył, czeka na zrzut",
+    "build": "Na pierwszym ekranie Polany jest teraz geografia jak w HoMM2. Pasmo trawiastych gór z brązowymi urwiskami biegnie wzdłuż wschodniego brzegu. Drugie pasmo leży w lewym górnym rogu, a w jego zbocze wcięta jest kopalnia odłamków. Rzeka jest węższa (2 pola), ciemniejsza (BARWY_TERENU) i widać oba jej brzegi, więc nie wygląda już jak morze. Obok są droga przez bród, las na dole i pełen zestaw rzeczy do zrobienia: kuźnia, obóz treningowy, wóz, wiatrak, sad, skrzynie, surowce i straże. Z OpenAI przyszło 7 grafik do nowego zestawu klimatu `polana` (4 kępy gór, 2 pojedyncze szczyty, jedna kępa wygenerowana drugi raz, bo pierwsza wyglądała jak rozsypane stożki). Wszystkie obrobiłem: zdjąłem jasny rąbek u podstawy, żeby góra nie wyglądała na naklejoną, i wyrównałem zieleń do łąki gry. Kopce powstały z tych samych grafik bez dodatkowego kosztu. Znikły też luźne głazy i piaszczyste łaty w dolinie domu, czyli „miękkie place\" z werdyktu 2. Start przesunąłem na (13,28), a obiekty pierwszego ekranu mają kadr o rząd wyższy i mniejsze odstępy (ODSTEP_OD_ZAMKOW 1, ODSTEP_KADRU 2). Uczciwie: plansza nadal ma jeden biom, zielony. Brak brązowej ziemi, którą ma wzorzec, to największa luka, jaka została. Zrzut końcowy: /home/user/heroes/tools/shots/mapa-polana-build.png."
+   }
   },
   {
    "name": "Plansza: Bagna (misja 3)",
@@ -125,7 +130,12 @@
      "blind": "tools/postep-obrazy/plansza-bagna-misja-3--r2.jpg",
      "label": "Runda 2"
     }
-   ]
+   ],
+   "live": {
+    "round": 3,
+    "stage": "zrzut i ślepe zestawienie",
+    "build": "Bagno na Bagnach wygląda teraz jak mokre trzęsawisko, a nie jak ciemna ściółka lasu, czyli luka z rundy 2 jest zamknięta. Do tej pory efekt „bagno” przyciemniał cały teren i malował niemal czarne oczka. Nowy efekt „trzesawisko”, włączany tylko przez tę planszę, zostawia jaśniejszy, błotnisty grunt z zielonymi kępami turzycy. Na nim są oczka stojącej wody w barwie jezior planszy: płycizna jaśniejsza, głębia ciemniejsza, poziome smugi odbitego nieba, rzęsa, grążele z kwiatami i drobne refleksy. Każde oczko otacza pas mokrego błota z trzciną. Jeziora na tej planszy mają też bardziej mętną, zieloną wodę, a granice bagna są ostrzejsze, żeby się nie rozmywały (wcześniejsze uwagi o czytelności). Na pierwszym ekranie droga jest piaskowa, łąka zielona, a bagno to woda z błotem, więc od razu widać, którędy się idzie."
+   }
   },
   {
    "name": "Plansza: Twierdza (misja 4)",
@@ -145,7 +155,11 @@
      "blind": "tools/postep-obrazy/plansza-twierdza-misja-4--r2.jpg",
      "label": "Runda 2"
     }
-   ]
+   ],
+   "live": {
+    "round": 3,
+    "stage": "builder pracuje"
+   }
   },
   {
    "name": "HUD mapy przygody",

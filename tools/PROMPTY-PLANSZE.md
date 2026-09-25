@@ -437,6 +437,16 @@ każdej musi sięgać obu boków kadru.
 |---|---|---|
 | `polana-kepa-skaly-1..4.png` | `public/mapa/polana/kepa-skaly-N.png` | 216 px |
 | `polana-skala.png`, `polana-skala-2.png` | `public/mapa/polana/skala*.png` | 67 px |
+| `polana-kopiec.png`, `polana-kopiec-2.png` | `public/mapa/polana/kopiec*.png` | 37 px |
+
+Pliki we wsadzie są już OBROBIONE po wygenerowaniu (nie surowe z API):
+jasny, kremowy rąbek u podstawy zdjęty z alfy (po nim góra wyglądała na
+naklejkę) i oliwkowo-żółta trawa przesunięta w stronę soczystej zieleni łąki
+gry. `polana-kopiec.png` to kopia `polana-skala.png`, `polana-kopiec-2.png`
+— odbita `polana-kepa-skaly-4.png` (scena i tak zmniejsza je do 37 px).
+Po ponownym wygenerowaniu trzeba to powtórzyć, inaczej rąbek wróci.
+Pierwsza wersja `polana-kepa-skaly-3` (trzy piaskowcowe iglice) czytała
+się na mapie jak rozsypane pomarańczowe stożki — prompt poniżej to druga.
 
 <!-- plik: polana-kepa-skaly-1.png | styl: obiekt | proporcje: 3:2 -->
 ```
@@ -462,11 +472,13 @@ across the whole width of the picture.
 
 <!-- plik: polana-kepa-skaly-3.png | styl: obiekt | proporcje: 3:2 -->
 ```
-A rocky brown mountain massif in the style of Heroes of Might and Magic 2:
-three jagged ochre and tan sandstone peaks with grassy green shoulders and
-patches of meadow on the lower slopes, layered cliff bands, scree at the
-foot. Sunlit faces warm tan, shadowed faces deep brown. Wider than tall; the
-foot spreads across the whole width of the picture.
+A broad massive green mountain in the style of Heroes of Might and Magic 2:
+one big rounded grassy summit with a long shoulder falling to each side,
+the whole front face cut by many parallel brown rocky gullies and ridges
+running down the slope like folds of cloth, a small rocky ledge near the top.
+Sunlit green slopes on the right, deep olive and brown shadowed gullies on
+the left. One solid landform, no separate spires or loose rocks. Wider than
+tall; the foot spreads across the whole width of the picture.
 ```
 
 <!-- plik: polana-kepa-skaly-4.png | styl: obiekt | proporcje: 3:2 -->
@@ -490,4 +502,68 @@ right, shaded on the left. Slightly wider than tall.
 A small rugged rocky crag in the style of Heroes of Might and Magic 2: two
 tan-brown sandstone spires with tufts of grass on the ledges, scree at the
 foot, sunlit on the right. Slightly wider than tall.
+```
+
+## 5. Twierdza — zimowe budowle pierwszego ekranu (runda 3 ślepego porównania)
+
+Werdykt rundy 2: „śnieg to białe plamy na zielonej trawie, obok zasp rosną
+liściaste drzewa". Po zdjęciu zielonej trawy z tła zostało zielone to, co
+stoi na nim: zamek gracza w liściastych drzewach, chatka z omszałym dachem,
+ognisko w trawie i omszałe kopczyki na skałach (`m-kopiec`). Zestaw `zima`
+podmienia je pod tymi samymi kluczami (`ZESTAWY` w `wsad_wczytaj.py`).
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `zima-zamek-las.png` (też jako `zima-zamek-ogien.png`) | `public/mapa/zima/zamek-*.png` | 384 / 336 px |
+| `zima-chatka.png` | `public/mapa/zima/chatka.png` | 115 px |
+| `zima-ognisko.png` | `public/mapa/zima/ognisko.png` | 86 px |
+| `zima-kopiec.png`, `zima-kopiec-2.png` | `public/mapa/zima/kopiec*.png` | 37 px |
+
+<!-- plik: zima-zamek-las.png -->
+```
+A richly detailed fortified town in deep winter, the player's capital on the
+adventure map, seen from the front and above: thick light grey granite
+curtain walls with crenellations and four sturdy round towers, a tall central
+gate keep with a big arched wooden portcullis at the bottom centre facing the
+viewer, a steep pointed blue slate roof on the keep and a blue banner with a
+white emblem on a tall flagpole. Inside the walls a crowded cluster of five or
+six timber-framed houses and a hall with steep blue slate roofs, chimneys and
+dormer windows, blue heraldic banners hanging on the walls. Every roof,
+battlement and ledge carries a thick pillow of white snow, icicles hang from
+the eaves, warm yellow light glows in many windows, thin smoke rises from two
+chimneys. A few snow-laden dark fir trees hug the walls — no leafy trees, no
+grass, no moss, no green lawns anywhere. The town fills the frame, chunky
+and impressive, roughly as wide as tall.
+```
+
+<!-- plik: zima-chatka.png -->
+```
+A tiny winter lean-to shelter of leaning wooden planks against a grey boulder,
+its shingle roof buried under a thick cap of snow with icicles on the front
+edge, a small dark opening at the front, a bundle of firewood and a wooden
+bowl in the doorway, a small snow drift against one side. No moss, no ivy,
+no green leaves.
+```
+
+<!-- plik: zima-ognisko.png -->
+```
+A winter campfire: a ring of grey stones dusted with snow around a bright
+crackling fire, two thick logs lying beside it as benches with snow on top,
+the snow around the fire melted into a small ring of dark wet earth, a few
+red-and-white round capsules and a small blue crystal lying by the stones.
+No grass, no green plants. Wider than tall.
+```
+
+<!-- plik: zima-kopiec.png -->
+```
+A small pile of three rounded grey boulders half buried in snow, thick white
+snow caps on their tops, cool blue shadows on the left side, a few pebbles
+poking out of the snow at the foot. No moss, no grass. Slightly wider than tall.
+```
+
+<!-- plik: zima-kopiec-2.png -->
+```
+A small cluster of two angular grey rocks and a flat stone, all capped with
+snow and frosted on the edges, a tiny snow drift at the base, blue shadow on
+the left. No moss, no grass. Slightly wider than tall.
 ```
