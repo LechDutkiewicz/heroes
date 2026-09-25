@@ -294,21 +294,21 @@ export const USTAWIENIA = {
   "obrysObiektow": 0.55,
   "wodaBarwy": {
     "plytka": [
-      0.5,
-      0.54,
-      0.42
+      0.22,
+      0.38,
+      0.34
     ],
     "gleboka": [
-      0.22,
-      0.27,
-      0.21
+      0.07,
+      0.15,
+      0.15
     ],
     "piana": [
-      0.55,
+      0.5,
       0.56,
       0.4
     ],
-    "pianaMoc": 0.3,
-    "iskry": 0.8
+    "pianaMoc": 0.25,
+    "iskry": 1.0
   }
 };

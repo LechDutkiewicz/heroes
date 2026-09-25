@@ -439,11 +439,12 @@ USTAWIENIA = {
     # Runda 6 („turkusowa, czysta woda — tropikalna zatoka"): tafla w shaderze
     # mętna, oliwkowo-brunatna, bez białej piany i z przygaszonymi iskrami.
     'wodaBarwy': {
-        'plytka': [0.50, 0.54, 0.42],
-        'gleboka': [0.22, 0.27, 0.21],
-        'piana': [0.55, 0.56, 0.40],
-        'pianaMoc': 0.3,
-        'iskry': 0.8,
+        # Runda 7: ciemna torfowa tafla (jak tekstura `teren-woda-czarna`).
+        'plytka': [0.22, 0.38, 0.34],
+        'gleboka': [0.07, 0.15, 0.15],
+        'piana': [0.50, 0.56, 0.40],
+        'pianaMoc': 0.25,
+        'iskry': 1.0,
     },
 }
 
@@ -456,7 +457,10 @@ BARWY_TERENU = {
     # Runda 6: tekstura mętnej wody (`teren-woda-bagno`: zmarszczki zwykłej
     # wody przemalowane na brunatną oliwkę + rzęsa i liście z dostawy OpenAI),
     # tu już tylko lekko przyciemniona.
-    'woda': {'nasycenie': 1.0, 'barwa': (90, 100, 90), 'moc': 0.15, 'jasnosc': 0.84},
+    # Runda 7 („prawa połowa to mętna, szarozielona plama bez kontrastu"):
+    # tafla `teren-woda-czarna` — ciemna, torfowa woda z jasnymi zmarszczkami
+    # i rzęsą, wyraźnie ciemniejsza od lądu. Barwy nie ruszamy.
+    'woda': {'nasycenie': 1.0, 'barwa': (90, 100, 90), 'moc': 0.0, 'jasnosc': 1.0},
     # Runda 6 („zieleń wokół obiektów przygasić"): łąka mniej nasycona.
     'trawa': {'nasycenie': 0.5, 'barwa': (100, 140, 112), 'moc': 0.55, 'jasnosc': 0.78},
     'las': {'nasycenie': 0.7, 'barwa': (90, 110, 75), 'moc': 0.4, 'jasnosc': 0.82},
@@ -470,9 +474,9 @@ BARWY_TERENU = {
 EFEKTY = ['trzesawisko', 'obwodka_drogi', 'relief', 'bez_placow', 'brzeg_wody']
 #: Runda 3 („ciemna ziemia z trzciną, wygląda jak ciemny las"): oczka stojącej
 #: wody w barwie jezior tej planszy, mokre błoto wokół, jaśniejszy grunt.
-TRZESAWISKO = {'woda': (72, 84, 52)}
+TRZESAWISKO = {'woda': (34, 64, 58)}
 #: Błoto z dostawy (`tools/PROMPTY-PLANSZE.md`), do tego czasu zwykłe bagno.
-TEKSTURY = {'bagno': ['bloto', 'bagno'], 'woda': ['woda-bagno', 'woda'], 'sciezka': ['bruk', 'sciezka']}
+TEKSTURY = {'bagno': ['bloto', 'bagno'], 'woda': ['woda-czarna', 'woda-bagno', 'woda'], 'sciezka': ['bruk', 'sciezka']}
 
 #: Runda 2 („krainy rozmywają się w jedną"): twardsze brzegi terenów.
 #: Runda 6 („brzegi wody miękko rozmyte, bez wyraźnej linii"): woda ostrzej.

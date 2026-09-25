@@ -146,7 +146,7 @@
    ],
    "live": {
     "round": 7,
-    "stage": "builder skończył, czeka na zrzut",
+    "stage": "krytycy oceniają (0/3)",
     "build": "Ostatnia luka z rundy 6 („wzgórza to ta sama zielona stożkowa pieczątka, bez skał, jeden biom”) jest zamknięta. Zielone kopce w zestawie `polana` zastąpiłem skalistymi graniami z OpenAI o czterech różnych sylwetkach: szare zęby, masyw z wodospadem, szeroka grań i skałki podnóża. Z surowych obrazków zdjąłem piaskowy rąbek u podstawy. Które rysunki stoją w którym miejscu, wybrałem ręcznie przez nowe ustawienie planszy `USTAWIENIA.kepySkal` (zmiana w `mapy.ts` i w scenie; bez tego ustawienia inne plansze rysują się jak dotąd). Losowanie po polu dawało w kadrze trzy razy tę samą grań, a wodospadu nie pokazywało wcale. W prawym dolnym rogu dodałem drugi teren: ścianę gór przesunąłem na kolumny 22–24, więc kieszeń za rzeką jest dwa razy większa. Jej dno i korytarz wzdłuż brzegu to teraz kamienista ziemia (rough) z nową, drobniejszą teksturą `teren-ziemia-drobna` i głazami; pas takiej ziemi leży też pod zachodnim pasmem. Stosy zdjąłem ze zboczy, drzewa sterczące nad granią usunąłem, a ognisko i stosy w kieszeni przestawiłem tak, żeby leżały na jej dnie, a nie na zboczach gór."
    }
   },
@@ -233,7 +233,8 @@
    ],
    "live": {
     "round": 3,
-    "stage": "builder pracuje"
+    "stage": "zrzut i ślepe zestawienie",
+    "build": "Góry na pierwszym ekranie przestały wyglądać jak kremowe blaty („tort”). Zestaw zima dostał nowe kępy skał: ostre, ośnieżone szczyty w szarobrązowej skale jak w HotA. Kępy 3 i 4 są narysowane od nowa, a 2 i nowe 3–4 dostały zdjęte nasycenie (z API wyszły pomarańczowe). Liściaste drzewa zniknęły ze śniegu: nagie drzewo i brzoza w zestawie to teraz ośnieżone jodły i świerki, a martwe drzewo z bagiennym mchem wypadło z naklejek. Budowle odwiedzane mają wersje zimowe zamiast omszałych i łąkowych (9 sztuk), na jeziorze jest wysepka ze świerkami i więcej kry, na śniegu rosną młode świerczki, a surowce leżą jako kupki w śniegu z cieniem (znajdzki 0,5).\n\nKamerę oddalono w trakcie mojej pracy do 32 px na pole (widok ma teraz 21 × 18 pól). Pierwszy ekran obejmuje więc całe `kadr_szeroki` z własnymi obiektami, a stara ramka (`RAMKA_STARTU`), która teraz wypadała w środku widoku, jest wyłączona. W kadrze stoją zimowa wieża, źródło, wóz, strzeżona kopalnia, kupki i skrzynie. Dolina gracza jest odsłonięta od startu (promień 13), więc na zrzucie nie ma już wyspy w czarnej mgle.\n\nPróba usunięcia drugiego wiatraka i ogniska z doliny sprawiła, że autopilot przestał zdobywać drugą twierdzę. Wróciłem do dawnej listy budowli, więc drugi wiatrak i drugie ognisko stoją w pierwszym ekranie (w HotA takie powtórzenia są zwykłe)."
    }
   },
   {

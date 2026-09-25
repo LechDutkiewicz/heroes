@@ -1240,3 +1240,27 @@ than a mountain but clearly impassable rough rocky ground. Lit from the
 right. Much wider than tall; the foot spreads across the whole width of the
 picture.
 ```
+
+## 13. Bagna — runda 7 (wzorzec HotA): most nad Czarną Strugą
+
+Werdykt rundy 6: „prawa połowa to mętna, szarozielona plama bez rzeźby
+i obiektów; bagnu trzeba dać ostrą teksturę z czytelnymi krawędziami wody
+i lądu". Woda dostała ciemną, torfową teksturę `teren-woda-czarna`
+(przeliczoną z `teren-woda` i rzęsy z `teren-woda-bagno`, bez API), Struga
+w kadrze jest wąską, czystą wstęgą, a bród zastąpił most — naklejka tła
+(`MOSTY` w `tools/mapy/bagna.py`), obrobiony plik w `public/mapa/bagno/most.png`.
+
+<!-- plik: bagno-most.png | styl: obiekt | proporcje: 3:2 -->
+```
+A short old wooden bridge over a swamp creek, seen straight from the front and
+from above at about forty-five degrees, NOT isometric and NOT diagonal: the
+bridge runs perfectly horizontally from the left edge to the right edge of the
+picture, parallel to the bottom edge. We see the top of the deck as a wide
+horizontal band of weathered grey-brown planks laid crosswise, some planks
+darker and slightly crooked, patches of green moss and a little hanging swamp
+moss on the edges, a rough log railing with crooked posts along the back edge
+and the front edge, a small lantern on one post, and below the deck the front
+face with three thick dark wooden stilts wrapped in moss. Both ends are flat
+and open so a road can run onto them. Much wider than tall. No water, no river
+banks, no grass, no ground.
+```

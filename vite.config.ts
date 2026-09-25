@@ -24,7 +24,7 @@ function wersjaZGita() {
 }
 
 /**
- * Porty 5190–5199 należą do etapu zrzutów w pętli ślepych porównań. Builderzy
+ * Porty 5200–5219 należą do etapu zrzutów w pętli ślepych porównań. Builderzy
  * zmieniają w tym czasie pliki w tym samym drzewie, a serwer z HMR
  * przeładowywał wtedy stronę w trakcie zrzutu albo sondy. Na tych portach
  * serwer nie obserwuje plików i nie przeładowuje; zwykły `npm run dev`
@@ -33,7 +33,7 @@ function wersjaZGita() {
 const portZrzutow = (() => {
   const i = process.argv.indexOf('--port');
   const port = i !== -1 ? Number(process.argv[i + 1]) : NaN;
-  return port >= 5190 && port <= 5199;
+  return port >= 5200 && port <= 5219;
 })();
 
 export default defineConfig({
