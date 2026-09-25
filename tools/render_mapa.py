@@ -67,6 +67,8 @@ EFEKTY: set = set()
 TEKSTURY: dict = {}
 WTAPIANIE: dict = {}
 NAKLEJKI: list = []
+#: Mosty malowane na wodzie — `MOSTY` z konfiguracji (patrz `teren_efekty.mosty`).
+MOSTY: list = []
 #: Parametry efektu `trzesawisko` (barwa oczek) — `TRZESAWISKO` z konfiguracji.
 TRZESAWISKO: dict = {}
 
@@ -122,7 +124,7 @@ def ustaw(mapa_id: str):
     """Przełącza moduł na planszę `mapa_id`. Funkcje niżej czytają rysunek
     i wymiary z globali — tak było, gdy plansza była jedna, i tak zostaje,
     bo każda z nich jest wołana raz na planszę."""
-    global KATALOG, ZRODLO, RYSUNEK, WYS, SZER, W, H, BARWY, EFEKTY, TEKSTURY, WTAPIANIE, NAKLEJKI, TRZESAWISKO
+    global KATALOG, ZRODLO, RYSUNEK, WYS, SZER, W, H, BARWY, EFEKTY, TEKSTURY, WTAPIANIE, NAKLEJKI, TRZESAWISKO, MOSTY
     KATALOG = katalog_tla(mapa_id)
     k = konfiguracja(mapa_id)
     BARWY = getattr(k, 'BARWY_TERENU', {})
@@ -133,6 +135,13 @@ def ustaw(mapa_id: str):
     TRZESAWISKO = getattr(k, 'TRZESAWISKO', {})
     ZRODLO = plik_ts(mapa_id)
     RYSUNEK = wczytaj_rysunek()
+    # Mosty (`MOSTY` planszy): pola pod mostem są w grze drogą, ale w tle
+    # maluje się pod nimi woda — rzeka płynie pod mostem, a nie urywa się
+    # na nim. Odcisk liczy się z rysunku PLANSZY (`renderuj`), nie z tego.
+    MOSTY = getattr(k, 'MOSTY', [])
+    for most in MOSTY:
+        for x, y in most['pola']:
+            RYSUNEK[y] = RYSUNEK[y][:x] + '~' + RYSUNEK[y][x + 1:]
     WYS, SZER = len(RYSUNEK), len(RYSUNEK[0])
     W, H = SZER * KAFEL, WYS * KAFEL
 
@@ -315,6 +324,8 @@ def klatka() -> tuple[Image.Image, Image.Image]:
     # sprite'ami sceny. Bez plików nic się nie dzieje (patrz `naklejki`).
     if NAKLEJKI:
         plansza = teren_efekty.naklejki(plansza, RYSUNEK, KAFEL, NAKLEJKI, ZIARNO + 740)
+    if MOSTY:
+        plansza, maskaWody = teren_efekty.mosty(plansza, maskaWody, KAFEL, MOSTY)
     return plansza, maskaWody
 
 
@@ -354,7 +365,7 @@ def renderuj(mapa_id: str):
         maskaWody = Image.new('L', maskaWody.size, 0)
     woda_dane.maska(RYSUNEK, KAFEL, maskaWody, KATALOG)
 
-    odcisk = hashlib.sha256('\n'.join(RYSUNEK).encode('utf-8')).hexdigest()[:16]
+    odcisk = hashlib.sha256('\n'.join(wczytaj_rysunek()).encode('utf-8')).hexdigest()[:16]
     (KATALOG / 'plansza.json').write_text(
         json.dumps({'odcisk': odcisk, 'szer': SZER, 'wys': WYS, 'kafel': KAFEL}, indent=2) + '\n',
         encoding='utf-8',

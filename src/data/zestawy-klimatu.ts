@@ -28,6 +28,7 @@ export const ZESTAWY_KLIMATU: Record<string, readonly string[]> = {
     "sosna",
     "sosna-b",
     "sosna-mala",
+    "wiatrak",
     "zamek-las",
     "zamek-ogien"
   ],

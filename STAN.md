@@ -287,6 +287,32 @@ dla menu). Mapę przygody powiększa się ×1,5 metodą najbliższego sąsiada d
 PR: https://github.com/LechDutkiewicz/heroes/pull/5 (szkic, gałąź
 `claude/relaxed-archimedes-dddvar`).
 
+## Uwagi z rozgrywki do osobnej rozmowy (2026-09-25)
+
+- **Jagody są prawie martwe.** Wydaje się je tylko na siedlisko 2 i 3
+  (4 i 6 sztuk, `CENY` w `src/data/zamki.ts`); po tych dwóch budynkach
+  nie mają żadnego ujścia, a sady i Krzew Jagodowy dalej je dokładają.
+  **Kamienie ewolucji** mają jedno ujście: Ośrodek Ewolucji na mapie
+  (oddział o poziom w górę za `EWOLUCJA_KOSZT`). Pokeballe i odłamki
+  są używane w całym drzewku.
+- **Ewolucja zmienia jednego pokemona w innego** — fabularnie się nie klei.
+  Pomysł gracza: ścieżki ewolucji per stworek (jak w Pokemonach), budynek
+  w mieście (ulepszone siedliska) i tam ewolucja za kamienie. To też daje
+  jagodom i kamieniom sens. Duży wątek: frakcje, ceny, AI, balans.
+- **Animacje stworków**: klatki chodu/lotu, ataku, obrony, trafienia przez
+  OpenAI `images/edits` z obecnym sprite'em jako wzorcem (poza na wywołanie),
+  wyrównane skryptem w arkusz. Najpierw pilotaż na jednym stworku.
+- **Gospodarka do przebudowy (po planszach).** W Heroes surowce są potrzebne
+  przez całą grę: najdroższe siedliska i sam werbunek wysokich poziomów
+  kosztują surowce rzadkie, kolejne poziomy gildii magów też (magii u nas
+  nie ma wcale), a część budowli na mapie bierze opłatę w surowcu (Drzewo
+  Wiedzy: złoto albo 10 klejnotów za poziom). U nas: werbunek tylko za
+  pokeballe, jagody i kamienie bez ujścia w drugiej połowie gry. Kierunek:
+  jagody/kamienie/odłamki w cenie werbunku wysokich poziomów, ewolucja
+  w mieście za kamienie, opłaty surowcem w budowlach mapy.
+- Gracz pozwolił dorabiać nowe rodzaje budowli mapy, jeśli plansze ich
+  potrzebują.
+
 ## Scalenie z AI przeciwnika (2026-09-15)
 
 Ta gałąź (mapa „Dwie Doliny") i osobna praca nad AI przeciwnika rozjechały

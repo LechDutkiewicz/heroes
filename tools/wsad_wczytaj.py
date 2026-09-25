@@ -620,7 +620,7 @@ ZESTAWY = {
         'kopalnia-kamien': 160, 'kopalnia-odlamek': 160, 'kopalnia-pokeball': 160, 'sad': 160,
         # Twierdza, runda 3: zielone budowle i omszałe kopce na śniegu
         # („obok zasp rosną liściaste drzewa") — zimowe wersje.
-        'zamek-las': 384, 'zamek-ogien': 336, 'chatka': 115, 'ognisko': 86,
+        'zamek-las': 384, 'zamek-ogien': 336, 'chatka': 115, 'ognisko': 86, 'wiatrak': 211,
         'kopiec': 37, 'kopiec-2': 37,
     },
     'bagno': {

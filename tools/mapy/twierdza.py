@@ -33,6 +33,8 @@ otwarta jest otwarta dla obu), a wtedy zagadka kluczy znika w pierwszym
 tygodniu. Stado trzeba pokonać — każda ze stron sama.
 """
 
+import random
+
 ID = 'twierdza'
 NAZWA = 'Twierdza'
 
@@ -64,7 +66,7 @@ SZKIC = [
     '##################',
     'Ts#s#.jssj#T.sjs.T',
     'sTss#.s#.sT.~~sTsT',
-    's#s~~~s#sjj.~~s#jT',
+    's.s.~~s#sjj.~~s#jT',
     '##sss..#s.sTs.T.sT',
     's#sss.s.sT.#.sTsjT',
     'T##sTTs#TT.TTTTsTT',
@@ -120,12 +122,45 @@ ZASYP_ODCIETE = True
 ODSTEP_OD_ZAMKOW = 2
 
 
+#: Przesunięcia ziaren tundry i dolin twierdz (patrz `rozstaw`).
+TUNDRA_ZIARNO = 40
+TWIERDZE_ZIARNO = 41
+
+
 def strefa(x, y):
     if y < 21:
         return 'wroga'
     if y <= 46:
         return 'pogranicze'
     return 'dom'
+
+
+def popraw_teren(g, mapa):
+    """Pierwszy ekran, runda 3: skuty lodem staw nad drogą i skalny próg.
+
+    Werdykt rundy 2: „nie ma ośnieżonych gór ani lodu". Staw ze szkicu leżał
+    w rogu kadru i widać było jego skrawek. Malujemy go tu, a nie w szkicu:
+    zmiana szkicu przestawia losowanie rozmycia na CAŁEJ planszy (inne doliny
+    twierdz, inna symulacja), a to jest poprawka jednego ekranu. Staw kończy
+    się przed x 21 — tamtędy idzie droga na północ (`rozstaje doliny`).
+    """
+    rng = random.Random(ZIARNO + 7)
+    for y in range(56, 60):
+        lewy = 12 - (1 if rng.random() < 0.5 else 0) + (1 if y == 59 else 0)
+        prawy = 20 - (1 if y == 56 and rng.random() < 0.5 else 0)
+        for x in range(lewy, prawy + 1):
+            mapa[y][x] = '~'
+    # Skalny próg nad zamkiem łączy staw z pasmem gór na zachodzie.
+    for y, (od, do) in zip(range(56, 60), [(5, 8), (5, 9), (6, 9), (6, 8)]):
+        for x in range(od, do + 1):
+            mapa[y][x] = '#'
+    # Pasmo gór na zachód od zamku ma dziewięć pól szerokości, nie osiem:
+    # scena układa masywy (`kepa-skaly`, 3 × 2 pola) od x 0, więc przy
+    # ośmiu na widoczny brzeg pasma (x 6–8) zostawały same drobne głazy
+    # i w kadrze stał rządek kopczyków zamiast gór.
+    for y in range(60, 67):
+        for x in range(0, 9):
+            mapa[y][x] = '#'
 
 
 def bez_sniegu(g, pola):
@@ -192,6 +227,11 @@ def rozstaw(g):
     ])
 
     # --- TUNDRA --------------------------------------------------------------
+    # Tundra i doliny twierdz losują z WŁASNEGO ziarna: pierwszy ekran zmienia
+    # się z rundy na rundę (ślepe porównania), a każda zmiana w dolinie gracza
+    # przesuwała losowanie całej reszty — inne straże przy twierdzach, inna
+    # symulacja misji. Teraz poprawka doliny nie rusza północy.
+    rng = g.rng = random.Random(ZIARNO + TUNDRA_ZIARNO)
     g.dodaj(18, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
     kopalnie = ['odlamek', 'kamien', 'pokeball', 'odlamek', 'kamien', 'odlamek', 'pokeball']
     polozone = []
@@ -215,6 +255,7 @@ def rozstaw(g):
     g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('jasnowidz', None))
 
     # --- DOLINY TWIERDZ ------------------------------------------------------
+    rng = g.rng = random.Random(ZIARNO + TWIERDZE_ZIARNO)
     # Prawie wszystko pod silną strażą. Nagroda rośnie z odległością: relikty
     # i kopalnie kamienia leżą w najdalszych kątach obu dolin.
     g.dodaj(14, 'wroga', (0, 999), lambda p: ('surowiec', rng.choice(['kamien', 'odlamek', 'pokeball'])))

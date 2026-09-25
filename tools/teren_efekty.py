@@ -347,3 +347,46 @@ def obwodka_drogi(plansza: Image.Image, maska_drogi: Image.Image, kafel: int) ->
     tab = tab * (1 - brzeg * 0.5) + np.array([45, 32, 20]) * brzeg * 0.25
     tab = tab + (255 - tab) * m[..., None] * 0.12
     return _obraz(tab)
+
+
+def mosty(plansza: Image.Image, maska_wody: Image.Image, kafel: int, mosty_planszy: list):
+    """Kładzie rysunek mostu na namalowanej wodzie (`MOSTY` w konfiguracji).
+
+    Pola pod mostem są w grze drogą, ale render maluje pod nimi wodę (patrz
+    `render_mapa.ustaw`), więc rzeka płynie pod mostem nieprzerwanie. Z maski
+    wody zdejmujemy sylwetkę mostu: shader falowałby inaczej także deskami,
+    a brzeg maski wokół przęseł daje pianę przy filarach.
+
+    Wpis: `{'plik': 'polana/most.png', 'srodek': (x, y), 'szer': w}` — środek
+    rysunku i jego szerokość w polach. Rysunek skalujemy z alfą wmnożoną
+    w barwę (bez tego przezroczyste piksele przyciemniają brzeg sylwetki).
+    """
+    im = plansza.convert('RGBA')
+    woda = np.asarray(maska_wody.convert('L'), dtype=np.float32)
+    for most in mosty_planszy:
+        sciezka = KATALOG_NAKLEJEK.parent / most['plik']
+        if not sciezka.exists():
+            continue
+        n = Image.open(sciezka).convert('RGBA')
+        w = max(1, round(most['szer'] * kafel))
+        h = max(1, round(n.height * w / n.width))
+        tab = np.asarray(n, dtype=np.float32)
+        tab[..., :3] *= tab[..., 3:4] / 255.0
+        male = np.asarray(Image.fromarray(tab.astype(np.uint8), 'RGBA').resize((w, h), Image.LANCZOS), dtype=np.float32)
+        a = np.clip(male[..., 3:4] / 255.0, 1e-3, 1)
+        male[..., :3] = np.clip(male[..., :3] / a, 0, 255)
+        n = Image.fromarray(male.astype(np.uint8), 'RGBA')
+        px = round(most['srodek'][0] * kafel - w / 2)
+        py = round(most['srodek'][1] * kafel - h / 2)
+        # Miękki cień pod mostem na wodzie: bez niego deski leżą na tafli
+        # jak naklejka, a nie wiszą nad nią.
+        cien = Image.new('RGBA', n.size, (10, 30, 40, 0))
+        cien.putalpha(n.getchannel('A').point(lambda v: int(v * 0.45)).filter(ImageFilter.GaussianBlur(kafel * 0.12)))
+        im.alpha_composite(cien, (px - round(kafel * 0.12), py + round(kafel * 0.18)))
+        im.alpha_composite(n, (px, py))
+        alfa = np.zeros_like(woda)
+        x0, y0 = max(0, px), max(0, py)
+        x1, y1 = min(woda.shape[1], px + w), min(woda.shape[0], py + h)
+        alfa[y0:y1, x0:x1] = np.asarray(n.getchannel('A'), dtype=np.float32)[y0 - py:y1 - py, x0 - px:x1 - px] / 255.0
+        woda = woda * (1 - alfa)
+    return im, Image.fromarray(woda.clip(0, 255).astype(np.uint8), 'L')

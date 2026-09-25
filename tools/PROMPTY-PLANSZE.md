@@ -520,6 +520,7 @@ podmienia je pod tymi samymi kluczami (`ZESTAWY` w `wsad_wczytaj.py`).
 | `zima-chatka.png` | `public/mapa/zima/chatka.png` | 115 px |
 | `zima-ognisko.png` | `public/mapa/zima/ognisko.png` | 86 px |
 | `zima-kopiec.png`, `zima-kopiec-2.png` | `public/mapa/zima/kopiec*.png` | 37 px |
+| `zima-wiatrak.png` | `public/mapa/zima/wiatrak.png` | 211 px |
 
 <!-- plik: zima-zamek-las.png -->
 ```
@@ -568,4 +569,64 @@ poking out of the snow at the foot. No moss, no grass. Slightly wider than tall.
 A small cluster of two angular grey rocks and a flat stone, all capped with
 snow and frosted on the edges, a tiny snow drift at the base, blue shadow on
 the left. No moss, no grass. Slightly wider than tall.
+```
+
+<!-- plik: zima-wiatrak.png -->
+```
+A small stone windmill in deep winter: a round grey fieldstone base and a
+white plaster upper storey, a conical wooden roof under a thick cap of snow
+with icicles on the rim, four wooden lattice sails with pale canvas, frost on
+the sail frames, a low wooden door with a small snow drift in front, a sack of
+grain and a wooden bucket half buried in snow. No ivy, no moss, no grass, no
+green plants. Taller than wide.
+```
+
+## 6. Polana — most przez rzekę w pierwszym ekranie (runda 4 ślepego porównania)
+
+Werdykt rundy 3: „prawa część kadru (rzeka i klify) to martwe tło: nie ma
+mostu ani brodu, nie widać, czy za wodą da się iść". Bród z piasku czytał się
+jak łacha, na której rzeka się urywa. Most jest NAKLEJKĄ TŁA
+(`MOSTY` w `tools/mapy/polana.py`, maluje go `render_mapa.py` na nieprzerwanej
+wodzie), a pola pod nim są w grze drogą. Obrobiony plik leży w
+`public/mapa/polana/most.png` (przycięty do sylwetki; render skaluje go na
+szerokość przeprawy).
+
+<!-- plik: polana-most.png | styl: obiekt | proporcje: 3:2 -->
+```
+A short sturdy wooden bridge in the style of Heroes of Might and Magic 2,
+crossing a river from LEFT to RIGHT, seen from above at a steep three-quarter
+angle so the plank deck is clearly visible as a long horizontal band: weathered
+warm brown planks laid crosswise, a simple log railing with posts along the
+far edge and a lower one along the near edge, a squat grey fieldstone pier
+under each end and one in the middle. The bridge is MUCH wider than tall and
+spans the whole width of the picture, both ends open and flat so a dirt road
+can join them. No water, no river banks, no grass, no ground under it.
+```
+
+<!-- plik: polana-most-2.png | styl: obiekt | proporcje: 3:2 -->
+```
+A small humped stone arch bridge in the style of Heroes of Might and Magic 2,
+crossing a river from LEFT to RIGHT, seen from above at a steep three-quarter
+angle: a pale grey-tan cobbled roadway running across the top as a long
+horizontal band, low stone parapets on both sides, two rounded arches visible
+on the near face, mossy stones at the waterline. Much wider than tall, spanning
+the whole width of the picture, flat open ends so a dirt road can join them.
+No water, no river banks, no grass, no ground.
+```
+
+Pierwsze dwie wersje wyszły izometrycznie, po skosie — na mapie widzianej
+z góry na wprost most stałby w poprzek rzeki krzywo. Trzecia prosi o widok
+z przodu, most równoległy do dolnej krawędzi kadru.
+
+<!-- plik: polana-most-3.png | styl: obiekt | proporcje: 3:2 -->
+```
+A short wooden plank bridge in the style of Heroes of Might and Magic 2, seen
+straight from the front and from above at about forty-five degrees, NOT
+isometric and NOT diagonal: the bridge runs perfectly horizontally from the
+left edge to the right edge of the picture, parallel to the bottom edge. We see
+the top of the plank deck as a wide horizontal band of warm brown planks laid
+crosswise, a simple log railing with posts along the back edge and along the
+front edge, and below the deck the front face with two squat grey fieldstone
+piers. Both ends are flat and open so a dirt road can run onto them. Much
+wider than tall. No water, no river banks, no grass, no ground.
 ```
