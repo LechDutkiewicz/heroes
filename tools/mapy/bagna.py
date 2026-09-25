@@ -326,7 +326,7 @@ USTAWIENIA = {
 #: spojrzenie na ekran ma mówić „bagno", zanim dziecko zobaczy choć jedno pole
 #: trzęsawiska.
 BARWY_TERENU = {
-    'woda': {'nasycenie': 0.55, 'barwa': (80, 125, 95), 'moc': 0.65, 'jasnosc': 0.8},
+    'woda': {'nasycenie': 0.5, 'barwa': (85, 125, 90), 'moc': 0.6, 'jasnosc': 0.72},
     'trawa': {'nasycenie': 0.62, 'barwa': (140, 140, 80), 'moc': 0.5, 'jasnosc': 0.8},
     'las': {'nasycenie': 0.7, 'barwa': (90, 110, 75), 'moc': 0.4, 'jasnosc': 0.82},
     'sciezka': {'nasycenie': 0.75, 'barwa': (175, 150, 110), 'moc': 0.3, 'jasnosc': 1.08},
@@ -338,7 +338,7 @@ BARWY_TERENU = {
 EFEKTY = ['trzesawisko', 'obwodka_drogi', 'relief', 'bez_placow']
 #: Runda 3 („ciemna ziemia z trzciną, wygląda jak ciemny las"): oczka stojącej
 #: wody w barwie jezior tej planszy, mokre błoto wokół, jaśniejszy grunt.
-TRZESAWISKO = {'woda': (46, 84, 76)}
+TRZESAWISKO = {'woda': (60, 116, 98)}
 #: Błoto z dostawy (`tools/PROMPTY-PLANSZE.md`), do tego czasu zwykłe bagno.
 TEKSTURY = {'bagno': ['bloto', 'bagno']}
 

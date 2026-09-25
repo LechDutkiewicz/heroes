@@ -195,7 +195,7 @@ def trzesawisko(plansza: Image.Image, maska: Image.Image, kafel: int, ziarno: in
         dtype=np.float32,
     ) / 255.0
     n = szum(W, H, max(2, int(kafel * 0.9)), ziarno) + szum(W, H, max(2, int(kafel * 0.32)), ziarno + 5) * 0.45
-    oczka = np.clip((n + 0.02) * 6, 0, 1) * rdzen
+    oczka = np.clip((n + 0.12) * 6, 0, 1) * rdzen
     oczka_im = Image.fromarray((oczka * 255).astype(np.uint8), 'L').filter(ImageFilter.GaussianBlur(1.2))
     oczka = np.asarray(oczka_im, dtype=np.float32) / 255.0
     # Głębia oczka: rozmyta maska — środek ciemniejszy niż płycizna.
@@ -213,23 +213,31 @@ def trzesawisko(plansza: Image.Image, maska: Image.Image, kafel: int, ziarno: in
     tab = tab * (1 - M * 0.8) + grunt * M * 0.8
     # Mokre błoto przy wodzie.
     B = brzeg[..., None]
-    tab = tab * (1 - B * 0.7) + np.array([62, 48, 28]) * B * 0.7
-    # Woda: płycizna jaśniejsza i bardziej zielona, głębia ciemna.
+    tab = tab * (1 - B * 0.75) + np.array([58, 44, 26]) * B * 0.75
+    # Woda: płycizna jaśniejsza, głębia ciemniejsza — ale wciąż WODA, nie dziura.
     w = np.array(woda, dtype=np.float32)
-    plytka = w * 1.35 + np.array([8, 14, 0])
-    gleboka = w * 0.72
-    G = np.clip(glebia * 1.6, 0, 1)[..., None]
+    plytka = w * 1.18 + np.array([12, 12, 0])
+    gleboka = w * 0.8
+    G = np.clip(glebia * 1.3 - 0.15, 0, 1)[..., None]
     barwa = plytka * (1 - G) + gleboka * G
+    # Odbicie nieba: miękkie poziome smugi, jak na stojącej tafli.
+    smugi = szum(W, max(2, H // 4), max(2, int(kafel * 0.7)), ziarno + 13)
+    smugi = np.asarray(
+        Image.fromarray(((smugi * 0.5 + 0.5) * 255).astype(np.uint8), 'L').resize((W, H), Image.BICUBIC),
+        dtype=np.float32,
+    ) / 255.0
+    niebo = np.clip((smugi - 0.55) * 3, 0, 1)[..., None] * 0.35
+    barwa = barwa + (np.array([175, 210, 200]) - barwa) * niebo
     # Tekstura gruntu prześwituje przez wodę odrobinę — dno, nie farba.
-    barwa = barwa + (tab - tab.mean(axis=2, keepdims=True)) * 0.12
+    barwa = barwa + (tab - tab.mean(axis=2, keepdims=True)) * 0.1
     O = oczka[..., None]
     tab = tab * (1 - O) + barwa * O
-    # Cień skarpy przy górnym brzegu, odbicie nieba przy dolnym.
+    # Cień skarpy przy górnym brzegu, jasna linia wody przy dolnym.
     gy = np.gradient(oczka, axis=0)
-    cien = np.clip(gy * 5, 0, 1)[..., None]
-    blask = np.clip(-gy * 5, 0, 1)[..., None]
-    tab = tab * (1 - cien * 0.45)
-    tab = tab + (np.array([185, 215, 200]) - tab) * blask * 0.55
+    cien = np.clip(gy * 4, 0, 1)[..., None]
+    blask = np.clip(-gy * 4, 0, 1)[..., None]
+    tab = tab * (1 - cien * 0.35)
+    tab = tab + (np.array([150, 195, 175]) - tab) * blask * 0.3
     # Rzęsa: drobne jasnozielone plamki na płyciźnie.
     r = szum(W, H, max(2, int(kafel * 0.08)), ziarno + 11)
     rzesa = (np.clip((r - 0.55) * 4, 0, 1) * oczka * np.clip(1 - glebia * 1.8, 0, 1))[..., None]

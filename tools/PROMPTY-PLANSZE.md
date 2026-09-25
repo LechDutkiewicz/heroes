@@ -422,3 +422,72 @@ A hunters' swamp camp: a hut on stilts with a reed-thatched roof, a round
 red-and-white sign over the door, a small flat-bottomed boat tied to one
 stilt, crates of red-and-white round capsules on the porch.
 ```
+
+## 4. Polana — zestaw klimatu `polana` (runda 3 ślepego porównania)
+
+Werdykt: „jednolity dywan trawy i lasu, bez pasma gór w kadrze". Skały
+Polany to podstawowe `kepa-skaly` — omszałe głazy rozsypane po łące, które
+z daleka czytają się jak garść drobiazgów, a nie jak góry. W Heroes 2 góra na
+łące to zielony, trawiasty masyw z brązowymi urwiskami i żlebami — ma rzeźbę
+i zamyka przejście także dla oka. Te kępy kładą się obok siebie w pasmo
+(scena stawia je co trzy pola, zachodzą na siebie o pole), więc podstawa
+każdej musi sięgać obu boków kadru.
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `polana-kepa-skaly-1..4.png` | `public/mapa/polana/kepa-skaly-N.png` | 216 px |
+| `polana-skala.png`, `polana-skala-2.png` | `public/mapa/polana/skala*.png` | 67 px |
+
+<!-- plik: polana-kepa-skaly-1.png | styl: obiekt | proporcje: 3:2 -->
+```
+A segment of a grassy mountain range in the style of Heroes of Might and
+Magic 2: two rounded green peaks covered in short meadow grass, steep
+ochre-brown rocky cliffs and deep ravines cut into the slopes, sharp ridge
+lines running down from each peak, a few tiny dark green pines in the folds.
+Sunlit green faces on the right, darker olive and brown shadowed folds on the
+left. Clearly an impassable mountain, not a pile of boulders. Wider than tall;
+the foot of the mountain spreads across the whole width of the picture so that
+pieces placed side by side join into one continuous range.
+```
+
+<!-- plik: polana-kepa-skaly-2.png | styl: obiekt | proporcje: 3:2 -->
+```
+A long grassy mountain ridge in the style of Heroes of Might and Magic 2: one
+high green crest with a saddle and a smaller second hump, brown rock showing
+through on the steep faces as vertical gullies and ledges, grass on the
+rounded tops. Strong sculpted relief: bright sunlit slopes on the right,
+deep olive-brown shadow folds on the left. Wider than tall; the foot spreads
+across the whole width of the picture.
+```
+
+<!-- plik: polana-kepa-skaly-3.png | styl: obiekt | proporcje: 3:2 -->
+```
+A rocky brown mountain massif in the style of Heroes of Might and Magic 2:
+three jagged ochre and tan sandstone peaks with grassy green shoulders and
+patches of meadow on the lower slopes, layered cliff bands, scree at the
+foot. Sunlit faces warm tan, shadowed faces deep brown. Wider than tall; the
+foot spreads across the whole width of the picture.
+```
+
+<!-- plik: polana-kepa-skaly-4.png | styl: obiekt | proporcje: 3:2 -->
+```
+A low broad green hill range in the style of Heroes of Might and Magic 2:
+three soft grassy knolls packed together with brown earth scarps and rocky
+outcrops breaking the slopes, a couple of small bushes in the hollows. Reads
+as foothills of a mountain chain, clearly impassable. Wider than tall; the
+foot spreads across the whole width of the picture.
+```
+
+<!-- plik: polana-skala.png -->
+```
+A single small grassy mountain peak in the style of Heroes of Might and Magic
+2: a green rounded top, steep brown rocky faces with one gully, sunlit on the
+right, shaded on the left. Slightly wider than tall.
+```
+
+<!-- plik: polana-skala-2.png -->
+```
+A small rugged rocky crag in the style of Heroes of Might and Magic 2: two
+tan-brown sandstone spires with tufts of grass on the ledges, scree at the
+foot, sunlit on the right. Slightly wider than tall.
+```
