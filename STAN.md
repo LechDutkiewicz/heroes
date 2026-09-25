@@ -116,6 +116,33 @@ włączane per plansza, więc Dwie Doliny zostają bajt w bajt:
 - Pierwszy ekran (`kadr_startu`, `RAMKA_STARTU`): dwie kopalnie, dwie
   budowle, stosy, skrzynia i skarb pod strażą w widoku z dnia pierwszego,
   pusty pas przy ramie (obiekt na ramie wychodził na zrzucie ucięty).
+### Runda 3 — geografia w pierwszym ekranie
+
+Werdykt rundy 2 (znów trzy razy wzorzec): „ten sam zestaw obiektów na tych
+samych okrągłych piaskowych plackach, żadnej wody ani rzeźby w widoku,
+krainy rozmyte w jedną". Poprawki:
+
+- **Geografia w pierwszym ekranie każdej mapy**: Polana — rzeka i skalny
+  grzbiet (zamek i start przesunięte bliżej rzeki); Bagna — Czarna Struga
+  i skałki; Twierdza — skuty lodem staw i skalne zbocze.
+- **Relief skał** (`relief`, `relief_sniezny` w `teren_efekty.py`): pasmo
+  skał ma stronę oświetloną i cień; w Twierdzy grań i jasne stoki bieleją.
+- **Bez placków** (`bez_placow`): plansze kampanii nie mają wydeptanego
+  placu z tekstury drogi pod zamkami i kopalniami — budowla stoi na swoim
+  terenie. Dwie Doliny place zachowują (ich tło jest zamrożone).
+- **Stojąca woda na Bagnach**: prawdziwe oczka `~` rozsiane po trzęsawisku
+  (z shaderem), obok malowanych oczek i trzciny.
+- **Twierdza bez łąki**: dolina gracza w śniegu (scena stawia krzaki tylko
+  na łące), sad tylko tam, gdzie wokół nie ma śniegu, pozostałe sady
+  w strefach śnieżnych zamienione na kopalnie odłamków.
+- **Kopalnie w zboczach** (`pod_skala`): tam, gdzie się da, kopalnia stoi
+  pod skałą, a jej bryła wchodzi w zbocze.
+- **Twardsze brzegi** (`WTAPIANIE` per plansza) i budowle pierwszego ekranu
+  co najmniej trzy pola od siebie (`ODSTEP_KADRU`).
+- Wyszło przy okazji: po przesunięciu startu mur kopalni stanął na polu
+  startu — bohater zaczynał w murze. Złapała to `probe-mapy.ts`; silnik
+  odrzuca teraz takie postawienie.
+
 - Czego NIE da się zrobić po stronie planszy: drzewa i krzaki rysuje scena,
   jednym zestawem sprite'ów na wszystkie klimaty — zielone sosny na śniegu
   i krzaki na łące Twierdzy zostają, dopóki `AdventureScene` nie dostanie
