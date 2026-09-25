@@ -262,7 +262,8 @@
    ],
    "live": {
     "round": 9,
-    "stage": "builder pracuje"
+    "stage": "zrzut i ślepe zestawienie",
+    "build": "Werdykt rundy 8 miał jedną główną przyczynę. Dolina była usiana pojedynczymi polami bagna, a każde miało własną skarpę, mokrą obwódkę i ciemny brzeg ułożony w kształt kafli. Pod górami i lasem prześwitywało przez miękkie podnóża rozmyte tło ściółki. Zmieniłem to tak: w pierwszym ekranie nie ma już ani jednego pola bagna, pod skałami i lasem kadru jest trawa (w grze to dalej skały i las, więc ruch się nie zmienia), a brzeg rzeki pod mostem to jedna czysta linia. Nad pasmem przy rzece jest nowy staw, a prawą krawędź kadru zamykają wierzby. Droga ma teraz namalowane pobocze zamiast ciemnej obwódki, a na rozwidleniu nie ma już pierścienia z wysepką trawy. Budowle stoją co najmniej 3 pola od siebie i nic nie leży na ich rysunkach. Zamek jest większy (skalaZamku 1,35), pozostałe budowle mniejsze. Stos pokeballi to teraz drewniana skrzynka zamiast czerwonej piramidki, która wyglądała jak grzyby. Na łące jest mniej grzybów, a na rzece mniej pływających śmieci. Na zrzucie przejścia są już ostre i czyste, ale nie zrobiłem nowego ślepego porównania, więc nie wiem, czy teraz wygrywamy z HotA. Zostało miękkie podnóże gór (próbowałem je wyostrzyć, ale góry wyglądały wtedy jak wycięte płaskowyże, więc to odrzuciłem). Bagno z ciemnymi obwódkami zostało też poza pierwszym ekranem."
    }
   },
   {
@@ -319,7 +320,11 @@
      "note": "Krytyk 1: wzorzec — B ma prawdziwą geografię: rzeka z piaszczystymi brzegami przecina mapę, łańcuchy górskie i gęste lasy tworzą korytarze, droga prowadzi w prawy dolny róg, a każdy obiekt (wiatrak, wieże, portal, obóz) ma cień i stoi na terenie. Całość wygląda jak zaprojektowany poziom z jednolitym oświetleniem. A ma ładne, spójne ilustracje gór i jeziora na lodzie, ale środek i prawa strona to płaski, pusty śnieg z blado wtopionymi ścieżkami. Kilkadziesiąt drobnych znaczników (czerwone jagody, skrzynie, ogniska) jest na nim rozsypanych jak naklejki i wygląda to na losowy spawn, a nie projekt mapy. Krytyk 2: wzorzec — B wygląda jak jeden spójny świat. Teren ma czytelną rzeźbę: rzeka wije się przez las, kamienista droga prowadzi od zamku w dół, a masywy górskie, jeziorka i wodospady dzielą mapę na strefy, więc od razu widać, którędy da się przejść. Obiekty (zamek, tartak, kopalnia, skrzynie, stosy surowców) stoją w terenie, rzucają cień i mają jedną skalę. A ma ładnie malowane pojedyncze assety, ale wyglądają jak naklejki położone na płaskim białym tle: ścieżki to rozmyte beżowe plamy bez krawędzi i faktury, góry po lewej są kilka razy większe od zamku, a całość jest zatłoczona na małej powierzchni bez wyraźnych korytarzy i stref. Krytyk 3: wzorzec — A ma spójną, zaprojektowaną geografię: linia brzegowa z plażą, zatoka, przejścia między biomami (trawa, piach, bagno, skały), a obiekty stoją na terenie i mają własną skalę, cień i sens położenia. Od razu widać, gdzie jest woda, gdzie góry, a gdzie przejście. B ma ładną, malarską zimę, ale wygląda jak zbiór naklejek na tle. Te same czerwone kupki surowców powtarzają się kilkanaście razy, drogi to płaskie beżowe wstęgi o ostrych krawędziach, a ogromne malowane góry po lewej są w innej skali niż zamek i bohater. Skutek: B przypomina wygenerowaną planszę mobilną, a A dopracowaną mapę gotowej gry.",
      "build": "Poprzedni builder zostawił planszę w dobrym stanie: góry z wielu różnych rysunków, rzeźba śniegu, jezioro z wysepką. Nie było czego dokańczać, więc zająłem się ostatnią luką. W pierwszym ekranie trakt dostał trzy odnogi: od rozstajów do kopalni odłamków, do placu z chatą i wiatrakiem oraz do strzeżonego skupiska przy ognisku (straż, skrzynia, relikt). Malowałem je po rozstawieniu, więc żaden obiekt się nie przesunął. Droga ma teraz ciemniejszy, brązowy kolor, a skrzynie, surowce i artefakty urosły z 0,5 do 0,78 pola i dostały ciemny obrys, żeby nie ginęły na śniegu (ustawienia `znajdzki` i `obrysObiektow`, tylko dla tej planszy). Kodu wspólnego nie ruszałem. Uwaga: w trakcie pracy ktoś zapisał migawkę do gita (commit 8883609 „Polana wygrywa…”), więc moje zmiany w twierdza.py i plikach generowanych już są w historii, a nie w `git status`."
     }
-   ]
+   ],
+   "live": {
+    "round": 6,
+    "stage": "builder pracuje"
+   }
   },
   {
    "name": "HUD mapy przygody",

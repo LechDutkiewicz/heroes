@@ -1615,3 +1615,72 @@ Mossy green foothills with a small twisted swamp willow, a dark pine, ferns and
 mossy boulders; the foot is a soft irregular edge of moss and grass tufts.
 Much wider than tall.
 ```
+
+## 18. Twierdza — skarpy i skalne progi na równinie (runda 6, wzorzec HotA)
+
+Werdykt rundy 5: „dolna i środkowa część to płaski śnieg bez rzeźby,
+zasypany identycznymi stosami — trzeba skarp, zagajników i wąwozów, które
+tworzą korytarze". Niskie, długie progi skalne (niższe niż góry §15)
+rozstawiane ręcznie jak masywy (`USTAWIENIA.masywy`): odnoga pasma na
+równinie z wąwozem przy lesie i skalny próg nad placem przy drodze.
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `zima-gora-6.png` … `zima-gora-8.png` | `public/mapa/zima/gora-N.png` | 200–260 px |
+
+<!-- plik: zima-gora-6.png | styl: obiekt | proporcje: 3:2 -->
+```
+A long low snowy escarpment for a winter adventure map, seen from a
+three-quarter top-down view: a raised shelf of snow-covered ground whose
+front edge breaks into a short, steep, jagged cliff band of cool slate-grey
+and blue-grey granite running across the whole width of the picture, with
+dark blue shadowed cracks, small icicles hanging from the lip, snow cornices
+along the top edge, a few snow-capped boulders and grey scree at the foot,
+three small snow-laden dark spruces standing on top of the shelf at one end.
+Low and long like a step in the terrain, much lower than a mountain. Cool
+winter palette, NO orange, NO warm brown rock. About three times wider than
+tall, the foot an irregular lumpy line of snow drifts and stones.
+```
+
+<!-- plik: zima-gora-7.png | styl: obiekt | proporcje: 3:2 -->
+```
+A small rocky snow knoll for a winter adventure map: a low mound of four or
+five big angular slate-grey granite boulders piled together, thick white
+snow caps on their tops, deep blue-grey shadows in the cracks between them,
+two small snow-laden dark spruces growing between the rocks, snow drifts
+piled around the base with soft blue shadow. Low and compact, clearly an
+impassable rocky outcrop. Cool winter palette, NO orange, NO warm brown
+rock. Wider than tall.
+```
+
+<!-- plik: zima-gora-8.png | styl: obiekt | proporcje: 3:2 -->
+```
+A snowy hill ridge with a small spruce grove for a winter adventure map: a
+long, low, gently curved white snow-covered ridge whose lower side breaks
+into a short grey granite rock face with dark blue shadowed cracks and a few
+icicles, and on the crest a dense little grove of six or seven snow-laden
+dark green spruces of different heights, a couple of snow-capped boulders
+and snow drifts along the irregular foot. Lower than a mountain. Cool winter
+palette, NO orange, NO warm brown rock. About twice as wide as tall.
+```
+
+## 18. Bagna — stos pokeballi w skrzynce (runda 9, wzorzec HotA)
+
+Werdykt rundy 8: „te same czerwone grzyby rozsypane po całej mapie zagłuszają
+obiekty". Piramidka trzech czerwonych kul z daleka czyta się jak kępka
+muchomorów, a na pierwszym ekranie leży ich kilka. Skrzynka z drewna daje
+stosowi brązową bryłę jak skarby w Heroes 3, czerwieni zostaje tyle, ile
+trzeba, żeby poznać pokeballe. Po obejrzeniu idzie do wsadu jako
+`bagno-stos-pokeball.png` (72 px).
+
+<!-- plik: bagno-skrzynka-pokeball.png -->
+```
+A small low open wooden crate, weathered brown planks with a bit of green
+moss on one corner, seen from above at a slight angle, filled with four
+red-and-white capture balls peeking over the rim: glossy red top halves,
+white bottom halves, black middle band with a round white button. The crate
+is the main shape, wider than tall, compact, reads as "a crate of capture
+balls to pick up" at 40 pixels. Soft painted shading and highlights like the
+rest of the map. Isolated cut-out: nothing under the crate — no ground, no
+grass, no shadow; everything around it is fully transparent.
+```

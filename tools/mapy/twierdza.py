@@ -166,6 +166,26 @@ def popraw_teren(g, mapa):
     for y in range(60, 67):
         for x in range(0, 9):
             mapa[y][x] = '#'
+    # Runda 6 (HotA): „dolna i środkowa część to płaski śnieg bez rzeźby —
+    # trzeba skarp, zagajników i wąwozów tworzących korytarze". Trzy bryły
+    # rzeźby na równinie (rysunki `gora-6..8` w `USTAWIENIA.masywy`):
+    #  * skalna skarpa pod zamkiem (y 67–68) — odnoga pasma; między nią
+    #    a górami wąski wąwóz (x 11–12) do zaułka ze skarbem pod strażą;
+    #  * zalesiony pagór (y 64–65) — między nim a skarpą korytarz (y 66)
+    #    wiodący w zatoczkę przy borze;
+    #  * zagajnik świerków przy borze (x 21–23) zamyka korytarz od wschodu.
+    for y in (67, 68):
+        for x in range(13, 18):
+            mapa[y][x] = '#'
+    for x, y in [(11, 67), (12, 67), (11, 68), (12, 68), (11, 69), (12, 69), (11, 70), (12, 70), (13, 70)]:
+        mapa[y][x] = 's'
+    for y in (64, 65):
+        for x in range(16, 20):
+            mapa[y][x] = '#'
+    for x, y in [(21, 66), (22, 66), (23, 66), (23, 67)]:
+        mapa[y][x] = 'T'
+    for x, y in [(23, 61), (24, 61), (23, 62), (24, 62)]:
+        mapa[y][x] = '#'
 
 
 def kadr_szeroki(g):
@@ -190,6 +210,63 @@ def bez_sniegu(g, pola):
     ]
 
 
+#: Pierwszy ekran po oddaleniu kamery (x 3–24, y 53–71 wokół startu).
+KADR = (3, 53, 24, 71)
+
+#: Pierwszy ekran, rozstawiony ręcznie (runda 6). Każdy wpis: lista pól do
+#: wyboru (pierwsze pasujące) i obiekt. Mapa kadru — patrz `popraw_teren`:
+#: staw u góry, pasmo gór po lewej, bór w prawym dolnym rogu; trakt od zamku
+#: na wschód (y 62) i na północ (x 22); zalesiony pagór (16–19, 64–65),
+#: skarpa (13–17, 67–68), między nimi korytarz, za skarpą zaułek z wąwozem.
+PIERWSZY_EKRAN = [
+    # Spichlerz jagód przy trakcie, między stawem a drogą.
+    ([(18, 61), (17, 61), (19, 61)], ('kopalnia', 'jagoda')),
+    # Kopalnia odłamków na wschodnim placu, wejściem do korytarza.
+    ([(21, 64), (22, 64), (21, 63)], ('kopalnia', 'odlamek')),
+    # Obóz łowców (złoto) w zaułku u stopy skarpy — za wąwozem ze strażą.
+    ([(14, 70), (15, 70)], ('kopalnia', 'pokeball')),
+    ([(12, 68), (12, 69), (11, 69)], ('potwor', 'slaby')),
+    ([(16, 69), (16, 71), (15, 71)], ('surowiec', 'kamien')),
+    # Plac nad zamkiem, na brzegu stawu: chata i wiatrak przy ścieżce.
+    ([(14, 60), (13, 60), (15, 60)], ('budynek', 'wiatrak')),
+    ([(10, 59), (11, 59), (9, 59)], ('budynek', 'chatka')),
+    # Za stawem: kamienna wieża pod górami, kupka kul i jagód na brzegu.
+    ([(9, 55), (10, 55), (9, 54)], ('budynek', 'kamienna-wieza')),
+    ([(12, 54), (13, 54), (12, 55)], ('surowiec', 'pokeball')),
+    ([(16, 55), (15, 55), (16, 54)], ('surowiec', 'jagoda')),
+    # Trakt na północ: źródło przy drodze, wóz na wschodnim brzegu.
+    ([(20, 55), (21, 55), (20, 56)], ('budynek', 'zrodlo')),
+    ([(24, 57), (23, 57), (23, 56)], ('budynek', 'woz')),
+    # Wylot korytarza przy zamku: ognisko, kupka odłamków przy trakcie.
+    ([(12, 65), (11, 65), (12, 66)], ('budynek', 'ognisko')),
+    ([(15, 63), (14, 63), (16, 63)], ('surowiec', 'odlamek')),
+    # Zatoczka na końcu korytarza, pod borem.
+    ([(19, 67), (18, 67), (20, 67)], ('skrzynia', None)),
+]
+
+
+def postaw_kadr(g, miejsca, wpis):
+    """Obiekt pierwszego ekranu na pierwszym pasującym polu z listy."""
+    sx, sy = PUNKTY['start']
+    zajete = {q for q, _ in g.obiekty} | g.blokada | set(PUNKTY.values())
+    for x, y in miejsca:
+        if not g.w(x, y) or g.mapa[y][x] not in '.,js' or (x, y) in zajete:
+            continue
+        if max(abs(x - sx), abs(y - sy)) <= (2 if wpis[0] == 'potwor' else 1):
+            continue
+        bryla = g.pola_bryly(wpis[0], wpis[1], (x, y))
+        if any(q in zajete or g.mapa[q[1]][q[0]] == '=' for q in bryla):
+            continue
+        if wpis[0] == 'potwor' and g.koliduje_ze_straza((x, y), wpis):
+            continue
+        try:
+            return g.postaw((x, y), wpis)
+        except SystemExit:
+            continue
+    print(f'  pierwszy ekran: brak miejsca na {wpis} w {miejsca}')
+    return None
+
+
 def rozstaw(g):
     rng = g.rng
 
@@ -207,40 +284,23 @@ def rozstaw(g):
     g.postaw((34, 9), ('potwor', 'silny', 'Straż Przełęczy Twierdz'))
 
     # --- DOLINA GRACZA -------------------------------------------------------
-    # Pierwszy ekran: kopalnie, budowle, stosy i skarb pod strażą w widoku
-    # z dnia pierwszego (runda 1: „poza zamkiem dwie trzecie pustki").
-    kadr = g.kadr_startu()
-    sx, sy = PUNKTY['start']
-    dalej = [p for p in kadr if max(abs(p[0] - sx), abs(p[1] - sy)) >= 4]
-    # Runda 2: „jabłonie obok zasp" — dziś sad w zestawie `zima` to
-    # zaśnieżony spichlerz jagód bez liści, więc może stać w śniegu, w kadrze.
-    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'jagoda'), kadr, bez_sniegu(g, g.wolne_pola('dom', (3, 20))))
-    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'odlamek'), kadr, None, (3, 14))
-    g.dodaj_najpierw('dom', lambda p: ('budynek', 'ognisko'), kadr, None, (2, 16))
-    g.dodaj_najpierw('dom', lambda p: ('budynek', 'chatka'), kadr, None, (2, 16))
-    # Runda 3 (wzorzec HotA): „dwie trzecie ekranu puste" — zimowy wiatrak
-    # i dwie kupki więcej w widoku z dnia pierwszego. Wiatrak blisko startu
-    # jest też potrzebny gospodarce: z wieżą obserwacyjną w tym miejscu
-    # autopilot nie zdobywał drugiej twierdzy do dnia 84 (symulacja misji).
-    g.dodaj_najpierw('dom', lambda p: ('budynek', 'wiatrak'), kadr, None, (2, 16))
-    for _ in range(5):
-        g.dodaj_najpierw('dom', lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kadr, None, (2, 12))
-    g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), kadr, None, (2, 12))
-    g.strzez(g.dodaj_najpierw('dom', lambda p: ('artefakt', None), dalej, None, (5, 14)), 'slaby')
-    # Runda 3 (wzorzec HotA, kamera oddalona do 32 px na pole): pierwszy ekran
-    # to już 21 × 18 pól, a `kadr_startu` pokrywa jego środek. Pierścień
-    # wokół (`kadr_szeroki`) dostaje własne rzeczy — zimowe budowle, strzeżoną
-    # kopalnię, kupki i skrzynie — żeby brzegi ekranu nie były pustym śniegiem.
-    pierscien = [p for p in kadr_szeroki(g) if p not in set(kadr)]
-    for budynek in ('kamienna-wieza', 'zrodlo', 'woz'):
-        g.dodaj_najpierw('dom', lambda p, b=budynek: ('budynek', b), pierscien, None, (3, 24))
-    g.strzez(g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'pokeball'), pierscien, None, (4, 24)), 'slaby')
-    for _ in range(4):
-        g.dodaj_najpierw('dom', lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), pierscien, None, (3, 20))
-    for _ in range(2):
-        g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), pierscien, None, (3, 20))
-    g.dodaj(2, 'dom', (6, 14), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])))
-    g.dodaj(1, 'dom', (6, 14), lambda p: ('skrzynia', None))
+    # PIERWSZY EKRAN (runda 6, wzorzec HotA) — rozstawiony RĘCZNIE, jak na
+    # Polanie. Werdykt rundy 5: „od wiatraka w dół płaski śnieg zasypany
+    # kilkunastoma identycznymi czerwonymi stosami, skrzyniami i ogniskami —
+    # szum, zdradza proceduralne rozrzucenie; wyraźnie mniej, w kilku różnych
+    # wariantach, osadzonych w terenie (przy ścieżkach, w zatoczkach, za
+    # strażą)". Losowanie z odstępami sypało kupki po całym kadrze; teraz
+    # każde miejsce ma swoją rzecz, a każdy surowiec leży tu raz.
+    for miejsca, wpis in PIERWSZY_EKRAN:
+        postaw_kadr(g, miejsca, wpis)
+    # Kadr jest skończony — reszta doliny idzie poza niego. Te same ilości co
+    # przed rundą 6 (kupki, skrzynie, relikt pod strażą), tylko dalej:
+    # symulacja misji liczy na tę gospodarkę.
+    g.zajete += [(x, y) for y in range(KADR[1], KADR[3] + 1) for x in range(KADR[0], KADR[2] + 1)
+                 if strefa(x, y) == 'dom']
+    g.dodaj(7, 'dom', (6, 30), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])))
+    g.dodaj(3, 'dom', (6, 30), lambda p: ('skrzynia', None))
+    g.strzez(g.dodaj(1, 'dom', (6, 30), lambda p: ('artefakt', None)), 'slaby')
     g.dodaj(8, 'dom', (10, 40), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])))
     kopalnie = ['odlamek', 'pokeball', 'odlamek', 'pokeball', 'kamien']
     polozone = []
@@ -334,9 +394,13 @@ def rozstaw(g):
     # rozstawieniu: nic się nie przesuwa, a pod obiektami droga i tak jest
     # przejezdna. Tylko na śniegu, darni i tundrze — nie na lodzie ani skałach.
     # (Odnoga od bramy zamku biegła pod rysunkiem gór — idzie od rozstajów.)
-    for x, y in [(13, 63), (13, 64), (13, 65), (13, 66), (12, 67),  # → kopalnia odłamków
+    # Runda 6: odnogi wiodą tam, gdzie teraz stoją rzeczy pierwszego ekranu —
+    # od startu w dół korytarzem między pagórem a skarpą do zatoczki, odbicie
+    # do wąwozu ze strażą, plac z chatą i wiatrakiem, kopalnia odłamków.
+    for x, y in [(13, 63), (13, 64), (13, 65), (14, 66), (15, 66), (16, 66), (17, 66), (18, 67),  # korytarz
+                 (12, 66), (12, 67),                    # → wąwóz
                  (13, 61), (12, 60), (11, 60),          # plac: chata, wiatrak
-                 (17, 63), (18, 64), (18, 65)]:         # skupisko przy ognisku
+                 (19, 63), (20, 64)]:                   # → kopalnia odłamków
         if g.mapa[y][x] in 's.j':
             g.mapa[y][x] = '='
 
@@ -398,10 +462,18 @@ USTAWIENIA = {
         {'plik': 'gora-4', 'x': 7.3, 'y': 60.3, 'szer': 7.6, 'pokrywa': [4, 56, 9, 59]},
         {'plik': 'gora-2', 'x': 5.2, 'y': 64.3, 'szer': 8.6, 'pokrywa': [0, 60, 8, 63]},
         {'plik': 'gora-1', 'x': 4.9, 'y': 68.4, 'szer': 11.0, 'pokrywa': [0, 64, 9, 67]},
-        {'plik': 'gora-3', 'x': 7.2, 'y': 72.4, 'szer': 8.2, 'odbij': True, 'pokrywa': [3, 68, 9, 71]},
-        {'plik': 'gora-5', 'x': 12.7, 'y': 71.5, 'szer': 3.8, 'pokrywa': [12, 69, 13, 70]},
+        # Runda 6: węższy, żeby nie przykrywał wąwozu (x 11–12) do zaułka.
+        {'plik': 'gora-3', 'x': 6.6, 'y': 72.4, 'szer': 7.4, 'odbij': True, 'pokrywa': [3, 68, 10, 71]},
+        # (Runda 6: bez skalnego pagóra `gora-5` w rogu — stał na wąwozie.)
         # Skalny garb nad stawem (górna krawędź ekranu) zamiast rzędu kęp.
         {'plik': 'gora-3', 'x': 17.4, 'y': 56.1, 'szer': 6.2, 'pokrywa': [15, 50, 20, 55]},
+        # Runda 6 (HotA): „równina bez rzeźby — skarpy, zagajniki, wąwozy".
+        # Skalna skarpa pod zamkiem i zalesiony pagór nad nią (§18,
+        # rysunki rozciągnięte w poziomie, żeby nie zasłaniały korytarza).
+        {'plik': 'gora-6', 'x': 15.5, 'y': 69.1, 'szer': 5.8, 'pokrywa': [13, 67, 17, 68]},
+        {'plik': 'gora-8', 'x': 17.8, 'y': 66.2, 'szer': 5.3, 'pokrywa': [16, 64, 19, 65]},
+        # Skalny pagór na wschodnim brzegu kadru, przy trakcie na północ.
+        {'plik': 'gora-7', 'x': 24.0, 'y': 63.2, 'szer': 2.8, 'pokrywa': [23, 61, 24, 62]},
     ],
 }
 
@@ -482,3 +554,27 @@ NAKLEJKI = [
     (['trawy-snieg'], 's.', 0.06),
     (['nawis-sniezny'], 's', 0.04),
 ]
+
+
+def TLO(rysunek):
+    """Podmiany znaków tylko w TLE planszy (`render_mapa`), runda 6.
+
+    Pod rysunkami gór i skarp z `USTAWIENIA.masywy` tło malowało skały
+    ciemną teksturą z cieniem skarpy — wokół zalesionego pagóra i skalnego
+    progu prześwitywała rozmyta szara plama wystająca za rysunek. Jak
+    w Heroes 3: góra stoi NA śniegu, więc pod prostokątem `pokrywa` skały
+    są w tle śniegiem; w grze dalej są skałami.
+    """
+    wynik = [list(w) for w in rysunek]
+    for m in USTAWIENIA['masywy']:
+        x0, y0, x1, y1 = m['pokrywa']
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                if wynik[y][x] == '#':
+                    wynik[y][x] = 's'
+    return [''.join(w) for w in wynik]
+
+#: Runda 6: kręty trakt z koleinami (jak na Polanie) zamiast prostych
+#: odcinków od środka do środka pola — sieć dróg ma się wić między pagórem,
+#: skarpą i stawem, a nie iść po linijce.
+DROGA_KRETA = {'szerokosc': 0.5, 'zmiennosc': 0.2, 'meander': 0.12}

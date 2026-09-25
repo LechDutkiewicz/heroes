@@ -647,6 +647,8 @@ ZESTAWY = {
         # Twierdza, runda 4 (HotA): wielopolowe góry rozstawiane ręcznie
         # (`USTAWIENIA.masywy`) — scena skaluje je po szerokości w polach.
         'gora-1': 340, 'gora-2': 380, 'gora-3': 280, 'gora-4': 220, 'gora-5': 240,
+        # Twierdza, runda 6 (HotA): skarpy i skalne progi na równinie (§18).
+        'gora-6': 240, 'gora-7': 200, 'gora-8': 240,
     },
     'bagno': {
         'drzewo': 144, 'drzewo-b': 144, 'krzak': 84, 'krzak-2': 84,

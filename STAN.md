@@ -282,6 +282,37 @@ zatokami — jedna mglista tafla. Zmiany (wszystko w `tools/mapy/bagna.py`):
 
 Symulacja misji 3: wygrana dnia 6 (3/3).
 
+### Bagna, runda 9 (HotA)
+
+Werdykt rundy 8 (0/3): „brudne, ciemne, rozmyte przejścia — schodkowe
+obwódki w kształcie kratki kafli, ciemnozielone rozlane plamy przy
+rozwidleniu i oczkach, szarozielona smuga wzdłuż rzeki, półprzezroczysta
+maska wokół gór; niespójna skala; czerwone grzyby wszędzie". Przyczyna:
+pojedyncze pola bagna `b` rozsiane po dolinie przez rozmycie szkicu — każde
+z czołem skarpy (`RZEZBA`), mokrą obwódką (`trzesawisko`) i ciemnym brzegiem,
+w kształcie swoich kafli; pod górami i lasem tło ściółki z reliefem
+prześwitujące przez miękkie podnóża rysunków. Zmiany (per plansza):
+
+- Dolina i wschodni brzeg w kadrze bez ani jednego pola `b`; oczko i las
+  przyklejone do Strugi pod mostem usunięte; nowe oczko nad pasmem przy
+  Strudze, ściana wierzb na prawym skraju kadru.
+- `TLO(rysunek)` w konfiguracji planszy (nowy hak w `render_mapa.ustaw`):
+  podmiana znaków TYLKO w tle — pod skałami i lasem kadru łąka; w grze
+  dalej skały i las.
+- `droga_obrzeze` zamiast `obwodka_drogi`, szerszy i jaśniejszy bruk;
+  rozstaje 2 × 2 (pierścień z wysepką trawy) rozplecione w `po_drogach`.
+- Rozstawienie: budowle ≥ 3 pola od siebie i od zamku, nic w pasie dwóch
+  rzędów nad budowlą (`dodaj_luzno` w `rozstaw`); budowla bez luźnego
+  miejsca w dolinie nie staje. Bez drugiego drzewa wiedzy i źródła w dolinie.
+  Wieża obserwacyjna i skrzynia za mostem.
+- Nowe `USTAWIENIA.skalaZamku` (scena; Bagna 1,35), `skalaBudowli` 1,05,
+  `znajdzki` 0,7. Stos pokeballi to teraz skrzynka (PROMPTY-PLANSZE §18),
+  mniej grzybów na łące i śmieci na wodzie. `odkryte` przy prawym skraju.
+- Próba: utwardzenie kanału alfa podnóży gór — wyglądały jak wycięte
+  płaskowyże, odrzucone.
+
+Symulacja misji 3: wygrana dnia 4 (2/2). Grafiki: 1 obrazek, ≈ $0,04.
+
 ### Polana, runda 7 (HotA)
 
 Werdykt rundy 6: „wzgórza to ta sama zielono-brązowa stożkowa pieczątka,

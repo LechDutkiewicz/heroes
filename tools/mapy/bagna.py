@@ -334,6 +334,10 @@ def popraw_teren(g, mapa):
         for x in range(struga_x(y) + 4, struga_x(y) + 7):
             if mapa[y][x] in '.b':
                 mapa[y][x] = 'T'
+    # Oczko z trzciną nad pasmem przy Strudze (jak stawy pod wodospadami we
+    # wzorcu HotA) — dół kadru między traktem a rzeką był pustą łąką.
+    for x, y in ((15, 48), (16, 48), (15, 49), (16, 49)):
+        mapa[y][x] = '~'
 
 
 def w_dolinie(x, y):
@@ -365,6 +369,54 @@ def rozstaw(g):
 
     wolne_pola = g.wolne_pola
     g.wolne_pola = lambda *a, **kw: [p for p in wolne_pola(*a, **kw) if not pod_skalami(p)]
+
+    # Runda 9 (HotA: „obiekty doklejone": wiatrak wchodził na obóz, stos
+    # pokeballi leżał na koronie drzewa wiedzy, ranczo siedziało na drzewie):
+    # rysunek budowli sięga dwa rzędy nad jej pole, więc (1) budowle stoją co
+    # najmniej trzy pola od siebie i od zamku, (2) nic nie leży w tym pasie
+    # nad budowlą, a budowla nie staje tuż pod czymś, co jej rysunek by
+    # przykrył. Gdy tak się nie da — dawne losowanie (plansza ma powstać).
+    dodaj = g.dodaj
+    zx, zy = PUNKTY['zamek gracza']
+
+    def budowla(wpis):
+        return wpis[0] in ('budynek', 'kopalnia')
+
+    def nad(b, p, wys=2, szer=1):
+        return abs(p[0] - b[0]) <= szer and 1 <= b[1] - p[1] <= wys
+
+    def luzno(p, jest_budowla):
+        if nad((zx, zy), p, 4, 2) or max(abs(p[0] - zx), abs(p[1] - zy)) <= (3 if jest_budowla else 1):
+            return False
+        for q, wpis in g.obiekty:
+            if budowla(wpis) and (nad(q, p) or jest_budowla and max(abs(p[0] - q[0]), abs(p[1] - q[1])) < 3):
+                return False
+            if jest_budowla and nad(p, q):
+                return False
+        return True
+
+    def dodaj_luzno(ile, ktora, zakres, buduj, odstep=1, kandydaci=None):
+        stale = []
+        for c in buduj.__code__.co_consts:
+            stale += list(c) if isinstance(c, tuple) else [c]
+        jest_budowla = 'kopalnia' in stale or 'budynek' in stale
+        pola = []
+        for _ in range(ile):
+            kand = kandydaci if kandydaci is not None else g.wolne_pola(ktora, zakres, odstep)
+            kand = [p for p in kand if p not in g.zajete]
+            dobre = [p for p in kand if luzno(p, jest_budowla)]
+            if scisle and not dobre:
+                raise SystemExit('brak luźnego miejsca')
+            try:
+                pola += dodaj(1, ktora, zakres, buduj, odstep, dobre or kand)
+            except SystemExit:
+                if not dobre:
+                    raise
+                pola += dodaj(1, ktora, zakres, buduj, odstep, kand)
+        return pola
+
+    g.dodaj = dodaj_luzno
+    scisle = False
 
     # --- CEL MISJI -----------------------------------------------------------
     # Najpierw, bo o tym jest ta mapa: Kamień w sercu wyspy, wódz na jedynej
@@ -412,7 +464,9 @@ def rozstaw(g):
     # Budowle doliny nie przy samej drodze (runda 5: wiatrak na skraju ścieżki
     # w dół doliny zasłaniał ją całą i dół kadru znów był ścianą obiektów).
     def z_dala_od_drogi(p):
-        if abs(p[0] - sx) > 7 or not -5 <= p[1] - sy <= 7:
+        # Runda 9: cały kadr, także jego górna część (wiatrak na skraju
+        # traktu w górę doliny zasłaniał drogę).
+        if abs(p[0] - sx) > 11 or not -11 <= p[1] - sy <= 7:
             return True
         return not any(
             0 <= p[1] + dy < BOK and 0 <= p[0] + dx < BOK and g.mapa[p[1] + dy][p[0] + dx] == '='
@@ -420,7 +474,11 @@ def rozstaw(g):
             for dx in (-1, 0, 1)
         )
 
-    for b in ['wiatrak', 'oboz-treningowy', 'ognisko', 'drzewo-wiedzy', 'zrodlo', 'ranczo', 'gniazdo', 'chatka', 'woz']:
+    # Runda 9: bez drugiego drzewa wiedzy i drugiego źródła w dolinie — dwa
+    # takie same drzewa w jednym kadrze to „pieczątka".
+    # Budowla, dla której nie ma LUŹNEGO miejsca, nie staje wcale (`scisle`).
+    scisle = True
+    for b in ['wiatrak', 'oboz-treningowy', 'ognisko', 'ranczo', 'gniazdo', 'chatka', 'woz']:
         kand = [p for p in g.wolne_pola('dom', (4, 40)) if z_dala_od_drogi(p)]
         # Runda 6: skały w dole doliny zabrały część miejsca — budowla, dla
         # której już go nie ma, po prostu nie staje (dolina i tak jest pełna).
@@ -428,6 +486,7 @@ def rozstaw(g):
             g.dodaj(1, 'dom', (4, 40), lambda p, b=b: ('budynek', b), kandydaci=kand)
         except SystemExit:
             continue
+    scisle = False
 
     # Straże przepraw przez Strugę. Obie średnie: pierwszy tydzień w dolinie
     # jest bezpieczny, a wyjście z niej to pierwsza poważna bitwa.
@@ -435,6 +494,14 @@ def rozstaw(g):
     # Straż mostu na wschodnim przyczółku (jak na Polanie): potwór blokuje
     # pole i osiem wokół, więc zamyka most, a nie stoi na deskach.
     g.postaw((MOST_WSCH[2] + 1, MOST_WSCH[1]), ('potwor', 'sredni'))
+    # Runda 9: prawy dół kadru za mostem był pustą łąką — wieża obserwacyjna
+    # na brzegu Strugi (za strażą mostu, jak nagroda za pierwszą bitwę)
+    # i skrzynia pod lasem.
+    for pole, wpis in (((21, 49), ('budynek', 'wieza-obserwacyjna')), ((22, 46), ('skrzynia', None))):
+        try:
+            g.postaw(pole, wpis)
+        except SystemExit as e:
+            print(f'  kadr za mostem: {e}')
 
     # --- TRZĘSAWISKO -----------------------------------------------------------
     # Najgęstszy kawałek. Kopalnie drogie (kamień, pokeballe) pod strażą; tanie
@@ -526,7 +593,8 @@ USTAWIENIA = {
     # (`public/mapa/bagno/stos-*.png`: kosz pokeballi, kosz jagód, kryształy
     # na omszałym kamieniu), nie ikony z paska — i są drobniejsze, z cieniem
     # kontaktowym, jak skarby na mapie Heroes 3.
-    'znajdzki': 0.8,
+    # Runda 9: 0,8 → 0,7 — czerwone stosy pokeballi zagłuszały budowle.
+    'znajdzki': 0.7,
     # Runda 8 (HotA: „góry to osobne stożki skał wklejone jak sprite'y — nie
     # łączą się w grzbiety ani pasma i nie mają podnóży przechodzących
     # w trawę"): skały pierwszego ekranu rysują WIELOPOLOWE pasma
@@ -589,7 +657,7 @@ BARWY_TERENU = {
     'bagno': {'nasycenie': 0.95, 'barwa': (130, 118, 80), 'moc': 0.2, 'jasnosc': 1.18},
     # Bruk grobli (runda 6): prawie bez zmian, lekko ciepły.
     # Runda 9: bez jaśniejszej jezdni z `obwodka_drogi` bruk jaśniejszy tu.
-    'sciezka': {'nasycenie': 0.85, 'barwa': (160, 145, 120), 'moc': 0.2, 'jasnosc': 1.2},
+    'sciezka': {'nasycenie': 0.8, 'barwa': (160, 145, 120), 'moc': 0.2, 'jasnosc': 1.32},
 }
 
 #: Po rundzie 1 ślepego porównania („bagno to brązowa plama w kolorze drogi"):
@@ -637,9 +705,11 @@ NAKLEJKI = [
     # a nie pusta turkusowa połać.
     # Runda 6 („tropikalna zatoka"): grążeli mniej, za to zatopione pnie,
     # kępy turzycy i trzcina w wodzie — mętne trzęsawisko, nie staw z liliami.
-    (['grazel-1', 'grazel-2'], '~', 0.07),
-    (['pien-zatopiony'], '~', 0.08),
-    (['kepa-turzycy', 'trzcina-1', 'trzcina-3'], '~', 0.18),
+    # Runda 9 („brudna, rozmyta rzeka"): na wodzie o połowę mniej śmieci —
+    # czysta tafla z kilkoma grążelami i kępami, jak rzeka we wzorcu HotA.
+    (['grazel-1', 'grazel-2'], '~', 0.06),
+    (['pien-zatopiony'], '~', 0.03),
+    (['kepa-turzycy', 'trzcina-1', 'trzcina-3'], '~', 0.07),
     (['martwe-drzewo-1', 'martwe-drzewo-2'], 'b', 0.04),
     (['pniak-bagienny'], 'b', 0.03),
     # Runda 4: sucha łąka w dole doliny ma być czytelnie INNA niż bagno —
