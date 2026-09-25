@@ -313,6 +313,11 @@ export class AdventureScene extends Phaser.Scene {
     ]) {
       this.load.image(`m-${n}`, `${b}mapa/${zKlimatu.has(n) ? `${zestaw}/` : ''}${n}.png`);
     }
+    // Stosy surowców na mapie (`m-stos-<ikona>`) są tylko w zestawie klimatu,
+    // który je ma — ikona `m-<ikona>` zostaje ikoną paska surowców.
+    for (const n of zKlimatu) {
+      if (n.startsWith('stos-')) this.load.image(`m-${n}`, `${b}mapa/${zestaw}/${n}.png`);
+    }
     const stan = this.wczytajStan();
     const potrzebne = new Set<string>();
     for (const o of zywe(stan.bohater.armia)) potrzebne.add(o.sprite);
@@ -471,6 +476,20 @@ export class AdventureScene extends Phaser.Scene {
       g.fillEllipse(bok / 2, bok / 4, bok * t, (bok / 2) * t);
     }
     g.generateTexture('t-cien', bok, bok / 2);
+    g.clear();
+    // Cień kontaktowy znajdziek (`USTAWIENIA.znajdzki`): ciemny rdzeń, krótki
+    // miękki brzeg. Plama `t-cien` pod rzeczą wielkości pół pola rozmywała się
+    // do niewidocznej.
+    const kroki = 40;
+    for (let i = kroki; i > 0; i--) {
+      const t = i / kroki;
+      // Stałe krycie warstw: ciemność rośnie liniowo ku środkowi, więc rdzeń
+      // jest szeroki — pod rzeczą wielkości pół pola widać go jako cień,
+      // a nie jako kropkę schowaną pod rysunkiem.
+      g.fillStyle(0x000000, 0.035);
+      g.fillEllipse(bok / 2, bok / 4, bok * t, (bok / 2) * t);
+    }
+    g.generateTexture('t-cien-kontakt', bok, bok / 2);
     g.destroy();
   }
 
@@ -1176,11 +1195,22 @@ export class AdventureScene extends Phaser.Scene {
     if (o.rodzaj === 'namiot')
       return { klucz: `m-namiot-klucznika-${o.klucz ?? 'zielony'}`, wys: KAFEL * 1.15 };
     if (o.rodzaj === 'jasnowidz') return { klucz: 'm-chata-jasnowidza', wys: KAFEL * 1.35 };
-    if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: KAFEL * 0.78 };
-    if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: KAFEL * 0.72 };
+    // Znajdźki per plansza (`USTAWIENIA.znajdzki`): mniejsze, a stos surowca
+    // z zestawu klimatu (`m-stos-<ikona>`) zamiast ikony z paska surowców.
+    const znajdzki = this.znajdzki();
+    if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: KAFEL * (znajdzki ? znajdzki * 1.1 : 0.78) };
+    if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: KAFEL * (znajdzki ?? 0.72) };
     if (o.rodzaj === 'potwor')
       return { klucz: `p-${o.oddzialy?.[0].sprite ?? '00002'}`, wys: KAFEL * 1.05 };
-    return { klucz: `m-${SUROWIEC_INFO[o.surowiec ?? 'pokeball'].ikona}`, wys: KAFEL * 0.7 };
+    const ikona = SUROWIEC_INFO[o.surowiec ?? 'pokeball'].ikona;
+    if (znajdzki && this.textures.exists(`m-stos-${ikona}`))
+      return { klucz: `m-stos-${ikona}`, wys: KAFEL * znajdzki };
+    return { klucz: `m-${ikona}`, wys: KAFEL * (znajdzki ?? 0.7) };
+  }
+
+  /** `USTAWIENIA.znajdzki` bieżącej planszy (patrz `UstawieniaPlanszy`). */
+  private znajdzki(): number | undefined {
+    return planszaPoId(this.stan.mapa).modul.USTAWIENIA?.znajdzki;
   }
 
   private rysujObiekty() {
@@ -1233,6 +1263,27 @@ export class AdventureScene extends Phaser.Scene {
         .setBlendMode(Phaser.BlendModes.MULTIPLY)
         .setAlpha(bryla ? 0.85 : 0.7);
       kont.add(cien);
+      // Znajdźka per plansza (`USTAWIENIA.znajdzki`): mała rzecz na ziemi ma
+      // cień przyklejony do spodu — szeroki jak ona, płaski i ciemny w środku
+      // (druga, ciaśniejsza plama) — plus lekki rzut w lewo w dół. Szeroka
+      // blada plama pod drobiazgiem czytała się jak aura, nie jak kontakt.
+      const drobna =
+        o.rodzaj === 'surowiec' || o.rodzaj === 'skrzynia' || o.rodzaj === 'artefakt';
+      if (drobna && this.znajdzki()) {
+        const tex = this.textures.get(klucz).getSourceImage();
+        const szer = (tex.width * wys) / tex.height;
+        cien
+          .setTexture('t-cien-kontakt')
+          .setPosition(-szer * 0.28, spod + wys * 0.02)
+          .setDisplaySize(szer * 1.7, Math.max(wys * 0.7, KAFEL * 0.3))
+          .setAlpha(0.4);
+        const kontakt = this.add
+          .image(-szer * 0.06, spod - wys * 0.02, 't-cien-kontakt')
+          .setDisplaySize(szer * 1.25, Math.max(wys * 0.5, KAFEL * 0.22))
+          .setBlendMode(Phaser.BlendModes.MULTIPLY)
+          .setAlpha(0.85);
+        kont.add(kontakt);
+      }
       // Wejście do budowli z bryłą (zamek, kopalnia) nie ma żadnego
       // odrębnego oznaczenia na gruncie — z daleka wygląda jak zwykła
       // ścieżka POD budynkiem, więc nie widać, gdzie naprawdę trzeba

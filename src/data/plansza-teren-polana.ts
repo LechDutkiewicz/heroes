@@ -170,5 +170,6 @@ export const USTAWIENIA = {
     "kamien": 0,
     "odlamek": 0
   },
-  "zestaw": "polana"
+  "zestaw": "polana",
+  "znajdzki": 0.42
 };

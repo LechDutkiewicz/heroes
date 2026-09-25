@@ -416,6 +416,11 @@ USTAWIENIA = {
     # Trawiaste góry z brązowymi urwiskami zamiast omszałych głazów
     # (`public/mapa/polana/kepa-skaly-*.png`, prompty: PROMPTY-PLANSZE.md §4).
     'zestaw': 'polana',
+    # Runda 5 (HotA): „kula przy wiatraku, jagody i kryształy są wielkości
+    # bohatera, bez cienia — ikony wklejone na tło". Znajdźki mają pół pola
+    # (ok. 45–50% wysokości bohatera), cień kontaktowy i rysunek STOSU leżącego
+    # na ziemi (`public/mapa/polana/stos-*.png`) zamiast ikony z paska.
+    'znajdzki': 0.42,
 }
 
 #: Przejezdne pola, do których nie da się dojść, zarastają lasem (patrz silnik).
@@ -444,8 +449,15 @@ BARWY_TERENU = {
 }
 
 #: Naklejki terenu (`public/mapa/tlo/`, prompty w `tools/PROMPTY-PLANSZE.md`).
+#: Runda 5 (HotA): `kwiaty-1` ma pod spodem jasną kępę mchu, która na łące
+#: czytała się jak doklejony talerzyk — zostają kwiaty bez podstawki, a obok
+#: drobiazgi łąki jak w HotA (kamienie w mchu, paprocie, grzyby; rysunki
+#: z `tools/PROMPTY-PLANSZE.md` §8).
 NAKLEJKI = [
-    (['kwiaty-1', 'kwiaty-2'], '.', 0.06),
+    (['kwiaty-2'], '.', 0.05),
+    (['kamienie-mech'], '.', 0.022),
+    (['paproc'], '.', 0.03),
+    (['grzyby-bagienne'], '.T', 0.015),
 ]
 
 #: Runda 4: most przez rzekę w pierwszym ekranie (`teren_efekty.mosty`).

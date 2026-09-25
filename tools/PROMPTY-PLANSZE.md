@@ -704,3 +704,144 @@ two grey rocks thickly overgrown with green moss and hanging lichen, a tuft
 of marsh grass on the ledge, dark wet mud at the foot, lit from the upper
 left. Slightly wider than tall.
 ```
+
+## 8. Bagna — znajdźki i drobiazgi trzęsawiska (runda 5, wzorzec HoMM3 HotA)
+
+Poprzeczką jest teraz mapa przygody HotA: gęsto od drobnych rzeczy, a każda
+leży NA ziemi. Werdykt rundy 3 („płaska ikona pokeballa wygląda na wklejoną
+z innej gry") i porównanie z HotA dają dwie grupy grafik:
+
+- **stosy surowców** na mapie (`bagno-stos-<ikona>.png` →
+  `public/mapa/bagno/stos-<ikona>.png`, scena bierze je przy
+  `USTAWIENIA.znajdzki`) zamiast ikon z paska surowców;
+- **drobiazgi tła** (`public/mapa/tlo/`, `NAKLEJKI` w `tools/mapy/bagna.py`):
+  grzyby, omszała kłoda, kamienie w mchu, paproć, bagienne irysy — gęstość
+  i odmiana, które HotA ma na każdym polu.
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `bagno-stos-pokeball.png` … `bagno-stos-kamien-ewolucji.png` | `public/mapa/bagno/stos-*.png` | 72 px |
+| `grzyby-bagienne.png`, `kloda-mech.png`, `kamienie-mech.png`, `paproc.png`, `irysy.png` | `public/mapa/tlo/` | 24–34 px |
+
+<!-- plik: bagno-stos-pokeball.png -->
+```
+Three big red-and-white capture balls stacked in a small pyramid, two at the
+bottom and one on top, no basket and no container. Each ball: glossy bright
+red top half, clean white bottom half, thick black band around the middle
+with a big round white button. The white halves and black bands must stay
+clearly visible even at 30 pixels, so the pile never reads as berries or
+apples. Soft painted shading and highlights like the rest of the map.
+Isolated cut-out: the balls rest on NOTHING — no ground, no sand, no dust, no
+glow and no shadow under them; everything around and below the balls is
+fully transparent.
+```
+
+<!-- plik: bagno-stos-jagody.png -->
+```
+A small heap of freshly picked red berries (like big glossy cranberries and
+raspberries) spilling out of a round wicker basket lying on its side, a few
+green leaves and one sprig with berries on top. Painted soft shading and wet
+highlights. Wider than tall, compact, reads as "berries to pick up" at 40
+pixels.
+```
+
+<!-- plik: bagno-stos-odlamki.png -->
+```
+A small cluster of glowing pale-blue ice-like crystal shards of different
+sizes growing out of a low mossy grey stone, soft cyan inner glow, crisp
+facets with bright highlights. Wider than tall, compact, reads as "crystal
+shards to pick up" at 40 pixels.
+```
+
+<!-- plik: bagno-stos-kamien-ewolucji.png -->
+```
+A small pile of three or four smooth rounded magic stones glowing violet and
+lilac, with a faint swirl pattern inside, lying on a flat mossy rock with a
+tuft of marsh grass. Painted soft shading and highlights. Wider than tall,
+compact, reads as "magic stones to pick up" at 40 pixels.
+```
+
+<!-- plik: grzyby-bagienne.png -->
+```
+A tiny cluster of forest mushrooms seen from above at a slight angle: three
+brown-capped mushrooms and two small ochre ones with pale stems, a bit of
+moss between them. Very small and flat, meant to be scattered across the
+ground of a swamp map.
+```
+
+<!-- plik: kloda-mech.png -->
+```
+A short fallen log lying on the ground, seen from above at a slight angle:
+old dark brown bark, thick bright green moss on top, a couple of small shelf
+mushrooms on the side, one broken branch stub. Low and long, much wider than
+tall.
+```
+
+<!-- plik: kamienie-mech.png -->
+```
+Three small flat grey stones half sunk in the ground, seen from above at a
+slight angle, patches of bright green moss on their tops and a few blades of
+grass between them. Very low and flat, wider than tall.
+```
+
+<!-- plik: paproc.png -->
+```
+A small low fern clump seen from above at a slight angle: six or seven curved
+bright green fronds spreading out like a star from the centre, one young
+curled frond. Flat and wide, meant to be scattered across damp ground.
+```
+
+<!-- plik: irysy.png -->
+```
+A small clump of wild swamp irises: a few sword-shaped green leaves and three
+blooming violet-purple iris flowers with yellow marks, one closed bud.
+Compact, slightly wider than tall, bright spot of colour on a marsh.
+```
+
+## 9. Polana — stosy surowców na łące (runda 5, wzorzec HoMM3 HotA)
+
+Werdykt rundy 4: „czerwono-biała kula przy wiatraku, kiście jagód i kryształy
+są wielkości bohatera, bez cienia i bez podstawki — ikony wklejone na tło".
+Scena przy `USTAWIENIA.znajdzki` zmniejsza znajdźki do pół pola, kładzie pod
+nie cień kontaktowy i bierze rysunek STOSU leżącego na trawie
+(`m-stos-<ikona>`) zamiast ikony z paska surowców — jak w HotA, gdzie
+surowiec to niska kupka, szersza niż wysoka, a nie pojedynczy przedmiot.
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `polana-stos-pokeball.png` … `polana-stos-kamien-ewolucji.png` | `public/mapa/polana/stos-*.png` | 72 px |
+
+<!-- plik: polana-stos-pokeball.png -->
+```
+A low heap of five red-and-white capture balls (red top half, white bottom
+half, dark band with a small round white button) piled in and around a small
+open wooden crate lying on the ground, one ball rolled out in front. Painted
+with soft shading and glossy highlights like the rest of the map, not a flat
+icon. Much wider than tall, a low compact pile that reads as "a pile of balls
+to pick up" at 30 pixels tall.
+```
+
+<!-- plik: polana-stos-jagody.png -->
+```
+A low heap of freshly picked glossy red berries spilling out of a small
+round wicker basket tipped on its side, a few green leaves among the berries.
+Painted soft shading and bright highlights. Much wider than tall, a low
+compact pile that reads as "berries to pick up" at 30 pixels tall.
+```
+
+<!-- plik: polana-stos-odlamki.png -->
+```
+A low heap of pale-blue crystal shards of different sizes lying scattered on
+top of each other, a few jutting up at angles, crisp facets with bright white
+highlights and a soft cyan inner glow, some small grey pebbles among them.
+Much wider than tall, a low compact pile that reads as "crystal shards to pick
+up" at 30 pixels tall.
+```
+
+<!-- plik: polana-stos-kamien-ewolucji.png -->
+```
+A low pile of four smooth rounded magic stones glowing violet and lilac with
+a faint swirl pattern inside, lying heaped together, one small stone rolled
+beside them. Painted soft shading and highlights. Much wider than tall, a low
+compact pile that reads as "magic stones to pick up" at 30 pixels tall.
+```

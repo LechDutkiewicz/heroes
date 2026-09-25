@@ -70,6 +70,13 @@ export interface UstawieniaPlanszy {
    * „Grafiki plansz kampanii". Brak = zestaw podstawowy.
    */
   zestaw?: 'zima' | 'bagno' | 'polana';
+  /**
+   * Wysokość znajdziek leżących na ziemi (stos surowca, skrzynia, artefakt)
+   * w polach. Brak = dawne rozmiary (0,7 / 0,78 / 0,72). Przy ustawionej
+   * znajdźka dostaje też ciaśniejszy, ciemniejszy cień kontaktowy —
+   * mała rzecz bez cienia wygląda na ikonę wklejoną w tło.
+   */
+  znajdzki?: number;
   /** Załoga zamku gracza (domyślnie poziomy 0–1, pięć tygodni przyrostu). */
   garnizonGracza?: { poziomy: number[]; tygodnie: number };
   /** Nazwy zamków wroga, w kolejności punktów 'zamek wroga', 'zamek wroga 2'… */

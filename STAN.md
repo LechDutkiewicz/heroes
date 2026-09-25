@@ -187,6 +187,20 @@ krainy rozmyte w jedną". Poprawki:
 Autopilot jest słabym graczem (trzyma setki niewydanych pokeballi, wędruje za
 brzegiem mgły), więc jego wynik to górna granica czasu, a nie średnia.
 
+### Znajdźki wielkości HotA (`USTAWIENIA.znajdzki`, Polana runda 5)
+
+Werdykt: „kula, jagody i kryształy są wielkości bohatera, bez cienia —
+ikony wklejone na tło". `USTAWIENIA.znajdzki` (liczba, wysokość w polach)
+włącza w scenie: stos surowca, artefakt i skrzynię (×1,1) na tej wysokości,
+cień kontaktowy z tekstury `t-cien-kontakt` (szeroki ciemny rdzeń; `t-cien`
+pod rzeczą wielkości pół pola był niewidoczny — sprawdzone w przeglądarce)
+i rysunek `m-stos-<ikona>` z zestawu klimatu zamiast ikony paska surowców,
+jeśli zestaw go ma (`public/mapa/<zestaw>/stos-*.png`, wczytywane tylko
+wtedy). Bez ustawienia nic się nie zmienia. Polana: 0,42 (≈ połowa bohatera),
+stosy `polana-stos-*` (PROMPTY-PLANSZE §9) — surowe z API miały kremowy
+talerzyk pod spodem, we wsadzie leżą już obrane z niego. Naklejka `kwiaty-1`
+ma jasną kępę mchu jak podstawkę, więc Polana jej nie używa.
+
 ## HUD mapy przygody na wspólnym zestawie (2026-09-24)
 
 - Mapa stoi na tym samym materiale co kampania i okna misji

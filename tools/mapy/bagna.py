@@ -393,6 +393,12 @@ USTAWIENIA = {
     # Wyspa Księżyca odsłonięta od pierwszego dnia: gracz ma wiedzieć, DOKĄD
     # jedzie — zagadką jest droga i wódz, a nie szukanie igły w trzęsawisku.
     'odkryte': [{'x': WYSPA[0], 'y': WYSPA[1], 'promien': 7}],
+    # Runda 5 (wzorzec HotA; wcześniej runda 3: „płaska ikona pokeballa
+    # wygląda na wklejoną z innej gry"): znajdźki to STOSY leżące na ziemi
+    # (`public/mapa/bagno/stos-*.png`: kosz pokeballi, kosz jagód, kryształy
+    # na omszałym kamieniu), nie ikony z paska — i są drobniejsze, z cieniem
+    # kontaktowym, jak skarby na mapie Heroes 3.
+    'znajdzki': 0.58,
 }
 
 #: Barwy terenu tej planszy (`tools/render_mapa.py`, `zabarw`). Woda na bagnach
@@ -435,12 +441,19 @@ ODSTEP_KADRU = 3
 #: i render po prostu ich nie rysuje.
 NAKLEJKI = [
     (['trzcina-1', 'trzcina-2', 'trzcina-3'], 'b', 0.22),
-    (['grazel-1', 'grazel-2'], '~', 0.10),
+    # Runda 5 (HotA): gęściej — tafla trzęsawiska zarośnięta grążelami,
+    # a nie pusta turkusowa połać.
+    (['grazel-1', 'grazel-2'], '~', 0.2),
     (['martwe-drzewo-1', 'martwe-drzewo-2'], 'b', 0.04),
     (['pniak-bagienny'], 'b', 0.03),
     # Runda 4: sucha łąka w dole doliny ma być czytelnie INNA niż bagno —
     # kwiaty rosną tylko na suchym.
     (['kwiaty-1', 'kwiaty-2'], '.', 0.07),
+    # Runda 5 (wzorzec HotA: gęsto od drobiazgów na każdym polu): grzyby,
+    # omszałe kłody, kamienie w mchu, paprocie i bagienne irysy — na suchym
+    # i na bagnie, żeby żadna połać nie była gołą teksturą.
+    (['grzyby-bagienne', 'kamienie-mech', 'paproc'], '.', 0.16),
+    (['kloda-mech', 'irysy', 'paproc', 'grzyby-bagienne'], 'b', 0.14),
 ]
 
 #: Runda 5 („ścieżki to sztywne beżowe pasy o stałej szerokości, zgięte pod

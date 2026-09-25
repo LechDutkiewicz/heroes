@@ -606,6 +606,8 @@ NAKLEJKI = {
     'kra-lodu-1': 26, 'kra-lodu-2': 30,
     'krzak-zimowy-1': 30,
     'kwiaty-1': 20, 'kwiaty-2': 22,
+    # Bagna, runda 5 (wzorzec HotA): drobiazgi trzęsawiska.
+    'grzyby-bagienne': 22, 'kloda-mech': 30, 'kamienie-mech': 24, 'paproc': 28, 'irysy': 30,
 }
 
 #: Zestawy klimatu dla SCENY: `tools/wsad/<zestaw>-<nazwa>.png` →
@@ -631,6 +633,9 @@ ZESTAWY = {
         # z urwiskami torfu zamiast szarych głazów.
         'kepa-skaly-1': 216, 'kepa-skaly-2': 216, 'kepa-skaly-3': 216, 'kepa-skaly-4': 216,
         'skala': 67, 'skala-2': 67, 'kopiec': 37, 'kopiec-2': 37,
+        # Bagna, runda 5 (HotA): stosy surowców leżące na ziemi zamiast ikon
+        # z paska (scena bierze je przy `USTAWIENIA.znajdzki`).
+        'stos-pokeball': 72, 'stos-jagody': 72, 'stos-odlamki': 72, 'stos-kamien-ewolucji': 72,
     },
     # Polana: trawiaste góry z brązowymi urwiskami zamiast omszałych głazów
     # (runda 3 ślepego porównania: „bez pasma gór w kadrze").
@@ -640,6 +645,10 @@ ZESTAWY = {
         # Drobne kopce przy skałach: bez nich scena dokłada podstawowe
         # omszałe głazy, obce obok trawiastych gór.
         'kopiec': 37, 'kopiec-2': 37,
+        # Polana, runda 5 (HotA): stosy surowców na łące zamiast ikon z paska.
+        # Scena rysuje je na pół pola (`USTAWIENIA.znajdzki`), plik dwa razy
+        # większy — przy dużym zmniejszeniu w scenie krawędzie migotały.
+        'stos-pokeball': 48, 'stos-jagody': 48, 'stos-odlamki': 48, 'stos-kamien-ewolucji': 48,
     },
 }
 

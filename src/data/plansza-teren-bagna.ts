@@ -278,5 +278,6 @@ export const USTAWIENIA = {
       "y": 8,
       "promien": 7
     }
-  ]
+  ],
+  "znajdzki": 0.58
 };
