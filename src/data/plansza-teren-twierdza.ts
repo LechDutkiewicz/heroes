@@ -335,7 +335,7 @@ export const ROZSTAWIENIE: Array<{
 export const USTAWIENIA = {
   "wrog": "aktywny",
   "natarcie": true,
-  "dzienNatarcia": 18,
+  "dzienNatarcia": 21,
   "nazwyZamkowWroga": [
     "Lodowa Twierdza",
     "Srebrna Strażnica"
@@ -351,7 +351,6 @@ export const USTAWIENIA = {
   },
   "budynkiWroga": [
     "ratusz1",
-    "ratusz2",
     "siedlisko1",
     "siedlisko2"
   ],
@@ -362,7 +361,7 @@ export const USTAWIENIA = {
       1,
       2
     ],
-    "tygodnie": 5
+    "tygodnie": 8
   },
   "wrogOdkryte": [
     {

@@ -252,17 +252,17 @@ NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 USTAWIENIA = {
     'wrog': 'aktywny',
     'natarcie': True,
-    'dzienNatarcia': 18,
+    'dzienNatarcia': 21,
     'nazwyZamkowWroga': ['Lodowa Twierdza', 'Srebrna Strażnica'],
     'garnizonWroga': {'poziomy': [0, 1, 2, 3], 'tygodnie': 1},
     # Twierdze bez fortu: przyrost bez premii o połowę. Z fortem armia wroga
     # rosła szybciej, niż jakikolwiek gracz zdążyłby dojść do pierwszej z nich.
-    'budynkiWroga': ['ratusz1', 'ratusz2', 'siedlisko1', 'siedlisko2'],
+    'budynkiWroga': ['ratusz1', 'siedlisko1', 'siedlisko2'],
     'wrogBuduje': False,
     # Zamek gracza z mocniejszą załogą — bohater jest wtedy daleko na północy,
     # a opis misji obiecuje, że wróg przyjdzie. Ma przyjść i ma to być groźne,
     # ale nie wyrok w trzecim tygodniu.
-    'garnizonGracza': {'poziomy': [0, 1, 2], 'tygodnie': 5},
+    'garnizonGracza': {'poziomy': [0, 1, 2], 'tygodnie': 8},
     'wrogOdkryte': [{'x': 10, 'y': 64, 'promien': 5}],
     # I odwrotnie: gracz wie, gdzie stoją obie twierdze — misja mówi „na
     # północy", a mapa to pokazuje. Zagadką jest droga, nie szukanie celu.
