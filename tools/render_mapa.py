@@ -312,6 +312,9 @@ def klatka() -> tuple[Image.Image, Image.Image]:
         # (`TRZESAWISKO` w konfiguracji) zamiast ciemnej ziemi.
         if nazwa == 'bagno' and 'trzesawisko' in EFEKTY:
             plansza = teren_efekty.trzesawisko(plansza, m, KAFEL, ZIARNO + 720, **TRZESAWISKO)
+    # Bagna, runda 6: wyraźny pas brzegu wokół wody (`EFEKTY = ['brzeg_wody']`).
+    if 'brzeg_wody' in EFEKTY and 'woda' in maski:
+        plansza = teren_efekty.brzeg_wody(plansza, maski['woda'], KAFEL, ZIARNO + 790)
     plansza = plansza.convert('RGBA')
     # Droga też słucha `TEKSTURY` planszy (Bagna, runda 6: bruk grobli
     # zamiast piaskowej smugi). Bez wpisu 'sciezka' — jak dotąd, bajt w bajt.

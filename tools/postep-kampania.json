@@ -134,7 +134,7 @@
    ],
    "live": {
     "round": 6,
-    "stage": "builder skończył, czeka na zrzut",
+    "stage": "zrzut i ślepe zestawienie",
     "build": "Ręcznie rozstawiłem pierwszy ekran Polany pod nowy kadr 21 × 18 pól (oddaloną kamerę ZOOM_MAPY wprowadził w międzyczasie ktoś inny). W kadrze jest teraz około 30 obiektów: kuźnia wcięta w zbocze, sad, wiatrak, obóz, źródło, ogniska, chatka, wóz, gniazdo, strażnica, skrzynie, stosy surowców i 5 straży. Są też pasma gór zamiast pojedynczych kopców: zachodnie ma przełęcz przy rzece, a wschodnie tworzy za rzeką zamkniętą kieszeń z kopalnią i skrzynią, do której prowadzi jedno wejście pilnowane przez straż. Lewy dół to już nie pusty las, tylko polana z obiektami, a na drugim brzegu dołożyłem kępę lasu. Na płaską zieleń: pagórki (RZEZBA), łaty brązowej ziemi (nowa tekstura teren-ziemia), dwa różne nieregularne krzewy w miejsce okrągłej kuli z jagodami, naklejki łąki (pniak, głazy, kwiaty), budowle w skali 0,8 (nowe ustawienie per plansza USTAWIENIA.skalaBudowli) i odsłonięte rogi kadru. Przy zdjęciu mgły w promieniu 12 pól zostawały tam czarne zęby. Inne plansze się nie zmieniły: ustawienia działają tylko dla Polany, zrzut Bagien bez zmian, odcisk Dwóch Dolin przechodzi."
    }
   },
@@ -185,7 +185,8 @@
    ],
    "live": {
     "round": 6,
-    "stage": "builder pracuje"
+    "stage": "builder skończył, czeka na zrzut",
+    "build": "Runda 6 Bagien: zamknąłem ostatnią lukę, czyli brak przeszkód, rozmyte drogi i brzegi. W dolnych rogach doliny stoją teraz dwie skalne granie, a trakt w dół przechodzi między nimi. Kępy skał zestawu `bagno` przemalowałem z zielonych kopców na skaliste granie, w tym jedną z wodospadem. Pola tuż nad skałami nie biorą udziału w rozstawianiu, bo grań je zasłaniała. Woda jest mętna, oliwkowo-brunatna, zamiast turkusowej: nowa tekstura, ostra linia brzegu z pasem błota (efekt `brzeg_wody`), barwy shadera ustawiane per plansza (`USTAWIENIA.wodaBarwy`), a na wodzie leżą zatopione pnie, kępy turzycy i trzcina. Drogi to szerszy i równiejszy bruk, bród w kadrze to łąka zamiast piaskowej łaty. Obiekty są większe (`znajdzki` 0,8, `skalaBudowli` 1,2) i mają ciemny obrys (nowe `USTAWIENIA.obrysObiektow`). Okrągłe krzaki zastąpiłem kępami trzciny i turzycy, łąkę przygasiłem, a rogi kadru za Strugą są odsłonięte. Wszystkie zmiany we wspólnym kodzie włącza tylko ustawienie Bagien. Zrzut Polany wygląda po staremu (turkusowa woda, bez obrysów), a tła Dwóch Dolin nie renderowałem ponownie. Uwaga: w trakcie rundy podmieniono wzorce, teraz są to kadry map kampanii HotA (rzeka, zamek z górami, wybrzeże). Obejrzałem je i kierunek zmian się zgadza."
    }
   },
   {

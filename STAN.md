@@ -236,6 +236,26 @@ krzewy `polana/krzak*.png` (dwa różne, nieregularne) i naklejki
 z API miały kremowe/jasnozielone podstawki — we wsadzie obrane). Symulacja
 misji 1: wygrana dnia 7 (2/2).
 
+### Bagna, runda 6 (HotA)
+
+Werdykty rundy 5: „poza klifem w rogu brak przeszkód i rzeźby, drogi to
+rozmyte smugi, brzegi wody rozmyte", „turkusowa woda = tropikalna zatoka",
+„obiekty mniejsze od drzew, bez konturu". Zmiany: dwie skalne granie
+w dolnych rogach doliny (`DOLINA_DOL`), trakt w dół doliny idzie między nimi;
+`bagno/kepa-skaly-*` przemalowane z omszałych kopców na skaliste granie
+(jedna z wodospadem); pola do dwóch rzędów nad skałami wyłączone
+z rozstawiania (grań je zasłaniała). Woda: tekstura `teren-woda-bagno`
+(`TEKSTURY`), efekt `brzeg_wody` (ostra linia wody, pas błota — nowy efekt
+w `teren_efekty.py`, włączany przez `EFEKTY`), barwy tafli shadera per
+plansza (`USTAWIENIA.wodaBarwy`, `src/visual/woda.ts`; bez ustawienia —
+dawne stałe), zatopione pnie, kępy turzycy i trzcina na wodzie. Drogi: bruk
+(`TEKSTURY['sciezka']` — `render_mapa.py` czyta teraz `TEKSTURY` także dla
+drogi), szerszy i równiejszy trakt. Obiekty: `znajdzki` 0,8,
+`skalaBudowli` 1,2 i nowy `USTAWIENIA.obrysObiektow` (ciemny obrys wokół
+wszystkiego poza stworkami). Krzaki `bagno/krzak*` to kępy trzciny
+i turzycy zamiast okrągłych kul. Bród w kadrze to łąka, nie piasek.
+Symulacja misji 3: wygrana dnia 5 (3/3).
+
 ## HUD mapy przygody na wspólnym zestawie (2026-09-24)
 
 - Mapa stoi na tym samym materiale co kampania i okna misji

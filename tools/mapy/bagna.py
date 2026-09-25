@@ -229,7 +229,9 @@ def popraw_teren(g, mapa):
                 if mapa[y + dy][x + dx] == 'b':
                     mapa[y + dy][x + dx] = '~'
     # Przeprawy: grobla przez Strugę, bród, grobla na wyspę.
-    for (x0, y0, x1, y1), teren in ((GROBLA_PN, '.'), (BROD_WSCH, ','), (GROBLA_WYSPY, ',')):
+    # Bród w kadrze startu to łąka pod traktem, nie piasek (runda 6: jasna
+    # piaskowa łata w środku rzeki czytała się jak dziura w tle).
+    for (x0, y0, x1, y1), teren in ((GROBLA_PN, '.'), (BROD_WSCH, '.'), (GROBLA_WYSPY, ',')):
         for y in range(y0, y1 + 1):
             for x in range(x0, x1 + 1):
                 mapa[y][x] = teren
@@ -277,6 +279,20 @@ def strefa(x, y):
 
 def rozstaw(g):
     rng = g.rng
+
+    # Runda 6: kępa skał to rysunek wysoki na cztery i pół pola, więc obiekt
+    # stojący rząd albo dwa NAD skałami chował się za granią (wejście do
+    # sadu, artefakt pod strażą). Takie pola nie są kandydatami nigdzie.
+    def pod_skalami(p):
+        x, y = p
+        return any(
+            0 <= y + dy < BOK and 0 <= x + dx < BOK and g.mapa[y + dy][x + dx] == '#'
+            for dy in (1, 2)
+            for dx in (-1, 0, 1)
+        )
+
+    wolne_pola = g.wolne_pola
+    g.wolne_pola = lambda *a, **kw: [p for p in wolne_pola(*a, **kw) if not pod_skalami(p)]
 
     # --- CEL MISJI -----------------------------------------------------------
     # Najpierw, bo o tym jest ta mapa: Kamień w sercu wyspy, wódz na jedynej
@@ -334,7 +350,12 @@ def rozstaw(g):
 
     for b in ['wiatrak', 'oboz-treningowy', 'ognisko', 'drzewo-wiedzy', 'zrodlo', 'ranczo', 'gniazdo', 'chatka', 'woz']:
         kand = [p for p in g.wolne_pola('dom', (4, 40)) if z_dala_od_drogi(p)]
-        g.dodaj(1, 'dom', (4, 40), lambda p, b=b: ('budynek', b), kandydaci=kand)
+        # Runda 6: skały w dole doliny zabrały część miejsca — budowla, dla
+        # której już go nie ma, po prostu nie staje (dolina i tak jest pełna).
+        try:
+            g.dodaj(1, 'dom', (4, 40), lambda p, b=b: ('budynek', b), kandydaci=kand)
+        except SystemExit:
+            continue
 
     # Straże przepraw przez Strugę. Obie średnie: pierwszy tydzień w dolinie
     # jest bezpieczny, a wyjście z niej to pierwsza poważna bitwa.
@@ -397,7 +418,13 @@ USTAWIENIA = {
     'zestaw': 'bagno',
     # Wyspa Księżyca odsłonięta od pierwszego dnia: gracz ma wiedzieć, DOKĄD
     # jedzie — zagadką jest droga i wódz, a nie szukanie igły w trzęsawisku.
-    'odkryte': [{'x': WYSPA[0], 'y': WYSPA[1], 'promien': 7}],
+    'odkryte': [
+        {'x': WYSPA[0], 'y': WYSPA[1], 'promien': 7},
+        # Runda 6: rogi pierwszego ekranu za Strugą — bez nich mgła rysowała
+        # w kadrze czarne zęby (jak na Polanie).
+        {'x': 25, 'y': 35, 'promien': 3},
+        {'x': 25, 'y': 53, 'promien': 3},
+    ],
     # Runda 5 (wzorzec HotA; wcześniej runda 3: „płaska ikona pokeballa
     # wygląda na wklejoną z innej gry"): znajdźki to STOSY leżące na ziemi
     # (`public/mapa/bagno/stos-*.png`: kosz pokeballi, kosz jagód, kryształy
@@ -412,11 +439,11 @@ USTAWIENIA = {
     # Runda 6 („turkusowa, czysta woda — tropikalna zatoka"): tafla w shaderze
     # mętna, oliwkowo-brunatna, bez białej piany i z przygaszonymi iskrami.
     'wodaBarwy': {
-        'plytka': [0.46, 0.47, 0.30],
-        'gleboka': [0.16, 0.19, 0.12],
+        'plytka': [0.50, 0.54, 0.42],
+        'gleboka': [0.22, 0.27, 0.21],
         'piana': [0.55, 0.56, 0.40],
         'pianaMoc': 0.3,
-        'iskry': 0.45,
+        'iskry': 0.8,
     },
 }
 
@@ -426,9 +453,10 @@ USTAWIENIA = {
 #: spojrzenie na ekran ma mówić „bagno", zanim dziecko zobaczy choć jedno pole
 #: trzęsawiska.
 BARWY_TERENU = {
-    # Runda 6: tekstura mętnej wody (`teren-woda-bagno`), lekko zazieleniona
-    # i przyciemniona, żeby tafla była ciemniejsza od łąki i błota.
-    'woda': {'nasycenie': 0.9, 'barwa': (80, 100, 72), 'moc': 0.5, 'jasnosc': 0.8},
+    # Runda 6: tekstura mętnej wody (`teren-woda-bagno`: zmarszczki zwykłej
+    # wody przemalowane na brunatną oliwkę + rzęsa i liście z dostawy OpenAI),
+    # tu już tylko lekko przyciemniona.
+    'woda': {'nasycenie': 1.0, 'barwa': (90, 100, 90), 'moc': 0.15, 'jasnosc': 0.84},
     # Runda 6 („zieleń wokół obiektów przygasić"): łąka mniej nasycona.
     'trawa': {'nasycenie': 0.5, 'barwa': (100, 140, 112), 'moc': 0.55, 'jasnosc': 0.78},
     'las': {'nasycenie': 0.7, 'barwa': (90, 110, 75), 'moc': 0.4, 'jasnosc': 0.82},
@@ -439,7 +467,7 @@ BARWY_TERENU = {
 #: Po rundzie 1 ślepego porównania („bagno to brązowa plama w kolorze drogi"):
 #: oczka ciemnej wody, trzcina i grążele na bagnie, obwódka i jaśniejsza
 #: jezdnia na grobli (`tools/teren_efekty.py`).
-EFEKTY = ['trzesawisko', 'obwodka_drogi', 'relief', 'bez_placow']
+EFEKTY = ['trzesawisko', 'obwodka_drogi', 'relief', 'bez_placow', 'brzeg_wody']
 #: Runda 3 („ciemna ziemia z trzciną, wygląda jak ciemny las"): oczka stojącej
 #: wody w barwie jezior tej planszy, mokre błoto wokół, jaśniejszy grunt.
 TRZESAWISKO = {'woda': (72, 84, 52)}
@@ -470,8 +498,8 @@ NAKLEJKI = [
     # Runda 6 („tropikalna zatoka"): grążeli mniej, za to zatopione pnie,
     # kępy turzycy i trzcina w wodzie — mętne trzęsawisko, nie staw z liliami.
     (['grazel-1', 'grazel-2'], '~', 0.07),
-    (['pien-zatopiony'], '~', 0.06),
-    (['kepa-turzycy', 'trzcina-1', 'trzcina-3'], '~', 0.1),
+    (['pien-zatopiony'], '~', 0.08),
+    (['kepa-turzycy', 'trzcina-1', 'trzcina-3'], '~', 0.18),
     (['martwe-drzewo-1', 'martwe-drzewo-2'], 'b', 0.04),
     (['pniak-bagienny'], 'b', 0.03),
     # Runda 4: sucha łąka w dole doliny ma być czytelnie INNA niż bagno —

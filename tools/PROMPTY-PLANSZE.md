@@ -384,7 +384,7 @@ A weeping swamp willow with long trailing olive branches almost reaching the
 ground, a thick twisted trunk, moss on the bark. Wide crown.
 ```
 
-<!-- Runda 6: kępy trzciny i turzycy zamiast okrągłych krzaczków (§11). -->
+<!-- Runda 6: kępy trzciny i turzycy zamiast okrągłych krzaczków (§12). -->
 <!-- plik: bagno-krzak.png -->
 ```
 A clump of marsh vegetation: a tall tuft of cattails with brown velvety heads
@@ -656,6 +656,10 @@ wider than tall. No water, no river banks, no grass, no ground.
 
 ## 7. Bagna — omszałe wzgórza w pierwszym ekranie (runda 5 ślepego porównania)
 
+> Runda 6 (wzorce HotA): kępy skał przepisane z omszałych kopców na skaliste
+> granie z rzeźbą i wodospadem — zielone kopce w kadrze czytały się jak
+> „płaska łąka poza klifem w rogu".
+
 Werdykt rundy 5: „zupełnie płaski teren bez wzniesień, skarp i cieni". Poza
 rzeźbą w tle (`teren_efekty.rzezba`) Bagna dostają pasmo wzgórz na lewym
 skraju pierwszego ekranu. Podstawowe `kepa-skaly` to szare głazy — na bagnie
@@ -669,47 +673,47 @@ wzgórze jest omszałe, z urwiskami torfu i ciemnej ziemi. Zestaw `bagno`.
 
 <!-- plik: bagno-kepa-skaly-1.png | styl: obiekt | proporcje: 3:2 -->
 ```
-A segment of a mossy swamp hill range in the style of Heroes of Might and
-Magic 2: two rounded hills covered in deep green moss and short marsh grass,
-steep dark brown peat-and-earth cliffs and ravines cut into the slopes, sharp
-ridge lines running down from each top, a small crooked willow and a few
-cattails in the folds. Lit from the upper left: bright yellow-green sunlit
-slopes on the left, deep olive and brown shadowed folds on the right. Clearly
-an impassable hill, not a pile of boulders. Wider than tall; the foot of the
-hill spreads across the whole width of the picture so that pieces placed side
-by side join into one continuous range.
+A segment of a rocky mountain range rising out of a swamp, in the style of
+Heroes of Might and Magic 3: a cluster of three jagged grey-brown rock peaks
+of different heights with sharp crests, deep dark crevices and vertical
+cracks, ledges patched with dark green moss and hanging vines, a couple of
+small twisted swamp trees and cattails at the foot. Strong sculpted relief lit
+from the upper left: pale warm-grey sunlit faces on the left, deep brown-grey
+shadowed faces on the right. Clearly an impassable mountain. Wider than tall;
+the foot spreads across the whole width of the picture so that pieces placed
+side by side join into one continuous range.
 ```
 
 <!-- plik: bagno-kepa-skaly-2.png | styl: obiekt | proporcje: 3:2 -->
 ```
-A long mossy ridge above a swamp in the style of Heroes of Might and Magic 2:
-one high green crest with a saddle and a smaller second hump, grey-green
-mossy rock ledges and vertical brown gullies on the steep faces, one bare
-dead tree on the crest, moss hanging over the ledges. Strong sculpted relief
-lit from the upper left: bright slopes on the left, deep olive-brown shadow
-folds on the right. Wider than tall; the foot spreads across the whole width
-of the picture.
+A long jagged rocky ridge above a swamp in the style of Heroes of Might and
+Magic 3: a row of sharp grey-brown rock spires and teeth along a crest, one
+taller peak, steep cracked cliff faces with dark crevices, green moss and
+small ferns in the cracks, one dead bare tree clinging to a ledge. Strong
+relief lit from the upper left, shadows on the right. Clearly an impassable
+mountain ridge. Wider than tall; the foot spreads across the whole width of
+the picture.
 ```
 
 <!-- plik: bagno-kepa-skaly-3.png | styl: obiekt | proporcje: 3:2 -->
 ```
-A broad massive mossy hill in the style of Heroes of Might and Magic 2: one
-big rounded summit overgrown with dark green moss and marsh grass, the whole
-front face cut by many parallel dark brown peat gullies and ridges running
-down the slope like folds of cloth, a tiny waterfall trickling down one
-gully, a few cattails at the foot. Lit from the upper left, shadows on the
-right. One solid landform, no separate spires or loose rocks. Wider than tall;
-the foot spreads across the whole width of the picture.
+A massive rocky crag with a waterfall in the style of Heroes of Might and
+Magic 3: a big grey-brown rock mountain with two sharp summits, a thin white
+waterfall pouring down a cleft in the front face into a small dark pool at the
+foot, mossy ledges, dark green swamp shrubs and cattails around the pool.
+Strong sculpted relief lit from the upper left, deep shadows on the right.
+One solid landform, clearly impassable. Wider than tall; the foot spreads
+across the whole width of the picture.
 ```
 
 <!-- plik: bagno-kepa-skaly-4.png | styl: obiekt | proporcje: 3:2 -->
 ```
-Low broad mossy foothills in the style of Heroes of Might and Magic 2: three
-soft knolls covered in moss and marsh grass packed together, dark brown earth
-scarps and mossy grey outcrops breaking the slopes, a couple of small dark
-green bushes and a willow sapling in the hollows. Lit from the upper left.
-Reads as foothills of a hill chain, clearly impassable. Wider than tall; the
-foot spreads across the whole width of the picture.
+Low craggy foothills of a mountain range in a swamp, in the style of Heroes
+of Might and Magic 3: four or five low sharp grey-brown rock outcrops and
+boulders packed tightly together, cracked faces, moss on their tops, tufts
+of marsh grass, ferns and a small twisted tree between them. Lit from the
+upper left. Clearly impassable rough rocky ground, lower than a mountain.
+Wider than tall; the foot spreads across the whole width of the picture.
 ```
 
 <!-- plik: bagno-skala.png | styl: obiekt -->
@@ -1109,7 +1113,7 @@ hollow at the base of the trunk, a small snow drift around the roots. No
 green leaves, no grass. Taller than wide.
 ```
 
-## 11. Bagna — runda 6 (wzorzec HotA): mętna woda, bity trakt, trzcinowe kępy
+## 12. Bagna — runda 6 (wzorzec HotA): mętna woda, bity trakt, trzcinowe kępy
 
 Werdykty rundy 5: „turkusowa, czysta woda wygląda jak tropikalna zatoka —
 ma być mętna, oliwkowo-brunatna, z trzciną, błotem, zatopionymi pniami
@@ -1124,6 +1128,15 @@ wody przez `NAKLEJKI`.
 | `teren-bruk.png` | `public/mapa/teren/` | tekstura 768 |
 | `bagno-krzak.png`, `bagno-krzak-2.png` | `public/mapa/bagno/krzak*.png` | 84 px |
 | `pien-zatopiony.png`, `kepa-turzycy.png` | `public/mapa/tlo/` | 30–34 px |
+
+Uwaga: `teren-woda-bagno.png` i `teren-bruk.png` we wsadzie są już
+obrobione (surowe z API ≠ plik we wsadzie). Bruk: kamienie zmniejszone
+o połowę (2 × 2 odbicia lustrzane) — w skali 768 px na teksturę na
+szerokość traktu mieścił się jeden kamień. Woda: sama rzęsa i liście
+z dostawy OpenAI położone na zmarszczkach `teren-woda` przemalowanych na
+brunatną oliwkę (z przygaszonymi liniami kaustyk i plamami odbicia nieba) —
+surowa tekstura wyglądała w grze jak mech, nie jak woda. Kępy skał
+`bagno-kepa-skaly-*` mają obrane jasne rąbki podstawek.
 
 <!-- plik: teren-woda-bagno.png | styl: teren -->
 ```

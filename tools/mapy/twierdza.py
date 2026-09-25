@@ -406,10 +406,11 @@ NAKLEJKI = [
     (['zaspa-1', 'zaspa-2'], 's', 0.08),
     (['kra-lodu-2'], '~', 0.04),
     (['krzak-zimowy-1'], 'j', 0.08),
-    # Runda 3: zmarznięta darń („.") też dostaje zaspy i głazy, a w śniegu
-    # stoi gdzieniegdzie nagi, martwy pień — mniej pustych połaci bieli.
+    # Runda 3: zmarznięta darń („.") też dostaje zaspy i głazy
+    # — mniej pustych połaci bieli.
     (['zaspa-1', 'zaspa-2', 'glaz-sniezny-2'], '.', 0.07),
-    (['martwe-drzewo-1'], 's', 0.012),
+    # (Runda 3: bez martwego drzewa z bagiennym mchem — w śniegu czytało się
+    # jak „liściaste drzewo przy zaspie"; zamiast niego świerczki niżej.)
     # Runda 3 (wzorzec HotA): „śnieg to białe plamy, dwie trzecie ekranu
     # puste". W HotA między obiektami stoją pojedyncze ośnieżone świerczki
     # i kępki — gęściej kry na lodzie i młode świerki na śniegu i darni.

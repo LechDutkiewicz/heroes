@@ -596,3 +596,50 @@ def rzezba(plansza: Image.Image, maski: dict, droga: Image.Image, kafel: int, zi
     tab = np.where(S > 0, jasne, ciemne)
     tab = tab * (1 - cien[..., None] * 0.4 * sila)
     return _obraz(tab)
+
+
+def brzeg_wody(plansza: Image.Image, maska_wody: Image.Image, kafel: int, ziarno: int,
+               szerokosc: float = 0.22, barwa=(138, 112, 74), linia=(38, 30, 18)) -> Image.Image:
+    """Wyraźny brzeg wody: pas jasnego błota na lądzie i ciemna linia wody
+    (Bagna, runda 6).
+
+    Werdykt: „brzegi wody miękko rozmyte, bez wyraźnej linii" — a mętna woda
+    trzęsawiska ma prawie tę samą barwę co bagno obok. Na mapach Heroes 3
+    rzekę i staw obwodzi pas piasku albo ziemi o OSTREJ krawędzi i dopiero po
+    nim oko czyta, gdzie kończy się ląd. Tu: maska wody progowana (nie
+    rozmyta), po stronie lądu pas błotnistego brzegu o nierównej szerokości
+    (szum), przy samej wodzie ciemna mokra linia, na wodzie tuż przy brzegu
+    jasny refleks. Krawędzie wygładzone tylko o piksel. Włącza plansza
+    (`EFEKTY = ['brzeg_wody']`).
+    """
+    W, H = plansza.size
+    from scipy.ndimage import distance_transform_edt, gaussian_filter
+    m = np.asarray(maska_wody, dtype=np.float32) / 255.0
+    woda = m > 0.5
+    # Odległość od linii wody po stronie lądu i po stronie wody, w pikselach.
+    d_lad = distance_transform_edt(~woda)
+    d_woda = distance_transform_edt(woda)
+    n = szum(W, H, max(2, int(kafel * 1.1)), ziarno) * 0.6 + szum(W, H, max(2, int(kafel * 0.3)), ziarno + 1) * 0.4
+    szer = kafel * szerokosc * np.clip(0.55 + n * 1.3, 0.15, 1.6)
+    gladko = lambda x: gaussian_filter(x.astype(np.float32), 0.8)
+    pas = gladko((~woda) & (d_lad <= szer))
+    mokra = gladko((~woda) & (d_lad <= max(2.0, kafel * 0.05)))
+    rant = gladko(woda & (d_woda <= max(2.0, kafel * 0.045)))
+    # Cień brzegu na wodzie: skarpa rzuca krótki cień w głąb tafli.
+    cien = np.clip(1 - d_woda / (kafel * 0.35), 0, 1) * woda
+    tab = _tab(plansza)
+    jas = tab.mean(axis=2, keepdims=True)
+    bloto = np.array(barwa, dtype=np.float32) * (0.8 + 0.4 * jas / 255.0)
+    P = pas[..., None]
+    tab = tab * (1 - P * 0.85) + bloto * P * 0.85
+    # Grudki i kamyki na brzegu: ciemniejsze plamki szumu.
+    g = szum(W, H, max(2, int(kafel * 0.12)), ziarno + 3)
+    G = (np.clip((g - 0.35) * 3, 0, 1) * pas)[..., None]
+    tab = tab * (1 - G * 0.35)
+    C = cien[..., None]
+    tab = tab * (1 - C * 0.3)
+    M = mokra[..., None]
+    tab = tab * (1 - M * 0.8) + np.array(linia, dtype=np.float32) * M * 0.8
+    R = rant[..., None]
+    tab = tab + (np.array([196, 200, 170]) - tab) * R * 0.35
+    return _obraz(tab)
