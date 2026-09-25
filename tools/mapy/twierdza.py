@@ -556,7 +556,12 @@ USTAWIENIA = {
     'bezOzdobTrawy': True,
     # Runda 9 (HotA): „zamek ledwie większy od chaty i młyna — powiększyć
     # co najmniej dwa razy; twierdza ma dominować nad lasem jak siedziba".
-    'skalaZamku': 1.8,
+    # Runda 11 (HotA): „zamek kilka razy większy od bohatera i młyna, wiatrak
+    # mniejszy od chaty obok — skala się nie trzyma". Zamek o jedną szóstą
+    # niżej (dalej największy w kadrze), budowle o 30% wyżej: wiatrak nad
+    # spichlerzem, jak w HotA (młyn ≈ 3 pola, zamek ≈ 4,5).
+    'skalaZamku': 1.5,
+    'skalaBudowli': 1.3,
     # Runda 9 (HotA): „świerki w prawej dolnej ćwiartce wyższe od zamku i młyna
     # — drzewa do skali kafla". Kępy boru (nowe rysunki: zwarty masyw małych
     # świerków, PROMPTY-PLANSZE §3) rysowane mniejsze, stopa na miejscu.
@@ -638,7 +643,9 @@ WODA_ANIMOWANA = False
 #: droga z brzegiem, las w zwartych masach, gęsty pierwszy ekran.
 #: Runda 3: bez efektu `lod` — jego rysy na turkusowym lodzie (`lod-2`) znów
 #: czytały się jak „błyskawice"; tekstura ma własne, delikatne pęknięcia.
-EFEKTY = ['zaspy', 'zaspy_zmienne', 'relief_sniezny', 'bez_placow', 'lod_tafla', 'droga_obrzeze']
+#: Runda 11: „śnieg jednolicie szumiący i plamisty, bez rzeźby" — wysokość
+#: zasp wygładzona (bez kratki z 8-bitowego szumu), drobne plamy słabsze.
+EFEKTY = ['zaspy', 'zaspy_zmienne', 'zaspy_gladkie', 'relief_sniezny', 'bez_placow', 'lod_tafla', 'droga_obrzeze']
 TEKSTURY = {'woda': ['lod-2', 'lod', 'snieg'], 'trawa': ['tundra', 'snieg-2', 'snieg'], 'las': ['snieg'],
             'sciezka': ['droga-snieg', 'sciezka']}
 SKUP_LAS = True
@@ -752,4 +759,8 @@ DROGA_OBRZEZE = {
     'trawa': 0.7,
     'kamyki': 1.2,
     'wal': 1.0,
+    # Runda 11: „drogi to płaskie brązowe wstęgi bez krawędzi i spadków" —
+    # trakt wcięty w śnieg: cień pod brzegiem od strony światła, jasna ścianka
+    # naprzeciw.
+    'skarpa': 1.0,
 }

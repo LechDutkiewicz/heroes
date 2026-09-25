@@ -192,3 +192,12 @@
 {"czas": "2026-09-25T17:11:40+00:00", "plik": "zima-stos2-pokeball.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 277, "wyj": 1056, "usd": 0.0436}
 {"czas": "2026-09-25T17:11:59+00:00", "plik": "zima-stos2-jagody.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 269, "wyj": 1056, "usd": 0.0436}
 {"czas": "2026-09-25T17:19:44+00:00", "plik": "teren-tundra.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 229, "wyj": 1056, "usd": 0.0434}
+{"czas": "2026-09-25T17:56:15+00:00", "plik": "kampania-wstep.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 250, "wyj": 1568, "usd": 0.064}
+{"czas": "2026-09-25T17:56:43+00:00", "plik": "kampania-mapa.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 441, "wyj": 1568, "usd": 0.0649}
+{"czas": "2026-09-25T17:57:03+00:00", "plik": "kampania-janek.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 244, "wyj": 1584, "usd": 0.0646}
+{"czas": "2026-09-25T17:57:21+00:00", "plik": "kampania-ola.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 240, "wyj": 1584, "usd": 0.0646}
+{"czas": "2026-09-25T17:57:41+00:00", "plik": "kampania-koniec.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 223, "wyj": 1568, "usd": 0.0638}
+{"czas": "2026-09-25T17:57:56+00:00", "plik": "kampania-zwoj.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 151, "wyj": 1584, "usd": 0.0641}
+{"czas": "2026-09-25T17:58:12+00:00", "plik": "wynik-zwyciestwo.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 360, "wyj": 1056, "usd": 0.044}
+{"czas": "2026-09-25T17:58:29+00:00", "plik": "wynik-porazka.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 386, "wyj": 1056, "usd": 0.0442}
+{"czas": "2026-09-25T17:58:48+00:00", "plik": "wynik-koniec.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 356, "wyj": 1056, "usd": 0.044}

@@ -32,7 +32,8 @@ def _obraz(tab: np.ndarray) -> Image.Image:
     return Image.fromarray(tab.clip(0, 255).astype(np.uint8), 'RGB')
 
 
-def zaspy(warstwa: Image.Image, kafel: int, ziarno: int, zmienne: bool = False) -> Image.Image:
+def zaspy(warstwa: Image.Image, kafel: int, ziarno: int, zmienne: bool = False,
+          gladkie: bool = False) -> Image.Image:
     """Śnieg z RZEŹBĄ: zaspy oświetlone z lewej góry, cienie niebieskie, iskry.
 
     Płaska biel wygląda jak mgła, bo nie ma w niej nic, co mówi „powierzchnia".
@@ -52,8 +53,17 @@ def zaspy(warstwa: Image.Image, kafel: int, ziarno: int, zmienne: bool = False) 
         # nimi wały w skali kilku pól.
         duze = szum(W, H, max(2, int(kafel * 4.5)), ziarno + 5)
         h = h * (0.25 + 0.75 * np.clip(duze * 1.4 + 0.5, 0, 1)) + szum(W, H, max(2, int(kafel * 2.6)), ziarno + 6) * 0.9
+    if gladkie:
+        # Twierdza, runda 11: „śnieg jednolicie szumiący i plamisty". Szum
+        # przechodzi przez 8-bitowy obrazek, więc pochodna wysokości miała
+        # schodki — drobna kratka jak płótno na całym polu śniegu — a grzbiety
+        # w skali pola dawały plamy. Wysokość wygładzona na liczbach
+        # zmiennoprzecinkowych, drobne fałdy słabsze: rzeźbę niosą długie
+        # wały w skali kilku pól i malowane zawieje tekstury.
+        from scipy.ndimage import gaussian_filter
+        h = gaussian_filter(h, kafel * 0.22)
     gy, gx = np.gradient(h)
-    swiatlo = -(gx + gy) * kafel * 0.9
+    swiatlo = -(gx + gy) * kafel * (0.9 if not gladkie else 0.75)
     swiatlo = np.clip(swiatlo, -1, 1)[..., None]
     tab = _tab(warstwa)
     if zmienne:
@@ -667,7 +677,7 @@ def brzeg_wody(plansza: Image.Image, maska_wody: Image.Image, kafel: int, ziarno
 
 def droga_obrzeze(plansza: Image.Image, maska_drogi: Image.Image, kafel: int, ziarno: int,
                   kamyki: float = 1.0, trawa: float = 1.0, pobocze=(92, 78, 40),
-                  barwy_trawy=None, wal: float = 0.0) -> Image.Image:
+                  barwy_trawy=None, wal: float = 0.0, skarpa: float = 0.0) -> Image.Image:
     """Malowane obrzeże traktu: przygaszony skraj jezdni, wydeptana trawa
     z ciemnym konturem, kamyki i kępki trawy wchodzące na drogę (Polana,
     runda 8).
@@ -691,6 +701,26 @@ def droga_obrzeze(plansza: Image.Image, maska_drogi: Image.Image, kafel: int, zi
     kraj = np.clip(1 - d_in / (kafel * 0.13), 0, 1) * droga
     kraj = gaussian_filter(kraj.astype(np.float32), 1.0)[..., None]
     tab = tab * (1 - kraj * 0.28) + np.array([60, 40, 22]) * kraj * 0.06
+    # Twierdza, runda 11 (`skarpa` > 0; domyślnie brak): „drogi to płaskie
+    # brązowe wstęgi bez krawędzi i spadków". Trakt wcięty w śnieg: brzeg od
+    # strony światła (lewa góra) rzuca na jezdnię sini cień, przeciwległa
+    # ścianka wykopu jaśnieje — jak koleina widziana z góry.
+    if skarpa > 0:
+        gl = gaussian_filter((d_in - d_out).astype(np.float32), 2.0)
+        sy, sx = np.gradient(gl)
+        # Normalna w głąb drogi; > 0, gdy krawędź leży po stronie światła.
+        ku_sw = np.clip((sx + sy) * 1.4, -1, 1)
+        pas_in = np.clip(1 - d_in / (kafel * 0.2), 0, 1) ** 1.3 * droga
+        pas_in = gaussian_filter(pas_in.astype(np.float32), 1.0)
+        cien_s = (pas_in * np.clip(ku_sw, 0, 1))[..., None] * skarpa
+        blask = (pas_in * np.clip(-ku_sw, 0, 1))[..., None] * skarpa
+        tab = tab * (1 - cien_s * 0.42) + np.array([40, 52, 90]) * cien_s * 0.12
+        tab = tab + (np.array([236, 226, 206]) - tab) * blask * 0.28
+        # Na zewnątrz, po stronie cienia, śnieżna krawędź wykopu jaśnieje.
+        pas_out = np.clip(1 - d_out / (kafel * 0.1), 0, 1) * (~droga)
+        pas_out = gaussian_filter(pas_out.astype(np.float32), 1.0)
+        rant = (pas_out * np.clip(-ku_sw, 0, 1))[..., None] * skarpa
+        tab = tab + (np.array([252, 253, 255]) - tab) * rant * 0.35
     # Wydeptane pobocze: trawa ciemniejsza i bardziej brunatna, pas nierówny.
     szer = kafel * 0.16 * np.clip(0.5 + n * 1.2, 0.2, 1.6)
     pob = gaussian_filter(((~droga) & (d_out <= szer)).astype(np.float32), 1.2)
