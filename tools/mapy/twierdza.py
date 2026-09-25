@@ -62,12 +62,12 @@ SZKIC = [
     'js#jsj~~~j.sj~~jTj',
     'sTjj.sjT#jsjTjsj#j',
     '##################',
-    'Ts#Ts.jssj#T.sjs.T',
-    'sTssT.s#.sT.~~sTsT',
-    'T.s.ss.Tsjj.~~s#jT',
-    's#T.s~.Ts.sTs.T.sT',
-    'T#s.s.s.sT.#.sTsjT',
-    'TTs.TTT#TT.TTTTsTT',
+    'Ts#s#.jssj#T.sjs.T',
+    'sTss#.s#.sT.~~sTsT',
+    's.s.~~s#sjj.~~s#jT',
+    '##sss..#s.sTs.T.sT',
+    's#sss.s.sT.#.sTsjT',
+    'T##sTTs#TT.TTTTsTT',
 ]
 
 #: Mury: dwa grzbiety poziome jak na Dwóch Dolinach i skalny „kręgosłup"
@@ -128,6 +128,16 @@ def strefa(x, y):
     return 'dom'
 
 
+def bez_sniegu(g, pola):
+    """Pola, wokół których (3 × 3) nie ma śniegu — na sad i łąkowe budowle."""
+    return [
+        (x, y)
+        for x, y in pola
+        if all(g.mapa[y + dy][x + dx] != 's' for dy in (-1, 0, 1) for dx in (-1, 0, 1)
+               if 0 <= x + dx < BOK and 0 <= y + dy < BOK)
+    ]
+
+
 def rozstaw(g):
     rng = g.rng
 
@@ -148,7 +158,9 @@ def rozstaw(g):
     kadr = g.kadr_startu()
     sx, sy = PUNKTY['start']
     dalej = [p for p in kadr if max(abs(p[0] - sx), abs(p[1] - sy)) >= 4]
-    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'jagoda'), kadr, None, (3, 14))
+    # Sad nie rośnie w zaspie: kopalnię jagód stawiamy tylko tam, gdzie
+    # wokół nie ma śniegu (runda 2: „jabłonie obok zasp").
+    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'jagoda'), bez_sniegu(g, kadr), bez_sniegu(g, g.wolne_pola('dom', (3, 20))))
     g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'odlamek'), kadr, None, (3, 14))
     g.dodaj_najpierw('dom', lambda p: ('budynek', 'ognisko'), kadr, None, (2, 16))
     g.dodaj_najpierw('dom', lambda p: ('budynek', 'chatka'), kadr, None, (2, 16))
@@ -159,7 +171,7 @@ def rozstaw(g):
     g.dodaj(2, 'dom', (6, 14), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])))
     g.dodaj(1, 'dom', (6, 14), lambda p: ('skrzynia', None))
     g.dodaj(8, 'dom', (10, 40), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])))
-    kopalnie = ['odlamek', 'pokeball', 'jagoda', 'pokeball', 'kamien']
+    kopalnie = ['odlamek', 'pokeball', 'odlamek', 'pokeball', 'kamien']
     polozone = []
     for co in kopalnie:
         polozone += g.dodaj(1, 'dom', (10, 40), lambda p, co=co: ('kopalnia', co))
@@ -176,7 +188,7 @@ def rozstaw(g):
 
     # --- TUNDRA --------------------------------------------------------------
     g.dodaj(18, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
-    kopalnie = ['odlamek', 'kamien', 'pokeball', 'odlamek', 'kamien', 'jagoda', 'pokeball']
+    kopalnie = ['odlamek', 'kamien', 'pokeball', 'odlamek', 'kamien', 'odlamek', 'pokeball']
     polozone = []
     for co in kopalnie:
         polozone += g.dodaj(1, 'pogranicze', (0, 999), lambda p, co=co: ('kopalnia', co))
@@ -199,7 +211,7 @@ def rozstaw(g):
     # Prawie wszystko pod silną strażą. Nagroda rośnie z odległością: relikty
     # i kopalnie kamienia leżą w najdalszych kątach obu dolin.
     g.dodaj(14, 'wroga', (0, 999), lambda p: ('surowiec', rng.choice(['kamien', 'odlamek', 'pokeball'])))
-    kopalnie = ['kamien', 'pokeball', 'odlamek', 'kamien', 'pokeball', 'jagoda']
+    kopalnie = ['kamien', 'pokeball', 'odlamek', 'kamien', 'pokeball', 'odlamek']
     polozone = []
     for co in kopalnie:
         polozone += g.dodaj(1, 'wroga', (0, 999), lambda p, co=co: ('kopalnia', co))
@@ -272,12 +284,12 @@ WODA_ANIMOWANA = False
 #: Runda 2 po ślepym porównaniu ("śnieg to blada mgła, lód to błyskawica"):
 #: zaspy z niebieskim cieniem i iskrami, lód z rysami zamiast tafli wody,
 #: droga z brzegiem, las w zwartych masach, gęsty pierwszy ekran.
-EFEKTY = ['zaspy', 'lod', 'obwodka_drogi']
+EFEKTY = ['zaspy', 'lod', 'obwodka_drogi', 'relief_sniezny', 'bez_placow']
 TEKSTURY = {'woda': 'snieg'}
 SKUP_LAS = True
 RAMKA_STARTU = True
 #: Twardszy brzeg śniegu — granica ma być czytelna, a nie rozmyta w mgłę.
-WTAPIANIE = {'snieg': 0.35}
+WTAPIANIE = {'snieg': 0.3, 'skaly': 0.28, 'las': 0.3, 'jalowa': 0.3, 'woda': 0.22}
 
 #: Budowle pierwszego ekranu co najmniej trzy pola od siebie (silnik).
 ODSTEP_KADRU = 3
