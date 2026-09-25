@@ -527,8 +527,11 @@ def droga_kreta(rysunek: list, kafel: int, ziarno: int, szerokosc: float = 0.36,
 
 def rzezba(plansza: Image.Image, maski: dict, droga: Image.Image, kafel: int, ziarno: int,
            wysokosci: dict | None = None, pagorki: float = 0.55, sila: float = 1.0,
-           czolo: float = 0.0) -> Image.Image:
+           czolo: float = 0.0, stok=(112, 86, 52)) -> Image.Image:
     """Rzeźba terenu: pagórki, skarpy i grobla nad bagnem (Bagna, runda 5).
+
+    `stok` — barwa odsłoniętej skarpy (domyślnie ziemia; Twierdza: sina skała
+    pod śniegiem).
 
     Werdykt: „zupełnie płaski teren bez wzniesień, skarp i cieni". Budujemy
     mapę wysokości z masek warstw: woda najniżej, bagno trochę wyżej, sucha
@@ -576,7 +579,7 @@ def rzezba(plansza: Image.Image, maski: dict, droga: Image.Image, kafel: int, zi
     cien = gaussian_filter(np.clip((wyzej - hs - 0.1) * 2.0, 0, 1), kafel * 0.07)
     tab = _tab(plansza)
     ziemia = (stromo * (1 - woda_m) * np.clip(hs + 0.6, 0, 1))[..., None] * 0.35
-    tab = tab * (1 - ziemia) + np.array([112, 86, 52]) * ziemia
+    tab = tab * (1 - ziemia) + np.array(stok) * ziemia
     if czolo > 0:
         # Czoło skarpy: kamera patrzy z południa, więc spadek ku dołowi ekranu
         # (wyżej na północy, niżej na południu) pokazuje ścianę ziemi — pas
@@ -642,4 +645,134 @@ def brzeg_wody(plansza: Image.Image, maska_wody: Image.Image, kafel: int, ziarno
     tab = tab * (1 - M * 0.8) + np.array(linia, dtype=np.float32) * M * 0.8
     R = rant[..., None]
     tab = tab + (np.array([196, 200, 170]) - tab) * R * 0.35
+    return _obraz(tab)
+
+
+def droga_obrzeze(plansza: Image.Image, maska_drogi: Image.Image, kafel: int, ziarno: int,
+                  kamyki: float = 1.0, trawa: float = 1.0) -> Image.Image:
+    """Malowane obrzeże traktu: przygaszony skraj jezdni, wydeptana trawa
+    z ciemnym konturem, kamyki i kępki trawy wchodzące na drogę (Polana,
+    runda 8).
+
+    Werdykt: „drogi są płaskimi beżowymi pasami o ostrych krawędziach bez
+    tekstury, obrzeży i kolein — wektorowe paski naklejone na teren". Na
+    mapach Heroes 3 trakt ma ciemniejszy skraj, przy nim wydeptaną trawę,
+    a jego brzeg łamią kamienie i źdźbła. Tekstura tego nie powie, bo nie
+    zna kierunku drogi — więc tu, po masce. Włącza plansza
+    (`EFEKTY = ['droga_obrzeze']`).
+    """
+    from scipy.ndimage import distance_transform_edt, gaussian_filter
+    W, H = plansza.size
+    m = np.asarray(maska_drogi, dtype=np.float32) / 255.0
+    droga = m > 0.5
+    d_in = distance_transform_edt(droga)
+    d_out = distance_transform_edt(~droga)
+    n = szum(W, H, max(2, int(kafel * 0.9)), ziarno) * 0.6 + szum(W, H, max(2, int(kafel * 0.25)), ziarno + 1) * 0.4
+    tab = _tab(plansza)
+    # Jezdnia: środek jasny, skraj przygaszony — wypukły, ubity grzbiet.
+    kraj = np.clip(1 - d_in / (kafel * 0.13), 0, 1) * droga
+    kraj = gaussian_filter(kraj.astype(np.float32), 1.0)[..., None]
+    tab = tab * (1 - kraj * 0.28) + np.array([60, 40, 22]) * kraj * 0.06
+    # Wydeptane pobocze: trawa ciemniejsza i bardziej brunatna, pas nierówny.
+    szer = kafel * 0.16 * np.clip(0.5 + n * 1.2, 0.2, 1.6)
+    pob = gaussian_filter(((~droga) & (d_out <= szer)).astype(np.float32), 1.2)
+    pob = pob * np.clip(1 - d_out / (szer + 1e-3), 0, 1) ** 0.6
+    P = pob[..., None]
+    tab = tab * (1 - P * 0.38) + np.array([92, 78, 40]) * P * 0.16
+    # Ciemny kontur tuż przy krawędzi — to on odcina drogę od łąki.
+    kont = gaussian_filter(((~droga) & (d_out <= max(1.5, kafel * 0.035))).astype(np.float32), 0.7)[..., None]
+    tab = tab * (1 - kont * 0.45)
+    out = _obraz(tab).convert('RGBA')
+
+    rng = np.random.default_rng(ziarno + 5)
+    warstwa = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(warstwa)
+    # Kierunek „w głąb drogi" z gradientu odległości.
+    gy, gx = np.gradient(gaussian_filter(d_in - d_out, 2.0))
+
+    # Kępki trawy na krawędzi, pochylone w stronę jezdni.
+    ys, xs = np.nonzero((~droga) & (d_out <= 1.6))
+    if len(xs) and trawa > 0:
+        ile = int(len(xs) / (kafel * 0.09) * trawa)
+        for i in rng.choice(len(xs), size=min(ile, len(xs)), replace=False):
+            x, y = float(xs[i]), float(ys[i])
+            vx, vy = gx[ys[i], xs[i]], gy[ys[i], xs[i]]
+            dl = np.hypot(vx, vy) + 1e-6
+            vx, vy = vx / dl, vy / dl
+            for _ in range(rng.integers(3, 6)):
+                kat = np.arctan2(vy, vx) + rng.normal(0, 0.55) - 0.35
+                L = kafel * rng.uniform(0.08, 0.16)
+                x1, y1 = x + np.cos(kat) * L, y + np.sin(kat) * L - L * 0.35
+                barwa = (int(rng.uniform(48, 80)), int(rng.uniform(100, 140)), int(rng.uniform(24, 44)), 235) \
+                    if rng.random() < 0.55 else \
+                    (int(rng.uniform(120, 160)), int(rng.uniform(170, 205)), int(rng.uniform(50, 80)), 235)
+                d.line([(x, y), (x1, y1)], fill=barwa, width=2 if rng.random() < 0.4 else 1)
+
+    # Kamyki: na skraju jezdni i tuż za nim.
+    # Kamyki leżą gromadkami, nie sznurem: tylko tam, gdzie szum jest wysoki
+    # (równy szpaler kamieni czytał się jak obramowanie z koralików).
+    gromadki = szum(W, H, max(2, int(kafel * 0.7)), ziarno + 9)
+    ys, xs = np.nonzero(((d_in >= 1) & (d_in <= kafel * 0.12) | ((~droga) & (d_out <= kafel * 0.05)))
+                        & (gromadki > 0.55))
+    if len(xs) and kamyki > 0:
+        ile = int(len(xs) / (kafel * 0.8) * kamyki)
+        for i in rng.choice(len(xs), size=min(ile, len(xs)), replace=False):
+            x, y = float(xs[i]), float(ys[i])
+            r = kafel * rng.uniform(0.035, 0.075)
+            ry = r * rng.uniform(0.6, 0.85)
+            szary = rng.uniform(0.85, 1.1)
+            baza = (int(158 * szary), int(146 * szary), int(126 * szary), 255)
+            d.ellipse([x - r + 1.2, y - ry + 1.8, x + r + 1.2, y + ry + 1.8], fill=(35, 25, 12, 120))
+            d.ellipse([x - r, y - ry, x + r, y + ry], fill=baza)
+            d.ellipse([x - r * 0.55, y - ry * 0.75, x + r * 0.2, y - ry * 0.05],
+                      fill=(min(255, baza[0] + 45), min(255, baza[1] + 42), min(255, baza[2] + 38), 200))
+    warstwa = warstwa.filter(ImageFilter.GaussianBlur(0.45))
+    out.alpha_composite(warstwa)
+    return out
+
+
+def lod_tafla(warstwa: Image.Image, maska: Image.Image, kafel: int, ziarno: int) -> Image.Image:
+    """Skuty staw z GŁĘBIĄ i brzegiem (Twierdza, runda 4).
+
+    Werdykt: „płaska, jednolicie niebieska tafla zamarzniętego jeziora". Lód
+    w HotA ma kilka odcieni: jasny, prawie biały przy brzegu, ciemny granat
+    tam, gdzie głęboko, łaty zawianego śniegu i ostry brzeg, na który ląd
+    rzuca cień. Liczymy odległość od brzegu (głębię), dokładamy duże łaty
+    jaśniejszego i ciemniejszego lodu, smugi śniegu nawianego wiatrem
+    (szum rozciągnięty w poziomie), cień skarpy od lewej góry i jasną krawędź
+    szronu na samej linii brzegu. Włącza plansza (`EFEKTY = ['lod_tafla']`).
+    """
+    from scipy.ndimage import distance_transform_edt, gaussian_filter
+    W, H = warstwa.size
+    m = np.asarray(maska, dtype=np.float32) / 255.0
+    woda = m > 0.5
+    d = distance_transform_edt(woda)
+    tab = _tab(warstwa)
+    # Głębia: środek ciemniejszy i chłodniejszy, przy brzegu jasny, zielonkawobłękitny lód.
+    gl = gaussian_filter(np.clip(d / (kafel * 1.6), 0, 1), kafel * 0.3)[..., None]
+    tab = tab * (1 - gl * 0.5) + np.array([46, 92, 158], dtype=np.float32) * gl * 0.5
+    plycizna = (np.clip(1 - d / (kafel * 0.8), 0, 1) * woda)[..., None]
+    tab = tab * (1 - plycizna * 0.45) + np.array([186, 222, 238], dtype=np.float32) * plycizna * 0.45
+    # Łaty lodu: szerokie jaśniejsze i ciemniejsze plamy.
+    n = szum(W, H, max(2, int(kafel * 1.4)), ziarno) * 0.6 + szum(W, H, max(2, int(kafel * 0.45)), ziarno + 1) * 0.4
+    tab = tab * (1 + n[..., None] * 0.12)
+    # Nawiany śnieg: smugi wzdłuż wiatru, ostre z jednej strony jak zaspa.
+    maly = szum(max(8, W // 5), H, max(2, int(kafel * 0.22)), ziarno + 2)
+    sm = np.asarray(Image.fromarray(((maly + 1) * 127.5).clip(0, 255).astype(np.uint8), 'L')
+                    .resize((W, H), Image.BICUBIC), dtype=np.float32) / 127.5 - 1
+    smuga = np.clip((sm - 0.3) * 2.6, 0, 1) * np.clip(d / (kafel * 0.3), 0, 1)
+    smuga = gaussian_filter(smuga, 1.2)[..., None]
+    tab = tab * (1 - smuga * 0.7) + np.array([236, 243, 252], dtype=np.float32) * smuga * 0.7
+    # Cień skarpy: ląd przesunięty w prawo-dół zasłania lód przy lewym i górnym brzegu.
+    p = max(1, int(kafel * 0.16))
+    lad = ~woda
+    przes = np.zeros_like(lad)
+    przes[p:, p:] = lad[:-p, :-p]
+    cien = gaussian_filter((przes & woda).astype(np.float32), kafel * 0.06)[..., None]
+    tab = tab * (1 - cien * 0.4) + np.array([20, 40, 80], dtype=np.float32) * cien * 0.12
+    # Linia brzegu: ciemniejszy pas wody tuż przy lądzie i jasny szron na krawędzi.
+    ciemna = gaussian_filter((woda & (d > 2) & (d <= max(4, kafel * 0.1))).astype(np.float32), 0.8)[..., None]
+    tab = tab * (1 - ciemna * 0.25)
+    szron = gaussian_filter((woda & (d <= 2.5)).astype(np.float32), 0.8)[..., None]
+    tab = tab + (np.array([245, 250, 255], dtype=np.float32) - tab) * szron * 0.75
     return _obraz(tab)

@@ -268,6 +268,11 @@ def popraw_teren(g, mapa):
         for x in range(x0, x1 + 1):
             if x > rzeka_x(y) and mapa[y][x] in '.,T':
                 mapa[y][x] = 'j'
+    # Runda 8: dwa drzewa pod wschodnim przyczółkiem stały koronami na
+    # drodze — trakt za mostem znikał pod nimi i „urywał się przy moście".
+    for x in (16, 17, 18):
+        if mapa[26][x] == 'T':
+            mapa[26][x] = '.'
     # Most: pola przeprawy przejezdne (droga wytyczy się po nich sama),
     # przyczółki po obu stronach wolne na dwa pola w głąb.
     x0, y0, x1, y1 = MOST
@@ -509,7 +514,12 @@ USTAWIENIA = {
     # bohatera, bez cienia — ikony wklejone na tło". Znajdźki mają pół pola
     # (ok. 45–50% wysokości bohatera), cień kontaktowy i rysunek STOSU leżącego
     # na ziemi (`public/mapa/polana/stos-*.png`) zamiast ikony z paska.
-    'znajdzki': 0.42,
+    # Runda 8 (werdykt rundy 7: „obiekty giną w szumie dekoracji — powiększyć
+    # je"): stosy o jedną piątą większe, a drobnica łąki przerzedzona.
+    'znajdzki': 0.5,
+    # …i ciemny obrys pod wszystkim, co da się podnieść albo odwiedzić —
+    # drzewa, krzaki i naklejki łąki go nie mają.
+    'obrysObiektow': 0.35,
     # Runda 6 (HotA): „zamek, młyn i most zajmują po kilka kafli". Budowle
     # odwiedzane stoją na jednym polu, więc mniejszy rysunek niczego nie psuje.
     'skalaBudowli': 0.8,
@@ -524,7 +534,10 @@ USTAWIENIA = {
     # grań, 4 skałki podnóża.
     'kepySkal': {
         '0,23': 1, '3,23': 3, '6,23': -1,
-        '2,25': 4, '5,25': 2, '8,25': -3,
+        # Runda 8: szeroka grań (3, 475 px ≈ 10 pól) na końcu pasma
+        # przykrywała rozwidlenie i przyczółek mostu — droga „urywała się
+        # przy moście". Węższe szare zęby kończą pasmo na przełęczy.
+        '2,25': 4, '5,25': 2, '8,25': -1,
         '18,28': 3, '21,28': 1,
         '22,30': -2, '22,32': 4, '22,34': -1,
     },
@@ -541,7 +554,7 @@ USTAWIENIA = {
 #: Runda 7: ta sama ziemia w pół skali (`teren-ziemia-drobna*`, zmniejszona
 #: `teren-ziemia` złożona 2 × 2 z odbiciami) — kamienie tekstury miały półtora
 #: pola i w kieszeni za rzeką czytały się jak szara płyta, nie jak rough.
-TEKSTURY = {'jalowa': ['ziemia-drobna', 'ziemia', 'jalowa']}
+TEKSTURY = {'jalowa': ['ziemia-drobna', 'ziemia', 'jalowa'], 'sciezka': ['droga-polana', 'sciezka']}
 
 #: Runda 6 („płaska, jednolita zieleń bez wzniesień"): łagodne pagórki
 #: i skarpy z cieniem na łące (`teren_efekty.rzezba`, jak na Bagnach).
@@ -558,7 +571,13 @@ SKUP_LAS = True
 RAMKA_STARTU = True
 
 #: Droga z brzegiem (runda 1: „jedna ścieżka ginie w trawie").
-EFEKTY = ['obwodka_drogi', 'relief', 'bez_placow']
+#: Runda 8 („drogi to płaskie beżowe pasy o ostrych krawędziach, bez tekstury,
+#: obrzeży i kolein"): kręty trakt z koleinami (`DROGA_KRETA`), własna
+#: tekstura ubitej ziemi i malowane obrzeże (`teren_efekty.droga_obrzeze`:
+#: przygaszony skraj, wydeptane pobocze, kamyki, źdźbła na krawędzi) zamiast
+#: rozjaśniającej `obwodka_drogi`, od której trakt robił się beżowy.
+EFEKTY = ['relief', 'bez_placow', 'droga_obrzeze']
+DROGA_KRETA = {'szerokosc': 0.5, 'zmiennosc': 0.22, 'meander': 0.12}
 
 #: Runda 2 („krainy rozmywają się w jedną"): twardsze brzegi terenów.
 WTAPIANIE = {'las': 0.3, 'skaly': 0.28, 'piasek': 0.3, 'woda': 0.25}
@@ -569,6 +588,10 @@ ODSTEP_KADRU = 3
 #: Runda 3: rzeka głębsza i ciemniejsza — turkus świecił jak laguna
 #: i razem z trzema polami szerokości robił z rzeki morze.
 BARWY_TERENU = {
+    # Runda 8: łąka o ton głębsza i mniej jaskrawa — w jaskrawej zieleni
+    # obiekty i trakt ginęły; w HotA trawa jest ciemna, a obiekty świecą.
+    'trawa': {'nasycenie': 0.86, 'barwa': (96, 138, 64), 'moc': 0.12, 'jasnosc': 0.9},
+    'sciezka': {'nasycenie': 1.0, 'barwa': (150, 110, 70), 'moc': 0.12, 'jasnosc': 0.9},
     'woda': {'nasycenie': 0.85, 'barwa': (70, 120, 200), 'moc': 0.35, 'jasnosc': 0.86},
 }
 
@@ -578,15 +601,18 @@ BARWY_TERENU = {
 #: drobiazgi łąki jak w HotA (kamienie w mchu, paprocie, grzyby; rysunki
 #: z `tools/PROMPTY-PLANSZE.md` §8).
 NAKLEJKI = [
-    (['kwiaty-2'], '.', 0.05),
-    (['kamienie-mech'], '.', 0.022),
-    (['paproc'], '.', 0.03),
-    (['grzyby-bagienne'], '.T', 0.015),
+    # Runda 8 (werdykt rundy 7: „łąka równo zasypana drobnymi kwiatkami,
+    # krzakami, grzybami — obiekty giną w szumie dekoracji"): drobnica
+    # przerzedzona trzy-, czterokrotnie; zostają pojedyncze akcenty.
+    (['kwiaty-2'], '.', 0.012),
+    (['kamienie-mech'], '.', 0.01),
+    (['paproc'], '.', 0.008),
+    (['grzyby-bagienne'], 'T', 0.006),
     # Runda 6: drobiazgi łąki (PROMPTY-PLANSZE §11) — pniaki, głazy, kępy
     # polnych kwiatów; ziemia pod skarpą dostaje głazy.
-    (['pniak-lakowy'], '.', 0.012),
-    (['glazy-lakowe'], '.j', 0.02),
-    (['kepa-kwiatow'], '.', 0.03),
+    (['pniak-lakowy'], '.', 0.006),
+    (['glazy-lakowe'], '.j', 0.012),
+    (['kepa-kwiatow'], '.', 0.008),
     # Runda 7: rough w kieszeni za rzeką i pod pasmami usiany głazami
     # i kamieniami — gołe dno czytało się jak wydeptany plac.
     (['glazy-lakowe', 'kamienie-mech'], 'j', 0.16),

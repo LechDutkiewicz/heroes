@@ -618,6 +618,9 @@ NAKLEJKI = {
     'pniak-lakowy': 30, 'glazy-lakowe': 26, 'kepa-kwiatow': 30,
     # Bagna, runda 6: zatopione pnie i kępy turzycy na mętnej wodzie.
     'pien-zatopiony': 30, 'kepa-turzycy': 34,
+    # Twierdza, runda 4 (HotA): pole śniegu — łaty ziemi, płyty skał, suche
+    # trawy i nawisy (surowe kremowe z API; we wsadzie przestudzone do bieli).
+    'lata-ziemi-snieg': 40, 'skalki-snieg': 42, 'trawy-snieg': 34, 'nawis-sniezny': 34,
 }
 
 #: Zestawy klimatu dla SCENY: `tools/wsad/<zestaw>-<nazwa>.png` →
@@ -641,6 +644,9 @@ ZESTAWY = {
         'oboz-treningowy': 154, 'kamienna-wieza': 192, 'arena': 144, 'drzewo-wiedzy': 230,
         'wieza-obserwacyjna': 250, 'ranczo': 144, 'zrodlo': 106, 'gniazdo': 134,
         'chata-jasnowidza': 154,
+        # Twierdza, runda 4 (HotA): wielopolowe góry rozstawiane ręcznie
+        # (`USTAWIENIA.masywy`) — scena skaluje je po szerokości w polach.
+        'gora-1': 340, 'gora-2': 380, 'gora-3': 280, 'gora-4': 220, 'gora-5': 240,
     },
     'bagno': {
         'drzewo': 144, 'drzewo-b': 144, 'krzak': 84, 'krzak-2': 84,

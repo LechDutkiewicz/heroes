@@ -312,7 +312,9 @@ export class AdventureScene extends Phaser.Scene {
     // Stosy surowców na mapie (`m-stos-<ikona>`) są tylko w zestawie klimatu,
     // który je ma — ikona `m-<ikona>` zostaje ikoną paska surowców.
     for (const n of zKlimatu) {
-      if (n.startsWith('stos-')) this.load.image(`m-${n}`, `${b}mapa/${zestaw}/${n}.png`);
+      // Góry ręczne (`USTAWIENIA.masywy`) — też tylko z zestawu klimatu.
+      if (n.startsWith('stos-') || n.startsWith('gora-'))
+        this.load.image(`m-${n}`, `${b}mapa/${zestaw}/${n}.png`);
     }
     const stan = this.wczytajStan();
     const potrzebne = new Set<string>();
@@ -1082,6 +1084,31 @@ export class AdventureScene extends Phaser.Scene {
       this.stan.teren[y][x] === t &&
       !zajete.has(`${x},${y}`);
 
+    // `USTAWIENIA.masywy` (per plansza): duże góry rozstawione ręcznie; pola
+    // skał pod nimi nie dostają kęp ani pojedynczych skał. Brak = jak dotąd.
+    // Kontener świata rysuje w kolejności dodania, nie po głębi — na planszy
+    // z górami drzewa, kępy i góry układamy na końcu po głębi (sortowanie
+    // stabilne), żeby las nad górą nie wchodził jej na zbocze.
+    const odIndeksu = this.swiat.list.length;
+    const gory: Phaser.GameObjects.Image[] = [];
+    for (const m of planszaPoId(this.stan.mapa).modul.USTAWIENIA?.masywy ?? []) {
+      if (!this.textures.exists(`m-${m.plik}`)) continue;
+      const [x0, y0, x1, y1] = m.pokrywa;
+      for (let y = y0; y <= y1; y++)
+        for (let x = x0; x <= x1; x++)
+          if (this.stan.teren[y]?.[x] === 'skaly') zajete.add(`${x},${y}`);
+      const im = this.add.image(m.x * KAFEL, m.y * KAFEL, `m-${m.plik}`).setOrigin(0.5, 1).setFlipX(!!m.odbij);
+      im.setScale((m.szer * KAFEL) / im.width).setDepth(m.y - 1);
+      gory.push(im);
+    }
+    const wstawGory = () => {
+      if (!gory.length) return;
+      this.swiat.add(gory);
+      const lista = this.swiat.list as Phaser.GameObjects.Image[];
+      const czesc = lista.slice(odIndeksu).sort((a, b) => a.depth - b.depth);
+      lista.splice(odIndeksu, czesc.length, ...czesc);
+    };
+
     // Najpierw kępy — od góry, żeby dalsze rzędy szły pod bliższe.
     for (let y = 0; y < this.stan.wys; y++) {
       for (let x = 0; x < this.stan.szer; x++) {
@@ -1169,6 +1196,7 @@ export class AdventureScene extends Phaser.Scene {
         }
       }
     }
+    wstawGory();
   }
 
   private rysujOzdoby() {

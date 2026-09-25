@@ -300,6 +300,9 @@ def klatka() -> tuple[Image.Image, Image.Image]:
             warstwa = teren_efekty.relief(warstwa, m, KAFEL, ZIARNO + 730, 'relief_sniezny' in EFEKTY)
         if nazwa == 'woda' and 'lod' in EFEKTY:
             warstwa = teren_efekty.lod(warstwa, m, KAFEL, ZIARNO + 710)
+        # Twierdza, runda 4: tafla lodu z głębią, smugami śniegu i brzegiem.
+        if nazwa == 'woda' and 'lod_tafla' in EFEKTY:
+            warstwa = teren_efekty.lod_tafla(warstwa, m, KAFEL, ZIARNO + 715)
         plansza.paste(warstwa, (0, 0), m)
         maski[nazwa] = m
         if nazwa == 'woda':
@@ -339,6 +342,10 @@ def klatka() -> tuple[Image.Image, Image.Image]:
         plansza = teren_efekty.rzezba(plansza, maski, droga, KAFEL, ZIARNO + 780, **RZEZBA).convert('RGBA')
     if 'obwodka_drogi' in EFEKTY:
         plansza = teren_efekty.obwodka_drogi(plansza, droga, KAFEL).convert('RGBA')
+    # Polana, runda 8: malowane obrzeże traktu (kamyki, trawa, wydeptane
+    # pobocze) — tylko plansze z `droga_obrzeze` w `EFEKTY`.
+    if 'droga_obrzeze' in EFEKTY:
+        plansza = teren_efekty.droga_obrzeze(plansza, droga, KAFEL, ZIARNO + 800).convert('RGBA')
     # Naklejki terenu (trzcina, grążele, zaśnieżone głazy…) z `public/mapa/tlo/`
     # — po drogach, żeby kępa trzciny nie znikała pod groblą, ale pod
     # sprite'ami sceny. Bez plików nic się nie dzieje (patrz `naklejki`).

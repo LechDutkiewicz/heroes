@@ -316,6 +316,16 @@ def rozstaw(g):
     g.strzez(g.dodaj(3, 'wroga', daleko, lambda p: ('artefakt', None)), 'wodz')
     g.strzez(g.dodaj(2, 'wroga', daleko, lambda p: ('skrzynia', None)), 'silny')
 
+    # Runda 4 (HotA): spichlerz jagód (20, 60) i kopalnia odłamków (23, 60)
+    # mają bryłę w rzędzie nad wejściem — w stawie. Na ekranie stały na
+    # lodzie jak doklejone. Po rozstawieniu (nic się nie przesuwa) brzeg pod
+    # nimi i pod wiatrakiem zamarza w śnieżny cypel: pola bryły i tak są
+    # zablokowane, a rząd 58 to kawałek brzegu przy drodze.
+    for x, y in [(13, 59), (14, 59), (15, 59), (19, 59), (20, 59), (21, 59), (22, 59),
+                 (19, 58), (20, 58), (21, 58), (23, 58), (16, 60), (21, 60)]:
+        if g.mapa[y][x] == '~':
+            g.mapa[y][x] = 's'
+
 
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 // Źródło: tools/mapy/twierdza.py (szkic i rozstawienie), silnik: tools/generuj_mape.py.
@@ -359,6 +369,22 @@ USTAWIENIA = {
     # Runda 3 (wzorzec HotA): znajdźki na pół pola z cieniem i rysunkiem stosu
     # leżącego w śniegu (`public/mapa/zima/stos-*.png`) zamiast ikon z paska.
     'znajdzki': 0.5,
+    # Runda 4 (HotA): „pasmo gór po lewej to ten sam ośnieżony szczyt wklejony
+    # w siatkę rzędami — tapeta, a nie masyw". W pierwszym ekranie góry stoją
+    # ręcznie, pięć różnych rysunków w różnej skali (`public/mapa/zima/gora-N`,
+    # PROMPTY-PLANSZE §15), jeden za drugim jak w HotA: pogórze nad stawem,
+    # za nim wysoki samotny szczyt, przed nim długi grzbiet z przełęczą,
+    # w lewym dolnym rogu dwa szczyty z siodłem i skalny pagór ze świerkami.
+    # `x`, `y` — stopa rysunku w polach (krawędzie pól), `szer` w polach.
+    'masywy': [
+        {'plik': 'gora-4', 'x': 7.3, 'y': 60.3, 'szer': 7.6, 'pokrywa': [4, 56, 9, 59]},
+        {'plik': 'gora-2', 'x': 5.2, 'y': 64.3, 'szer': 8.6, 'pokrywa': [0, 60, 8, 63]},
+        {'plik': 'gora-1', 'x': 4.9, 'y': 68.4, 'szer': 11.0, 'pokrywa': [0, 64, 9, 67]},
+        {'plik': 'gora-3', 'x': 7.2, 'y': 72.4, 'szer': 8.2, 'odbij': True, 'pokrywa': [3, 68, 9, 71]},
+        {'plik': 'gora-5', 'x': 12.7, 'y': 71.5, 'szer': 3.8, 'pokrywa': [12, 69, 13, 70]},
+        # Skalny garb nad stawem (górna krawędź ekranu) zamiast rzędu kęp.
+        {'plik': 'gora-3', 'x': 17.4, 'y': 56.1, 'szer': 6.2, 'pokrywa': [15, 50, 20, 55]},
+    ],
 }
 
 #: Zima: łąka wypłowiała i chłodna, jeziora skute lodem, bór ciemny i sinawy.
@@ -391,9 +417,15 @@ WODA_ANIMOWANA = False
 #: droga z brzegiem, las w zwartych masach, gęsty pierwszy ekran.
 #: Runda 3: bez efektu `lod` — jego rysy na turkusowym lodzie (`lod-2`) znów
 #: czytały się jak „błyskawice"; tekstura ma własne, delikatne pęknięcia.
-EFEKTY = ['zaspy', 'obwodka_drogi', 'relief_sniezny', 'bez_placow']
+EFEKTY = ['zaspy', 'obwodka_drogi', 'relief_sniezny', 'bez_placow', 'lod_tafla']
 TEKSTURY = {'woda': ['lod-2', 'lod', 'snieg'], 'trawa': ['snieg-2', 'snieg'], 'las': ['snieg']}
 SKUP_LAS = True
+#: Runda 4 (HotA): „pole śniegu to jednolita płaska biała tekstura — bez
+#: uskoków, zmian odcienia i cieni". Rzeźba z silnika (`teren_efekty.rzezba`):
+#: łagodne wały śniegu w skali kilku pól, stok ku słońcu cieplejszy, odwrotny
+#: sinoniebieski, za wyższym gruntem krótki cień; skarpa przy skałach odsłania
+#: sinoszarą skałę zamiast brązowej ziemi. Bez czoła skarpy (torf i trawa).
+RZEZBA = {'pagorki': 0.9, 'sila': 1.2, 'czolo': 0.0, 'stok': (128, 138, 158)}
 #: Pas przy ramie liczony dla dawnej kamery (14 × 12 pól) leżał po oddaleniu
 #: w środku ekranu i zostawiał w nim pusty pierścień — brzeg pilnuje teraz
 #: `kadr_szeroki`.
@@ -421,4 +453,11 @@ NAKLEJKI = [
     (['kra-lodu-1', 'kra-lodu-2'], '~', 0.09),
     (['swierczek-sniezny-1', 'swierczek-sniezny-2'], 's', 0.05),
     (['swierczek-sniezny-1'], '.', 0.03),
+    # Runda 4 (HotA): „pole śniegu to jednolita, płaska biała tekstura — bez
+    # uskoków, skał i zmian odcienia". Łaty odsłoniętej ziemi, płyty skał spod
+    # śniegu, suche trawy i nawisy z pasem cienia (PROMPTY-PLANSZE §15b).
+    (['lata-ziemi-snieg'], 's.', 0.035),
+    (['skalki-snieg'], 's', 0.03),
+    (['trawy-snieg'], 's.', 0.06),
+    (['nawis-sniezny'], 's', 0.04),
 ]

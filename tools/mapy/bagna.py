@@ -416,6 +416,10 @@ def rozstaw(g):
     g.dodaj(2, 'wroga', (0, 999), lambda p: ('potwor', 'silny'))
     g.budowle(6, 'wroga', ['osrodek-ewolucji', 'arena', 'kamienna-wieza', 'drzewo-wiedzy', 'gniazdo', 'zrodlo'])
 
+    # Straż przy samym Kamieniu (sonda: „artefaktu pilnuje straż" — wódz stoi
+    # na grobli, siedem pól dalej). Na końcu, żeby nie ruszać losowań wyżej.
+    g.postaw((WYSPA[0] - 1, WYSPA[1]), ('potwor', 'silny'))
+
 
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 // Źródło: tools/mapy/bagna.py (szkic i rozstawienie), silnik: tools/generuj_mape.py.
@@ -445,7 +449,7 @@ USTAWIENIA = {
         {'x': 25, 'y': 53, 'promien': 3},
         # Runda 7: górne rogi kadru (za mostem i nad wzgórzami) — ciemna plama
         # mgły w prawym górnym rogu czytała się jak pusta połać.
-        {'x': 23, 'y': 38, 'promien': 3},
+        {'x': 22, 'y': 38, 'promien': 3},
         {'x': 4, 'y': 37, 'promien': 3},
     ],
     # Runda 5 (wzorzec HotA; wcześniej runda 3: „płaska ikona pokeballa
@@ -454,6 +458,17 @@ USTAWIENIA = {
     # na omszałym kamieniu), nie ikony z paska — i są drobniejsze, z cieniem
     # kontaktowym, jak skarby na mapie Heroes 3.
     'znajdzki': 0.8,
+    # Runda 7: rysunki kęp skał w kadrze wybrane ręcznie (`kepySkal`, scena):
+    # hasz pola kładł w lewym górnym rogu dwa wodospady obok siebie — ta sama
+    # pieczątka dwa razy. Jeden wodospad na pasmo, reszta to różne granie.
+    'kepySkal': {
+        '4,37': 2, '7,37': -1,
+        '4,39': -4, '7,39': 3,
+        '4,41': 1, '7,41': -2,
+        '4,43': 2, '7,43': 4,
+        '4,50': -2, '4,52': 4,
+        '15,50': 1, '15,52': -4,
+    },
     # Runda 6 (HotA: „obiekty interaktywne są mniejsze od drzew i krzaków,
     # bez cienia, konturu i kontrastu"): budowle większe i obrys wokół
     # wszystkiego, co da się odwiedzić albo podnieść.

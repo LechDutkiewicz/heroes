@@ -1264,3 +1264,153 @@ face with three thick dark wooden stilts wrapped in moss. Both ends are flat
 and open so a road can run onto them. Much wider than tall. No water, no river
 banks, no grass, no ground.
 ```
+
+## 14. Polana — ubity trakt zamiast beżowych pasków (runda 8, wzorzec HotA)
+
+Werdykt rundy 7: „drogi są płaskimi beżowymi pasami o ostrych krawędziach bez
+tekstury, obrzeży i kolein — wyglądają jak wektorowe paski naklejone na
+malowany teren". Trakt dostaje własną teksturę ubitej ziemi
+(`TEKSTURY = {'sciezka': ['droga-polana', …]}` w `tools/mapy/polana.py`),
+a kręty kształt, koleiny i obrzeże (przydrożna trawa, kamyki, cień) maluje
+`teren_efekty` — w teksturze nie ma kierunku, bo leży pod każdym zakrętem.
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `teren-droga-polana.png` | `public/mapa/teren/` (kopiowany ręcznie, zmniejszony do 768) | tekstura 768 |
+
+<!-- plik: teren-droga-polana.png | styl: teren -->
+```
+The ground is a well-trodden country dirt road surface seen from above: packed
+warm medium-brown earth, darker than sand, with fine grey and ochre gravel,
+many tiny pebbles, a few small flat stones pressed into the soil, faint dusty
+lighter patches and darker damp patches, tiny hoof prints and dry cracks. The
+surface fills the WHOLE picture evenly with no direction, no edges, no grass
+verge, no grass at all.
+```
+
+## 15. Twierdza — masyw górski zamiast tapety kęp (runda 4, wzorzec HotA)
+
+Werdykt rundy 3 (dwóch krytyków): „pasmo gór po lewej to ten sam ośnieżony
+szczyt skopiowany w regularnej siatce — tapeta, a nie masyw; trzeba 3–5
+wariantów o różnej wielkości, jeden główny grzbiet z pogórzem, nieregularna
+krawędź przejścia w śnieg i wyraźny cień". Scena stawia kępy skał 3 × 2 na
+każdym zwartym kawałku skał, więc pasmo zawsze wychodzi w rzędach. Te
+rysunki to WIELOPOLOWE góry różnej wielkości, które plansza rozstawia ręcznie
+(`USTAWIENIA.masywy` w `tools/mapy/twierdza.py`), a pola pod nimi scena
+zostawia bez kęp. Skała zimna, szaroniebieska (surowe kępy §3 wyszły
+pomarańczowe — tu pilnuje tego prompt).
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `zima-gora-1.png` … `zima-gora-5.png` | `public/mapa/zima/gora-N.png` | 300–420 px |
+
+<!-- plik: zima-gora-1.png | styl: obiekt | proporcje: 3:2 -->
+```
+A long, massive snow-covered mountain range segment for a winter adventure
+map: one main ridge running across the whole width of the picture with five
+peaks of clearly different heights, the tallest and broadest summit left of
+centre, a lower notch-shaped pass right of centre, then two smaller jagged
+peaks stepping down to the right. Cool slate-grey and blue-grey granite
+cliffs with deep dark blue shadowed gullies and couloirs, thick white snow on
+every summit and along the ridge line, snowfields and a small glacier tongue
+on the upper slopes, grey scree fans and a few big snow-capped boulders at
+the foot, three or four tiny snow-laden dark spruces on the lower shoulders.
+Strong sculpted relief: bright sunlit faces, deep cool shadows. The foot is
+an irregular, lumpy edge of snow drifts and rocks, not a straight line. Cool
+winter palette, NO orange, NO warm brown rock. Much wider than tall.
+```
+
+<!-- plik: zima-gora-2.png | styl: obiekt | proporcje: 1:1 -->
+```
+One huge, tall, solitary snowy mountain massif for a winter adventure map:
+a broad pyramid of cool blue-grey granite with a sharp snow-covered summit
+slightly off-centre and two lower shoulders, sheer cliff faces with dark
+blue shadowed cracks, a frozen pale-cyan icefall (a waterfall turned to ice)
+hanging down a cleft in the front face, thick snow on the ledges, a skirt of
+grey scree, snow-capped boulders and a few small snowy spruces around the
+wide irregular foot. Strong sculpted relief, bright sunlit faces and deep
+cool shadows. Cool winter palette, NO orange, NO warm brown rock. About as
+wide as tall, the foot spreading across the whole width of the picture.
+```
+
+<!-- plik: zima-gora-3.png | styl: obiekt | proporcje: 3:2 -->
+```
+A medium-size snowy mountain for a winter adventure map: two sharp rocky
+summits of different height joined by a snowy saddle, cool slate-grey rock
+with dark blue-grey shadowed gullies, heavy white snow caps and snow streaks
+down the faces, a few jagged rock teeth on the ridge, grey scree and
+snow-capped boulders along the irregular lumpy foot, two small snow-laden
+spruces at one side of the foot. Strong relief with bright sunlit faces and
+deep cool shadows. Cool winter palette, NO orange, NO warm brown rock.
+Wider than tall.
+```
+
+<!-- plik: zima-gora-4.png | styl: obiekt | proporcje: 3:2 -->
+```
+Low rugged snowy foothills of a mountain chain for a winter adventure map:
+a tight cluster of six or seven low sharp slate-grey rock outcrops and big
+angular boulders of different sizes packed together, each with a thick
+white snow cap, dark blue-grey shadowed cracks, snow drifts piled between
+the rocks, grey gravel peeking through, two tiny snow-laden spruces in the
+gaps. Lower and flatter than a mountain, but clearly impassable rough rocky
+ground. Cool winter palette, NO orange, NO warm brown rock. Much wider than
+tall, the lumpy irregular foot spreading across the whole width.
+```
+
+<!-- plik: zima-gora-5.png | styl: obiekt | proporcje: 3:2 -->
+```
+A snowy rocky hill with a cliff for a winter adventure map: a broad rounded
+white snow-covered hill whose front face breaks into a short sheer grey
+granite cliff with dark blue shadowed cracks and icicles hanging from the
+cliff edge, a few snow-capped rocks and a small group of three snow-laden
+dark spruces on the top of the hill, snow drifts and scattered grey stones
+at the foot. Medium height, lower than a mountain. Cool winter palette, NO
+orange, NO warm brown rock. Wider than tall.
+```
+
+### 15b. Twierdza — naklejki pola śniegu (runda 4, wzorzec HotA)
+
+Werdykt rundy 3: „pole śniegu między zamkiem a lasem to jednolita, płaska
+biała tekstura — brakuje uskoków, zasp, skał i zmian odcienia, drobne
+obiekty unoszą się na pustym tle". Naklejki tła (`NAKLEJKI` w
+`tools/mapy/twierdza.py`, `public/mapa/tlo/`): łaty odsłoniętej zmarzniętej
+ziemi, płyty skalne spod śniegu, kępy suchej trawy i nawisy śnieżne ze
+schodkiem cienia.
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `lata-ziemi-snieg.png`, `skalki-snieg.png`, `trawy-snieg.png`, `nawis-sniezny.png` | `public/mapa/tlo/` | 30–56 px |
+
+<!-- plik: lata-ziemi-snieg.png | styl: obiekt | proporcje: 3:2 -->
+```
+A flat irregular patch of bare frozen ground in snow, seen from above at a
+three-quarter angle, lying flat on the ground with no height: dark grey-brown
+frozen earth, a few small grey stones and pebbles, sparse tufts of dry pale
+yellow grass, thin frost, surrounded by a ragged, lumpy rim of white snow
+with soft blue shadows. This object IS a flat patch of ground. Much wider
+than tall, like a puddle-shaped decal.
+```
+
+<!-- plik: skalki-snieg.png | styl: obiekt | proporcje: 3:2 -->
+```
+Four flat slate-grey rock slabs and a few smaller stones poking out of deep
+snow at different angles, thick white snow on their tops, cool blue-grey
+shadowed sides and a soft blue shadow in the snow beside them, a little snow
+drift piled against them. Low and flat, clearly lying on the ground. Much
+wider than tall.
+```
+
+<!-- plik: trawy-snieg.png | styl: obiekt -->
+```
+Three tufts of dry golden-beige winter grass and a couple of bare thin brown
+twigs sticking out of a small low snow mound, a little frost on the blades,
+soft blue shadow on one side of the mound. Small and low. Wider than tall.
+```
+
+<!-- plik: nawis-sniezny.png | styl: obiekt | proporcje: 3:2 -->
+```
+A low wind-carved snow bank step: a curved crescent-shaped ledge of snow
+with a smooth rounded top and an overhanging cornice lip, under the lip a
+deep cool blue shadow band and a small drop to lower snow, a few grey stones
+peeking out at one end. Low, flat, long. About three times wider than tall.
+```

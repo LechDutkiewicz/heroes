@@ -67,9 +67,9 @@ export const TEREN = [
   'TTTTTTTTssssssss###~..=.ssss###s.ssssjssTTj....~~~~~~~~~sssssTTjssjTTTTT',
   'TTTTT####ss~~~~~~~~~..=.ssss####sssjjjssjjjj..~~.~~~~~~~~ssss###jjsjTTTT',
   'TTTTT#####s~~~~TTT~~~.=.ssss#####sjjjjsjjjjj....~~~~~~~~~ss######jjTTTTT',
-  'TTTTT#####ss~~~~T~~~~~=~..ss###sssssjjjjjjjj.....~~~~~s~~ssss###jjjTTTTT',
-  'TTTT#####sss.~~~~~~~~~~=.sss####ssssjj..jjjjs...~~~~..~.ssTs#.##.jjjTTTT',
-  '#########sss.s.s~sss.~=.....####sssss...ssss.TT.ssss..~ssTTT...sjssTTTTT',
+  'TTTTT#####ss~~~~T~~sss=s..ss###sssssjjjjjjjj.....~~~~~s~~ssss###jjjTTTTT',
+  'TTTT#####sss.sss~~~ssss=.sss####ssssjj..jjjjs...~~~~..~.ssTs#.##.jjjTTTT',
+  '#########sss.s.sssss.s=.....####sssss...ssss.TT.ssss..~ssTTT...sjssTTTTT',
   '#########sssssssssss.=......###sssss.....sssTTT~ssss~...TTTT..ssssssTTTT',
   '#########sss=========.....s..##sssss.....ssTTTTssss.s...TTTT...jssssTTTT',
   '#########ss=sssssss.......s.s.#.ssss....ss..TT#sss......sTT.s...jsssTTTT',
@@ -399,5 +399,80 @@ export const USTAWIENIA = {
       "promien": 13
     }
   ],
-  "znajdzki": 0.5
+  "znajdzki": 0.5,
+  "masywy": [
+    {
+      "plik": "gora-4",
+      "x": 7.3,
+      "y": 60.3,
+      "szer": 7.6,
+      "pokrywa": [
+        4,
+        56,
+        9,
+        59
+      ]
+    },
+    {
+      "plik": "gora-2",
+      "x": 5.2,
+      "y": 64.3,
+      "szer": 8.6,
+      "pokrywa": [
+        0,
+        60,
+        8,
+        63
+      ]
+    },
+    {
+      "plik": "gora-1",
+      "x": 4.9,
+      "y": 68.4,
+      "szer": 11.0,
+      "pokrywa": [
+        0,
+        64,
+        9,
+        67
+      ]
+    },
+    {
+      "plik": "gora-3",
+      "x": 7.2,
+      "y": 72.4,
+      "szer": 8.2,
+      "odbij": true,
+      "pokrywa": [
+        3,
+        68,
+        9,
+        71
+      ]
+    },
+    {
+      "plik": "gora-5",
+      "x": 12.7,
+      "y": 71.5,
+      "szer": 3.8,
+      "pokrywa": [
+        12,
+        69,
+        13,
+        70
+      ]
+    },
+    {
+      "plik": "gora-3",
+      "x": 17.4,
+      "y": 56.1,
+      "szer": 6.2,
+      "pokrywa": [
+        15,
+        50,
+        20,
+        55
+      ]
+    }
+  ]
 };

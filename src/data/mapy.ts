@@ -98,6 +98,23 @@ export interface UstawieniaPlanszy {
    */
   kepySkal?: Record<string, number>;
   /**
+   * Góry rozstawione ręcznie: duże, wielopolowe rysunki `m-<plik>` z zestawu
+   * klimatu (`public/mapa/<zestaw>/<plik>.png`, nazwa zaczyna się od `gora-`).
+   * `x`, `y` — punkt stopy rysunku w polach (środek w poziomie, dół), `szer` —
+   * szerokość rysunku w polach, `odbij` — lustro w poziomie. Pola skał
+   * w prostokącie `pokrywa` [x0, y0, x1, y1] (włącznie) scena zostawia bez kęp
+   * i pojedynczych skał. Twierdza, runda 4: „pasmo gór to ten sam szczyt
+   * wklejony w siatkę rzędami — tapeta, nie masyw". Brak = jak dotąd.
+   */
+  masywy?: Array<{
+    plik: string;
+    x: number;
+    y: number;
+    szer: number;
+    odbij?: boolean;
+    pokrywa: number[];
+  }>;
+  /**
    * Barwy tafli w shaderze wody (`src/visual/woda.ts`, składowe 0–1): płycizna,
    * głębia, piana, krycie piany i siła iskier. Bagna: mętna oliwkowa woda
    * zamiast turkusu z białą pianą. Brak = dawne stałe.

@@ -263,6 +263,7 @@ export const ROZSTAWIENIE: Array<{
   { x: 9, y: 1, rodzaj: 'budynek', strefa: 'wroga', budynek: 'drzewo-wiedzy' },
   { x: 47, y: 6, rodzaj: 'budynek', strefa: 'wroga', budynek: 'gniazdo' },
   { x: 4, y: 9, rodzaj: 'budynek', strefa: 'wroga', budynek: 'zrodlo' },
+  { x: 45, y: 8, rodzaj: 'potwor', strefa: 'wroga', sila: 'silny' },
 ];
 
 /** Ustawienia misji na tej planszy — patrz `UstawieniaPlanszy` w `src/data/mapy.ts`. */
@@ -289,7 +290,7 @@ export const USTAWIENIA = {
       "promien": 3
     },
     {
-      "x": 23,
+      "x": 22,
       "y": 38,
       "promien": 3
     },
@@ -300,6 +301,20 @@ export const USTAWIENIA = {
     }
   ],
   "znajdzki": 0.8,
+  "kepySkal": {
+    "4,37": 2,
+    "7,37": -1,
+    "4,39": -4,
+    "7,39": 3,
+    "4,41": 1,
+    "7,41": -2,
+    "4,43": 2,
+    "7,43": 4,
+    "4,50": -2,
+    "4,52": 4,
+    "15,50": 1,
+    "15,52": -4
+  },
   "skalaBudowli": 1.2,
   "obrysObiektow": 0.55,
   "wodaBarwy": {

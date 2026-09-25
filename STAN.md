@@ -256,6 +256,32 @@ wszystkiego poza stworkami). Krzaki `bagno/krzak*` to kępy trzciny
 i turzycy zamiast okrągłych kul. Bród w kadrze to łąka, nie piasek.
 Symulacja misji 3: wygrana dnia 5 (3/3).
 
+### Bagna, runda 7 (HotA)
+
+Werdykty rundy 6: „prawa trzecia kadru (bagno za Strugą) to mętna,
+szarozielona plama bez kontrastu, rzeźby i obiektów; czarne schodki mgły".
+Przyczyna: tekstura `teren-woda-bagno` (mleczna oliwka) miała prawie tę samą
+jasność co bagno obok, a Struga w kadrze była szeroka na trzy pola z losowymi
+zatokami — jedna mglista tafla. Zmiany (wszystko w `tools/mapy/bagna.py`):
+
+- Woda: nowa tekstura `public/mapa/teren/teren-woda-czarna.png` (bez API:
+  zmarszczki `teren-woda` przemapowane na ciemną torfową zieleń-granat,
+  rzęsa z `teren-woda-bagno`, okresowe smugi odbicia nieba — kafelkuje się),
+  pierwsza w `TEKSTURY['woda']`; barwy shadera (`wodaBarwy`) i oczek
+  trzęsawiska (`TRZESAWISKO`) dociągnięte do niej. Woda jest teraz wyraźnie
+  ciemniejsza od lądu — ląd bagna jasna oliwka, woda ciemna.
+- Struga w kadrze (`STRUGA_WASKA_OD = 36`): dwa pola, bez zatok, bez oczek
+  w pasie ±4 pola (losowania zostają, żeby reszta planszy się nie ruszyła).
+- Bród → most (`MOST_WSCH`, `MOSTY`, rysunek `bagno/most.png` — omszały
+  pomost z latarnią, PROMPTY-PLANSZE §13), straż na wschodnim przyczółku.
+- Mgła: `odkryte` w obu górnych rogach kadru.
+- `kepySkal`: w lewym górnym paśmie były dwa wodospady obok siebie — teraz
+  jeden, reszta to różne granie.
+- Straż przy samym Kamieniu (`g.postaw` na końcu `rozstaw`) — sonda
+  „artefaktu pilnuje straż" nie przechodziła (najbliższe straże 3 pola).
+
+Symulacja misji 3: wygrana dnia 6 (3/3).
+
 ### Polana, runda 7 (HotA)
 
 Werdykt rundy 6: „wzgórza to ta sama zielono-brązowa stożkowa pieczątka,
