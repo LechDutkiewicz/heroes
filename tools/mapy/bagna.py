@@ -549,6 +549,34 @@ def rozstaw(g):
         except SystemExit:
             continue
 
+    przerzedz_kadr(g)
+
+
+#: Runda 10 (HotA: „obiekty do zebrania za duże i za gęste — sterta jagód
+#: i skrzyń w górnym środku obok sadu, ten sam kosz i skrzynka skopiowane
+#: kilkanaście razy wokół sadu i wzdłuż drogi pod zamkiem"). Pierwszy ekran
+#: dostaje po JEDNYM stosie każdego surowca, dwie skrzynie i artefakt pod
+#: strażą — reszta znajdziek z doliny znika. Na końcu `rozstaw`, żeby nie ruszać
+#: losowań: reszta planszy wychodzi ta sama. Zabranie znajdźki niczego nie
+#: zamyka (znajdźka nie ma bryły), więc przejezdność tylko rośnie.
+ZNAJDZKI_KADRU_USUN = {(16, 45), (16, 46), (15, 36), (14, 35), (16, 36), (17, 36), (15, 47), (3, 42)}
+#: Dwa sady w jednym kadrze to znów „pieczątka" — dolny (przy zamku) to
+#: kopalnia kamieni ewolucji.
+KOPALNIA_KADRU_ZMIEN = {(11, 51): 'kamien'}
+
+
+def przerzedz_kadr(g):
+    zostaja = []
+    for pole, wpis in g.obiekty:
+        if pole in ZNAJDZKI_KADRU_USUN and wpis[0] in ('surowiec', 'skrzynia'):
+            if pole in g.zajete:
+                g.zajete.remove(pole)
+            continue
+        if pole in KOPALNIA_KADRU_ZMIEN and wpis[0] == 'kopalnia':
+            wpis = ('kopalnia', KOPALNIA_KADRU_ZMIEN[pole]) + tuple(wpis[2:])
+        zostaja.append((pole, wpis))
+    g.obiekty[:] = zostaja
+
 
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 // Źródło: tools/mapy/bagna.py (szkic i rozstawienie), silnik: tools/generuj_mape.py.
