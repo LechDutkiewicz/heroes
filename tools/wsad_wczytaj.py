@@ -707,8 +707,11 @@ WTOP_PODSTAWY = {
     'zima': {
         'wiatrak', 'sad', 'kopalnia-odlamek', 'kopalnia-pokeball', 'kamienna-wieza', 'chatka',
         'oboz-treningowy', 'ranczo', 'gniazdo', 'chata-jasnowidza', 'wieza-obserwacyjna',
-        'drzewo-wiedzy', 'zamek-las', 'zamek-ogien',
-        'stos-jagody', 'stos-pokeball', 'stos-odlamki', 'stos-kamien-ewolucji', 'ognisko',
+        'drzewo-wiedzy', 'zamek-las', 'zamek-ogien', 'ognisko',
+        # (Twierdza, runda 10: bez stosów — rozpuszczona zaspa pod stosem
+        # zostawiała półprzezroczysty spód, cień kontaktowy siadał pod nim
+        # i kryształy wisiały nad własnym cieniem. Nowe stosy, §24, są
+        # wciśnięte w małą zaspę, którą scena podcina gruntem.)
     },
 }
 

@@ -75,8 +75,8 @@ export const TEREN = [
   '#########ss=s=.....=......s.s.#.ssss....ss..TT#sss......sTT.s...jsssTTTT',
   '###ssssss=====TTTTTT=..TTTs.s..sssssTs......#.##ss.....ssTTssssjjjjjTTTT',
   '###sss===ssss=TTTTTTs..TTTss.s..sssTTT.......##....s.sssTTTTssssjjjjTTTT',
-  '###s==ssssss=s====sssTTTsssss....sssTTT.....#####..s.sTTTTTTTsssjjjjTTTT',
-  '##########ss=#####=s.TTTssss.#..#ssssTTT...#####.#.ssTTTTTTTTsssjjjTTTTT',
+  '###s==sssTTs=s====sssTTTsssss....sssTTT.....#####..s.sTTTTTTTsssjjjjTTTT',
+  '##########Ts=#####=s.TTTssss.#..#ssssTTT...#####.#.ssTTTTTTTTsssjjjTTTTT',
   '###########s=#####TTTTTTssss#..#sTTsTTTT...TTT#TTTTTTTTTTTTTsssssTTTTTTT',
   '###########s=ssssTTTTTTTTssss##ssTTTTTT....TTTTTTTTTTTTTTTTTssssTTTTTTTT',
   '###########ss==sTTTTTTTTTsss##s##TTTTTTT....TTTTTTTTTTTTTTTTssssTTTTTTTT',
@@ -420,8 +420,8 @@ export const USTAWIENIA = {
       "promien": 9
     }
   ],
-  "znajdzki": 0.66,
-  "osadzZnajdzki": 0.4,
+  "znajdzki": 0.72,
+  "osadzZnajdzki": 0.2,
   "skalaStrazy": 1.2,
   "bezOzdobTrawy": true,
   "skalaZamku": 1.8,

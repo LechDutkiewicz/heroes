@@ -2312,7 +2312,7 @@ export class AdventureScene extends Phaser.Scene {
     // nieodkrytych pól w rzędzie — i z krawędziami liczonymi tym samym
     // wzorem dla sąsiadów, bo przy półprzezroczystości każda zakładka
     // dwóch prostokątów zostawiłaby ciemniejszą kreskę.
-    g.fillStyle(0x140b04, 0.93);
+    g.fillStyle(0x140b04, 1); // kryjąca: przez mgłę nie może prześwitywać układ nieodkrytej planszy
     const kx = (x: number) => mx + x * kw;
     const ky = (y: number) => my + y * kh;
     for (let y = 0; y < this.stan.wys; y++) {

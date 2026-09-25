@@ -549,8 +549,8 @@ USTAWIENIA = {
     # (PROMPTY-PLANSZE §24: kryształy, skrzynka, kosz wciśnięte w zaspę)
     # trochę większe, spód grzęźnie w śniegu (`osadzZnajdzki`), strażnicy
     # o jedną piątą wyżsi — prawie jak bohater (1,5 pola).
-    'znajdzki': 0.66,
-    'osadzZnajdzki': 0.4,
+    'znajdzki': 0.72,
+    'osadzZnajdzki': 0.2,
     'skalaStrazy': 1.2,
     # Runda 10: łąka to tundra — bez białych zasp sceny na co trzecim polu.
     'bezOzdobTrawy': True,
@@ -710,7 +710,7 @@ def NAKLEJKI_OMIN(zrodlo):
     for m in USTAWIENIA['masywy']:
         x0, y0, x1, y1 = m['pokrywa']
         omin |= {(x, y) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1)
-                 if not (x0 == 0 and y0 == 64 and 3 <= x <= 8 and y <= 66)}
+                 if not (x0 == 0 and y0 == 64 and 3 <= x <= 8 and y <= 65)}
     for m in re.finditer(r"'zamek[^']*': \{ x: (\d+), y: (\d+) \}", zrodlo):
         x, y = int(m.group(1)), int(m.group(2))
         omin |= {(x + dx, y + dy) for dx in range(-2, 3) for dy in range(-3, 2)}
