@@ -148,7 +148,9 @@ def rozstaw(g):
     # północnego — brama do twierdz.
     g.postaw((29, 46), ('potwor', 'straznik', 'Strażnik Mroźnej Przełęczy'))
     g.postaw((55, 46), ('potwor', 'straznik', 'Strażnik Tundry'))
-    g.postaw((12, 21), ('potwor', 'wodz', 'Wódz Zachodniej Przełęczy'))
+    # Zachodnia przełęcz prowadzi do słabszej twierdzy — pilnuje jej strażnik,
+    # nie wódz; symulacja z wodzem po obu stronach nigdy nie zdobywała drugiej.
+    g.postaw((12, 21), ('potwor', 'straznik', 'Strażnik Zachodniej Przełęczy'))
     g.postaw((57, 21), ('potwor', 'wodz', 'Wódz Wschodniej Przełęczy'))
     g.postaw((34, 9), ('potwor', 'silny', 'Straż Przełęczy Twierdz'))
 

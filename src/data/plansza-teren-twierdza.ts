@@ -117,7 +117,7 @@ export const ROZSTAWIENIE: Array<{
 }> = [
   { x: 29, y: 46, rodzaj: 'potwor', strefa: 'pogranicze', sila: 'straznik', nazwa: 'Strażnik Mroźnej Przełęczy' },
   { x: 55, y: 46, rodzaj: 'potwor', strefa: 'pogranicze', sila: 'straznik', nazwa: 'Strażnik Tundry' },
-  { x: 12, y: 21, rodzaj: 'potwor', strefa: 'pogranicze', sila: 'wodz', nazwa: 'Wódz Zachodniej Przełęczy' },
+  { x: 12, y: 21, rodzaj: 'potwor', strefa: 'pogranicze', sila: 'straznik', nazwa: 'Strażnik Zachodniej Przełęczy' },
   { x: 57, y: 21, rodzaj: 'potwor', strefa: 'pogranicze', sila: 'wodz', nazwa: 'Wódz Wschodniej Przełęczy' },
   { x: 34, y: 9, rodzaj: 'potwor', strefa: 'wroga', sila: 'silny', nazwa: 'Straż Przełęczy Twierdz' },
   { x: 22, y: 65, rodzaj: 'kopalnia', strefa: 'dom', surowiec: 'jagoda' },
