@@ -297,8 +297,8 @@ def rozstaw(g):
     g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'odlamek'), w_skale, kadr)
     g.dodaj_najpierw('dom', lambda p: ('budynek', 'wiatrak'), kadr, None, (2, 16))
     g.dodaj_najpierw('dom', lambda p: ('budynek', 'oboz-treningowy'), kadr, None, (2, 16))
-    for _ in range(3):
-        g.dodaj_najpierw('dom', lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kadr, None, (2, 12))
+    for co in ('odlamek', 'pokeball', 'jagoda'):
+        g.dodaj_najpierw('dom', lambda p, co=co: ('surowiec', co), kadr, None, (2, 12))
     g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), kadr, None, (2, 12))
     # Skarb pod strażą co najmniej cztery pola od startu — straż stoi od
     # strony gracza, a na progu startu stać jej nie wolno.
@@ -309,7 +309,7 @@ def rozstaw(g):
         p
         for p in kadr
         if max(abs(p[0] - sx), abs(p[1] - sy)) >= 4
-        and all(max(abs(p[0] - q[0]), abs(p[1] - q[1])) >= 3 for q in budowle_kadru)
+        and all(max(abs(p[0] - q[0]), abs(p[1] - q[1])) >= 2 for q in budowle_kadru)
     ]
     strzez_pewnie(g, g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), dalej, None, (5, 14)), 'slaby')
     # Pierwszy ekran jest skończony: reszta rozstawienia (budowle i stosy
@@ -353,15 +353,22 @@ def rozstaw(g):
     ]
     # Kopalnia ma szeroki rysunek — nie w ostatniej kolumnie kadru.
     w_zboczu = [p for p in g.pod_skala('pogranicze') if p[0] - sx <= 5 and -4 <= p[1] - sy <= 5]
-    g.strzez(
-        g.dodaj_najpierw('pogranicze', lambda p: ('kopalnia', 'kamien'), w_zboczu, g.pod_skala('pogranicze')),
-        'slaby',
-    )
-    blisko = [p for p in brzeg if p[0] - sx <= 5]
-    g.dodaj_najpierw('pogranicze', lambda p: ('budynek', 'wieza-obserwacyjna'), blisko)
-    g.dodaj_najpierw('pogranicze', lambda p: ('surowiec', 'kamien'), brzeg)
-    strzez_pewnie(g, g.dodaj_najpierw('pogranicze', lambda p: ('skrzynia', None), brzeg), 'slaby')
-    g.dodaj_najpierw('pogranicze', lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball'])), brzeg)
+    def wolne(lista):
+        return [p for p in lista if p in brzeg]
+
+    kopalnia = g.dodaj_najpierw('pogranicze', lambda p: ('kopalnia', 'kamien'), w_zboczu, g.pod_skala('pogranicze'))
+    # Straż kopalni w przesmyku między rzeką a zboczem — tędy się do niej
+    # dochodzi od mostu. Gdy układ się zmieni, straż staje jak zwykle.
+    kx, ky = kopalnia[0]
+    przesmyk = (kx - 1, ky)
+    if g.w(*przesmyk) and g.mapa[ky][kx - 1] in '.,' and przesmyk not in g.zajete:
+        g.postaw(przesmyk, ('potwor', 'slaby'))
+    else:
+        g.strzez(kopalnia, 'slaby')
+    g.dodaj_najpierw('pogranicze', lambda p: ('budynek', 'wieza-obserwacyjna'), wolne([(sx + 5, sy - 4), (sx + 4, sy - 4)]) or [p for p in brzeg if p[0] - sx <= 5])
+    g.dodaj_najpierw('pogranicze', lambda p: ('skrzynia', None), wolne([(kx + 1, ky + 1), (kx + 1, ky)]) or brzeg)
+    g.dodaj_najpierw('pogranicze', lambda p: ('surowiec', 'kamien'), wolne([(sx + 3, sy - 1), (sx + 3, sy - 2)]) or brzeg)
+    g.dodaj_najpierw('pogranicze', lambda p: ('surowiec', 'jagoda'), wolne([(sx + 6, sy - 4), (sx + 3, sy - 5)]) or brzeg)
     g.zajete += zdjete
     # Drugi brzeg w kadrze też jest skończony: reszta pogranicza poza kadr
     # (wóz postawiony losowo stanął na trawiastym ramieniu góry jak doklejony).
