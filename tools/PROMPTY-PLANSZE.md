@@ -253,8 +253,10 @@ poking out, frost on the tips, a few red berries. Low and round.
 
 <!-- plik: zima-krzak-2.png -->
 ```
-A low juniper bush covered with a pillow of snow, dark green showing only at
-the bottom edges, blue shadow under the snow. Low and round.
+A low shrub completely buried under a rounded pillow of snow: only a few dark
+brown bare twig tips poke out of the snow, blue shadow under the snow on the
+left, frost glitter on the top. No green leaves, no needles, no grass.
+Low and round, wider than tall.
 ```
 
 <!-- plik: zima-skala.png -->

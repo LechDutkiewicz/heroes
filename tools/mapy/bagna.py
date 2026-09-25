@@ -133,6 +133,44 @@ POD_OBIEKTY = '.,b'
 ZASYP_ODCIETE = True
 
 
+#: Dół doliny gracza, x 4–17, y 47–53 (patrz `popraw_teren`).
+DOLINA_DOL = [
+    'bb..........bb',
+    'bbb..........b',
+    'bbbb.........b',
+    'Tbb~~~b....bbb',
+    'Tbb~~~b.T...bb',
+    'TTbbb.....T.bb',
+    'TTT.T.......Tb',
+]
+
+#: Ścieżka z pola startu w dół doliny — do kopalń i skrzyni, dalej za kadr.
+SCIEZKA_DOLU = [(13, 47), (13, 48), (14, 49), (14, 50), (13, 51), (13, 52), (13, 53)]
+
+
+def po_drogach(g, mapa):
+    for x, y in SCIEZKA_DOLU:
+        mapa[y][x] = '='
+
+
+def przy_drodze(g, pola, zasieg=2):
+    """Pola kadru blisko drogi, na których mur budowli (rząd nad wejściem) nie
+    wejdzie na drogę — w Heroes kopalnie i skarby stoją przy trakcie."""
+    m = g.mapa
+    wynik = []
+    for x, y in pola:
+        if not any(
+            0 <= y + dy < BOK and 0 <= x + dx < BOK and m[y + dy][x + dx] == '='
+            for dy in range(-zasieg, zasieg + 1)
+            for dx in range(-zasieg, zasieg + 1)
+        ):
+            continue
+        if any(m[y - 1][x + dx] == '=' for dx in (-1, 0, 1)):
+            continue
+        wynik.append((x, y))
+    return wynik
+
+
 def popraw_teren(g, mapa):
     rng = random.Random(ZIARNO + 7)
     # Czarna Struga: poziomy odcinek od zachodniej krawędzi do zakrętu,
@@ -195,6 +233,18 @@ def popraw_teren(g, mapa):
         for x in (x0 - 2, x0 - 1, x1 + 1, x1 + 2):
             if mapa[y][x] not in '.,=b':
                 mapa[y][x] = '.'
+    # Dół pierwszego ekranu (runda 4: „cała dolna połowa to zbita ściana
+    # roślinności bez drogi — nie widać, gdzie przejezdne"). Las 3 × 2 rysuje
+    # się jako kępa wysoka na cztery i pół pola, więc dwa rzędy lasu przy
+    # dolnej krawędzi zasłaniały trzy rzędy łąki nad sobą. Zostaje sucha łąka
+    # (tu stoją kopalnie i skrzynia), oczko wody z trzcinowym brzegiem, bagno
+    # przy Strudze i pojedyncze drzewa — żadnej kępy w kadrze.
+    for dy, wiersz in enumerate(DOLINA_DOL):
+        y = 47 + dy
+        for dx, znak in enumerate(wiersz):
+            x = 4 + dx
+            if x < struga_x(y) - 2 and mapa[y][x] != '~' or znak == '~':
+                mapa[y][x] = znak
 
 
 def w_dolinie(x, y):
@@ -237,13 +287,15 @@ def rozstaw(g):
     kadr = g.kadr_startu()
     sx, sy = PUNKTY['start']
     dalej = [p for p in kadr if max(abs(p[0] - sx), abs(p[1] - sy)) >= 4]
-    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'jagoda'), kadr, None, (3, 14))
-    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'odlamek'), kadr, None, (3, 14))
+    # Kopalnie i skrzynia przy ścieżce w dół doliny (runda 4).
+    dol = [p for p in przy_drodze(g, kadr) if p[1] >= sy + 2]
+    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'jagoda'), dol, kadr, (3, 14))
+    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'odlamek'), dol, kadr, (3, 14))
     g.dodaj_najpierw('dom', lambda p: ('budynek', 'drzewo-wiedzy'), kadr, None, (2, 16))
     g.dodaj_najpierw('dom', lambda p: ('budynek', 'zrodlo'), kadr, None, (2, 16))
     for _ in range(3):
         g.dodaj_najpierw('dom', lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])), kadr, None, (2, 12))
-    g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), kadr, None, (2, 12))
+    g.dodaj_najpierw('dom', lambda p: ('skrzynia', None), dol, kadr, (2, 12))
     g.strzez(g.dodaj_najpierw('dom', lambda p: ('artefakt', None), dalej, None, (5, 14)), 'slaby')
     g.dodaj(2, 'dom', (6, 14), lambda p: ('surowiec', rng.choice(['jagoda', 'pokeball', 'odlamek'])))
     g.dodaj(1, 'dom', (6, 14), lambda p: ('skrzynia', None))
@@ -363,4 +415,7 @@ NAKLEJKI = [
     (['grazel-1', 'grazel-2'], '~', 0.10),
     (['martwe-drzewo-1', 'martwe-drzewo-2'], 'b', 0.04),
     (['pniak-bagienny'], 'b', 0.03),
+    # Runda 4: sucha łąka w dole doliny ma być czytelnie INNA niż bagno —
+    # kwiaty rosną tylko na suchym.
+    (['kwiaty-1', 'kwiaty-2'], '.', 0.07),
 ]

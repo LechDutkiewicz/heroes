@@ -308,7 +308,7 @@ TEKSTURY = {'woda': ['lod-2', 'lod', 'snieg'], 'trawa': ['snieg-2', 'snieg'], 'l
 SKUP_LAS = True
 RAMKA_STARTU = True
 #: Twardszy brzeg śniegu — granica ma być czytelna, a nie rozmyta w mgłę.
-WTAPIANIE = {'snieg': 0.3, 'skaly': 0.28, 'las': 0.3, 'jalowa': 0.3, 'woda': 0.22}
+WTAPIANIE = {'snieg': 0.3, 'skaly': 0.28, 'las': 0.3, 'jalowa': 0.3, 'woda': 0.12}
 
 #: Budowle pierwszego ekranu co najmniej trzy pola od siebie (silnik).
 ODSTEP_KADRU = 3
@@ -319,4 +319,8 @@ NAKLEJKI = [
     (['zaspa-1', 'zaspa-2'], 's', 0.08),
     (['kra-lodu-2'], '~', 0.04),
     (['krzak-zimowy-1'], 'j', 0.08),
+    # Runda 3: zmarznięta darń („.") też dostaje zaspy i głazy, a w śniegu
+    # stoi gdzieniegdzie nagi, martwy pień — mniej pustych połaci bieli.
+    (['zaspa-1', 'zaspa-2', 'glaz-sniezny-2'], '.', 0.07),
+    (['martwe-drzewo-1'], 's', 0.012),
 ]
