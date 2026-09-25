@@ -58,6 +58,7 @@ export const ZESTAWY_KLIMATU: Record<string, readonly string[]> = {
     "drzewo-b",
     "gora-1",
     "gora-10",
+    "gora-11",
     "gora-2",
     "gora-3",
     "gora-4",

@@ -2014,3 +2014,56 @@ shadows, thick dark green moss on every ledge. Around the whole foot: a skirt
 of grey scree and tumbled mossy boulders sinking into reeds, cattails and
 patches of murky water, the edge soft and irregular. Much wider than tall.
 ```
+
+## 24. Twierdza — stosy surowców wtopione w śnieg (runda 10, wzorzec HotA)
+
+Werdykt rundy 9: „zasoby i stwory, np. fioletowe kryształy przy drodze pod
+wiatrakiem, to malutkie płaskie naklejki bez osadzenia w podłożu, w innej
+skali niż szczegółowy zamek". Stare stosy (§10) miały śnieżny płat, który
+`wtopPodstawe` rozpuszczał w przezroczystość — rysunek wisiał nad własnym
+cieniem, a „kamień ewolucji" był fioletową watą. Nowe: bogatszy rysunek
+w skali budowli, stos WCIŚNIĘTY w zaspę (śnieg zachodzi na dół przedmiotów
+i leży na nich), bez osobnej podstawki. Po obejrzeniu kopiowane ręcznie
+do `tools/wsad/zima-stos-<nazwa>.png` (wysokość 72, `wsad_wczytaj.py`).
+
+<!-- plik: zima-stos2-kamien-ewolucji.png -->
+```
+A cluster of six tall faceted violet amethyst crystals of different sizes
+growing out of a small grey rock half buried in snow, the crystals angled
+outward like a gem geode, crisp facets with bright lilac highlights and a
+soft inner violet glow, snow lying on the rock and heaped around the base so
+the lower ends of the crystals disappear into the snow drift, a few tiny
+violet shards scattered in the snow. Detailed painted game object in the
+same scale and richness as a fantasy building, soft shading. About as wide
+as tall, compact.
+```
+
+<!-- plik: zima-stos2-odlamki.png -->
+```
+A heap of pale icy-blue crystal shards of different sizes jutting at angles
+out of a small snow drift, with a small wooden sack tipped over beside them
+spilling more small shards, crisp facets with bright white highlights and a
+soft cyan inner glow, the snow drift wraps around the base so the shards
+sink into it, frost sparkle on top. Detailed painted game object, soft
+shading. Wider than tall, compact.
+```
+
+<!-- plik: zima-stos2-pokeball.png -->
+```
+A small open wooden crate sunk into a snow drift and overflowing with
+red-and-white capture balls (red top half, white bottom half, dark band with
+a small round white button), three more balls lying half buried in the snow
+in front of it, snow caps on the crate edges and on the balls, the drift
+covers the bottom of the crate. Detailed painted game object, glossy
+highlights, soft shading. Wider than tall, compact.
+```
+
+<!-- plik: zima-stos2-jagody.png -->
+```
+A small woven wicker basket tipped on its side and half buried in a snow
+drift, spilling a heap of glossy dark red frozen berries across the snow,
+a sprig of dark evergreen twigs beside it, frost and snow caps on the basket
+rim and on the berries, the drift covers the bottom of the basket. Detailed
+painted game object, bright highlights, soft shading. Wider than tall,
+compact.
+```

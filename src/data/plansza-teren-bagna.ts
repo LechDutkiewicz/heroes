@@ -340,10 +340,10 @@ export const USTAWIENIA = {
       ]
     },
     {
-      "plik": "gora-9",
-      "x": 17.1,
-      "y": 54.15,
-      "szer": 5.6,
+      "plik": "gora-11",
+      "x": 17.0,
+      "y": 54.25,
+      "szer": 5.4,
       "pokrywa": [
         15,
         50,

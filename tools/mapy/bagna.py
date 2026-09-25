@@ -692,7 +692,11 @@ USTAWIENIA = {
         {'plik': 'gora-10', 'x': 5.3, 'y': 54.15, 'szer': 8.0, 'pokrywa': [4, 50, 8, 53]},
         # Runda 9: węższa i w lewo — prawe zbocze wchodziło na Strugę
         # i rzeka płynęła „pod górą".
-        {'plik': 'gora-9', 'x': 17.1, 'y': 54.15, 'szer': 5.6, 'pokrywa': [15, 50, 18, 53]},
+        # Runda 12 (HotA: „lewy dolny róg i środek dolnej krawędzi to
+        # powielone, identyczne stożki jak stemple" — `gora-9` i `gora-10` to
+        # ten sam kłąb szpiców): tu skalny próg z półkami, wodospadem i
+        # martwymi drzewami, wyrastający z mokradła (PROMPTY-PLANSZE §23).
+        {'plik': 'gora-11', 'x': 17.0, 'y': 54.25, 'szer': 5.4, 'pokrywa': [15, 50, 18, 53]},
     ],
     # Runda 6 (HotA: „obiekty interaktywne są mniejsze od drzew i krzaków,
     # bez cienia, konturu i kontrastu"): budowle większe i obrys wokół
