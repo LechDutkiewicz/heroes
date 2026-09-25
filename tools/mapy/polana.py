@@ -106,18 +106,18 @@ PASMA = [
     (18, 28, 23, 29),
     # Runda 7 (HotA): „wzgórza w prawym dolnym rogu to klony zielonych kopców,
     # złamać to drugim terenem (skalisty rough) na wschodnim brzegu". Ściana
-    # gór odsunięta pod prawą krawędź kadru (kolumny 23–25): kieszeń za
+    # gór odsunięta pod prawą krawędź kadru (kolumny 22–24): kieszeń za
     # rzeką jest dwa razy większa i ma dno z ubitej, kamienistej ziemi
     # (`KIESZEN_ROUGH`), a nie trzy kopce zachodzące na skrzynię i ognisko.
-    (23, 30, 25, 31),
-    (23, 32, 25, 33),
-    (23, 34, 25, 35),
+    (22, 30, 24, 31),
+    (22, 32, 24, 33),
+    (22, 34, 24, 35),
 ]
 
 #: Runda 7: dno kieszeni za rzeką (x0, y0, x1, y1) — „rough" z HotA,
 #: pomarańczowobrązowa ziemia z kamieniami (`teren-ziemia`) od brzegu po
 #: ścianę gór, z językiem wychodzącym korytarzem wzdłuż brzegu.
-KIESZEN_ROUGH = (17, 30, 22, 35)
+KIESZEN_ROUGH = (17, 30, 21, 35)
 
 #: Runda 6: ubita ziemia (`j`, tekstura `teren-ziemia`) pod skarpami pasm
 #: i na dnie kieszeni za rzeką — przejście terenu zamiast jednolitej zieleni.
@@ -253,6 +253,11 @@ def popraw_teren(g, mapa):
         for x in range(21, 24):
             if mapa[y][x] in '.,':
                 mapa[y][x] = 'T'
+    # Runda 7: kępa lasu tuż za zachodnim pasmem (wiersz 22) wystawała
+    # koronami nad grań — drzewa stały na szczycie skał.
+    for x in range(7, 12):
+        if mapa[22][x] == 'T':
+            mapa[22][x] = '.'
     for x, y in ZIEMIA:
         if mapa[y][x] in '.,':
             mapa[y][x] = 'j'
@@ -353,7 +358,7 @@ PIERWSZY_EKRAN_DOM = [
     ([(15, 33), (14, 34), (15, 32)], ('budynek', 'oboz-treningowy')),
     ([(13, 30), (14, 30), (12, 31)], ('budynek', 'zrodlo')),
     ([(5, 28), (6, 28), (6, 29)], ('budynek', 'ognisko')),
-    ([(11, 24), (10, 24)], ('surowiec', 'odlamek')),
+    ([(11, 27), (10, 28)], ('surowiec', 'odlamek')),
     ([(14, 31), (14, 32)], ('surowiec', 'pokeball')),
     ([(6, 30), (5, 30), (6, 31)], ('surowiec', 'jagoda')),
     ([(11, 29), (10, 28)], ('surowiec', 'kamien')),
@@ -363,7 +368,7 @@ PIERWSZY_EKRAN_DOM = [
     ([(4, 31), (5, 32)], ('artefakt', None)),
     ([(5, 31), (4, 30)], ('potwor', 'slaby')),
     ([(9, 21), (8, 20), (10, 21)], ('budynek', 'chatka')),
-    ([(4, 21), (5, 21)], ('surowiec', 'pokeball')),
+    ([(6, 19), (5, 19), (7, 19)], ('surowiec', 'pokeball')),
     ([(10, 19), (9, 19)], ('skrzynia', None)),
 ]
 
@@ -373,9 +378,9 @@ PIERWSZY_EKRAN_BRZEG = [
     ([(17, 30), (17, 29)], ('potwor', 'slaby')),
     ([(19, 32), (18, 32)], ('skrzynia', None)),
     # Runda 7: kieszeń jest większa — ognisko głębiej, dwa stosy na roughu.
-    ([(21, 33), (20, 33), (20, 32)], ('budynek', 'ognisko')),
-    ([(21, 31), (22, 31)], ('surowiec', 'odlamek')),
-    ([(19, 34), (20, 34)], ('surowiec', 'kamien')),
+    ([(19, 33), (20, 33), (18, 33)], ('budynek', 'ognisko')),
+    ([(20, 31), (18, 31)], ('surowiec', 'odlamek')),
+    ([(19, 35), (20, 35), (21, 32)], ('surowiec', 'kamien')),
     ([(18, 23), (17, 23)], ('budynek', 'wieza-obserwacyjna')),
     ([(20, 23), (21, 23), (20, 22)], ('budynek', 'gniazdo')),
     ([(19, 24), (18, 24)], ('surowiec', 'jagoda')),
@@ -512,6 +517,17 @@ USTAWIENIA = {
     # odsłonięte od startu — czarne zęby mgły w rogach ekranu wyglądały jak
     # dziura w mapie. Tylko rogi: sonda pilnuje, żeby na starcie było
     # odsłonięte mniej niż 20% planszy.
+    # Runda 7: skaliste granie z czterech różnych rysunków (PROMPTY-PLANSZE
+    # §12) rozdane ręcznie — hasz pola dawał w kadrze trzy razy tę samą grań,
+    # a masyw z wodospadem nie trafiał się wcale. Klucz: lewy górny róg kępy
+    # 3 × 2 z `PASMA`; minus = odbicie. 1 szare zęby, 2 wodospad, 3 szeroka
+    # grań, 4 skałki podnóża.
+    'kepySkal': {
+        '0,23': 1, '3,23': 3, '6,23': -1,
+        '2,25': 4, '5,25': 2, '8,25': -3,
+        '18,28': 3, '21,28': 1,
+        '22,30': -2, '22,32': 4, '22,34': -1,
+    },
     'odkryte': [
         {'x': 4, 'y': 19, 'promien': 3},
         {'x': 23, 'y': 20, 'promien': 4},
@@ -522,7 +538,10 @@ USTAWIENIA = {
 
 #: Runda 6: ziemia pod skarpami to ubita brązowa ziemia z kamykami
 #: (`teren-ziemia`, PROMPTY-PLANSZE §11), a nie spękana szara jałowa ziemia.
-TEKSTURY = {'jalowa': ['ziemia', 'jalowa']}
+#: Runda 7: ta sama ziemia w pół skali (`teren-ziemia-drobna*`, zmniejszona
+#: `teren-ziemia` złożona 2 × 2 z odbiciami) — kamienie tekstury miały półtora
+#: pola i w kieszeni za rzeką czytały się jak szara płyta, nie jak rough.
+TEKSTURY = {'jalowa': ['ziemia-drobna', 'ziemia', 'jalowa']}
 
 #: Runda 6 („płaska, jednolita zieleń bez wzniesień"): łagodne pagórki
 #: i skarpy z cieniem na łące (`teren_efekty.rzezba`, jak na Bagnach).
@@ -568,6 +587,9 @@ NAKLEJKI = [
     (['pniak-lakowy'], '.', 0.012),
     (['glazy-lakowe'], '.j', 0.02),
     (['kepa-kwiatow'], '.', 0.03),
+    # Runda 7: rough w kieszeni za rzeką i pod pasmami usiany głazami
+    # i kamieniami — gołe dno czytało się jak wydeptany plac.
+    (['glazy-lakowe', 'kamienie-mech'], 'j', 0.16),
 ]
 
 #: Runda 4: most przez rzekę w pierwszym ekranie (`teren_efekty.mosty`).

@@ -74,6 +74,7 @@ import {
 import { ICON, buildIcons } from '../visual/icons';
 import { GORA, KAFEL, MARGINES, PANEL_W, PASEK_H, RAMA_MAPY_H, RAMA_MAPY_W, ZOOM_MAPY } from '../visual/uklad';
 import { dodajWode } from '../visual/woda';
+import { MGLA_GESTOSC, MalarzMgly } from '../visual/mgla';
 import { wersjonujZasoby } from '../visual/zasoby';
 import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
 import {
@@ -120,18 +121,6 @@ const BOHATER_KLATKA = 96;
 const KIERUNEK_WIERSZ = { dol: 0, lewo: 1, prawo: 2, gora: 3 } as const;
 type Kierunek = keyof typeof KIERUNEK_WIERSZ;
 
-/**
- * Ile pikseli płótna mgły przypada na jedno pole planszy.
- *
- * Przy jednym pikselu na pole obrazek był rozciągany czterdziestoośmiokrotnie
- * i rozmycie z filtrowania sięgało pół pola w głąb odsłoniętego terenu —
- * cała mapa wyglądała przez to na przyciemnioną. Przy czterech pikselach
- * na pole rozmycie ma kilkanaście pikseli: granica jest wciąż miękka,
- * a odsłonięty teren zostaje w pełnym kolorze.
- */
-const MGLA_GESTOSC = 4;
-/** Mgła nie jest czarna. Ma zasłaniać, ale nie odbierać planszy koloru. */
-const MGLA_ALFA = 0.88;
 
 /** Klucze, pod którymi stan przeżywa przejście do bitwy i z powrotem. */
 const KLUCZ_STANU = 'stan-mapy';
@@ -175,6 +164,9 @@ export class AdventureScene extends Phaser.Scene {
   /** Kwadrat shadera z animowaną wodą; `null`, gdy karta go nie uciągnie. */
   private woda: Phaser.GameObjects.Shader | null = null;
   private mgla!: Phaser.GameObjects.Image;
+  /** Liczy teksele mgły i pamięta, co już namalował — patrz `visual/mgla.ts`. */
+  private malarzMgly: MalarzMgly | null = null;
+  private obrazMgly: ImageData | null = null;
   private warstwaTrasy!: Phaser.GameObjects.Graphics;
   private bohaterObj!: Phaser.GameObjects.Container;
   private bohaterSprite!: Phaser.GameObjects.Sprite;
@@ -1109,11 +1101,14 @@ export class AdventureScene extends Phaser.Scene {
           for (let dx = 0; dx < 3; dx++) zajete.add(`${x + dx},${y + dy}`);
 
         const { x: ex, y: ey } = this.naEkran(x, y);
-        const nr = this.wariant(x, y, 4) + 1;
+        // `USTAWIENIA.kepySkal` (per plansza): rysunek kępy skał wybrany ręcznie.
+        const reczna =
+          t === 'skaly' ? planszaPoId(this.stan.mapa).modul.USTAWIENIA?.kepySkal?.[`${x},${y}`] : undefined;
+        const nr = reczna ? Math.abs(reczna) : this.wariant(x, y, 4) + 1;
         const im = this.add
           .image(ex + KAFEL, ey + KAFEL * 1.5, `m-kepa-${t}-${nr}`)
           .setOrigin(0.5, 1)
-          .setFlipX(this.wariant(y, x, 2) === 1)
+          .setFlipX(reczna ? reczna < 0 : this.wariant(y, x, 2) === 1)
           // Głębia z DOLNEGO rzędu kępy: to on decyduje, co ją zasłoni.
           .setDepth(y + 1);
         this.swiat.add(im);
@@ -1552,15 +1547,20 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   /**
-   * Mgła wojny. Rysujemy ją na płótnie 36 × 36 — jeden piksel na pole — i
-   * rozciągamy na całą planszę. Filtrowanie robi z tego miękką granicę za
-   * darmo; tysiąc prostokątów przerysowywanych przy każdym kroku byłoby
-   * wolniejsze i wyglądałoby jak kratka.
+   * Mgła wojny. Płótno ma `MGLA_GESTOSC` tekseli na bok pola i jest
+   * rozciągnięte na całą planszę; brzeg (rozmyte pokrycie + szum, półcień po
+   * stronie odkrytej) liczy `MalarzMgly`. Tekstura przeżywa restart sceny,
+   * więc przy planszy innej wielkości trzeba ją założyć od nowa, a malarz
+   * zaczyna zawsze od czystej kartki.
    */
   private rysujMgle() {
-    if (!this.textures.exists('mgla')) {
-      this.textures.createCanvas('mgla', this.stan.szer * MGLA_GESTOSC, this.stan.wys * MGLA_GESTOSC);
-    }
+    const w = this.stan.szer * MGLA_GESTOSC;
+    const h = this.stan.wys * MGLA_GESTOSC;
+    const stara = this.textures.exists('mgla') ? this.textures.get('mgla') : null;
+    if (stara && (stara.source[0].width !== w || stara.source[0].height !== h)) this.textures.remove('mgla');
+    if (!this.textures.exists('mgla')) this.textures.createCanvas('mgla', w, h);
+    this.malarzMgly = new MalarzMgly(this.stan.szer, this.stan.wys);
+    this.obrazMgly = new ImageData(w, h);
     this.mgla = this.add.image(0, 0, 'mgla').setOrigin(0, 0).setDepth(this.stan.wys + 50);
     this.mgla.setDisplaySize(this.mapaW, this.mapaH);
     this.swiat.add(this.mgla);
@@ -1577,16 +1577,15 @@ export class AdventureScene extends Phaser.Scene {
 
   private malujMgle() {
     const tekstura = this.textures.get('mgla') as Phaser.Textures.CanvasTexture;
-    const ctx = tekstura.getContext();
-    const g = MGLA_GESTOSC;
-    ctx.clearRect(0, 0, this.stan.szer * g, this.stan.wys * g);
-    ctx.fillStyle = `rgba(10, 14, 28, ${MGLA_ALFA})`;
-    for (let y = 0; y < this.stan.wys; y++) {
-      for (let x = 0; x < this.stan.szer; x++) {
-        if (!this.stan.odkryte[y][x]) ctx.fillRect(x * g, y * g, g, g);
+    if (this.malarzMgly && this.obrazMgly) {
+      // Malarz porównuje z poprzednim malowaniem i oddaje tylko zmieniony
+      // prostokąt — krok bohatera przerysowuje okolicę, nie całą planszę.
+      const zmiana = this.malarzMgly.maluj(this.stan.odkryte, this.obrazMgly);
+      if (zmiana) {
+        tekstura.getContext().putImageData(this.obrazMgly, 0, 0, zmiana.x, zmiana.y, zmiana.w, zmiana.h);
+        tekstura.refresh();
       }
     }
-    tekstura.refresh();
     this.aktualizujWidocznoscObiektow();
   }
 

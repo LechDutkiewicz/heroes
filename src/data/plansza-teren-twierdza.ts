@@ -124,7 +124,7 @@ export const ROZSTAWIENIE: Array<{
   { x: 11, y: 67, rodzaj: 'kopalnia', strefa: 'dom', surowiec: 'odlamek' },
   { x: 16, y: 66, rodzaj: 'budynek', strefa: 'dom', budynek: 'ognisko' },
   { x: 10, y: 59, rodzaj: 'budynek', strefa: 'dom', budynek: 'chatka' },
-  { x: 14, y: 60, rodzaj: 'budynek', strefa: 'dom', budynek: 'wieza-obserwacyjna' },
+  { x: 14, y: 60, rodzaj: 'budynek', strefa: 'dom', budynek: 'wiatrak' },
   { x: 12, y: 59, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'pokeball' },
   { x: 17, y: 64, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'pokeball' },
   { x: 18, y: 66, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'jagoda' },

@@ -146,7 +146,8 @@
    ],
    "live": {
     "round": 7,
-    "stage": "builder pracuje"
+    "stage": "builder skończył, czeka na zrzut",
+    "build": "Ostatnia luka z rundy 6 („wzgórza to ta sama zielona stożkowa pieczątka, bez skał, jeden biom”) jest zamknięta. Zielone kopce w zestawie `polana` zastąpiłem skalistymi graniami z OpenAI o czterech różnych sylwetkach: szare zęby, masyw z wodospadem, szeroka grań i skałki podnóża. Z surowych obrazków zdjąłem piaskowy rąbek u podstawy. Które rysunki stoją w którym miejscu, wybrałem ręcznie przez nowe ustawienie planszy `USTAWIENIA.kepySkal` (zmiana w `mapy.ts` i w scenie; bez tego ustawienia inne plansze rysują się jak dotąd). Losowanie po polu dawało w kadrze trzy razy tę samą grań, a wodospadu nie pokazywało wcale. W prawym dolnym rogu dodałem drugi teren: ścianę gór przesunąłem na kolumny 22–24, więc kieszeń za rzeką jest dwa razy większa. Jej dno i korytarz wzdłuż brzegu to teraz kamienista ziemia (rough) z nową, drobniejszą teksturą `teren-ziemia-drobna` i głazami; pas takiej ziemi leży też pod zachodnim pasmem. Stosy zdjąłem ze zboczy, drzewa sterczące nad granią usunąłem, a ognisko i stosy w kieszeni przestawiłem tak, żeby leżały na jej dnie, a nie na zboczach gór."
    }
   },
   {
@@ -205,7 +206,11 @@
      "note": "Krytyk 1: wzorzec — A wygląda jak gotowa mapa komercyjna. Na każdym fragmencie coś się dzieje: rzeka z brzegami i piaszczystymi skarpami przecina mapę, obok są pasma gór, jezioro chmur/śniegu z wysepkami, gęste lasy, droga i kilkadziesiąt różnych obiektów (skrzynie, kryształy, kotły, wiatrak, wieże, portale, obóz). Wszystko jest w jednej technice rysunku i w jednym oświetleniu. B jest estetyczny i czytelny, bo ma wyraźne ścieżki, ładny wodospad i spójny, bajkowy styl. Mapa jest jednak zbudowana z kilku powtarzalnych stożkowatych gór i drzew wklejonych na płaską zieloną planszę. Ma też znacznie mniej obiektów i mniejszą różnorodność terenu, więc wygląda bardziej jak ładna gra mobilna niż jak dopracowana mapa przygody. Krytyk 2: wzorzec — B ma jeden spójny styl: góry, lasy, rzeki, jeziora i droga mają tę samą skalę, oświetlenie i perspektywę, dlatego od razu widać, gdzie da się przejść (brukowana droga, przełęcze między masywami), a gdzie nie. Obiekty (surowce, skrzynie, kopalnie, zamek) dobrze odcinają się od trawy. A ma bogate, ręcznie malowane sprite'y, ale ich skala się gryzie. Góry są ogromne w porównaniu z budynkami, a drzewa i domki w lewym górnym rogu zlewają się w nieczytelną kupkę. Prawa połowa mapy to mętna, płaska plama bagna bez rzeźby terenu. Krytyk 3: wzorzec — A ma czytelną geografię: wyraźną linię brzegową, morze z wrakami i łodziami, a biomy (trawa, piasek, skały, las) oddzielają naturalne przejścia. Każdy obiekt (kapliczki, kryształy, drzewa, budynki) stoi osobno na terenie i widać, gdzie da się przejść. B ma bogatszą i nowocześniejszą grafikę, ale teren to głównie gęsty zbiór obiektów bez wyraźnej rzeźby. Góry to ten sam stożkowy sprite powtórzony kilka razy, a obiekty mają różną skalę: ogromne góry obok małego zamku i domków. Przez to całość wygląda jak kolaż zasobów, a nie jak zaprojektowany świat.",
      "build": "Runda 6 Bagien: zamknąłem ostatnią lukę, czyli brak przeszkód, rozmyte drogi i brzegi. W dolnych rogach doliny stoją teraz dwie skalne granie, a trakt w dół przechodzi między nimi. Kępy skał zestawu `bagno` przemalowałem z zielonych kopców na skaliste granie, w tym jedną z wodospadem. Pola tuż nad skałami nie biorą udziału w rozstawianiu, bo grań je zasłaniała. Woda jest mętna, oliwkowo-brunatna, zamiast turkusowej: nowa tekstura, ostra linia brzegu z pasem błota (efekt `brzeg_wody`), barwy shadera ustawiane per plansza (`USTAWIENIA.wodaBarwy`), a na wodzie leżą zatopione pnie, kępy turzycy i trzcina. Drogi to szerszy i równiejszy bruk, bród w kadrze to łąka zamiast piaskowej łaty. Obiekty są większe (`znajdzki` 0,8, `skalaBudowli` 1,2) i mają ciemny obrys (nowe `USTAWIENIA.obrysObiektow`). Okrągłe krzaki zastąpiłem kępami trzciny i turzycy, łąkę przygasiłem, a rogi kadru za Strugą są odsłonięte. Wszystkie zmiany we wspólnym kodzie włącza tylko ustawienie Bagien. Zrzut Polany wygląda po staremu (turkusowa woda, bez obrysów), a tła Dwóch Dolin nie renderowałem ponownie. Uwaga: w trakcie rundy podmieniono wzorce, teraz są to kadry map kampanii HotA (rzeka, zamek z górami, wybrzeże). Obejrzałem je i kierunek zmian się zgadza."
     }
-   ]
+   ],
+   "live": {
+    "round": 7,
+    "stage": "builder pracuje"
+   }
   },
   {
    "name": "Plansza: Twierdza (misja 4)",

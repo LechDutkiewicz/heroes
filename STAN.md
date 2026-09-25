@@ -256,6 +256,33 @@ wszystkiego poza stworkami). Krzaki `bagno/krzak*` to kępy trzciny
 i turzycy zamiast okrągłych kul. Bród w kadrze to łąka, nie piasek.
 Symulacja misji 3: wygrana dnia 5 (3/3).
 
+### Polana, runda 7 (HotA)
+
+Werdykt rundy 6: „wzgórza to ta sama zielono-brązowa stożkowa pieczątka,
+bez skał, jeden biom; potrzebne skaliste grzbiety i drugi teren w prawej
+dolnej ćwiartce". Zmiany:
+
+- `polana/kepa-skaly-1..4` przemalowane z zielonych kopców na skaliste
+  granie o czterech RÓŻNYCH sylwetkach (szare zęby, masyw z wodospadem,
+  szeroka grań, skałki podnóża; PROMPTY-PLANSZE §12, generowane jako
+  `polana-gran-N`, po obraniu piaskowego rąbka zapisane we wsadzie jako
+  `polana-kepa-skaly-N`); `skala*`/`kopiec*` zestawu to ich pomniejszenia.
+- Nowe `USTAWIENIA.kepySkal` (`mapy.ts`, scena): rysunek kępy skał wybrany
+  ręcznie per pole (`"x,y"` → 1–4, minus = odbicie). Hasz pola dawał
+  w kadrze trzy razy tę samą grań, a wodospadu wcale. Bez ustawienia — jak
+  dotąd.
+- Kieszeń za rzeką: ściana gór przesunięta na kolumny 22–24, dno
+  (`KIESZEN_ROUGH`) i korytarz wzdłuż brzegu to rough (`j`) z teksturą
+  `teren-ziemia-drobna` (ta sama ziemia w pół skali, złożona 2 × 2 —
+  kamienie miały półtora pola i czytały się jak szara płyta) i głazami
+  (`NAKLEJKI` na `j`). Pas ziemi też pod zachodnim pasmem.
+- Znajdźki zdjęte ze zboczy (pokeball, odłamki), las zza grani usunięty.
+- Uwaga dla zrzutów: serwer na portach 5190–5199 NIE obserwuje plików — po
+  zmianie kodu albo `src/data/plansza-teren-*.ts` trzeba go zrestartować,
+  inaczej zrzut pokazuje stary układ.
+
+Symulacja misji 1: wygrana dnia 7 (2/2).
+
 ## HUD mapy przygody na wspólnym zestawie (2026-09-24)
 
 - Mapa stoi na tym samym materiale co kampania i okna misji

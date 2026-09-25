@@ -90,6 +90,14 @@ export interface UstawieniaPlanszy {
    */
   obrysObiektow?: number;
   /**
+   * Kępy skał wybrane ręcznie: `"x,y"` lewego górnego pola kępy 3 × 2 →
+   * numer rysunku `m-kepa-skaly-N` (1–4), ujemny = odbity w poziomie.
+   * Bez wpisu kępa bierze wariant z hasza pola, jak dotąd. Polana, runda 7:
+   * hasz dawał w kadrze trzy razy tę samą grań, a masyw z wodospadem nie
+   * trafiał się wcale („pieczątka powtórzona trzy razy").
+   */
+  kepySkal?: Record<string, number>;
+  /**
    * Barwy tafli w shaderze wody (`src/visual/woda.ts`, składowe 0–1): płycizna,
    * głębia, piana, krycie piany i siła iskier. Bagna: mętna oliwkowa woda
    * zamiast turkusu z białą pianą. Brak = dawne stałe.
