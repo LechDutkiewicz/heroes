@@ -176,6 +176,106 @@ def bagno(plansza: Image.Image, maska: Image.Image, kafel: int, ziarno: int) -> 
     return im
 
 
+def trzesawisko(plansza: Image.Image, maska: Image.Image, kafel: int, ziarno: int, woda=(46, 84, 76)) -> Image.Image:
+    """Bagno jako STOJĄCA WODA i błoto, a nie ciemna ziemia (Bagna, runda 3).
+
+    Werdykt: „ciemna oliwkowa ziemia z trzciną, bez stojącej wody i błota —
+    wygląda jak ciemny las". `bagno()` przyciemniało cały teren i malowało
+    oczka niemal czarne, więc z daleka trzęsawisko zlewało się ze ściółką lasu.
+    Tu jest odwrotnie: grunt zostaje jasny (błotnista oliwka), a oczka są
+    WODĄ — w barwie jezior tej planszy (`woda`), z odbiciem nieba przy dolnym
+    brzegu, cieniem skarpy przy górnym, iskrami i rzęsą. Każde oczko obwodzi
+    ciemne, mokre błoto. Tak bagno czyta się z drugiego końca ekranu: tafla
+    błyszczy, las nie. Włącza plansza (`EFEKTY = ['trzesawisko']`).
+    """
+    W, H = plansza.size
+    m = np.asarray(maska, dtype=np.float32) / 255.0
+    rdzen = np.asarray(
+        maska.filter(ImageFilter.MinFilter(max(3, (kafel // 4) | 1))).filter(ImageFilter.GaussianBlur(kafel * 0.1)),
+        dtype=np.float32,
+    ) / 255.0
+    n = szum(W, H, max(2, int(kafel * 0.9)), ziarno) + szum(W, H, max(2, int(kafel * 0.32)), ziarno + 5) * 0.45
+    oczka = np.clip((n + 0.02) * 6, 0, 1) * rdzen
+    oczka_im = Image.fromarray((oczka * 255).astype(np.uint8), 'L').filter(ImageFilter.GaussianBlur(1.2))
+    oczka = np.asarray(oczka_im, dtype=np.float32) / 255.0
+    # Głębia oczka: rozmyta maska — środek ciemniejszy niż płycizna.
+    glebia = np.asarray(oczka_im.filter(ImageFilter.GaussianBlur(kafel * 0.18)), dtype=np.float32) / 255.0
+    # Pas mokrego błota wokół oczka.
+    brzeg_im = oczka_im.filter(ImageFilter.MaxFilter(max(3, (kafel // 7) | 1))).filter(ImageFilter.GaussianBlur(2.5))
+    brzeg = np.clip(np.asarray(brzeg_im, dtype=np.float32) / 255.0 - oczka, 0, 1) * m
+
+    tab = _tab(plansza)
+    M = m[..., None]
+    # Grunt: błotnista oliwka, jaśniejsza i cieplejsza niż ściółka lasu.
+    jas = tab.mean(axis=2, keepdims=True)
+    grunt = jas * np.array([1.02, 0.98, 0.62]) * 0.62 + np.array([52, 50, 26])
+    grunt = grunt + (tab - jas) * 0.45
+    tab = tab * (1 - M * 0.8) + grunt * M * 0.8
+    # Mokre błoto przy wodzie.
+    B = brzeg[..., None]
+    tab = tab * (1 - B * 0.7) + np.array([62, 48, 28]) * B * 0.7
+    # Woda: płycizna jaśniejsza i bardziej zielona, głębia ciemna.
+    w = np.array(woda, dtype=np.float32)
+    plytka = w * 1.35 + np.array([8, 14, 0])
+    gleboka = w * 0.72
+    G = np.clip(glebia * 1.6, 0, 1)[..., None]
+    barwa = plytka * (1 - G) + gleboka * G
+    # Tekstura gruntu prześwituje przez wodę odrobinę — dno, nie farba.
+    barwa = barwa + (tab - tab.mean(axis=2, keepdims=True)) * 0.12
+    O = oczka[..., None]
+    tab = tab * (1 - O) + barwa * O
+    # Cień skarpy przy górnym brzegu, odbicie nieba przy dolnym.
+    gy = np.gradient(oczka, axis=0)
+    cien = np.clip(gy * 5, 0, 1)[..., None]
+    blask = np.clip(-gy * 5, 0, 1)[..., None]
+    tab = tab * (1 - cien * 0.45)
+    tab = tab + (np.array([185, 215, 200]) - tab) * blask * 0.55
+    # Rzęsa: drobne jasnozielone plamki na płyciźnie.
+    r = szum(W, H, max(2, int(kafel * 0.08)), ziarno + 11)
+    rzesa = (np.clip((r - 0.55) * 4, 0, 1) * oczka * np.clip(1 - glebia * 1.8, 0, 1))[..., None]
+    tab = tab * (1 - rzesa * 0.8) + np.array([120, 160, 60]) * rzesa * 0.8
+    im = _obraz(tab)
+
+    d = ImageDraw.Draw(im, 'RGBA')
+    rng = np.random.default_rng(ziarno + 9)
+    # Iskry na wodzie: krótkie poziome refleksy.
+    for _ in range(W * H // 700):
+        x, y = int(rng.integers(4, W - 8)), int(rng.integers(4, H - 4))
+        if oczka[y, x] < 0.9 or glebia[y, x] < 0.3:
+            continue
+        dl = rng.uniform(3, 8)
+        d.line([(x, y), (x + dl, y)], fill=(225, 240, 230, 170), width=1)
+        if rng.random() < 0.5:
+            d.line([(x + 2, y + 2), (x + 2 + dl * 0.6, y + 2)], fill=(200, 225, 215, 110), width=1)
+    # Grążele na wodzie, część z kwiatem.
+    for _ in range(W * H // 1300):
+        x, y = int(rng.integers(4, W - 4)), int(rng.integers(4, H - 4))
+        if oczka[y, x] < 0.8:
+            continue
+        rr = rng.uniform(kafel * 0.06, kafel * 0.1)
+        d.ellipse([x - rr + 1, y - rr * 0.7 + 1, x + rr + 1, y + rr * 0.7 + 1], fill=(15, 30, 25, 120))
+        d.ellipse([x - rr, y - rr * 0.7, x + rr, y + rr * 0.7], fill=(88, 150, 62, 245))
+        d.pieslice([x - rr, y - rr * 0.7, x + rr, y + rr * 0.7], 300, 335, fill=tuple(int(c) for c in w) + (255,))
+        if rng.random() < 0.3:
+            d.ellipse([x - 2, y - 3, x + 3, y + 1], fill=(250, 215, 230, 255))
+            d.point((x, y - 1), fill=(250, 220, 90, 255))
+    # Trzcina na błotnym brzegu oczek — tam rośnie, a nie na środku kępy.
+    for _ in range(W * H // 500):
+        x, y = int(rng.integers(3, W - 3)), int(rng.integers(14, H - 3))
+        if brzeg[y, x] < 0.35 or m[y, x] < 0.9:
+            continue
+        for _ in range(int(rng.integers(3, 7))):
+            dx = rng.uniform(-5, 5)
+            wys = rng.uniform(kafel * 0.18, kafel * 0.36)
+            pochyl = rng.uniform(-3, 3)
+            x0, y0 = x + dx, y + rng.uniform(-1.5, 1.5)
+            d.line([(x0 + 1, y0 + 1), (x0 + pochyl + 1, y0 - wys + 1)], fill=(20, 25, 10, 110), width=2)
+            d.line([(x0, y0), (x0 + pochyl, y0 - wys)], fill=(96, 128, 52, 245), width=2)
+            if rng.random() < 0.4:
+                d.line([(x0 + pochyl * 0.8, y0 - wys * 0.8), (x0 + pochyl, y0 - wys)], fill=(120, 78, 40, 255), width=4)
+    return im
+
+
 #: Katalog naklejek terenu — ozdób malowanych w TLE planszy (nie blokują
 #: ruchu, nie są obiektami gry). Pliki kładzie tam `wsad_wczytaj.py`
 #: (`NAKLEJKI`), prompty są w `tools/PROMPTY-PLANSZE.md`.

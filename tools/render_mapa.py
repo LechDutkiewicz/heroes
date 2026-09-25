@@ -67,6 +67,8 @@ EFEKTY: set = set()
 TEKSTURY: dict = {}
 WTAPIANIE: dict = {}
 NAKLEJKI: list = []
+#: Parametry efektu `trzesawisko` (barwa oczek) — `TRZESAWISKO` z konfiguracji.
+TRZESAWISKO: dict = {}
 
 KAFEL = 48                  # bok pola na ekranie
 #: Ile razy nadpróbkowujemy maskę drogi, zanim ją zmniejszymy. Rysowanie
@@ -120,7 +122,7 @@ def ustaw(mapa_id: str):
     """Przełącza moduł na planszę `mapa_id`. Funkcje niżej czytają rysunek
     i wymiary z globali — tak było, gdy plansza była jedna, i tak zostaje,
     bo każda z nich jest wołana raz na planszę."""
-    global KATALOG, ZRODLO, RYSUNEK, WYS, SZER, W, H, BARWY, EFEKTY, TEKSTURY, WTAPIANIE, NAKLEJKI
+    global KATALOG, ZRODLO, RYSUNEK, WYS, SZER, W, H, BARWY, EFEKTY, TEKSTURY, WTAPIANIE, NAKLEJKI, TRZESAWISKO
     KATALOG = katalog_tla(mapa_id)
     k = konfiguracja(mapa_id)
     BARWY = getattr(k, 'BARWY_TERENU', {})
@@ -128,6 +130,7 @@ def ustaw(mapa_id: str):
     TEKSTURY = getattr(k, 'TEKSTURY', {})
     WTAPIANIE = getattr(k, 'WTAPIANIE', {})
     NAKLEJKI = getattr(k, 'NAKLEJKI', [])
+    TRZESAWISKO = getattr(k, 'TRZESAWISKO', {})
     ZRODLO = plik_ts(mapa_id)
     RYSUNEK = wczytaj_rysunek()
     WYS, SZER = len(RYSUNEK), len(RYSUNEK[0])
@@ -286,6 +289,10 @@ def klatka() -> tuple[Image.Image, Image.Image]:
         # i wodą: drzewo i staw leżą na nim, nie pod nim.
         if nazwa == 'bagno' and 'bagno' in EFEKTY:
             plansza = teren_efekty.bagno(plansza, m, KAFEL, ZIARNO + 720)
+        # Bagna, runda 3: oczka stojącej wody w barwie jezior planszy
+        # (`TRZESAWISKO` w konfiguracji) zamiast ciemnej ziemi.
+        if nazwa == 'bagno' and 'trzesawisko' in EFEKTY:
+            plansza = teren_efekty.trzesawisko(plansza, m, KAFEL, ZIARNO + 720, **TRZESAWISKO)
     plansza = plansza.convert('RGBA')
     sciezka = zabarw(kafelkuj(tekstura('sciezka'), W, H), 'sciezka').convert('RGBA')
     # Place pod budowlami idą PRZED drogami: droga ma dobiegać do placu

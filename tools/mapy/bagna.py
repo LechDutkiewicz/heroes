@@ -335,7 +335,10 @@ BARWY_TERENU = {
 #: Po rundzie 1 ślepego porównania („bagno to brązowa plama w kolorze drogi"):
 #: oczka ciemnej wody, trzcina i grążele na bagnie, obwódka i jaśniejsza
 #: jezdnia na grobli (`tools/teren_efekty.py`).
-EFEKTY = ['bagno', 'obwodka_drogi', 'relief', 'bez_placow']
+EFEKTY = ['trzesawisko', 'obwodka_drogi', 'relief', 'bez_placow']
+#: Runda 3 („ciemna ziemia z trzciną, wygląda jak ciemny las"): oczka stojącej
+#: wody w barwie jezior tej planszy, mokre błoto wokół, jaśniejszy grunt.
+TRZESAWISKO = {'woda': (46, 84, 76)}
 #: Błoto z dostawy (`tools/PROMPTY-PLANSZE.md`), do tego czasu zwykłe bagno.
 TEKSTURY = {'bagno': ['bloto', 'bagno']}
 
