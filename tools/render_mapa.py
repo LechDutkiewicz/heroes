@@ -67,6 +67,8 @@ EFEKTY: set = set()
 TEKSTURY: dict = {}
 WTAPIANIE: dict = {}
 NAKLEJKI: list = []
+#: Pola bez naklejek — funkcja planszy od źródła .ts (patrz `klatka`).
+NAKLEJKI_OMIN = None
 #: Mosty malowane na wodzie — `MOSTY` z konfiguracji (patrz `teren_efekty.mosty`).
 MOSTY: list = []
 #: Parametry efektu `trzesawisko` (barwa oczek) — `TRZESAWISKO` z konfiguracji.
@@ -147,6 +149,8 @@ def ustaw(mapa_id: str):
     RZEZBA = getattr(k, 'RZEZBA', None)
     BRZEG_WODY = getattr(k, 'BRZEG_WODY', {})
     DROGA_OBRZEZE = getattr(k, 'DROGA_OBRZEZE', {})
+    global NAKLEJKI_OMIN
+    NAKLEJKI_OMIN = getattr(k, 'NAKLEJKI_OMIN', None)
     ZRODLO = plik_ts(mapa_id)
     RYSUNEK = wczytaj_rysunek()
     # Mosty (`MOSTY` planszy): pola pod mostem są w grze drogą, ale w tle
@@ -365,7 +369,10 @@ def klatka() -> tuple[Image.Image, Image.Image]:
     # — po drogach, żeby kępa trzciny nie znikała pod groblą, ale pod
     # sprite'ami sceny. Bez plików nic się nie dzieje (patrz `naklejki`).
     if NAKLEJKI:
-        plansza = teren_efekty.naklejki(plansza, RYSUNEK, KAFEL, NAKLEJKI, ZIARNO + 740)
+        # Twierdza, runda 8: `NAKLEJKI_OMIN(źródło .ts)` planszy — pola bez naklejek
+        # (pod budowlami). Bez ustawienia — jak dotąd, bajt w bajt.
+        omin = NAKLEJKI_OMIN(ZRODLO.read_text(encoding='utf-8')) if NAKLEJKI_OMIN else None
+        plansza = teren_efekty.naklejki(plansza, RYSUNEK, KAFEL, NAKLEJKI, ZIARNO + 740, omin=omin)
     if MOSTY:
         plansza, maskaWody = teren_efekty.mosty(plansza, maskaWody, KAFEL, MOSTY)
     return plansza, maskaWody

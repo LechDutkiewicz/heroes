@@ -305,7 +305,8 @@ def trzesawisko(plansza: Image.Image, maska: Image.Image, kafel: int, ziarno: in
 KATALOG_NAKLEJEK = __import__('pathlib').Path(__file__).resolve().parent.parent / 'public' / 'mapa' / 'tlo'
 
 
-def naklejki(plansza: Image.Image, rysunek: list, kafel: int, zasady: list, ziarno: int) -> Image.Image:
+def naklejki(plansza: Image.Image, rysunek: list, kafel: int, zasady: list, ziarno: int,
+             omin=None) -> Image.Image:
     """Rozsiewa naklejki z `public/mapa/tlo/` po polach danego terenu.
 
     `zasady` to lista `(pliki, znaki_terenu, gęstość)` z konfiguracji planszy
@@ -331,6 +332,11 @@ def naklejki(plansza: Image.Image, rysunek: list, kafel: int, zasady: list, ziar
                 wybor = int(rng.integers(0, max(1, len(obrazy))))
                 dx, dy = rng.uniform(-0.3, 0.3, 2)
                 if not obrazy or rysunek[y][x] not in znaki or los > gestosc:
+                    continue
+                # `omin` (Twierdza, runda 8): pola pod budowlami — głaz albo
+                # nawis spod ściany robił z budynku „wysepkę na półce skalnej".
+                # Losowania wyżej zostają, więc reszta rozsiewu się nie zmienia.
+                if omin is not None and (x, y) in omin:
                     continue
                 n = obrazy[wybor]
                 if rng.random() < 0.5:

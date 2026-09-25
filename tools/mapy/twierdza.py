@@ -179,11 +179,27 @@ def popraw_teren(g, mapa):
             mapa[y][x] = '#'
     for x, y in [(11, 67), (12, 67), (11, 68), (12, 68), (11, 69), (12, 69), (11, 70), (12, 70), (13, 70)]:
         mapa[y][x] = 's'
+    # Runda 8 (HotA): „środkowe i prawe pola śniegu to puste białe plamy
+    # z pojedynczymi kępkami drzew". Zalesiony pagór (płaski śnieżny płat
+    # z kilkoma świerkami) zamienia się w zwarty masyw boru 6 × 2 — dwie
+    # kępy 3 × 2 sceny — jak na Polanie: las wyznacza korytarz (y 66) i plac
+    # pod traktem (y 63), a nie leży płaską białą wyspą.
     for y in (64, 65):
-        for x in range(16, 20):
-            mapa[y][x] = '#'
+        for x in range(14, 20):
+            mapa[y][x] = 'T'
     for x, y in [(21, 66), (22, 66), (23, 66), (23, 67)]:
         mapa[y][x] = 'T'
+    # Wschodni brzeg stawu jako śnieżny cypel już przed rozstawieniem (dotąd
+    # zamarzał dopiero po nim, patrz koniec `rozstaw`): stoi na nim relikt
+    # pod strażą.
+    for x, y in [(19, 58), (20, 58), (21, 58), (19, 59), (20, 59), (21, 59), (22, 59), (21, 60)]:
+        if mapa[y][x] == '~':
+            mapa[y][x] = 's'
+    # …i ściana boru na prawym brzegu kadru, za kopalnią odłamków: świat
+    # ciągnie się dalej, zamiast kończyć na pustym śniegu przy ramie.
+    for y in (64, 65):
+        for x in range(23, 26):
+            mapa[y][x] = 'T'
     for x, y in [(23, 61), (24, 61), (23, 62), (24, 62)]:
         mapa[y][x] = '#'
 
@@ -242,6 +258,20 @@ PIERWSZY_EKRAN = [
     ([(15, 63), (14, 63), (16, 63)], ('surowiec', 'odlamek')),
     # Zatoczka na końcu korytarza, pod borem.
     ([(19, 67), (18, 67), (20, 67)], ('skrzynia', None)),
+    # Runda 8 (HotA): „pola śniegu między jeziorem a zamkiem i pas od ścieżki
+    # do prawego brzegu to puste białe plamy — powiększyć i zagęścić obiekty
+    # (kopalnie, skrzynie, strażnicy, ruiny), żeby mapa miała rytm i cele".
+    # Plac pod traktem, przed nowym borem: obóz łowców z namiotami.
+    ([(17, 63), (18, 63)], ('budynek', 'oboz-treningowy')),
+    # Brzeg stawu na wschód od spichlerza: relikt za strażnikiem — cel
+    # widoczny z rozstajów, straż stoi z dala od traktu (x 22–23).
+    ([(20, 58), (20, 59)], ('potwor', 'slaby')),
+    ([(21, 59), (21, 60)], ('artefakt', None)),
+    # Skrzynia przy trakcie na północ i kupka kul za kopalnią, pod borem.
+    ([(20, 61), (20, 60)], ('skrzynia', None)),
+    ([(23, 63), (22, 62)], ('surowiec', 'pokeball')),
+    # Góra kadru, przy wieży: skrzynia na brzegu stawu.
+    ([(14, 53), (13, 53), (14, 54)], ('skrzynia', None)),
 ]
 
 
@@ -442,14 +472,21 @@ USTAWIENIA = {
     'odkryte': [
         {'x': 58, 'y': 8, 'promien': 4},
         {'x': 13, 'y': 10, 'promien': 4},
-        {'x': 13, 'y': 62, 'promien': 13},
+        # Runda 8 (HotA): „świat kończy się na ramce — rogi i prawy brzeg kadru
+        # w ciemnej winiecie mgły; minimapa to sam granat z jednym rogiem".
+        # Cała dolina gracza (y 47–71) jest mu znana, z zapasem na miękki brzeg
+        # mgły poza kadrem; północ — tundra i twierdze — zostaje do odkrycia.
+        {'x': 13, 'y': 62, 'promien': 19},
+        {'x': 34, 'y': 60, 'promien': 13},
+        {'x': 56, 'y': 60, 'promien': 13},
     ],
     # Runda 3 (wzorzec HotA): znajdźki na pół pola z cieniem i rysunkiem stosu
     # leżącego w śniegu (`public/mapa/zima/stos-*.png`) zamiast ikon z paska.
     # Runda 5 (HotA): „zasoby, skrzynie i flagi mają 1/3 kafla, bez cieni,
     # giną na śniegu — powiększyć 1,5–2 razy". Trzy czwarte pola i ciemny
     # obrys obiektów gry (jak Bagna/Polana) — odróżnia je od zasp i głazów.
-    'znajdzki': 0.78,
+    # Runda 8 (HotA): „obiekty są za małe" — stosy prawie na całe pole.
+    'znajdzki': 0.9,
     # Runda 7 (HotA): „budynki jak naklejki na owalnych wysepkach śniegu
     # z twardą krawędzią". Podstawki budowli rozpływają się teraz w tle
     # (`wtopPodstawe` w `wsad_wczytaj.py`), a ciemny obrys — osiem
@@ -475,7 +512,8 @@ USTAWIENIA = {
         # Skalna skarpa pod zamkiem i zalesiony pagór nad nią (§18,
         # rysunki rozciągnięte w poziomie, żeby nie zasłaniały korytarza).
         {'plik': 'gora-6', 'x': 15.5, 'y': 69.1, 'szer': 5.8, 'pokrywa': [13, 67, 17, 68]},
-        {'plik': 'gora-8', 'x': 17.8, 'y': 66.2, 'szer': 5.3, 'pokrywa': [16, 64, 19, 65]},
+        # (Runda 8: bez zalesionego pagóra `gora-8` — płaski śnieżny płat czytał
+        # się jak „pusta biała plama z kępką drzew"; w jego miejscu zwarty bór.)
         # Skalny pagór na wschodnim brzegu kadru, przy trakcie na północ.
         {'plik': 'gora-7', 'x': 24.0, 'y': 63.2, 'szer': 2.8, 'pokrywa': [23, 61, 24, 62]},
     ],
@@ -560,6 +598,29 @@ NAKLEJKI = [
     (['trawy-snieg'], 's.', 0.06),
     (['nawis-sniezny'], 's', 0.04),
 ]
+
+
+
+def NAKLEJKI_OMIN(zrodlo):
+    """Pola bez naklejek tła (`render_mapa`, runda 8).
+
+    Werdykt rundy 7: „wiatrak, chata nad jeziorem i chatka na dole wiszą na
+    śniegu jak naklejki". Pod spichlerzem leżał zaśnieżony głaz, pod kopalnią
+    nawis z pasem cienia — budynek stał na półce skalnej, a jego ściany
+    kończyły się nad ciemną plamą. Pod budowlą i wokół niej sam śnieg.
+    """
+    import re
+    omin = set()
+    for m in re.finditer(r"\{ x: (\d+), y: (\d+), rodzaj: '(\w+)'", zrodlo):
+        x, y, rodzaj = int(m.group(1)), int(m.group(2)), m.group(3)
+        if rodzaj in ('kopalnia', 'budynek', 'jasnowidz'):
+            omin |= {(x + dx, y + dy) for dx in (-2, -1, 0, 1, 2) for dy in (-2, -1, 0, 1)}
+        else:
+            omin |= {(x + dx, y + dy) for dx in (-1, 0, 1) for dy in (-1, 0)}
+    for m in re.finditer(r"'zamek[^']*': \{ x: (\d+), y: (\d+) \}", zrodlo):
+        x, y = int(m.group(1)), int(m.group(2))
+        omin |= {(x + dx, y + dy) for dx in range(-2, 3) for dy in range(-3, 2)}
+    return omin
 
 
 def TLO(rysunek):

@@ -1813,3 +1813,35 @@ and boot prints. Cool muted palette: umber brown, slate grey, touches of
 white. The surface fills the WHOLE picture evenly with no direction, no edges,
 no verge, no grass, no clean white snow areas larger than a pebble cluster.
 ```
+
+## 21. Twierdza — zaspy przy podstawach budowli (runda 8, wzorzec HotA)
+
+Werdykt rundy 7: „wiatrak, chata nad jeziorem i chatka na dole wiszą na
+śniegu jak naklejki — bez zaspy przy podstawie". Scena sadzi przy podstawie
+każdej kopalni i zamku kilka sprite'ów `m-krzak`/`m-krzak-2`
+(`zaroslaPrzyPodstawie`); w zestawie `zima` były to krzaki na śnieżnym
+kopczyku z ciemnym, sinym spodem — pod budynkiem czytały się jak skalna
+półka z kamieniami. Zamiast nich miękkie zaspy nawiane pod ściany, z kilkoma
+suchymi źdźbłami: podstawa budowli ginie w śniegu, a nie stoi na podstawce.
+Po wygenerowaniu kopiowane ręcznie do `tools/wsad/zima-krzak.png`
+i `zima-krzak-2.png` (wysokość 84, `wsad_wczytaj.py`).
+
+<!-- plik: zima-zaspa-krzak.png -->
+```
+A soft wind-blown snow drift, low and wide, like snow piled against the foot
+of a wall: smooth rounded white snow with a gentle curling crest on top, cool
+pale blue shading on the lower right side, a few thin dry golden-brown grass
+stalks and two or three bare twig tips poking out of the snow. Pure white and
+pale blue snow only, no dark rocks, no dark outline, no dark underside, no
+green. About twice as wide as tall.
+```
+
+<!-- plik: zima-zaspa-krzak-2.png -->
+```
+A small cluster of two soft rounded snow drifts side by side, low and wide,
+freshly fallen snow heaped up by the wind, smooth white with delicate pale
+blue shading on the lower right, sparkle of frost on top, a single small dry
+tuft of straw-coloured grass sticking out between them. Pure white and pale
+blue snow only, no dark rocks, no dark outline, no dark underside, no green.
+About two and a half times as wide as tall.
+```
