@@ -1684,3 +1684,91 @@ balls to pick up" at 40 pixels. Soft painted shading and highlights like the
 rest of the map. Isolated cut-out: nothing under the crate — no ground, no
 grass, no shadow; everything around it is fully transparent.
 ```
+
+## 19. Bagna — zwarte masywy zamiast rzędów stożków, sad na torfowisku (runda 10, wzorzec HotA)
+
+Werdykt rundy 9: „góry to pojedyncze, odizolowane stożki (lewy dolny róg
+i lewa krawędź nad zamkiem)" oraz „ten sam kosz czerwonych owoców i skrzynka
+skopiowane kilkanaście razy wokół sadu". Rysunki §16 wyszły jako JEDEN rząd
+szczytów widziany z boku — z kamery Heroes 3 (z góry, pod kątem) pasmo to
+kłąb wielu szczytów w kilku rzędach, jedne za drugimi, połączonych graniami,
+z usypiskami i głazami u stóp. Sad (kopalnia jagód) na bagnach to torfowisko
+żurawin, nie jabłonie z koszami — kosze były tym samym czerwonym szumem co
+stosy jagód obok. Zestaw `bagno`.
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `bagno-gora-7.png` … `bagno-gora-9.png` | `public/mapa/bagno/gora-N.png` | 340–380 px |
+| `bagno-sad.png` | `public/mapa/bagno/sad.png` | 160 px |
+
+<!-- plik: bagno-gora-7.png | styl: obiekt | proporcje: 3:2 -->
+```
+A dense mountain massif for a swampland adventure map, seen from high above at
+a steep three-quarter top-down angle exactly like the mountains on a Heroes of
+Might and Magic 3 adventure map: NOT a single row of peaks seen from the side,
+but a tight crumpled cluster of about twelve sharp rocky peaks of different
+heights packed together in three or four overlapping rows receding into depth,
+all joined by jagged ridgelines and rocky saddles into one solid impassable
+mass that fills the whole width of the picture. Cool grey and grey-brown rock
+with pale sunlit faces lit from the upper left and deep blue-grey shadowed
+faces, dark crevices, patches of dark green moss in the hollows between the
+peaks. Around the whole foot: grey scree slopes, big mossy boulders, a few
+small dark fir trees and ferns, the edge soft and irregular. Much wider than
+tall.
+```
+
+<!-- plik: bagno-gora-8.png | styl: obiekt | proporcje: 3:2 -->
+```
+A mountain chain for a swampland adventure map, seen from high above at a
+steep three-quarter top-down angle like the mountain ranges on a Heroes of
+Might and Magic 3 adventure map: a long diagonal band of many sharp rocky
+peaks packed shoulder to shoulder in several overlapping rows, the highest and
+thickest part on the left, thinning to a few lower crags and a spur of
+boulders on the right, so it reads as one continuous range, never separate
+cones. Cool grey and grey-brown rock with pale sunlit faces lit from the upper
+left, deep blue-grey shadows, dark crevices, dark green moss in the gullies, a
+small white waterfall thread in one cleft. Grey scree, mossy boulders, a few
+dark fir trees and ferns along the soft irregular foot. Much wider than tall.
+```
+
+<!-- plik: bagno-gora-9.png | styl: obiekt | proporcje: 3:2 -->
+```
+The end of a mountain range for a swampland adventure map, seen from high
+above at a steep three-quarter top-down angle like on a Heroes of Might and
+Magic 3 adventure map: a compact knot of seven or eight sharp rocky peaks
+crowded together in overlapping rows, highest at the back left, stepping down
+to the front right into a skirt of rocky foothills, grey scree and big mossy
+boulders. Cool grey and grey-brown rock with pale sunlit faces lit from the
+upper left, deep blue-grey shadows, dark crevices, dark green moss in the
+hollows, two or three small dark fir trees and ferns at the soft irregular
+foot. Wider than tall, one solid mass.
+```
+
+<!-- plik: bagno-sad.png | styl: obiekt -->
+```
+A small cranberry bog farm for a swampland adventure map, seen from above at a
+three-quarter angle like a resource building in Heroes of Might and Magic 3: a
+rectangular flooded bog bed with dark peaty water almost completely covered by
+a carpet of floating deep crimson cranberries, framed by low weathered wooden
+plank boardwalks on two sides, a tiny thatched reed-roofed picker's shed on
+stilts at the back corner, a wooden hand rake leaning against it, one small
+wooden barrel, clumps of reeds and cattails at the corners. Compact, reads as
+"a berry farm in the swamp" from far away. Soft painted shading and highlights.
+Wider than tall.
+```
+
+Druga próba sadu (pierwsza: równa skrzynia pomidorów — z daleka ta sama
+czerwona skrzynka co stos pokeballi):
+
+<!-- plik: bagno-sad-2.png | styl: obiekt -->
+```
+A swamp berry-picker's homestead for a fantasy adventure map, painted in the
+soft, colourful hand-painted style of Heroes of Might and Magic 3 map objects,
+seen from above at a three-quarter angle: a small crooked hut on wooden stilts
+with a mossy green reed-thatched roof and a round window, standing at the edge
+of an irregular little bog pond, a short plank jetty over the dark water, and
+around it three lush dark green bilberry and cranberry bushes dotted with small
+red and dark blue berries, one woven wicker basket on the jetty, cattails and
+reeds at the water's edge. Organic irregular shapes, no straight boxes. Mostly
+green, brown and dark water, with only small touches of red. Wider than tall.
+```
