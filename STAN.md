@@ -605,6 +605,10 @@ PR: https://github.com/LechDutkiewicz/heroes/pull/5 (szkic, gałąź
   pokeballe, jagody i kamienie bez ujścia w drugiej połowie gry. Kierunek:
   jagody/kamienie/odłamki w cenie werbunku wysokich poziomów, ewolucja
   w mieście za kamienie, opłaty surowcem w budowlach mapy.
+- **Czas misji 4 (Twierdza) się wydłużył** po ręcznym rozstawieniu
+  pierwszego ekranu w pętli wyglądu (runda 6): autopilot wygrywa 3/3, ale
+  średnio dnia 61 (wcześniej 30), gracz bierny pada dnia 60–63. Do
+  sprawdzenia przy balansie po planszach.
 - Gracz pozwolił dorabiać nowe rodzaje budowli mapy, jeśli plansze ich
   potrzebują.
 
