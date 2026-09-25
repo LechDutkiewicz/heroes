@@ -295,7 +295,7 @@ def klatka() -> tuple[Image.Image, Image.Image]:
         # falowałyby w tym samym rytmie i widać by było jeden wzór.
         m = maska(pola(znaki), KAFEL, wtapianie, poszarpanie, ZIARNO + n)
         if nazwa == 'snieg' and 'zaspy' in EFEKTY:
-            warstwa = teren_efekty.zaspy(warstwa, KAFEL, ZIARNO + 700)
+            warstwa = teren_efekty.zaspy(warstwa, KAFEL, ZIARNO + 700, zmienne='zaspy_zmienne' in EFEKTY)
         if nazwa == 'skaly' and ('relief' in EFEKTY or 'relief_sniezny' in EFEKTY):
             warstwa = teren_efekty.relief(warstwa, m, KAFEL, ZIARNO + 730, 'relief_sniezny' in EFEKTY)
         if nazwa == 'woda' and 'lod' in EFEKTY:

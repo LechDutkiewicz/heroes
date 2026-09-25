@@ -407,7 +407,11 @@ przepuszcza). Do plansz trzy kadry wyglądające jak ZAPROJEKTOWANA mapa kampani
 (gracz odrzucił zrzuty z generatora — chaotyczne, turniejowe): rzeka
 z zrzutu trawy w skali 32 px na pole oraz dwa oficjalne zrzuty moda HotA
 (zamek z pasmami gór i wodospadami, wybrzeże). Pliki i URL-e: tabela
-„Zestaw porównawczy" w `tools/reference/homm3/ZRODLA.md`. Runda to
+„Zestaw porównawczy" w `tools/reference/homm3/ZRODLA.md`.
+**UWAGA dla etapu zrzutów:** `ref-trawa.png`, `ref-bagno.png` i
+`ref-snieg.png` to nazwy historyczne — ich TREŚĆ to dziś te trzy dobre
+kadry (rzeka, zamek HotA, wybrzeże HotA; to samo co `wzor-1/2/3-*.png`).
+Porównanie robi się ze WSZYSTKIMI trzema, żadnego nie pomija się. Runda to
 trzy ślepe zestawienia (nasz zrzut przeciw każdemu wzorcowi), trzech
 krytyków ze świeżym kontekstem, wygrana przy 2 z 3.
 

@@ -32,7 +32,7 @@ def _obraz(tab: np.ndarray) -> Image.Image:
     return Image.fromarray(tab.clip(0, 255).astype(np.uint8), 'RGB')
 
 
-def zaspy(warstwa: Image.Image, kafel: int, ziarno: int) -> Image.Image:
+def zaspy(warstwa: Image.Image, kafel: int, ziarno: int, zmienne: bool = False) -> Image.Image:
     """Śnieg z RZEŹBĄ: zaspy oświetlone z lewej góry, cienie niebieskie, iskry.
 
     Płaska biel wygląda jak mgła, bo nie ma w niej nic, co mówi „powierzchnia".
@@ -46,10 +46,21 @@ def zaspy(warstwa: Image.Image, kafel: int, ziarno: int) -> Image.Image:
     # Zaspy mają grzbiet: wartość bezwzględna szumu daje ostre krawędzie
     # (jak wydmy), a nie łagodne pagórki, które z daleka rozmywają się w mgłę.
     h = 1 - np.abs(h)
+    if zmienne:
+        # Twierdza, runda 4 („jednolita, płaska biała tekstura"): fałdy nie
+        # wszędzie jednakowe — duże łany gładkiego śniegu obok pól zasp, a pod
+        # nimi wały w skali kilku pól.
+        duze = szum(W, H, max(2, int(kafel * 4.5)), ziarno + 5)
+        h = h * (0.25 + 0.75 * np.clip(duze * 1.4 + 0.5, 0, 1)) + szum(W, H, max(2, int(kafel * 2.6)), ziarno + 6) * 0.9
     gy, gx = np.gradient(h)
     swiatlo = -(gx + gy) * kafel * 0.9
     swiatlo = np.clip(swiatlo, -1, 1)[..., None]
     tab = _tab(warstwa)
+    if zmienne:
+        # Odcień: niecki sinoniebieskie, wzniesienia cieplejsze, jak śnieg w słońcu.
+        ton = szum(W, H, max(2, int(kafel * 3.4)), ziarno + 7)[..., None]
+        tab = np.where(ton < 0, tab * (1 + ton * 0.16) + np.array([60, 95, 160], dtype=np.float32) * (-ton) * 0.14,
+                       tab + (np.array([255, 250, 238], dtype=np.float32) - tab) * ton * 0.35)
     jasne = tab + (255 - tab) * np.clip(swiatlo, 0, 1) * 0.7
     cien = np.array([95, 135, 205], dtype=np.float32)
     ciemne = tab * (1 + np.clip(swiatlo, -1, 0) * 0.5) + cien * (-np.clip(swiatlo, -1, 0)) * 0.45

@@ -417,7 +417,7 @@ WODA_ANIMOWANA = False
 #: droga z brzegiem, las w zwartych masach, gęsty pierwszy ekran.
 #: Runda 3: bez efektu `lod` — jego rysy na turkusowym lodzie (`lod-2`) znów
 #: czytały się jak „błyskawice"; tekstura ma własne, delikatne pęknięcia.
-EFEKTY = ['zaspy', 'obwodka_drogi', 'relief_sniezny', 'bez_placow', 'lod_tafla']
+EFEKTY = ['zaspy', 'zaspy_zmienne', 'obwodka_drogi', 'relief_sniezny', 'bez_placow', 'lod_tafla']
 TEKSTURY = {'woda': ['lod-2', 'lod', 'snieg'], 'trawa': ['snieg-2', 'snieg'], 'las': ['snieg']}
 SKUP_LAS = True
 #: Runda 4 (HotA): „pole śniegu to jednolita płaska biała tekstura — bez
@@ -454,9 +454,10 @@ NAKLEJKI = [
     (['swierczek-sniezny-1', 'swierczek-sniezny-2'], 's', 0.05),
     (['swierczek-sniezny-1'], '.', 0.03),
     # Runda 4 (HotA): „pole śniegu to jednolita, płaska biała tekstura — bez
-    # uskoków, skał i zmian odcienia". Łaty odsłoniętej ziemi, płyty skał spod
-    # śniegu, suche trawy i nawisy z pasem cienia (PROMPTY-PLANSZE §15b).
-    (['lata-ziemi-snieg'], 's.', 0.035),
+    # uskoków, skał i zmian odcienia". Płyty skał spod śniegu, suche trawy
+    # i nawisy z pasem cienia (PROMPTY-PLANSZE §15b).
+    # (Łaty odsłoniętej ziemi — `lata-ziemi-snieg` — odrzucone: w kadrze czytały
+    # się jak szare przeręble, nie jak zmiana odcienia gruntu.)
     (['skalki-snieg'], 's', 0.03),
     (['trawy-snieg'], 's.', 0.06),
     (['nawis-sniezny'], 's', 0.04),
