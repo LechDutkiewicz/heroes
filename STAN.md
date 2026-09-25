@@ -313,6 +313,25 @@ prześwitujące przez miękkie podnóża rysunków. Zmiany (per plansza):
 
 Symulacja misji 3: wygrana dnia 4 (2/2). Grafiki: 1 obrazek, ≈ $0,04.
 
+### Bagna, runda 10 (HotA)
+
+Werdykty rundy 9: „góry to pojedyncze stożki (lewy dolny róg, lewa krawędź
+nad zamkiem)", „znajdźki za duże i za gęste — sterta jagód i skrzyń obok
+sadu, ten sam kosz i skrzynka skopiowane kilkanaście razy". Zmiany (per
+plansza, zestaw `bagno`):
+
+- Masywy widziane z góry (`bagno/gora-7`, `gora-9`, `gora-10`, PROMPTY-PLANSZE
+  §19): kilka rzędów szczytów połączonych granią zamiast jednego rzędu
+  stożków z boku (`gora-1/5/6` zostają w zestawie, kadr ich nie używa).
+  Surowe z API miały słomkowy „talerz" pod stopą — przemalowany na mech
+  i wtopiony tylko u stopy (szczyty ostre). `gora-8` (za zielona) nieużyta.
+- `bagno/sad.png`: chata zbieracza na palach nad oczkiem z krzakami borówek
+  zamiast jabłoni z czerwonymi koszami (`ZESTAWY['bagno']['sad']`).
+- `przerzedz_kadr` na końcu `rozstaw` (losowania bez zmian): w kadrze
+  zostaje po jednym stosie każdego surowca, dwie skrzynie i artefakt pod
+  strażą; dolny sad (11,51) to kopalnia kamieni (dwa sady w kadrze =
+  pieczątka). `znajdzki` 0,7 → 0,44.
+
 ### Polana, runda 7 (HotA)
 
 Werdykt rundy 6: „wzgórza to ta sama zielono-brązowa stożkowa pieczątka,
