@@ -17,6 +17,7 @@ import {
   odslon,
   odwiedz,
   odpowiedzNaPytanie,
+  polaBryly,
   bonusPoziomu,
   poziom,
   postepPoziomu,
@@ -158,6 +159,8 @@ const KLUCZ_TLA = 'tlo-planszy';
 const KLUCZ_ZESTAWU = 'zestaw-planszy';
 /** Tekstura miękkiego cienia kontaktowego — patrz `zbudujCien`. */
 const CIEN_KONTAKTOWY = 't-cien-miekki';
+/** Tło planszy pomniejszone do boku minimapy — patrz `zbudujMiniature`. */
+const MINIATURA = 'plansza-mini';
 /** Krycie cienia kontaktowego: pod znajdźką, stworkiem i bohaterem / pod dużą bryłą. */
 const KRYCIE_CIENIA = 0.48;
 const KRYCIE_CIENIA_BRYLY = 0.38;
@@ -226,6 +229,8 @@ export class AdventureScene extends Phaser.Scene {
   private kursorZnakTlo!: Phaser.GameObjects.Graphics;
   private kursorZnakIkona!: Phaser.GameObjects.Image;
   private kursorZnakTekst!: Phaser.GameObjects.Text;
+  /** Złota elipsa wejścia pokazana właśnie pod kursorem — patrz `podswietlWejscie`. */
+  private znakWejscia?: Phaser.GameObjects.Graphics;
 
   /** Zmierzone marginesy tekstur — liczone raz, bo to czytanie całego obrazka. */
   private marginesy = new Map<string, number>();
@@ -480,6 +485,7 @@ export class AdventureScene extends Phaser.Scene {
       // Bez tego znak-kursor zostawał zawieszony w powietrzu, kiedy mysz
       // wyjeżdżała za okno gry — a systemowy kursor jest tam wyłączony.
       this.kursorZnak.setVisible(false);
+      this.podswietlWejscie(undefined);
       this.input.setDefaultCursor('default');
     });
     // Strzałki przesuwają widok. Na planszy 36 × 36 samo podążanie za bohaterem
@@ -755,6 +761,9 @@ export class AdventureScene extends Phaser.Scene {
    * wolniej dokładnie wtedy, gdy jest najwięcej do narysowania.
    */
   update(_czas: number, delta: number) {
+    // Marsz, bitwa czy okno: złota elipsa wejścia nie zostaje pod kursorem,
+    // choćby mysz się nie ruszyła — wróci przy następnym jej ruchu.
+    if (this.zajety && this.znakWejscia) this.podswietlWejscie(undefined);
     if (!this.kursor || this.zajety) return;
     const { x, y } = this.kursor;
     // Pas jest liczony od ramy mapy, nie od okna: po prawej stronie leży panel
@@ -1321,6 +1330,10 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   private rysujOzdoby() {
+    // `USTAWIENIA.bezOzdobTrawy` (per plansza; Twierdza, runda 10): krzak
+    // zestawu `zima` to zaspa, a łąka Twierdzy to teraz tundra — co trzecie
+    // pole dostawało białą „chmurkę". Tundrę ubierają naklejki tła.
+    if (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.bezOzdobTrawy) return;
     for (let y = 0; y < this.stan.wys; y++) {
       for (let x = 0; x < this.stan.szer; x++) {
         if (this.stan.teren[y][x] !== 'trawa') continue;
@@ -1476,16 +1489,30 @@ export class AdventureScene extends Phaser.Scene {
       // odrębnego oznaczenia na gruncie — z daleka wygląda jak zwykła
       // ścieżka POD budynkiem, więc nie widać, gdzie naprawdę trzeba
       // kliknąć, żeby wejść: budynek wygląda na jedną spójną bryłę, choć
-      // pole wejścia leży kawałek przed nią. Miękka złota poświata na tym
-      // polu nie zmienia mechaniki — to wciąż to samo pole — tylko robi je
-      // wreszcie widocznym jako osobne miejsce, a nie część muru.
-      if (bryla && (o.rodzaj === 'zamek' || o.rodzaj === 'kopalnia')) {
-        const wejscie = this.add.graphics();
-        wejscie.fillStyle(C.gold, 0.3);
-        wejscie.fillEllipse(0, KAFEL * 0.1, KAFEL * 0.85, KAFEL * 0.4);
-        wejscie.lineStyle(2, C.gold, 0.6);
-        wejscie.strokeEllipse(0, KAFEL * 0.1, KAFEL * 0.85, KAFEL * 0.4);
-        kont.add(wejscie);
+      // pole wejścia leży kawałek przed nią.
+      //
+      // Stała złota elipsa na tym polu czytała się jak znacznik debugowy
+      // (trzech krytyków, niezależnie). W Heroes 3 wejście nie ma znacznika:
+      // mówi o nim kształt budowli, flaga i kursor. Na stałe zostaje więc
+      // tylko wydeptany, ciemniejszy placek ziemi — miękki, bez obrysu —
+      // a złota elipsa pokazuje się dopiero po najechaniu kursorem na
+      // budowlę albo jej pole wejścia (`podswietlWejscie`).
+      if (bryla && o.rodzaj !== 'straznica') {
+        kont.add(
+          this.add
+            .image(0, KAFEL * 0.14, CIEN_KONTAKTOWY)
+            .setDisplaySize(KAFEL * 0.95, KAFEL * 0.5)
+            .setTint(0x3a2812)
+            .setTintMode(Phaser.TintModes.FILL)
+            .setAlpha(0.22)
+        );
+        const znak = this.add.graphics().setVisible(false);
+        znak.fillStyle(C.gold, 0.3);
+        znak.fillEllipse(0, KAFEL * 0.1, KAFEL * 0.85, KAFEL * 0.4);
+        znak.lineStyle(2, C.gold, 0.7);
+        znak.strokeEllipse(0, KAFEL * 0.1, KAFEL * 0.85, KAFEL * 0.4);
+        kont.add(znak);
+        kont.setData('znakWejscia', znak);
       }
       // Budowle z bryłą stoją ZA polem wejścia, a nie na nim: podstawa siada na
       // górnej krawędzi tego pola, więc brama zostaje odsłonięta i widać, że
@@ -1664,7 +1691,9 @@ export class AdventureScene extends Phaser.Scene {
     // żywopłot posadzony przez ogrodnika, a nie jak zarośla, które same tam
     // wyrosły. Środek zostaje pusty, bo tam jest brama — krzak przed wejściem
     // wygląda na przeszkodę, a właśnie tamtędy się do miasta wchodzi.
-    const ile = 7;
+    // Drobne rzeczy (`skala` < 1) bez zasp: przy stosie czy stworku białe
+    // kłęby czytały się jak podstawka z chmurki — wystarcza nierówny grunt.
+    const ile = skala < 1 ? 0 : 7;
     for (let i = 0; i < ile; i++) {
       const u = (i + 0.5) / ile;
       if (Math.abs(u - 0.5) < 0.12) continue;
@@ -1849,6 +1878,10 @@ export class AdventureScene extends Phaser.Scene {
     const ramka = this.add.graphics().setDepth(Z.hud);
     ramka.fillStyle(0x0d0904, 1);
     ramka.fillRect(mmX, mmY, mmBok, mmBok);
+    // Pod minimapą leży SAMA plansza, pomniejszona — ten sam malowany teren
+    // co w oknie mapy, a nie kratka płaskich barw, która gryzła się z resztą.
+    if (this.zbudujMiniature(mmBok))
+      this.add.image(mmX, mmY, MINIATURA).setOrigin(0, 0).setDisplaySize(mmBok, mmBok).setDepth(Z.hud + 0.5);
     ramaZlota(this, mmX, mmY, mmBok, mmBok, false).setDepth(Z.hud + 3);
     for (const [lit, dx, dy] of [
       ['N', mmBok / 2, -14],
@@ -2228,6 +2261,40 @@ export class AdventureScene extends Phaser.Scene {
     this.sprawdzAwans();
   }
 
+  /**
+   * Tło planszy (`plansza-0`) pomniejszone do boku minimapy, jako osobna
+   * tekstura. Obrazek 3456 px ściśnięty wprost przez kamerę do 176 px mieni
+   * się i gubi szczegóły, więc zmniejszamy go na płótnie po połowie — każdy
+   * krok uśrednia sąsiednie piksele, a nie wybiera co dwudziesty.
+   * Budowana przy każdym wejściu na mapę, bo tło zmienia się z planszą.
+   */
+  private zbudujMiniature(bok: number): boolean {
+    if (this.textures.exists(MINIATURA)) this.textures.remove(MINIATURA);
+    if (!this.textures.exists('plansza-0')) return false;
+    let zrodlo = this.textures.get('plansza-0').getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    let w = zrodlo.width;
+    let h = zrodlo.height;
+    while (w > bok * 2 || h > bok * 2) {
+      w = Math.max(bok, Math.round(w / 2));
+      h = Math.max(bok, Math.round(h / 2));
+      const krok = document.createElement('canvas');
+      krok.width = w;
+      krok.height = h;
+      const ctx = krok.getContext('2d');
+      if (!ctx) return false;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(zrodlo, 0, 0, w, h);
+      zrodlo = krok;
+    }
+    const t = this.textures.createCanvas(MINIATURA, bok, bok);
+    if (!t) return false;
+    const ctx = t.getContext();
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(zrodlo, 0, 0, bok, bok);
+    t.refresh();
+    return true;
+  }
+
   private rysujMinimape() {
     const g = this.minimapa;
     const mx = g.getData('x') as number;
@@ -2236,40 +2303,76 @@ export class AdventureScene extends Phaser.Scene {
     const kw = bok / this.stan.szer;
     const kh = bok / this.stan.wys;
     g.clear();
-    const barwy: Record<string, number> = {
-      trawa: 0xa8c93a,
-      sciezka: 0xd0a468,
-      piasek: 0xf6d98a,
-      las: 0x3f7a3a,
-      skaly: 0x8a8a92,
-      woda: 0x2f9fe0,
-    };
+    // Teren to pomniejszona plansza pod spodem (`zbudujMiniature`); tu tylko
+    // mgła i znaczki. Minimapa pokazuje wyłącznie to, co odsłonięte — inaczej
+    // zdradza całą planszę i mgła wojny przestaje cokolwiek znaczyć.
+    //
+    // Mgła to ciemny brąz drewna ramy, nie granat: granatowa minimapa była
+    // jedyną zimną plamą w całym panelu. Pasami — jeden prostokąt na ciąg
+    // nieodkrytych pól w rzędzie — i z krawędziami liczonymi tym samym
+    // wzorem dla sąsiadów, bo przy półprzezroczystości każda zakładka
+    // dwóch prostokątów zostawiłaby ciemniejszą kreskę.
+    g.fillStyle(0x140b04, 0.93);
+    const kx = (x: number) => mx + x * kw;
+    const ky = (y: number) => my + y * kh;
     for (let y = 0; y < this.stan.wys; y++) {
-      for (let x = 0; x < this.stan.szer; x++) {
-        // Minimapa pokazuje tylko to, co odsłonięte — inaczej zdradza całą
-        // planszę i mgła wojny przestaje cokolwiek znaczyć.
-        g.fillStyle(
-          this.stan.odkryte[y][x] ? barwy[this.stan.teren[y][x]] ?? 0x888888 : 0x141a2c,
-          1
-        );
-        g.fillRect(mx + x * kw, my + y * kh, Math.ceil(kw), Math.ceil(kh));
+      let x = 0;
+      while (x < this.stan.szer) {
+        if (this.stan.odkryte[y][x]) {
+          x++;
+          continue;
+        }
+        const od = x;
+        while (x < this.stan.szer && !this.stan.odkryte[y][x]) x++;
+        g.fillRect(kx(od), ky(y), kx(x) - kx(od), ky(y + 1) - ky(y));
       }
     }
+
+    // Znaczki jak w Heroes 3: zajęte budowle w barwie właściciela na całej
+    // swojej bryle; stworki tylko drobną kropką.
+    // Surowców i skrzyń nie ma — to one robiły z minimapy konfetti.
+    const znak = (x0: number, y0: number, x1: number, y1: number, barwa: number) => {
+      const w = Math.max(4, kx(x1 + 1) - kx(x0));
+      const h = Math.max(4, ky(y1 + 1) - ky(y0));
+      const sx = (kx(x0) + kx(x1 + 1)) / 2 - w / 2;
+      const sy = (ky(y0) + ky(y1 + 1)) / 2 - h / 2;
+      g.fillStyle(0x1c1006, 0.9);
+      g.fillRect(sx - 1, sy - 1, w + 2, h + 2);
+      g.fillStyle(barwa, 1);
+      g.fillRect(sx, sy, w, h);
+    };
     for (const o of this.stan.obiekty) {
       if (o.zebrany || !this.stan.odkryte[o.y][o.x]) continue;
-      const barwa =
-        o.rodzaj === 'potwor'
-          ? C.foe
-          : o.rodzaj === 'zamek'
-            ? o.wlasciciel === 'gracz'
-              ? C.ally
-              : C.foe
-            : C.gold;
-      g.fillStyle(barwa, 1);
-      g.fillRect(mx + o.x * kw - 1, my + o.y * kh - 1, Math.ceil(kw) + 2, Math.ceil(kh) + 2);
+      if (o.rodzaj === 'potwor') {
+        g.fillStyle(0x1c1006, 0.8);
+        g.fillCircle(kx(o.x + 0.5), ky(o.y + 0.5), 2.2);
+        g.fillStyle(C.foe, 1);
+        g.fillCircle(kx(o.x + 0.5), ky(o.y + 0.5), 1.4);
+        continue;
+      }
+      const doZajecia =
+        o.rodzaj === 'zamek' || o.rodzaj === 'kopalnia' || budowlaPoId(o.budynek)?.efekt.typ === 'gniazdo';
+      // Niczyja kopalnia czy gniazdo nie ma znaczka — jak w Heroes 3, gdzie
+      // minimapa barwi tylko to, co ma flagę. Zamek bez właściciela broni
+      // garnizon, więc dostaje barwę przeciwnika, tak jak jego chorągiew.
+      if (!doZajecia || (!o.wlasciciel && o.rodzaj !== 'zamek')) continue;
+      const barwa = o.wlasciciel === 'gracz' ? C.ally : C.foe;
+      let [x0, y0, x1, y1] = [o.x, o.y, o.x, o.y];
+      for (const q of polaBryly(this.stan, o)) {
+        x0 = Math.min(x0, q.x);
+        y0 = Math.min(y0, q.y);
+        x1 = Math.max(x1, q.x);
+        y1 = Math.max(y1, q.y);
+      }
+      znak(x0, y0, x1, y1, barwa);
     }
+    // Bohater: kropka w barwie gracza w jasnej obwódce — największy znak na
+    // minimapie, bo to jego gracz szuka wzrokiem najczęściej.
+    const b = this.stan.bohater;
     g.fillStyle(C.white, 1);
-    g.fillRect(mx + this.stan.bohater.x * kw - 1, my + this.stan.bohater.y * kh - 1, kw + 3, kh + 3);
+    g.fillCircle(kx(b.x + 0.5), ky(b.y + 0.5), 4);
+    g.fillStyle(C.ally, 1);
+    g.fillCircle(kx(b.x + 0.5), ky(b.y + 0.5), 2.8);
     this.rysujRamkeWidoku();
   }
 
@@ -2297,7 +2400,26 @@ export class AdventureScene extends Phaser.Scene {
 
   // ---------- interakcja ----------
 
+  /**
+   * Budowla, której wejście ma się podświetlić: ta pod kursorem — jej rysunek,
+   * pole bryły albo samo pole wejścia. Tylko na odkrytym terenie planszy.
+   */
+  private wejscieDoPodswietlenia(p: Phaser.Input.Pointer): Obiekt | undefined {
+    if (this.zajety || !this.wRamie(p.x, p.y)) return undefined;
+    const { x, y } = this.zEkranu(p.x, p.y);
+    if (!this.wGranicach(x, y) || !this.stan.odkryte[y][x]) return undefined;
+    return this.obiektPodKursorem(p) ?? obiektNa(this.stan, x, y) ?? brylaNa(this.stan, x, y);
+  }
+
+  /** Złota elipsa wejścia widoczna tylko pod jedną budowlą naraz (albo żadną). */
+  private podswietlWejscie(o: Obiekt | undefined) {
+    const znak = o ? (this.ikonyObiektow[o.id]?.getData('znakWejscia') as Phaser.GameObjects.Graphics | undefined) : undefined;
+    if (this.znakWejscia && this.znakWejscia !== znak && this.znakWejscia.active) this.znakWejscia.setVisible(false);
+    this.znakWejscia = znak?.active ? znak.setVisible(true) : undefined;
+  }
+
   private ruchMyszy(p: Phaser.Input.Pointer) {
+    this.podswietlWejscie(this.wejscieDoPodswietlenia(p));
     if (this.zajety) {
       this.kursorZnak.setVisible(false);
       return;

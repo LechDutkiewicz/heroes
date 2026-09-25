@@ -215,6 +215,9 @@ def popraw_teren(g, mapa):
     for y in range(67, 72):
         for x in range(0, 10):
             mapa[y][x] = '#'
+    # Zagajnik między przełęczą a wąwozem — pusty płat śniegu pod doliną.
+    for x, y in [(9, 66), (10, 66), (10, 67)]:
+        mapa[y][x] = 'T'
 
 
 def kadr_szeroki(g):
@@ -447,6 +450,17 @@ def rozstaw(g):
         if g.mapa[y][x] == '~':
             g.mapa[y][x] = 's'
 
+    # Runda 10 (HotA): „śnieżne pola pod jeziorem martwe — drugi biom albo
+    # strefa przejściowa". Pod stawem, wokół wiatraka i spichlerza, śnieg
+    # przechodzi w wywianą tundrę (`.` z teksturą `tundra`: płowe trawy,
+    # borówki, kamienie przez cienki śnieg). Nieregularny płat, brzeg
+    # postrzępiony, żeby nie wyglądał jak prostokąt. Malowany PO drogach
+    # i rozstawieniu: tańsza darń przyciągała trasę traktu przez plac.
+    for y, (od, do) in {59: (12, 15), 60: (12, 21), 61: (13, 21), 62: (19, 22), 63: (14, 18)}.items():
+        for x in range(od, do + 1):
+            if g.mapa[y][x] == 's':
+                g.mapa[y][x] = '.'
+
     # Runda 5 (HotA): „droga urywa się za szopą, obiekty rozsypane na chybił
     # trafił — biel na bieli nie mówi, którędy się idzie". Krótkie odnogi
     # traktu w pierwszym ekranie, jak w HotA: od rozstajów pod zamkiem do kopalni
@@ -538,6 +552,8 @@ USTAWIENIA = {
     'znajdzki': 0.66,
     'osadzZnajdzki': 0.4,
     'skalaStrazy': 1.2,
+    # Runda 10: łąka to tundra — bez białych zasp sceny na co trzecim polu.
+    'bezOzdobTrawy': True,
     # Runda 9 (HotA): „zamek ledwie większy od chaty i młyna — powiększyć
     # co najmniej dwa razy; twierdza ma dominować nad lasem jak siedziba".
     'skalaZamku': 1.8,
@@ -570,7 +586,9 @@ USTAWIENIA = {
         # od y ≈ 67), żeby nad nim było widać dolinę przełęczy (y 64–66)
         # z kopalnią kamieni. Pokrywa sięga y 64: skały x 0–2 przy dolinie
         # (poza kadrem) też bez kęp. (Bez `gora-3` — stał na dolinie.)
-        {'plik': 'gora-1', 'x': 5.0, 'y': 72.3, 'szer': 8.8, 'pokrywa': [0, 64, 9, 71]},
+        # Odbity: główny szczyt na prawo, nad pustym śniegiem przy wąwozie,
+        # a nie nad kopalnią. Sięga x 10 — bez rządka głazów przy wąwozie.
+        {'plik': 'gora-1', 'x': 5.6, 'y': 72.3, 'szer': 10.2, 'odbij': True, 'pokrywa': [0, 64, 10, 71]},
         # (Runda 6: bez skalnego pagóra `gora-5` w rogu — stał na wąwozie.)
         # Skalny garb nad stawem (górna krawędź ekranu) zamiast rzędu kęp.
         {'plik': 'gora-3', 'x': 17.4, 'y': 56.1, 'szer': 6.2, 'pokrywa': [15, 50, 20, 55]},
@@ -590,7 +608,9 @@ BARWY_TERENU = {
     # „Łąka" to tu zmarznięta, zasypana darń: tekstura śniegu z wystającymi
     # źdźbłami (TEKSTURY), lekko płowa — odróżnia się od zasp, ale nie jest
     # zielona. Runda 2: „śnieg to białe plamy na zielonej trawie".
-    'trawa': {'nasycenie': 0.9, 'barwa': (215, 212, 200), 'moc': 0.35, 'jasnosc': 0.97},
+    # Runda 10: łąka to teraz wywiana TUNDRA (`teren-tundra`, PROMPTY-PLANSZE
+    # §25) — płowa i oliwkowa, przygaszona chłodem, żeby nie była jesienią.
+    'trawa': {'nasycenie': 0.8, 'barwa': (205, 212, 225), 'moc': 0.3, 'jasnosc': 0.97},
     # „Woda" to tu LÓD: tekstura śniegu (patrz TEKSTURY) przebarwiona na
     # błękit, z rysami pęknięć. Przebarwiona tekstura wody zostawiała jasne
     # linie załamań światła, które w ślepym porównaniu czytały się jak
@@ -619,7 +639,7 @@ WODA_ANIMOWANA = False
 #: Runda 3: bez efektu `lod` — jego rysy na turkusowym lodzie (`lod-2`) znów
 #: czytały się jak „błyskawice"; tekstura ma własne, delikatne pęknięcia.
 EFEKTY = ['zaspy', 'zaspy_zmienne', 'relief_sniezny', 'bez_placow', 'lod_tafla', 'droga_obrzeze']
-TEKSTURY = {'woda': ['lod-2', 'lod', 'snieg'], 'trawa': ['snieg-2', 'snieg'], 'las': ['snieg'],
+TEKSTURY = {'woda': ['lod-2', 'lod', 'snieg'], 'trawa': ['tundra', 'snieg-2', 'snieg'], 'las': ['snieg'],
             'sciezka': ['droga-snieg', 'sciezka']}
 SKUP_LAS = True
 #: Runda 4 (HotA): „pole śniegu to jednolita płaska biała tekstura — bez
@@ -646,7 +666,9 @@ NAKLEJKI = [
     (['krzak-zimowy-1'], 'j', 0.08),
     # Runda 3: zmarznięta darń („.") też dostaje zaspy i głazy
     # — mniej pustych połaci bieli.
-    (['zaspa-1', 'zaspa-2', 'glaz-sniezny-2'], '.', 0.07),
+    # Runda 10: „.” to tundra (`teren-tundra`) — zamiast zasp nagie krzaczki
+    # borówek, suche trawy i głazy.
+    (['krzak-zimowy-1', 'glaz-sniezny-2', 'krzak-zimowy-1'], '.', 0.07),
     # (Runda 3: bez martwego drzewa z bagiennym mchem — w śniegu czytało się
     # jak „liściaste drzewo przy zaspie"; zamiast niego świerczki niżej.)
     # Runda 3 (wzorzec HotA): „śnieg to białe plamy, dwie trzecie ekranu
@@ -683,6 +705,12 @@ def NAKLEJKI_OMIN(zrodlo):
             omin |= {(x + dx, y + dy) for dx in (-2, -1, 0, 1, 2) for dy in (-2, -1, 0, 1)}
         else:
             omin |= {(x + dx, y + dy) for dx in (-1, 0, 1) for dy in (-1, 0)}
+    # Runda 10: pod rysunkami gór (`masywy`) też bez naklejek — w szczelinie
+    # między szczytami odbitego pasma prześwitywała kępa suchej trawy.
+    for m in USTAWIENIA['masywy']:
+        x0, y0, x1, y1 = m['pokrywa']
+        omin |= {(x, y) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1)
+                 if not (x0 == 0 and y0 == 64 and 3 <= x <= 8 and y <= 66)}
     for m in re.finditer(r"'zamek[^']*': \{ x: (\d+), y: (\d+) \}", zrodlo):
         x, y = int(m.group(1)), int(m.group(2))
         omin |= {(x + dx, y + dy) for dx in range(-2, 3) for dy in range(-3, 2)}

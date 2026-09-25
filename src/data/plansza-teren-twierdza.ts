@@ -68,11 +68,11 @@ export const TEREN = [
   'TTTTT####s=~~~~~~~~~..=.ssss####sssjjjssjjjj..~~.~~~~~~~~ssss###jjsjTTTT',
   'TTTTT#####=~~~~TTT~~~.=.ssss#####sjjjjsjjjjj....~~~~~~~~~ss######jjTTTTT',
   'TTTTT#####s=~~~~T~~sss=s..ss###sssssjjjjjjjj.....~~~~~s~~ssss###jjjTTTTT',
-  'TTTT#####ss=.sss~~~ssss=.sss####ssssjj..jjjjs...~~~~..~.ssTs#.##.jjjTTTT',
-  '#########ss==s.sssss.s=.....####sssss...ssss.TT.ssss..~ssTTT...sjssTTTTT',
-  '#########ssss=ssssss.=.##...###sssss.....sssTTT~ssss~...TTTT..ssssssTTTT',
+  'TTTT#####ss=....~~~ssss=.sss####ssssjj..jjjjs...~~~~..~.ssTs#.##.jjjTTTT',
+  '#########ss==.........=.....####sssss...ssss.TT.ssss..~ssTTT...sjssTTTTT',
+  '#########ssss=.......=.##...###sssss.....sssTTT~ssss~...TTTT..ssssssTTTT',
   '#########sss=========..##.s..##sssss.....ssTTTTssss.s...TTTT...jssssTTTT',
-  '#########ss=s=sssss=......s.s.#.ssss....ss..TT#sss......sTT.s...jsssTTTT',
+  '#########ss=s=.....=......s.s.#.ssss....ss..TT#sss......sTT.s...jsssTTTT',
   '###ssssss=====TTTTTT=..TTTs.s..sssssTs......#.##ss.....ssTTssssjjjjjTTTT',
   '###sss===ssss=TTTTTTs..TTTss.s..sssTTT.......##....s.sssTTTTssssjjjjTTTT',
   '###s==ssssss=s====sssTTTsssss....sssTTT.....#####..s.sTTTTTTTsssjjjjTTTT',
@@ -423,6 +423,7 @@ export const USTAWIENIA = {
   "znajdzki": 0.66,
   "osadzZnajdzki": 0.4,
   "skalaStrazy": 1.2,
+  "bezOzdobTrawy": true,
   "skalaZamku": 1.8,
   "skalaKepLasu": 0.76,
   "cienBudowli": {
@@ -456,13 +457,14 @@ export const USTAWIENIA = {
     },
     {
       "plik": "gora-1",
-      "x": 5.0,
+      "x": 5.6,
       "y": 72.3,
-      "szer": 8.8,
+      "szer": 10.2,
+      "odbij": true,
       "pokrywa": [
         0,
         64,
-        9,
+        10,
         71
       ]
     },

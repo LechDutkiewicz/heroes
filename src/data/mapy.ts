@@ -92,6 +92,12 @@ export interface UstawieniaPlanszy {
    */
   osadzZnajdzki?: number;
   /**
+   * Bez krzaków sceny na polach łąki (`rysujOzdoby`). Twierdza, runda 10:
+   * krzak zestawu `zima` to zaspa, a łąka — tundra; co trzecie pole miało
+   * białą „chmurkę". Brak = krzaki jak dotąd.
+   */
+  bezOzdobTrawy?: boolean;
+  /**
    * Mnożnik wysokości rysunków budowli odwiedzanych (`budynek`: wiatrak,
    * wieża, obóz…) na tej planszy. Budowle zajmują jedno pole, więc rysunek
    * mniejszy niż w `BUDOWLE` niczego nie odsłania. Brak = 1.
