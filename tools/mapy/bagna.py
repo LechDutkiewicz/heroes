@@ -84,12 +84,16 @@ PIERSCIEN_ZEWN = 8.2
 
 #: Przeprawy. `(x0, y0, x1, y1)`.
 GROBLA_PN = (11, struga_y(12) - 2, 12, struga_y(12) + 2)
-BROD_WSCH = (struga_x(44) - 2, 44, struga_x(44) + 2, 45)
+#: Runda 7: wschodnia przeprawa to most nad wąską Strugą (dwa pola wody pod
+#: deskami; w grze droga, w tle woda — `MOSTY` niżej), a nie bród z łąki:
+#: łata łąki w poprzek rzeki czytała się jak koniec wody.
+STRUGA_WASKA_OD = 36
+MOST_WSCH = (struga_x(44) - 1, 44, struga_x(44), 44)
 GROBLA_WYSPY = (45, 13, 46, 17)
 
 ZAPORY = {
     'Czarna Struga': {
-        'przejscia': [GROBLA_PN, BROD_WSCH],
+        'przejscia': [GROBLA_PN, MOST_WSCH],
         'odcina': ['zamek wroga', 'wyspa', 'trzesawisko'],
     },
     'pierścień wyspy': {
@@ -195,10 +199,18 @@ def popraw_teren(g, mapa):
             mapa[cy + (2 if rng.random() < 0.5 else -2)][x] = '~'
     for y in range(struga_y(zakret) - 1, BOK):
         cx = struga_x(y)
-        for x in range(cx - 1, cx + 2):
+        # Runda 7 („prawa trzecia kadru to mętna plama bez rzeźby"): w kadrze
+        # startu Struga jest wąską, czystą wstęgą na dwa pola, bez zatok —
+        # szeroka na trzy z przypadkowymi oczkami robiła z prawej trzeciej
+        # ekranu jedną ciemną taflę. Losowanie zatoki zostaje (to samo ziarno
+        # dla reszty planszy), tylko jej nie malujemy.
+        waska = y >= STRUGA_WASKA_OD
+        for x in range(cx - 1, cx + (1 if waska else 2)):
             mapa[y][x] = '~'
         if rng.random() < 0.3:
-            mapa[y][cx + (2 if rng.random() < 0.5 else -2)] = '~'
+            zatoka = cx + (2 if rng.random() < 0.5 else -2)
+            if not waska:
+                mapa[y][zatoka] = '~'
     # Pierścień wody wokół wyspy — z lekkim szumem promienia, żeby brzeg nie
     # był cyrklem. Szum jest mniejszy niż grubość pierścienia (3 pola), więc
     # nie ma prawa go przerwać; sprawdza to i tak silnik (`ZAPORY`).
@@ -225,13 +237,17 @@ def popraw_teren(g, mapa):
                 continue
             if any(max(abs(x - px), abs(y - py)) <= 3 for px, py in punkty):
                 continue
+            # Runda 7: wschodni brzeg Strugi w kadrze to ląd z obiektami, nie
+            # kolejne oczka przyklejone do rzeki.
+            if y >= STRUGA_WASKA_OD - 1 and abs(x - struga_x(y)) <= 4:
+                continue
             for dx, dy in [(0, 0)] + rng.sample([(1, 0), (0, 1), (1, 1), (-1, 0)], rng.randint(0, 3)):
                 if mapa[y + dy][x + dx] == 'b':
                     mapa[y + dy][x + dx] = '~'
     # Przeprawy: grobla przez Strugę, bród, grobla na wyspę.
     # Bród w kadrze startu to łąka pod traktem, nie piasek (runda 6: jasna
     # piaskowa łata w środku rzeki czytała się jak dziura w tle).
-    for (x0, y0, x1, y1), teren in ((GROBLA_PN, '.'), (BROD_WSCH, '.'), (GROBLA_WYSPY, ',')):
+    for (x0, y0, x1, y1), teren in ((GROBLA_PN, '.'), (MOST_WSCH, ','), (GROBLA_WYSPY, ',')):
         for y in range(y0, y1 + 1):
             for x in range(x0, x1 + 1):
                 mapa[y][x] = teren
@@ -241,7 +257,8 @@ def popraw_teren(g, mapa):
             for y in (y0 - 2, y0 - 1, y1 + 1, y1 + 2):
                 if mapa[y][x] not in '.,=b':
                     mapa[y][x] = 'b'
-    x0, y0, x1, y1 = BROD_WSCH
+    # Przyczółki mostu przejezdne na dwa pola w głąb.
+    x0, y0, x1, y1 = MOST_WSCH
     for y in range(y0, y1 + 1):
         for x in (x0 - 2, x0 - 1, x1 + 1, x1 + 2):
             if mapa[y][x] not in '.,=b':
@@ -360,7 +377,9 @@ def rozstaw(g):
     # Straże przepraw przez Strugę. Obie średnie: pierwszy tydzień w dolinie
     # jest bezpieczny, a wyjście z niej to pierwsza poważna bitwa.
     g.postaw((GROBLA_PN[0], struga_y(12)), ('potwor', 'sredni'))
-    g.postaw((struga_x(44), 44), ('potwor', 'sredni'))
+    # Straż mostu na wschodnim przyczółku (jak na Polanie): potwór blokuje
+    # pole i osiem wokół, więc zamyka most, a nie stoi na deskach.
+    g.postaw((MOST_WSCH[2] + 1, MOST_WSCH[1]), ('potwor', 'sredni'))
 
     # --- TRZĘSAWISKO -----------------------------------------------------------
     # Najgęstszy kawałek. Kopalnie drogie (kamień, pokeballe) pod strażą; tanie
@@ -424,6 +443,10 @@ USTAWIENIA = {
         # w kadrze czarne zęby (jak na Polanie).
         {'x': 25, 'y': 35, 'promien': 3},
         {'x': 25, 'y': 53, 'promien': 3},
+        # Runda 7: górne rogi kadru (za mostem i nad wzgórzami) — ciemna plama
+        # mgły w prawym górnym rogu czytała się jak pusta połać.
+        {'x': 23, 'y': 38, 'promien': 3},
+        {'x': 4, 'y': 37, 'promien': 3},
     ],
     # Runda 5 (wzorzec HotA; wcześniej runda 3: „płaska ikona pokeballa
     # wygląda na wklejoną z innej gry"): znajdźki to STOSY leżące na ziemi
@@ -525,3 +548,10 @@ NAKLEJKI = [
 #: bruk (`TEKSTURY`), szerszy i równiejszy trakt.
 DROGA_KRETA = {'szerokosc': 0.46, 'zmiennosc': 0.25, 'meander': 0.14}
 RZEZBA = {'pagorki': 0.9, 'czolo': 0.7}
+
+#: Runda 7: most nad Czarną Strugą w kadrze startu (`teren_efekty.mosty`).
+#: Pola mostu są w grze drogą, w tle maluje się pod nimi woda.
+MOSTY = [
+    {'plik': 'bagno/most.png', 'pola': [(MOST_WSCH[0], MOST_WSCH[1]), (MOST_WSCH[2], MOST_WSCH[3])],
+     'srodek': (MOST_WSCH[0] + 1.0, MOST_WSCH[1] + 0.62), 'szer': 3.3},
+]
