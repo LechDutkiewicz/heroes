@@ -652,6 +652,9 @@ ZESTAWY = {
         # Twierdza, runda 11 (HotA: „góry nie trzymają skali pola"): zwarte
         # gromady małych szczytów i niski łańcuch (§26).
         'gora-9': 300, 'gora-10': 260, 'gora-11': 260,
+        # Twierdza, runda 12 (HotA: „ten sam szczyt wklejony kilka razy"):
+        # masyw z kopułą i stołem, łańcuch o różnych sylwetkach, przedgórze (§27).
+        'gora-12': 340, 'gora-13': 340, 'gora-14': 260,
     },
     'bagno': {
         'drzewo': 144, 'drzewo-b': 144, 'krzak': 84, 'krzak-2': 84,
@@ -715,6 +718,9 @@ WTOP_PODSTAWY = {
         # zostawiała półprzezroczysty spód, cień kontaktowy siadał pod nim
         # i kryształy wisiały nad własnym cieniem. Nowe stosy, §24, są
         # wciśnięte w małą zaspę, którą scena podcina gruntem.)
+        # Twierdza, runda 12: gaje (§27) i nowe góry stoją na płacie śniegu —
+        # na sinawym tle to wysepka; płat rozpływa się jak pod budowlami.
+        'kepa-las-3', 'kepa-las-4', 'gora-12', 'gora-13', 'gora-14',
     },
 }
 

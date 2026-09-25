@@ -129,6 +129,15 @@ export interface UstawieniaPlanszy {
    */
   cienZnajdzek?: { szer?: number; krycie?: number };
   /**
+   * Cienie na śniegu (scena): `barwa` — kolor miękkiego cienia kontaktowego
+   * pod obiektami i bohaterem (zamiast ciepłej czerni; w HoMM3 cień na śniegu
+   * jest sinoniebieski), `krycie` — mnożnik jego krycia; `gory` i `las` —
+   * krycie cienia rzucanego na śnieg przez rysunki `masywy` i kępy lasu
+   * (0 lub brak = bez). Twierdza, runda 12: „góry i obiekty wiszą na białym
+   * tle bez cienia". Brak = jak dotąd.
+   */
+  cienNaSniegu?: { barwa?: number; krycie?: number; gory?: number; las?: number };
+  /**
    * Kępy skał wybrane ręcznie: `"x,y"` lewego górnego pola kępy 3 × 2 →
    * numer rysunku `m-kepa-skaly-N` (1–4), ujemny = odbity w poziomie.
    * Bez wpisu kępa bierze wariant z hasza pola, jak dotąd. Polana, runda 7:

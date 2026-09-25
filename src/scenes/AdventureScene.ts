@@ -562,10 +562,24 @@ export class AdventureScene extends Phaser.Scene {
     // Środek plamy trochę w prawo i w dół od środka podstawy: rysunek zasłania
     // jej lewą-górną część, spod niego wychodzi prawy-dolny sierp — tak jak
     // w Heroes 3. Plama dokładnie pod spodem chowała się pod rysunkiem cała.
-    return this.add
-      .image(x + srodek + szer * 0.14, spod + wysC * 0.2, CIEN_KONTAKTOWY)
-      .setDisplaySize(szer, wysC)
-      .setAlpha(krycie);
+    return this.naSniegu(
+      this.add
+        .image(x + srodek + szer * 0.14, spod + wysC * 0.2, CIEN_KONTAKTOWY)
+        .setDisplaySize(szer, wysC)
+        .setAlpha(krycie)
+    );
+  }
+
+  /**
+   * `USTAWIENIA.cienNaSniegu` (per plansza): cień w barwie śniegu w cieniu
+   * i z mnożnikiem krycia. Bez ustawienia obrazek wraca bez zmian.
+   */
+  private naSniegu(im: Phaser.GameObjects.Image): Phaser.GameObjects.Image {
+    const c = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienNaSniegu;
+    if (!c) return im;
+    if (c.barwa !== undefined) im.setTint(c.barwa).setTintMode(Phaser.TintModes.FILL);
+    if (c.krycie !== undefined) im.setAlpha(Math.min(1, im.alpha * c.krycie));
+    return im;
   }
 
   /**
@@ -1217,6 +1231,14 @@ export class AdventureScene extends Phaser.Scene {
     // stabilne), żeby las nad górą nie wchodził jej na zbocze.
     const odIndeksu = this.swiat.list.length;
     const gory: Phaser.GameObjects.Image[] = [];
+    // Cienie rzucane na grunt (`USTAWIENIA.cienNaSniegu`): wstawiane na
+    // początek warstwy, pod wszystkie drzewa, skały, góry i obiekty.
+    const cienie = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienNaSniegu;
+    const cienZiemi = (cx: number, cy: number, w: number, h: number, krycie: number) => {
+      const c = this.add.image(cx, cy, CIEN_KONTAKTOWY).setDisplaySize(w, h).setAlpha(krycie).setDepth(-1e6);
+      if (cienie?.barwa !== undefined) c.setTint(cienie.barwa).setTintMode(Phaser.TintModes.FILL);
+      this.swiat.addAt(c, odIndeksu);
+    };
     for (const m of planszaPoId(this.stan.mapa).modul.USTAWIENIA?.masywy ?? []) {
       if (!this.textures.exists(`m-${m.plik}`)) continue;
       const [x0, y0, x1, y1] = m.pokrywa;
@@ -1226,6 +1248,12 @@ export class AdventureScene extends Phaser.Scene {
       const im = this.add.image(m.x * KAFEL, m.y * KAFEL, `m-${m.plik}`).setOrigin(0.5, 1).setFlipX(!!m.odbij);
       im.setScale((m.szer * KAFEL) / im.width).setDepth(m.y - 1);
       gory.push(im);
+      // `USTAWIENIA.cienNaSniegu.gory` (per plansza): góra rzuca na śnieg
+      // miękki cień w prawo-dół, od światła — stoi na ziemi, nie wisi.
+      if (cienie?.gory) {
+        const szer = m.szer * KAFEL;
+        cienZiemi(m.x * KAFEL + szer * 0.24, m.y * KAFEL - KAFEL * 0.3, szer * 1.15, szer * 0.36, cienie.gory);
+      }
     }
     const wstawGory = () => {
       if (!gory.length) return;
@@ -1268,6 +1296,8 @@ export class AdventureScene extends Phaser.Scene {
         // Twierdza, runda 9: „choinki wyższe od zamku". Brak = 1.
         const skalaKep = t === 'las' ? planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaKepLasu : undefined;
         if (skalaKep) im.setScale(skalaKep);
+        if (t === 'las' && cienie?.las)
+          cienZiemi(ex + KAFEL * 1.35, ey + KAFEL * 1.3, KAFEL * 3.6 * (skalaKep ?? 1), KAFEL * 1.3, cienie.las);
         this.swiat.add(im);
       }
     }
@@ -1736,10 +1766,12 @@ export class AdventureScene extends Phaser.Scene {
     const s = this.sylwetkaBohatera();
     const szerC = s.polSzer * 2 * 1.35;
     const wysC = szerC * 0.37;
-    const cien = this.add
-      .image(szerC * 0.09, s.stopy - wysC * 0.125, CIEN_KONTAKTOWY)
-      .setDisplaySize(szerC, wysC)
-      .setAlpha(KRYCIE_CIENIA);
+    const cien = this.naSniegu(
+      this.add
+        .image(szerC * 0.09, s.stopy - wysC * 0.125, CIEN_KONTAKTOWY)
+        .setDisplaySize(szerC, wysC)
+        .setAlpha(KRYCIE_CIENIA)
+    );
     this.bohaterObj.add(cien);
 
     // Punkt zaczepienia to dół KLATKI, a stopy stoją nad nim o przezroczysty

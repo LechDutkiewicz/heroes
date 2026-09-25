@@ -73,14 +73,14 @@ export const TEREN = [
   '#########ssss=.......=.##...###sssss.....sssTTT~ssss~...TTTT..ssssssTTTT',
   '#########sss=========..##.s..##sssss.....ssTTTTssss.s...TTTT...jssssTTTT',
   '#########ss=s=.....=......s.s.#.ssss....ss..TT#sss......sTT.s...jsssTTTT',
-  '###ssssss=====TTTTTT=..TTTs.s..sssssTs......#.##ss.....ssTTssssjjjjjTTTT',
-  '###sss===ssss=TTTTTTs..TTTss.s..sssTTT.......##....s.sssTTTTssssjjjjTTTT',
-  '###s==sssTTs=s====sssTTTsssss....sssTTT.....#####..s.sTTTTTTTsssjjjjTTTT',
-  '##########Ts=#####=s.TTTssss.#..#ssssTTT...#####.#.ssTTTTTTTTsssjjjTTTTT',
-  '###########s=#####TTTTTTssss#..#sTTsTTTT...TTT#TTTTTTTTTTTTTsssssTTTTTTT',
-  '###########s=ssssTTTTTTTTssss##ssTTTTTT....TTTTTTTTTTTTTTTTTssssTTTTTTTT',
-  '###########ss==sTTTTTTTTTsss##s##TTTTTTT....TTTTTTTTTTTTTTTTssssTTTTTTTT',
-  '############sssssTTTTTTTTsss#####TTTTTTT....TTTTTTTTTTTTTTTsssssTTTTTTTT',
+  '###ssssss=====TTTsTT=..TTTs.s..sssssTs......#.##ss.....ssTTssssjjjjjTTTT',
+  '###sss===ssss=TTTsTTs..TTTss.s..sssTTT.......##....s.sssTTTTssssjjjjTTTT',
+  '###s==sssTTs=s====ssssTTsssss....sssTTT.....#####..s.sTTTTTTTsssjjjjTTTT',
+  '##########Ts=#####=s.sTTssss.#..#ssssTTT...#####.#.ssTTTTTTTTsssjjjTTTTT',
+  '###########s=###ssT==s##Tsss#..#sTTsTTTT...TTT#TTTTTTTTTTTTTsssssTTTTTTT',
+  '###########s=ssssTsssssTTssss##ssTTTTTT....TTTTTTTTTTTTTTTTTssssTTTTTTTT',
+  '###########ss==sTTTsssTTTsss##s##TTTTTTT....TTTTTTTTTTTTTTTTssssTTTTTTTT',
+  '############ssssTTTsssTTTsss#####TTTTTTT....TTTTTTTTTTTTTTTsssssTTTTTTTT',
 ];
 
 export const PUNKTY = {
@@ -146,6 +146,8 @@ export const ROZSTAWIENIE: Array<{
   { x: 14, y: 54, rodzaj: 'skrzynia', strefa: 'dom' },
   { x: 16, y: 61, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'kamien' },
   { x: 11, y: 70, rodzaj: 'skrzynia', strefa: 'dom' },
+  { x: 20, y: 69, rodzaj: 'budynek', strefa: 'dom', budynek: 'gniazdo' },
+  { x: 19, y: 70, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'jagoda' },
   { x: 25, y: 55, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'pokeball' },
   { x: 41, y: 57, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'jagoda' },
   { x: 33, y: 49, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'jagoda' },
@@ -435,6 +437,12 @@ export const USTAWIENIA = {
     "szer": 1.25,
     "krycie": 1.6
   },
+  "cienNaSniegu": {
+    "barwa": 3820152,
+    "krycie": 1.35,
+    "gory": 0.55,
+    "las": 0.32
+  },
   "masywy": [
     {
       "plik": "gora-2",
@@ -449,10 +457,10 @@ export const USTAWIENIA = {
       ]
     },
     {
-      "plik": "gora-9",
-      "x": 4.4,
-      "y": 64.3,
-      "szer": 7.0,
+      "plik": "gora-12",
+      "x": 4.3,
+      "y": 64.0,
+      "szer": 6.0,
       "pokrywa": [
         0,
         60,
@@ -461,10 +469,11 @@ export const USTAWIENIA = {
       ]
     },
     {
-      "plik": "gora-11",
-      "x": 8.1,
-      "y": 62.9,
-      "szer": 2.3,
+      "plik": "gora-7",
+      "x": 7.7,
+      "y": 63.2,
+      "szer": 2.7,
+      "odbij": true,
       "pokrywa": [
         0,
         60,
@@ -473,10 +482,10 @@ export const USTAWIENIA = {
       ]
     },
     {
-      "plik": "gora-10",
-      "x": 5.6,
-      "y": 69.9,
-      "szer": 7.4,
+      "plik": "gora-13",
+      "x": 5.2,
+      "y": 70.4,
+      "szer": 7.6,
       "pokrywa": [
         0,
         64,
@@ -485,10 +494,22 @@ export const USTAWIENIA = {
       ]
     },
     {
-      "plik": "gora-1",
-      "x": 7.4,
-      "y": 72.5,
-      "szer": 7.2,
+      "plik": "gora-14",
+      "x": 2.4,
+      "y": 71.8,
+      "szer": 4.0,
+      "pokrywa": [
+        0,
+        64,
+        10,
+        71
+      ]
+    },
+    {
+      "plik": "gora-8",
+      "x": 9.0,
+      "y": 71.9,
+      "szer": 3.6,
       "odbij": true,
       "pokrywa": [
         0,
@@ -498,10 +519,10 @@ export const USTAWIENIA = {
       ]
     },
     {
-      "plik": "gora-3",
+      "plik": "gora-10",
       "x": 17.4,
-      "y": 56.1,
-      "szer": 6.2,
+      "y": 56.0,
+      "szer": 7.0,
       "pokrywa": [
         15,
         50,

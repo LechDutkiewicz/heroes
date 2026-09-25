@@ -450,7 +450,8 @@
    ],
    "live": {
     "round": 12,
-    "stage": "builder pracuje"
+    "stage": "zrzut i ślepe zestawienie",
+    "build": "Zatrzymałem się w połowie, bo nad Twierdzą r12 w tym samym katalogu pracował już drugi builder; zmiany w scenie i w układzie twierdza.py są jego, nie moje. Mój wkład to pięć nowych grafik OpenAI (masyw z kopułą i stołową skałą gora-12, łańcuch o różnych sylwetkach z przedgórzem gora-13, niskie przedgórze gora-14, gaj brzóz i modrzewi, skalny pagór ze świerkami) z promptami w §27 PROMPTY-PLANSZE.md, przestudzone do palety zimy. Oba gaje wszedł jako nowe kępy lasu kepa-las-3 i -4, a nowe góry dopisałem do zestawu `zima` w wsad_wczytaj.py i puściłem go. Drugi builder już ich używa: masywy ma na gora-12 i gora-7, wcześniej gora-9 i gora-11, a `cienNaSniegu` jest w USTAWIENIA. Swoją jedyną edycję twierdza.py (przesiekę w borze) cofnąłem, bo jego blok ją i tak nadpisywał; sceny, mapy.ts, układu, boru ani gniazda nie ruszałem, więc nie mam czego więcej cofać."
    }
   },
   {

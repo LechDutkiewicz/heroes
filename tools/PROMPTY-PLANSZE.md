@@ -2140,3 +2140,89 @@ boulders at the lumpy irregular foot, one tiny snowy spruce at the side.
 Strong relief lit from the upper left. Cool winter palette, NO orange, NO
 warm brown rock. About as wide as tall, compact.
 ```
+
+## 27. Twierdza — łańcuch gór o różnych sylwetkach z przedgórzem, bór z prześwitami (runda 12, wzorzec HotA)
+
+Werdykt rundy 11: „lewa krawędź i dolny pas mapy to kilka razy wklejony ten
+sam śnieżny szczyt, bez podstawy i bez przejścia w teren — łańcuch o różnych
+sylwetkach, z przedgórzem i cieniem rzucanym na śnieg" oraz „prawy dolny
+kwadrant to jeden blok identycznych, kopiowanych świerków bez polan, ścieżek
+i skał — skupiska różnych drzew z prześwitami". Góry §26 (gora-9..11) i §15
+(gora-1) to ten sam sinoszary ostry stożek w różnej liczbie. Nowe rysunki
+mają INNE bryły: kopulasty masyw z półkami skalnymi, stołowa skała z urwiskiem,
+długi grzbiet schodzący w pagóry; skała ciepła szarobrązowa (jak w HotA),
+u stóp szerokie przedgórze z piargami, głazami i świerkami. Kępy lasu:
+gaj brzóz i modrzewi oraz skalny pagór z kilkoma świerkami — zamiast dwóch
+z czterech kęp samych świerków (kopiowane do `tools/wsad/zima-kepa-las-3/4.png`).
+
+<!-- plik: zima-gora-12.png | styl: obiekt | proporcje: 3:2 -->
+```
+A broad snowy mountain massif for a winter adventure map, seen from high above
+at a three-quarter top-down angle like the mountains on a Heroes of Might and
+Magic 3 adventure map. NOT a pointed cone: one wide rounded dome-shaped summit
+on the left with thick snow lying on its gentle top, a lower flat-topped rocky
+shoulder with a sheer cliff face on the right, the two joined by a snowy
+saddle; layered horizontal ledges and cliffs of warm grey-brown and ochre
+granite with pale sunlit faces lit from the upper left and cool blue-violet
+shadowed faces, icicles hanging from one ledge. The lower slopes spread out
+into a wide apron of foothills: grey scree fans, snow-capped boulders of many
+sizes, a few small dark snowy spruces growing among the rocks, and the whole
+irregular foot fading into trodden snow across the full width of the picture.
+Much wider than tall, solid and heavy, clearly impassable.
+```
+
+<!-- plik: zima-gora-13.png | styl: obiekt | proporcje: 3:2 -->
+```
+A long winter mountain range for an adventure map, seen from high above at a
+three-quarter top-down angle like the mountain ranges on a Heroes of Might and
+Magic 3 adventure map. Each part has a DIFFERENT silhouette, reading left to
+right: a massive flat-topped table rock with vertical striped cliffs and a
+snow-covered top, a deep notch with a small frozen waterfall, one tall
+craggy peak with a hooked summit, then a crumpled ridge of lower rocky knobs
+stepping down into low rounded snowy foothill mounds on the right. Warm
+grey-brown and slate rock, pale sunlit faces lit from the upper left, cool
+blue shadows, snow in every hollow and on every ledge. At the foot of the
+whole range a broad foothill belt: scree slopes, jumbled snowy boulders, a
+few small dark spruces and bare shrubs, the lower edge soft and irregular,
+melting into snow. Much wider than tall.
+```
+
+<!-- plik: zima-gora-14.png | styl: obiekt | proporcje: 3:2 -->
+```
+Low rocky foothills for a winter adventure map, seen from high above at a
+three-quarter top-down angle in the style of Heroes of Might and Magic 3: a
+cluster of three or four low rounded snowy hills of different sizes with grey
+and brown rock outcrops breaking through the snow on their sunlit sides,
+small cliffs and ledges, jumbled boulders with snow caps between the hills,
+four or five small dark snow-laden spruces and a bare shrub growing in the
+hollows, soft blue shadows on the far sides. Low and wide, clearly rough
+rocky ground, not tall mountains. The irregular foot fades into trodden snow
+across the whole width of the picture.
+```
+
+<!-- plik: zima-gaj-1.png | styl: obiekt -->
+```
+A winter grove of MIXED trees for a fantasy adventure map, in the style of
+Heroes of Might and Magic 3 seen from a high three-quarter angle: a loose
+cluster of about ten small slender bare birch trees with white-and-black
+trunks and fine reddish-brown twig crowns dusted with snow, three small
+golden-bronze larches that kept a few needles, and four small dark snowy
+spruces at the back, with small gaps of open snow between the trees, a grey
+snow-capped boulder and a fallen log at the front. Each tree small. Cool
+blue shadows, warm sunlit trunks lit from the upper left. No snow platform or
+island under it: the foot is soft trodden snow across the whole width of the
+picture. About as wide as tall.
+```
+
+<!-- plik: zima-gaj-2.png | styl: obiekt -->
+```
+A small rocky wooded knoll for a winter fantasy adventure map, in the style of
+Heroes of Might and Magic 3 seen from a high three-quarter angle: a low mound
+of grey-brown rock outcrops and snow-capped boulders with six or seven small
+tall dark snow-laden spruces of very different heights growing on and around
+it, one crooked old pine with a flat crown, a few low juniper bushes, open
+patches of snow between the trees so the rocks show. Each tree small. Cool
+blue shadows, sunlit snow on the upper-left faces. No snow platform or island
+under it: the irregular foot fades into trodden snow across the whole width
+of the picture. About as wide as tall.
+```

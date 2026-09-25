@@ -218,6 +218,25 @@ def popraw_teren(g, mapa):
     # Zagajnik między przełęczą a wąwozem — pusty płat śniegu pod doliną.
     for x, y in [(9, 66), (10, 66), (10, 67)]:
         mapa[y][x] = 'T'
+    # Runda 12 (HotA): „prawy dolny kwadrant — od środkowego lasu po prawą
+    # krawędź i dół — to jeden blok identycznych świerków, bez polan, ścieżek
+    # i skał". Bór rozbity na kępy różnej wielkości z prześwitami: kępa 3 × 2
+    # na zachodzie środkowego boru, obok luźne pojedyncze drzewa (scena stawia
+    # je z różnych rysunków); w dolnym bloku polana z odnogą traktu, gniazdem
+    # na pniu i skałkami, dwie kępy po bokach i pojedyncze drzewa na skraju.
+    for y in (64, 65):
+        mapa[y][17] = 's'
+    for x, y in [(21, 66), (21, 67)]:
+        mapa[y][x] = 's'
+    for y in range(68, 72):
+        for x in range(16, 25):
+            mapa[y][x] = 's'
+    for x, y in [(16, 70), (17, 70), (18, 70), (16, 71), (17, 71), (18, 71),   # kępa zachodnia
+                 (22, 70), (23, 70), (24, 70), (22, 71), (23, 71), (24, 71),   # kępa wschodnia
+                 (18, 68), (17, 69), (23, 69), (24, 69), (24, 68)]:           # pojedyncze
+        mapa[y][x] = 'T'
+    for x, y in [(22, 68), (23, 68)]:
+        mapa[y][x] = '#'
 
 
 def kadr_szeroki(g):
@@ -306,6 +325,9 @@ PIERWSZY_EKRAN = [
     ([(16, 61), (15, 61)], ('surowiec', 'kamien')),
     # Zaułek za wąwozem: skrzynia obok obozu łowców — druga nagroda za strażą.
     ([(11, 70), (12, 70), (12, 71)], ('skrzynia', None)),
+    # Runda 12 (HotA): polana w rozbitym borze, na końcu odnogi z zatoczki.
+    ([(20, 69), (21, 69), (20, 70)], ('budynek', 'gniazdo')),
+    ([(19, 70), (21, 70)], ('surowiec', 'jagoda')),
 ]
 
 
@@ -486,7 +508,9 @@ def rozstaw(g):
                  # do obozu łowców w zaułku.
                  (9, 64), (8, 65), (7, 65), (6, 65), (5, 66), (4, 66),
                  (11, 59), (11, 58), (10, 57), (10, 56), (11, 55),
-                 (12, 68), (12, 69), (13, 70), (14, 70)]:
+                 (12, 68), (12, 69), (13, 70), (14, 70),
+                 # Runda 12: z zatoczki na polanę w borze.
+                 (19, 68), (20, 68)]:
         if g.mapa[y][x] in 's.j':
             g.mapa[y][x] = '='
 
@@ -576,6 +600,11 @@ USTAWIENIA = {
     # kontaktowych — unoszą się nad śniegiem". Na jasnym, sinawym śniegu
     # zwykły cień ginął: pod drobnymi rzeczami szerszy i wyraźniejszy.
     'cienZnajdzek': {'szer': 1.25, 'krycie': 1.6},
+    # Runda 12 (HotA): „obiekty drobne, bez cienia, jak ikony wklejone na
+    # śnieg; góry wiszą na białym tle". Ciepła czerń cienia na bieli ginęła
+    # w szarości — cień na śniegu jest sinoniebieski (jak w HoMM3) i mocniejszy;
+    # góry i kępy boru rzucają miękki cień w prawo-dół.
+    'cienNaSniegu': {'barwa': 0x3a4a78, 'krycie': 1.35, 'gory': 0.55, 'las': 0.32},
     # Runda 7 (HotA): „budynki jak naklejki na owalnych wysepkach śniegu
     # z twardą krawędzią". Podstawki budowli rozpływają się teraz w tle
     # (`wtopPodstawe` w `wsad_wczytaj.py`), a ciemny obrys — osiem
@@ -598,16 +627,25 @@ USTAWIENIA = {
         #  * szczyt z lodospadem, mniejszy, na progu nad stawem (tło);
         #  * gromada szczytów na pasie skał x 1–8 za zamkiem;
         #  * iglice przy murach zamku (skały x 7–8, dotąd goły śnieg).
+        # Runda 12 (HotA): „lewa krawędź i dolny pas to kilka razy wklejony
+        # ten sam śnieżny szczyt, bez podstawy i przejścia w teren — łańcuch
+        # o różnych sylwetkach, z przedgórzem i cieniem na śniegu". Każda
+        # góra w kadrze ma inny kształt: samotny szczyt z lodospadem,
+        # kopulasty masyw z półkami (§27 gora-12), głazy przy murach, długie
+        # pasmo ze stołową skałą (gora-13), pagóry przedgórza (gora-14)
+        # i urwisko z borem; skała cieplejsza, u stóp piargi, zachodzą na
+        # siebie, cień na śnieg z `cienNaSniegu`.
         {'plik': 'gora-2', 'x': 6.6, 'y': 60.3, 'szer': 5.4, 'pokrywa': [4, 56, 9, 59]},
-        {'plik': 'gora-9', 'x': 4.4, 'y': 64.3, 'szer': 7.0, 'pokrywa': [0, 60, 8, 63]},
-        {'plik': 'gora-11', 'x': 8.1, 'y': 62.9, 'szer': 2.3, 'pokrywa': [0, 60, 8, 63]},
-        # Lewy dolny róg: z tyłu niski łańcuch ząbków (nie zasłania doliny
-        # przełęczy z kopalnią), z przodu grzbiet z siodłem, odbity.
-        {'plik': 'gora-10', 'x': 5.6, 'y': 69.9, 'szer': 7.4, 'pokrywa': [0, 64, 10, 71]},
-        {'plik': 'gora-1', 'x': 7.4, 'y': 72.5, 'szer': 7.2, 'odbij': True, 'pokrywa': [0, 64, 10, 71]},
+        {'plik': 'gora-12', 'x': 4.3, 'y': 64.0, 'szer': 6.0, 'pokrywa': [0, 60, 8, 63]},
+        {'plik': 'gora-7', 'x': 7.7, 'y': 63.2, 'szer': 2.7, 'odbij': True, 'pokrywa': [0, 60, 8, 63]},
+        # Lewy dolny róg: z tyłu pasmo (nie zasłania doliny przełęczy
+        # z kopalnią), z przodu pagóry i urwisko z borem jako przedgórze.
+        {'plik': 'gora-13', 'x': 5.2, 'y': 70.4, 'szer': 7.6, 'pokrywa': [0, 64, 10, 71]},
+        {'plik': 'gora-14', 'x': 2.4, 'y': 71.8, 'szer': 4.0, 'pokrywa': [0, 64, 10, 71]},
+        {'plik': 'gora-8', 'x': 9.0, 'y': 71.9, 'szer': 3.6, 'odbij': True, 'pokrywa': [0, 64, 10, 71]},
         # (Runda 6: bez skalnego pagóra `gora-5` w rogu — stał na wąwozie.)
         # Skalny garb nad stawem (górna krawędź ekranu) zamiast rzędu kęp.
-        {'plik': 'gora-3', 'x': 17.4, 'y': 56.1, 'szer': 6.2, 'pokrywa': [15, 50, 20, 55]},
+        {'plik': 'gora-10', 'x': 17.4, 'y': 56.0, 'szer': 7.0, 'pokrywa': [15, 50, 20, 55]},
         # Runda 6 (HotA): „równina bez rzeźby — skarpy, zagajniki, wąwozy".
         # Skalna skarpa pod zamkiem i zalesiony pagór nad nią (§18,
         # rysunki rozciągnięte w poziomie, żeby nie zasłaniały korytarza).
