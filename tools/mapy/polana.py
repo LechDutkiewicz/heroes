@@ -132,6 +132,17 @@ ZIEMIA = [
     (3, 27), (4, 27), (5, 27), (7, 27), (8, 27), (10, 27), (6, 28),
 ]
 
+#: Runda 9: zwarte masywy lasu w górnej połowie pierwszego ekranu
+#: (x0, y0, x1, y1). Szerokości i wiersze dobrane pod kępy 3 × 2 sceny
+#: (kępa zaczyna się od lewego górnego pola i skanuje od góry).
+LAS_KADRU = [
+    (0, 17, 7, 20),
+    (8, 18, 8, 20),
+    (16, 18, 18, 21),
+    (22, 17, 26, 18),
+    (21, 19, 26, 22),
+]
+
 #: Most (runda 4). Pola pod nim są w grze DROGĄ, a render maluje pod nimi
 #: nieprzerwaną wodę i kładzie na niej rysunek mostu (`MOSTY` niżej). Piaszczysty
 #: bród w tym miejscu czytał się jak łacha, na której rzeka się urywa.
@@ -258,6 +269,18 @@ def popraw_teren(g, mapa):
     for x in range(7, 12):
         if mapa[22][x] == 'T':
             mapa[22][x] = '.'
+    # Runda 9 (werdykt rundy 8: „łąki w lewej górnej i prawej górnej
+    # ćwiartce to pusta, płaska zieleń z rozsypanymi znacznikami — brakuje
+    # zwartych masywów lasu, które wyznaczałyby korytarze"). Trzy masywy
+    # (`LAS_KADRU`): na zachodzie las od krawędzi mapy do traktu — trakt na
+    # północ idzie wąwozem między lasem a rzeką; na drugim brzegu las nad
+    # polaną strażnicy i ściana lasu od wschodu, a między nimi przesmyk na
+    # północ (kolumny 20–21).
+    for x0, y0, x1, y1 in LAS_KADRU:
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                if mapa[y][x] in '.,j':
+                    mapa[y][x] = 'T'
     for x, y in ZIEMIA:
         if mapa[y][x] in '.,':
             mapa[y][x] = 'j'
@@ -373,7 +396,8 @@ PIERWSZY_EKRAN_DOM = [
     ([(4, 31), (5, 32)], ('artefakt', None)),
     ([(5, 31), (4, 30)], ('potwor', 'slaby')),
     ([(9, 21), (8, 20), (10, 21)], ('budynek', 'chatka')),
-    ([(6, 19), (5, 19), (7, 19)], ('surowiec', 'pokeball')),
+    # Runda 9: na zachodzie las — stosy i skrzynia przy trakcie w wąwozie.
+    ([(9, 19), (9, 20)], ('surowiec', 'pokeball')),
     ([(10, 19), (9, 19)], ('skrzynia', None)),
 ]
 
@@ -390,9 +414,10 @@ PIERWSZY_EKRAN_BRZEG = [
     ([(20, 23), (21, 23), (20, 22)], ('budynek', 'gniazdo')),
     ([(19, 24), (18, 24)], ('surowiec', 'jagoda')),
     ([(22, 25), (22, 26), (23, 24)], ('surowiec', 'kamien')),
-    ([(18, 20), (17, 20), (19, 19)], ('skrzynia', None)),
+    ([(20, 20), (20, 21), (19, 20)], ('skrzynia', None)),
     ([(19, 21), (18, 21)], ('potwor', 'slaby')),
-    ([(22, 20), (21, 19)], ('budynek', 'woz')),
+    # Runda 9: wóz na polanie strażnicy (na wschodzie stoi teraz las).
+    ([(16, 22), (15, 22)], ('budynek', 'woz')),
 ]
 
 
@@ -516,7 +541,8 @@ USTAWIENIA = {
     # na ziemi (`public/mapa/polana/stos-*.png`) zamiast ikony z paska.
     # Runda 8 (werdykt rundy 7: „obiekty giną w szumie dekoracji — powiększyć
     # je"): stosy o jedną piątą większe, a drobnica łąki przerzedzona.
-    'znajdzki': 0.5,
+    # Runda 9 („obiekty za małe względem zamku, giną wśród trawy”): 0,62.
+    'znajdzki': 0.62,
     # …i ciemny obrys pod wszystkim, co da się podnieść albo odwiedzić —
     # drzewa, krzaki i naklejki łąki go nie mają.
     'obrysObiektow': 0.35,
@@ -590,7 +616,9 @@ ODSTEP_KADRU = 3
 BARWY_TERENU = {
     # Runda 8: łąka o ton głębsza i mniej jaskrawa — w jaskrawej zieleni
     # obiekty i trakt ginęły; w HotA trawa jest ciemna, a obiekty świecą.
-    'trawa': {'nasycenie': 0.86, 'barwa': (96, 138, 64), 'moc': 0.12, 'jasnosc': 0.9},
+    # Runda 9: jeszcze o ton ciemniej i chłodniej — przy ciemnych masywach
+    # lasu jaskrawa łąka między nimi wciąż świeciła jak pusta plama.
+    'trawa': {'nasycenie': 0.74, 'barwa': (84, 132, 60), 'moc': 0.16, 'jasnosc': 0.77},
     'sciezka': {'nasycenie': 1.0, 'barwa': (150, 110, 70), 'moc': 0.12, 'jasnosc': 0.9},
     'woda': {'nasycenie': 0.85, 'barwa': (70, 120, 200), 'moc': 0.35, 'jasnosc': 0.86},
 }

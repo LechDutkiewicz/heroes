@@ -142,11 +142,16 @@ DOLINA_DOL = [
     'bb..........bb',
     'bb...........b',
     'bbb..........b',
-    '###~~b.....###',
-    '###~~b.....###',
-    '###b.......###',
-    '###b.......###',
+    '#####b.....###',
+    '#####~~....###',
+    '#####~~....###',
+    '#####b.....###',
 ]
+# Runda 8 (HotA: „góry to osobne stożki — nie łączą się w grzbiety i nie
+# zamykają dolin"): dół doliny zamyka CIĄGŁE pasmo — od lasu na zachodzie
+# do Czarnej Strugi na wschodzie, z jedną przełęczą, którą schodzi ścieżka.
+# Oczko wody przeszło spod skał na skraj przełęczy. Pasmo rysują duże góry
+# z `masywy` (USTAWIENIA), nie kępy 3 × 2.
 # Runda 6 (wzorzec HotA: „poza klifem w lewym górnym rogu nie ma przeszkód
 # ani rzeźby — środek i prawy dół to płaska łąka z okrągłymi krzaczkami"):
 # dwa omszałe urwiska w dolnych rogach doliny, 3 × 4 pola, czyli po dwie
@@ -279,6 +284,21 @@ def popraw_teren(g, mapa):
             x = 4 + dx
             if x < struga_x(y) - 2 and mapa[y][x] != '~' or znak == '~':
                 mapa[y][x] = znak
+    # Pasmo w dole doliny dochodzi do samej Strugi (runda 8).
+    for y in range(50, BOK):
+        for x in range(18, struga_x(y) - 1):
+            if mapa[y][x] != '~':
+                mapa[y][x] = '#'
+    # Runda 8 („prawa trzecia kadru to ciemnoturkusowa plama — nie widać,
+    # gdzie kończy się ląd, a zaczyna woda"): wschodni brzeg Strugi w kadrze
+    # startu to SUCHY pas łąki na cztery pola, z czytelnym brzegiem; bagno
+    # z oczkami zaczyna się dopiero za nim. Błoto z kałużami tuż przy rzece
+    # zlewało się z wodą w jedną taflę.
+    for y in range(STRUGA_WASKA_OD, BOK):
+        ostatnia = max((x for x in range(struga_x(y) - 2, struga_x(y) + 3) if mapa[y][x] == '~'), default=struga_x(y))
+        for x in range(ostatnia + 1, ostatnia + 5):
+            if mapa[y][x] == 'b':
+                mapa[y][x] = '.'
 
 
 def w_dolinie(x, y):
@@ -418,7 +438,14 @@ def rozstaw(g):
 
     # Straż przy samym Kamieniu (sonda: „artefaktu pilnuje straż" — wódz stoi
     # na grobli, siedem pól dalej). Na końcu, żeby nie ruszać losowań wyżej.
-    g.postaw((WYSPA[0] - 1, WYSPA[1]), ('potwor', 'silny'))
+    # Runda 8: przy innym rozstawieniu pole obok Kamienia bywa zajęte przez
+    # skrzynię z wyspy — strażnik staje wtedy na pierwszym wolnym sąsiednim.
+    for dx, dy in ((-1, 0), (1, 0), (-1, 1), (1, 1), (0, 1), (-1, -1), (1, -1)):
+        try:
+            g.postaw((WYSPA[0] + dx, WYSPA[1] + dy), ('potwor', 'silny'))
+            break
+        except SystemExit:
+            continue
 
 
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
@@ -458,17 +485,20 @@ USTAWIENIA = {
     # na omszałym kamieniu), nie ikony z paska — i są drobniejsze, z cieniem
     # kontaktowym, jak skarby na mapie Heroes 3.
     'znajdzki': 0.8,
-    # Runda 7: rysunki kęp skał w kadrze wybrane ręcznie (`kepySkal`, scena):
-    # hasz pola kładł w lewym górnym rogu dwa wodospady obok siebie — ta sama
-    # pieczątka dwa razy. Jeden wodospad na pasmo, reszta to różne granie.
-    'kepySkal': {
-        '4,37': 2, '7,37': -1,
-        '4,39': -4, '7,39': 3,
-        '4,41': 1, '7,41': -2,
-        '4,43': 2, '7,43': 4,
-        '4,50': -2, '4,52': 4,
-        '15,50': 1, '15,52': -4,
-    },
+    # Runda 8 (HotA: „góry to osobne stożki skał wklejone jak sprite'y — nie
+    # łączą się w grzbiety ani pasma i nie mają podnóży przechodzących
+    # w trawę"): skały pierwszego ekranu rysują WIELOPOLOWE pasma
+    # (`public/mapa/bagno/gora-N.png`, PROMPTY-PLANSZE §16) zachodzące na
+    # siebie, z miękkim, omszałym podnóżem. Na lewym skraju masyw
+    # z wodospadem, przed nim długi grzbiet; dół doliny zamyka pasmo od lasu
+    # do Strugi z przełęczą, którą schodzi ścieżka.
+    # `x`, `y` — stopa rysunku w polach (krawędzie pól), `szer` w polach.
+    'masywy': [
+        {'plik': 'gora-2', 'x': 6.2, 'y': 41.4, 'szer': 5.8, 'pokrywa': [4, 37, 9, 40]},
+        {'plik': 'gora-1', 'x': 6.7, 'y': 45.3, 'szer': 7.8, 'pokrywa': [4, 41, 9, 44]},
+        {'plik': 'gora-4', 'x': 6.4, 'y': 54.3, 'szer': 6.4, 'pokrywa': [4, 50, 8, 53]},
+        {'plik': 'gora-3', 'x': 17.1, 'y': 54.3, 'szer': 5.6, 'odbij': True, 'pokrywa': [15, 50, 18, 53]},
+    ],
     # Runda 6 (HotA: „obiekty interaktywne są mniejsze od drzew i krzaków,
     # bez cienia, konturu i kontrastu"): budowle większe i obrys wokół
     # wszystkiego, co da się odwiedzić albo podnieść.
@@ -478,8 +508,9 @@ USTAWIENIA = {
     # mętna, oliwkowo-brunatna, bez białej piany i z przygaszonymi iskrami.
     'wodaBarwy': {
         # Runda 7: ciemna torfowa tafla (jak tekstura `teren-woda-czarna`).
-        'plytka': [0.22, 0.38, 0.34],
-        'gleboka': [0.07, 0.15, 0.15],
+        # Runda 8: odrobinę jaśniej i chłodniej (łupkowa, nie czarna).
+        'plytka': [0.30, 0.44, 0.44],
+        'gleboka': [0.12, 0.22, 0.25],
         'piana': [0.50, 0.56, 0.40],
         'pianaMoc': 0.25,
         'iskry': 1.0,
@@ -498,7 +529,10 @@ BARWY_TERENU = {
     # Runda 7 („prawa połowa to mętna, szarozielona plama bez kontrastu"):
     # tafla `teren-woda-czarna` — ciemna, torfowa woda z jasnymi zmarszczkami
     # i rzęsą, wyraźnie ciemniejsza od lądu. Barwy nie ruszamy.
-    'woda': {'nasycenie': 1.0, 'barwa': (90, 100, 90), 'moc': 0.0, 'jasnosc': 1.0},
+    # Runda 8 („ciemnoturkusowa plama, nie widać, gdzie kończy się ląd"):
+    # tafla jaśniejsza i chłodniejsza, łupkowa jak rzeka we wzorcu HotA —
+    # ciemna woda obok ciemnego błota to była jedna plama.
+    'woda': {'nasycenie': 0.9, 'barwa': (92, 112, 138), 'moc': 0.35, 'jasnosc': 1.32},
     # Runda 6 („zieleń wokół obiektów przygasić"): łąka mniej nasycona.
     'trawa': {'nasycenie': 0.5, 'barwa': (100, 140, 112), 'moc': 0.55, 'jasnosc': 0.78},
     'las': {'nasycenie': 0.7, 'barwa': (90, 110, 75), 'moc': 0.4, 'jasnosc': 0.82},
@@ -514,11 +548,19 @@ EFEKTY = ['trzesawisko', 'obwodka_drogi', 'relief', 'bez_placow', 'brzeg_wody']
 #: wody w barwie jezior tej planszy, mokre błoto wokół, jaśniejszy grunt.
 TRZESAWISKO = {'woda': (34, 64, 58)}
 #: Błoto z dostawy (`tools/PROMPTY-PLANSZE.md`), do tego czasu zwykłe bagno.
-TEKSTURY = {'bagno': ['bloto', 'bagno'], 'woda': ['woda-czarna', 'woda-bagno', 'woda'], 'sciezka': ['bruk', 'sciezka']}
+TEKSTURY = {'bagno': ['bloto', 'bagno'], 'woda': ['woda-czarna', 'woda-bagno', 'woda'], 'sciezka': ['bruk', 'sciezka'],
+            # Runda 8: pod pasmami gór (`masywy`) mszysta ściółka, nie szary
+            # kamień — miękkie podnóże rysunku przechodzi w nią, a nie w kratę.
+            'skaly': ['las']}
 
 #: Runda 2 („krainy rozmywają się w jedną"): twardsze brzegi terenów.
 #: Runda 6 („brzegi wody miękko rozmyte, bez wyraźnej linii"): woda ostrzej.
 WTAPIANIE = {'bagno': 0.22, 'las': 0.3, 'skaly': 0.28, 'woda': 0.1}
+
+#: Runda 8 (wzorzec HotA: rzekę obwodzi szeroki pas jasnego piasku
+#: z kamykami): brzeg Strugi i stawów szerszy i jaśniejszy — to ta linia mówi,
+#: gdzie kończy się ląd (`teren_efekty.brzeg_wody`).
+BRZEG_WODY = {'szerokosc': 0.36, 'barwa': (186, 160, 112), 'linia': (52, 42, 28)}
 
 #: Plac wokół zamków wolny od innych budowli (patrz silnik).
 ODSTEP_OD_ZAMKOW = 2

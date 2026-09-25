@@ -659,6 +659,9 @@ ZESTAWY = {
         # Bagna, runda 5 (HotA): stosy surowców leżące na ziemi zamiast ikon
         # z paska (scena bierze je przy `USTAWIENIA.znajdzki`).
         'stos-pokeball': 72, 'stos-jagody': 72, 'stos-odlamki': 72, 'stos-kamien-ewolucji': 72,
+        # Bagna, runda 8 (HotA): pasma gór rozstawiane ręcznie
+        # (`USTAWIENIA.masywy`) zamiast osobnych stożków kęp.
+        'gora-1': 340, 'gora-2': 380, 'gora-3': 280, 'gora-4': 320,
     },
     # Polana: trawiaste góry z brązowymi urwiskami zamiast omszałych głazów
     # (runda 3 ślepego porównania: „bez pasma gór w kadrze").
@@ -675,6 +678,9 @@ ZESTAWY = {
         # Polana, runda 6: dwa RÓŻNE nieregularne krzewy zamiast jednej
         # okrągłej kuli z jagodami na co trzecim polu łąki.
         'krzak': 84, 'krzak-2': 84,
+        # Polana, runda 9: zwarte masywy lasu zamiast rzadkich kęp drzewek
+        # (PROMPTY-PLANSZE §17).
+        'kepa-las-1': 216, 'kepa-las-2': 216, 'kepa-las-3': 216, 'kepa-las-4': 216,
     },
 }
 

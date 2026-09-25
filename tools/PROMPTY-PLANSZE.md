@@ -1414,3 +1414,175 @@ with a smooth rounded top and an overhanging cornice lip, under the lip a
 deep cool blue shadow band and a small drop to lower snow, a few grey stones
 peeking out at one end. Low, flat, long. About three times wider than tall.
 ```
+
+## 16. Bagna — łańcuchy gór zamiast osobnych stożków (runda 8, wzorzec HotA)
+
+Werdykt rundy 7: „góry to osobne stożki skał wklejone jak sprite'y (lewy
+górny róg, lewy dolny róg, dół przy moście) — nie łączą się w grzbiety ani
+pasma i nie mają podnóży przechodzących w trawę". Kępy 3 × 2 (§7) scena
+stawia po jednej na każdy kawałek skał, więc zawsze wychodzą pojedyncze
+szczyty. Te rysunki to WIELOPOLOWE pasma rozstawiane ręcznie
+(`USTAWIENIA.masywy` w `tools/mapy/bagna.py`, jak Twierdza §15), zachodzące
+na siebie, z pogórzem, które schodzi w mech i trawę. Zestaw `bagno`.
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `bagno-gora-1.png` … `bagno-gora-4.png` | `public/mapa/bagno/gora-N.png` | 260–380 px |
+
+<!-- plik: bagno-gora-1.png | styl: obiekt | proporcje: 3:2 -->
+```
+A long continuous mountain range segment for a swampland adventure map, in the
+style of Heroes of Might and Magic 3: ONE unbroken ridge running across the
+whole width of the picture, with five jagged peaks of clearly different heights
+joined by rocky saddles, the tallest summit left of centre. Warm grey-brown
+rock with deep dark brown crevices and vertical cracks, ledges and gullies
+covered in dark green moss, sculpted relief lit from the upper left: pale
+sunlit faces, deep brown shadowed faces. The lower slopes turn into rounded
+foothills covered in moss and grass with a few dark green pines, twisted swamp
+willows, ferns and mossy boulders, so the mountain grows out of the ground
+instead of standing on it. The foot is a soft, irregular, lumpy edge of moss,
+grass tufts and small bushes, not a straight line. Much wider than tall.
+```
+
+<!-- plik: bagno-gora-2.png | styl: obiekt | proporcje: 1:1 -->
+```
+A big tall mountain massif for a swampland adventure map, in the style of
+Heroes of Might and Magic 3: a broad, heavy block of several jagged grey-brown
+rock peaks rising behind each other, one clearly higher in the middle, with a
+narrow white waterfall falling down a dark cleft in the front face into a small
+murky green pool with reeds at the foot. Deep dark brown crevices, ledges
+patched with dark green moss and hanging vines, strong relief lit from the
+upper left. The lower shoulders are mossy green foothills with dark pines,
+twisted swamp willows, ferns and mossy boulders that fade into grass at the
+wide, irregular foot spreading across the whole width of the picture.
+```
+
+<!-- plik: bagno-gora-3.png | styl: obiekt | proporcje: 3:2 -->
+```
+A long, low rocky ridge of foothills for a swampland adventure map, in the
+style of Heroes of Might and Magic 3: a continuous chain of low sharp
+grey-brown rock crests and big angular mossy boulders packed tightly along one
+line across the whole width of the picture, lower and flatter than a mountain
+but clearly impassable, with dark crevices, thick dark green moss on the tops,
+four or five dark pines and a twisted swamp willow growing between the rocks,
+ferns and grass tufts at the irregular lumpy foot that blends into moss and
+grass. Relief lit from the upper left. Much wider than tall.
+```
+
+<!-- plik: bagno-gora-4.png | styl: obiekt | proporcje: 3:2 -->
+```
+The end of a mountain chain for a swampland adventure map, in the style of
+Heroes of Might and Magic 3: a ridge of three jagged grey-brown rock peaks
+stepping down from a high summit on the left to a low mossy rock shoulder on
+the right, where it ends in a short steep cliff. Deep dark brown crevices,
+ledges covered in dark green moss, strong relief lit from the upper left, a
+few dark pines and a twisted swamp willow on the shoulders, mossy boulders,
+ferns and grass tufts along the soft irregular foot that fades into grass.
+Wider than tall.
+```
+
+## 17. Polana — zwarte masywy lasu zamiast rzadkich kęp drzew (runda 9, wzorzec HotA)
+
+Werdykt rundy 8: „łąki w lewej górnej i prawej górnej ćwiartce to pusta,
+płaska zieleń z rozsypanymi drobnymi znacznikami; brakuje zwartych masywów
+lasu, które wyznaczałyby korytarze". Podstawowe `kepa-las-*` to cztery, pięć
+osobnych drzewek z trawą między nimi — nawet blok lasu 6 × 4 pola czytał się
+jak sad. W HotA las to ciemnozielona, zbita ściana koron. Cztery RÓŻNE bryły
+gęstego lasu mieszanego; scena kładzie je co trzy pola (rysunek na pięć pól
+szerokości), więc sąsiednie zachodzą na siebie w jeden masyw.
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `polana-kepa-las-1..4.png` | `public/mapa/polana/kepa-las-N.png` | 216 |
+
+<!-- plik: polana-kepa-las-1.png | styl: obiekt -->
+```
+A dense block of mixed forest for a fantasy adventure map, in the style of
+Heroes of Might and Magic 3: about twelve tall dark green pines and firs packed
+tightly together with three round-crowned leafy oaks between them, crowns
+overlapping so that no grass shows between the trees, several rows deep, the
+back row taller. Deep dark green shadows between the trunks, sunlit lighter
+green tips on the right. Reads as one solid, impassable wall of forest. A bit
+wider than tall; the row of trunks and low bushes at the bottom spreads across
+the whole width of the picture so that pieces placed side by side join into
+one continuous forest.
+```
+
+<!-- plik: polana-kepa-las-2.png | styl: obiekt -->
+```
+A thick clump of deciduous forest for a fantasy adventure map, in the style of
+Heroes of Might and Magic 3: eight to ten big round-crowned oaks, beeches and
+lindens of different greens packed tightly together, crowns overlapping into
+one billowing canopy, two dark pines poking out at the back, a dense
+undergrowth of bushes and ferns along the bottom. Deep dark shadows inside the
+canopy, sunlit crowns on the right. One solid impassable block of forest, no
+gaps. A bit wider than tall; the undergrowth spreads across the whole width.
+```
+
+<!-- plik: polana-kepa-las-3.png | styl: obiekt -->
+```
+A dense stand of dark coniferous forest for a fantasy adventure map, in the
+style of Heroes of Might and Magic 3: fifteen tall slim dark green spruces and
+firs of uneven heights crowded together in several rows, pointed tops forming a
+jagged skyline, one birch with a white trunk at the front edge, low bushes
+between the front trunks. Deep blue-green shadows between the trees, sunlit
+edges on the right. Clearly one impassable block of forest. A bit wider than
+tall; the front row spreads across the whole width of the picture.
+```
+
+<!-- plik: polana-kepa-las-4.png | styl: obiekt -->
+```
+The ragged edge of a mixed forest for a fantasy adventure map, in the style of
+Heroes of Might and Magic 3: a tight mass of dark pines and round leafy trees,
+tall and thick on the left and in the back, stepping down to smaller young
+trees and round green bushes at the front right, crowns overlapping into one
+dense canopy with deep shadows inside. One solid block of forest, no grass
+showing between the trees. A bit wider than tall; the bushes at the foot
+spread across the whole width of the picture.
+```
+
+Pojedyncze drzewa na skraju masywów (scena stawia je tam, gdzie kępa 3 × 2
+się nie mieści) — w tym samym malowanym stylu co kępy, zamiast jaskrawych
+kreskówkowych drzewek podstawowego zestawu.
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `polana-sosna.png`, `polana-sosna-b.png` | `public/mapa/polana/sosna*.png` | 144 |
+| `polana-drzewo.png`, `polana-drzewo-b.png` | `public/mapa/polana/drzewo*.png` | 144 |
+| `polana-sosna-mala.png` (zmniejszona `polana-sosna-b`) | `public/mapa/polana/sosna-mala.png` | 96 |
+
+<!-- plik: polana-sosna.png | styl: obiekt | proporcje: 2:3 -->
+```
+A single tall dark green pine tree for a fantasy adventure map, in the style
+of Heroes of Might and Magic 3: a slim pointed crown of layered dark green
+needle branches with lighter sunlit tips on the right and deep blue-green
+shadow on the left, a short straight reddish-brown trunk, a few small green
+bushes at its foot. Much taller than wide.
+```
+
+<!-- plik: polana-sosna-b.png | styl: obiekt | proporcje: 2:3 -->
+```
+Two dark green fir trees growing close together for a fantasy adventure map,
+in the style of Heroes of Might and Magic 3: one tall and one a bit shorter,
+dense layered needle branches, sunlit tips on the right, deep shadow on the
+left, short brown trunks hidden by a small round bush at the foot. Taller
+than wide.
+```
+
+<!-- plik: polana-drzewo.png | styl: obiekt -->
+```
+A single big old oak tree for a fantasy adventure map, in the style of Heroes
+of Might and Magic 3: a broad, billowing crown of deep green leaves in several
+round clusters, sunlit lighter green on the upper right, dark shadowed green
+underneath, a thick gnarled brown trunk with roots, two small bushes at its
+foot. About as wide as tall.
+```
+
+<!-- plik: polana-drzewo-b.png | styl: obiekt -->
+```
+A leafy linden tree with a young pine beside it for a fantasy adventure map,
+in the style of Heroes of Might and Magic 3: a round dense crown of deep green
+leaves, the dark pointed pine a little behind on the left, sunlit tips on the
+right, deep shadows inside the crowns, brown trunks, a few ferns at the foot.
+About as wide as tall.
+```

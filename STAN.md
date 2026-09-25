@@ -309,6 +309,33 @@ dolnej ćwiartce". Zmiany:
 
 Symulacja misji 1: wygrana dnia 7 (2/2).
 
+### Twierdza, runda 4 (HotA)
+
+Werdykt rundy 3: „masyw po lewej to ten sam ośnieżony szczyt wklejony
+w siatkę rzędami — tapeta; pole śniegu płaskie i jednolite; tafla jeziora
+płasko niebieska". Zmiany:
+
+- Nowe `USTAWIENIA.masywy` (`mapy.ts`, scena): duże góry rozstawione
+  ręcznie (`plik` z zestawu klimatu, nazwa `gora-*`, stopa `x`, `y`
+  w polach, `szer`, `odbij`, `pokrywa` = prostokąt pól skał bez kęp).
+  Na planszy z górami scena układa drzewa, kępy i góry po głębi (kontener
+  świata rysuje w kolejności dodania, więc las nad górą wchodził jej na
+  zbocze). Bez ustawienia — jak dotąd. Twierdza: pięć rysunków
+  `zima/gora-1..5` (PROMPTY-PLANSZE §15: długi grzbiet, samotny szczyt
+  z lodospadem, dwa szczyty z siodłem, pogórze, skalny pagór ze świerkami)
+  w kadrze: pogórze nad stawem, szczyt, grzbiet, dwa szczyty w rogu i garb
+  nad stawem u góry ekranu.
+- Staw: efekt `lod_tafla` (`teren_efekty.py`, `EFEKTY`): głębia od brzegu,
+  łaty lodu, smugi nawianego śniegu, cień skarpy i szron na linii brzegu.
+  Spichlerz jagód i kopalnia odłamków stały bryłą na lodzie — po
+  rozstawieniu brzeg pod nimi i pod wiatrakiem to śnieg (koniec `rozstaw`).
+- Pole śniegu: `zaspy_zmienne` (duże łany gładkiego śniegu obok pól zasp,
+  sine niecki i cieplejsze wzniesienia), `RZEZBA` z nowym parametrem
+  `stok` (barwa skarpy; domyślnie dawna ziemia), naklejki `skalki-snieg`,
+  `trawy-snieg`, `nawis-sniezny` (§15b; surowe z API kremowe — we wsadzie
+  przestudzone). `lata-ziemi-snieg` odrzucona: szare „przeręble".
+- Obrazki „high" z OpenAI kończyły się 502 (upstream) — wszystko medium.
+
 ## HUD mapy przygody na wspólnym zestawie (2026-09-24)
 
 - Mapa stoi na tym samym materiale co kampania i okna misji

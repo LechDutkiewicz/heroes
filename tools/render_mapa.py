@@ -75,6 +75,8 @@ TRZESAWISKO: dict = {}
 #: i rzeźba terenu (`RZEZBA`, `teren_efekty.rzezba`). Brak wpisu — jak dotąd.
 DROGA_KRETA = None
 RZEZBA = None
+#: Parametry `teren_efekty.brzeg_wody` planszy (`BRZEG_WODY`). Brak — domyślne.
+BRZEG_WODY: dict = {}
 
 KAFEL = 48                  # bok pola na ekranie
 #: Ile razy nadpróbkowujemy maskę drogi, zanim ją zmniejszymy. Rysowanie
@@ -129,7 +131,7 @@ def ustaw(mapa_id: str):
     i wymiary z globali — tak było, gdy plansza była jedna, i tak zostaje,
     bo każda z nich jest wołana raz na planszę."""
     global KATALOG, ZRODLO, RYSUNEK, WYS, SZER, W, H, BARWY, EFEKTY, TEKSTURY, WTAPIANIE, NAKLEJKI, TRZESAWISKO, MOSTY
-    global DROGA_KRETA, RZEZBA
+    global DROGA_KRETA, RZEZBA, BRZEG_WODY
     KATALOG = katalog_tla(mapa_id)
     k = konfiguracja(mapa_id)
     BARWY = getattr(k, 'BARWY_TERENU', {})
@@ -140,6 +142,7 @@ def ustaw(mapa_id: str):
     TRZESAWISKO = getattr(k, 'TRZESAWISKO', {})
     DROGA_KRETA = getattr(k, 'DROGA_KRETA', None)
     RZEZBA = getattr(k, 'RZEZBA', None)
+    BRZEG_WODY = getattr(k, 'BRZEG_WODY', {})
     ZRODLO = plik_ts(mapa_id)
     RYSUNEK = wczytaj_rysunek()
     # Mosty (`MOSTY` planszy): pola pod mostem są w grze drogą, ale w tle
@@ -317,7 +320,7 @@ def klatka() -> tuple[Image.Image, Image.Image]:
             plansza = teren_efekty.trzesawisko(plansza, m, KAFEL, ZIARNO + 720, **TRZESAWISKO)
     # Bagna, runda 6: wyraźny pas brzegu wokół wody (`EFEKTY = ['brzeg_wody']`).
     if 'brzeg_wody' in EFEKTY and 'woda' in maski:
-        plansza = teren_efekty.brzeg_wody(plansza, maski['woda'], KAFEL, ZIARNO + 790)
+        plansza = teren_efekty.brzeg_wody(plansza, maski['woda'], KAFEL, ZIARNO + 790, **BRZEG_WODY)
     plansza = plansza.convert('RGBA')
     # Droga też słucha `TEKSTURY` planszy (Bagna, runda 6: bruk grobli
     # zamiast piaskowej smugi). Bez wpisu 'sciezka' — jak dotąd, bajt w bajt.
