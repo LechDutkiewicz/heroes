@@ -238,6 +238,21 @@ def zabarw(im: Image.Image, nazwa: str) -> Image.Image:
     return Image.fromarray(tab.astype(np.uint8), 'RGB')
 
 
+def tekstura_warstwy(nazwa: str) -> str:
+    """Tekstura dla warstwy: pierwsza ISTNIEJĄCA z `TEKSTURY` planszy.
+
+    `TEKSTURY = {'woda': ['lod', 'snieg']}` znaczy: lód, jeśli już jest
+    `public/mapa/teren/teren-lod.png` (dostawa z `tools/PROMPTY-PLANSZE.md`),
+    a do tego czasu śnieg. Dzięki temu nowa grafika wchodzi samym
+    `wsad_wczytaj.py` i ponownym renderem, bez ruszania konfiguracji.
+    """
+    wybor = TEKSTURY.get(nazwa, nazwa)
+    for t in [wybor] if isinstance(wybor, str) else wybor:
+        if (KORZEN / 'public' / 'mapa' / 'teren' / f'teren-{t}.png').exists():
+            return t
+    return nazwa
+
+
 def klatka() -> tuple[Image.Image, Image.Image]:
     """Plansza i maska wody.
 
@@ -253,7 +268,7 @@ def klatka() -> tuple[Image.Image, Image.Image]:
         if not any(c in znaki for wiersz in RYSUNEK for c in wiersz):
             continue
         wtapianie = WTAPIANIE.get(nazwa, wtapianie)
-        warstwa = zabarw(zmieszaj(warianty(TEKSTURY.get(nazwa, nazwa)), W, H, (0, 0), ZIARNO + 50 + n), nazwa)
+        warstwa = zabarw(zmieszaj(warianty(tekstura_warstwy(nazwa)), W, H, (0, 0), ZIARNO + 50 + n), nazwa)
         # Każda warstwa dostaje własne ziarno, inaczej wszystkie granice
         # falowałyby w tym samym rytmie i widać by było jeden wzór.
         m = maska(pola(znaki), KAFEL, wtapianie, poszarpanie, ZIARNO + n)

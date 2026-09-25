@@ -53,6 +53,42 @@ zawiera, więc nie wypada ze skrzyni, wozu, chaty ani artefaktu luzem
 nie ma gniazda w siatce (siatka to osiem artefaktów do zbierania) — pokazuje
 go karta pod siatką, jako najważniejszą noszoną rzecz.
 
+### Grafiki plansz kampanii — jak wchodzą do gry
+
+Prompty: `tools/PROMPTY-PLANSZE.md` (zarejestrowany w `DOKUMENTY`
+`generuj_grafiki.py`; style `obiekt` i `teren` z `PROMPTY-MAPA-2.md`).
+Następna sesja z kluczem OpenAI robi tylko:
+
+    python3 tools/generuj_grafiki.py        # czego brak w tools/wsad/
+    python3 tools/wsad_wczytaj.py           # → public/mapa/tlo/, public/mapa/<zestaw>/, public/mapa/teren/
+    python3 tools/render_mapa.py polana bagna twierdza
+    npx tsx tools/probe-mapy.ts             # odciski teł (rysunek się nie zmienia, więc przechodzą)
+
+Trzy rodzaje grafik, trzy różne drogi:
+
+| Rodzaj | Plik we wsadzie | Ląduje w | Kto rysuje | Co trzeba zrobić |
+|---|---|---|---|---|
+| naklejki terenu (trzcina, grążele, martwe drzewa, zaśnieżone głazy, zaspy, kry, kwiaty) | `trzcina-1.png` … | `public/mapa/tlo/<nazwa>.png` | `render_mapa.py` w tle (`NAKLEJKI` w `tools/mapy/<id>.py`) | nic — gotowe, bez plików render je pomija |
+| tereny (lód, błoto) | `teren-lod.png`, `teren-bloto.png` (+ `…2`) | `public/mapa/teren/` | `render_mapa.py` (`TEKSTURY` z listą zapasową) | nic — gotowe, pierwsza istniejąca tekstura wygrywa |
+| zestawy klimatu dla sceny (zaśnieżone sosny, nagie drzewa, skały ze śniegiem, kopalnie w skale, drzewa bagienne) | `zima-sosna.png`, `bagno-drzewo.png` … | `public/mapa/<zestaw>/<nazwa>.png` | `AdventureScene` | **scena musi zacząć je czytać** — patrz niżej |
+
+**Kontrakt dla sceny (właściciel `AdventureScene`).** Plansza podaje
+`USTAWIENIA.zestaw` (`'zima'` w Twierdzy, `'bagno'` na Bagnach). W `preload`
+dla każdej nazwy z listy poniżej: jeśli istnieje
+`mapa/<zestaw>/<nazwa>.png`, wczytać ją pod tym samym kluczem `m-<nazwa>`
+zamiast `mapa/<nazwa>.png` (i usuwać teksturę przy zmianie planszy — tak jak
+dziś `plansza-0`). Nazwy i wymiary są identyczne z sprite'ami, które
+zastępują, więc reszta sceny nie zmienia się wcale:
+
+| Zestaw | Nazwy (`m-…`) | Wymiary oryginału |
+|---|---|---|
+| `zima` | `sosna`, `sosna-b` (90 × 144), `sosna-mala` (60 × 96), `drzewo`, `drzewo-b` (147 × 144), `krzak`, `krzak-2` (97 × 84), `skala`, `skala-2` (76 × 67), `kepa-las-1..4`, `kepa-skaly-1..4` (240 × 216), `kopalnia-kamien` (173 × 160), `kopalnia-odlamek` (146 × 160), `kopalnia-pokeball` (140 × 160), `sad` (178 × 160) | |
+| `bagno` | `drzewo`, `drzewo-b`, `krzak`, `krzak-2`, `kepa-las-1..4`, `kopalnia-kamien`, `kopalnia-odlamek`, `kopalnia-pokeball` | jak wyżej |
+
+Wysokości docelowe siedzą w `ZESTAWY` w `wsad_wczytaj.py` i odpowiadają
+wysokościom oryginałów. Do czasu zmiany w scenie pliki leżą w `public/`
+i nie są wczytywane — nic się nie psuje.
+
 ### Znalezione w AI przy symulacji misji
 
 Trzy usterki `wrog-ai.ts`, żadna niewidoczna na Dwóch Doliniach z osobna:

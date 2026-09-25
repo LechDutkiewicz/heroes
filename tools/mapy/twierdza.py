@@ -294,7 +294,7 @@ WODA_ANIMOWANA = False
 #: zaspy z niebieskim cieniem i iskrami, lód z rysami zamiast tafli wody,
 #: droga z brzegiem, las w zwartych masach, gęsty pierwszy ekran.
 EFEKTY = ['zaspy', 'lod', 'obwodka_drogi', 'relief_sniezny', 'bez_placow']
-TEKSTURY = {'woda': 'snieg'}
+TEKSTURY = {'woda': ['lod', 'snieg']}
 SKUP_LAS = True
 RAMKA_STARTU = True
 #: Twardszy brzeg śniegu — granica ma być czytelna, a nie rozmyta w mgłę.

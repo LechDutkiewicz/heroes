@@ -336,6 +336,8 @@ BARWY_TERENU = {
 #: oczka ciemnej wody, trzcina i grążele na bagnie, obwódka i jaśniejsza
 #: jezdnia na grobli (`tools/teren_efekty.py`).
 EFEKTY = ['bagno', 'obwodka_drogi', 'relief', 'bez_placow']
+#: Błoto z dostawy (`tools/PROMPTY-PLANSZE.md`), do tego czasu zwykłe bagno.
+TEKSTURY = {'bagno': ['bloto', 'bagno']}
 
 #: Runda 2 („krainy rozmywają się w jedną"): twardsze brzegi terenów.
 WTAPIANIE = {'bagno': 0.3, 'las': 0.3, 'skaly': 0.28, 'woda': 0.22}
