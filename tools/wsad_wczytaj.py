@@ -709,6 +709,15 @@ WTOP_PODSTAWY = {
     },
 }
 
+#: Twierdza, runda 8 (HotA): „budynki wiszą na śniegu jak naklejki". Śnieg
+#: tła przy budowlach jest sinawy (rzeźba, zaspy), a podstawka rysunku
+#: bielutka — jasny płat pod ścianą czytał się jak wysepka. Krótszy zasięg
+#: zaspy przy ścianach i barwa śniegu tła zamiast bieli.
+WTOP_PARAMY = {
+    'zima': {'zasieg': 0.03, 'przesun': 0.004, 'zimny': (196, 210, 228), 'lum0': 235.0,
+             'sila': 0.85, 'od': 0.35},
+}
+
 #: To samo dla naklejek tła, które mają śnieżny płat pod spodem (tylko Twierdza
 #: ich używa — `NAKLEJKI` w `tools/mapy/twierdza.py`).
 WTOP_NAKLEJKI = {
@@ -717,7 +726,9 @@ WTOP_NAKLEJKI = {
 }
 
 
-def wtopPodstawe(im: Image.Image, ziarno: int = 0) -> Image.Image:
+def wtopPodstawe(im: Image.Image, ziarno: int = 0, zasieg: float = 0.055, przesun: float = 0.008,
+                 zimny: tuple = (226, 234, 246), lum0: float = 215.0, sila: float = 0.7,
+                 od: float = 0.0) -> Image.Image:
     """Rozpuszcza śnieżną podstawkę pod budowlą w przezroczystość.
 
     Model rysuje każdą budowlę na owalnym płacie śniegu z twardym, cieniowanym
@@ -753,10 +764,10 @@ def wtopPodstawe(im: Image.Image, ziarno: int = 0) -> Image.Image:
     d = ndi.distance_transform_edt(~cialo)
     szum = ndi.gaussian_filter(np.random.default_rng(ziarno).standard_normal((H, W)), H * 0.03)
     szum /= np.abs(szum).max() + 1e-6
-    x = np.clip((d + szum * H * 0.025 - H * 0.008) / (H * 0.055), 0, 1)
+    x = np.clip((d + szum * H * 0.025 - H * przesun) / (H * zasieg), 0, 1)
     t[:, :, 3] = np.where(cialo, a, a * (1 - x * x * (3 - 2 * x))) * 255
-    zimny = np.array([226, 234, 246], np.float32) * (lum[..., None] / 215.0)
-    w = np.where(cialo, 0.0, 0.7 * np.clip(x * 2.5, 0, 1))[..., None]
+    zimny = np.array(zimny, np.float32) * (lum[..., None] / lum0)
+    w = np.where(cialo, 0.0, sila * np.clip(od + x * 2.5, 0, 1))[..., None]
     t[:, :, :3] = rgb * (1 - w) + zimny * w
     return Image.fromarray(t.clip(0, 255).astype(np.uint8), 'RGBA')
 
@@ -819,7 +830,7 @@ def mapa():
                 continue
             im = dopasuj(wczytaj(f'{zestaw}-{nazwa}'), wys)
             if nazwa in WTOP_PODSTAWY.get(zestaw, ()):
-                im = wtopPodstawe(im)
+                im = wtopPodstawe(im, **WTOP_PARAMY.get(zestaw, {}))
             ostrzezOTle(f'{zestaw}-{nazwa}', im)
             im.save(MAPA / zestaw / f'{nazwa}.png')
             print(f'  {zestaw}/{nazwa}.png  {im.width} × {im.height}')

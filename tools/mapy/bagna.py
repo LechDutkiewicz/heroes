@@ -550,6 +550,48 @@ def rozstaw(g):
             continue
 
     przerzedz_kadr(g)
+    mokradla_kadru(g)
+
+
+#: Runda 11 (HotA, zwycięzca rundy 10: „nic nie przypomina bagna — stawy małe,
+#: brak trzcin, błota i mokradeł, prawie jednolita zieleń"). Pierwszy ekran
+#: dostaje MOKRADŁA: pola trzęsawiska (`b`, w grze droższe, przejezdne)
+#: malowane w tle jako jedna płachta błota z oczkami mętnej wody o ostrym,
+#: nieregularnym brzegu (`DOMALUJ`, nie warstwa `bagno` z kratką kafli —
+#: za to przegraliśmy rundę 8), i większe stawy (`~`). Stawiane na końcu
+#: `rozstaw`: losowania i obiekty zostają te same, a silnik i tak sprawdza
+#: potem łączność przy obiektach.
+#:  - górny środek: gęsta kępa wierzb (werdykt r10: „korony zasłaniają, gdzie
+#:    da się przejść") → staw-starorzecze przy Strudze i błota wokół; pola
+#:    (16,40), (17,40) zostają nieprzejezdne (woda), więc artefakt pod strażą
+#:    (17,39) dalej jest dostępny tylko przez straż;
+#:  - dół środka: oczko nad pasmem w pasie błota do samej Strugi;
+#:  - za Strugą: dół ściany wierzb i łąka przy wieży to już trzęsawisko;
+#:  - staw w przełęczy pod zamkiem z błotnistym brzegiem.
+MOKRADLA_WODA = [(15, 40), (16, 40), (17, 40), (14, 41), (15, 41), (16, 41)]
+MOKRADLA_BAGNO = [
+    # górny środek
+    (13, 42), (14, 42), (15, 42), (16, 42), (12, 43), (13, 43), (14, 43), (13, 41),
+    # dół środka
+    (15, 45), (16, 45), (17, 45), (14, 47),
+    (15, 46), (16, 46), (17, 46), (15, 47), (16, 47), (17, 47), (17, 48), (17, 49), (18, 49),
+    # za Strugą, prawy górny róg kadru
+    (22, 38), (23, 38), (22, 39), (23, 39), (21, 40), (22, 40), (21, 41), (22, 41),
+    # za Strugą, dół
+    (24, 45), (25, 45), (24, 46), (25, 46),
+    (22, 50), (23, 50), (24, 50), (25, 50), (22, 51), (23, 51), (24, 51), (25, 51), (26, 51),
+    (22, 52), (23, 52), (24, 52), (22, 53), (23, 53), (24, 53), (25, 53),
+    # staw w przełęczy pod zamkiem
+    (11, 52), (9, 53), (10, 53), (11, 53),
+]
+
+
+def mokradla_kadru(g):
+    zajete = {p for p, _ in g.obiekty}
+    for (x, y), znak in [(p, '~') for p in MOKRADLA_WODA] + [(p, 'b') for p in MOKRADLA_BAGNO]:
+        if (x, y) in zajete or g.mapa[y][x] in '=~#':
+            continue
+        g.mapa[y][x] = znak
 
 
 #: Runda 10 (HotA: „obiekty do zebrania za duże i za gęste — sterta jagód
@@ -796,4 +838,166 @@ def TLO(rysunek):
         for x in range(0, 29):
             if wynik[y][x] in '#T':
                 wynik[y][x] = '.'
+            # Runda 11: trzęsawisko pierwszego ekranu nie idzie warstwą
+            # `bagno` (maska kafli z ciemną obwódką), tylko `DOMALUJ` —
+            # znak `m` nie należy do żadnej warstwy, więc pod nim jest łąka.
+            elif wynik[y][x] == 'b':
+                wynik[y][x] = 'm'
     return [''.join(w) for w in wynik]
+
+
+#: Mokradła pierwszego ekranu (`DOMALUJ`): barwy błota i mętnej wody oczek.
+MOKRADLA = {
+    'bloto': {'nasycenie': 0.75, 'barwa': (150, 132, 62), 'moc': 0.55, 'jasnosc': 0.9},
+    'woda': {'nasycenie': 0.85, 'barwa': (128, 112, 64), 'moc': 0.55, 'jasnosc': 0.9},
+    'linia': (44, 36, 20),
+    'rant': (150, 128, 82),
+}
+
+
+def DOMALUJ(plansza, rysunek, kafel, droga=None, maska_wody=None):
+    """Mokradła pierwszego ekranu (runda 11) — pola `m` z `TLO`.
+
+    Jedna płachta błota o nieregularnym, OSTRYM brzegu (maska pól rozmyta
+    i progowana z szumem, brzeg wygładzony o piksel — bez ciemnej obwódki
+    w kształcie kafli), w niej oczka mętnej, oliwkowo-brunatnej wody z ciemną
+    mokrą linią i jaśniejszym rantem, a na brzegach oczek trzcina, turzyca,
+    martwe drzewa, pnie i kłody. Błoto nie wchodzi na trakt ani na piaszczysty
+    brzeg Strugi — kończy się przed nimi.
+    """
+    import numpy as np
+    from PIL import Image
+    from scipy.ndimage import distance_transform_edt, gaussian_filter
+    import teren_efekty
+    from teren_malowanie import kafelkuj, szum, tekstura
+
+    pola = np.array([[1.0 if c == 'm' else 0.0 for c in w] for w in rysunek], np.float32)
+    if not pola.any():
+        return plansza
+    ys, xs = np.nonzero(pola)
+    fx0, fy0 = max(0, xs.min() - 2), max(0, ys.min() - 2)
+    fx1, fy1 = min(pola.shape[1], xs.max() + 3), min(pola.shape[0], ys.max() + 3)
+    X0, Y0, X1, Y1 = fx0 * kafel, fy0 * kafel, fx1 * kafel, fy1 * kafel
+    W, H = X1 - X0, Y1 - Y0
+    ziarno = ZIARNO + 1100
+
+    # Obszar: pola rozciągnięte na piksele, rozmyte i progowane z szumem.
+    p = Image.fromarray((pola[fy0:fy1, fx0:fx1] * 255).astype(np.uint8), 'L').resize((W, H), Image.BILINEAR)
+    t = gaussian_filter(np.asarray(p, np.float32) / 255.0, kafel * 0.3)
+    t += szum(W, H, max(2, int(kafel * 0.9)), ziarno) * 0.2 + szum(W, H, max(2, int(kafel * 0.3)), ziarno + 1) * 0.06
+    obszar = t > 0.5
+    if droga is not None:
+        d = np.asarray(droga.convert('L'), np.float32)[Y0:Y1, X0:X1] > 90
+        obszar &= distance_transform_edt(~d) > kafel * 0.16
+    if maska_wody is not None:
+        w = np.asarray(maska_wody.convert('L'), np.float32)[Y0:Y1, X0:X1] > 127
+        obszar &= distance_transform_edt(~w) > kafel * (0.3 + 0.12 * szum(W, H, max(2, int(kafel * 0.7)), ziarno + 2))
+    else:
+        w = np.zeros((H, W), bool)
+    A = gaussian_filter(obszar.astype(np.float32), 0.7)
+
+    # Oczka: szum progowany, tylko w głębi obszaru.
+    d_in = distance_transform_edt(obszar)
+    n = szum(W, H, max(2, int(kafel * 1.2)), ziarno + 3) * 0.7 + szum(W, H, max(2, int(kafel * 0.4)), ziarno + 4) * 0.3
+    oczka = (n > 0.05) & (d_in > kafel * 0.22)
+    d_oczko = distance_transform_edt(oczka)
+    d_od_oczka = distance_transform_edt(~oczka)
+    O = gaussian_filter(oczka.astype(np.float32), 0.7)
+
+    zabarw = lambda im, u: _zabarw(im, u)
+    # Grunt mokradła to ta sama malowana łąka, przygaszona do oliwkowej
+    # turzycy — jedna rodzina tekstur, tylko wilgotniejsza i cieplejsza.
+    bloto = np.asarray(zabarw(plansza.convert('RGB').crop((X0, Y0, X1, Y1)), MOKRADLA['bloto']), np.float32)
+    woda = np.asarray(zabarw(kafelkuj(tekstura('woda-bagno'), W, H, (-X0, -Y0)), MOKRADLA['woda']), np.float32)
+    # Głębia oczka: ciemniej w środku.
+    glab = np.clip(d_oczko / (kafel * 0.45), 0, 1)[..., None]
+    woda = woda * (1 - glab * 0.3)
+
+    tab = np.asarray(plansza.convert('RGB'), np.float32).copy()
+    kaw = tab[Y0:Y1, X0:X1]
+    # Błoto na obszarze, ostro.
+    kaw = kaw * (1 - A[..., None]) + bloto * A[..., None]
+    # Cienka ciemniejsza krawędź błota od strony łąki (1–2 px, nie pas).
+    kraw = gaussian_filter((obszar & (d_in <= 2.0)).astype(np.float32), 0.6)[..., None]
+    kaw = kaw * (1 - kraw * 0.12)
+    # Rant wokół oczka: pas jaśniejszego, mokrego błota.
+    rant = gaussian_filter(((~oczka) & (d_od_oczka <= kafel * 0.08) & obszar).astype(np.float32), 0.6)[..., None]
+    kaw = kaw * (1 - rant * 0.5) + np.array(MOKRADLA['rant'], np.float32) * rant * 0.5
+    kaw = kaw * (1 - O[..., None]) + woda * O[..., None]
+    mokra = gaussian_filter((oczka & (d_oczko <= max(2.0, kafel * 0.05))).astype(np.float32), 0.6)[..., None]
+    kaw = kaw * (1 - mokra * 0.75) + np.array(MOKRADLA['linia'], np.float32) * mokra * 0.75
+    # Refleks nieba przy dolnym brzegu oczka.
+    dol = oczka & ~np.roll(oczka, -max(2, kafel // 12), axis=0)
+    ref = gaussian_filter(dol.astype(np.float32), 0.8)[..., None]
+    kaw = kaw + (np.array([200, 204, 168], np.float32) - kaw) * ref * 0.25
+    tab[Y0:Y1, X0:X1] = kaw
+    im = Image.fromarray(tab.clip(0, 255).astype(np.uint8), 'RGB').convert('RGBA')
+
+    # Naklejki: trzcina i turzyca na brzegach oczek, martwe drzewa, pnie, kłody.
+    from pathlib import Path
+    kat = Path(__file__).resolve().parent.parent.parent / 'public' / 'mapa' / 'tlo'
+
+    def wczytaj(n, skala=1.0):
+        f = kat / f'{n}.png'
+        if not f.exists():
+            return None
+        o = Image.open(f).convert('RGBA')
+        if skala != 1.0:
+            o = o.resize((max(1, int(o.width * skala)), max(1, int(o.height * skala))), Image.LANCZOS)
+        return o
+
+    rng = np.random.default_rng(ziarno + 5)
+    trzciny = [x for x in (wczytaj('trzcina-1', 1.3), wczytaj('trzcina-2', 1.3), wczytaj('trzcina-3', 1.3),
+                           wczytaj('kepa-turzycy', 1.2)) if x]
+    na_wodzie = [x for x in (wczytaj('pien-zatopiony', 1.2), wczytaj('grazel-1'), wczytaj('grazel-2'),
+                             wczytaj('kepa-turzycy', 1.1)) if x]
+    na_blocie = [x for x in (wczytaj('martwe-drzewo-1', 1.25), wczytaj('martwe-drzewo-2', 1.25),
+                             wczytaj('pniak-bagienny', 1.15), wczytaj('kloda-mech', 1.2), wczytaj('irysy', 1.1)) if x]
+    naklejki = []
+    # Trzcina na brzegach oczek.
+    brzeg = np.argwhere(oczka & (d_oczko <= 2) & (d_in > kafel * 0.3))
+    ile = int(pola[fy0:fy1, fx0:fx1].sum() * 0.4)
+    postawione = []
+    for i in rng.permutation(len(brzeg)):
+        if len(postawione) >= ile:
+            break
+        y, x = brzeg[i]
+        if any((y - a) ** 2 + (x - b) ** 2 < (kafel * 0.75) ** 2 for a, b in postawione):
+            continue
+        postawione.append((y, x))
+        naklejki.append((y, x, trzciny[int(rng.integers(0, len(trzciny)))]))
+    # Na wodzie i na błocie — po polu.
+    for fy in range(fy0, fy1):
+        for fx in range(fx0, fx1):
+            if pola[fy, fx] < 1:
+                continue
+            for _ in range(2):
+                px = int((fx + rng.uniform(0.15, 0.85)) * kafel) - X0
+                py = int((fy + rng.uniform(0.3, 0.95)) * kafel) - Y0
+                los = rng.random()
+                if not (0 <= px < W and 0 <= py < H) or not obszar[py, px]:
+                    continue
+                if oczka[py, px] and d_oczko[py, px] > kafel * 0.15:
+                    if los < 0.22:
+                        naklejki.append((py, px, na_wodzie[int(rng.integers(0, len(na_wodzie)))]))
+                elif not oczka[py, px] and d_in[py, px] > kafel * 0.25:
+                    if los < 0.2:
+                        naklejki.append((py, px, na_blocie[int(rng.integers(0, len(na_blocie)))]))
+    naklejki.sort(key=lambda t: t[0])
+    for py, px, n in naklejki:
+        if rng.random() < 0.5:
+            n = n.transpose(Image.FLIP_LEFT_RIGHT)
+        im.alpha_composite(n, (max(0, X0 + px - n.width // 2), max(0, Y0 + py - n.height + int(n.height * 0.12))))
+    return im
+
+
+def _zabarw(im, u):
+    import numpy as np
+    from PIL import Image
+    tab = np.asarray(im.convert('RGB'), dtype=np.float32)
+    szary = tab.mean(axis=2, keepdims=True)
+    tab = szary + (tab - szary) * u.get('nasycenie', 1.0)
+    b = np.array(u.get('barwa', (128, 128, 128)), dtype=np.float32)
+    mnoznik = 1 + (b / b.mean() - 1) * u.get('moc', 0.0)
+    tab = (tab * mnoznik[None, None, :] * u.get('jasnosc', 1.0)).clip(0, 255)
+    return Image.fromarray(tab.astype(np.uint8), 'RGB')

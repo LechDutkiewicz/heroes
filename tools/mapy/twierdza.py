@@ -271,7 +271,11 @@ PIERWSZY_EKRAN = [
     ([(20, 61), (20, 60)], ('skrzynia', None)),
     ([(23, 63), (22, 62)], ('surowiec', 'pokeball')),
     # Góra kadru, przy wieży: skrzynia na brzegu stawu.
-    ([(14, 53), (13, 53), (14, 54)], ('skrzynia', None)),
+    ([(14, 54), (13, 55), (14, 55)], ('skrzynia', None)),
+    # Między wiatrakiem a spichlerzem: kamień ewolucji przy ścieżce.
+    ([(16, 61), (15, 61)], ('surowiec', 'kamien')),
+    # Zaułek za wąwozem: skrzynia obok obozu łowców — druga nagroda za strażą.
+    ([(11, 70), (12, 70), (12, 71)], ('skrzynia', None)),
 ]
 
 

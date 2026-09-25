@@ -69,6 +69,8 @@ WTAPIANIE: dict = {}
 NAKLEJKI: list = []
 #: Pola bez naklejek — funkcja planszy od źródła .ts (patrz `klatka`).
 NAKLEJKI_OMIN = None
+#: Własne malowanie planszy po naklejkach (`DOMALUJ` z konfiguracji).
+DOMALUJ = None
 #: Mosty malowane na wodzie — `MOSTY` z konfiguracji (patrz `teren_efekty.mosty`).
 MOSTY: list = []
 #: Parametry efektu `trzesawisko` (barwa oczek) — `TRZESAWISKO` z konfiguracji.
@@ -151,6 +153,10 @@ def ustaw(mapa_id: str):
     DROGA_OBRZEZE = getattr(k, 'DROGA_OBRZEZE', {})
     global NAKLEJKI_OMIN
     NAKLEJKI_OMIN = getattr(k, 'NAKLEJKI_OMIN', None)
+    # Bagna, runda 11: `DOMALUJ(plansza, rysunek, kafel, droga=, maska_wody=)`
+    # planszy maluje własne mokradła po naklejkach. Brak — jak dotąd.
+    global DOMALUJ
+    DOMALUJ = getattr(k, 'DOMALUJ', None)
     ZRODLO = plik_ts(mapa_id)
     RYSUNEK = wczytaj_rysunek()
     # Mosty (`MOSTY` planszy): pola pod mostem są w grze drogą, ale w tle
@@ -373,6 +379,8 @@ def klatka() -> tuple[Image.Image, Image.Image]:
         # (pod budowlami). Bez ustawienia — jak dotąd, bajt w bajt.
         omin = NAKLEJKI_OMIN(ZRODLO.read_text(encoding='utf-8')) if NAKLEJKI_OMIN else None
         plansza = teren_efekty.naklejki(plansza, RYSUNEK, KAFEL, NAKLEJKI, ZIARNO + 740, omin=omin)
+    if DOMALUJ is not None:
+        plansza = DOMALUJ(plansza, RYSUNEK, KAFEL, droga=droga, maska_wody=maskaWody).convert('RGBA')
     if MOSTY:
         plansza, maskaWody = teren_efekty.mosty(plansza, maskaWody, KAFEL, MOSTY)
     return plansza, maskaWody
