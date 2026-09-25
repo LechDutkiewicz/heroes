@@ -13,17 +13,17 @@ Droga do gry: `python3 tools/generuj_grafiki.py <plik>` zapisuje do
 `tools/wsad/`, stamtąd plik trafia do `public/kampania/` pod nazwę, którą czyta
 scena (`mapa.jpg`, `zwoj.png`, `janek.png`, `ola.png`).
 
-**Stan na 2026-09-24: te prompty NIE zostały jeszcze wygenerowane.** API Gemini
-odpowiadało 402 („prepayment credits are depleted") na każdym modelu, więc
-grafiki ekranu są na razie składane z tego, co gra już ma —
-`python3 tools/kampania_grafiki.py` maluje mapę krainy z tekstur terenu
-i budowli mapy przygody, zwój liczy numerycznie, a figurki trenerów bierze
-z wsadu mapy. Wstęp i zakończenie pokazują panoramy Groty i Boru z ekranu
-miasta. Gdy konto znów zadziała: wygenerować pliki poniżej i podmienić
-odpowiedniki w `public/kampania/` — scena nie zależy od tego, skąd są.
-Jedno zastrzeżenie: mapa z modelu musi mieć misje tam, gdzie wskazują pola
-`naMapie` w `src/data/kampania.ts`, a drogę zgodną z `public/kampania/mapa.json`
-(albo trzeba przepisać te punkty pod nową ilustrację).
+**Stan na 2026-09-25: wszystkie sześć grafik jest wygenerowanych (OpenAI)**
+i leży w `tools/wsad/kampania-*.png`. Do gry wpina je
+`python3 tools/kampania_ilustracje.py`: przycina wstęp i zakończenie do
+proporcji ekranu (`wstep.jpg`, `koniec.jpg`), portrety do kart
+(`portret-janek.jpg`, `portret-ola.jpg`), mapę do okna 4:3 (`mapa.jpg`,
+połysk wody `woda-a/b.png`, droga `mapa.json`) i wycina magentę ze zwoju
+(`zwoj.png`). Punkty misji zostały przepisane pod ilustrację: skrypt trzyma je
+w pikselach obrazka i pilnuje, żeby `naMapie` w `src/data/kampania.ts` się
+z nimi zgadzało i żeby pod znacznikiem i tabliczką było spokojne tło.
+Figurki trenerów (`janek.png`, `ola.png`) zostają — stoją na mapie przy
+bieżącej misji i w scenie wyniku.
 
 ## Zasady wspólne
 

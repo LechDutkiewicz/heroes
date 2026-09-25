@@ -37,7 +37,12 @@ Co wychodzi
     public/kampania/janek.png     figurki trenerów na ekran wyboru
     public/kampania/ola.png
 
-    python3 tools/kampania_grafiki.py
+    python3 tools/kampania_grafiki.py              # tylko figurki trenerów
+    python3 tools/kampania_grafiki.py --skladana   # całość, NADPISUJE malowaną mapę
+
+Stan od 2026-09-25: malowane ilustracje z `tools/wsad/kampania-*.png`
+przetwarza `tools/kampania_ilustracje.py` — mapa, woda, droga i zwój stąd
+są zapasem na wypadek, gdyby trzeba było wrócić do mapy składanej.
 """
 
 import json
@@ -576,4 +581,12 @@ def figurki():
 
 
 if __name__ == '__main__':
-    main()
+    # Od 2026-09-25 mapa, woda, mapa.json i zwój są z malowanego wsadu
+    # (`tools/kampania_ilustracje.py`). Ten skrypt nadpisałby je wersją
+    # składaną, więc bez jawnej zgody robi tylko figurki trenerów.
+    import sys
+    if '--skladana' in sys.argv:
+        main()
+    else:
+        print('Mapę i zwój robi teraz tools/kampania_ilustracje.py; tu tylko figurki (--skladana: całość).')
+        figurki()

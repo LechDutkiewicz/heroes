@@ -88,8 +88,13 @@ const EKRAN_W = 960;
 const EKRAN_H = 694;
 /** Mapa krainy, 4:3 jak plik (1232 × 924). */
 const MAPA = { x: 28, y: 76, w: 588, h: 441 };
-/** Zwój z opisem misji — prawa kolumna. */
-const ZWOJ = { x: 646, y: 64, w: 300, h: 541 };
+/**
+ * Zwój z opisem misji — prawa kolumna. Malowany (`tools/kampania_ilustracje.py`):
+ * gałki wałków wystają za papier, więc tekst ma wcięcia z pliku, nie z ramki.
+ */
+const ZWOJ = { x: 634, y: 56, w: 318, h: 560 };
+/** Papier zwoju względem `ZWOJ`: wcięcie boczne tekstu, koniec górnego wałka, początek dolnego. */
+const PAPIER = { bok: 44, gora: 60, dol: 497 };
 /** Pergamin z nagrodami pod mapą. */
 const PAS = { x: 22, y: 546, w: 600, h: 138 };
 const GRAJ = { x: 850, y: 650, w: 188, h: 54 };
@@ -112,18 +117,68 @@ const BARWA_TRENERA: Record<string, number> = { Janek: 0xe4413c, Ola: 0x3fae5a }
 
 interface Trener {
   imie: string;
-  /** Figurka (pixel art 1×) i jej głowa do medalionu. */
+  /** Figurka z mapy przygody (stoi przy bieżącej misji) i jej głowa do medalionu w belce. */
   figurka: string;
   glowa: string;
+  /** Malowany portret na kartę wyboru. */
+  portret: string;
   opis: string;
-  /** Który wycinek ilustracji Boru jest tłem karty. */
-  tloX: number;
 }
 
 const TRENERZY: Trener[] = [
-  { imie: 'Janek', figurka: 'k-janek', glowa: 'k-glowa-janek', opis: 'Odważny i szybki.\nZawsze pierwszy do przygody!', tloX: 0.28 },
-  { imie: 'Ola', figurka: 'k-ola', glowa: 'k-glowa-ola', opis: 'Sprytna i uważna.\nŻaden ślad jej nie umknie!', tloX: 0.72 },
+  { imie: 'Janek', figurka: 'k-janek', glowa: 'k-glowa-janek', portret: 'k-portret-janek', opis: 'Odważny i szybki. Zawsze pierwszy do przygody!' },
+  { imie: 'Ola', figurka: 'k-ola', glowa: 'k-glowa-ola', portret: 'k-portret-ola', opis: 'Sprytna i uważna. Żaden ślad jej nie umknie!' },
 ];
+
+/** Karta portretu na ekranie wyboru — proporcje pliku `portret-*.jpg` (620 × 892). */
+const KARTA = { w: 310, h: 446, y: 70, odstep: 185 };
+
+/**
+ * Ilustracja opowieści na cały ekran i to, co na niej leży. Współrzędne są
+ * ekranowe przy kadrze bez najazdu; miejsca dobrane pod treść obrazu — tekst
+ * i tabliczki leżą tam, gdzie nie ma twarzy, pochodu ani groty.
+ */
+interface Ilustracja {
+  klucz: string;
+  /** Środek deski z tytułem. */
+  tytul: { x: number; y: number };
+  /** Pergamin z tekstem: lewy brzeg, szerokość i krawędź, do której przylega (góra albo dół). */
+  tekst: { x: number; w: number; gora?: number; dol?: number };
+  /** Środek głównego przycisku; „Zagraj od nowa" staje obok, po stronie `odNowa`. */
+  dalej: { x: number; y: number; odNowa: -1 | 1 };
+  /** Namalowane źródła światła, którym dokładamy migotanie. */
+  swiatla: { x: number; y: number; r: number; barwa: number }[];
+  /** Świetliki nocą, pyłek w słońcu — barwa i obszar lotu. */
+  pylki: { barwa: number; x: number; y: number; w: number; h: number };
+}
+
+const WSTEP: Ilustracja = {
+  klucz: 'k-wstep',
+  // Nad lasem, między strażnikiem a księżycem.
+  tytul: { x: 480, y: 48 },
+  // Lewy dół: paprocie i broda strażnika. Twarz, latarnia i wóz zostają odkryte.
+  tekst: { x: 28, w: 506, dol: 666 },
+  dalej: { x: 850, y: 640, odNowa: -1 },
+  swiatla: [
+    { x: 385, y: 420, r: 70, barwa: 0xffa040 },
+    { x: 750, y: 218, r: 90, barwa: 0x9fdcff },
+  ],
+  pylki: { barwa: 0xbfe8ff, x: 420, y: 240, w: 520, h: 360 },
+};
+
+const KONIEC: Ilustracja = {
+  klucz: 'k-koniec',
+  // Prawy górny róg: korony drzew nad kapturem strażnika.
+  tytul: { x: 772, y: 48 },
+  // Lewy górny róg: las. Stworki, góra z grotą i strażnik zostają odkryte.
+  tekst: { x: 28, w: 298, gora: 28 },
+  dalej: { x: 360, y: 640, odNowa: -1 },
+  swiatla: [{ x: 891, y: 372, r: 60, barwa: 0xffd070 }],
+  pylki: { barwa: 0xfff2b0, x: 40, y: 180, w: 880, h: 420 },
+};
+
+/** Przesunięcie winiety misji w bok (ułamek mapy), gdy jej miejsce nie stoi za znacznikiem. */
+const WINIETA_W_BOK: Record<string, number> = { 'bagienny-szlak': 0.13 };
 
 const trenerPoImieniu = (imie: string) => TRENERZY.find((t) => t.imie === imie) ?? TRENERZY[0];
 
@@ -239,8 +294,6 @@ export class KampaniaScene extends Phaser.Scene {
   private graj?: Przycisk;
   private nakladka?: Phaser.GameObjects.Container;
   private trenerNaMapie?: Phaser.GameObjects.Image;
-  /** Postacie scenek opowieści — przesuwane co klatkę; `false` = do usunięcia. */
-  private ruchome: ((czas: number) => boolean)[] = [];
   /** Ekran zbudowany (kroje wczytane) — na to czekają narzędzia zrzutów. */
   gotowa = false;
 
@@ -256,22 +309,12 @@ export class KampaniaScene extends Phaser.Scene {
     for (const n of ['woda-a', 'woda-b', 'zwoj', 'janek', 'ola', 'glowa-janek', 'glowa-ola'])
       this.load.image(`k-${n}`, `${b}kampania/${n}.png`);
     this.load.json('k-mapa-json', `${b}kampania/mapa.json`);
-    // Ilustracje wstępu i zakończenia: panoramy Groty i Boru z ekranu miasta.
-    // Wstęp opowiada o Grocie nocą, zakończenie o powrocie do Boru — dokładnie
-    // te dwa miejsca, więc nie ma powodu malować ich drugi raz.
-    this.load.image('k-tlo-grota', `${b}miasto/tlo-grota.png`);
-    this.load.image('k-tlo-bor', `${b}miasto/tlo-bor.png`);
-    // Narrator opowieści — Drzewo Wiedzy, to samo, które dziecko spotyka na mapie.
-    this.load.image('k-drzewo', `${b}mapa/drzewo-wiedzy.png`);
-    // Srebrne płaszcze, ikony nagród i obozowisko — malowane
-    // (`tools/kampania_postacie.py`) albo z mapy przygody.
-    for (const n of [
-      'wrog-a',
-      'wrog-b',
-      ...['buty', 'rower', 'tarcza', 'miecz', 'pokeball', 'jagody', 'kamien', 'odlamki'].map((i) => `ikona-${i}`),
-    ])
-      this.load.image(`k-${n}`, `${b}kampania/${n}.png`);
-    this.load.image('k-woz', `${b}mapa/woz.png`);
+    // Malowane ilustracje: wstęp, zakończenie i portrety trenerów
+    // (`tools/kampania_ilustracje.py`, wsad z `tools/PROMPTY-KAMPANIA.md`).
+    for (const n of ['wstep', 'koniec', 'portret-janek', 'portret-ola']) this.load.image(`k-${n}`, `${b}kampania/${n}.jpg`);
+    // Ikony nagród (`tools/kampania_postacie.py`) i ognisko obozu z mapy przygody.
+    for (const i of ['buty', 'rower', 'tarcza', 'miecz', 'pokeball', 'jagody', 'kamien', 'odlamki'])
+      this.load.image(`k-ikona-${i}`, `${b}kampania/ikona-${i}.png`);
     this.load.image('k-ognisko', `${b}mapa/ognisko.png`);
     this.load.image('k-deseczka', `${b}menu/deseczka.png`);
     for (const s of Object.values(SUROWIEC_INFO)) this.load.image(`m-${s.ikona}`, `${b}mapa/${s.ikona}.png`);
@@ -297,7 +340,6 @@ export class KampaniaScene extends Phaser.Scene {
     this.tresc = undefined;
     this.flagiG = undefined;
     this.drogaG = undefined;
-    this.ruchome = [];
 
     sledzScene(this);
     buildIcons(this);
@@ -393,7 +435,6 @@ export class KampaniaScene extends Phaser.Scene {
   }
 
   update(czas: number, delta: number) {
-    this.ruchome = this.ruchome.filter((f) => f(czas));
     this.rysujFlagi(czas);
     this.rysujKreski(czas);
     for (const c of this.chmury) {
@@ -437,121 +478,96 @@ export class KampaniaScene extends Phaser.Scene {
   // ═════════════════════════════════════════════════ wybór trenera
 
   /**
-   * Wybór trenera jako SCENA, nie formularz: obaj trenerzy stoją na polanie
-   * z Boru — tej samej, którą dziecko zobaczy w zakończeniu — każdy ze swoim
-   * pierwszym stworkiem, a pod stopami mają pergaminowe tabliczki z imieniem.
-   * Heroes 2 stawia w tym miejscu dwa portrety; my stawiamy dwie postacie
-   * w świecie, bo dziecko wybiera, KIM będzie chodzić po mapie.
+   * Wybór trenera jak wybór strony w Heroes 2: dwa wielkie malowane portrety
+   * w złotych ramach, pod każdym metryczka na pergaminie. Klik w portret =
+   * wybór. Najechany portret wychodzi do przodu i się rozjaśnia, drugi
+   * przygasa — dziecko widzi, „kogo teraz wskazuje", zanim kliknie.
    */
   private pokazWybor() {
     napisTytulowy(this, EKRAN_W / 2, BELKA_Y, 'Kto wyruszy w drogę?', 28);
     const menu = tabliczka(this, EKRAN_W - 66, BELKA_Y, 100, 36, 'Menu', false, 16, () => this.scene.start('menu'));
     menu.ustaw(true);
 
-    const IL = { x: 30, y: 72, w: 900, h: 520 };
-    this.cien(IL.x, IL.y, IL.w, IL.h, 1);
-    const tlo = this.add.image(IL.x, IL.y, 'k-tlo-bor').setOrigin(0);
-    const tw = tlo.width;
-    const th = tlo.height;
-    const bazowa = Math.max(IL.w / tw, IL.h / th);
-    const najazd = { z: 1.02 };
-    const kadruj = () => {
-      const sk = bazowa * najazd.z;
-      const cw = IL.w / sk;
-      const ch = IL.h / sk;
-      const cx = (tw - cw) / 2;
-      const cy = (th - ch) * 0.7;
-      tlo.setScale(sk).setCrop(cx, cy, cw, ch).setPosition(IL.x - cx * sk, IL.y - cy * sk);
-    };
-    kadruj();
-    this.tweens.add({ targets: najazd, z: 1.08, duration: 24000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', onUpdate: kadruj });
-    // Ciepłe światło od góry i przyciemnione brzegi — postacie mają wyjść z tła.
-    this.add.image(IL.x + IL.w / 2, IL.y + IL.h * 0.62, 'k-poswiata').setDisplaySize(IL.w * 1.1, IL.h).setTint(0xfff0c0).setAlpha(0.35);
-    const win = this.add.graphics();
-    for (let i = 0; i < 10; i++) {
-      win.fillStyle(0x1a0e04, 0.035);
-      win.fillRect(IL.x, IL.y, IL.w, 30 + i * 6);
-    }
-    this.pylki(26, 0xfff2b0, IL);
-    this.ramaZlota(IL.x, IL.y, IL.w, IL.h).setDepth(5);
+    const karty = TRENERZY.map((t, i) => this.kartaTrenera(t, EKRAN_W / 2 + (i === 0 ? -KARTA.odstep : KARTA.odstep), i));
+    karty.forEach((k, i) => {
+      k.strefa.on('pointerover', () => karty[1 - i].przygas(true));
+      k.strefa.on('pointerout', () => karty[1 - i].przygas(false));
+    });
 
-    const bor = factionById('bor') ?? FACTIONS[0];
-    const towarzysze = [bor.units[1], bor.units[2]];
-    TRENERZY.forEach((t, i) => this.postacTrenera(t, EKRAN_W / 2 + (i === 0 ? -200 : 200), IL.y + IL.h - 64, towarzysze[i]?.sprite, i));
-
-    // Wezwanie do działania: Cinzel, jasny krem, lekki oddech — pierwsza
-    // wersja (kursywa 16 px) ginęła na desce i krytyk jej nie zauważył.
-    const wezwanie = this.napisNaDrewnie(EKRAN_W / 2, 668, 'Kliknij trenera, którym chcesz grać', 21).setOrigin(0.5);
+    // Wezwanie do działania: Cinzel, jasny krem, lekki oddech.
+    const wezwanie = this.napisNaDrewnie(EKRAN_W / 2, 646, 'Kliknij trenera, którym chcesz grać', 21).setOrigin(0.5);
     this.tweens.add({ targets: wezwanie, scale: 1.04, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
     this.input.keyboard?.on('keydown-ESC', () => this.scene.start('menu'));
-    this.input.keyboard?.on('keydown-LEFT', () => this.wybierzTrenera(TRENERZY[0]));
-    this.input.keyboard?.on('keydown-RIGHT', () => this.wybierzTrenera(TRENERZY[1]));
+    this.input.keyboard?.on('keydown-LEFT', () => this.wybierzTrenera(TRENERZY[0], karty[0].kontener));
+    this.input.keyboard?.on('keydown-RIGHT', () => this.wybierzTrenera(TRENERZY[1], karty[1].kontener));
   }
 
-  /** Trener na polanie: postać, stworek u boku, cień, tabliczka z imieniem. */
-  private postacTrenera(t: Trener, cx: number, stopy: number, stworek: string | undefined, i: number) {
-    const k = this.add.container(cx, stopy).setDepth(6);
-    const blask = this.add.image(0, -130, 'k-poswiata').setDisplaySize(330, 380).setTint(C.gold).setAlpha(0);
-    const cien = this.add.ellipse(0, 2, 170, 30, 0x1a0e04, 0.4);
-    const figurka = this.add.image(0, 4, t.figurka).setOrigin(0.5, 1);
-    figurka.setScale(300 / figurka.height);
-    const czesci: Phaser.GameObjects.GameObject[] = [blask, cien];
-    let zwierz: Phaser.GameObjects.Image | undefined;
-    if (stworek) {
-      // Stworek stoi po zewnętrznej stronie — trenerzy patrzą na siebie przez środek.
-      // Stworek stoi krok za trenerem i na zewnątrz tabliczki — pierwsza
-      // wersja chowała go pod pergaminem z imieniem.
-      const sx = i === 0 ? -150 : 150;
-      czesci.push(this.add.ellipse(sx, -16, 70, 14, 0x1a0e04, 0.35));
-      zwierz = this.add.image(sx, -14, `p-${stworek}`).setOrigin(0.5, 1);
-      zwierz.setScale(92 / zwierz.height).setFlipX(i === 1);
-      czesci.push(zwierz);
-      this.tweens.add({ targets: zwierz, y: -24, duration: 520 + i * 90, yoyo: true, repeat: -1, ease: 'Sine.easeOut' });
+  /** Karta trenera: portret w grubej złotej ramie, metryczka z imieniem zachodząca na dolną ramę. */
+  private kartaTrenera(t: Trener, cx: number, i: number) {
+    const { w, h } = KARTA;
+    // Kontener zaczepiony w środku karty — powiększenie przy najechaniu rośnie od środka.
+    const k = this.add.container(cx, KARTA.y + h / 2).setDepth(6);
+    const x0 = -w / 2;
+    const y0 = -h / 2;
+    const blask = this.add.image(0, 0, 'k-poswiata').setDisplaySize(w * 1.7, h * 1.35).setTint(C.gold).setAlpha(0);
+    const cien = cienPanelu(this, x0, y0, w, h, 1);
+    // Powolny najazd na portret liczony przycięciem (maski w WebGL tu nie ma).
+    const portret = this.add.image(0, 0, t.portret).setOrigin(0);
+    const pw = portret.width;
+    const ph = portret.height;
+    const bazowa = Math.max(w / pw, h / ph);
+    const najazd = { z: 1 };
+    const kadruj = () => {
+      const s = bazowa * najazd.z;
+      const cw = w / s;
+      const ch = h / s;
+      const sx = (pw - cw) / 2;
+      const sy = (ph - ch) * 0.3;
+      portret.setScale(s).setCrop(sx, sy, cw, ch).setPosition(x0 - sx * s, y0 - sy * s);
+    };
+    kadruj();
+    // Ciemniejący dół portretu — metryczka ma na czym leżeć.
+    const cienDol = this.add.graphics();
+    for (let j = 0; j < 12; j++) {
+      cienDol.fillStyle(0x1a0e04, 0.035);
+      cienDol.fillRect(x0, y0 + h - 12 - j * 8, w, 12 + j * 8);
     }
-    czesci.push(figurka);
-    // Tabliczka na pergaminie pod stopami, zachodzi na dolną ramę jak metryczka obrazu.
-    const pw = 230;
-    const ph = 92;
-    const py = 22;
-    czesci.push(...this.panelPergaminu(-pw / 2, py, pw, ph));
-    czesci.push(
-      this.add
-        .text(0, py + 28, t.imie, { fontFamily: SERIF, fontSize: '30px', color: ATRAMENT_CZERWONY })
-        .setOrigin(0.5)
-        .setShadow(0, 1, '#fff6dc', 0, false, true),
-      this.add
-        .text(0, py + 66, t.opis.replace('\n', ' '), {
-          fontFamily: KURSYWA,
-          fontSize: '14px',
-          color: ATRAMENT,
-          align: 'center',
-          wordWrap: { width: pw - 30 },
-        })
-        .setOrigin(0.5)
-    );
-    // Stan „wskazany": złota rama wokół tabliczki i poświata za postacią.
-    const ramka = this.ramaZlota(-pw / 2, py, pw, ph).setAlpha(0);
-    czesci.push(ramka);
-    const strefa = this.add.zone(0, -110, 300, 260 + py + ph).setOrigin(0.5, 0.5).setInteractive({ useHandCursor: true });
-    strefa.y = (-310 + py + ph) / 2;
-    czesci.push(strefa);
-    k.add(czesci);
-    const bazaSkali = figurka.scaleX;
+    const rama = this.ramaZlota(x0, y0, w, h);
 
-    this.tweens.add({ targets: figurka, scaleY: figurka.scaleY * 1.012, duration: 1300 + i * 200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const pw2 = 252;
+    const phh = 86;
+    const py = y0 + h - 22;
+    const metryczka = this.panelPergaminu(-pw2 / 2, py, pw2, phh);
+    const imie = this.add
+      .text(0, py + 27, t.imie, { fontFamily: SERIF, fontSize: '30px', color: ATRAMENT_CZERWONY })
+      .setOrigin(0.5)
+      .setShadow(0, 1, '#fff6dc', 0, false, true);
+    const opis = this.add
+      .text(0, py + 63, t.opis, { fontFamily: KURSYWA, fontSize: '14px', color: ATRAMENT, align: 'center', wordWrap: { width: pw2 - 30 } })
+      .setOrigin(0.5);
+    const strefa = this.add.zone(0, phh / 2 - 11, w + 26, h + phh).setInteractive({ useHandCursor: true });
+    k.add([blask, cien, portret, cienDol, rama, ...metryczka, imie, opis, strefa]);
+
+    const oddech = this.tweens.add({ targets: najazd, z: 1.03, duration: 5200 + i * 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', onUpdate: kadruj });
     strefa.on('pointerover', () => {
-      this.tweens.add({ targets: blask, alpha: 0.6, duration: 160 });
-      this.tweens.add({ targets: ramka, alpha: 1, duration: 160 });
-      this.tweens.add({ targets: figurka, scaleX: bazaSkali * 1.05, duration: 160, ease: 'Quad.easeOut' });
-      this.tweens.add({ targets: figurka, y: -8, duration: 150, yoyo: true, ease: 'Quad.easeOut' });
+      this.tweens.add({ targets: blask, alpha: 0.55, duration: 160 });
+      this.tweens.add({ targets: k, scale: 1.035, duration: 160, ease: 'Quad.easeOut' });
+      oddech.pause();
+      this.tweens.add({ targets: najazd, z: 1.07, duration: 400, ease: 'Quad.easeOut', onUpdate: kadruj });
       sfx(this, 'wejscie', 0.3);
     });
     strefa.on('pointerout', () => {
-      this.tweens.add({ targets: [blask, ramka], alpha: 0, duration: 160 });
-      this.tweens.add({ targets: figurka, scaleX: bazaSkali, duration: 160 });
+      this.tweens.add({ targets: blask, alpha: 0, duration: 160 });
+      this.tweens.add({ targets: k, scale: 1, duration: 160 });
+      this.tweens.add({ targets: najazd, z: 1, duration: 400, onUpdate: kadruj, onComplete: () => oddech.resume() });
     });
     strefa.on('pointerdown', () => this.wybierzTrenera(t, k));
+    const przygas = (tak: boolean) => {
+      if (tak) portret.setTint(0xa89c8c);
+      else portret.clearTint();
+    };
+    return { kontener: k, strefa, przygas };
   }
 
   private wybierzTrenera(t: Trener, karta?: Phaser.GameObjects.Container) {
@@ -560,12 +576,12 @@ export class KampaniaScene extends Phaser.Scene {
     zapiszPostep(this.postep);
     sfx(this, 'awans', 0.8);
     if (karta) {
-      this.tweens.add({ targets: karta, scale: 1.04, duration: 160, yoyo: true, ease: 'Back.easeOut' });
-      this.iskry(karta.x, karta.y - 160, 14);
+      this.tweens.add({ targets: karta, scale: 1.06, duration: 160, yoyo: true, ease: 'Back.easeOut' });
+      this.iskry(karta.x, karta.y - 120, 16);
     }
     this.time.delayedCall(520, () =>
       this.pokazOpowiesc(
-        { tlo: 'k-tlo-grota', naglowek: KAMPANIA.tytul, podtytul: 'Wstęp', akapity: KAMPANIA.wstep, przycisk: 'Dalej' },
+        { il: WSTEP, naglowek: KAMPANIA.tytul, akapity: KAMPANIA.wstep, przycisk: 'Dalej' },
         () => this.scene.restart()
       )
     );
@@ -574,115 +590,111 @@ export class KampaniaScene extends Phaser.Scene {
   // ═════════════════════════════════════════════════ opowieść (wstęp, zakończenie)
 
   /**
-   * Opowieść: ilustracja w złotej ramie, narrator w medalionie i tekst na
-   * pergaminie, akapit po akapicie. W Heroes 2 w tym miejscu jest filmik
-   * z lektorem; u nas lektorem jest Drzewo Wiedzy z mapy przygody, a ruch
-   * daje powolny najazd kamery na ilustrację.
+   * Opowieść: jedna malowana ilustracja na cały ekran, tytuł na desce i tekst
+   * na pergaminie w miejscu, które ilustracja zostawia wolne. W Heroes 2 w tym
+   * miejscu jest filmik; u nas ruch daje powolny najazd kamery, migotanie
+   * namalowanych świateł (latarnia, grota) i świetliki albo pyłek.
+   * Narratorem jest sam strażnik z obrazka — tekst mówi o nim, nie trzeba
+   * dokładać medalionu z mówcą.
    *
    * Pierwsze kliknięcie „Dalej" w trakcie pojawiania się tekstu odsłania go
    * całego zamiast zamykać — dziecko, które czyta szybciej, nie musi czekać,
    * a to, które kliknęło z rozpędu, nie gubi opowieści.
    */
   private pokazOpowiesc(
-    o: { tlo: string; naglowek: string; podtytul: string; akapity: string[]; przycisk: string; odNowa?: boolean },
+    o: { il: Ilustracja; naglowek: string; akapity: string[]; przycisk: string; odNowa?: boolean },
     poZamknieciu: () => void
   ) {
+    const il = o.il;
     this.nakladka?.destroy();
     const n = this.add.container(0, 0).setDepth(500);
     this.nakladka = n;
     const blok = this.add.zone(0, 0, EKRAN_W, EKRAN_H).setOrigin(0).setInteractive();
-    n.add([blok, tloDrewna(this)]);
+    n.add(blok);
 
-    n.add(napisTytulowy(this, EKRAN_W / 2, BELKA_Y, `${o.naglowek} · ${o.podtytul}`, 26));
-
-    // Ilustracja przycięta do okna ramy; najazd kamery wewnątrz okna.
-    const IL = { x: 44, y: 76, w: 872, h: 290 };
-    n.add(this.cien(IL.x, IL.y, IL.w, IL.h));
-    // Najazd kamery liczony przycięciem, nie maską: `GeometryMask` w Phaserze 4
-    // działa tylko na płótnie 2D, w WebGL nic nie przycina i obraz wylewał się
-    // na belkę. Przycięcie przeliczane przy każdym kroku trzyma obraz w oknie.
-    const tlo = this.add.image(IL.x, IL.y, o.tlo).setOrigin(0);
+    // Ilustracja na cały kadr (plik ma już proporcje ekranu). Najazd liczony
+    // przycięciem, nie maską: `GeometryMask` w Phaserze 4 działa tylko na
+    // płótnie 2D. Światła jadą razem z obrazem.
+    const tlo = this.add.image(0, 0, il.klucz).setOrigin(0);
     const tw = tlo.width;
     const th = tlo.height;
-    const bazowa = Math.max(IL.w / tw, IL.h / th);
+    const bazowa = Math.max(EKRAN_W / tw, EKRAN_H / th);
     const najazd = { z: 1 };
+    const swiatla = il.swiatla.map((s) => {
+      const img = this.add.image(s.x, s.y, 'k-poswiata').setDisplaySize(s.r * 2, s.r * 2).setTint(s.barwa).setAlpha(0.35);
+      img.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({
+        targets: img,
+        alpha: 0.18,
+        duration: 380 + Phaser.Math.Between(0, 400),
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+      return { img, s };
+    });
     const kadruj = () => {
-      const s = bazowa * najazd.z;
-      const cw = IL.w / s;
-      const ch = IL.h / s;
+      const sk = bazowa * najazd.z;
+      const cw = EKRAN_W / sk;
+      const ch = EKRAN_H / sk;
       const cx = (tw - cw) / 2;
-      const cy = (th - ch) * 0.55;
-      tlo.setScale(s).setCrop(cx, cy, cw, ch).setPosition(IL.x - cx * s, IL.y - cy * s);
+      const cy = (th - ch) * 0.45;
+      tlo.setScale(sk).setCrop(cx, cy, cw, ch).setPosition(-cx * sk, -cy * sk);
+      for (const { img, s } of swiatla) img.setPosition((s.x / bazowa - cx) * sk, (s.y / bazowa - cy) * sk);
     };
     kadruj();
     n.add(tlo);
-    this.tweens.add({ targets: najazd, z: 1.08, duration: 22000, ease: 'Sine.easeInOut', yoyo: true, repeat: -1, onUpdate: kadruj });
-    for (const f of o.tlo === 'k-tlo-grota' ? this.scenkaWstepu(IL) : this.scenkaKonca(IL)) n.add(f);
-    for (const p of this.pylki(22, o.tlo === 'k-tlo-grota' ? 0xbfe8ff : 0xfff2b0, IL)) n.add(p);
-    n.add(this.ramaZlota(IL.x, IL.y, IL.w, IL.h));
+    for (const { img } of swiatla) n.add(img);
+    this.tweens.add({ targets: najazd, z: 1.05, duration: 24000, ease: 'Sine.easeInOut', yoyo: true, repeat: -1, onUpdate: kadruj });
+    const p = il.pylki;
+    for (const s of this.pylki(24, p.barwa, p)) n.add(s);
+    // Winieta: brzegi kadru ciemnieją, jak na płótnie w ramie.
+    const win = this.add.graphics();
+    for (let i = 0; i < 8; i++) {
+      win.fillStyle(0x0a0602, 0.05);
+      const d = i * 5;
+      win.fillRect(0, 0, EKRAN_W, 4 + d);
+      win.fillRect(0, EKRAN_H - 4 - d, EKRAN_W, 4 + d);
+      win.fillRect(0, 0, 4 + d, EKRAN_H);
+      win.fillRect(EKRAN_W - 4 - d, 0, 4 + d, EKRAN_H);
+    }
+    n.add(win);
+    n.add(this.ramaZlota(13, 13, EKRAN_W - 26, EKRAN_H - 26));
 
-    // Narrator: Drzewo Wiedzy w złotym medalionie, z tabliczką imienia.
-    const NX = 124;
-    const NY = 494;
-    const med = this.add.graphics();
-    med.fillStyle(0x0a0602, 0.45);
-    med.fillCircle(NX + 2, NY + 6, 72);
-    med.fillStyle(C.goldDeep, 1);
-    med.fillCircle(NX, NY, 70);
-    med.fillStyle(C.gold, 1);
-    med.fillCircle(NX, NY - 1, 66);
-    med.fillStyle(C.goldLight, 0.55);
-    med.slice(NX, NY - 1, 64, Phaser.Math.DegToRad(200), Phaser.Math.DegToRad(340));
-    med.fillPath();
-    med.fillStyle(mix(C.goldDeep, 0x2a1606, 0.4), 1);
-    med.fillCircle(NX, NY, 58);
-    med.fillStyle(o.tlo === 'k-tlo-grota' ? 0x1d2a4a : 0x3d6b3a, 1);
-    med.fillCircle(NX, NY, 55);
-    const drzewo = this.add.image(NX, NY + 6, 'k-drzewo');
-    drzewo.setScale(96 / drzewo.height);
-    const ts = tabliczka(this, NX, NY + 88, 176, 34, 'Drzewo Wiedzy', false, 15, () => {});
-    ts.szyld();
-    n.add([med, drzewo, ts.kontener]);
+    // Tytuł na desce — tej samej, z której są tabliczki przycisków.
+    const tytul = napisTytulowy(this, il.tytul.x, il.tytul.y, o.naglowek, 26);
+    const dw = tytul.width + 64;
+    const deska = this.add
+      .nineslice(il.tytul.x, il.tytul.y, 'z-tabliczka-drewno', undefined, dw * 2, 100, 40, 40, 30, 30)
+      .setScale(0.5)
+      .setOrigin(0.5);
+    n.add([this.add.ellipse(il.tytul.x, il.tytul.y + 26, dw * 0.9, 12, BARWA.cien, 0.45), deska, tytul]);
 
-    // Pergamin z tekstem, z „dzióbkiem" w stronę narratora — to on mówi.
-    const PX = 222;
-    const PY = 392;
-    const PW = 694;
-    const PH = 222;
-    n.add(this.panelPergaminu(PX, PY, PW, PH));
-    const dziob = this.add.graphics();
-    dziob.fillStyle(0xf3e3bd, 1);
-    dziob.fillTriangle(PX + 2, NY - 16, PX + 2, NY + 16, PX - 24, NY);
-    dziob.lineStyle(2, C.goldDeep, 1);
-    dziob.beginPath();
-    dziob.moveTo(PX, NY - 16);
-    dziob.lineTo(PX - 24, NY);
-    dziob.lineTo(PX, NY + 16);
-    dziob.strokePath();
-    n.add(dziob);
-
-    let y = PY + 24;
-    const teksty: Phaser.GameObjects.Text[] = [];
-    o.akapity.forEach((a, i) => {
-      const t = this.add
-        .text(PX + 30, y, a, {
+    // Pergamin: wysokość z tekstu, przylega do krawędzi podanej w układzie.
+    const T = il.tekst;
+    const teksty = o.akapity.map((a, i) =>
+      this.add
+        .text(T.x + 26, 0, a, {
           fontFamily: TEKST,
-          fontSize: '19px',
+          fontSize: '18px',
           color: i === 0 ? ATRAMENT_CZERWONY : ATRAMENT,
-          wordWrap: { width: PW - 60 },
-          lineSpacing: 5,
+          wordWrap: { width: T.w - 52 },
+          lineSpacing: 4,
         })
-        .setAlpha(0);
-      y += t.height + 12;
-      teksty.push(t);
+        .setAlpha(0)
+    );
+    const odstep = 9;
+    const wys = teksty.reduce((s, t) => s + t.height, 0) + odstep * (teksty.length - 1) + 40;
+    const PY = T.gora ?? (T.dol ?? EKRAN_H - 16) - wys;
+    n.add(this.panelPergaminu(T.x, PY, T.w, wys));
+    let y = PY + 20;
+    for (const t of teksty) {
+      t.y = y + 8;
+      y += t.height + odstep;
       n.add(t);
-    });
-    const zapas = PY + PH - 18 - y;
-    if (zapas > 0) for (const t of teksty) t.y += zapas / 2;
-
-    for (const t of teksty) t.y += 8;
+    }
     const odslony = teksty.map((t, i) =>
-      this.tweens.add({ targets: t, alpha: 1, y: t.y - 8, duration: 700, delay: 350 + i * 1100, ease: 'Sine.easeOut' })
+      this.tweens.add({ targets: t, alpha: 1, y: t.y - 8, duration: 700, delay: 450 + i * 1100, ease: 'Sine.easeOut' })
     );
 
     const zamknij = (dalej: () => void) => {
@@ -697,7 +709,7 @@ export class KampaniaScene extends Phaser.Scene {
     };
 
     let odslonieta = false;
-    const dalej = tabliczka(this, EKRAN_W - 132, EKRAN_H - 38, 190, 50, o.przycisk, true, 21, () => {
+    const dalej = tabliczka(this, il.dalej.x, il.dalej.y, 180, 52, o.przycisk, true, 21, () => {
       if (!odslonieta && teksty.some((t) => t.alpha < 1)) {
         odslonieta = true;
         for (const tw of odslony) tw.complete();
@@ -709,109 +721,13 @@ export class KampaniaScene extends Phaser.Scene {
     dalej.strzalka();
     n.add(dalej.kontener);
     if (o.odNowa) {
-      const od = tabliczka(this, EKRAN_W - 360, EKRAN_H - 38, 200, 42, 'Zagraj od nowa', false, 16, () =>
+      const od = tabliczka(this, il.dalej.x + il.dalej.odNowa * 200, il.dalej.y, 196, 44, 'Zagraj od nowa', false, 16, () =>
         this.potwierdzNowa()
       );
       od.ustaw(true);
       n.add(od.kontener);
     }
     this.input.keyboard?.once('keydown-ENTER', () => dalej.kliknij());
-  }
-
-  /**
-   * Wstęp to nie sama grota: przez ilustrację ciągnie pochód — srebrny
-   * płaszcz z przodu, wóz z uwięzionymi stworkami, drugi płaszcz z tyłu.
-   * Dokładnie to, o czym mówi tekst. Postacie są malowane z tego samego
-   * rysunku co trener (`tools/kampania_postacie.py`) i przyciemnione barwą
-   * groty, żeby stały w jej świetle, a nie na nim.
-   */
-  private scenkaWstepu(IL: { x: number; y: number; w: number; h: number }) {
-    const figury: Phaser.GameObjects.GameObject[] = [];
-    const bor = factionById('bor') ?? FACTIONS[0];
-    const ziemia = IL.y + IL.h - 30;
-    const start = IL.x + IL.w - 60;
-    const koniec = IL.x + 200;
-    const CZAS = 30000;
-    const SWIATLO_GROTY = 0xc4c0f0;
-    // Pochód idzie JEDNĄ grupą: czoło przesuwa się od prawej ramy do lewej,
-    // a każdy uczestnik trzyma stały odstęp za nim. Wcześniej każdy miał
-    // własną pętlę i przy zawinięciu przywódca wracał z prawej, gdy ogon był
-    // jeszcze po lewej — kolejność się rozsypywała. Kto wychodzi poza okno,
-    // gaśnie przy jego brzegu (bez maski: tą w WebGL nic by nie przycięło).
-    // Grupa startuje w pół drogi, żeby otwarty wstęp od razu miał scenę.
-    const DLUGOSC = 360;
-    const t0 = this.time.now;
-    const idz = (obiekty: Phaser.GameObjects.Image[], odstep: number, podskok: number, szer: number) => {
-      const cien = this.add.ellipse(start, ziemia + 2, szer, 10, 0x05030a, 0.5);
-      figury.push(cien, ...obiekty);
-      const dy = obiekty.map((o) => o.y - ziemia);
-      this.ruchome.push((czas) => {
-        if (!obiekty[obiekty.length - 1].active) return false;
-        const u = ((czas - t0) / CZAS + 0.28) % 1;
-        const czolo = start - u * (start - koniec + DLUGOSC + 80);
-        const x = czolo + odstep;
-        const a = Phaser.Math.Clamp(Math.min((x - (koniec - 40)) / 50, (start + 20 - x) / 50), 0, 1);
-        const skok = Math.abs(Math.sin((x / 18) * Math.PI)) * podskok;
-        obiekty.forEach((o, i) => o.setPosition(x + (o.getData('dx') ?? 0), ziemia + dy[i] - skok).setAlpha(a));
-        cien.setPosition(x, ziemia + 2).setAlpha(a * 0.5);
-        return true;
-      });
-    };
-    // Przywódca z profilu — idzie w lewo, więc odbity.
-    const a = this.add.image(0, ziemia, 'k-wrog-a').setOrigin(0.5, 1).setFlipX(true).setTint(SWIATLO_GROTY);
-    a.setScale(128 / a.height);
-    idz([a], 0, 3, 60);
-    // Wóz z mapy przygody, za nim trzy stworki z pogranicza.
-    // Zaczep 0,91: pod kołami wozu jest w pliku 11 pustych wierszy (dyszel
-    // sięga niżej) — przy zaczepie 1 wóz wisiał nad własnym cieniem.
-    const woz = this.add.image(0, ziemia, 'k-woz').setOrigin(0.5, 0.91).setTint(SWIATLO_GROTY);
-    woz.setScale(104 / woz.height);
-    idz([woz], 118, 1.5, 96);
-    // Stworki idą za wozem na smyczy z księżycowego blasku — każdy z własnym
-    // cieniem, w tej samej skali co postacie i w tym samym świetle groty.
-    // (Wóz jest kryty; posadzone w nim znikały pod plandeką.)
-    bor.units.slice(0, 3).forEach((u, i) => {
-      const st = this.add.image(0, ziemia, `p-${u.sprite}`).setOrigin(0.5, 1).setTint(SWIATLO_GROTY);
-      st.setScale(50 / st.height);
-      idz([st], 190 + i * 44, 5, 36);
-    });
-    const b2 = this.add.image(0, ziemia, 'k-wrog-b').setOrigin(0.5, 1).setTint(SWIATLO_GROTY);
-    b2.setScale(118 / b2.height);
-    idz([b2], 340, 3, 70);
-    return figury;
-  }
-
-  /** Zakończenie: trener stoi na polanie, a stworki biegną z powrotem do lasu. */
-  private scenkaKonca(IL: { x: number; y: number; w: number; h: number }) {
-    const figury: Phaser.GameObjects.GameObject[] = [];
-    const t = trenerPoImieniu(this.postep?.trener ?? 'Janek');
-    const ziemia = IL.y + IL.h - 26;
-    const tx = IL.x + 250;
-    figury.push(this.add.ellipse(tx, ziemia, 90, 16, 0x1a0e04, 0.4));
-    const tr = this.add.image(tx, ziemia, t.figurka).setOrigin(0.5, 1);
-    tr.setScale(170 / tr.height);
-    figury.push(tr);
-    // Podskok radości — krótki i sprężysty, jak u stworków obok.
-    this.tweens.add({ targets: tr, y: ziemia - 8, duration: 380, yoyo: true, repeat: -1, ease: 'Sine.easeOut' });
-    const bor = factionById('bor') ?? FACTIONS[0];
-    bor.units.forEach((u, i) => {
-      const s = this.add.image(0, 0, `p-${u.sprite}`).setOrigin(0.5, 1);
-      s.setScale(56 / s.height);
-      const x0 = tx + 60;
-      const x1 = IL.x + IL.w - 24;
-      const faza = i / bor.units.length;
-      const okres = 7000 + i * 700;
-      const y0 = ziemia - (i % 2) * 14;
-      figury.push(s);
-      this.ruchome.push((czas) => {
-        if (!s.active) return false;
-        const u = (((czas / okres + faza) % 1) + 1) % 1;
-        s.setPosition(x0 + u * (x1 - x0), y0 - Math.abs(Math.sin(u * Math.PI * (8 + i))) * 16);
-        s.setAlpha(Phaser.Math.Clamp(Math.min((1 - u) * 6, u * 10), 0, 1));
-        return true;
-      });
-    });
-    return figury;
   }
 
   // ═════════════════════════════════════════════════ ekran kampanii
@@ -868,7 +784,7 @@ export class KampaniaScene extends Phaser.Scene {
     const wstep = tabliczka(this, prawy - 48, BELKA_Y, 96, 34, 'Wstęp', false, 15, () => {
       sfx(this, 'wejscie', 0.6);
       this.pokazOpowiesc(
-        { tlo: 'k-tlo-grota', naglowek: KAMPANIA.tytul, podtytul: 'Wstęp', akapity: KAMPANIA.wstep, przycisk: 'Zamknij' },
+        { il: WSTEP, naglowek: KAMPANIA.tytul, akapity: KAMPANIA.wstep, przycisk: 'Zamknij' },
         () => {}
       );
     });
@@ -1404,7 +1320,8 @@ export class KampaniaScene extends Phaser.Scene {
   // ————————————————————————————————————————————————— zwój
 
   private rysujZwoj() {
-    this.cien(ZWOJ.x + 8, ZWOJ.y + 18, ZWOJ.w - 16, ZWOJ.h - 26, 0.9);
+    // Cień tylko pod papierem — gałki wałków wystają w powietrze.
+    this.cien(ZWOJ.x + 26, ZWOJ.y + 20, ZWOJ.w - 52, ZWOJ.h - 30, 0.9);
     this.add.image(ZWOJ.x, ZWOJ.y, 'k-zwoj').setOrigin(0).setDisplaySize(ZWOJ.w, ZWOJ.h);
   }
 
@@ -1427,7 +1344,7 @@ export class KampaniaScene extends Phaser.Scene {
     // Winieta jest ZAWSZE (runda 3 chowała ją przy długich misjach i zwoje
     // różnych misji miały różny układ). Gdy się nie mieści, maleją winieta
     // i tekst, stopniami, aż się zmieści.
-    const doly = ZWOJ.y + ZWOJ.h - (this.pokazana && this.pokazana !== biezacaMisja(this.postep!) ? 84 : 34);
+    const doly = ZWOJ.y + PAPIER.dol - (this.pokazana && this.pokazana !== biezacaMisja(this.postep!) ? 52 : 4);
     for (const [winieta, rozmiar] of [
       [92, 14.5],
       [74, 14],
@@ -1446,10 +1363,10 @@ export class KampaniaScene extends Phaser.Scene {
     const p = this.postep!;
     const k = this.add.container(0, 0).setDepth(20);
     this.tresc = k;
-    const lewy = ZWOJ.x + 34;
-    const szer = ZWOJ.w - 68;
+    const lewy = ZWOJ.x + PAPIER.bok;
+    const szer = ZWOJ.w - PAPIER.bok * 2;
     const srodek = ZWOJ.x + ZWOJ.w / 2;
-    let y = ZWOJ.y + 46;
+    let y = ZWOJ.y + PAPIER.gora;
 
     const akapit = (tekst: string, o: { rozmiar?: number; barwa?: string; kursywa?: boolean; wciecie?: number } = {}) => {
       const t = this.add.text(lewy + (o.wciecie ?? 0), y, tekst, {
@@ -1516,7 +1433,7 @@ export class KampaniaScene extends Phaser.Scene {
       const pkt = Object.values(p.wyniki).reduce((s, w) => s + w.punkty, 0);
       wiersz(ICON.hourglass, 'Cała wyprawa', `${dni} ${odmianaDni(dni)} w drodze`);
       wiersz(ICON.star, 'Wynik', `${pkt} punktów`);
-      this.pieczec(k, ZWOJ.x + ZWOJ.w - 76, ZWOJ.y + ZWOJ.h - 92, 'BRAWO!');
+      this.pieczec(k, ZWOJ.x + ZWOJ.w - 100, ZWOJ.y + PAPIER.dol - 44, 'BRAWO!');
       return y;
     }
 
@@ -1600,11 +1517,16 @@ export class KampaniaScene extends Phaser.Scene {
    */
   private winieta(k: Phaser.GameObjects.Container, cx: number, y: number, w: number, h: number, m: Misja) {
     const tex = this.textures.get('k-mapa').getSourceImage() as { width: number; height: number };
-    const skala = 0.78;
+    // Malowana mapa ma szerokie plamy zamiast drobnych obiektów — wycinek
+    // szerszy niż przy mapie składanej, żeby winieta pokazała miejsce, nie plamę.
+    const skala = 0.6;
     const cw = w / skala;
     const ch = h / skala;
     // Środek wycinka trochę nad znacznikiem — budowla misji stoi za nim.
-    const sx = Phaser.Math.Clamp(m.naMapie.x * tex.width - cw / 2, 0, tex.width - cw);
+    // Bagno leży nie za znacznikiem, a na prawo od niego (znacznik stoi na
+    // brzegu, bo na wodzie by zginął) — tam przesuwamy wycinek.
+    const przes = WINIETA_W_BOK[m.id] ?? 0;
+    const sx = Phaser.Math.Clamp((m.naMapie.x + przes) * tex.width - cw / 2, 0, tex.width - cw);
     const sy = Phaser.Math.Clamp(m.naMapie.y * tex.height - ch * 0.78, 0, tex.height - ch);
     const x = cx - w / 2;
     const img = this.add
@@ -1627,7 +1549,7 @@ export class KampaniaScene extends Phaser.Scene {
     const b = tabliczka(
       this,
       ZWOJ.x + ZWOJ.w / 2,
-      ZWOJ.y + ZWOJ.h - 58,
+      ZWOJ.y + PAPIER.dol - 30,
       212,
       36,
       cel ? `Wróć do misji ${cel.nr}` : 'Wróć do zakończenia',
@@ -1946,9 +1868,8 @@ export class KampaniaScene extends Phaser.Scene {
         sfx(this, 'wejscie', 0.6);
         this.pokazOpowiesc(
           {
-            tlo: 'k-tlo-bor',
+            il: KONIEC,
             naglowek: 'Zwycięstwo!',
-            podtytul: 'Zakończenie',
             akapity: KAMPANIA.zakonczenie,
             przycisk: 'Zamknij',
             odNowa: true,

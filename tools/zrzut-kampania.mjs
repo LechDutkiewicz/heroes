@@ -9,7 +9,7 @@
 //   node tools/zrzut-kampania.mjs [--url http://localhost:4175]
 //
 // Wynik: tools/shots/kampania-wybor.png, kampania-wstep.png, kampania.png,
-// kampania-m3.png, kampania-koniec.png. Kod wyjścia ≠ 0, gdy w konsoli były
+// kampania-m3.png, kampania-koniec.png, kampania-zakonczenie.png. Kod wyjścia ≠ 0, gdy w konsoli były
 // błędy albo „Graj" nie doprowadził do mapy przygody.
 
 import { chromium } from 'playwright';
@@ -185,6 +185,19 @@ async function zrzut(page, nazwa) {
   const page = await otworz(postep('Janek', 4));
   await page.waitForTimeout(600);
   await zrzut(page, 'kampania-koniec.png');
+  // „Zakończenie" (w miejscu „Graj") otwiera ilustrację końca opowieści.
+  await klik(page, GRAJ);
+  await page.waitForFunction(
+    () => {
+      const s = window.__game.scene.getScene('kampania');
+      const n = s.children.list.find((o) => o.depth === 500);
+      const t = n ? n.list.filter((o) => o.type === 'Text') : [];
+      return t.length > 2 && t.every((o) => o.alpha > 0.99);
+    },
+    null,
+    { timeout: 60000 }
+  );
+  await zrzut(page, 'kampania-zakonczenie.png');
   await page.close();
 }
 

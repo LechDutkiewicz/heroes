@@ -3,19 +3,28 @@
  "pieces": [
   {
    "name": "Sceny wyniku: zwycięstwo, porażka, koniec kampanii (grafiki OpenAI)",
-   "status": "build",
-   "bar": "Ekrany zwycięstwa i porażki Heroes. Wzorce: w przygotowaniu.",
-   "note": "Słabość zwycięzcy z poprzedniej sesji: wycięte postacie bez jednej malowanej ilustracji, ta sama poza na trzech ekranach. Teraz: 3 malowane ilustracje z OpenAI.",
-   "rounds": [],
-   "live": {
-    "round": 1,
-    "stage": "builder wpina ilustracje"
-   }
+   "status": "done",
+   "bar": "Prawdziwe ekrany HoMM2 z fheroes2 na darmowym demie (Victory!, Defeat!, Legendary Heroes). Trzech krytyków na ślepo, wygrana przy 2 z 3.",
+   "note": "Builder (runda 1): każda scena to jedna malowana ilustracja 3:2 z OpenAI na pełny ekran — trener z chorągwią o wschodzie słońca, trener przy ognisku w deszczu, nocne święto z fajerwerkami. Tytuł na niebie, karta tekstu na spokojnym pierwszym planie, żywe światło (słońce, konfetti, ognisko, deszcz, fajerwerki); wycięte postacie usunięte. Koszt ok. $0.40.",
+   "rounds": [
+    {
+     "win": true,
+     "label": "Runda 1 (2/3)",
+     "gap": "Największa słabość A to dolny panel podsumowania, który jest przeładowany i słabo czytelny. Mieści cztery strefy informacji: opis, odblokowaną misję, kolumnę statystyk i listę „ZABIERASZ DALEJ”. Etykiety statystyk (np. „Dni wyprawy”, „Poziom bohatera”) i pozycje łupów są drobne i szarobrązowe na beżu, a ikony w kolumnie środkowej i prawej są malutkie i zlewają się. Na ekranie telewizora albo telefonu ta część będzie nieczytelna. Pomniejszy zgrzyt stylistyczny: płaskie, wektorowe konfetti leży na malowanej ilustracji, a cukierkowe stworki mają inny poziom szczegółu niż realistycznie malowany zamek. Naprawa: odchudzić panel (np. połączyć atak i obronę z poziomem bohatera albo przenieść łupy do osobnego kroku), powiększyć font o 20–30%, przyciemnić etykiety i dać ikonom więcej miejsca. | Ilustracja zdradza generyczny render bez nadzoru dyrektora artystycznego i ma sprzeczną logikę sceny. Jest noc z gwiazdami, a jednocześnie deszcz, tęcza i jasne ognisko, które płonie w deszczu pod liściem. Ciepłe oświetlenie od ognia nie pasuje do chłodnego, niebieskiego otoczenia. Do tego chibi-maskotki z wielkimi oczami są w innym rejestrze stylistycznym niż ciężka, klasyczna rama pergaminu ze złotymi przyciskami i szeryfowymi kapitalikami. Drugorzędnie: tekst w panelu, zwłaszcza kursywa z serduszkiem i treść boksu „Rada”, jest za mały i zbyt szary jak na ekran gry, a panel ucina scenę tuż pod stopami postaci.",
+     "blinds": [
+      "tools/postep-obrazy/wynik-r1-w1.jpg",
+      "tools/postep-obrazy/wynik-r1-w2.jpg",
+      "tools/postep-obrazy/wynik-r1-w3.jpg"
+     ],
+     "note": "Krytyk 1: nasze — A jest pełnoprawnym, zaprojektowanym ekranem końca misji. Jest na nim jedna spójna, malowana ilustracja: bohater z flagą i stworkami po lewej, smok w środku i zamek po prawej. Kompozycja prowadzi wzrok od tytułu „ZWYCIĘSTWO!” przez scenę do panelu podsumowania. Tytuł jest czytelny, ma złoty relief i czerwoną wstęgę z nazwą misji. Panel dolny ma logiczną hierarchię: opis fabularny, statystyki (dni, punkty, poziom, atak i obrona), łupy, odblokowana misja 2 i jeden wyraźny przycisk główny „DALEJ ▶”. Gracz dostaje nagrodę emocjonalną (światło, konfetti) i informacyjną (co zyskał i co dalej).\n\nB to nie jest ekran zwycięstwa, tylko mały modal nałożony na mapę przygody. Z zakończenia misji zostaje okienko „Victory! The enemy is beaten” z przyciskiem „OKAY”. Nie ma podsumowania, nagród, ilustracji ani nagrody emocjonalnej. Pikselowa oprawa jest rzemieślniczo spójna i ma klimat, ale jako ekran końca misji działa słabo. Tekst w okienku jest drobny i ma niski kontrast (jasny, cienki font na brązowym pergaminie). Połowę kadru zajmuje czarna pustka wokół mapy, a minimapa w prawym górnym rogu jest prawie pusta. Krytyk 2: nasze — A działa jako pełny, zaprojektowany ekran porażki. Ma bohaterską ilustrację z czytelnym punktem skupienia: grupa przy ognisku jest w prawym dolnym trójkącie, a zamek po lewej ją równoważy. Tytuł „TYM RAZEM SIĘ NIE UDAŁO” jest duży i złoty, z mocnym cieniem, pod nim wstęga z nazwą misji. Dolny panel na pergaminie ma jasną hierarchię: przyczyna porażki, rada i dwa wyraźne przyciski. Główna akcja jest jasna, a akcja drugorzędna ciemna. Gracz wie, co się stało i co może zrobić dalej, a klimat melancholijnej porażki jest spójny z przekazem. B to spójny stylistycznie oryginał pixel-art. Jako ekran zakończenia misji to jednak tylko mały modalny komunikat na mapie przygody. Nie ma momentu dramatycznego, ilustracji ani wyjaśnienia porażki, a jedyną opcją jest OKAY. Większość kadru zajmują mapa i interfejs, które w tej chwili nie mają znaczenia. Ekran pełni rolę technicznego powiadomienia, a nie sceny zakończenia misji. Krytyk 3: wzorzec — B jest spójny w każdym pikselu i od razu wygląda jak ekran z wydanej gry. Ramka z kamienia i marmuru, dwa miecze po bokach, pionowe przyciski STANDARD/EXIT stylizowane na zwoje, złoty nagłówek z rubinami i gotycka czcionka pixel-art pochodzą z jednej ręki i jednej epoki. Hierarchia jest prosta: tabela, kolumny, ikony jednostek w kolumnie RATING (każda narysowana osobno i czytelna mimo małego rozmiaru). Wyróżnienie pozycji 1. złotem to świadoma decyzja projektowa. Nic nie wystaje ani nie wygląda na zapomniane. A ma lepszy klimat, ładną kompozycję nocy z księżycem i fajerwerkami, czytelny panel i wyraźne CTA „SALA SŁAW”, ale składa się z elementów z różnych stylów. Tło jest malarskie i półrealistyczne (skały, kryształy, las), postacie to chibi-maskotki w innym renderingu, a panel UI jest w płaskim, nowoczesnym stylu webowym (pergamin z CSS-owym cieniem i przyciskiem jak z aplikacji). Do tego ma widoczny błąd renderu, który od razu zdradza nieskończony asset. Ekran końca kampanii z artefaktem na ilustracji to dla mnie dyskwalifikacja jako produkt komercyjny.",
+     "build": ""
+    }
+   ]
   },
   {
    "name": "Kampania: wstęp, wybór trenera, mapa, zakończenie (grafiki OpenAI)",
    "status": "build",
-   "bar": "Ekrany kampanii Heroes (HoMM2 The Succession Wars — przebieg kampanii; HoMM3/HotA — malowane tła). Wzorce: w przygotowaniu.",
+   "bar": "Prawdziwe ekrany kampanii: HoMM2 (kampania Rolanda z fheroes2) i HoMM3/HotA (wybór kampanii, ekran scenariusza z VCMI). Trzech krytyków na ślepo, wygrana przy 2 z 3.",
    "note": "Słabość zwycięzcy z poprzedniej sesji: wstęp i wybór trenera złożone z istniejących grafik zamiast jednej malowanej sceny. Teraz: 6 malowanych ilustracji z OpenAI (mapa krainy, Janek, Ola, wstęp, zakończenie, zwój).",
    "rounds": [],
    "live": {

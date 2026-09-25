@@ -98,7 +98,7 @@ export const KAMPANIA: Kampania = {
         { typ: 'artefakt', artefakt: 'buty', opis: 'Buty Wędrowca' },
         { typ: 'oddzial', tier: 1, ile: 6, opis: '6 stworków drugiego poziomu' },
       ],
-      naMapie: { x: 0.2, y: 0.78 },
+      naMapie: { x: 0.2198, y: 0.8643 },
       epilog: 'Fort jest wolny, a stworki z Polany wracają do domu. Ale srebrne płaszcze uciekły za góry.',
     },
     {
@@ -117,7 +117,7 @@ export const KAMPANIA: Kampania = {
         { typ: 'statystyka', atak: 1, opis: '+1 do ataku' },
         { typ: 'oddzial', tier: 2, ile: 4, opis: '4 stworki trzeciego poziomu' },
       ],
-      naMapie: { x: 0.42, y: 0.5 },
+      naMapie: { x: 0.348, y: 0.459 },
       epilog: 'Grota Księżycowa padła. W jej skarbcu była tylko mapa bagien i jedno słowo: Kamień.',
     },
     {
@@ -136,7 +136,7 @@ export const KAMPANIA: Kampania = {
         { typ: 'surowiec', surowiec: 'kamien', ile: 6, opis: '6 kamieni ewolucji' },
         { typ: 'statystyka', obrona: 2, opis: '+2 do obrony' },
       ],
-      naMapie: { x: 0.64, y: 0.66 },
+      naMapie: { x: 0.5971, y: 0.752 },
       epilog: 'Księżycowy Kamień świeci w twojej dłoni. Bez niego twierdze Groty są słabsze niż kiedykolwiek.',
     },
     {
@@ -155,7 +155,7 @@ export const KAMPANIA: Kampania = {
         { typ: 'artefakt', artefakt: 'tarcza', opis: 'Tarcza z Łusek' },
         { typ: 'surowiec', surowiec: 'pokeball', ile: 60, opis: '60 pokeballi' },
       ],
-      naMapie: { x: 0.8, y: 0.24 },
+      naMapie: { x: 0.8242, y: 0.459 },
       epilog: 'Ostatnia twierdza Groty otwiera bramy. Srebrne płaszcze składają broń.',
     },
   ],
