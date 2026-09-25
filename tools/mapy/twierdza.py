@@ -326,6 +326,20 @@ def rozstaw(g):
         if g.mapa[y][x] == '~':
             g.mapa[y][x] = 's'
 
+    # Runda 5 (HotA): „droga urywa się za szopą, obiekty rozsypane na chybił
+    # trafił — biel na bieli nie mówi, którędy się idzie". Krótkie odnogi
+    # traktu w pierwszym ekranie, jak w HotA: od rozstajów pod zamkiem do kopalni
+    # odłamków, od traktu do placu z chatą i wiatrakiem oraz do strzeżonego
+    # skupiska przy ognisku (straż, skrzynia, relikt, kupki). Malowane PO
+    # rozstawieniu: nic się nie przesuwa, a pod obiektami droga i tak jest
+    # przejezdna. Tylko na śniegu, darni i tundrze — nie na lodzie ani skałach.
+    # (Odnoga od bramy zamku biegła pod rysunkiem gór — idzie od rozstajów.)
+    for x, y in [(13, 63), (13, 64), (13, 65), (13, 66), (12, 67),  # → kopalnia odłamków
+                 (13, 61), (12, 60), (11, 60),          # plac: chata, wiatrak
+                 (17, 63), (18, 64), (18, 65)]:         # skupisko przy ognisku
+        if g.mapa[y][x] in 's.j':
+            g.mapa[y][x] = '='
+
 
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 // Źródło: tools/mapy/twierdza.py (szkic i rozstawienie), silnik: tools/generuj_mape.py.
@@ -368,7 +382,11 @@ USTAWIENIA = {
     ],
     # Runda 3 (wzorzec HotA): znajdźki na pół pola z cieniem i rysunkiem stosu
     # leżącego w śniegu (`public/mapa/zima/stos-*.png`) zamiast ikon z paska.
-    'znajdzki': 0.5,
+    # Runda 5 (HotA): „zasoby, skrzynie i flagi mają 1/3 kafla, bez cieni,
+    # giną na śniegu — powiększyć 1,5–2 razy". Trzy czwarte pola i ciemny
+    # obrys obiektów gry (jak Bagna/Polana) — odróżnia je od zasp i głazów.
+    'znajdzki': 0.78,
+    'obrysObiektow': 0.45,
     # Runda 4 (HotA): „pasmo gór po lewej to ten sam ośnieżony szczyt wklejony
     # w siatkę rzędami — tapeta, a nie masyw". W pierwszym ekranie góry stoją
     # ręcznie, pięć różnych rysunków w różnej skali (`public/mapa/zima/gora-N`,
@@ -406,7 +424,9 @@ BARWY_TERENU = {
     'jalowa': {'nasycenie': 0.8, 'barwa': (160, 165, 180), 'moc': 0.3, 'jasnosc': 1.05},
     # Ubity, zmarznięty trakt: brąz ziemi przyprószony szronem, bez
     # pomarańczowego piasku i zielonych kępek.
-    'sciezka': {'nasycenie': 0.45, 'barwa': (170, 158, 150), 'moc': 0.3, 'jasnosc': 0.88},
+    # Runda 5: „droga to ledwo widoczna beżowa smuga" — ciemniejszy,
+    # cieplejszy brąz ubitej ziemi, czytelny na bieli z daleka.
+    'sciezka': {'nasycenie': 0.6, 'barwa': (150, 120, 95), 'moc': 0.45, 'jasnosc': 0.74},
 }
 
 #: Jeziora są skute lodem — bez shadera wody (patrz `render_mapa.py`).

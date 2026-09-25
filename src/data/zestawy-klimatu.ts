@@ -57,6 +57,8 @@ export const ZESTAWY_KLIMATU: Record<string, readonly string[]> = {
     "gora-2",
     "gora-3",
     "gora-4",
+    "gora-5",
+    "gora-6",
     "kepa-las-1",
     "kepa-las-2",
     "kepa-las-3",
@@ -80,6 +82,8 @@ export const ZESTAWY_KLIMATU: Record<string, readonly string[]> = {
     "stos-pokeball"
   ],
   "polana": [
+    "drzewo",
+    "drzewo-b",
     "kepa-las-1",
     "kepa-las-2",
     "kepa-las-3",
@@ -94,6 +98,9 @@ export const ZESTAWY_KLIMATU: Record<string, readonly string[]> = {
     "krzak-2",
     "skala",
     "skala-2",
+    "sosna",
+    "sosna-b",
+    "sosna-mala",
     "stos-jagody",
     "stos-kamien-ewolucji",
     "stos-odlamki",

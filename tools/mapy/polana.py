@@ -140,8 +140,13 @@ LAS_KADRU = [
     (8, 18, 8, 20),
     (16, 18, 18, 21),
     (22, 17, 26, 18),
-    (21, 19, 26, 22),
+    (22, 19, 26, 22),
 ]
+
+#: Runda 9: przesmyk na północ przez las na drugim brzegu (kolumny 19–21).
+#: Kępa lasu zachodzi na sąsiednie pole z każdej strony, więc przesmyk
+#: szeroki na dwa pola czytał się jak zwarta ściana drzew.
+PRZESMYK = [(21, y) for y in range(19, 23)]
 
 #: Most (runda 4). Pola pod nim są w grze DROGĄ, a render maluje pod nimi
 #: nieprzerwaną wodę i kładzie na niej rysunek mostu (`MOSTY` niżej). Piaszczysty
@@ -281,6 +286,9 @@ def popraw_teren(g, mapa):
             for x in range(x0, x1 + 1):
                 if mapa[y][x] in '.,j':
                     mapa[y][x] = 'T'
+    for x, y in PRZESMYK:
+        if mapa[y][x] == 'T':
+            mapa[y][x] = '.'
     for x, y in ZIEMIA:
         if mapa[y][x] in '.,':
             mapa[y][x] = 'j'
@@ -541,8 +549,8 @@ USTAWIENIA = {
     # na ziemi (`public/mapa/polana/stos-*.png`) zamiast ikony z paska.
     # Runda 8 (werdykt rundy 7: „obiekty giną w szumie dekoracji — powiększyć
     # je"): stosy o jedną piątą większe, a drobnica łąki przerzedzona.
-    # Runda 9 („obiekty za małe względem zamku, giną wśród trawy”): 0,62.
-    'znajdzki': 0.62,
+    # Runda 9 („obiekty za małe względem zamku, giną wśród trawy”): 0,68.
+    'znajdzki': 0.68,
     # …i ciemny obrys pod wszystkim, co da się podnieść albo odwiedzić —
     # drzewa, krzaki i naklejki łąki go nie mają.
     'obrysObiektow': 0.35,
@@ -602,7 +610,12 @@ RAMKA_STARTU = True
 #: tekstura ubitej ziemi i malowane obrzeże (`teren_efekty.droga_obrzeze`:
 #: przygaszony skraj, wydeptane pobocze, kamyki, źdźbła na krawędzi) zamiast
 #: rozjaśniającej `obwodka_drogi`, od której trakt robił się beżowy.
-EFEKTY = ['relief', 'bez_placow', 'droga_obrzeze']
+EFEKTY = ['relief', 'bez_placow', 'droga_obrzeze', 'brzeg_wody']
+
+#: Runda 9 (wzorzec: rzeka z mapy kampanii HotA): rzeka obwiedziona pasem
+#: piaszczystego brzegu o ostrej krawędzi — trawa dochodząca do samej wody
+#: rozmywała granicę lądu i ćwiartki nad mostem czytały się jak jedna zieleń.
+BRZEG_WODY = {'szerokosc': 0.6, 'barwa': (182, 154, 106), 'linia': (50, 42, 28)}
 DROGA_KRETA = {'szerokosc': 0.5, 'zmiennosc': 0.22, 'meander': 0.12}
 
 #: Runda 2 („krainy rozmywają się w jedną"): twardsze brzegi terenów.

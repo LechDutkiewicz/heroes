@@ -87,7 +87,7 @@
   },
   {
    "name": "Plansza: Polana (misja 1)",
-   "status": "build",
+   "status": "done",
    "bar": "Mapy kampanii Heroes 3 / Horn of the Abyss: trzy kadry wyglądające jak zaprojektowana mapa (rzeka z lasami, zamek z pasmami gór i wodospadami, wybrzeże). Trzech krytyków na ślepo, wygrana przy 2 z 3. Rundy 1–4: przeciw HoMM2; runda 5: przeciw zrzutom z generatora (odrzucone).",
    "note": "Mapa 36 × 36: rzeka z dwoma pilnowanymi brodami, zamek gracza na południowym zachodzie, Stary Fort na wschodzie. Sondy i symulacja przechodzą.",
    "rounds": [
@@ -164,12 +164,20 @@
      ],
      "note": "Krytyk 1: wzorzec — A ma wyraźną geografię. Rzeka biegnie pionowo z lewej strony i ma piaszczyste brzegi. Masywy leśne i skalne tworzą korytarze, a centralne jezioro chmur ma naturalną, poszarpaną linię brzegu. Obiekty (wiatrak, wieże, skrzynie, kryształy, obóz, portal) są osadzone w terenie, mają spójną skalę i własny cień, więc całość czyta się jak ręcznie zaprojektowana plansza kampanii. B jest czysty i spójny kolorystycznie, ale wygląda jak casualowa gra mobilna. Teren to płaska zielona trawa, na której leżą małe ikonki, a góry stoją jako pojedyncze izolowane stożki, bez pasm i bez przejść między biomami.",
      "build": "Poprawiłem drogi na Polanie, bo to była ostatnia luka („płaskie beżowe pasy bez tekstury, obrzeży i kolein, urywają się przy moście”). Trakt wije się teraz, ma zmienną szerokość i koleiny (włączone ustawieniem DROGA_KRETA). Dostał nową teksturę ubitej ziemi z OpenAI (`teren-droga-polana`) i malowane obrzeże: przygaszony skraj jezdni, wydeptane pobocze z ciemnym konturem, gromadki kamyków i źdźbła trawy na krawędzi. Robi to nowy efekt `droga_obrzeze` w `teren_efekty.py`, który włącza się tylko wpisem w `EFEKTY` planszy. Droga dochodzi teraz do obu końców mostu i idzie dalej na wschód. Wcześniej zasłaniały ją dwa drzewa pod wschodnim przyczółkiem, a przy zachodnim za szeroki rysunek grani (475 px), więc zmieniłem go na węższy. Przy okazji wróciłem do werdyktu rundy 7 o szumie dekoracji: drobnicy na łące jest 3–4 razy mniej, trawa jest o ton głębsza i mniej jaskrawa, stosy surowców są większe (0.42 → 0.5), a obiekty, które można zebrać lub odwiedzić, mają ciemny obrys (`obrysObiektow`, 0.35). Pracowałem pod wzorzec, który gracz uznał za dobry (rzeka z lewej, wyglądający jak kampania)."
+    },
+    {
+     "win": true,
+     "label": "Runda 9 (HotA, 2/3)",
+     "gap": "W A znajdźki (fioletowe i błękitne kryształy, jagody, skrzynie z żółtymi elipsami pod spodem) są przesadnie duże i rozsiane równomiernie jak konfetti, zwłaszcza na łące na dole po lewej i na prawym brzegu rzeki, przez co mapa zaczyna wyglądać jak planszówka albo gra mobilna, a nie przemyślany świat. | A: znajdźki (fioletowe i niebieskie kryształy, skrzynie, jagody) są rozsypane równomiernie jak naklejki, bez cienia i kontaktu z podłożem. Najgorzej jest na prawym brzegu rzeki w dolnej części. Do tego są w złej skali względem zamku i budynków, co daje efekt planszy z mobilnej gry casual, a nie ręcznie ułożonej mapy kampanii.",
+     "blinds": [
+      "tools/postep-obrazy/mapa-polana-r9-w1.jpg",
+      "tools/postep-obrazy/mapa-polana-r9-w2.jpg",
+      "tools/postep-obrazy/mapa-polana-r9-w3.jpg"
+     ],
+     "note": "Krytyk 1: wzorzec — A ma prawdziwą, zaprojektowaną geografię: rzeka płynie pionowo przy lewej krawędzi, pasma gór i gęste lasy tworzą korytarze, a jezioro chmur z wieżami stanowi wyraźny punkt centralny. Obiekty (wiatrak, latarnia, fontanna z posągiem, kotły, kryształy, obozowisko) są liczne i różne, mają jedną skalę i jedną technikę pikselową, są osadzone w terenie i mają cienie, więc całość wygląda jak mapa ręcznie złożona do kampanii. B jest czysty i spójny stylistycznie (malarski, mobilny), ale poza dwoma masywami skalnymi i rzeką teren jest płaską zieloną łąką, a obiekty to drobne, podobnej wielkości ikonki rozsypane bez kompozycji. Przez to B czyta się jak planszetka gry casualowej, a nie jak gęsta mapa przygody. Krytyk 2: nasze — A ma czytelną, zaprojektowaną geografię. Rzeka biegnie jako kręgosłup mapy z góry na dół, drewniany most tworzy wyraźne przejście, a obszary są rozdzielone: skalisty masyw z wodospadem po lewej, las na północy, piaszczysty brzeg z kopalnią po prawej. Ścieżki prowadzą od zamku do mostu, więc od razu widać, gdzie da się iść. B ma dopracowane, spójne rzemiosło pikselowe, ale układ wygląda jak z generatora. Po jednolitym, płaskim trawiastym podłożu rozrzucone są bez logiki góry i kępy lasu, a cienka niebieska rzeka po lewej nie łączy się z żadnym jeziorem ani wodospadem, więc nie kształtuje terenu. Krytyk 3: nasze — A ma czytelną, zaprojektowaną geografię. Rzeka płynie przez środek, jest jeden most jako przeprawa, droga prowadzi z lewej góry do zamku, a masywy górskie z wodospadem zamykają krawędzie. Wszystko jest w jednym spójnym, malarskim stylu z wyraźnym światłem. Od razu widać, gdzie da się iść (trawa i droga) i co jest obiektem. W B środek lewej wyspy to ciemna, niskokontrastowa plątanina czerwonych i ciemnozielonych drzew oraz skał. Nie widać tam ścieżek ani granic przejścia, a obiekty (kapliczki, kryształy) giną w tym szumie. B ma za to lepiej osadzone obiekty i ciekawszą makrogeografię wybrzeża ze statkami.",
+     "build": "Runda 9 celowała w lukę z rundy 8: puste łąki w górnych ćwiartkach i brak masywów lasu, które tworzyłyby korytarze. Porównywałem głównie z kadrem z rzeką, który gracz uznał za dobry wzorzec. W `tools/mapy/polana.py` dodałem zwarte masywy lasu (`LAS_KADRU`): na zachodzie od krawędzi mapy do traktu, na drugim brzegu nad polaną strażnicy i ścianę lasu od wschodu. Między nimi zostaje przesmyk na północ szeroki na 3 pola, a wóz, skrzynia i stos pokeballi stoją teraz przy trakcie i na polanie. Zestaw `polana` dostał nowe grafiki z OpenAI: 4 zbite kępy lasu (poprzednie to były 4–5 osobnych drzewek) i pojedyncze drzewa w tym samym stylu (obrałem je z jasnego talerzyka trawy i przygasiłem). Do tego ciemniejsza łąka, piaszczysty brzeg rzeki (`brzeg_wody`) i znajdźki 0,68 zamiast 0,62. Uczciwie: górne ćwiartki mają teraz las i widać, którędy się idzie, ale styl dalej jest jaśniejszy i bardziej bajkowy niż we wzorcu HotA, a równolegle inny builder zmienia minimalne rozmiary znajdziek i cienie w `AdventureScene.ts`, więc ostateczny wygląd obiektów zależy też od jego pracy."
     }
-   ],
-   "live": {
-    "round": 9,
-    "stage": "builder pracuje"
-   }
+   ]
   },
   {
    "name": "Plansza: Bagna (misja 3)",

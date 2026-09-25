@@ -27,10 +27,10 @@ export const TEREN = [
   'TTTT....=TTT###~~~.........###=.....',
   'TTTTTTTT.=..##~~~.....TTTT####=.....',
   'TTTTTTTTT.=..~~~TTT...TTTTT..=....TT',
-  'TTTTTTTTT..=.~~~TTT..TTTTTTT=...TTTT',
-  'TTTTTTTTT..=~~~.TTT..TTTTTT=....TTTT',
-  'TTTTT......=~~~.TTT..TTTTTT=.,,,,,TT',
-  'TTTTT......=~~...j...TTTTTT=.,,,,,TT',
+  'TTTTTTTTT..=.~~~TTT...TTTTTT=...TTTT',
+  'TTTTTTTTT..=~~~.TTT...TTTTT=....TTTT',
+  'TTTTT......=~~~.TTT...TTTTT=.,,,,,TT',
+  'TTTTT......=~~...j....TTTTT=.,,,,,TT',
   '#########TT.=~~.j....TTTT..=.,,,TTTT',
   '#########...=.~~..........==....TTTT',
   'TT#########.==============.=.....TTT',
@@ -188,7 +188,7 @@ export const USTAWIENIA = {
     "odlamek": 0
   },
   "zestaw": "polana",
-  "znajdzki": 0.62,
+  "znajdzki": 0.68,
   "obrysObiektow": 0.35,
   "skalaBudowli": 0.8,
   "kepySkal": {

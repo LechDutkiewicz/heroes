@@ -298,6 +298,16 @@ export const USTAWIENIA = {
       "x": 4,
       "y": 37,
       "promien": 3
+    },
+    {
+      "x": 2,
+      "y": 52,
+      "promien": 3
+    },
+    {
+      "x": 2,
+      "y": 40,
+      "promien": 4
     }
   ],
   "znajdzki": 0.8,
@@ -327,10 +337,10 @@ export const USTAWIENIA = {
       ]
     },
     {
-      "plik": "gora-4",
+      "plik": "gora-6",
       "x": 6.3,
       "y": 54.4,
-      "szer": 7.4,
+      "szer": 7.8,
       "pokrywa": [
         4,
         50,
@@ -339,10 +349,10 @@ export const USTAWIENIA = {
       ]
     },
     {
-      "plik": "gora-3",
+      "plik": "gora-5",
       "x": 17.4,
       "y": 54.4,
-      "szer": 6.0,
+      "szer": 6.4,
       "odbij": true,
       "pokrywa": [
         15,

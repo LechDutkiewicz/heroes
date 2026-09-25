@@ -131,6 +131,32 @@ const KLUCZ_WYNIKU = 'wynik-bitwy';
 const KLUCZ_TLA = 'tlo-planszy';
 /** Zestaw klimatu, z którego wczytano sprite'y `m-…` — patrz `preload`. */
 const KLUCZ_ZESTAWU = 'zestaw-planszy';
+/** Tekstura miękkiego cienia kontaktowego — patrz `zbudujCien`. */
+const CIEN_KONTAKTOWY = 't-cien-miekki';
+/** Krycie cienia kontaktowego: pod znajdźką, stworkiem i bohaterem / pod dużą bryłą. */
+const KRYCIE_CIENIA = 0.46;
+const KRYCIE_CIENIA_BRYLY = 0.36;
+
+/**
+ * NAJMNIEJSZA wysokość znajdziek na mapie, w polach — jedno miejsce, które
+ * pilnuje czytelności niezależnie od `USTAWIENIA.znajdzki` planszy.
+ *
+ * Pole ma na ekranie 32 px (`ZOOM_MAPY`); w Heroes 3 kupka surowca zajmuje
+ * 60–80% pola. Przy znajdźkach 0,5 pola stos wychodził na 16 px, a kamień
+ * artefaktu — wąski, o proporcjach 2 : 3 — na 11 px szerokości: ginął w każdej
+ * dekoracji. Tu liczy się sama wysokość rysunku; pole, na którym obiekt
+ * stoi, i jego podstawa zostają te same (rysunek rośnie w górę), a trafienia
+ * liczą się z granic rysunku, więc idą za nim same.
+ */
+const WYS_ZNAJDZKI: Record<'surowiec' | 'skrzynia' | 'artefakt', number> = {
+  // Stosy są szersze niż wyższe (1,15–1,4 : 1) — 0,64 pola wysokości daje
+  // 23–29 px szerokości na ekranie, czyli 70–90% pola.
+  surowiec: 0.64,
+  skrzynia: 0.7,
+  // Kamień ewolucji ma 2 : 3, więc dopiero 0,86 pola wysokości daje 60% pola
+  // szerokości; artefakt ma się czytać jako cel wyprawy, nie jako okruch.
+  artefakt: 0.86,
+};
 
 
 const DOMYSLNA_PODPOWIEDZ =
@@ -201,6 +227,8 @@ export class AdventureScene extends Phaser.Scene {
   private marginesy = new Map<string, number>();
   /** Kanały alfa tekstur — do marginesów i do trafiania kliknięciem. */
   private alfy = new Map<string, { w: number; h: number; dane: Uint8Array } | null>();
+  /** Spód rysunku w poziomie, per tekstura — patrz `podstawaRysunku`. */
+  private podstawy = new Map<string, { lewo: number; prawo: number; widocznaSzer?: number }>();
 
   private trasaBiezaca: Krok[] | null = null;
   private zajety = false;
@@ -372,6 +400,7 @@ export class AdventureScene extends Phaser.Scene {
     this.trafienia = [];
     this.marginesy.clear();
     this.alfy.clear();
+    this.podstawy.clear();
 
     this.stan = this.wczytajStan();
     // Stan mapy jest tym, czego brakuje najbardziej w zgłoszeniach typu
@@ -453,42 +482,114 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   /**
-   * Miękka plama cienia jako tekstura, rysowana raz na scenę.
+   * Miękki cień kontaktowy jako tekstura (`CIEN_KONTAKTOWY`), rysowana raz na grę.
    *
    * Elipsa z `fillEllipse` ma OSTRĄ krawędź, a cień kontaktowy nie ma żadnej —
    * gaśnie stopniowo. Ostry brzeg czyta się jak kałuża albo dziura w trawie,
-   * a nie jak cień. Kilkadziesiąt elips o rosnącym promieniu i malejącym
-   * kryciu daje zejście do zera, którego nie widać.
+   * a nie jak cień. Gradient radialny płótna, ściśnięty w pionie o połowę:
+   * pełny rdzeń (tak jak w Heroes 3 — plama ma być widać, a nie domyślać się
+   * jej) i długie, gładkie zejście do zera, bez krawędzi do wskazania palcem.
+   * Krycie ustawia dopiero obrazek (`cienKontaktowy`), tekstura jest pełna.
+   *
+   * Osobny klucz, a nie `t-cien`: ten robi też `TownScene` i kto pierwszy,
+   * ten wygrywa — po wizycie w mieście mapa dostawała cudzy kształt.
    */
   private zbudujCien() {
-    if (this.textures.exists('t-cien')) return;
-    const bok = 256;
-    const g = this.add.graphics();
-    const krokow = 72;
-    for (let i = krokow; i > 0; i--) {
-      const t = i / krokow;
-      // Trzecia potęga zamiast kwadratu: ogon schodzi do zera znacznie
-      // łagodniej, więc plama nie ma żadnej krawędzi, którą dałoby się
-      // wskazać palcem — a to po niej poznaje się namalowany cień.
-      g.fillStyle(0x000000, 0.03 * (1 - t) * (1 - t) * (1 - t));
-      g.fillEllipse(bok / 2, bok / 4, bok * t, (bok / 2) * t);
+    if (this.textures.exists(CIEN_KONTAKTOWY)) return;
+    const w = 128;
+    const t = this.textures.createCanvas(CIEN_KONTAKTOWY, w, w / 2);
+    if (!t) return;
+    const ctx = t.getContext();
+    ctx.setTransform(1, 0, 0, 0.5, 0, 0);
+    const g = ctx.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
+    g.addColorStop(0, 'rgba(14,9,4,1)');
+    g.addColorStop(0.4, 'rgba(14,9,4,0.92)');
+    g.addColorStop(0.7, 'rgba(14,9,4,0.5)');
+    g.addColorStop(0.88, 'rgba(14,9,4,0.16)');
+    g.addColorStop(1, 'rgba(14,9,4,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, w);
+    t.refresh();
+  }
+
+  /**
+   * Cień kontaktowy pod rysunkiem stojącym na ziemi — jeden przepis dla
+   * znajdziek, budowli, zamków, kopalń i stworków.
+   *
+   * Szerokość bierze się z PODSTAWY rysunku (`podstawaRysunku`), nie z jego
+   * prostokąta: wiatrak ma wąską wieżę i szerokie śmigła, stworek stoi na
+   * dwóch łapach. Cień szeroki jak prostokąt wystawał spod śmigieł w powietrze.
+   * Światło pada z lewej-góry (tak są cieniowane rysunki: blik na pokeballu,
+   * jasne lewe ściany), więc plama wychodzi spod podstawy w prawo i w dół.
+   *
+   * Żaden rysunek obiektu nie ma namalowanego cienia rzuconego (są wycięte do
+   * sylwetki; niektóre stosy mają tylko podstawkę z mchu albo śniegu), więc
+   * cień dajemy wszystkim — słabszy tylko tam, gdzie leży pod dużą bryłą.
+   */
+  private cienKontaktowy(
+    klucz: string,
+    wys: number,
+    x: number,
+    spod: number,
+    krycie: number
+  ): Phaser.GameObjects.Image {
+    const zrodlo = this.textures.get(klucz).getSourceImage() as { width: number; height: number };
+    const skala = wys / (zrodlo.height || 1);
+    const p = this.podstawaRysunku(klucz);
+    const szerRysunku = zrodlo.width * skala;
+    // Środek podstawy względem osi rysunku (origin 0,5).
+    const srodek = ((p.lewo + p.prawo) / 2 - 0.5) * szerRysunku;
+    const szer = Math.max(
+      (p.prawo - p.lewo) * szerRysunku * 1.15,
+      (p.widocznaSzer ?? 1) * szerRysunku * 0.6,
+      KAFEL * 0.34
+    );
+    const wysC = Math.max(szer * 0.36, KAFEL * 0.14);
+    return this.add
+      .image(x + srodek + szer * 0.1, spod + wysC * 0.12, CIEN_KONTAKTOWY)
+      .setDisplaySize(szer, wysC)
+      .setAlpha(krycie);
+  }
+
+  /**
+   * Gdzie w poziomie leży spód rysunku — lewa i prawa krawędź widocznych
+   * pikseli w najniższym pasie rysunku (ułamki szerokości pliku) oraz
+   * szerokość całej sylwetki. Liczone z alfy i zapamiętane, jak margines.
+   */
+  private podstawaRysunku(klucz: string): { lewo: number; prawo: number; widocznaSzer?: number } {
+    const znane = this.podstawy.get(klucz);
+    if (znane) return znane;
+    let wynik: { lewo: number; prawo: number; widocznaSzer?: number } = { lewo: 0.2, prawo: 0.8 };
+    const a = this.alfa(klucz);
+    if (a) {
+      let dol = -1;
+      let gora = a.h;
+      let minX = a.w;
+      let maxX = -1;
+      for (let y = 0; y < a.h; y++)
+        for (let x = 0; x < a.w; x++)
+          if (a.dane[y * a.w + x] > 40) {
+            if (y > dol) dol = y;
+            if (y < gora) gora = y;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+          }
+      if (dol >= 0) {
+        // Pas podstawy: dolne 18% sylwetki, ale nie mniej niż dwa wiersze.
+        const pas = Math.max(2, Math.round((dol - gora + 1) * 0.18));
+        let l = a.w;
+        let r = -1;
+        for (let y = Math.max(0, dol - pas + 1); y <= dol; y++)
+          for (let x = 0; x < a.w; x++)
+            if (a.dane[y * a.w + x] > 40) {
+              if (x < l) l = x;
+              if (x > r) r = x;
+            }
+        wynik = { lewo: l / a.w, prawo: (r + 1) / a.w, widocznaSzer: (maxX - minX + 1) / a.w };
+      }
     }
-    g.generateTexture('t-cien', bok, bok / 2);
-    g.clear();
-    // Cień kontaktowy znajdziek (`USTAWIENIA.znajdzki`): ciemny rdzeń, krótki
-    // miękki brzeg. Plama `t-cien` pod rzeczą wielkości pół pola rozmywała się
-    // do niewidocznej.
-    const kroki = 40;
-    for (let i = kroki; i > 0; i--) {
-      const t = i / kroki;
-      // Stałe krycie warstw: ciemność rośnie liniowo ku środkowi, więc rdzeń
-      // jest szeroki — pod rzeczą wielkości pół pola widać go jako cień,
-      // a nie jako kropkę schowaną pod rysunkiem.
-      g.fillStyle(0x000000, 0.035);
-      g.fillEllipse(bok / 2, bok / 4, bok * t, (bok / 2) * t);
-    }
-    g.generateTexture('t-cien-kontakt', bok, bok / 2);
-    g.destroy();
+    this.podstawy.set(klucz, wynik);
+    return wynik;
   }
 
   private przygotujAnimacje() {
@@ -1303,59 +1404,20 @@ export class AdventureScene extends Phaser.Scene {
       const { klucz, wys } = this.grafikaObiektu(o);
       const bryla = brylaObiektu(o);
 
-      // Cień kontaktowy. Przy bryle siada na jej podstawie — czyli w rzędzie
-      // NAD polem wejścia, nie na samym wejściu; położony niżej odklejał się
-      // od budowli i cała rzecz zaczynała lewitować.
+      // Cień kontaktowy (`cienKontaktowy`) — pod KAŻDYM obiektem, także pod
+      // stworkiem. Przy bryle siada na jej podstawie — czyli w rzędzie NAD
+      // polem wejścia, nie na samym wejściu; położony niżej odklejał się od
+      // budowli i cała rzecz zaczynała lewitować.
       //
-      // Miękka tekstura, nie elipsa z `fillEllipse`: elipsa ma ostrą krawędź,
-      // a cień kontaktowy nie ma żadnej. Mnożenie zamiast przykrywania, bo
-      // czarna plama o krycia 0,3 rozjaśnia się do szarości i leży na trawie
-      // jak folia, zamiast przyciemniać to, co pod nią.
-      //
-      // Poprzednia wersja była za mała i siedziała dokładnie pod podstawą,
-      // więc bryła zasłaniała ją niemal w całości — porównanie z włączonym
-      // i wyłączonym cieniem nie pokazywało ŻADNEJ różnicy. Cień, którego nie
-      // widać, nie osadza niczego. Teraz jest szerszy od budowli, wychodzi
-      // spod niej w lewo i w dół (słońce stoi w prawym górnym rogu) i widać
-      // go na tyle, żeby robił swoją robotę.
       // Prawdziwy spód rysunku, a nie dolna krawędź pliku — patrz
       // `marginesPodRysunkiem`. Wszystko, co osadza budowlę w terenie, liczy
       // się od tej jednej wartości, więc nie da się już tego rozjechać
       // osobno dla cienia i osobno dla gruntu.
+      //
+      // Cień nie trafia do `trafienia`, więc nie łapie kliknięć — liczą się
+      // tylko widoczne piksele samego rysunku.
       const spod = (bryla ? -KAFEL * 0.5 : KAFEL * 0.46) - this.pustkaPodRysunkiem(klucz, wys);
-      const cien = this.add
-        .image(-KAFEL * (bryla ? 0.3 : 0.12), spod + KAFEL * (bryla ? 0.08 : 0.02), 't-cien')
-        // Szeroka i WYSOKA plama, nie pasek. Spłaszczona do jednej trzeciej
-        // wysokości czytała się jak ciemna kreska doklejona pod bryłą; cień
-        // widziany pod tym kątem jest owalny i sięga dalej, niż się wydaje.
-        .setDisplaySize(
-          KAFEL * (bryla ? bryla[0] * 1.15 : 0.9),
-          KAFEL * (bryla ? 1.0 : 0.42)
-        )
-        .setBlendMode(Phaser.BlendModes.MULTIPLY)
-        .setAlpha(bryla ? 0.85 : 0.7);
-      kont.add(cien);
-      // Znajdźka per plansza (`USTAWIENIA.znajdzki`): mała rzecz na ziemi ma
-      // cień przyklejony do spodu — szeroki jak ona, płaski i ciemny w środku
-      // (druga, ciaśniejsza plama) — plus lekki rzut w lewo w dół. Szeroka
-      // blada plama pod drobiazgiem czytała się jak aura, nie jak kontakt.
-      const drobna =
-        o.rodzaj === 'surowiec' || o.rodzaj === 'skrzynia' || o.rodzaj === 'artefakt';
-      if (drobna && this.znajdzki()) {
-        const tex = this.textures.get(klucz).getSourceImage();
-        const szer = (tex.width * wys) / tex.height;
-        cien
-          .setTexture('t-cien-kontakt')
-          .setPosition(-szer * 0.28, spod + wys * 0.02)
-          .setDisplaySize(szer * 1.7, Math.max(wys * 0.7, KAFEL * 0.3))
-          .setAlpha(0.4);
-        const kontakt = this.add
-          .image(-szer * 0.06, spod - wys * 0.02, 't-cien-kontakt')
-          .setDisplaySize(szer * 1.25, Math.max(wys * 0.5, KAFEL * 0.22))
-          .setBlendMode(Phaser.BlendModes.MULTIPLY)
-          .setAlpha(0.85);
-        kont.add(kontakt);
-      }
+      kont.add(this.cienKontaktowy(klucz, wys, 0, spod, bryla ? KRYCIE_CIENIA_BRYLY : KRYCIE_CIENIA));
       // Wejście do budowli z bryłą (zamek, kopalnia) nie ma żadnego
       // odrębnego oznaczenia na gruncie — z daleka wygląda jak zwykła
       // ścieżka POD budynkiem, więc nie widać, gdzie naprawdę trzeba
@@ -1559,9 +1621,14 @@ export class AdventureScene extends Phaser.Scene {
     const { x, y } = this.naEkran(this.stan.bohater.x, this.stan.bohater.y);
     this.bohaterObj = this.add.container(x, y).setDepth(this.stan.bohater.y + 0.8);
 
-    const cien = this.add.graphics();
-    cien.fillStyle(C.shadow, 0.34);
-    cien.fillEllipse(0, KAFEL * 0.34, KAFEL * 0.5, KAFEL * 0.16);
+    // Ten sam miękki cień co pod obiektami (`cienKontaktowy`), tylko z ręki:
+    // rysunek bohatera to arkusz klatek, więc spodu nie da się zmierzyć z alfy
+    // całego pliku. Stopy są ok. 0,36 pola pod środkiem pola, sylwetka ma
+    // 0,4 pola szerokości; plama wychodzi w prawo-dół, od światła.
+    const cien = this.add
+      .image(KAFEL * 0.05, KAFEL * 0.375, CIEN_KONTAKTOWY)
+      .setDisplaySize(KAFEL * 0.54, KAFEL * 0.2)
+      .setAlpha(KRYCIE_CIENIA);
     this.bohaterObj.add(cien);
 
     this.bohaterSprite = this.add.sprite(0, KAFEL * 0.4, 'bohater', 0).setOrigin(0.5, 1);

@@ -309,6 +309,29 @@ dolnej ćwiartce". Zmiany:
 
 Symulacja misji 1: wygrana dnia 7 (2/2).
 
+### Polana, runda 9 (HotA, wzorzec: rzeka z mapy kampanii)
+
+Werdykt rundy 8: „łąki w lewej górnej i prawej górnej ćwiartce to pusta,
+płaska zieleń z drobnymi znacznikami; brak zwartych masywów lasu
+wyznaczających korytarze; obiekty za małe względem zamku". Zmiany (wszystko
+per plansza):
+
+- `LAS_KADRU` w `tools/mapy/polana.py`: las od lewej krawędzi do traktu (trakt
+  na północ idzie wąwozem między lasem, pasmem i rzeką), las nad polaną
+  strażnicy na drugim brzegu i ściana lasu od wschodu; między nimi
+  `PRZESMYK` na północ szeroki na trzy pola (kępa zachodzi na sąsiednie pole,
+  więc przy dwóch polach przesmyk czytał się jak zwarta ściana). Wóz
+  i skrzynia przestawione.
+- Zestaw `polana` dostał własne `kepa-las-1..4` (zbite masywy lasu mieszanego
+  zamiast 4–5 osobnych drzewek; PROMPTY-PLANSZE §17) i pojedyncze drzewa
+  `sosna`, `sosna-b`, `sosna-mala`, `drzewo`, `drzewo-b` w tym samym stylu
+  (surowe z API miały jasny talerzyk trawy — we wsadzie obrane i przygaszone).
+  Wpisy w `ZESTAWY['polana']` w `wsad_wczytaj.py`.
+- Łąka ciemniejsza (`BARWY_TERENU['trawa']`), rzeka z piaszczystym brzegiem
+  (`EFEKTY += 'brzeg_wody'`, `BRZEG_WODY`), `znajdzki` 0,68.
+
+Symulacja misji 1: wygrana dnia 7 (2/2). Grafiki: 8 obrazków, ≈ $0,38.
+
 ### Twierdza, runda 4 (HotA)
 
 Werdykt rundy 3: „masyw po lewej to ten sam ośnieżony szczyt wklejony

@@ -69,14 +69,14 @@ export const TEREN = [
   'TTTTT#####s~~~~TTT~~~.=.ssss#####sjjjjsjjjjj....~~~~~~~~~ss######jjTTTTT',
   'TTTTT#####ss~~~~T~~sss=s..ss###sssssjjjjjjjj.....~~~~~s~~ssss###jjjTTTTT',
   'TTTT#####sss.sss~~~ssss=.sss####ssssjj..jjjjs...~~~~..~.ssTs#.##.jjjTTTT',
-  '#########sss.s.sssss.s=.....####sssss...ssss.TT.ssss..~ssTTT...sjssTTTTT',
-  '#########sssssssssss.=......###sssss.....sssTTT~ssss~...TTTT..ssssssTTTT',
+  '#########ss==s.sssss.s=.....####sssss...ssss.TT.ssss..~ssTTT...sjssTTTTT',
+  '#########ssss=ssssss.=......###sssss.....sssTTT~ssss~...TTTT..ssssssTTTT',
   '#########sss=========.....s..##sssss.....ssTTTTssss.s...TTTT...jssssTTTT',
-  '#########ss=sssssss.......s.s.#.ssss....ss..TT#sss......sTT.s...jsssTTTT',
-  '#########s=ssssssss.....sss.s..sssssTs......#.##ss.....ssTTssssjjjjjTTTT',
-  '#########ssssssssss.s....sss.s..sssTTT.......##....s.sssTTTTssssjjjjTTTT',
-  '#########ssssssssssss...sssss....sssTTT.....#####..s.sTTTTTTTsssjjjjTTTT',
-  'TTTT####ssssssssssss.TT.ssss.#..#ssssTTT...#####.#.ssTTTTTTTTsssjjjTTTTT',
+  '#########ss=s=sss=s.......s.s.#.ssss....ss..TT#sss......sTT.s...jsssTTTT',
+  '#########s=ss=ssss=.....sss.s..sssssTs......#.##ss.....ssTTssssjjjjjTTTT',
+  '#########ssss=ssss=.s....sss.s..sssTTT.......##....s.sssTTTTssssjjjjTTTT',
+  '#########ssss=sssssss...sssss....sssTTT.....#####..s.sTTTTTTTsssjjjjTTTT',
+  'TTTT####ssss=sssssss.TT.ssss.#..#ssssTTT...#####.#.ssTTTTTTTTsssjjjTTTTT',
   'TTTT#######ssssssTTTTTTTssss#..#sTTsTTTT...TTT#TTTTTTTTTTTTTsssssTTTTTTT',
   'TTTT#######s#ssssTTTTTTTTssss##ssTTTTTT....TTTTTTTTTTTTTTTTTssssTTTTTTTT',
   'TTT########s##ssTTTTTTTTTsss##s##TTTTTTT....TTTTTTTTTTTTTTTTssssTTTTTTTT',
@@ -399,7 +399,8 @@ export const USTAWIENIA = {
       "promien": 13
     }
   ],
-  "znajdzki": 0.5,
+  "znajdzki": 0.78,
+  "obrysObiektow": 0.45,
   "masywy": [
     {
       "plik": "gora-4",

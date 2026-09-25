@@ -478,6 +478,10 @@ USTAWIENIA = {
         # mgły w prawym górnym rogu czytała się jak pusta połać.
         {'x': 22, 'y': 38, 'promien': 3},
         {'x': 4, 'y': 37, 'promien': 3},
+        # Runda 8: lewy skraj kadru pod pasmami gór (lewy dolny róg i pas
+        # nad wiatrakiem) — czarne zęby mgły ucinały góry w pół.
+        {'x': 2, 'y': 52, 'promien': 3},
+        {'x': 2, 'y': 40, 'promien': 4},
     ],
     # Runda 5 (wzorzec HotA; wcześniej runda 3: „płaska ikona pokeballa
     # wygląda na wklejoną z innej gry"): znajdźki to STOSY leżące na ziemi
@@ -536,6 +540,9 @@ BARWY_TERENU = {
     # Runda 6 („zieleń wokół obiektów przygasić"): łąka mniej nasycona.
     'trawa': {'nasycenie': 0.5, 'barwa': (100, 140, 112), 'moc': 0.55, 'jasnosc': 0.78},
     'las': {'nasycenie': 0.7, 'barwa': (90, 110, 75), 'moc': 0.4, 'jasnosc': 0.82},
+    # Runda 8 („rozjaśnić teren"): błoto trzęsawiska o ton jaśniejsze
+    # i cieplejsze — czarnobrunatne łaty przy dolinie czytały się jak dziury.
+    'bagno': {'nasycenie': 0.95, 'barwa': (130, 118, 80), 'moc': 0.2, 'jasnosc': 1.18},
     # Bruk grobli (runda 6): prawie bez zmian, lekko ciepły.
     'sciezka': {'nasycenie': 0.85, 'barwa': (160, 145, 120), 'moc': 0.2, 'jasnosc': 1.05},
 }
@@ -546,7 +553,8 @@ BARWY_TERENU = {
 EFEKTY = ['trzesawisko', 'obwodka_drogi', 'relief', 'bez_placow', 'brzeg_wody']
 #: Runda 3 („ciemna ziemia z trzciną, wygląda jak ciemny las"): oczka stojącej
 #: wody w barwie jezior tej planszy, mokre błoto wokół, jaśniejszy grunt.
-TRZESAWISKO = {'woda': (34, 64, 58)}
+#: Runda 8: oczka w barwie jaśniejszej, łupkowej wody Strugi.
+TRZESAWISKO = {'woda': (46, 76, 82)}
 #: Błoto z dostawy (`tools/PROMPTY-PLANSZE.md`), do tego czasu zwykłe bagno.
 TEKSTURY = {'bagno': ['bloto', 'bagno'], 'woda': ['woda-czarna', 'woda-bagno', 'woda'], 'sciezka': ['bruk', 'sciezka'],
             # Runda 8: pod pasmami gór (`masywy`) mszysta ściółka, nie szary
