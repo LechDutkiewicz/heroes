@@ -286,7 +286,8 @@
    ],
    "live": {
     "round": 11,
-    "stage": "builder pracuje"
+    "stage": "zrzut i ślepe zestawienie",
+    "build": "Pierwszy ekran Bagien ma teraz wyraźny charakter bagna, a to, co dało wygraną w rundzie 10, zostało bez zmian. Na końcu `rozstaw` wybrane pola kadru stają się trzęsawiskiem `b`. Losowania i wszystkie obiekty są te same. Gęstą kępę wierzb w górnym środku (werdykt: „korony zasłaniają, gdzie da się przejść”) zastąpił staw. Pola (16,40) i (17,40) zostały wodą, więc artefakt (17,39) nadal jest dostępny tylko przez straż. W tle te pola nie idą już warstwą `bagno` z ciemną obwódką w kształcie kratki kafli (za nią przegraliśmy rundę 8). Maluje je nowy hak `DOMALUJ` w `render_mapa.py`, włączany tylko przez Bagna. Mokradło ma ostry, nieregularny brzeg i malowany grunt turzycy z oczkami mętnej, oliwkowo-brunatnej wody. Nie wchodzi na trakt ani na brzeg Strugi. Stawy w kadrze są mętne i oliwkowe (nieruchome, zdjęte z maski shadera), a Struga zostaje łupkowa i płynie. Są też trzcinowiska na brzegach wody, martwe drzewa z mchem i powalone pnie z 5 nowych grafik OpenAI (PROMPTY-PLANSZE §22). Dopisałem też wpis rundy 11 w STAN.md. Uwaga: skrypt pętli zatwierdził już moje zmiany w migawkach (e19c6f4, 55b58ea), więc `git status` jest pusty — sam nic nie zatwierdzałem."
    }
   },
   {

@@ -490,7 +490,12 @@ USTAWIENIA = {
     # giną na śniegu — powiększyć 1,5–2 razy". Trzy czwarte pola i ciemny
     # obrys obiektów gry (jak Bagna/Polana) — odróżnia je od zasp i głazów.
     # Runda 8 (HotA): „obiekty są za małe" — stosy prawie na całe pole.
-    'znajdzki': 0.9,
+    # Runda 9 (HotA): „skrzynie, kryształy i ametysty są prawie wielkości
+    # budynków — hierarchia skali się rozpada; znajdźki do około pół kafla".
+    'znajdzki': 0.55,
+    # Runda 9 (HotA): „zamek ledwie większy od chaty i młyna — powiększyć
+    # co najmniej dwa razy; twierdza ma dominować nad lasem jak siedziba".
+    'skalaZamku': 1.8,
     # Runda 8 (HotA): „wiatrak, chata nad jeziorem i chatka wiszą na śniegu
     # jak naklejki". Szeroka plama cienia spod śnieżnej podstawki przyciemniała
     # sinawy śnieg wokół budynku, a jasna podstawka nad nią czytała się jak
