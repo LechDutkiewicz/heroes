@@ -88,7 +88,7 @@
   {
    "name": "Plansza: Polana (misja 1)",
    "status": "build",
-   "bar": "Mapa przygody Heroes 3 / Horn of the Abyss: trzy zrzuty (trawa, bagno, śnieg). Trzech krytyków na ślepo, każdy przeciw innemu, wygrana przy 2 z 3. Rundy 1–4 były jeszcze przeciw HoMM2.",
+   "bar": "Mapy kampanii Heroes 3 / Horn of the Abyss: trzy kadry wyglądające jak zaprojektowana mapa (rzeka z lasami, zamek z pasmami gór i wodospadami, wybrzeże). Trzech krytyków na ślepo, wygrana przy 2 z 3. Rundy 1–4: przeciw HoMM2; runda 5: przeciw zrzutom z generatora (odrzucone).",
    "note": "Mapa 36 × 36: rzeka z dwoma pilnowanymi brodami, zamek gracza na południowym zachodzie, Stary Fort na wschodzie. Sondy i symulacja przechodzą.",
    "rounds": [
     {
@@ -121,7 +121,7 @@
     },
     {
      "win": false,
-     "label": "Runda 5 (HotA, 0/3)",
+     "label": "Runda 5 (HoMM3 z generatora — wzorce odrzucone, 0/3)",
      "gap": "Mapa A nie ma barier, które budują korytarze: cała lewa połowa to przejezdna łąka z luźnymi drzewkami, a wzgórza (lewy górny róg, stożek z kopalnią fioletowych kryształów po prawej stronie środka, zielony kopiec w prawym dolnym rogu) to pojedyncze kopce. Trzeba je połączyć w pasma gór lub zwarte ściany lasu, które wyznaczą przejścia i zamknięte strefy. | W B środek i lewy dół mapy (pas trawy między zamkiem, ścieżką a rzeką i obszar nad wiatrakiem) to płaska, jednolita zieleń z powtarzalnymi okrągłymi kępkami krzaków: brak przejść terenu (brak ziemi, skał, bagna, wzniesień) i brak drobnych obiektów do zbierania, więc mapa wydaje się pusta; góry są tylko uciętymi stożkami przy krawędziach. | W B na mapie prawie nie ma obiektów do zebrania i odwiedzenia: lewy dolny róg to wypełniony drzewami las bez niczego, a pas trawy między zamkiem a rzeką i prawy brzeg poniżej kopalni kryształów są pusty. Trzeba zmniejszyć skalę budynków (zamek, młyn i most zajmują po kilka kafli) i gęsto wypełnić te miejsca kopalniami, skrzyniami, strażnikami, siedliskami i kapliczkami, żeby każdy ekran dawał kilka wyborów trasy.",
      "blinds": [
       "tools/postep-obrazy/mapa-polana-r5-w1.jpg",
@@ -134,13 +134,14 @@
    ],
    "live": {
     "round": 6,
-    "stage": "builder pracuje"
+    "stage": "builder skończył, czeka na zrzut",
+    "build": "Ręcznie rozstawiłem pierwszy ekran Polany pod nowy kadr 21 × 18 pól (oddaloną kamerę ZOOM_MAPY wprowadził w międzyczasie ktoś inny). W kadrze jest teraz około 30 obiektów: kuźnia wcięta w zbocze, sad, wiatrak, obóz, źródło, ogniska, chatka, wóz, gniazdo, strażnica, skrzynie, stosy surowców i 5 straży. Są też pasma gór zamiast pojedynczych kopców: zachodnie ma przełęcz przy rzece, a wschodnie tworzy za rzeką zamkniętą kieszeń z kopalnią i skrzynią, do której prowadzi jedno wejście pilnowane przez straż. Lewy dół to już nie pusty las, tylko polana z obiektami, a na drugim brzegu dołożyłem kępę lasu. Na płaską zieleń: pagórki (RZEZBA), łaty brązowej ziemi (nowa tekstura teren-ziemia), dwa różne nieregularne krzewy w miejsce okrągłej kuli z jagodami, naklejki łąki (pniak, głazy, kwiaty), budowle w skali 0,8 (nowe ustawienie per plansza USTAWIENIA.skalaBudowli) i odsłonięte rogi kadru. Przy zdjęciu mgły w promieniu 12 pól zostawały tam czarne zęby. Inne plansze się nie zmieniły: ustawienia działają tylko dla Polany, zrzut Bagien bez zmian, odcisk Dwóch Dolin przechodzi."
    }
   },
   {
    "name": "Plansza: Bagna (misja 3)",
    "status": "build",
-   "bar": "Mapa przygody Heroes 3 / Horn of the Abyss: trzy zrzuty (trawa, bagno, śnieg). Trzech krytyków na ślepo, każdy przeciw innemu, wygrana przy 2 z 3. Rundy 1–4 były jeszcze przeciw HoMM2.",
+   "bar": "Mapy kampanii Heroes 3 / Horn of the Abyss: trzy kadry wyglądające jak zaprojektowana mapa (rzeka z lasami, zamek z pasmami gór i wodospadami, wybrzeże). Trzech krytyków na ślepo, wygrana przy 2 z 3. Rundy 1–4: przeciw HoMM2; runda 5: przeciw zrzutom z generatora (odrzucone).",
    "note": "Mapa 54 × 54: trzęsawisko z groblami, Księżycowy Kamień na wyspie pod strażą wodza. Sondy i symulacja przechodzą.",
    "rounds": [
     {
@@ -171,7 +172,7 @@
     },
     {
      "win": false,
-     "label": "Runda 5 (HotA, 0/3)",
+     "label": "Runda 5 (HoMM3 z generatora — wzorce odrzucone, 0/3)",
      "gap": "W B poza klifem w lewym górnym rogu nie ma przeszkód ani rzeźby terenu: środek i prawy dół to płaska zielona łąka z okrągłymi krzaczkami, drogi to rozmyte beżowe smugi, a brzegi wody po prawej i w lewym dole są miękko rozmyte, bez wyraźnej linii. Trzeba dodać pasma skał, wzgórz i gęstego lasu, które wyznaczą przejścia, oraz wyraźny brzeg i utwardzoną drogę. | W A brakuje charakteru bagna: turkusowa, czysta woda w prawej części mapy i w lagunie w lewym dolnym rogu, razem z soczyście zieloną trawą w dolnej połowie, wygląda jak tropikalna zatoka; trzeba ją zastąpić mętną, oliwkowo-brunatną wodą z trzciną, błotem, zatopionymi pniami i kępami, które przechodzą w mokradło. | W A obiekty interaktywne (bohater na skrzyżowaniu ścieżek pośrodku mapy, fioletowy kryształ i czerwone grzyby u dołu, niebieskie kryształy po prawej) są mniejsze od drzew i krzaków i nie mają wyraźnego cienia pod spodem, konturu ani kontrastu, więc zlewają się z dekoracją; trzeba je powiększyć i graficznie oddzielić od tła, a zieleń wokół nich przygasić.",
      "blinds": [
       "tools/postep-obrazy/mapa-bagna-r5-w1.jpg",
@@ -181,12 +182,16 @@
      "note": "Krytyk 1: wzorzec — A ma zwartą, wielowarstwową geografię: rzeka biegnie przez całą lewą część z brzegami, grzbiety skalne i pasma lasu tworzą korytarze, a droga wije się między przeszkodami. Każdy kafel coś niesie, obiekty (wiatrak, wieże, twierdza, skrzynie, kapliczki) są w jednej skali i jednym oświetleniu i od razu widać, że da się je odwiedzić. B jest ładnie namalowane, ale czyta się jak powiększona ilustracja, a nie mapa strategiczna: dużo płaskiej, pustej łąki, mało obiektów, a skala się rozjeżdża (zamek i domek na palach są ogromne przy malutkim bohaterze). Krytyk 2: wzorzec — B czyta się jak pełnoprawna mapa przygody: na jednym ekranie jest kilkadziesiąt różnych obiektów (świątynia, wieża, wiatrak, jaskinie, skrzynie, surowce, potwory), drogi jasno pokazują, którędy się idzie, a ciemna trawa, rozlewiska i gęsta roślinność od razu mówią, że to bagno. A jest ładnie namalowane i spójne stylistycznie, ale ma może 12–15 dużych obiektów na ekran, więc mapa jest uboga w decyzje. Wygląda też jak wiosenna łąka nad tropikalną laguną, a nie jak bagno. Poza tym skala obiektów się rozjeżdża: ogromny zamek i tartak obok malutkiego bohatera. Krytyk 3: wzorzec — B wygląda jak gotowa gra. Jedna izometryczna konwencja obejmuje kilkadziesiąt rozróżnialnych obiektów: zamek, kopalnie, kapliczki, skrzynie, stosy surowców i potwory. Kamienista droga i zamarznięte rzeki wyraźnie dzielą mapę na strefy, a pasma gór tworzą korytarze, więc widać, którędy da się przejść. A ma ładnie malowane, spójne kolorystycznie tło, ale pokazuje tylko ok. 10x10 pól z garstką obiektów. Te obiekty są drobne i giną w gęstej, równie szczegółowej roślinności. W efekcie mapa czyta się bardziej jak ilustracja niż plansza do rozgrywki.",
      "build": "Ostatni zarzut krytyka (sztywne drogi, płaski teren) jest już zamknięty. Kręte drogi o zmiennej szerokości, rzeźbę terenu z zapadniętym bagnem i omszałe wzgórze z urwiskiem zrobił przerwany builder. Sprawdziłem jego pracę i działa, więc ją zostawiłem. Tę rundę poświęciłem temu, czym HotA wciąż wygrywa, czyli gęstości drobnych rzeczy i znajdźkom leżącym na ziemi. Na planszy są teraz malowane stosy zamiast płaskiej ikony pokeballa (zarzut z rundy 3) i jagód: piramidka pokeballi, kosz jagód, kryształy i kamienie ewolucji. Są mniejsze niż ikony i mają cień, bo włączyłem `znajdzki: 0.58`. Tło dostało nowe drobiazgi: grzyby, omszałe kłody, kamienie w mchu, paprocie i irysy. Na wodzie jest dwa razy więcej grążeli, a łąka jest chłodniejsza i mniej limonkowa, więc bardziej przypomina bagno. Próbna tekstura omszałej łąki wyszła płaska i rozmyta, więc ją odrzuciłem. Układ planszy się nie zmienił (ten sam TEREN, to samo rozstawienie, odcisk f78c3bdd2f50d3be), więc symulacji nie puszczałem, a misja pozostaje wygrywalna. Na koniec zrobiłem zrzut Polany dla porównania i jest bez zmian. Wzorce HotA dalej przewyższają nas gęstością (u nas 14 × 12 pól w kadrze, w HotA około 22 × 18), a złote elipsy wejść do budowli mogą wyglądać na doklejone."
     }
-   ]
+   ],
+   "live": {
+    "round": 6,
+    "stage": "builder pracuje"
+   }
   },
   {
    "name": "Plansza: Twierdza (misja 4)",
    "status": "build",
-   "bar": "Mapa przygody Heroes 3 / Horn of the Abyss: trzy zrzuty (trawa, bagno, śnieg). Trzech krytyków na ślepo, każdy przeciw innemu, wygrana przy 2 z 3. Rundy 1–4 były jeszcze przeciw HoMM2.",
+   "bar": "Mapy kampanii Heroes 3 / Horn of the Abyss: trzy kadry wyglądające jak zaprojektowana mapa (rzeka z lasami, zamek z pasmami gór i wodospadami, wybrzeże). Trzech krytyków na ślepo, wygrana przy 2 z 3. Rundy 1–4: przeciw HoMM2; runda 5: przeciw zrzutom z generatora (odrzucone).",
    "note": "Mapa 72 × 72: śnieg i tundra, dwie twierdze wroga w osobnych dolinach, natarcie wroga. Sondy i symulacja przechodzą.",
    "rounds": [
     {

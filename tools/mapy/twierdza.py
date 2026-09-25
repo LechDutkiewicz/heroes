@@ -253,9 +253,11 @@ def rozstaw(g):
     g.strzez(g.dodaj(2, 'dom', (14, 40), lambda p: ('artefakt', None)), 'slaby')
     g.skarb_w_kieszeni('dom', 'slaby', 3, lambda p: ('skrzynia', None))
     g.skarb_w_kieszeni('dom', 'sredni', 3, lambda p: rng.choice([('artefakt', None), ('skrzynia', None), ('surowiec', 'odlamek')]))
+    # Runda 3: bez drugiego wiatraka i ogniska — po oddaleniu kamery stawały
+    # w pierwszym ekranie obok tych z kadru i czytały się jak kopiuj-wklej.
     g.budowle(14, 'dom', [
-        'ognisko', 'wiatrak', 'oboz-treningowy', 'zrodlo', 'ranczo', 'gniazdo',
-        'drzewo-wiedzy', 'chatka', 'woz', 'kamienna-wieza',
+        'oboz-treningowy', 'ranczo', 'drzewo-wiedzy', 'chatka', 'wieza-obserwacyjna',
+        'gniazdo', 'woz', 'zrodlo', 'kamienna-wieza',
     ])
 
     # --- TUNDRA --------------------------------------------------------------

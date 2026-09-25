@@ -136,13 +136,18 @@ ZASYP_ODCIETE = True
 #: Dół doliny gracza, x 4–17, y 47–53 (patrz `popraw_teren`).
 DOLINA_DOL = [
     'bb..........bb',
+    'bb...........b',
     'bbb..........b',
-    'bbbb.........b',
-    'Tbb~~~b....bbb',
-    'Tbb~~~b.T...bb',
-    'TTbbb.....T.bb',
-    'TTT.T.......Tb',
+    '###~~b.....###',
+    '###~~b.....###',
+    '###b.......###',
+    '###b.......###',
 ]
+# Runda 6 (wzorzec HotA: „poza klifem w lewym górnym rogu nie ma przeszkód
+# ani rzeźby — środek i prawy dół to płaska łąka z okrągłymi krzaczkami"):
+# dwa omszałe urwiska w dolnych rogach doliny, 3 × 4 pola, czyli po dwie
+# kępy 3 × 2 jedna nad drugą. Trakt w dół doliny idzie MIĘDZY nimi — skały
+# wyznaczają przejście, jak przełęcz na mapie Heroes 3.
 
 #: Omszałe wzgórza na lewym skraju pierwszego ekranu, x 4–9, y 37–44 (runda 5:
 #: „płaski teren bez wzniesień i skarp"). Sześć pól na szerokość i osiem na
@@ -398,7 +403,21 @@ USTAWIENIA = {
     # (`public/mapa/bagno/stos-*.png`: kosz pokeballi, kosz jagód, kryształy
     # na omszałym kamieniu), nie ikony z paska — i są drobniejsze, z cieniem
     # kontaktowym, jak skarby na mapie Heroes 3.
-    'znajdzki': 0.58,
+    'znajdzki': 0.8,
+    # Runda 6 (HotA: „obiekty interaktywne są mniejsze od drzew i krzaków,
+    # bez cienia, konturu i kontrastu"): budowle większe i obrys wokół
+    # wszystkiego, co da się odwiedzić albo podnieść.
+    'skalaBudowli': 1.2,
+    'obrysObiektow': 0.55,
+    # Runda 6 („turkusowa, czysta woda — tropikalna zatoka"): tafla w shaderze
+    # mętna, oliwkowo-brunatna, bez białej piany i z przygaszonymi iskrami.
+    'wodaBarwy': {
+        'plytka': [0.46, 0.47, 0.30],
+        'gleboka': [0.16, 0.19, 0.12],
+        'piana': [0.55, 0.56, 0.40],
+        'pianaMoc': 0.3,
+        'iskry': 0.45,
+    },
 }
 
 #: Barwy terenu tej planszy (`tools/render_mapa.py`, `zabarw`). Woda na bagnach
@@ -407,10 +426,14 @@ USTAWIENIA = {
 #: spojrzenie na ekran ma mówić „bagno", zanim dziecko zobaczy choć jedno pole
 #: trzęsawiska.
 BARWY_TERENU = {
-    'woda': {'nasycenie': 0.5, 'barwa': (85, 125, 90), 'moc': 0.6, 'jasnosc': 0.72},
-    'trawa': {'nasycenie': 0.6, 'barwa': (100, 140, 112), 'moc': 0.55, 'jasnosc': 0.8},
+    # Runda 6: tekstura mętnej wody (`teren-woda-bagno`), lekko zazieleniona
+    # i przyciemniona, żeby tafla była ciemniejsza od łąki i błota.
+    'woda': {'nasycenie': 0.9, 'barwa': (80, 100, 72), 'moc': 0.5, 'jasnosc': 0.8},
+    # Runda 6 („zieleń wokół obiektów przygasić"): łąka mniej nasycona.
+    'trawa': {'nasycenie': 0.5, 'barwa': (100, 140, 112), 'moc': 0.55, 'jasnosc': 0.78},
     'las': {'nasycenie': 0.7, 'barwa': (90, 110, 75), 'moc': 0.4, 'jasnosc': 0.82},
-    'sciezka': {'nasycenie': 0.75, 'barwa': (175, 150, 110), 'moc': 0.3, 'jasnosc': 1.08},
+    # Bruk grobli (runda 6): prawie bez zmian, lekko ciepły.
+    'sciezka': {'nasycenie': 0.85, 'barwa': (160, 145, 120), 'moc': 0.2, 'jasnosc': 1.05},
 }
 
 #: Po rundzie 1 ślepego porównania („bagno to brązowa plama w kolorze drogi"):
@@ -419,12 +442,13 @@ BARWY_TERENU = {
 EFEKTY = ['trzesawisko', 'obwodka_drogi', 'relief', 'bez_placow']
 #: Runda 3 („ciemna ziemia z trzciną, wygląda jak ciemny las"): oczka stojącej
 #: wody w barwie jezior tej planszy, mokre błoto wokół, jaśniejszy grunt.
-TRZESAWISKO = {'woda': (60, 116, 98)}
+TRZESAWISKO = {'woda': (72, 84, 52)}
 #: Błoto z dostawy (`tools/PROMPTY-PLANSZE.md`), do tego czasu zwykłe bagno.
-TEKSTURY = {'bagno': ['bloto', 'bagno']}
+TEKSTURY = {'bagno': ['bloto', 'bagno'], 'woda': ['woda-bagno', 'woda'], 'sciezka': ['bruk', 'sciezka']}
 
 #: Runda 2 („krainy rozmywają się w jedną"): twardsze brzegi terenów.
-WTAPIANIE = {'bagno': 0.22, 'las': 0.3, 'skaly': 0.28, 'woda': 0.22}
+#: Runda 6 („brzegi wody miękko rozmyte, bez wyraźnej linii"): woda ostrzej.
+WTAPIANIE = {'bagno': 0.22, 'las': 0.3, 'skaly': 0.28, 'woda': 0.1}
 
 #: Plac wokół zamków wolny od innych budowli (patrz silnik).
 ODSTEP_OD_ZAMKOW = 2
@@ -443,7 +467,11 @@ NAKLEJKI = [
     (['trzcina-1', 'trzcina-2', 'trzcina-3'], 'b', 0.22),
     # Runda 5 (HotA): gęściej — tafla trzęsawiska zarośnięta grążelami,
     # a nie pusta turkusowa połać.
-    (['grazel-1', 'grazel-2'], '~', 0.2),
+    # Runda 6 („tropikalna zatoka"): grążeli mniej, za to zatopione pnie,
+    # kępy turzycy i trzcina w wodzie — mętne trzęsawisko, nie staw z liliami.
+    (['grazel-1', 'grazel-2'], '~', 0.07),
+    (['pien-zatopiony'], '~', 0.06),
+    (['kepa-turzycy', 'trzcina-1', 'trzcina-3'], '~', 0.1),
     (['martwe-drzewo-1', 'martwe-drzewo-2'], 'b', 0.04),
     (['pniak-bagienny'], 'b', 0.03),
     # Runda 4: sucha łąka w dole doliny ma być czytelnie INNA niż bagno —
@@ -461,5 +489,7 @@ NAKLEJKI = [
 #: i zmienia szerokość (`teren_efekty.droga_kreta`), a teren dostaje rzeźbę —
 #: pagórki na suchym, skarpy wysepek nad bagnem, groblę jako wał z cieniem
 #: (`teren_efekty.rzezba`).
-DROGA_KRETA = {'szerokosc': 0.34, 'zmiennosc': 0.5, 'meander': 0.26}
+#: Runda 6 („drogi to rozmyte beżowe smugi — potrzebna utwardzona droga"):
+#: bruk (`TEKSTURY`), szerszy i równiejszy trakt.
+DROGA_KRETA = {'szerokosc': 0.46, 'zmiennosc': 0.25, 'meander': 0.14}
 RZEZBA = {'pagorki': 0.9, 'czolo': 0.7}

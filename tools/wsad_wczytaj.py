@@ -593,6 +593,8 @@ TERENY = [
     'teren-lod', 'teren-bloto',
     # Polana, runda 6: ubita brązowa ziemia pod skarpami (`TEKSTURY` Polany).
     'teren-ziemia',
+    # Bagna, runda 6: mętna woda trzęsawiska i bruk grobli (`TEKSTURY` Bagien).
+    'teren-woda-bagno', 'teren-bruk',
 ]
 
 #: Naklejki terenu (`tools/PROMPTY-PLANSZE.md`) → `public/mapa/tlo/<nazwa>.png`,
@@ -614,6 +616,8 @@ NAKLEJKI = {
     'swierczek-sniezny-1': 46, 'swierczek-sniezny-2': 50,
     # Polana, runda 6 (wzorzec HotA): drobiazgi łąki.
     'pniak-lakowy': 30, 'glazy-lakowe': 26, 'kepa-kwiatow': 30,
+    # Bagna, runda 6: zatopione pnie i kępy turzycy na mętnej wodzie.
+    'pien-zatopiony': 30, 'kepa-turzycy': 34,
 }
 
 #: Zestawy klimatu dla SCENY: `tools/wsad/<zestaw>-<nazwa>.png` →

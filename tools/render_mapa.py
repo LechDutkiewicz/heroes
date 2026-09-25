@@ -313,7 +313,9 @@ def klatka() -> tuple[Image.Image, Image.Image]:
         if nazwa == 'bagno' and 'trzesawisko' in EFEKTY:
             plansza = teren_efekty.trzesawisko(plansza, m, KAFEL, ZIARNO + 720, **TRZESAWISKO)
     plansza = plansza.convert('RGBA')
-    sciezka = zabarw(kafelkuj(tekstura('sciezka'), W, H), 'sciezka').convert('RGBA')
+    # Droga też słucha `TEKSTURY` planszy (Bagna, runda 6: bruk grobli
+    # zamiast piaskowej smugi). Bez wpisu 'sciezka' — jak dotąd, bajt w bajt.
+    sciezka = zabarw(kafelkuj(tekstura(tekstura_warstwy('sciezka')), W, H), 'sciezka').convert('RGBA')
     # Place pod budowlami idą PRZED drogami: droga ma dobiegać do placu
     # i się z nim zlewać, a nie kończyć na jego brzegu.
     # Plac pod budowlami: na Dwóch Dolinach zostaje; plansze kampanii go nie

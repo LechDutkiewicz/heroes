@@ -109,8 +109,9 @@ import {
 
 /**
  * Prędkość przewijania kursorem przy krawędzi, w pikselach ŚWIATA na sekundę
- * (na ekranie to `ZOOM_MAPY` razy mniej). Dobrane tak, żeby przejechanie całej planszy zajmowało jakieś trzy sekundy:
- * szybciej gubi się orientację, wolniej łatwiej sięgnąć po minimapę.
+ * (na ekranie to `ZOOM_MAPY` razy mniej). Dobrane tak, żeby przejechanie
+ * całej planszy zajmowało jakieś trzy sekundy: szybciej gubi się orientację,
+ * wolniej łatwiej sięgnąć po minimapę.
  */
 const PREDKOSC_PRZEWIJANIA = 560;
 
@@ -791,7 +792,13 @@ export class AdventureScene extends Phaser.Scene {
     // Woda leży NAD planszą i przepisuje ją w całości, więc namalowana plansza
     // zostaje widoczna tylko wtedy, gdy shader się nie utworzył. Jest w ten
     // sposób zapasem, a nie martwym obrazkiem pod spodem.
-    this.woda = dodajWode(this, this.mapaW, this.mapaH, () => this.kamera);
+    this.woda = dodajWode(
+      this,
+      this.mapaW,
+      this.mapaH,
+      () => this.kamera,
+      planszaPoId(this.stan.mapa).modul.USTAWIENIA?.wodaBarwy
+    );
     if (this.woda) {
       this.woda.setDepth(-0.5);
       this.swiat.add(this.woda);
@@ -1348,6 +1355,25 @@ export class AdventureScene extends Phaser.Scene {
         .image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, klucz)
         .setOrigin(0.5, 1);
       im.setScale(wys / im.height);
+      // Obrys obiektów gry (`USTAWIENIA.obrysObiektow`, per plansza): ciemna
+      // sylwetka przesunięta o 2,5 piksela świata w ośmiu kierunkach, pod rysunkiem.
+      // Bagna, runda 6: „obiekty interaktywne zlewają się z dekoracją — bez
+      // konturu i kontrastu". Drzewa i skały obrysu nie mają, więc to, co
+      // da się podnieść albo odwiedzić, odcina się od tła. Stworki bez obrysu.
+      const obrys = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.obrysObiektow;
+      if (obrys && o.rodzaj !== 'potwor') {
+        const d = 2.5;
+        for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]]) {
+          const cien = this.add
+            .image(im.x + ox * d, im.y + oy * d, klucz)
+            .setOrigin(0.5, 1)
+            .setScale(im.scaleX, im.scaleY)
+            .setTint(0x1c1408)
+            .setTintMode(Phaser.TintModes.FILL)
+            .setAlpha(obrys);
+          kont.add(cien);
+        }
+      }
       kont.add(im);
 
       // Klik w RYSUNEK ma celować w pole obiektu.

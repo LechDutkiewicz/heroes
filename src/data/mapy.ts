@@ -83,6 +83,24 @@ export interface UstawieniaPlanszy {
    * mniejszy niż w `BUDOWLE` niczego nie odsłania. Brak = 1.
    */
   skalaBudowli?: number;
+  /**
+   * Krycie ciemnego obrysu wokół obiektów gry (budowle, kopalnie, znajdźki,
+   * zamki — bez stworków). Odcina to, co da się odwiedzić, od drzew i skał.
+   * Brak = bez obrysu.
+   */
+  obrysObiektow?: number;
+  /**
+   * Barwy tafli w shaderze wody (`src/visual/woda.ts`, składowe 0–1): płycizna,
+   * głębia, piana, krycie piany i siła iskier. Bagna: mętna oliwkowa woda
+   * zamiast turkusu z białą pianą. Brak = dawne stałe.
+   */
+  wodaBarwy?: {
+    plytka?: [number, number, number];
+    gleboka?: [number, number, number];
+    piana?: [number, number, number];
+    pianaMoc?: number;
+    iskry?: number;
+  };
   /** Załoga zamku gracza (domyślnie poziomy 0–1, pięć tygodni przyrostu). */
   garnizonGracza?: { poziomy: number[]; tygodnie: number };
   /** Nazwy zamków wroga, w kolejności punktów 'zamek wroga', 'zamek wroga 2'… */

@@ -3,9 +3,14 @@
 // `public/mapa/<zestaw>/<nazwa>.png` zamiast `public/mapa/<nazwa>.png`.
 export const ZESTAWY_KLIMATU: Record<string, readonly string[]> = {
   "zima": [
+    "arena",
+    "chata-jasnowidza",
     "chatka",
     "drzewo",
     "drzewo-b",
+    "drzewo-wiedzy",
+    "gniazdo",
+    "kamienna-wieza",
     "kepa-las-1",
     "kepa-las-2",
     "kepa-las-3",
@@ -21,7 +26,9 @@ export const ZESTAWY_KLIMATU: Record<string, readonly string[]> = {
     "kopiec-2",
     "krzak",
     "krzak-2",
+    "oboz-treningowy",
     "ognisko",
+    "ranczo",
     "sad",
     "skala",
     "skala-2",
@@ -33,8 +40,10 @@ export const ZESTAWY_KLIMATU: Record<string, readonly string[]> = {
     "stos-odlamki",
     "stos-pokeball",
     "wiatrak",
+    "wieza-obserwacyjna",
     "zamek-las",
-    "zamek-ogien"
+    "zamek-ogien",
+    "zrodlo"
   ],
   "bagno": [
     "drzewo",

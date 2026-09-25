@@ -384,16 +384,23 @@ A weeping swamp willow with long trailing olive branches almost reaching the
 ground, a thick twisted trunk, moss on the bark. Wide crown.
 ```
 
+<!-- Runda 6: kępy trzciny i turzycy zamiast okrągłych krzaczków (§11). -->
 <!-- plik: bagno-krzak.png -->
 ```
-A low round swamp shrub of dark olive leaves with a few pale yellow flowers,
-sedge blades sticking out at the base. Low and round.
+A clump of marsh vegetation: a tall tuft of cattails with brown velvety heads
+and long sword-shaped green-olive leaves bending in different directions,
+a few shorter sedge blades at the base, a little dark wet mud at the foot.
+Irregular, spiky silhouette — NOT a round bush. Slightly taller than wide.
 ```
 
 <!-- plik: bagno-krzak-2.png -->
 ```
-A low clump of ferns and horsetails, dark green, wet shiny leaves. Low and round.
+A low swamp tussock: a shaggy mound of coarse yellow-olive sedge grass with
+blades spilling outward like a fountain, one broken grey dead branch sticking
+out of it, two small orange-brown mushrooms at the foot. Irregular, spiky
+silhouette — NOT a round bush. Wider than tall.
 ```
+
 
 <!-- plik: bagno-kepa-las-1.png -->
 ```
@@ -1100,4 +1107,56 @@ branches heavily covered in white snow and silver hoarfrost, a few glittering
 golden leaves still clinging among the snow, a few open books resting in a
 hollow at the base of the trunk, a small snow drift around the roots. No
 green leaves, no grass. Taller than wide.
+```
+
+## 11. Bagna — runda 6 (wzorzec HotA): mętna woda, bity trakt, trzcinowe kępy
+
+Werdykty rundy 5: „turkusowa, czysta woda wygląda jak tropikalna zatoka —
+ma być mętna, oliwkowo-brunatna, z trzciną, błotem, zatopionymi pniami
+i kępami"; „drogi to rozmyte beżowe smugi — potrzebny utwardzony trakt";
+„płaska łąka z okrągłymi krzaczkami". Tekstury wody i traktu wchodzą przez
+`TEKSTURY` Bagien (`woda`, `sciezka`), kępy przez zestaw `bagno`, a naklejki
+wody przez `NAKLEJKI`.
+
+| Plik (tools/wsad/) | Trafia do | Wysokość |
+|---|---|---|
+| `teren-woda-bagno.png` | `public/mapa/teren/` | tekstura 768 |
+| `teren-bruk.png` | `public/mapa/teren/` | tekstura 768 |
+| `bagno-krzak.png`, `bagno-krzak-2.png` | `public/mapa/bagno/krzak*.png` | 84 px |
+| `pien-zatopiony.png`, `kepa-turzycy.png` | `public/mapa/tlo/` | 30–34 px |
+
+<!-- plik: teren-woda-bagno.png | styl: teren -->
+```
+The ground is the still, murky water of a swamp pool: opaque dark olive-green
+and brown water like strong tea, NOT blue and NOT turquoise, nothing visible
+under the surface. Faint slow ripples, floating rafts of bright green duckweed
+and algae scum drifting in irregular patches, a few fallen brown leaves and
+tiny twigs floating, soft dull reflections of an overcast sky. Stagnant,
+muddy and gloomy but still painted in a warm friendly storybook palette.
+```
+
+<!-- plik: teren-bruk.png | styl: teren -->
+```
+The ground is a sturdy old paved road surface seen from above: rounded
+cobblestones and flat grey-brown flagstones of different sizes fitted closely
+together, dark earth and thin green moss in the gaps between them, a few
+cracked stones, warm grey and ochre tones. The stones fill the WHOLE picture
+evenly with no direction, no edges, no grass verge.
+```
+
+<!-- plik: pien-zatopiony.png -->
+```
+A half-sunken dead tree trunk lying in dark swamp water, seen from above at
+a slight angle: grey-brown weathered wood with peeling bark, a broken stub of
+a branch sticking up, green moss and a bit of duckweed clinging to it, small
+ripples of dark olive water around it where it enters the water. Low and long,
+much wider than tall.
+```
+
+<!-- plik: kepa-turzycy.png -->
+```
+A tiny island tussock rising out of dark swamp water, seen from above at a
+slight angle: a round mound of wet dark mud crowned with a shaggy tuft of
+olive-green sedge and three cattails, a ring of murky olive water ripples
+around its base. Small and compact, slightly wider than tall.
 ```
