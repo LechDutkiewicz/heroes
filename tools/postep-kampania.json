@@ -278,7 +278,8 @@
    ],
    "live": {
     "round": 4,
-    "stage": "builder pracuje"
+    "stage": "zrzut i ślepe zestawienie",
+    "build": "Góry po lewej nie są już jednym szczytem powtórzonym w siatce. Dodałem ustawienie `USTAWIENIA.masywy`, działające tylko na planszy, która je ma: duże góry stawiane ręcznie, a pola pod nimi zostają bez kęp. Twierdza dostała pięć nowych rysunków gór w różnych rozmiarach (grzbiet, samotny szczyt z lodospadem, dwa szczyty z siodłem, pogórze, skalny pagór ze świerkami), a scena układa góry i las po głębi, żeby las nie wchodził na zbocza. Na jeziorze jest teraz głębia, smugi śniegu, ostry brzeg z cieniem i szronem; spichlerz jagód i kopalnia odłamków stały na lodzie, więc pod nimi i pod wiatrakiem jest teraz śnieżny brzeg (zmiana po rozstawieniu, obiekty się nie przesuwają). Na polu śniegu fałdy zasp mają różną wielkość, niecki są sine, a wzniesienia cieplejsze; doszła rzeźba terenu z sinoszarą skarpą oraz nowe naklejki (płyty skał, suche trawy, nawisy); łaty odsłoniętej ziemi odrzuciłem, bo wyglądały jak przeręble."
    }
   },
   {

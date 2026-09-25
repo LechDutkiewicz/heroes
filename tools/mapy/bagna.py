@@ -494,10 +494,10 @@ USTAWIENIA = {
     # do Strugi z przełęczą, którą schodzi ścieżka.
     # `x`, `y` — stopa rysunku w polach (krawędzie pól), `szer` w polach.
     'masywy': [
-        {'plik': 'gora-2', 'x': 6.2, 'y': 41.4, 'szer': 5.8, 'pokrywa': [4, 37, 9, 40]},
-        {'plik': 'gora-1', 'x': 6.7, 'y': 45.3, 'szer': 7.8, 'pokrywa': [4, 41, 9, 44]},
-        {'plik': 'gora-4', 'x': 6.4, 'y': 54.3, 'szer': 6.4, 'pokrywa': [4, 50, 8, 53]},
-        {'plik': 'gora-3', 'x': 17.1, 'y': 54.3, 'szer': 5.6, 'odbij': True, 'pokrywa': [15, 50, 18, 53]},
+        {'plik': 'gora-2', 'x': 6.0, 'y': 41.5, 'szer': 7.0, 'pokrywa': [4, 37, 9, 40]},
+        {'plik': 'gora-1', 'x': 6.3, 'y': 45.4, 'szer': 9.0, 'pokrywa': [4, 41, 9, 44]},
+        {'plik': 'gora-4', 'x': 6.3, 'y': 54.4, 'szer': 7.4, 'pokrywa': [4, 50, 8, 53]},
+        {'plik': 'gora-3', 'x': 17.4, 'y': 54.4, 'szer': 6.0, 'odbij': True, 'pokrywa': [15, 50, 18, 53]},
     ],
     # Runda 6 (HotA: „obiekty interaktywne są mniejsze od drzew i krzaków,
     # bez cienia, konturu i kontrastu"): budowle większe i obrys wokół
@@ -560,7 +560,7 @@ WTAPIANIE = {'bagno': 0.22, 'las': 0.3, 'skaly': 0.28, 'woda': 0.1}
 #: Runda 8 (wzorzec HotA: rzekę obwodzi szeroki pas jasnego piasku
 #: z kamykami): brzeg Strugi i stawów szerszy i jaśniejszy — to ta linia mówi,
 #: gdzie kończy się ląd (`teren_efekty.brzeg_wody`).
-BRZEG_WODY = {'szerokosc': 0.36, 'barwa': (186, 160, 112), 'linia': (52, 42, 28)}
+BRZEG_WODY = {'szerokosc': 0.62, 'barwa': (186, 160, 112), 'linia': (52, 42, 28)}
 
 #: Plac wokół zamków wolny od innych budowli (patrz silnik).
 ODSTEP_OD_ZAMKOW = 2

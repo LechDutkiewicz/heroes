@@ -681,6 +681,7 @@ ZESTAWY = {
         # Polana, runda 9: zwarte masywy lasu zamiast rzadkich kęp drzewek
         # (PROMPTY-PLANSZE §17).
         'kepa-las-1': 216, 'kepa-las-2': 216, 'kepa-las-3': 216, 'kepa-las-4': 216,
+        'sosna': 144, 'sosna-b': 144, 'sosna-mala': 96, 'drzewo': 144, 'drzewo-b': 144,
     },
 }
 

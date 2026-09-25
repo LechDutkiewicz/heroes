@@ -304,9 +304,9 @@ export const USTAWIENIA = {
   "masywy": [
     {
       "plik": "gora-2",
-      "x": 6.2,
-      "y": 41.4,
-      "szer": 5.8,
+      "x": 6.0,
+      "y": 41.5,
+      "szer": 7.0,
       "pokrywa": [
         4,
         37,
@@ -316,9 +316,9 @@ export const USTAWIENIA = {
     },
     {
       "plik": "gora-1",
-      "x": 6.7,
-      "y": 45.3,
-      "szer": 7.8,
+      "x": 6.3,
+      "y": 45.4,
+      "szer": 9.0,
       "pokrywa": [
         4,
         41,
@@ -328,9 +328,9 @@ export const USTAWIENIA = {
     },
     {
       "plik": "gora-4",
-      "x": 6.4,
-      "y": 54.3,
-      "szer": 6.4,
+      "x": 6.3,
+      "y": 54.4,
+      "szer": 7.4,
       "pokrywa": [
         4,
         50,
@@ -340,9 +340,9 @@ export const USTAWIENIA = {
     },
     {
       "plik": "gora-3",
-      "x": 17.1,
-      "y": 54.3,
-      "szer": 5.6,
+      "x": 17.4,
+      "y": 54.4,
+      "szer": 6.0,
       "odbij": true,
       "pokrywa": [
         15,
