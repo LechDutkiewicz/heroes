@@ -202,6 +202,19 @@ def popraw_teren(g, mapa):
             mapa[y][x] = 'T'
     for x, y in [(23, 61), (24, 61), (23, 62), (24, 62)]:
         mapa[y][x] = '#'
+    # Runda 10 (HotA): „lewa trzecia część — masyw gór od góry do dołu — jest
+    # martwa, bez odnóg ze skarbami; dodać przełęcz przez lewe góry". Między
+    # wysokim szczytem (`gora-2`, stopa 64,3) a pasmem w lewym dolnym rogu
+    # (`gora-1`, niższe i zsunięte w dół) otwiera się dolina x 3–8, y 64–66:
+    # trakt od bramy zamku na zachód, kopalnia kamieni w skalnej ścianie,
+    # straż na przełęczy i skrzynia za nią. Cała dolina leży w kadrze (x ≥ 3),
+    # więc losowanie reszty doliny gracza (poza kadrem) się nie zmienia.
+    for y in (64, 65, 66):
+        for x in range(3, 9):
+            mapa[y][x] = 's'
+    for y in range(67, 72):
+        for x in range(0, 10):
+            mapa[y][x] = '#'
 
 
 def kadr_szeroki(g):
@@ -242,13 +255,25 @@ PIERWSZY_EKRAN = [
     # Obóz łowców (złoto) w zaułku u stopy skarpy — za wąwozem ze strażą.
     ([(14, 70), (15, 70)], ('kopalnia', 'pokeball')),
     ([(12, 68), (12, 69), (11, 69)], ('potwor', 'slaby')),
-    ([(16, 69), (16, 71), (15, 71)], ('surowiec', 'kamien')),
+    # (Runda 10: nie na (16, 69) — tam stoi brzeg boru i kupka leżała na
+    # koronie świerka.)
+    ([(15, 70), (13, 69)], ('surowiec', 'kamien')),
     # Plac nad zamkiem, na brzegu stawu: chata i wiatrak przy ścieżce.
     ([(14, 60), (13, 60), (15, 60)], ('budynek', 'wiatrak')),
-    ([(10, 59), (11, 59), (9, 59)], ('budynek', 'chatka')),
+    # (Runda 10: chatka nie stoi już na (10, 59) — od rundy 9 zamek jest 1,8
+    # raza większy i zasłaniał ją całą. Stoi nad stawem, na końcu odnogi
+    # traktu, która od placu z wiatrakiem wiedzie brzegiem do kamiennej wieży.)
+    ([(12, 55), (13, 55)], ('budynek', 'chatka')),
+    # Runda 10 (HotA): przełęcz przez lewe góry (`popraw_teren`) — kopalnia
+    # kamieni w skalnej ścianie pod szczytem, straż na trakcie przełęczy,
+    # skrzynia za strażą. Kamienie ewolucji bliżej zamku skracają też drogę
+    # do surowców (autopilot wygrywał dopiero ok. 61 dnia).
+    ([(4, 66), (5, 66)], ('kopalnia', 'kamien')),
+    ([(7, 65), (7, 66)], ('potwor', 'slaby')),
+    ([(6, 64), (5, 64)], ('skrzynia', None)),
     # Za stawem: kamienna wieża pod górami, kupka kul i jagód na brzegu.
     ([(9, 55), (10, 55), (9, 54)], ('budynek', 'kamienna-wieza')),
-    ([(12, 54), (13, 54), (12, 55)], ('surowiec', 'pokeball')),
+    ([(13, 54), (11, 54), (12, 54)], ('surowiec', 'pokeball')),
     ([(16, 55), (15, 55), (16, 54)], ('surowiec', 'jagoda')),
     # Trakt na północ: źródło przy drodze, wóz na wschodnim brzegu.
     ([(20, 55), (21, 55), (20, 56)], ('budynek', 'zrodlo')),
@@ -439,7 +464,15 @@ def rozstaw(g):
                  (19, 63), (20, 64),                    # → kopalnia odłamków
                  # Runda 9: zamek jest teraz 1,8 raza większy — brama
                  # dostaje własny zjazd na trakt, zamiast wejścia w śniegu.
-                 (11, 64), (12, 64)]:
+                 (11, 64), (12, 64),
+                 # Runda 10 (HotA): „cała mapa to jedna droga; lewa trzecia
+                 # martwa, bez odnóg ze skarbami". Trzy nowe odnogi: od bramy
+                 # zamku przełęczą na zachód do kopalni kamieni; od placu
+                 # z wiatrakiem brzegiem stawu do wieży i chatki; przez wąwóz
+                 # do obozu łowców w zaułku.
+                 (9, 64), (8, 65), (7, 65), (6, 65), (5, 66), (4, 66),
+                 (11, 59), (11, 58), (10, 57), (10, 56), (11, 55),
+                 (12, 68), (12, 69), (13, 70), (14, 70)]:
         if g.mapa[y][x] in 's.j':
             g.mapa[y][x] = '='
 
@@ -497,7 +530,14 @@ USTAWIENIA = {
     # Runda 8 (HotA): „obiekty są za małe" — stosy prawie na całe pole.
     # Runda 9 (HotA): „skrzynie, kryształy i ametysty są prawie wielkości
     # budynków — hierarchia skali się rozpada; znajdźki do około pół kafla".
-    'znajdzki': 0.55,
+    # Runda 10 (HotA): „zasoby i stwory to malutkie płaskie naklejki bez
+    # osadzenia w podłożu, w innej skali niż szczegółowy zamek". Nowe stosy
+    # (PROMPTY-PLANSZE §24: kryształy, skrzynka, kosz wciśnięte w zaspę)
+    # trochę większe, spód grzęźnie w śniegu (`osadzZnajdzki`), strażnicy
+    # o jedną piątą wyżsi — prawie jak bohater (1,5 pola).
+    'znajdzki': 0.66,
+    'osadzZnajdzki': 0.4,
+    'skalaStrazy': 1.2,
     # Runda 9 (HotA): „zamek ledwie większy od chaty i młyna — powiększyć
     # co najmniej dwa razy; twierdza ma dominować nad lasem jak siedziba".
     'skalaZamku': 1.8,
@@ -526,9 +566,11 @@ USTAWIENIA = {
     'masywy': [
         {'plik': 'gora-4', 'x': 7.3, 'y': 60.3, 'szer': 7.6, 'pokrywa': [4, 56, 9, 59]},
         {'plik': 'gora-2', 'x': 5.2, 'y': 64.3, 'szer': 8.6, 'pokrywa': [0, 60, 8, 63]},
-        {'plik': 'gora-1', 'x': 4.9, 'y': 68.4, 'szer': 11.0, 'pokrywa': [0, 64, 9, 67]},
-        # Runda 6: węższy, żeby nie przykrywał wąwozu (x 11–12) do zaułka.
-        {'plik': 'gora-3', 'x': 6.6, 'y': 72.4, 'szer': 7.4, 'odbij': True, 'pokrywa': [3, 68, 10, 71]},
+        # Runda 10: pasmo w lewym dolnym rogu niższe i zsunięte w dół (szczyty
+        # od y ≈ 67), żeby nad nim było widać dolinę przełęczy (y 64–66)
+        # z kopalnią kamieni. Pokrywa sięga y 64: skały x 0–2 przy dolinie
+        # (poza kadrem) też bez kęp. (Bez `gora-3` — stał na dolinie.)
+        {'plik': 'gora-1', 'x': 5.0, 'y': 72.3, 'szer': 8.8, 'pokrywa': [0, 64, 9, 71]},
         # (Runda 6: bez skalnego pagóra `gora-5` w rogu — stał na wąwozie.)
         # Skalny garb nad stawem (górna krawędź ekranu) zamiast rzędu kęp.
         {'plik': 'gora-3', 'x': 17.4, 'y': 56.1, 'szer': 6.2, 'pokrywa': [15, 50, 20, 55]},

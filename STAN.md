@@ -358,6 +358,38 @@ trzcin, błota i mokradeł, prawie jednolita zieleń; gęste korony w górnym
   nie idą przez `wsad_wczytaj.py` — obiera i skaluje je
   `bagna.przygotuj_naklejki_mokradla()` do `public/mapa/bagno/tlo-*.png`.
 
+### Bagna, runda 12 (HotA)
+
+Werdykty rundy 11 (1/3): „rozlewiska w dolnym środku i przy chatce to blade,
+zamazane plamy bez wody, błota i szuwarów" oraz „góry w lewym dolnym rogu
+i na środku dolnej krawędzi to identyczne stożki jak stemple". Przyczyna
+pierwszego: `teren-mokradlo` to limonkowa łąka w regularne kropki kałuż —
+po przygaszeniu i w skali 32 px na pole zostawała oliwkowa plama, a stawy
+kadru miały jasną, mleczną oliwkę. Zmiany (wszystko per plansza):
+
+- `DOMALUJ`: grunt mokradła z `teren-bloto` (turzyca z błotem, oliwkowy,
+  ton ciemniejszy od łąki), a na nim DUŻE oczka wody (szum w dwóch skalach,
+  kwantyl `MOKRADLA['oczka']` wnętrza, nie pod budowlami — `_pod_obiektami`
+  czyta ROZSTAWIENIE). Woda oczek i stawów kadru (`_maluj_wode`):
+  zmarszczki `teren-woda-czarna` przemalowane na mętną oliwkę, ciemniej
+  w głębi, ukośne refleksy nieba, cień skarpy pod górnym brzegiem, jasna
+  linia u dolnego, pas błota 3 px wokół oczek. Brzegi ostre (antyaliasing
+  0,6 px), żadnej obwódki w kształcie kafli.
+- Naklejki: szuwar na brzegach oczek, grążele (`bagno-grazele`) na oczkach
+  i stawach, martwe drzewa i pnie na lądzie mokradła. Bez `trzcinowisko-2`
+  i `kepa-turzycy` (okrągła podstawka = naklejka na talerzyku); nowe kępy
+  bez podstawki `bagno-szuwar-1/2/3` (PROMPTY-PLANSZE §23), żeby jedno
+  trzcinowisko nie było stemplem.
+- Mokradło w kadrze szersze: za Strugą przy skrzyni i w lewym dole do stóp
+  pasma (`MOKRADLA_BAGNO`, gra: pola `b`). Łąka planszy o ton bardziej
+  oliwkowa (`BARWY_TERENU['trawa']`).
+- Środek dolnej krawędzi: `gora-11` (skalny próg z półkami, wodospadem
+  i martwymi drzewami) zamiast `gora-9` — drugi taki sam kłąb szpiców co
+  `gora-10` obok. Surowa z API miała słomkowy „talerz" — przemalowany na mech
+  tylko w dolnej części rysunku (gałęzie drzew na górze zostają ostre).
+
+Symulacja misji 3: wygrana dnia 5 (2/2). Grafiki: 5 obrazków, ≈ $0,29.
+
 ### Polana, runda 7 (HotA)
 
 Werdykt rundy 6: „wzgórza to ta sama zielono-brązowa stożkowa pieczątka,

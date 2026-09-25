@@ -1405,9 +1405,12 @@ export class AdventureScene extends Phaser.Scene {
       const p = this.podstawaRysunku(klucz);
       const zrodlo = this.textures.get(klucz).getSourceImage() as { width: number; height: number };
       const proporcja = (zrodlo.width || 1) / (zrodlo.height || 1);
+      // `USTAWIENIA.skalaStrazy` (per plansza; Twierdza, runda 10: „stwory to
+      // malutkie naklejki w innej skali niż zamek"). Brak = 1.
+      const skalaStrazy = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaStrazy ?? 1;
       const wys = Math.min(
-        WYS_STRAZNIKA / (p.widocznaWys ?? 1),
-        SZER_STRAZNIKA_MAX / ((p.widocznaSzer ?? 1) * proporcja)
+        (WYS_STRAZNIKA * skalaStrazy) / (p.widocznaWys ?? 1),
+        (SZER_STRAZNIKA_MAX * skalaStrazy) / ((p.widocznaSzer ?? 1) * proporcja)
       );
       return { klucz, wys: KAFEL * wys };
     }
@@ -1562,6 +1565,13 @@ export class AdventureScene extends Phaser.Scene {
       }
 
       if (bryla) this.zaroslaPrzyPodstawie(o, im, kont, spod);
+      // `USTAWIENIA.osadzZnajdzki` (per plansza; Twierdza, runda 10: „zasoby
+      // i stwory to płaskie naklejki bez osadzenia w podłożu"): stosy,
+      // skrzynie, artefakty i stworki dostają tę samą nierówną krawędź gruntu
+      // co budowle, tylko w skali drobnej rzeczy — spód grzęźnie w śniegu.
+      const osadz = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.osadzZnajdzki;
+      if (osadz && !bryla && o.rodzaj !== 'budynek' && o.rodzaj !== 'jasnowidz')
+        this.zaroslaPrzyPodstawie(o, im, kont, spod, osadz);
 
       kont.setData('obiekt', o);
       this.ikonyObiektow[o.id] = kont;
@@ -1590,18 +1600,26 @@ export class AdventureScene extends Phaser.Scene {
     o: Obiekt,
     im: Phaser.GameObjects.Image,
     kont: Phaser.GameObjects.Container,
-    spod: number
+    spod: number,
+    skala = 1
   ) {
     const podstawa = kont.y + spod;
     const szer = im.displayWidth;
     const lewo = kont.x - szer / 2;
+    // Drobna rzecz (`skala` < 1, `USTAWIENIA.osadzZnajdzki`) da się podnieść
+    // albo pokonać — grunt i zaspy idą wtedy do jej kontenera i znikają razem
+    // z nią, zamiast zostać na pustym polu. Budowle zostają w świecie.
+    const dodaj = (ob: Phaser.GameObjects.Image) => {
+      if (skala < 1) kont.add(ob.setPosition(ob.x - kont.x, ob.y - kont.y));
+      else this.swiat.add(ob);
+    };
 
     // 1. Grunt podchodzi na spód rysunku.
     //
     // Wcześniej były trzy pasy o kryciu 0,4 / 0,72 / 1 — czyli trzy widoczne
     // stopnie zamiast przejścia. Teraz krycie rośnie po krzywej i pasów jest
     // tyle, że każdy ma dwa piksele: oko nie ma czego złapać jako krawędzi.
-    const pasmo = KAFEL * 0.3;
+    const pasmo = KAFEL * 0.3 * skala;
     const pasow = 10;
     for (let i = 0; i < pasow; i++) {
       const t = (i + 1) / pasow;
@@ -1618,7 +1636,7 @@ export class AdventureScene extends Phaser.Scene {
       // Tło planszy leży w świecie jeden do jednego od (0,0), więc piksel
       // świata jest wprost pikselem tekstury.
       kopia.setCrop(lewo, y, szer, wysPasa + 1);
-      this.swiat.add(kopia);
+      dodaj(kopia);
     }
 
     // 2. Ziemia podchodzi NIERÓWNO — każda kolumna na inną wysokość.
@@ -1637,7 +1655,7 @@ export class AdventureScene extends Phaser.Scene {
         .setOrigin(0, 0)
         .setDepth(o.y + 0.71);
       kopia.setCrop(lewo + (szer * i) / kolumn, podstawa - wysokosc, szer / kolumn + 1, wysokosc);
-      this.swiat.add(kopia);
+      dodaj(kopia);
     }
 
     // 3. Kilka krzaków przy samej podstawie.
@@ -1652,14 +1670,14 @@ export class AdventureScene extends Phaser.Scene {
       if (Math.abs(u - 0.5) < 0.12) continue;
       const los = this.wariant(o.x * 31 + i, o.y * 17 + i * 7, 1000) / 1000;
       if (los < 0.25) continue;
-      const kx = lewo + szer * u + (los - 0.5) * KAFEL * 0.3;
+      const kx = lewo + szer * u + (los - 0.5) * KAFEL * 0.3 * skala;
       const krzak = this.add
-        .image(kx, podstawa + (los - 0.4) * KAFEL * 0.2, los < 0.6 ? 'm-krzak' : 'm-krzak-2')
+        .image(kx, podstawa + (los - 0.4) * KAFEL * 0.2 * skala, los < 0.6 ? 'm-krzak' : 'm-krzak-2')
         .setOrigin(0.5, 1)
         .setDepth(o.y + 0.75)
         .setFlipX(los > 0.5);
-      krzak.setScale((KAFEL * (0.3 + los * 0.4)) / krzak.height);
-      this.swiat.add(krzak);
+      krzak.setScale((KAFEL * (0.3 + los * 0.4) * skala) / krzak.height);
+      dodaj(krzak);
     }
   }
 

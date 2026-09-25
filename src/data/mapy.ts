@@ -78,6 +78,20 @@ export interface UstawieniaPlanszy {
    */
   znajdzki?: number;
   /**
+   * Mnożnik wysokości widocznej sylwetki strażników (`WYS_STRAZNIKA`) na tej
+   * planszy. Twierdza, runda 10: „stwory to malutkie naklejki w innej skali
+   * niż zamek". Brak = 1.
+   */
+  skalaStrazy?: number;
+  /**
+   * Osadzenie drobnych rzeczy w gruncie: stosy, skrzynie, artefakty
+   * i strażnicy dostają nierówną krawędź tła na spodzie rysunku i drobne
+   * zaspy (`zaroslaPrzyPodstawie` w skali tej liczby, budowle mają 1).
+   * Twierdza, runda 10: „zasoby i stwory to płaskie naklejki bez osadzenia
+   * w podłożu". Brak = bez osadzenia.
+   */
+  osadzZnajdzki?: number;
+  /**
    * Mnożnik wysokości rysunków budowli odwiedzanych (`budynek`: wiatrak,
    * wieża, obóz…) na tej planszy. Budowle zajmują jedno pole, więc rysunek
    * mniejszy niż w `BUDOWLE` niczego nie odsłania. Brak = 1.
