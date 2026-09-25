@@ -1471,10 +1471,13 @@ export class AdventureScene extends Phaser.Scene {
       const spod = (bryla ? -KAFEL * 0.5 : KAFEL * 0.46) - this.pustkaPodRysunkiem(klucz, wys);
       // `USTAWIENIA.cienBudowli` (per plansza): węższy i słabszy cień pod
       // budowlami — bez ustawienia mnożniki 1, jak dotąd.
+      // `USTAWIENIA.cienZnajdzek` (per plansza): to samo dla drobnych rzeczy.
       const cb =
         bryla || o.rodzaj === 'budynek'
           ? planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienBudowli
-          : undefined;
+          : o.rodzaj === 'jasnowidz'
+            ? undefined
+            : planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienZnajdzek;
       kont.add(
         this.cienKontaktowy(
           klucz,

@@ -438,7 +438,8 @@
    ],
    "live": {
     "round": 11,
-    "stage": "builder pracuje"
+    "stage": "zrzut i ślepe zestawienie",
+    "build": "Tej rundy zamykałem lukę z rundy 10 (szumiący śnieg, płaskie drogi, obiekty bez cieni, rozjechana skala), a główna przyczyna szumu leżała w kodzie. Szum zasp szedł przez 8-bitowy obrazek, a światło liczone z jego pochodnej dawało drobną kratkę jak płótno na całym śniegu. Nowy efekt `zaspy_gladkie` wygładza wysokość i osłabia plamy, więc widać teraz malowane zawieje tekstury. Trakt ma skarpę (`DROGA_OBRZEZE['skarpa']`): cień pod brzegiem od strony światła i jasną ściankę naprzeciw. Nowe ustawienie `USTAWIENIA.cienZnajdzek` daje wyraźniejsze cienie pod stosami, skrzyniami i stworkami. Skala: zamek 1,8 → 1,5, budowle ×1,3 (wiatrak jest teraz większy od spichlerza). Olbrzymie góry (szczyt na 8 pól, pasmo 10 × 6) zastąpiłem trzema nowymi rysunkami z OpenAI w skali pola (§26: gromada małych szczytów, łańcuch ząbków, iglice); stopy gór leżą na polach skał. Dołożyłem więcej świerczków i płyt skał na śniegu, a zdjąłem szarą smugę nawisu. Układ planszy i rozstawienie się nie zmieniły, więc misja trwa tyle samo, a drogi do surowców nie skracałem."
    }
   },
   {

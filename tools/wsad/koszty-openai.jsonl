@@ -201,3 +201,6 @@
 {"czas": "2026-09-25T17:58:12+00:00", "plik": "wynik-zwyciestwo.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 360, "wyj": 1056, "usd": 0.044}
 {"czas": "2026-09-25T17:58:29+00:00", "plik": "wynik-porazka.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 386, "wyj": 1056, "usd": 0.0442}
 {"czas": "2026-09-25T17:58:48+00:00", "plik": "wynik-koniec.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 356, "wyj": 1056, "usd": 0.044}
+{"czas": "2026-09-25T18:02:41+00:00", "plik": "zima-gora-9.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 361, "wyj": 1568, "usd": 0.0645}
+{"czas": "2026-09-25T18:03:02+00:00", "plik": "zima-gora-10.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 345, "wyj": 1568, "usd": 0.0644}
+{"czas": "2026-09-25T18:03:18+00:00", "plik": "zima-gora-11.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 316, "wyj": 1056, "usd": 0.0438}

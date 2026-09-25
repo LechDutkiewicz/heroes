@@ -649,6 +649,9 @@ ZESTAWY = {
         'gora-1': 340, 'gora-2': 380, 'gora-3': 280, 'gora-4': 220, 'gora-5': 240,
         # Twierdza, runda 6 (HotA): skarpy i skalne progi na równinie (§18).
         'gora-6': 240, 'gora-7': 200, 'gora-8': 240,
+        # Twierdza, runda 11 (HotA: „góry nie trzymają skali pola"): zwarte
+        # gromady małych szczytów i niski łańcuch (§26).
+        'gora-9': 300, 'gora-10': 260, 'gora-11': 260,
     },
     'bagno': {
         'drzewo': 144, 'drzewo-b': 144, 'krzak': 84, 'krzak-2': 84,

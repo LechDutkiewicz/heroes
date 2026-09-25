@@ -496,6 +496,31 @@ puste białe plamy"; „wiatrak, spichlerz, chatka wiszą jak naklejki";
   planszy) — cały kadr bez winiety, minimapa pokazuje dolinę.
 - Grafiki: 2 obrazki medium, ≈ $0,10.
 
+### Twierdza, runda 11 (HotA)
+
+Werdykt rundy 10: „śnieg jednolicie szumiący i plamisty; drogi to płaskie
+wstęgi bez krawędzi; skrzynki i kryształy bez cieni; wiatrak mniejszy od
+chaty, zamek kilka razy większy od bohatera; gigantyczne góry w lewym dolnym
+rogu i ściana gór wzdłuż lewej krawędzi — nie wiadomo, jak duże jest pole".
+Zmiany (wszystkie per plansza, układ i rozstawienie bez zmian):
+
+- Śnieg: efekt `zaspy_gladkie` (`teren_efekty.zaspy(gladkie=…)`). Przyczyna
+  „szumu": szum idzie przez 8-bitowy obrazek, a światło liczy się z pochodnej
+  — schodki dawały drobną kratkę jak płótno na całym śniegu. Wysokość
+  wygładzona na float, cieniowanie słabsze; widać malowane zawieje tekstury.
+  Naklejki: więcej świerczków i płyt skał, bez `nawis-sniezny` (szara smuga).
+- Droga: `DROGA_OBRZEZE['skarpa']` (`droga_obrzeze(skarpa=…)`) — trakt wcięty
+  w śnieg: sini cień pod brzegiem od strony światła, jasna ścianka naprzeciw.
+- Skala: `skalaZamku` 1,8 → 1,5, `skalaBudowli` 1,3 (wiatrak nad spichlerzem).
+- Nowe `USTAWIENIA.cienZnajdzek` (`mapy.ts`, scena; brak = jak dotąd):
+  mnożniki cienia kontaktowego pod stosami, skrzyniami, artefaktami
+  i stworkami; Twierdza 1,25 / 1,6.
+- Góry w skali pola (PROMPTY-PLANSZE §26, `zima/gora-9..11`: gromada małych
+  szczytów, niski łańcuch ząbków, iglice): za zamkiem gromada zamiast szczytu
+  na 8 pól, w lewym dolnym rogu łańcuch + grzbiet ~4 pola zamiast pasma
+  10 × 6, szczyt z lodospadem mniejszy na progu nad stawem.
+- Grafiki: 3 obrazki medium, ≈ $0,17.
+
 ## HUD mapy przygody na wspólnym zestawie (2026-09-24)
 
 - Mapa stoi na tym samym materiale co kampania i okna misji

@@ -572,6 +572,10 @@ USTAWIENIA = {
     # półka. Cień węższy (pod samymi ścianami) i słabszy; zaspy przy ścianach
     # to teraz `zima/krzak*` (PROMPTY-PLANSZE §21).
     'cienBudowli': {'szer': 0.7, 'krycie': 0.6},
+    # Runda 11 (HotA): „skrzynki, kryształy i stwory nie mają cieni
+    # kontaktowych — unoszą się nad śniegiem". Na jasnym, sinawym śniegu
+    # zwykły cień ginął: pod drobnymi rzeczami szerszy i wyraźniejszy.
+    'cienZnajdzek': {'szer': 1.25, 'krycie': 1.6},
     # Runda 7 (HotA): „budynki jak naklejki na owalnych wysepkach śniegu
     # z twardą krawędzią". Podstawki budowli rozpływają się teraz w tle
     # (`wtopPodstawe` w `wsad_wczytaj.py`), a ciemny obrys — osiem
@@ -585,15 +589,22 @@ USTAWIENIA = {
     # w lewym dolnym rogu dwa szczyty z siodłem i skalny pagór ze świerkami.
     # `x`, `y` — stopa rysunku w polach (krawędzie pól), `szer` w polach.
     'masywy': [
-        {'plik': 'gora-4', 'x': 7.3, 'y': 60.3, 'szer': 7.6, 'pokrywa': [4, 56, 9, 59]},
-        {'plik': 'gora-2', 'x': 5.2, 'y': 64.3, 'szer': 8.6, 'pokrywa': [0, 60, 8, 63]},
-        # Runda 10: pasmo w lewym dolnym rogu niższe i zsunięte w dół (szczyty
-        # od y ≈ 67), żeby nad nim było widać dolinę przełęczy (y 64–66)
-        # z kopalnią kamieni. Pokrywa sięga y 64: skały x 0–2 przy dolinie
-        # (poza kadrem) też bez kęp. (Bez `gora-3` — stał na dolinie.)
-        # Odbity: główny szczyt na prawo, nad pustym śniegiem przy wąwozie,
-        # a nie nad kopalnią. Sięga x 10 — bez rządka głazów przy wąwozie.
-        {'plik': 'gora-1', 'x': 5.6, 'y': 72.3, 'szer': 10.2, 'odbij': True, 'pokrywa': [0, 64, 10, 71]},
+        # Runda 11 (HotA): „gigantyczne góry w lewym dolnym rogu i ściana gór
+        # wzdłuż lewej krawędzi zasłaniają pola — nie wiadomo, gdzie kończy się
+        # przejezdny teren i jak duże jest pole; skala gór do siatki kafli".
+        # Zamiast dwóch olbrzymów (szczyt na 8 pól, pasmo 10 × 6) gromady
+        # małych szczytów w skali 1–2 pól na szczyt (PROMPTY-PLANSZE §26),
+        # stopa każdej na polach skał, jedna za drugą:
+        #  * szczyt z lodospadem, mniejszy, na progu nad stawem (tło);
+        #  * gromada szczytów na pasie skał x 1–8 za zamkiem;
+        #  * iglice przy murach zamku (skały x 7–8, dotąd goły śnieg).
+        {'plik': 'gora-2', 'x': 6.6, 'y': 60.3, 'szer': 5.4, 'pokrywa': [4, 56, 9, 59]},
+        {'plik': 'gora-9', 'x': 4.4, 'y': 64.3, 'szer': 7.0, 'pokrywa': [0, 60, 8, 63]},
+        {'plik': 'gora-11', 'x': 8.1, 'y': 62.9, 'szer': 2.3, 'pokrywa': [0, 60, 8, 63]},
+        # Lewy dolny róg: z tyłu niski łańcuch ząbków (nie zasłania doliny
+        # przełęczy z kopalnią), z przodu grzbiet z siodłem, odbity.
+        {'plik': 'gora-10', 'x': 5.6, 'y': 69.9, 'szer': 7.4, 'pokrywa': [0, 64, 10, 71]},
+        {'plik': 'gora-1', 'x': 7.4, 'y': 72.5, 'szer': 7.2, 'odbij': True, 'pokrywa': [0, 64, 10, 71]},
         # (Runda 6: bez skalnego pagóra `gora-5` w rogu — stał na wąwozie.)
         # Skalny garb nad stawem (górna krawędź ekranu) zamiast rzędu kęp.
         {'plik': 'gora-3', 'x': 17.4, 'y': 56.1, 'szer': 6.2, 'pokrywa': [15, 50, 20, 55]},
@@ -682,16 +693,19 @@ NAKLEJKI = [
     # puste". W HotA między obiektami stoją pojedyncze ośnieżone świerczki
     # i kępki — gęściej kry na lodzie i młode świerki na śniegu i darni.
     (['kra-lodu-1', 'kra-lodu-2'], '~', 0.09),
-    (['swierczek-sniezny-1', 'swierczek-sniezny-2'], 's', 0.05),
+    # Runda 11: śnieg po wygładzeniu zasp jest spokojniejszy — więcej drobnej
+    # rzeźby jak w HotA (świerczki, głazy, płyty skał), bez ciemnych nawisów.
+    (['swierczek-sniezny-1', 'swierczek-sniezny-2'], 's', 0.075),
     (['swierczek-sniezny-1'], '.', 0.03),
     # Runda 4 (HotA): „pole śniegu to jednolita, płaska biała tekstura — bez
     # uskoków, skał i zmian odcienia". Płyty skał spod śniegu, suche trawy
     # i nawisy z pasem cienia (PROMPTY-PLANSZE §15b).
     # (Łaty odsłoniętej ziemi — `lata-ziemi-snieg` — odrzucone: w kadrze czytały
     # się jak szare przeręble, nie jak zmiana odcienia gruntu.)
-    (['skalki-snieg'], 's', 0.03),
+    (['skalki-snieg'], 's', 0.05),
     (['trawy-snieg'], 's.', 0.06),
-    (['nawis-sniezny'], 's', 0.04),
+    # (Runda 11: bez `nawis-sniezny` — pas cienia pod nawisem czytał się
+    # w kadrze jak brudna szara smuga na śniegu.)
 ]
 
 

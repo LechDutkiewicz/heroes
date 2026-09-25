@@ -122,6 +122,13 @@ export interface UstawieniaPlanszy {
    */
   cienBudowli?: { szer?: number; krycie?: number };
   /**
+   * Mnożniki cienia kontaktowego pod drobnymi rzeczami (stosy, skrzynie,
+   * artefakty, stworki). Twierdza, runda 11: „skrzynki i kryształy nie mają
+   * cieni, unoszą się nad śniegiem" — na jasnym śniegu zwykły cień ginął.
+   * Brak = jak dotąd (1, 1).
+   */
+  cienZnajdzek?: { szer?: number; krycie?: number };
+  /**
    * Kępy skał wybrane ręcznie: `"x,y"` lewego górnego pola kępy 3 × 2 →
    * numer rysunku `m-kepa-skaly-N` (1–4), ujemny = odbity w poziomie.
    * Bez wpisu kępa bierze wariant z hasza pola, jak dotąd. Polana, runda 7:

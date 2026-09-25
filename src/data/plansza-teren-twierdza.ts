@@ -431,12 +431,16 @@ export const USTAWIENIA = {
     "szer": 0.7,
     "krycie": 0.6
   },
+  "cienZnajdzek": {
+    "szer": 1.25,
+    "krycie": 1.6
+  },
   "masywy": [
     {
-      "plik": "gora-4",
-      "x": 7.3,
+      "plik": "gora-2",
+      "x": 6.6,
       "y": 60.3,
-      "szer": 7.6,
+      "szer": 5.4,
       "pokrywa": [
         4,
         56,
@@ -445,10 +449,10 @@ export const USTAWIENIA = {
       ]
     },
     {
-      "plik": "gora-2",
-      "x": 5.2,
+      "plik": "gora-9",
+      "x": 4.4,
       "y": 64.3,
-      "szer": 8.6,
+      "szer": 7.0,
       "pokrywa": [
         0,
         60,
@@ -457,10 +461,34 @@ export const USTAWIENIA = {
       ]
     },
     {
-      "plik": "gora-1",
+      "plik": "gora-11",
+      "x": 8.1,
+      "y": 62.9,
+      "szer": 2.3,
+      "pokrywa": [
+        0,
+        60,
+        8,
+        63
+      ]
+    },
+    {
+      "plik": "gora-10",
       "x": 5.6,
-      "y": 72.3,
-      "szer": 10.2,
+      "y": 69.9,
+      "szer": 7.4,
+      "pokrywa": [
+        0,
+        64,
+        10,
+        71
+      ]
+    },
+    {
+      "plik": "gora-1",
+      "x": 7.4,
+      "y": 72.5,
+      "szer": 7.2,
       "odbij": true,
       "pokrywa": [
         0,

@@ -2088,3 +2088,55 @@ Cool muted palette: straw, ochre, olive, slate grey, white. The surface fills
 the WHOLE picture evenly with no direction, no edges, no paths, no large
 clean snow areas, no trees.
 ```
+
+## 26. Twierdza — góry w skali pola: zwarte łańcuchy małych szczytów (runda 11, wzorzec HotA)
+
+Werdykt rundy 10: „gigantyczne góry w lewym dolnym rogu i ściana gór wzdłuż
+lewej krawędzi zasłaniają pola — nie wiadomo, gdzie kończy się przejezdny
+teren i jak duże jest pole; ujednolicić skalę gór do siatki kafli". Góry §15
+to pojedyncze wielkie masywy (szczyt na 6–8 pól). W HotA pasmo to ciasna
+gromada WIELU małych szczytów, każdy na 1–2 pola, a cała bryła ma stopę
+dokładnie na polach skał. Rysunki idą do `USTAWIENIA.masywy` jak §15;
+po obejrzeniu kopiowane do `tools/wsad/zima-gora-9..11.png`
+(wysokości w `ZESTAWY['zima']` w `wsad_wczytaj.py`).
+
+<!-- plik: zima-gora-9.png | styl: obiekt | proporcje: 3:2 -->
+```
+A compact cluster of seven or eight small sharp snowy mountain peaks packed
+tightly together for a winter adventure map, in the style of Heroes of Might
+and Magic 3: many small pointed summits of slightly different heights, none
+dominating, standing in two overlapping rows (a back row a bit higher, a
+front row lower), cool slate-grey and blue-grey granite with dark blue
+shadowed gullies between the peaks, thick white snow caps on every summit,
+snow streaks down the faces, grey scree and a few snow-capped boulders along
+the irregular lumpy foot, two tiny dark snow-laden spruces between the front
+peaks. Strong sculpted relief lit from the upper left. Cool winter palette,
+NO orange, NO warm brown rock. Wider than tall, the foot spreading across
+the whole width of the picture.
+```
+
+<!-- plik: zima-gora-10.png | styl: obiekt | proporcje: 3:2 -->
+```
+A long low chain of small jagged snowy rock peaks for a winter adventure map,
+in the style of Heroes of Might and Magic 3: one continuous ridge running
+across the whole width of the picture made of about ten small sharp rocky
+teeth and summits of varying heights joined by rocky saddles, cool slate-grey
+granite with dark blue shadowed cracks, white snow caps and snow lying in
+the saddles, grey scree fans and snow-capped boulders at the uneven foot,
+three tiny snowy spruces growing on the lower shoulders. Low and long,
+clearly an impassable mountain ridge but small in scale. Strong relief lit
+from the upper left. Cool winter palette, NO orange, NO warm brown rock.
+About twice as wide as tall.
+```
+
+<!-- plik: zima-gora-11.png | styl: obiekt | proporcje: 1:1 -->
+```
+A small tight group of four sharp snowy rock pinnacles for a winter adventure
+map, in the style of Heroes of Might and Magic 3: one slightly taller pointed
+peak in the middle with three smaller jagged rocks around its foot, cool
+slate-grey granite with dark blue shadowed cracks, white snow caps and snow
+drifts piled between the rocks, grey gravel and a few small snow-capped
+boulders at the lumpy irregular foot, one tiny snowy spruce at the side.
+Strong relief lit from the upper left. Cool winter palette, NO orange, NO
+warm brown rock. About as wide as tall, compact.
+```
