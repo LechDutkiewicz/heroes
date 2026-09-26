@@ -1,4 +1,7 @@
 import { artefaktPoId, type Bohater, type StanMapy, type Surowiec } from './mapa';
+import { aktywnyProfil, czytajKlucz, imieTrenera, kluczProfilu, piszKlucz, usunKlucz, wymusProfil } from './profile';
+
+export { imieTrenera };
 
 /**
  * Kampania — kolejne misje ułożone w jedną opowieść, jak „The Succession Wars"
@@ -195,23 +198,20 @@ export type BohaterPrzenoszony = Pick<
   'imie' | 'atak' | 'obrona' | 'artefakty' | 'doswiadczenie' | 'umiejetnosci' | 'poziomOdebrany'
 >;
 
-const KLUCZ_POSTEPU = 'heroes-kampania-v1';
+/**
+ * Postęp kampanii należy do PROFILU gracza (src/data/profile.ts): Ela, Janek
+ * i tata mają każde swoją kampanię. Bez podanego profilu — aktywny.
+ */
+const kluczPostepu = (profil: string) => kluczProfilu(profil, 'kampania');
 
 export function nowyPostep(trener: string): PostepKampanii {
   return { kampania: KAMPANIA.id, trener, ukonczone: [], wyniki: {} };
 }
 
-/**
- * Imię trenera po zmianach w grze. Bohaterka nazywała się kiedyś Ola —
- * zapisy i rekordy sprzed zmiany mają to imię, a obrazki i barwy są już
- * pod „Ela". Stare imię czytamy jako nowe, zamiast gubić postęp.
- */
-const DAWNE_IMIONA: Record<string, string> = { Ola: 'Ela' };
-export const imieTrenera = (imie: string) => DAWNE_IMIONA[imie] ?? imie;
-
-export function wczytajPostep(): PostepKampanii | null {
+export function wczytajPostep(profil: string | undefined = aktywnyProfil()?.id): PostepKampanii | null {
+  if (!profil) return null;
   try {
-    const s = localStorage.getItem(KLUCZ_POSTEPU);
+    const s = czytajKlucz(kluczPostepu(profil));
     if (!s) return null;
     const p = JSON.parse(s) as PostepKampanii;
     if (p.kampania !== KAMPANIA.id) return null;
@@ -224,19 +224,22 @@ export function wczytajPostep(): PostepKampanii | null {
 }
 
 export function zapiszPostep(p: PostepKampanii): void {
-  try {
-    localStorage.setItem(KLUCZ_POSTEPU, JSON.stringify(p));
-  } catch {
-    // Prywatna karta albo pełny limit — kampania działa dalej, bez pamięci.
-  }
+  // Prywatna karta albo pełny limit — kampania działa dalej, bez pamięci
+  // (`piszKlucz` połyka wyjątek).
+  piszKlucz(kluczPostepu(wymusProfil().id), JSON.stringify(p));
 }
 
 export function usunPostep(): void {
-  try {
-    localStorage.removeItem(KLUCZ_POSTEPU);
-  } catch {
-    // nie było czego kasować
-  }
+  const profil = aktywnyProfil();
+  if (profil) usunKlucz(kluczPostepu(profil.id));
+}
+
+/**
+ * Kampania, którą szkoda stracić: wybrany trener i już coś rozegrane
+ * (ukończona misja albo wybrany bonus toczącej się misji), a nie koniec.
+ */
+export function kampaniaWToku(p: PostepKampanii | null): p is PostepKampanii {
+  return !!p && !kampaniaUkonczona(p) && (p.ukonczone.length > 0 || p.bonus !== undefined);
 }
 
 /** Pierwsza nieukończona misja — ta, którą ekran kampanii proponuje. */

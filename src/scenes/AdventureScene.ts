@@ -26,6 +26,7 @@ import {
   trasa,
   wezZeSkrzyni,
   zSasiedniegoPola,
+  zagradzaDroge,
   zamknietaBrama,
   zasiegNaTure,
   dniNaTrase,
@@ -40,7 +41,8 @@ import { planszaPrzygody } from '../data/plansza';
 import { planszaPoId } from '../data/mapy';
 import { turaWroga } from '../data/wrog-ai';
 import { SLOTY_ARMII, dolacz, pustaArmia, zywe } from '../data/armia';
-import { jestZapis, wczytajGre, zapiszGre } from '../data/zapis';
+import { autozapis, nazwaSlotu } from '../data/zapis';
+import { pokazWczytanie, pokazZapis } from '../visual/oknoZapisu';
 import { KAMPANIA, misjaPoId, wczytajPostep } from '../data/kampania';
 import { celSlowami, coSieStalo, ocenGre, przyczynaPorazki, warunkiGry } from '../data/wynik';
 import {
@@ -178,6 +180,12 @@ const MINIATURA = 'plansza-mini';
 /** Krycie cienia kontaktowego: pod znajdźką, stworkiem i bohaterem / pod dużą bryłą. */
 const KRYCIE_CIENIA = 0.48;
 const KRYCIE_CIENIA_BRYLY = 0.38;
+/**
+ * Cień RZUCONY przez jednostkę (strażnik, bohater) — patrz `cienRzucany`.
+ * `kx`, `ky`: gdzie na gruncie ląduje czubek głowy, w ułamkach widocznej
+ * wysokości postaci (w prawo / w dół od stóp — od światła z lewej-góry).
+ */
+const CIEN_RZUT = { kx: 0.75, ky: 0.28, krycie: 0.68 };
 
 
 const DOMYSLNA_PODPOWIEDZ =
@@ -256,6 +264,11 @@ export class AdventureScene extends Phaser.Scene {
   private sylwetka?: SylwetkaBohatera;
 
   private trasaBiezaca: Krok[] | null = null;
+  /**
+   * Cel, do którego drogę zagradza potwór: klik w niego wytyczył trasę do
+   * strażnika. Ważne tylko, dopóki `trasa` to wciąż `trasaBiezaca`.
+   */
+  private zagrodzenie: { x: number; y: number; trasa: Krok[]; tekst: string } | null = null;
   private zajety = false;
   /**
    * Gra się rozstrzygnęła i scena odlicza do ekranu wyniku. Osobno od
@@ -583,6 +596,91 @@ export class AdventureScene extends Phaser.Scene {
         .image(x + srodek + szer * 0.14, spod + wysC * 0.2, CIEN_KONTAKTOWY)
         .setDisplaySize(szer, wysC)
         .setAlpha(krycie)
+    );
+  }
+
+  /**
+   * Cień RZUCONY na grunt przez jednostkę — strażnika albo bohatera.
+   *
+   * Stworki runda 2 (ślepe porównanie z HotA): „strażnika nie da się odróżnić
+   * od znajdźki — ta sama wielkość, brak cienia; naklejki położone na
+   * ilustrację". W HoMM3 jednostka rzuca na trawę własną, miękką sylwetkę,
+   * a przedmiot leżący na ziemi nie — i to jedno odróżnia „kogoś, kto stoi"
+   * od „czegoś, co leży". Elipsa pod stopami tego nie daje (znajdźki też ją
+   * mają), więc tu jest sylwetka samego rysunku położona na gruncie od
+   * światła (`CIEN_RZUT`), rozmyta i gasnąca ku czubkowi głowy.
+   *
+   * Tekstura liczona raz na rysunek (`ramka` — jedna klatka arkusza bohatera).
+   * Zwrócony obrazek ma origin w punkcie stóp: stawia się go tam, gdzie stoi
+   * spód widocznej sylwetki, w tej samej skali co rysunek.
+   */
+  private cienRzucany(
+    klucz: string,
+    skala: number,
+    x: number,
+    stopy: number,
+    ramka?: { x: number; y: number; w: number; h: number }
+  ): Phaser.GameObjects.Image | null {
+    const klTekstury = `t-cien-rzut-${klucz}${ramka ? `-${ramka.x}-${ramka.y}` : ''}`;
+    const zrodlo = this.textures.get(klucz)?.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
+    const a = this.alfa(klucz);
+    if (!zrodlo?.width || !a) return null;
+    const r = ramka ?? { x: 0, y: 0, w: a.w, h: a.h };
+    let gora = r.h;
+    let dol = -1;
+    for (let y = 0; y < r.h; y++)
+      for (let xx = 0; xx < r.w; xx++)
+        if (a.dane[(r.y + y) * a.w + r.x + xx] > 40) {
+          if (y < gora) gora = y;
+          dol = y;
+        }
+    if (dol < 0) return null;
+    const h = dol - gora + 1;
+    const rozmycie = Math.max(1.2, h * 0.014);
+    const P = Math.ceil(rozmycie * 3);
+    const { kx, ky } = CIEN_RZUT;
+    const stopaY = P + Math.max(0, -ky * h);
+    const W = Math.ceil(r.w + Math.abs(kx) * h + 2 * P);
+    const H = Math.ceil(Math.abs(ky) * h + 2 * P);
+    const stopaX = P + Math.max(0, -kx * h);
+    if (!this.textures.exists(klTekstury)) {
+      // 1. Sylwetka położona na gruncie: wiersz na wysokości v nad stopami
+      //    ląduje o (kx·v, ky·v) od nich, szerokość wiersza bez zmian.
+      const plaska = document.createElement('canvas');
+      plaska.width = W;
+      plaska.height = H;
+      const c1 = plaska.getContext('2d');
+      const t = this.textures.createCanvas(klTekstury, W, H);
+      if (!c1 || !t) return null;
+      c1.setTransform(1, 0, -kx, -ky, stopaX + kx * dol, stopaY + ky * dol);
+      c1.drawImage(zrodlo, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
+      c1.setTransform(1, 0, 0, 1, 0, 0);
+      c1.globalCompositeOperation = 'source-in';
+      c1.fillStyle = 'rgb(14,9,4)';
+      c1.fillRect(0, 0, W, H);
+      // 2. Rozmycie i zejście krycia od stóp (pełny) ku głowie (ok. jednej
+      //    trzeciej) — w HotA cień przy stopach jest najgęstszy.
+      const ctx = t.getContext();
+      ctx.filter = `blur(${rozmycie.toFixed(1)}px)`;
+      ctx.drawImage(plaska, 0, 0);
+      ctx.filter = 'none';
+      ctx.globalCompositeOperation = 'destination-in';
+      const x0 = stopaX + r.w * 0.5;
+      const g = ctx.createLinearGradient(x0 - r.w * 0.25, stopaY, x0 + kx * h, stopaY + ky * h);
+      g.addColorStop(0, 'rgba(0,0,0,1)');
+      g.addColorStop(0.5, 'rgba(0,0,0,0.85)');
+      g.addColorStop(1, 'rgba(0,0,0,0.5)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'source-over';
+      t.refresh();
+    }
+    return this.naSniegu(
+      this.add
+        .image(x, stopy, klTekstury)
+        .setOrigin((stopaX + r.w / 2) / W, stopaY / H)
+        .setScale(skala)
+        .setAlpha(CIEN_RZUT.krycie)
     );
   }
 
@@ -1542,6 +1640,12 @@ export class AdventureScene extends Phaser.Scene {
           cb?.szer ?? 1
         )
       );
+      // Strażnik to jednostka, nie przedmiot: rzuca na grunt własną sylwetkę
+      // (`cienRzucany`), której znajdźki nie mają.
+      if (o.rodzaj === 'potwor') {
+        const rzut = this.cienRzucany(klucz, wys / this.textures.get(klucz).getSourceImage().height, 0, spod);
+        if (rzut) kont.add(rzut);
+      }
       // Wejście do budowli z bryłą (zamek, kopalnia) nie ma żadnego
       // odrębnego oznaczenia na gruncie — z daleka wygląda jak zwykła
       // ścieżka POD budynkiem, więc nie widać, gdzie naprawdę trzeba
@@ -1797,6 +1901,15 @@ export class AdventureScene extends Phaser.Scene {
         .setAlpha(KRYCIE_CIENIA)
     );
     this.bohaterObj.add(cien);
+    // Cień rzucony (`cienRzucany`) z pierwszej klatki arkusza — rozmyty, więc
+    // to, że nie idzie za krokiem ani kierunkiem, nie rzuca się w oczy.
+    const rzut = this.cienRzucany('bohater', s.skala, 0, s.stopy, {
+      x: 0,
+      y: 0,
+      w: BOHATER_KLATKA,
+      h: BOHATER_KLATKA,
+    });
+    if (rzut) this.bohaterObj.add(rzut);
 
     // Punkt zaczepienia to dół KLATKI, a stopy stoją nad nim o przezroczysty
     // margines — schodzimy o niego, żeby na `stopy` stały same stopy.
@@ -2120,31 +2233,35 @@ export class AdventureScene extends Phaser.Scene {
     guzik(px + PANEL_W / 2, turaY, wnetrzeW, 40, 'Zakończ turę', () => this.koniecTury(), true);
   }
 
-  /** Zapis gry w przeglądarce — jeden slot, żeby dało się wrócić do planszy później. */
+  /**
+   * Zapis i wczytanie — okna ze slotami profilu gracza (`src/visual/oknoZapisu.ts`),
+   * jak ekran zapisu w Heroes 3. Wczytanie pyta, bo kasuje bieżącą grę.
+   */
   private zapiszStanGry() {
     if (this.zajety) return;
-    this.napisUlotny(zapiszGre(this.stan) ? 'Gra zapisana.' : 'Nie udało się zapisać gry.');
+    this.zajety = true;
+    pokazZapis(this, this.stan, {
+      glebia: Z.overlay,
+      naWierzchu: (o) => this.naWierzchu(o),
+      poZamknieciu: () => (this.zajety = false),
+      poZapisie: (slot, udany) =>
+        this.napisUlotny(udany ? `Gra zapisana (${nazwaSlotu(slot).toLowerCase()}).` : 'Nie udało się zapisać gry.'),
+    });
   }
 
   private wczytajStanGry() {
     if (this.zajety) return;
-    if (!jestZapis()) {
-      this.napisUlotny('Nie ma jeszcze żadnego zapisu.');
-      return;
-    }
-    // Wczytanie zastępuje bieżący, niezapisany postęp — to jedyna operacja
-    // tutaj, która coś nieodwracalnie kasuje, więc pyta wprost, zamiast
-    // ciszej zamiany stanu pod nogami gracza.
-    if (!window.confirm('Wczytać zapisaną grę? Obecny postęp od ostatniego zapisu przepadnie.')) {
-      return;
-    }
-    const wczytany = wczytajGre();
-    if (!wczytany) {
-      this.napisUlotny('Nie udało się wczytać zapisu.');
-      return;
-    }
-    this.registry.set(KLUCZ_STANU, wczytany);
-    this.scene.start('adventure');
+    this.zajety = true;
+    pokazWczytanie(this, {
+      glebia: Z.overlay,
+      naWierzchu: (o) => this.naWierzchu(o),
+      pytaj: true,
+      poZamknieciu: () => (this.zajety = false),
+      poWczytaniu: (stan) => {
+        this.registry.set(KLUCZ_STANU, stan);
+        this.scene.start('adventure');
+      },
+    });
   }
 
   /**
@@ -2506,6 +2623,17 @@ export class AdventureScene extends Phaser.Scene {
     // dokładnie tym samym rysunkiem, a nie dwoma osobnymi kursorami naraz.
     this.input.setDefaultCursor('none');
     this.kursorZnak.setPosition(p.x, p.y);
+    // Cel za strażnikiem, w który już kliknięto: podpowiedź dalej mówi, kto
+    // zagradza drogę, zamiast wracać do zwykłego opisu przy każdym ruchu myszy.
+    const z = this.zagrodzenie;
+    if (z && z.trasa === this.trasaBiezaca) {
+      const wskazany = this.obiektPodKursorem(p) ?? { x, y };
+      if (wskazany.x === z.x && wskazany.y === z.y) {
+        this.podpowiedz.setText(z.tekst);
+        this.pokazZnakKursora(ICON.sword);
+        return;
+      }
+    }
     if (!this.stan.odkryte[y][x]) {
       this.podpowiedz.setText('Nieznany teren — trzeba tam podejść.');
       this.pokazZnakKursora(null);
@@ -2680,15 +2808,45 @@ export class AdventureScene extends Phaser.Scene {
    * Wspólne dla kliknięcia w teren i w rysunek obiektu.
    */
   private celujW(x: number, y: number) {
-    if (!this.wGranicach(x, y) || kosztPola(this.stan, x, y) === null) return;
+    if (!this.wGranicach(x, y)) return;
     const t = this.trasaBiezaca;
     const cel = t && t.length > 0 ? t[t.length - 1] : null;
-    if (cel && cel.x === x && cel.y === y) {
+    const z = this.zagrodzenie && this.zagrodzenie.trasa === t ? this.zagrodzenie : null;
+    // Drugi klik w ten sam cel — albo w cel, do którego drogę zagradza
+    // strażnik — rusza wytyczoną trasą.
+    if ((cel && cel.x === x && cel.y === y) || (z && z.x === x && z.y === y)) {
       this.idz(t!);
       return;
     }
-    this.trasaBiezaca = trasa(this.stan, x, y);
+    this.zagrodzenie = null;
+    // Zamknięta brama to mur, ale wolno do niej podejść jako do celu (klucz).
+    const nowa =
+      kosztPola(this.stan, x, y) !== null || zamknietaBrama(this.stan, x, y)
+        ? trasa(this.stan, x, y)
+        : null;
+    if (nowa && nowa.length > 0) {
+      this.trasaBiezaca = nowa;
+      this.pokazTrase();
+      return;
+    }
+    // Brak trasy nie może kończyć się ciszą — gracz myśli wtedy, że miejsca
+    // nie da się osiągnąć. Jak w Heroes 3: jeśli drogę zagradza strażnik,
+    // trasa prowadzi do niego (bitwa), a podpowiedź mówi, kto pilnuje.
+    // Cel może leżeć pod mgłą (trasa w nieznane też jest dozwolona), ale
+    // strażnik musi być widoczny — podpowiedź nie zdradza, kto stoi w mroku.
+    const odkryte = this.stan.odkryte;
+    const blok = zagradzaDroge(this.stan, x, y, (o) => !!odkryte[o.y]?.[o.x]);
+    if (blok) {
+      const tekst = `Drogę zagradza: ${blok.straz.nazwa}.\nPokonaj go, żeby przejść.`;
+      this.trasaBiezaca = blok.kroki;
+      this.zagrodzenie = { x, y, trasa: blok.kroki, tekst };
+      this.pokazTrase();
+      this.podpowiedz.setText(tekst);
+      return;
+    }
+    this.trasaBiezaca = null;
     this.pokazTrase();
+    this.podpowiedz.setText('Nie ma tam drogi.');
   }
 
   private pokazTrase() {
@@ -3675,7 +3833,7 @@ export class AdventureScene extends Phaser.Scene {
       this.zajety = false;
     };
     const wyjdz = (zapisac: boolean) => {
-      if (zapisac) zapiszGre(this.stan);
+      if (zapisac) autozapis(this.stan);
       stopMusic(this);
       stopAmbient(this);
       this.registry.set(KLUCZ_STANU, this.stan);
@@ -3889,6 +4047,9 @@ export class AdventureScene extends Phaser.Scene {
       this.zajety = false;
       this.napisUlotny(['Nowy dzień', ...wpisy].join('\n'));
       this.odswiezWszystko();
+      // Autozapis na początku dnia, jak w Heroes — ale nie gry, która
+      // właśnie się skończyła.
+      if (!this.rozstrzygnieta) autozapis(this.stan);
     }, 0);
   }
 }

@@ -567,9 +567,12 @@ USTAWIENIA = {
     # (PROMPTY-PLANSZE §24: kryształy, skrzynka, kosz wciśnięte w zaspę)
     # trochę większe, spód grzęźnie w śniegu (`osadzZnajdzki`), strażnicy
     # o jedną piątą wyżsi — prawie jak bohater (1,5 pola).
+    # Stworki, runda 2: strażnicy i bohater urośli we wszystkich planszach
+    # (`WYS_STRAZNIKA` 1,6, `WYS_BOHATERA` 1,9 w `src/visual/uklad.ts`),
+    # więc mnożnik wraca do 1 — skala stworów taka sama jak na Polanie i Bagnach.
     'znajdzki': 0.72,
     'osadzZnajdzki': 0.2,
-    'skalaStrazy': 1.2,
+    'skalaStrazy': 1.0,
     # Runda 10: łąka to tundra — bez białych zasp sceny na co trzecim polu.
     'bezOzdobTrawy': True,
     # Runda 9 (HotA): „zamek ledwie większy od chaty i młyna — powiększyć

@@ -414,7 +414,7 @@ export const USTAWIENIA = {
   ],
   "znajdzki": 0.72,
   "osadzZnajdzki": 0.2,
-  "skalaStrazy": 1.2,
+  "skalaStrazy": 1.0,
   "bezOzdobTrawy": true,
   "skalaZamku": 1.5,
   "skalaBudowli": 1.3,

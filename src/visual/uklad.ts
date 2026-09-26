@@ -40,19 +40,24 @@ export const KAFEL_EKRAN = KAFEL * ZOOM_MAPY;
  *
  * Wysokości to WIDOCZNA sylwetka (od stóp do czubka głowy, bez przezroczystego
  * marginesu pliku), w polach. Hierarchia jak w Heroes 3: bohater jest
- * największą ruchomą rzeczą na mapie (~1,5 pola), strażnik ~1,2 pola — zawsze
+ * największą ruchomą rzeczą na mapie (~1,9 pola), strażnik ~1,6 pola — zawsze
  * wyraźnie większy od kupki surowca (0,45–0,8 pola, `USTAWIENIA.znajdzki`
  * planszy), a mniejszy od budowli. Wcześniej bohater miał 0,9 pola, czyli
  * mniej niż kryształ przy drodze, a strażnik 1,0 — oba ginęły między
  * znajdźkami. Znajdźek i budowli te liczby nie dotyczą.
+ *
+ * Stworki, runda 2 (ślepe porównanie z HotA, 0/2): „strażnika nie da się
+ * odróżnić od znajdźki", „Janek jest wielkości kryształu". Jak w HoMM3 stack
+ * zajmuje wizualnie półtora pola, a bohater ok. dwóch — stąd 1,6 i 1,9;
+ * do tego obaj rzucają na grunt własny cień (`cienRzucany` w scenie mapy).
  */
-export const WYS_BOHATERA = 1.5;
-export const WYS_STRAZNIKA = 1.2;
+export const WYS_BOHATERA = 1.9;
+export const WYS_STRAZNIKA = 1.6;
 /**
- * Szerokie stworki (węże, płaszczki) przy 1,2 pola wysokości rozlewałyby się
+ * Szerokie stworki (węże, płaszczki) przy pełnej wysokości rozlewałyby się
  * na trzy pola i zasłaniały sąsiadów — ich sylwetkę ograniczamy szerokością.
  */
-export const SZER_STRAZNIKA_MAX = 1.6;
+export const SZER_STRAZNIKA_MAX = 2.1;
 
 export const PANEL_W = 250;
 export const PASEK_H = 34;

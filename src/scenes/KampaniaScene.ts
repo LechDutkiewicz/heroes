@@ -13,6 +13,8 @@ import {
   zapiszPostep,
 } from '../data/kampania';
 import { rozpocznijMisje } from '../data/kampania-start';
+import { aktywnyProfil } from '../data/profile';
+import { autozapis, listaZapisow, usunZapis } from '../data/zapis';
 import { SUROWIEC_INFO, artefaktPoId } from '../data/mapa';
 import { FACTIONS, factionById } from '../data/factions';
 import { C } from '../visual/theme';
@@ -506,8 +508,19 @@ export class KampaniaScene extends Phaser.Scene {
       k.strefa.on('pointerout', () => karty[1 - i].przygas(false));
     });
 
+    // Imię gracza to nie trener, ale gdy się zgadza (profil „Ela", trenerka
+    // Ela), podpowiadamy tę kartę — jak po najechaniu. Wybór i tak jest wolny.
+    const gracz = aktywnyProfil()?.imie;
+    const podpowiedz = gracz ? TRENERZY.findIndex((t) => t.imie.toLocaleLowerCase('pl') === gracz.toLocaleLowerCase('pl')) : -1;
+    if (podpowiedz >= 0) this.time.delayedCall(700, () => karty[podpowiedz]?.strefa.emit('pointerover'));
+
     // Wezwanie do działania: Cinzel, jasny krem, lekki oddech.
-    const wezwanie = this.napisNaDrewnie(EKRAN_W / 2, 646, 'Kliknij trenera, którym chcesz grać', 21).setOrigin(0.5);
+    const wezwanie = this.napisNaDrewnie(
+      EKRAN_W / 2,
+      646,
+      gracz ? `${gracz}, kliknij trenera, którym chcesz grać` : 'Kliknij trenera, którym chcesz grać',
+      21
+    ).setOrigin(0.5);
     this.tweens.add({ targets: wezwanie, scale: 1.04, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
     this.input.keyboard?.on('keydown-ESC', () => this.scene.start('menu'));
@@ -1922,6 +1935,8 @@ export class KampaniaScene extends Phaser.Scene {
     p.bonus = this.bonus;
     zapiszPostep(p);
     this.registry.set('stan-mapy', s);
+    // Autozapis na starcie misji — „Kontynuuj" w menu od razu ma do czego wrócić.
+    autozapis(s);
     sfx(this, 'awans', 0.7);
     this.input.enabled = false;
     this.cameras.main.fadeOut(320, 20, 12, 6);
@@ -1958,6 +1973,8 @@ export class KampaniaScene extends Phaser.Scene {
     // „Nie" jest złote — bezpieczny wybór wygląda jak główny.
     const tak = tabliczka(this, EKRAN_W / 2 - 96, y + h - 40, 170, 44, 'Tak, od nowa', false, 16, () => {
       usunPostep();
+      // Autozapis misji ze starej kampanii nie może zostać „bieżącą grą".
+      if (listaZapisow()[0]?.misja) usunZapis('auto');
       this.registry.remove('kampania-widziane');
       this.scene.restart();
     });

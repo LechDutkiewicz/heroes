@@ -41,6 +41,17 @@ gpt-image-1 w stylu `obiekt`, razem z dwoma nowymi etapami ewolucji każdego
   Vulkarex, Cynderos); Aquilon ma resztkę placka pod stopami; Flamidor ma
   żółtą poświatę po obrysie. Każdy da się dorobić jednym plikiem
   (`generuj_grafiki.py --nadpisz stworek-<numer>.png`, potem wczytaj).
+- **Mapa, runda 2** (ślepe z HotA r1 0/2: „strażnika nie da się odróżnić od
+  znajdźki", „Janek wielkości kryształu"): `WYS_STRAZNIKA` 1,2 → 1,6,
+  `SZER_STRAZNIKA_MAX` 1,6 → 2,1, `WYS_BOHATERA` 1,5 → 1,9 (`uklad.ts`);
+  Twierdza `skalaStrazy` 1,2 → 1,0 (ta sama skala na wszystkich planszach).
+  Strażnik i bohater rzucają na grunt własną sylwetkę (`cienRzucany`,
+  `CIEN_RZUT` w AdventureScene: położona w prawo-dół od światła, rozmyta,
+  gasnąca ku głowie, na śniegu w barwie `cienNaSniegu`); znajdźki zostają
+  z samym cieniem kontaktowym — to je odróżnia. Cień bohatera jest z klatki 0
+  (nie idzie za krokiem). Poświaty dla ciemnych stworków nie dałem — nasze
+  stworki są jasne, a jasna obwódka to właśnie ta „naklejka", którą
+  `stworki_wczytaj.py` zdejmuje. Zrzuty `tools/blind/stworki-mapa-r2*.png`.
 
 ## Plansze kampanii: Polana, Bagna, Twierdza (2026-09-24)
 
@@ -1718,3 +1729,19 @@ Morał jest ten sam, co zwykle w tym projekcie, tylko z drugiej strony: tym
 razem to nie zły pomiar udawał złą pracę, tylko BRAK pomiaru pozwolił złej
 pracy przejść. Mapa przeszła wszystkie sondy i cztery ślepe porównania
 z prawdziwymi mapami Heroes 3, mając w sobie portal donikąd.
+
+## Klik w cel za strażnikiem (2026-09-26)
+
+Klik w miejsce bez trasy nie milczy. `zagradzaDroge()` w `src/data/mapa.ts`
+liczy trasę „na próbę" (strefy i pola potworów przejezdne, reszta jak w
+`trasa`) i bierze pierwszego potwora, w którego strefę ta trasa wchodzi;
+scena (`celujW`) wytycza prawdziwą trasę do niego, a podpowiedź mówi
+„Drogę zagradza: X. Pokonaj go, żeby przejść." (zostaje przy ruchu myszy nad
+tym celem, drugi klik w cel rusza do strażnika = bitwa). Strażnik spod mgły
+się nie liczy — podpowiedź nie zdradza nieodkrytego. Bez przejścia (woda,
+mur, brama bez trasy, ukryty strażnik) — „Nie ma tam drogi.". Klik w
+zamkniętą bramę przechodzi teraz do `trasa` (wcześniej `celujW` odrzucał ją
+po `kosztPola === null` i klik milczał). Polana: kopalnia (19,30) na starcie →
+trasa do Sporexa przy moście (16,25), zrzut `tools/blind/klik-strazony.png`.
+Uwaga: serwer na portach 5200–5229 nie obserwuje plików — po zmianie kodu
+trzeba go zrestartować, inaczej sondy i zrzuty idą na starej wersji.
