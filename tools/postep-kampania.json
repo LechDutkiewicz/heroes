@@ -2,6 +2,42 @@
  "updated": "Wszystko wygrywa ślepo: plansze Polana, Bagna, Twierdza przeciw mapom kampanii HoMM3/HotA; ekran kampanii (3/3) i sceny wyniku (2/3) z nowymi ilustracjami OpenAI przeciw prawdziwym ekranom HoMM2/HotA.",
  "pieces": [
   {
+   "name": "Uwagi gracza: HUD miasta spójny z mapą",
+   "status": "build",
+   "bar": "Porównanie zrzutu miasta z nową mapą przygody (jedna gra), potem ślepy krytyk.",
+   "live": {
+    "round": 1,
+    "stage": "builder pracuje"
+   }
+  },
+  {
+   "name": "Uwagi gracza: przewijanie przy krawędzi i mgła na starcie",
+   "status": "build",
+   "bar": "Jak w HoMM3: przewijanie tylko przy brzegu okna ze zwłoką; na starcie widać tylko okolice zamku.",
+   "live": {
+    "round": 1,
+    "stage": "builder pracuje"
+   }
+  },
+  {
+   "name": "Uwagi gracza: Ela zamiast Oli, nowe ikony celów",
+   "status": "build",
+   "bar": "Imię bohaterki Ela; ikony celów misji malowane w stylu reszty (OpenAI).",
+   "live": {
+    "round": 1,
+    "stage": "builder pracuje"
+   }
+  },
+  {
+   "name": "Uwagi gracza: nowe stworki i linie ewolucyjne (OpenAI)",
+   "status": "build",
+   "bar": "Stacki stworków w stylu malowanych plansz; pełne linie ewolucyjne jako grafiki. Ślepy krytyk vs HotA.",
+   "live": {
+    "round": 1,
+    "stage": "builder pracuje"
+   }
+  },
+  {
    "name": "Sceny wyniku: zwycięstwo, porażka, koniec kampanii (grafiki OpenAI)",
    "status": "done",
    "bar": "Prawdziwe ekrany HoMM2 z fheroes2 na darmowym demie (Victory!, Defeat!, Legendary Heroes). Trzech krytyków na ślepo, wygrana przy 2 z 3.",
