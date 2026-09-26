@@ -87,6 +87,7 @@ DOKUMENTY = [
     KORZEN / 'tools' / 'PROMPTY-KAMPANIA.md',
     KORZEN / 'tools' / 'PROMPTY-PLANSZE.md',
     KORZEN / 'tools' / 'PROMPTY-STWORKI.md',
+    KORZEN / 'tools' / 'PROMPTY-BOHATER.md',
 ]
 
 API = 'https://generativelanguage.googleapis.com/v1beta'
