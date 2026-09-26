@@ -2,6 +2,24 @@
  "updated": "Wszystko wygrywa ślepo: plansze Polana, Bagna, Twierdza przeciw mapom kampanii HoMM3/HotA; ekran kampanii (3/3) i sceny wyniku (2/3) z nowymi ilustracjami OpenAI przeciw prawdziwym ekranom HoMM2/HotA.",
  "pieces": [
   {
+   "name": "Uwagi gracza: profile graczy i wiele zapisów",
+   "status": "build",
+   "bar": "Profile Ela / Janek / Tata z osobnymi kampaniami, kilka slotów zapisu jak w HoMM3, Nowa gra zaczyna od zera, migracja starego zapisu.",
+   "live": {
+    "round": 1,
+    "stage": "builder pracuje"
+   }
+  },
+  {
+   "name": "Uwagi gracza: nieosiągalna kopalnia na Polanie",
+   "status": "build",
+   "bar": "Sonda osiągalności wszystkich obiektów na każdej planszy; poprawka źródeł map.",
+   "live": {
+    "round": 1,
+    "stage": "builder pracuje"
+   }
+  },
+  {
    "name": "Uwagi gracza: HUD miasta spójny z mapą",
    "status": "done",
    "bar": "Porównanie zrzutu miasta z nową mapą przygody (jedna gra), potem ślepy krytyk.",
@@ -24,12 +42,18 @@
   },
   {
    "name": "Uwagi gracza: Ela zamiast Oli, nowe ikony celów",
-   "status": "build",
+   "status": "done",
    "bar": "Imię bohaterki Ela; ikony celów misji malowane w stylu reszty (OpenAI).",
-   "live": {
-    "round": 1,
-    "stage": "builder pracuje"
-   }
+   "note": "Builder: bohaterka nazywa się Ela wszędzie (pliki, klucze, rekordy; stare zapisy z „Ola” przechodzą na Elę). 7 ikon, które odstawały (gwiazda, czaszka, klepsydra, sakwa, miecz, tarcza, rower), wygenerowanych przez OpenAI w stylu reszty i wpiętych w cele misji, kronikę, nagrody i ekran wyniku. Koszt ok. $0.39.",
+   "rounds": [
+    {
+     "win": true,
+     "label": "Runda 1 (vs ekran scenariusza HotA, 1/1)",
+     "blind": "tools/postep-obrazy/kampania-ela-r1-w1.jpg",
+     "gap": "Słabość zwycięzcy: miniatura misji pod tytułem na zwoju to rozmyty pasek zieleni; rower nie pasuje do fantasy.",
+     "note": "Krytyk: nasze — jeden malarski styl, czytelna ścieżka misji, ikony spójne (złote medaliony, ta sama paleta)."
+    }
+   ]
   },
   {
    "name": "Uwagi gracza: nowe stworki i linie ewolucyjne (OpenAI)",
