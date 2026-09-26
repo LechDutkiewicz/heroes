@@ -2296,21 +2296,30 @@ export class AdventureScene extends Phaser.Scene {
       g.lineStyle(1.2, BARWA.kreska, 0.6);
       g.strokeRoundedRect(0, 0, slotBok, slotBok + 12, 4);
       // Portret, nie figurka: przy 28 px cały stworek był plamką z nóżkami,
-      // a popiersie na tle miasta (jak w Heroes) ma twarz na pół slotu.
+      // a ciasny kadr twarzy (mały portret, jak w Heroes) czyta się od razu.
       // Oprawa rysowana osobno, bo pusty slot ma zostać samą kratką.
+      //
+      // Liczba stoi na OSOBNEJ tabliczce pod ramą, nie na portrecie — na
+      // dolnej trzeciej zasłaniała pierś i brodę stwora (runda 2 portretów).
       const oprawa = this.add.graphics().setVisible(false);
       oprawPortret(oprawa, 1, 1, slotBok - 2, 1);
+      oprawa.fillStyle(0x1a0e04, 0.95);
+      oprawa.fillRoundedRect(1, slotBok + 1, slotBok - 2, 11, 3);
+      oprawa.fillStyle(0x3a2410, 1);
+      oprawa.fillRoundedRect(2, slotBok + 2, slotBok - 4, 9, 2.5);
+      oprawa.fillStyle(0xe0a53a, 0.9);
+      oprawa.fillRect(4, slotBok + 2, slotBok - 8, 1);
       const im = this.add
         .image(slotBok / 2, slotBok / 2, 'bohater')
         .setDisplaySize(slotBok - 2, slotBok - 2)
         .setVisible(false);
       const licznik = this.add
-        .text(slotBok / 2, slotBok + 4, '', {
+        .text(slotBok / 2, slotBok + 6.5, '', {
           fontFamily: KROJ.tytul,
-          fontSize: '11px',
+          fontSize: '10px',
           color: BARWA.krem,
           stroke: BARWA.braz,
-          strokeThickness: 3,
+          strokeThickness: 2,
         })
         .setOrigin(0.5);
       const slot = this.add.container(sx, rzadY, [g, oprawa, im, licznik]).setDepth(Z.hud + 1);

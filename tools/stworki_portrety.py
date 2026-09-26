@@ -24,10 +24,10 @@ Stąd dwie zasady tej wersji:
      Głowa z ramionami wypełnia wtedy ~80% wysokości ramki u każdego stwora,
      a oczy stoją w całym rzędzie na jednej linii. Stwory bez twarzy
      (Obsydian) mierzy się po „czole" bryły.
-  2. JEDNO TŁO I JEDNO ŚWIATŁO NA FRAKCJĘ. Tło to ten sam wycinek panoramy
-     miasta (`public/miasto/tlo-<f>.png` + dalekie bryły, ustawione wzorem
-     perspektywy z `TownScene`) dla wszystkich stworów frakcji, przestrojony
-     w ciepłą sepię pergaminu i drewna, na których portret leży w grze.
+  2. JEDNO TŁO I JEDNO ŚWIATŁO NA FRAKCJĘ. Tło to ten sam wycinek
+     malowanego krajobrazu miasta (`public/miasto/tlo-<f>.png`: niebo,
+     horyzont, grunt) dla wszystkich stworów frakcji, ocieplony pod
+     pergamin i drewno, na których portret leży w grze.
      Stwór dostaje to samo światło kluczowe: z góry-lewa, w barwie tła,
      z przygaszonym połyskiem i nasyceniem — jest wtedy namalowany w tym
      samym świetle co tło, a nie wklejony.
@@ -72,11 +72,11 @@ OKRAGLY = (56, 56)
 GLOWA: dict[str, tuple[float, float, float]] = {
     # Bór
     '00193': (178, 158, 96),  # Pyroko — twarz z przodu bryły
-    '00020': (82, 80, 62),  # Flamir — ptasia głowa z grzebieniem po lewej
+    '00020': (92, 88, 84),  # Flamir — ptasia głowa z grzebieniem po lewej
     '00218': (100, 62, 100),  # Aquino
     '00030': (182, 122, 104),  # Torrenar — głowa w pancerzu
     '00096': (148, 142, 88),  # Verdiko
-    '00227': (127, 46, 54),  # Silvena
+    '00227': (128, 70, 60),  # Silvena — twarz pod koroną płatków
     # Grota
     '00246': (166, 58, 46),  # Glacyn
     '00002': (131, 116, 104),  # Sporex — twarz pod kapeluszem
@@ -94,25 +94,36 @@ GLOWA: dict[str, tuple[float, float, float]] = {
 }
 
 # Bok kadru w wielkościach głowy i położenie oczu (ułamek wysokości od góry).
-# 1.8 głowy: głowa zajmuje górne ~55% ramki, ramiona i pierś resztę do ~80%
-# (reszta to tło) — tak jak popiersia w Heroes. Oczy na 0.36: „górna trzecia".
-SZABLON_BOK = {'duzy': 1.8, 'maly': 1.45}
-SZABLON_OCZY = {'duzy': 0.36, 'maly': 0.4}
-# Najmniejszy bok kadru w pikselach mistrza — przy mniejszym portret 128 px
-# byłby powiększeniem ponad 1,6× i rozmyłby się. Mała głowa zostaje wtedy
-# trochę mniejsza w ramce, ale ostra.
-MIN_BOK = {'duzy': 80, 'maly': 60}
+# Runda 2 (1.8 głowy) przegrała, bo stwór „pływał mały na środku kafla".
+# W Heroes popiersie WYPEŁNIA portret i rama tnie je bez litości: 1.3 głowy
+# daje głowę na ~75% wysokości, ramiona ucięte dolną krawędzią, a boki
+# głowy (uszy, grzebień, kolce) mogą wyjść za ramę. Oczy na ~0.4.
+# Mały portret jest jeszcze ciaśniejszy — przy 26 px liczy się tylko twarz.
+SZABLON_BOK = {'duzy': 1.3, 'maly': 1.12}
+SZABLON_OCZY = {'duzy': 0.42, 'maly': 0.45}
+# Najmniejszy bok kadru w pikselach mistrza — poniżej tego portret 128 px
+# byłby powiększeniem ponad 2× i rozmyłby się.
+MIN_BOK = {'duzy': 64, 'maly': 48}
 
 # ————————————————————————————————————————————————— tło i światło frakcji
 #
-# Jedno tło na frakcję: wycinek panoramy (ułamek szerokości, środek) i jego
-# nastrojenie. `sepia` — barwa, którą mnożymy odbarwione tło: ciepły papier
-# i drewno interfejsu, z nutą klimatu frakcji. `swiatlo` — barwa światła
-# kluczowego na stworze (ta sama, co w tle, żeby stwór stał w TYM świetle).
+# Jedno tło na frakcję: kwadratowy wycinek malowanego krajobrazu miasta
+# (`public/miasto/tlo-<f>.png`, 960 × 596, bez budynków) — niebo, horyzont
+# i grunt, z horyzontem mniej więcej w połowie, żeby głowa stwora stała na
+# tle nieba albo dali, a ramiona na tle ziemi. Runda 2 dawała tu mocno
+# rozmyty, odbarwiony wycinek z winietą i krytyk widział w nim „płaskie
+# plamy koloru"; teraz krajobraz zostaje krajobrazem — lekko zmiękczony
+# i ocieplony pod drewno i pergamin interfejsu.
+#   `okno`   — (lewo, góra, bok) wycinka w pikselach krajobrazu;
+#   `cieplo` — barwa lekkiego przemnożenia (ciepło papieru), `moc` — ile go;
+#   `swiatlo` — barwa światła kluczowego na stworze (ta sama, co w tle).
 FRAKCJA = {
-    'bor': {'tlo_x': 0.42, 'sepia': (255, 226, 170), 'nasycenie_tla': 0.55, 'swiatlo': (255, 232, 185)},
-    'grota': {'tlo_x': 0.50, 'sepia': (226, 206, 214), 'nasycenie_tla': 0.5, 'swiatlo': (236, 222, 236)},
-    'zbocze': {'tlo_x': 0.62, 'sepia': (255, 206, 160), 'nasycenie_tla': 0.55, 'swiatlo': (255, 216, 175)},
+    # Bór: niebo z chmurami, pasmo gór, las i skraj łąki.
+    'bor': {'okno': (470, 0, 210), 'cieplo': (255, 228, 180), 'moc': 0.5, 'swiatlo': (255, 234, 190)},
+    # Grota: sklepienie, snop księżycowego światła, jezioro i posadzka.
+    'grota': {'okno': (400, 0, 230), 'cieplo': (250, 222, 200), 'moc': 0.45, 'swiatlo': (240, 226, 236)},
+    # Zbocze: zachód słońca, wulkan, pole lawy.
+    'zbocze': {'okno': (540, 0, 220), 'cieplo': (255, 220, 180), 'moc': 0.35, 'swiatlo': (255, 216, 175)},
 }
 
 
@@ -131,69 +142,37 @@ def frakcje() -> dict[str, str]:
     return wynik
 
 
-# ————————————————————————————————————————————————— panorama
-
-# Te same stałe co w `TownScene` / `zamki.ts` — panorama portretu stoi
-# jak panorama miasta, tylko bez pierwszego planu.
-PAN_W, PAN_H = 960, 596
-HORYZONT = 0.3
-BRYLA = 0.5
-MGLA_DALI = (0xC9, 0xDC, 0xEA)
-POLOZENIE = {
-    'ratusz3': (0.5, 0.45),
-    'fort': (0.22, 0.14),
-    'siedlisko4': (0.89, 0.52),
-    'siedlisko5': (0.83, 0.2),
-    'siedlisko6': (0.36, 0.04),
-}
+# ————————————————————————————————————————————————— tło
 
 
-def panorama(frakcja: str) -> Image.Image:
-    tlo = Image.open(MIASTO / f'tlo-{frakcja}.png').convert('RGBA')
-    for nazwa in sorted(POLOZENIE, key=lambda n: POLOZENIE[n][1]):
-        plik = MIASTO / f'{frakcja}-{nazwa}.png'
-        if not plik.exists():
-            continue
-        bx, by = POLOZENIE[nazwa]
-        skala = BRYLA * (0.6 + 0.62 * by)
-        im = Image.open(plik).convert('RGBA')
-        im = im.resize((round(im.width * skala), round(im.height * skala)), Image.LANCZOS)
-        # Mgła dali: mnożenie przez biel zmieszaną z barwą mgły, jak `setTint`.
-        mg = 0.34 * (1 - by)
-        tint = tuple(round(255 * (1 - mg) + c * mg) for c in MGLA_DALI)
-        rgb = ImageChops.multiply(im.convert('RGB'), Image.new('RGB', im.size, tint))
-        im = Image.merge('RGBA', (*rgb.split(), im.getchannel('A')))
-        pas = PAN_H * (1 - HORYZONT)
-        ziemia = PAN_H * HORYZONT + pas * (0.05 + 0.62 * by)
-        tlo.alpha_composite(im, (round(bx * PAN_W - im.width / 2), round(ziemia - im.height)))
-    return tlo
+def krajobraz(frakcja: str) -> Image.Image:
+    """Malowany krajobraz miasta frakcji — bez budynków (bryły Groty i Zbocza
+    to przemalowany komplet Boru i na tle portretu wyglądały jak obcy las)."""
+    return Image.open(MIASTO / f'tlo-{frakcja}.png').convert('RGB')
 
 
-def tlo_frakcji(pan: Image.Image, f: dict, rozmiar: tuple[int, int], maly: bool) -> Image.Image:
-    """Wspólne tło frakcji: wycinek panoramy w sepii interfejsu."""
+def tlo_frakcji(kraj: Image.Image, f: dict, rozmiar: tuple[int, int], maly: bool) -> Image.Image:
+    """Wspólne tło frakcji: wycinek krajobrazu, ocieplony, światło z góry-lewa."""
     w, h = rozmiar
-    wys = 250
-    szer = wys * w / h
-    lewo = min(max(f['tlo_x'] * PAN_W - szer / 2, 0), PAN_W - szer)
-    kawal = pan.crop((round(lewo), 0, round(lewo + szer), wys)).convert('RGB')
-    kawal = kawal.resize((w, h), Image.LANCZOS)
-    # Tło jest dalekie: miękkie, żeby ostry był tylko stwór.
-    kawal = kawal.filter(ImageFilter.GaussianBlur(1.2 if not maly else 1.6))
+    lewo, gora, bok = f['okno']
+    kawal = kraj.crop((lewo, gora, lewo + bok, gora + bok)).resize((w, h), Image.LANCZOS)
+    # Dal lekko miękka — ostry ma być stwór, ale pędzel tła ma być widać.
+    kawal = kawal.filter(ImageFilter.GaussianBlur(0.5 if not maly else 0.9))
     a = np.asarray(kawal).astype(np.float32) / 255
-    # Sepia: najpierw odebrać nasycenie, potem przemnożyć barwą papieru.
+    # Ocieplenie pod drewno i pergamin: przemnożenie barwą papieru z mocą `moc`
+    # i odrobina mniej nasycenia — tło nie może krzyczeć głośniej od stwora.
+    cieplo = np.array(f['cieplo'], np.float32) / 255
+    a = a * (1 - f['moc'] + f['moc'] * cieplo)
     szar = (a * np.array([0.3, 0.55, 0.15])).sum(axis=2, keepdims=True)
-    a = szar + (a - szar) * f['nasycenie_tla']
-    a = a * np.array(f['sepia'], np.float32) / 255
-    # Winieta i przygaszenie ku dołowi: światło z góry-lewa, jak na stworze.
+    a = szar + (a - szar) * 0.85
+    # Światło z góry-lewa, jak na stworze: łagodny spadek w prawo-dół.
     yy = np.linspace(0, 1, h)[:, None, None]
     xx = np.linspace(0, 1, w)[None, :, None]
-    swiatlo = 0.9 - 0.3 * yy**1.3 - 0.16 * xx**1.5
-    rr = np.hypot(xx - 0.45, yy - 0.4)
-    swiatlo *= 1 - 0.35 * np.clip(rr - 0.35, 0, 1)
+    swiatlo = 1.0 - 0.18 * xx - 0.22 * yy**1.5
     if maly:
-        # Mały portret jak w Heroes: ciemne tło, bo przy 28 px stwór ma się
-        # od niego odcinać, a nie z nim mieszać.
-        swiatlo *= 0.66
+        # Mały portret: tło ciemniejsze, bo przy 26 px twarz ma się od niego
+        # odcinać — ale to dalej krajobraz, nie jednolita plama.
+        swiatlo *= 0.7
     return Image.fromarray((np.clip(a * swiatlo, 0, 1) * 255).astype(np.uint8), 'RGB')
 
 
@@ -291,14 +270,14 @@ def wytnij_kolo(im: Image.Image) -> Image.Image:
 # ————————————————————————————————————————————————— składanie
 
 
-def portret(sid: str, frakcja: str, pan: Image.Image, rodzaj: str) -> Image.Image:
+def portret(sid: str, frakcja: str, kraj: Image.Image, rodzaj: str) -> Image.Image:
     rozmiar = {'duzy': DUZY, 'maly': MALY, 'okragly': OKRAGLY}[rodzaj]
     szablon = 'duzy' if rodzaj == 'duzy' else 'maly'
     maly = szablon == 'maly'
     f = FRAKCJA[frakcja]
     mistrz = Image.open(MISTRZOWIE / f'{sid}.png').convert('RGBA')
     stw = w_swietle(wytnij(mistrz, kadr(sid, szablon), rozmiar), f, maly)
-    im = zloz(stw, tlo_frakcji(pan, f, rozmiar, maly), maly)
+    im = zloz(stw, tlo_frakcji(kraj, f, rozmiar, maly), maly)
     return wytnij_kolo(im) if rodzaj == 'okragly' else ramka(im)
 
 
@@ -334,7 +313,7 @@ def main():
     if args.pomiar:
         pomiar([s for s in fr if not args.ids or s in args.ids], args.pomiar)
     WYJSCIE.mkdir(parents=True, exist_ok=True)
-    panoramy = {f: panorama(f) for f in set(fr.values())}
+    panoramy = {f: krajobraz(f) for f in set(fr.values())}
     gotowe = []
     for sid, f in fr.items():
         if args.ids and sid not in args.ids:
