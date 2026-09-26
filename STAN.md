@@ -77,6 +77,36 @@ gpt-image-1 w stylu `obiekt`, razem z dwoma nowymi etapami ewolucji każdego
   i chorągiewka); bohater to nadal chudy chłopiec, nie jeździec — jeśli
   krytyk dalej chce „figury jak na koniu", następny krok to szerszy arkusz
   bohatera (OpenAI).
+- **Mapa, runda 4** (ślepe z HotA r3 1/3: „Janek wyższy niż tawerna, sięga
+  połowy wiatraka, narysowany płasko", „stwory tej wielkości, barwy i podania
+  co znajdźki obok — turkusowy smoczek przy turkusowych kryształach", „kolaż
+  naklejek bez jednej reguły skali"). Jedna reguła na wszystkich planszach
+  (widoczna sylwetka, pola): budowla ≥ 2,2 > bohater 1,9 > strażnik 1,4
+  (≤ 1,65 wszerz) > znajdźka 0,62 (skrzynia 0,65). `uklad.ts`:
+  `WYS_BOHATERA` 2,2 → 1,9, `WYS_STRAZNIKA` 1,3 → 1,4, `SZER_STRAZNIKA_MAX`
+  1,6 → 1,65, `PROPORZEC` mniejszy (0,4 / 0,8 / 0,45). Znajdźki: wielkość
+  już nie z `USTAWIENIA.znajdzki` (było 0,39 Bagna / 0,6 Polana / 0,63
+  Twierdza), tylko `ZNAJDZKI_NA_MAPIE.wys` 0,62 i `szerMax` 0,95
+  (`wysZnajdzki`); `znajdzki` planszy decyduje już tylko o rysunku stosu.
+  Wyciszenie łupu: nasycenie 0,55, kontrast ×0,82 ku średniej, jasność ×0,94,
+  obrys `obrysObiektow` ×0,35; łup do 3 pól od strażnika o bliskiej barwie
+  (`barwyRysunku` — odcienie ≥12% nasyconych pikseli, różnica ≤ 42°) gaśnie
+  do nasycenia 0,3 i jasności ×0,83 (turkusowy kryształ przy smoczku robi
+  się szaroniebieski, fioletowy przy kwiatowym stworze — szaroliliowy).
+  Rozsuwanie w generatorze niepotrzebne. Strażnik: ciemna „podstawka" pod
+  stopami (`STWORKI_NA_MAPIE.podstawka` 0,42, zwarta plama `CIEN_KONTAKTOWY`
+  w barwie 0x0e0904) + cień rzucany; światło mocniejsze (nasycenie 0,95,
+  światło 0,2, krawędź 0,24). Bohater: arkusz `bohater-mapa`
+  (`teksturaBohateraNaMape`, wspólny `oswietlObszar` ze strażnikami, bez
+  erozji — kreska arkusza to rysunek), światło z lewej-góry 0,16, podcień
+  0,2, krawędź 0,26 (`BOHATER_NA_MAPIE`); ciemny obrys z 4 kopii zdjęty
+  (`obrys` 0), pierścień węższy (1,15 pola). Animacje `chod-*` z nowego
+  arkusza, portret w HUD-zie z oryginału. Polana: `skalaBudowli` 0,8 → 1,0
+  (wiatrak miał 1,76 pola, niżej niż bohater; `tools/mapy/polana.py`
+  i `plansza-teren-polana.ts`). OpenAI $0. Zrzuty
+  `tools/blind/stworki-mapa-r4*.png`. Do sprawdzenia: bohater przy 1,9 jest
+  chudy — strażnik szerokością bywa „cięższy"; wyróżnia go proporzec
+  i pierścień.
 
 ## Plansze kampanii: Polana, Bagna, Twierdza (2026-09-24)
 

@@ -556,7 +556,9 @@ USTAWIENIA = {
     'obrysObiektow': 0.35,
     # Runda 6 (HotA): „zamek, młyn i most zajmują po kilka kafli". Budowle
     # odwiedzane stoją na jednym polu, więc mniejszy rysunek niczego nie psuje.
-    'skalaBudowli': 0.8,
+    # Stworki runda 4 („kolaż naklejek, a nie mapa z jedną regułą skali"):
+    # bohater 1,9 pola ma być niższy od budowli — wiatrak przy 0,8 miał 1,76.
+    'skalaBudowli': 1.0,
     # Runda 6: rogi pierwszego kadru (21 × 18 pól po oddaleniu kamery)
     # odsłonięte od startu — czarne zęby mgły w rogach ekranu wyglądały jak
     # dziura w mapie. Tylko rogi: sonda pilnuje, żeby na starcie było

@@ -85,6 +85,7 @@ import {
   RAMA_MAPY_H,
   RAMA_MAPY_W,
   STWORKI_NA_MAPIE,
+  BOHATER_NA_MAPIE,
   SZER_STRAZNIKA_MAX,
   WYS_BOHATERA,
   WYS_STRAZNIKA,
@@ -154,6 +155,8 @@ const KLATKI_PROPORCA = 4;
 /** Arkusz bohatera: 4 kierunki (wiersze) × 4 klatki chodu (kolumny). */
 const BOHATER_KLATKA = 96;
 const KIERUNEK_WIERSZ = { dol: 0, lewo: 1, prawo: 2, gora: 3 } as const;
+/** Arkusz bohatera w świetle planszy — `teksturaBohateraNaMape`. */
+const BOHATER_MAPA = 'bohater-mapa';
 type Kierunek = keyof typeof KIERUNEK_WIERSZ;
 
 /**
@@ -274,6 +277,8 @@ export class AdventureScene extends Phaser.Scene {
   private proporzecOrigin = { x: 0, y: 1 };
   /** Kopie klatki bohatera jako ciemny obrys — `rysujBohatera`. */
   private obrysBohatera: Phaser.GameObjects.Sprite[] = [];
+  /** Wyraźne barwy rysunków — `barwyRysunku`. */
+  private barwyRysunkow = new Map<string, number[]>();
 
   private trasaBiezaca: Krok[] | null = null;
   /**
@@ -774,36 +779,63 @@ export class AdventureScene extends Phaser.Scene {
     const d = obraz.data;
     const a0 = new Uint8Array(W * H);
     for (let i = 0; i < a0.length; i++) a0[i] = d[i * 4 + 3];
-    const alfa = (x: number, y: number) => (x < 0 || y < 0 || x >= W || y >= H ? 0 : a0[y * W + x]);
+    if (!this.oswietlObszar(d, a0, W, { x: 0, y: 0, w: W, h: H }, ust, grunt, Math.max(2, Math.round((W / 128) * 3))))
+      return klucz;
+    t.getContext().putImageData(obraz, 0, 0);
+    t.refresh();
+    return nowy;
+  }
+
+  /**
+   * Piksele sylwetki w obszarze `r0` płótna (`d` — RGBA, `a0` — alfa sprzed
+   * zmian, `W` — szerokość płótna) w świetle planszy: erozja obwódki o piksel,
+   * nasycenie, barwa gruntu (gdy jest `grunt`), światło z lewej-góry,
+   * podcień przy ziemi i ciemny brzeg od strony cienia (`kr` — grubość
+   * brzegu w pikselach pliku). Wspólne dla strażników (cały plik) i bohatera
+   * (każda klatka arkusza osobno). `false` — w obszarze nic nie widać.
+   */
+  private oswietlObszar(
+    d: Uint8ClampedArray,
+    a0: Uint8Array,
+    W: number,
+    r0: { x: number; y: number; w: number; h: number },
+    ust: { nasycenie: number; swiatlo: number; podcien: number; krawedz: number; paleta: number; otoczenie: number },
+    grunt: [number, number, number] | null,
+    kr: number,
+    erozja = true
+  ): boolean {
+    // Poza obszarem (sąsiednia klatka arkusza) liczy się jak przezroczyste.
+    const alfa = (x: number, y: number) =>
+      x < r0.x || y < r0.y || x >= r0.x + r0.w || y >= r0.y + r0.h ? 0 : a0[y * W + x];
     // Ramka widocznej sylwetki — do gradientu światła.
     let minX = W;
     let maxX = -1;
-    let minY = H;
+    let minY = r0.y + r0.h;
     let maxY = -1;
-    for (let yy = 0; yy < H; yy++)
-      for (let xx = 0; xx < W; xx++)
+    for (let yy = r0.y; yy < r0.y + r0.h; yy++)
+      for (let xx = r0.x; xx < r0.x + r0.w; xx++)
         if (a0[yy * W + xx] > 40) {
           if (xx < minX) minX = xx;
           if (xx > maxX) maxX = xx;
           if (yy < minY) minY = yy;
           if (yy > maxY) maxY = yy;
         }
-    if (maxX < 0) return klucz;
+    if (maxX < 0) return false;
     const bw = Math.max(1, maxX - minX);
     const bh = Math.max(1, maxY - minY);
     // Chroma gruntu (barwa podzielona przez jasność), przycięta — na śniegu
     // stworek sinieje, w trawie zielenieje, ale nie zmienia gatunku.
-    const [gr, gg, gb] = grunt;
+    // Bez gruntu (bohater) — bez barwy miejsca i bez przebijania tła.
+    const [gr, gg, gb] = grunt ?? [128, 128, 128];
     const gl = Math.max(1, 0.299 * gr + 0.587 * gg + 0.114 * gb);
-    const chroma = [gr, gg, gb].map((v) => 1 + (Phaser.Math.Clamp(v / gl, 0.6, 1.45) - 1) * ust.paleta);
-    const kr = Math.max(2, Math.round((W / 128) * 3));
-    for (let yy = 0; yy < H; yy++)
-      for (let xx = 0; xx < W; xx++) {
+    const chroma = [gr, gg, gb].map((v) => 1 + (Phaser.Math.Clamp(v / gl, 0.6, 1.45) - 1) * (grunt ? ust.paleta : 0));
+    for (let yy = r0.y; yy < r0.y + r0.h; yy++)
+      for (let xx = r0.x; xx < r0.x + r0.w; xx++) {
         const i = yy * W + xx;
         const a = a0[i];
         if (!a) continue;
         // 1. Erozja o piksel: brzeg obwódki znika, sylwetka zostaje.
-        const ae = Math.min(a, alfa(xx - 1, yy), alfa(xx + 1, yy), alfa(xx, yy - 1), alfa(xx, yy + 1));
+        const ae = erozja ? Math.min(a, alfa(xx - 1, yy), alfa(xx + 1, yy), alfa(xx, yy - 1), alfa(xx, yy + 1)) : a;
         d[i * 4 + 3] = ae;
         if (!ae) continue;
         let r = d[i * 4];
@@ -822,34 +854,36 @@ export class AdventureScene extends Phaser.Scene {
         const u = (xx - minX) / bw;
         const v = (yy - minY) / bh;
         let f = 1 + ust.swiatlo * (1 - 2 * (0.45 * u + 0.55 * v));
-        const p = Phaser.Math.Clamp((v - 0.62) / 0.38, 0, 1);
-        f *= 1 - ust.podcien * p * p;
+        const pc = Phaser.Math.Clamp((v - 0.62) / 0.38, 0, 1);
+        f *= 1 - ust.podcien * pc * pc;
         if (alfa(xx + kr, yy + kr) < 60) f *= 1 - ust.krawedz;
         else if (alfa(xx + 2 * kr, yy + 2 * kr) < 60) f *= 1 - ust.krawedz * 0.45;
         else if (alfa(xx - kr, yy - kr) < 60) f *= 1 + ust.krawedz * 0.3;
         r *= f;
         g *= f;
         b *= f;
-        const o = ust.otoczenie;
+        const o = grunt ? ust.otoczenie : 0;
         d[i * 4] = Phaser.Math.Clamp(r * (1 - o) + gr * o, 0, 255);
         d[i * 4 + 1] = Phaser.Math.Clamp(g * (1 - o) + gg * o, 0, 255);
         d[i * 4 + 2] = Phaser.Math.Clamp(b * (1 - o) + gb * o, 0, 255);
       }
-    t.getContext().putImageData(obraz, 0, 0);
-    t.refresh();
-    return nowy;
+    return true;
   }
 
   /**
-   * Znajdźka (stos, skrzynia, artefakt) w przygaszonych barwach
-   * (`ZNAJDZKI_NA_MAPIE.nasycenie`) — stworki runda 3: „niebieski smoczek
-   * przy niebieskich kryształach ma tę samą wagę". Tekstura osobna, bo te
-   * same pliki idą na pasek surowców i do okien.
+   * Znajdźka (stos, skrzynia, artefakt) wyciszona (`ZNAJDZKI_NA_MAPIE`):
+   * niższe nasycenie, ściśnięta jasność i trochę ciemniej — stworki runda 3
+   * i 4: „turkusowe smoczki przy turkusowych kryształach mają tę samą wagę".
+   * `przyStrazniku` — gaśnie mocniej, bo obok stoi strażnik podobnej barwy.
+   * Tekstura osobna, bo te same pliki idą na pasek surowców i do okien.
    */
-  private teksturaZnajdzkiNaMape(klucz: string): string {
-    const nas = { ...ZNAJDZKI_NA_MAPIE, ...planszaPoId(this.stan.mapa).modul.USTAWIENIA?.znajdzkiNaMapie }.nasycenie;
-    if (nas >= 1) return klucz;
-    const nowy = `pz-${klucz}-${nas}`;
+  private teksturaZnajdzkiNaMape(klucz: string, przyStrazniku = false): string {
+    const zn = { ...ZNAJDZKI_NA_MAPIE, ...planszaPoId(this.stan.mapa).modul.USTAWIENIA?.znajdzkiNaMapie };
+    const nas = przyStrazniku ? zn.przyStrazniku.nasycenie : zn.nasycenie;
+    const jas = (przyStrazniku ? zn.przyStrazniku.jasnosc : 1) * zn.jasnosc;
+    const kon = zn.kontrast;
+    if (nas >= 1 && jas >= 1 && kon >= 1) return klucz;
+    const nowy = `pz-${klucz}-${nas}-${jas.toFixed(3)}-${kon}`;
     if (this.textures.exists(nowy)) return nowy;
     const zrodlo = this.textures.get(klucz)?.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
     if (!zrodlo?.width) return klucz;
@@ -859,14 +893,56 @@ export class AdventureScene extends Phaser.Scene {
     ctx.drawImage(zrodlo, 0, 0);
     const obraz = ctx.getImageData(0, 0, zrodlo.width, zrodlo.height);
     const d = obraz.data;
+    // Średnia jasność rysunku — ku niej ściska się kontrast.
+    let suma = 0;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4)
+      if (d[i + 3] > 40) {
+        suma += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        n++;
+      }
+    const srednia = n ? suma / n : 128;
     for (let i = 0; i < d.length; i += 4) {
       if (!d[i + 3]) continue;
       const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-      for (let k = 0; k < 3; k++) d[i + k] = lum + (d[i + k] - lum) * nas;
+      const lumK = srednia + (lum - srednia) * kon;
+      for (let k = 0; k < 3; k++) d[i + k] = Phaser.Math.Clamp((lumK + (d[i + k] - lum) * nas) * jas, 0, 255);
     }
     ctx.putImageData(obraz, 0, 0);
     t.refresh();
     return nowy;
+  }
+
+  /**
+   * Wyraźne barwy rysunku: odcienie (stopnie, środki przedziałów po 30°),
+   * które zajmują co najmniej 12% nasyconych pikseli — strażnik
+   * bywa dwubarwny (zielony z fioletowym kwiatem), więc średnia by kłamała.
+   * Do rozsuwania barw strażnika i łupu obok niego (`rysujObiekty`).
+   */
+  private barwyRysunku(klucz: string): number[] {
+    const znane = this.barwyRysunkow.get(klucz);
+    if (znane) return znane;
+    const kosze = new Array(12).fill(0);
+    let suma = 0;
+    const zrodlo = this.textures.get(klucz)?.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
+    const p = document.createElement('canvas');
+    p.width = 40;
+    p.height = 40;
+    const ctx = p.getContext('2d', { willReadFrequently: true });
+    if (zrodlo?.width && ctx) {
+      ctx.drawImage(zrodlo, 0, 0, 40, 40);
+      const d = ctx.getImageData(0, 0, 40, 40).data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i + 3] < 128) continue;
+        const c = Phaser.Display.Color.RGBToHSV(d[i], d[i + 1], d[i + 2]);
+        if (c.v < 0.2 || c.s < 0.3) continue;
+        kosze[Math.floor(c.h * 12) % 12] += c.s;
+        suma += c.s;
+      }
+    }
+    const wynik = suma > 4 ? kosze.flatMap((k, i) => (k / suma >= 0.12 ? [i * 30 + 15] : [])) : [];
+    this.barwyRysunkow.set(klucz, wynik);
+    return wynik;
   }
 
   /**
@@ -915,12 +991,53 @@ export class AdventureScene extends Phaser.Scene {
     return wynik;
   }
 
+  /**
+   * Arkusz bohatera NA MAPĘ (`BOHATER_MAPA`): każda klatka w świetle planszy
+   * jak strażnicy (`oswietlObszar`, parametry `BOHATER_NA_MAPIE`) — stworki
+   * runda 4: „Janek narysowany płasko, jak postać z innej gry". Klatki mają
+   * te same numery co `bohater`, więc animacje, `setFrame` i cień rzucany
+   * (liczony z oryginału) się nie zmieniają. Portret w HUD-zie bierze
+   * oryginał.
+   */
+  private teksturaBohateraNaMape(): string {
+    if (this.textures.exists(BOHATER_MAPA)) return BOHATER_MAPA;
+    const zrodlo = this.textures.get('bohater')?.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
+    if (!zrodlo?.width) return 'bohater';
+    const W = zrodlo.width;
+    const H = zrodlo.height;
+    const plotno = document.createElement('canvas');
+    plotno.width = W;
+    plotno.height = H;
+    const ctx = plotno.getContext('2d', { willReadFrequently: true });
+    const t = this.textures.createCanvas(BOHATER_MAPA, W, H);
+    if (!ctx || !t) return 'bohater';
+    ctx.drawImage(zrodlo, 0, 0);
+    const obraz = ctx.getImageData(0, 0, W, H);
+    const d = obraz.data;
+    const a0 = new Uint8Array(W * H);
+    for (let i = 0; i < a0.length; i++) a0[i] = d[i * 4 + 3];
+    const ust = { ...BOHATER_NA_MAPIE, paleta: 0, otoczenie: 0 };
+    const K = BOHATER_KLATKA;
+    let nr = 0;
+    for (let ky = 0; ky + K <= H; ky += K)
+      for (let kx = 0; kx + K <= W; kx += K) {
+        // Bez erozji: kreska arkusza bohatera to rysunek (oczy, dłonie), nie
+        // doklejona obwódka — bez niej Janek się rozmywał.
+        this.oswietlObszar(d, a0, W, { x: kx, y: ky, w: K, h: K }, ust, null, 2, false);
+        t.add(nr++, 0, kx, ky, K, K);
+      }
+    t.getContext().putImageData(obraz, 0, 0);
+    t.refresh();
+    return BOHATER_MAPA;
+  }
+
   private przygotujAnimacje() {
+    const arkusz = this.teksturaBohateraNaMape();
     for (const [nazwa, wiersz] of Object.entries(KIERUNEK_WIERSZ)) {
       if (this.anims.exists(`chod-${nazwa}`)) continue;
       this.anims.create({
         key: `chod-${nazwa}`,
-        frames: this.anims.generateFrameNumbers('bohater', {
+        frames: this.anims.generateFrameNumbers(arkusz, {
           start: wiersz * 4,
           end: wiersz * 4 + 3,
         }),
@@ -1729,14 +1846,14 @@ export class AdventureScene extends Phaser.Scene {
     if (o.rodzaj === 'namiot')
       return { klucz: `m-namiot-klucznika-${o.klucz ?? 'zielony'}`, wys: KAFEL * 1.15 };
     if (o.rodzaj === 'jasnowidz') return { klucz: 'm-chata-jasnowidza', wys: KAFEL * 1.35 };
-    // Znajdźki per plansza (`USTAWIENIA.znajdzki`): mniejsze, a stos surowca
-    // z zestawu klimatu (`m-stos-<ikona>`) zamiast ikony z paska surowców.
-    // Stworki runda 3: znajdźka o `ZNAJDZKI_NA_MAPIE.skala` mniejsza — obok
-    // strażnika ma być drobiazgiem, nie drugą figurą.
-    const zs = { ...ZNAJDZKI_NA_MAPIE, ...planszaPoId(this.stan.mapa).modul.USTAWIENIA?.znajdzkiNaMapie }.skala;
+    // Znajdźki: stos surowca z zestawu klimatu (`m-stos-<ikona>`, gdy plansza
+    // ma `USTAWIENIA.znajdzki`) zamiast ikony z paska surowców. Stworki
+    // runda 4: jedna WIDOCZNA wysokość łupu na wszystkie plansze
+    // (`ZNAJDZKI_NA_MAPIE.wys`), przycięta szerokością — obok strażnika ma
+    // być drobiazgiem przy gruncie, nie drugą figurą.
     const znajdzki = this.znajdzki();
-    if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: KAFEL * zs * (znajdzki ? znajdzki * 1.1 : 0.78) };
-    if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: KAFEL * zs * (znajdzki ?? 0.72) };
+    if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: this.wysZnajdzki('m-skrzynia', 1.05) };
+    if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: this.wysZnajdzki('m-kamien-ewolucji') };
     if (o.rodzaj === 'potwor') {
       // Strażnik ma mieć `WYS_STRAZNIKA` pola WIDOCZNEJ sylwetki, nie pliku:
       // stworki mają różny przezroczysty margines, a przy jednej wysokości
@@ -1757,9 +1874,23 @@ export class AdventureScene extends Phaser.Scene {
       return { klucz, wys: KAFEL * wys };
     }
     const ikona = SUROWIEC_INFO[o.surowiec ?? 'pokeball'].ikona;
-    if (znajdzki && this.textures.exists(`m-stos-${ikona}`))
-      return { klucz: `m-stos-${ikona}`, wys: KAFEL * zs * znajdzki };
-    return { klucz: `m-${ikona}`, wys: KAFEL * zs * (znajdzki ?? 0.7) };
+    const klucz = znajdzki && this.textures.exists(`m-stos-${ikona}`) ? `m-stos-${ikona}` : `m-${ikona}`;
+    return { klucz, wys: this.wysZnajdzki(klucz) };
+  }
+
+  /**
+   * Wysokość PLIKU znajdźki (piksele świata), przy której widoczna sylwetka
+   * ma `ZNAJDZKI_NA_MAPIE.wys` pola (× `mnoznik`) i najwyżej `szerMax` wszerz.
+   */
+  private wysZnajdzki(klucz: string, mnoznik = 1): number {
+    const zn = { ...ZNAJDZKI_NA_MAPIE, ...planszaPoId(this.stan.mapa).modul.USTAWIENIA?.znajdzkiNaMapie };
+    const p = this.podstawaRysunku(klucz);
+    const zrodlo = this.textures.get(klucz).getSourceImage() as { width: number; height: number };
+    const proporcja = (zrodlo.width || 1) / (zrodlo.height || 1);
+    return (
+      KAFEL *
+      Math.min((zn.wys * mnoznik) / (p.widocznaWys ?? 1), (zn.szerMax * mnoznik) / ((p.widocznaSzer ?? 1) * proporcja))
+    );
   }
 
   /** `USTAWIENIA.znajdzki` bieżącej planszy (patrz `UstawieniaPlanszy`). */
@@ -1768,6 +1899,25 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   private rysujObiekty() {
+    // Strażnicy z główną barwą rysunku — łup tej samej barwy obok nich gaśnie
+    // mocniej (`ZNAJDZKI_NA_MAPIE.przyStrazniku`, stworki runda 4).
+    const zn = { ...ZNAJDZKI_NA_MAPIE, ...planszaPoId(this.stan.mapa).modul.USTAWIENIA?.znajdzkiNaMapie };
+    const straz = this.stan.obiekty
+      .filter((o) => o.rodzaj === 'potwor' && !o.zebrany)
+      .map((o) => ({ x: o.x, y: o.y, barwy: this.barwyRysunku(this.grafikaObiektu(o).klucz) }));
+    const przyStrazniku = (o: Obiekt, klucz: string) => {
+      const barwy = this.barwyRysunku(klucz);
+      return straz.some(
+        (g) =>
+          Math.hypot(g.x - o.x, g.y - o.y) <= zn.przyStrazniku.pola &&
+          g.barwy.some((h) =>
+            barwy.some((b) => {
+              const r = Math.abs(h - b) % 360;
+              return Math.min(r, 360 - r) <= zn.przyStrazniku.roznica;
+            })
+          )
+      );
+    };
     for (const o of this.stan.obiekty) {
       if (o.zebrany) continue;
       const { x, y } = this.naEkran(o.x, o.y);
@@ -1822,6 +1972,27 @@ export class AdventureScene extends Phaser.Scene {
       if (o.rodzaj === 'potwor') {
         const rzut = this.cienRzucany(klucz, wys / this.textures.get(klucz).getSourceImage().height, 0, spod);
         if (rzut) kont.add(rzut);
+        // Podstawka (stworki runda 4: „brak podstawki / znacznika strażnika"):
+        // zwarta, ciemna plama gruntu wprost pod stopami — jednostka stoi
+        // ciężko, łup obok leży lekko. Bez jasnej obwódki (to byłaby naklejka).
+        const podst = { ...STWORKI_NA_MAPIE, ...planszaPoId(this.stan.mapa).modul.USTAWIENIA?.stworkiNaMapie }.podstawka;
+        if (podst > 0) {
+          const zr = this.textures.get(klucz).getSourceImage() as { width: number; height: number };
+          const sk = wys / (zr.height || 1);
+          const pr = this.podstawaRysunku(klucz);
+          const szerP = Math.max((pr.prawo - pr.lewo) * zr.width * sk * 1.05, KAFEL * 0.55);
+          const srodekP = ((pr.lewo + pr.prawo) / 2 - 0.5) * zr.width * sk;
+          kont.add(
+            this.naSniegu(
+              this.add
+                .image(srodekP + szerP * 0.05, spod + 1, CIEN_KONTAKTOWY)
+                .setDisplaySize(szerP, szerP * 0.3)
+                .setTint(0x0e0904)
+                .setTintMode(Phaser.TintModes.FILL)
+                .setAlpha(podst)
+            )
+          );
+        }
       }
       // Wejście do budowli z bryłą (zamek, kopalnia) nie ma żadnego
       // odrębnego oznaczenia na gruncie — z daleka wygląda jak zwykła
@@ -1863,7 +2034,7 @@ export class AdventureScene extends Phaser.Scene {
         o.rodzaj === 'potwor'
           ? this.teksturaStworkaNaMape(klucz, kont.x, kont.y + spod)
           : znajdzka
-            ? this.teksturaZnajdzkiNaMape(klucz)
+            ? this.teksturaZnajdzkiNaMape(klucz, przyStrazniku(o, klucz))
             : klucz;
       const im = this.add
         .image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, kluczRys)
@@ -1874,7 +2045,8 @@ export class AdventureScene extends Phaser.Scene {
       // Bagna, runda 6: „obiekty interaktywne zlewają się z dekoracją — bez
       // konturu i kontrastu". Drzewa i skały obrysu nie mają, więc to, co
       // da się podnieść albo odwiedzić, odcina się od tła. Stworki bez obrysu.
-      const obrys = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.obrysObiektow;
+      // Łup ma obrys słabszy (`ZNAJDZKI_NA_MAPIE.obrys`, stworki runda 4).
+      const obrys = (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.obrysObiektow ?? 0) * (znajdzka ? zn.obrys : 1);
       if (obrys && o.rodzaj !== 'potwor') {
         const d = 2.5;
         for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]]) {
@@ -2116,25 +2288,31 @@ export class AdventureScene extends Phaser.Scene {
     // Ciemny obrys: cztery kopie bieżącej klatki przesunięte o piksel świata
     // (tak jak `obrysObiektow` przy budowlach) — sylwetka odcina się od
     // zamku i drogi. Klatkę kopiują za postacią (`update`).
-    this.obrysBohatera = [
-      [-1.5, 0],
-      [1.5, 0],
-      [0, -1.5],
-      [0, 1.5],
-    ].map(([ox, oy]) =>
+    // Stworki runda 4: twarda ciemna linia robiła z Janka naklejkę — krycie
+    // `BOHATER_NA_MAPIE.obrys` (0 = bez obrysu, sylwetkę niesie światło).
+    const arkusz = this.teksturaBohateraNaMape();
+    this.obrysBohatera = (BOHATER_NA_MAPIE.obrys > 0
+      ? [
+          [-1.5, 0],
+          [1.5, 0],
+          [0, -1.5],
+          [0, 1.5],
+        ]
+      : []
+    ).map(([ox, oy]) =>
       this.add
-        .sprite(ox, s.kotwica + oy, 'bohater', 0)
+        .sprite(ox, s.kotwica + oy, arkusz, 0)
         .setOrigin(0.5, 1)
         .setScale(s.skala)
         .setTint(0x1c1408)
         .setTintMode(Phaser.TintModes.FILL)
-        .setAlpha(0.6)
+        .setAlpha(BOHATER_NA_MAPIE.obrys)
     );
     for (const o of this.obrysBohatera) this.bohaterObj.add(o);
 
     // Punkt zaczepienia to dół KLATKI, a stopy stoją nad nim o przezroczysty
     // margines — schodzimy o niego, żeby na `stopy` stały same stopy.
-    this.bohaterSprite = this.add.sprite(0, s.kotwica, 'bohater', 0).setOrigin(0.5, 1).setScale(s.skala);
+    this.bohaterSprite = this.add.sprite(0, s.kotwica, arkusz, 0).setOrigin(0.5, 1).setScale(s.skala);
     this.bohaterObj.add(this.bohaterSprite);
     this.swiat.add(this.bohaterObj);
   }
@@ -2305,8 +2483,9 @@ export class AdventureScene extends Phaser.Scene {
     }
 
     if (!this.textures.exists('t-podstawa-bohatera')) {
-      const w = KAFEL * 1.3;
-      const h = KAFEL * 0.5;
+      // Stworki runda 4: bohater 1,8 pola — pierścień węższy za nim.
+      const w = KAFEL * 1.15;
+      const h = KAFEL * 0.44;
       const t = this.textures.createCanvas('t-podstawa-bohatera', Math.ceil((w + 6) * R), Math.ceil((h + 6) * R));
       if (!t) return;
       const ctx = t.getContext();
