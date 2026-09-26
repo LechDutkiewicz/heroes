@@ -147,14 +147,14 @@ function nagraj({ akcja, stwor }) {
     };
     koniecAkcji = () => wypuscil && spokoj(sub.view);
   } else {
-    // Chód: dwa pola; lot: trzy pola. Kadr jedzie za stworkiem w poziomie,
+    // Chód i lot: po trzy pola (pełny cykl chodu: rozkrok A, przejście, rozkrok B). Kadr jedzie za stworkiem w poziomie,
     // w pionie stoi — podskok i wznoszenie mają być widać względem ziemi.
     postaw(wrog, 9, 0);
     sledz = true;
     let doszedl = false;
     start = () => {
       zero = krok;
-      scene.performMove(sub, { col: sub.col + (akcja === 'lot' ? 3 : 2), row }, () => {
+      scene.performMove(sub, { col: sub.col + 3, row }, () => {
         doszedl = true;
       });
     };

@@ -903,8 +903,8 @@ export function setUnitActive(scene: Phaser.Scene, view: UnitView, active: boole
 // (środek dołu), a odbicie wroga (`flipX`) działa bez przeliczeń. Brak pliku
 // pozy nie jest błędem — stworek zostaje wtedy przy obrazku „stoi".
 
-export type PoseName = 'zamach' | 'atak' | 'trafiony' | 'krok' | 'krok2' | 'lot' | 'lot2';
-export const POSES: PoseName[] = ['zamach', 'atak', 'trafiony', 'krok', 'krok2', 'lot', 'lot2'];
+export type PoseName = 'zamach' | 'atak' | 'trafiony' | 'krok' | 'krok2' | 'lot' | 'lot2' | 'lot3';
+export const POSES: PoseName[] = ['zamach', 'atak', 'trafiony', 'krok', 'krok2', 'lot', 'lot2', 'lot3'];
 export const poseKey = (sprite: string, pose: PoseName) => `poza-${sprite}-${pose}`;
 
 /** Strona, w którą stworek patrzy: gracz w prawo, wróg (odbity) w lewo. */
@@ -919,7 +919,7 @@ export function setPose(view: UnitView, pose: PoseName | null) {
   if (!alive(view)) return;
   const has = (p: PoseName) => view.sprite.scene.textures.exists(poseKey(view.restKey, p));
   let use: PoseName | null = pose;
-  if (use && !has(use)) use = use === 'krok2' ? 'krok' : use === 'lot2' ? 'lot' : use === 'lot' ? 'krok' : null;
+  if (use && !has(use)) use = use === 'krok2' ? 'krok' : use === 'lot3' ? 'lot' : use === 'lot2' ? 'lot' : use === 'lot' ? 'krok' : null;
   if (use && !has(use)) use = null;
   view.pose = use;
   const key = use ? poseKey(view.restKey, use) : view.restKey;
@@ -1099,16 +1099,16 @@ export function playHitPose(scene: Phaser.Scene, view: UnitView, fromDirX: numbe
 // i animacja zapada się po szczycie.
 
 /** Chód: uniesienie w połowie kroku (px), kołysanie na boki (°), pochylenie (°). */
-const STEP_LIFT = 2;
+const STEP_LIFT = 2.5;
 const WADDLE = 5;
 const WALK_LEAN = 4;
 /** Ugięcie przy zetknięciu. */
 const STEP_SQUASH = 0.08;
-/** Latacz: wysokość przelotu nad linią stóp, amplituda łuku, przechył, pół okresu łuku. */
+/** Latacz: wysokość przelotu nad linią stóp i przechył w stronę lotu. */
 const FLY_RISE = 22;
-const FLY_BOB = 3.5;
 const FLY_TILT = 10;
-const FLY_HALF = 120;
+/** Jedna klatka trzepotu (ms); pełne uderzenie to cztery: góra, środek, dół, środek. */
+const FLAP_FRAME = 75;
 /** Wyciągnięcie latacza w poziomie na czas lotu. */
 const FLY_SX = 1.1;
 const FLY_SY = 0.94;
@@ -1136,6 +1136,44 @@ function resetMoveTweens(view: UnitView) {
   clearGait(view);
 }
 
+/**
+ * Pętla trzepotu: góra → środek → dół → środek, klatka co `FLAP_FRAME`.
+ * Z `bob` ciało idzie w górę na uderzeniu w dół (środek → dół) i opada na
+ * podnoszeniu skrzydeł — wyciągnięte u góry, ściśnięte u dołu. Bez `bob`
+ * (lądowanie) wysokością rządzi kto inny, a pętla daje same klatki.
+ */
+function startFlap(scene: Phaser.Scene, view: UnitView, bob: boolean) {
+  const cykl: PoseName[] = ['lot', 'lot3', 'lot2', 'lot3'];
+  let faza = 0;
+  setPose(view, cykl[0]);
+  const lift = view.silH * 0.08;
+  const ruch = (gora: boolean) => {
+    if (!bob || !alive(view)) return;
+    view.moveHop?.remove();
+    view.moveHop = scene.tweens.add({
+      targets: view.sprite,
+      y: FEET_Y - FLY_RISE - (gora ? lift : 0),
+      scaleX: view.baseScaleX * FLY_SX * (gora ? 0.97 : 1.04),
+      scaleY: view.baseScaleY * FLY_SY * (gora ? 1.05 : 0.95),
+      duration: FLAP_FRAME * 2,
+      ease: gora ? 'Quad.easeOut' : 'Sine.easeInOut',
+    });
+  };
+  view.gait.push(
+    scene.time.addEvent({
+      delay: FLAP_FRAME,
+      loop: true,
+      callback: () => {
+        faza = (faza + 1) % 4;
+        setPose(view, cykl[faza]);
+        // Faza 1 zaczyna uderzenie w dół (unosi), faza 3 — podnoszenie (opada).
+        if (faza === 1) ruch(true);
+        else if (faza === 3) ruch(false);
+      },
+    })
+  );
+}
+
 /** Przygotowanie do przejścia: gasimy oddech, żeby nie walczył o `y` sylwetki. */
 export function beginUnitMove(scene: Phaser.Scene, view: UnitView, flying: boolean) {
   if (!alive(view)) return;
@@ -1149,42 +1187,39 @@ export function beginUnitMove(scene: Phaser.Scene, view: UnitView, flying: boole
 
   if (!flying) return;
 
-  // Oderwanie: przysiad na starcie (klatka zamachu), potem wybicie w górę
-  // z wyciągnięciem w poziomie i klatką skrzydła w dole.
-  setPose(view, 'lot2');
-  const rise = scene.tweens.add({
+  // Wyczekanie: krótki przysiad (klatka zamachu), potem wybicie w górę
+  // z pchnięciem skrzydeł w dół i dopiero wtedy pętla trzepotu.
+  setPose(view, 'zamach');
+  view.moveSquash = scene.tweens.add({
     targets: view.sprite,
-    y: FEET_Y - FLY_RISE,
-    duration: 170,
-    ease: 'Quad.easeOut',
+    scaleX: view.baseScaleX * 1.12,
+    scaleY: view.baseScaleY * 0.84,
+    duration: 80,
+    ease: 'Sine.easeOut',
     onComplete: () => {
-      if (!alive(view) || view.moveHop !== rise) return;
-      // Łuk góra–dół. Klatka skrzydła zmienia się na obu krańcach: na górze
-      // skrzydła idą w górę (wyciągnięty), na dole biją w dół — i to bicie
-      // unosi stwora w następnej połowie.
-      setPose(view, 'lot');
-      view.moveHop = scene.tweens.add({
+      if (!alive(view)) return;
+      setPose(view, 'lot2');
+      view.moveSquash = scene.tweens.add({
         targets: view.sprite,
-        y: { from: FEET_Y - FLY_RISE - FLY_BOB, to: FEET_Y - FLY_RISE + FLY_BOB },
-        scaleX: { from: view.baseScaleX * FLY_SX * 0.96, to: view.baseScaleX * FLY_SX * 1.05 },
-        scaleY: { from: view.baseScaleY * FLY_SY * 1.06, to: view.baseScaleY * FLY_SY * 0.95 },
-        duration: FLY_HALF,
-        ease: E.soft,
-        yoyo: true,
-        repeat: -1,
-        onYoyo: () => setPose(view, 'lot2'),
-        onRepeat: () => setPose(view, 'lot'),
+        scaleX: view.baseScaleX * FLY_SX,
+        scaleY: view.baseScaleY * FLY_SY,
+        duration: 160,
+        ease: 'Quad.easeOut',
       });
     },
   });
-  view.moveHop = rise;
-  view.moveSquash = scene.tweens.add({
+  const rise = scene.tweens.add({
     targets: view.sprite,
-    scaleX: { from: view.baseScaleX * 1.1, to: view.baseScaleX * FLY_SX },
-    scaleY: { from: view.baseScaleY * 0.86, to: view.baseScaleY * FLY_SY * 1.06 },
-    duration: 170,
+    y: FEET_Y - FLY_RISE,
+    delay: 80,
+    duration: 160,
     ease: 'Quad.easeOut',
+    onComplete: () => {
+      if (!alive(view) || view.moveHop !== rise) return;
+      startFlap(scene, view, true);
+    },
   });
+  view.moveHop = rise;
 
   // Cień zostaje na ziemi: maleje i blednie; podest (znacznik strony) blednie
   // razem z nim — stwór ma się od niego oderwać, a nie lecieć na talerzu.
@@ -1234,14 +1269,17 @@ export function stepUnitMove(
   const strona = view.gaitStep % 2 === 0 ? 1 : -1;
   view.gaitStep++;
 
-  // Granica pola to klatka „stoi" (nogi razem — faza przejścia), a przez
-  // większość pola klatka kroku: raz bliższa noga w przód, raz dalsza.
-  // Razem cztery klatki na dwa pola, jak cykl chodu w Heroes 3.
+  // Cykl chodu na dwa pola: zetknięcie A → przejście → zetknięcie B →
+  // przejście. Zetknięcie (szeroki rozkrok, klatka `krok` / `krok2`) wypada na
+  // granicy pola, gdzie sylwetka jest najniżej i najbardziej ugięta;
+  // przejście (nogi razem — sam mistrz) w środku pola, gdzie jest najwyżej.
+  // Klatkę następnego zetknięcia stawiamy już pod koniec pola, żeby granica
+  // leżała w środku jej trwania.
   clearGait(view);
-  setPose(view, null);
+  setPose(view, strona > 0 ? 'krok' : 'krok2');
   view.gait.push(
-    scene.time.delayedCall(duration * 0.12, () => setPose(view, strona > 0 ? 'krok' : 'krok2')),
-    scene.time.delayedCall(duration * 0.88, () => setPose(view, null))
+    scene.time.delayedCall(duration * 0.3, () => setPose(view, null)),
+    scene.time.delayedCall(duration * 0.7, () => setPose(view, strona > 0 ? 'krok2' : 'krok'))
   );
 
   // Kołysanie wokół stóp (punkt zaczepienia sprite'a jest u stóp): w każdym
@@ -1299,22 +1337,10 @@ export function endUnitMove(scene: Phaser.Scene, view: UnitView, flying: boolean
     return;
   }
   resetMoveTweens(view);
-  setPose(view, flying ? 'lot' : null);
-  if (flying) {
-    // Skrzydła biją aż do zetknięcia z ziemią — opadanie ze skrzydłami
-    // zamarłymi w górze wyglądało jak spadający kamień.
-    let gora = true;
-    view.gait.push(
-      scene.time.addEvent({
-        delay: 80,
-        loop: true,
-        callback: () => {
-          gora = !gora;
-          setPose(view, gora ? 'lot' : 'lot2');
-        },
-      })
-    );
-  }
+  setPose(view, null);
+  // Skrzydła biją aż do zetknięcia z ziemią — opadanie ze skrzydłami
+  // zamarłymi wyglądało jak spadający kamień.
+  if (flying) startFlap(scene, view, false);
 
   const land = flying ? 240 : 140;
   view.moveHop = scene.tweens.add({
@@ -1325,11 +1351,28 @@ export function endUnitMove(scene: Phaser.Scene, view: UnitView, flying: boolean
     onComplete: () => {
       if (!alive(view)) return;
       clearGait(view);
-      setPose(view, null);
-      // Cios potrafi ruszyć tuż po lądowaniu — wtedy skalą i położeniem
-      // w poziomie rządzi już poza, a my prostujemy tylko resztę.
-      if (view.poseTween) view.sprite.setY(FEET_Y).setAngle(0);
-      else view.sprite.setPosition(0, FEET_Y).setAngle(0).setScale(view.baseScaleX, view.baseScaleY);
+      // Cios potrafi ruszyć tuż po lądowaniu — wtedy skalą, klatką
+      // i położeniem w poziomie rządzi już poza, a my prostujemy tylko resztę.
+      if (view.poseTween) {
+        view.sprite.setY(FEET_Y).setAngle(0);
+      } else if (flying) {
+        // Ugięcie przy zetknięciu: przysiad (klatka zamachu) i sprężyste wyprostowanie.
+        view.sprite.setPosition(0, FEET_Y).setAngle(0);
+        setPose(view, 'zamach');
+        view.moveSquash = scene.tweens.add({
+          targets: view.sprite,
+          scaleX: { from: view.baseScaleX * 1.14, to: view.baseScaleX },
+          scaleY: { from: view.baseScaleY * 0.82, to: view.baseScaleY },
+          duration: 170,
+          ease: E.out,
+          onUpdate: (tw) => {
+            if (tw.progress > 0.45 && view.pose === 'zamach' && !view.poseTween) setPose(view, null);
+          },
+        });
+      } else {
+        setPose(view, null);
+        view.sprite.setPosition(0, FEET_Y).setAngle(0).setScale(view.baseScaleX, view.baseScaleY);
+      }
       view.moveHop = undefined;
       startBreathing(scene, view, view.seed);
     },

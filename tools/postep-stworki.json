@@ -191,10 +191,29 @@
   },
   {
    "name": "Najechanie na stos (mapa przygody)",
-   "status": "todo",
-   "bar": "Od 2026-09-26 (decyzja gracza): poprzeczką jest NASZA mapa, nie HotA. Krytyk dostaje sam nasz kadr, wskazuje element, który najmniej pasuje, i ocenia, czy stwory pasują do naszej mapy. Wygrana: w 2 z 3 kadrów najgorszym elementem nie jest stwór i werdykt brzmi PASUJĄ.",
+   "status": "critic",
+   "bar": "Paski animacji stworów na mapie HotA (satyr, pirat, leprikon; tools/reference/homm3/ref-anim-mapa-hota-*-pasek-x2.png). Krytyk ocenia na ślepo tylko animację (gest, rytm, waga, ruch wtórny, czysta pętla), nie styl. Wygrana: 2 z 3.",
    "note": "Drobna animacja stosu po najechaniu kursorem, jak w HotA.",
-   "rounds": []
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Przełącznik dwóch póz bez klatek pośrednich, bez ruchu wtórnego — przy tej skali to zająknięcie.",
+     "blind": "tools/postep-obrazy/najechanie-satyr-r1.jpg",
+     "note": "Runda 1 (oddech + poza kroku co drugi cykl), wzór: satyr."
+    },
+    {
+     "win": false,
+     "gap": "Krok w miejscu i machanie wąsami to niejasne drżenie; brak jednego gestu z przytrzymaniem.",
+     "blind": "tools/postep-obrazy/najechanie-pirat-r1.jpg",
+     "note": "Runda 1, wzór: pirat."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: oddech, wymach liści, kołysanie głowy z opóźnieniem, czysty powrót.",
+     "blind": "tools/postep-obrazy/najechanie-lep-r1.jpg",
+     "note": "Runda 1, wzór: leprikon. 1/3."
+    }
+   ]
   },
   {
    "name": "Stwory na polu bitwy",

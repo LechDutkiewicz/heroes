@@ -576,8 +576,9 @@ WSAD_POZ = WSAD / 'pozy'
 MISTRZE_POZ = MISTRZE / 'pozy'
 GRA_POZ = GRA / 'pozy'
 
-#: Ile ta część (pozy) może wydać łącznie — osobno od limitu całego projektu.
-LIMIT_POZ_USD = float(os.environ.get('POZY_LIMIT_USD', '3.50'))
+#: Ile ta część (pozy) może wydać łącznie — osobno od limitu całego projektu
+#: (runda 1–2: $3.50, runda 3: +$2.00).
+LIMIT_POZ_USD = float(os.environ.get('POZY_LIMIT_USD', '5.00'))
 
 #: Opis pozy dla modelu. `{akcja}` — cios właściwy dla stworka (AKCJE),
 #: `{nogi}` — jak chodzi (NOGI), `{lot}` — czym bije w locie (LOTY).
@@ -603,23 +604,40 @@ POZY: dict[str, str] = {
     ),
     # Dwie klatki chodu na zmianę: bliższa noga w przód / dalsza noga w przód.
     # Obie stopy (albo cała para) na ziemi — runda 1 wyglądała jak skakanie.
+    # Runda 3 porównania: dwa kroki z rundy 2 różniły się za mało („stopy
+    # nigdy się nie zmieniają"). Teraz szeroki rozkrok nożycowy, jeden
+    # lustrzany do drugiego, z przeciwnym wymachem rąk / ogona. Fazą
+    # przejścia (nogi razem) jest sam mistrz.
     'krok': (
-        'WALKING to the right, side view, mid-stride: {nogi} Its NEAR-side '
-        '(viewer-side, lit) leg is clearly stepping FORWARD to the right and its '
-        'far-side leg (in shadow, darker) is pushed BACK behind the body; feet touch the ground '
-        'line, no jumping. Body level, walking calmly.'
+        'WALKING to the right, side view, CONTACT pose of a big exaggerated '
+        'stride: {nogi} Its NEAR-side (viewer-side, brightly lit) leg is '
+        'thrown FAR FORWARD to the right, heel down, and its FAR-side leg '
+        '(in shadow, clearly darker) is stretched FAR BACK behind the body, '
+        'toes pushing off — a wide scissor stride as wide as the body is '
+        'long, both feet on the ground line. Counter-swing: near-side arm '
+        '(if any) swung back, far-side arm forward, tail swung the opposite '
+        'way. Body low and leaning slightly forward. No jumping.'
     ),
     'krok2': (
-        'WALKING to the right, side view, mid-stride — the OPPOSITE step: {nogi} '
-        'Its FAR-side leg (in shadow, darker) is clearly stepping FORWARD to the right and its '
-        'near-side (viewer-side, lit) leg is pushed BACK behind the body; feet touch '
-        'the ground line, no jumping. Body level, walking calmly.'
+        'WALKING to the right, side view, the MIRRORED contact pose of a big '
+        'exaggerated stride: {nogi} Its FAR-side leg (in shadow, clearly '
+        'darker) is thrown FAR FORWARD to the right, heel down, and its '
+        'NEAR-side (viewer-side, brightly lit) leg is stretched FAR BACK '
+        'behind the body, toes pushing off — a wide scissor stride as wide as '
+        'the body is long, both feet on the ground line. Counter-swing: '
+        'near-side arm (if any) swung forward, far-side arm back, tail swung '
+        'the opposite way. Body low and leaning slightly forward. No jumping.'
     ),
     # Lot, dwie fazy skrzydła. Ciało wyciągnięte w poziomie, nogi podkulone.
     'lot': (
         'FLYING to the right, WINGS-UP phase: {lot_gora} Body stretched out '
         'horizontally and tilted forward toward the right, legs tucked up under '
         'the body, nothing touching the ground — clearly airborne.'
+    ),
+    'lot3': (
+        'FLYING to the right, MID-STROKE phase: {lot_srodek} Body stretched '
+        'out horizontally toward the right, legs tucked up under the body, '
+        'nothing touching the ground — clearly airborne.'
     ),
     'lot2': (
         'FLYING to the right, WINGS-DOWN power-stroke phase: {lot_dol} Body '
@@ -639,9 +657,9 @@ NOGI: dict[str, str] = {
     '00246': 'an upright biped lizard walking on its two hind legs, tail out behind.',
     '00002': 'it waddles on its two short legs, tentacles swaying.',
     '00263': 'an upright biped walking on its two legs, arms swinging.',
-    '00220': 'a four-legged beast: one diagonal pair of legs forward, the other pair back.',
+    '00220': 'a four-legged beast: one diagonal pair of legs forward, the other pair back. Keep its two BIG round white eyes on the sides of its body and its compact rounded body.',
     '00196': 'a heavy biped stomping on its two short legs, arms swinging.',
-    '00074': 'a four-legged beast: one diagonal pair of legs forward, the other pair back.',
+    '00074': 'a four-legged beast: one diagonal pair of legs forward, the other pair back. Keep its SHORT, stocky, compact body exactly as long as in the input — do not stretch it.',
     '00058': 'a four-legged hoofed creature: one diagonal pair of legs forward, the other pair back.',
     '00095': 'it waddles on its two round lavender feet.',
     '00077': 'it walks on its six long jointed legs, alternating tripods.',
@@ -650,6 +668,12 @@ NOGI: dict[str, str] = {
 
 #: Czym latacz bije w locie. Torrenar i Sporina nie mają skrzydeł — dostają
 #: ruch tułowia / liścia zamiast skrzydła.
+LOTY_SRODEK: dict[str, str] = {
+    '00023': 'its teal cape-like wing flap spread open as a real wing, held out LEVEL and straight to the side at body height, halfway between up and down.',
+    '00030': 'its armoured body held straight and level, head forward, tail straight out behind.',
+    '00250': 'its leaf-shaped pod body half open, edges held level, the white orb above.',
+}
+
 LOTY: dict[str, tuple[str, str]] = {
     '00023': ('its teal cape-like wing flap spread open as a real wing and raised HIGH above its back.',
               'its teal cape-like wing flap spread open as a real wing and swept DOWN below its belly.'),
@@ -721,7 +745,8 @@ def generujPoze(sid: str, poza: str) -> Path | None:
     _rezerwuj()
     try:
         gora, dol = LOTY.get(sid, ('', ''))
-        opis = POZY[poza].format(akcja=AKCJE[sid], nogi=NOGI.get(sid, ''), lot_gora=gora, lot_dol=dol)
+        opis = POZY[poza].format(akcja=AKCJE[sid], nogi=NOGI.get(sid, ''), lot_gora=gora, lot_dol=dol,
+                                 lot_srodek=LOTY_SRODEK.get(sid, ''))
         prompt = PROMPT_POZA.format(poza=opis, opis=STWORKI[sid][1])
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as t:
             Image.open(MISTRZE / f'{sid}.png').convert('RGBA').resize((1024, 1024), Image.LANCZOS).save(t.name)
@@ -786,6 +811,12 @@ ODRZUC_POZ: set[str] = {
     # Druga próba Vulkarona lepsza, ale obok wygiętego krok2 wyglądała jak
     # inny stwór — przy chodzie na zmianę bije to w oczy bardziej niż brak nóg.
     '00196-krok-2',
+    # Runda 3 (szeroki rozkrok): Vulkaron i Lawina drugi raz stracili swoją
+    # budowę (dwunóg z twarzą, dwunóg z czterech odnóży) — zostają przy
+    # pozach wygiętych. Bazalt wyciągnięty w krokodyla, Aquator zgubił oczy
+    # na bokach — po jednej ponownej próbie.
+    '00196-krok-3', '00196-krok2-1', '00077-krok-2', '00077-krok2-2',
+    '00074-krok-2', '00074-krok2-2', '00220-krok-2', '00220-krok2-2',
 }
 
 
@@ -869,6 +900,7 @@ WYGIECIA: dict[str, dict[str, float]] = {
     # w dół (spłaszczony, najmocniej wyciągnięty w poziomie).
     'lot': dict(bend=0.12, p=1.3, sy=1.05, sx=0.10, stopy=-0.12),
     'lot2': dict(bend=0.04, p=1.3, sy=0.88, sx=0.22, stopy=-0.16),
+    'lot3': dict(bend=0.08, p=1.3, sy=0.96, sx=0.16, stopy=-0.14),
 }
 
 
@@ -1092,7 +1124,7 @@ def main() -> None:
         def pasuje(s: str, p: str) -> bool:
             if p in ('krok', 'krok2'):
                 return s in NOGI
-            if p in ('lot', 'lot2'):
+            if p in ('lot', 'lot2', 'lot3'):
                 return s in LOTY
             return True
         cele = [(s, p) for p in args.pozy for s in ids if pasuje(s, p)]
