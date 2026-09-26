@@ -555,6 +555,397 @@ def arkusz(wyjscie: Path, wszystkie: bool) -> None:
     print(f'arkusz: {wyjscie}')
 
 
+# ————————————————————————————————————————————— pozy do bitwy
+#
+# Bitwa animowała stworka samymi tweenami: oddech, podskok, przechył. Cios
+# wyglądał jak „naklejka, która podskakuje". W Heroes 3 każdy oddział ma
+# osobne klatki: zamach, cios, drgnięcie po trafieniu, krok. Tu dostajemy
+# namiastkę tego zestawu — dwie–trzy POZY na stworka, malowane jako edycja
+# MISTRZA (ta sama tożsamość, barwy i pędzel), a gra przeplata je z tweenami.
+#
+#     python3 tools/stworki_przemaluj.py --pozy atak trafiony      # (kosztuje)
+#     python3 tools/stworki_przemaluj.py --pozy krok 00246 00074    # (kosztuje)
+#     python3 tools/stworki_przemaluj.py --kadruj-pozy              # darmowe
+#     python3 tools/stworki_przemaluj.py --arkusz-poz tools/shots/pozy-arkusz.png
+#
+# Surowe: `tools/wsad/stworki/pozy/<id>-<poza>-<n>.png` (nigdy nadpisywane),
+# mistrzowie póz: `assets/stworki/pozy/<id>-<poza>.png` (256 px, kadr jak
+# mistrz), gra: `public/sprites/pozy/<id>-<poza>.png` (128 px).
+
+WSAD_POZ = WSAD / 'pozy'
+MISTRZE_POZ = MISTRZE / 'pozy'
+GRA_POZ = GRA / 'pozy'
+
+#: Ile ta część (pozy) może wydać łącznie — osobno od limitu całego projektu.
+LIMIT_POZ_USD = float(os.environ.get('POZY_LIMIT_USD', '3.00'))
+
+#: Opis pozy dla modelu. `{akcja}` — ruch właściwy dla stworka (niżej).
+POZY: dict[str, str] = {
+    'atak': (
+        'ATTACK — the creature strikes hard toward the RIGHT: {akcja}. Body '
+        'and head thrust forward to the right, weight on the front, fierce '
+        'focused expression. A bold, dynamic silhouette that instantly reads '
+        'as an attack even when small.'
+    ),
+    'trafiony': (
+        'HIT / DEFENDING — it has just been struck from the right and flinches: '
+        'the whole body recoils backwards toward the LEFT and leans back, '
+        'hunched, head pulled in and tilted down, eyes squeezed shut in pain, '
+        'front limbs (or its front side) drawn up protectively, weight on the '
+        'back. Still facing the right side of the image.'
+    ),
+    'krok': (
+        'MOVING — {krok}. A clear mid-motion silhouette, different from the '
+        'standing pose.'
+    ),
+}
+
+#: Cios właściwy dla stworka — bez tego model dawał każdemu ten sam
+#: „wyskok z otwartą paszczą", a strzelcy nie wyglądali na strzelających.
+AKCJE: dict[str, str] = {
+    '00193': 'it rears back and slams its whole round body forward in a headbutt, stubby feet kicking off the ground',
+    '00020': 'wings flung open and long neck stretched forward, beak wide open as if spitting a fireball forward',
+    '00218': 'its big round arm-bulb punches forward to the right like a boxer\'s jab, the other bulb pulled back',
+    '00030': 'it lowers its armoured head and charges forward, ramming with its head plate, mouth open',
+    '00096': 'leaning forward, leaf sprout whipped forward, mouth wide open as if shooting a seed forward, arms thrown back',
+    '00227': 'one arm swept forward in a graceful slashing strike, the leaf cape billowing out behind',
+    '00246': 'it snaps its long neck forward with jaws wide open, biting to the right, tail swung back for balance',
+    '00002': 'purple petal-tentacles flung forward, huge mouth wide open as if spitting spores forward',
+    '00263': 'it throws a punch forward with its right fist, the other arm pulled far back, tail curled up',
+    '00250': 'its pod body tilts hard forward and the dotted leaf edge lashes forward like a blade, the small white orb swung forward too',
+    '00220': 'crouched low with its crystal spikes bristling, head thrust forward, mouth open as if launching an ice shard forward',
+    '00196': 'both black arms swung forward in a heavy double-fisted smash, its big red mouth gaping wide',
+    '00074': 'lunging forward with jaws wide open to bite, shaggy mane bristling, tail raised high',
+    '00058': 'rearing up on its hind legs with the cloud head thrust forward, as if blowing a blast of ash forward',
+    '00095': 'its whole vase body tips forward and swings the tall stone column like a club toward the right',
+    '00023': 'lunging forward with jaws wide open, the teal wing flap raised high, front claws out',
+    '00077': 'its front limbs thrust forward with clawed hands open, body tilted forward as if hurling a stone forward',
+    '00041': 'pecking forward hard with its beak, arms flung back, one clawed foot kicking forward',
+}
+
+#: Krok albo lot — tylko dla tych, którym druga klatka ruchu coś daje.
+#: Kulki i wazy (Pyroko, Aquino, Obsydian, Sporex) podskakują tweenem.
+KROKI: dict[str, str] = {
+    '00020': 'walking mid-stride: one thin leg lifted and stepping forward, the other pushing off behind, wings slightly lifted',
+    '00030': 'flying leap: all four legs tucked under the body, armoured body stretched forward and slightly raised, as if soaring through the air',
+    '00096': 'walking mid-stride: one little foot lifted forward, body bobbing forward, leaf sprout swaying back',
+    '00227': 'walking mid-stride: one leg stepping forward, arms swinging, the leaf cape flowing behind',
+    '00246': 'walking mid-stride: one hind leg lifted and stepping forward, body leaning forward, tail swinging',
+    '00263': 'walking mid-stride: one leg lifted and stepping forward, arms swinging, tail curled',
+    '00250': 'floating in flight: the pod tilted forward, leaf edges flared out like wings, the white orb trailing slightly behind',
+    '00220': 'walking mid-stride: one front leg and the opposite hind leg lifted, body shifted forward',
+    '00196': 'stomping forward mid-stride: one foot lifted, arms swinging, heavy body leaning forward',
+    '00074': 'walking mid-stride: one front leg and the opposite hind leg lifted, mane swaying',
+    '00058': 'trotting mid-stride: one front hoof and the opposite hind hoof lifted, cloud head bobbing',
+    '00023': 'flying: the teal wing flap spread wide and raised high like a wing, legs tucked under the body, tail streaming behind',
+    '00077': 'walking mid-stride: the long jointed legs in the opposite phase, two lifted and reaching forward',
+    '00041': 'walking mid-stride: one feathered foot lifted and stepping forward, arms swinging',
+}
+
+PROMPT_POZA = (
+    'This is a finished hand-painted creature sprite for a fantasy strategy '
+    'game battle screen. Redraw the SAME creature — identical design, '
+    'identical colours and markings, identical painterly storybook rendering, '
+    'the same edge and the same warm light from the upper left — in a new '
+    'battle animation pose: {poza} Keep its identity exactly: {opis}. Same '
+    'anatomy and number of limbs, same proportions, same size as in the '
+    'input image; do not add weapons, effects or new body parts. Side / '
+    'three-quarter view facing the RIGHT side of the image, exactly like the '
+    'input. The whole creature fully visible, not cropped. Only the creature, '
+    'cut out on a fully transparent background: no ground, no shadow, no '
+    'motion lines, no dust, no sparks, no fire, no glow, no frame, no text.'
+)
+
+
+def wydaneNaPozy() -> float:
+    from generuj_grafiki import DZIENNIK_KOSZTOW
+    if not DZIENNIK_KOSZTOW.exists():
+        return 0.0
+    return sum(json.loads(l)['usd'] for l in DZIENNIK_KOSZTOW.read_text().splitlines()
+               if l.strip() and json.loads(l)['plik'].startswith('stworki/pozy/'))
+
+
+def wersjePozy(sid: str, poza: str) -> list[int]:
+    return sorted(int(p.stem.rsplit('-', 1)[1]) for p in WSAD_POZ.glob(f'{sid}-{poza}-*.png'))
+
+
+def generujPoze(sid: str, poza: str) -> Path | None:
+    """Jedno zapytanie `images/edits`: mistrz → poza. Wejście to mistrz
+    powiększony do 1024 — wtedy wyjście ma tę samą skalę co wejście, a model
+    rzadziej przestawia kadr."""
+    with _zamek:
+        if wydaneNaPozy() + (_w_locie + 1) * NAJDROZSZE > LIMIT_POZ_USD:
+            print(f'  {sid}-{poza}: limit póz ${LIMIT_POZ_USD:.2f} (wydane ${wydaneNaPozy():.2f}) — pomijam', flush=True)
+            return None
+    _rezerwuj()
+    try:
+        opis = POZY[poza].format(akcja=AKCJE[sid], krok=KROKI.get(sid, 'walking mid-stride'))
+        prompt = PROMPT_POZA.format(poza=opis, opis=STWORKI[sid][1])
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as t:
+            Image.open(MISTRZE / f'{sid}.png').convert('RGBA').resize((1024, 1024), Image.LANCZOS).save(t.name)
+            wejscie = t.name
+        polecenie = [
+            'curl', '-s', '--max-time', '120', 'https://api.openai.com/v1/images/edits',
+            '-F', f'model={MODEL}', '-F', f'image[]=@{wejscie}',
+            '-F', f'size={ROZMIAR}', '-F', f'quality={JAKOSC}', '-F', 'background=transparent',
+            '-F', 'output_format=png', '-F', f'prompt={prompt}',
+        ]
+        try:
+            for proba in range(8):
+                wynik = subprocess.run(polecenie, capture_output=True, text=True)
+                try:
+                    odp = json.loads(wynik.stdout)
+                except json.JSONDecodeError:
+                    print(f'  {sid}-{poza}: nie-JSON ({wynik.stdout[:60]!r}), ponawiam', flush=True)
+                    time.sleep(10)
+                    continue
+                if 'error' in odp:
+                    blad = str(odp['error'].get('message', odp['error']))[:160]
+                    if 'safety' in blad and proba >= 4:
+                        break
+                    print(f'  {sid}-{poza}: błąd API: {blad[:90]} — ponawiam', flush=True)
+                    time.sleep(25 if 'rate' in blad.lower() else 10)
+                    continue
+                WSAD_POZ.mkdir(parents=True, exist_ok=True)
+                w = wersjePozy(sid, poza)
+                cel = WSAD_POZ / f'{sid}-{poza}-{(w[-1] + 1) if w else 1}.png'
+                usd = zapiszKoszt(f'stworki/pozy/{cel.name}', MODEL, JAKOSC, ROZMIAR, odp.get('usage', {}))
+                dane = next((d['b64_json'] for d in odp.get('data', []) if d.get('b64_json')), None)
+                if not dane:
+                    print(f'  {sid}-{poza}: odpowiedź bez obrazka', flush=True)
+                    return None
+                cel.write_bytes(base64.b64decode(dane))
+                print(f'  {cel.name}  ${usd:.3f}  (pozy ${wydaneNaPozy():.2f}, razem ${wydaneDotad():.2f})', flush=True)
+                return cel
+            print(f'  {sid}-{poza}: poddaję się', flush=True)
+            return None
+        finally:
+            os.unlink(wejscie)
+    finally:
+        _zwolnij()
+
+
+#: Która surowa wersja pozy idzie do gry (klucz `<id>-<poza>`). Brak — najnowsza.
+WYBOR_POZ: dict[str, int] = {}
+
+#: Surowe pozy namalowane przodem w lewo (klucz `<id>-<poza>-<n>`).
+ODBIJ_POZ: set[str] = set()
+
+
+def wybranaPoza(sid: str, poza: str) -> Path | None:
+    w = wersjePozy(sid, poza)
+    if not w:
+        return None
+    return WSAD_POZ / f'{sid}-{poza}-{WYBOR_POZ.get(f"{sid}-{poza}", w[-1])}.png'
+
+
+#: Kadr pozy: szerszy od mistrza o pół boku, z kwadratem mistrza DOKŁADNIE
+#: pośrodku (przesunięcie `ODSUNIECIE_POZY`). Wypad do przodu i odchylenie
+#: po trafieniu wychodzą poza obrys stojącego stworka — w kwadracie 256 px
+#: szerokie sylwetki (Bazalt, Cynder) musiałyby się kurczyć albo ucinać.
+#: W grze tekstura pozy ma tę samą gęstość pikseli co mistrz (128 px
+#: wysokości), więc podmiana nie zmienia skali ani punktu zaczepienia
+#: (środek dołu), a odbicie wroga działa bez przeliczeń.
+SZER_POZY = BOK_MISTRZA * 3 // 2
+ODSUNIECIE_POZY = (SZER_POZY - BOK_MISTRZA) // 2
+
+
+def kadrPozy(sylwetka: Image.Image, wzor: Image.Image) -> Image.Image:
+    """Poza (surowa, z modelu) w kadrze pozy. Skala z POLA sylwetki, nie
+    z obrysu: wypad do przodu poszerza obrys o połowę, a stworek ma zostać
+    tej samej wielkości — inaczej przy podmianie klatki w bitwie „puchłby"
+    na czas ciosu. Stopy na linii mistrza, środek masy w poziomie tam, gdzie
+    u mistrza (przesunięcie robi tween, nie rysunek)."""
+    aw = np.array(wzor.getchannel('A')) > 128
+    ap_ = np.array(sylwetka.getchannel('A')) > 128
+    s = (aw.sum() / max(1, ap_.sum())) ** 0.5
+    s = min(s, (SZER_POZY - 2 * MARGINES) / sylwetka.width, (BOK_MISTRZA - 2 * MARGINES) / sylwetka.height)
+    # Barwy mistrza: lekki transfer, żeby podmiana klatki nie mrugała odcieniem.
+    sylwetka = _dopasujDoMistrza(sylwetka, wzor, 0.5)
+    im = sylwetka
+    while im.width * 0.5 > sylwetka.width * s * 1.5:
+        im = im.resize((im.width // 2, im.height // 2), Image.LANCZOS)
+    im = im.resize((max(1, round(sylwetka.width * s)), max(1, round(sylwetka.height * s))), Image.LANCZOS)
+    xs_w = np.nonzero(aw)[1].mean() + ODSUNIECIE_POZY
+    xs_p = np.nonzero(np.array(im.getchannel('A')) > 128)[1].mean()
+    x = int(round(xs_w - xs_p))
+    x = max(MARGINES, min(SZER_POZY - MARGINES - im.width, x))
+    kw = Image.new('RGBA', (SZER_POZY, BOK_MISTRZA), (0, 0, 0, 0))
+    kw.alpha_composite(im, (x, BOK_MISTRZA - MARGINES - im.height))
+    return kw
+
+
+# ——— pozy wygięte z mistrza (darmowe)
+#
+# Gdy nie ma pozy malowanej (konto OpenAI bez środków w chwili pisania),
+# klatkę robimy z samego mistrza: sylwetka jest wyginana względem linii stóp.
+# Stopy stoją, a przesunięcie rośnie z wysokością jak h^p — to łuk, nie obrót:
+# korpus i głowa idą w przód albo w tył, a nogi zostają na ziemi. Tego tween
+# obrotu nie umie (obraca też stopy), a właśnie to odróżnia „wypad" od
+# „przechylonej naklejki". Tożsamość i barwy są z definicji te same.
+#
+#   bend — przesunięcie czubka w ułamkach wysokości sylwetki (+ = w przód),
+#   p    — krzywizna łuku (1 = pochylenie, 2 = zgięcie w „pasie"),
+#   sy   — skala pionowa (ugięcie < 1 < wyciągnięcie),
+#   sx   — skala pozioma czubka (1 + sx·h); dół zostaje,
+#   stopy — dodatkowe przesunięcie dolnej ćwiartki (krok: noga w przód / w tył).
+WYGIECIA: dict[str, dict[str, float]] = {
+    # Zamach: odchylenie do tyłu i przysiad — wyczekanie przed ciosem.
+    'zamach': dict(bend=-0.20, p=1.5, sy=0.85, sx=0.12, stopy=0.0),
+    # Cios: wyrzucenie korpusu w przód z wyciągnięciem, lekko nisko.
+    # Pierwsze wartości (0.26) były za nieśmiałe: na pasku w bitwie
+    # (sylwetka ~50 px) cios nie różnił się od stania.
+    'atak': dict(bend=0.34, p=1.6, sy=0.93, sx=0.18, stopy=-0.04),
+    # Trafienie: zgięcie do tyłu w pasie, wciśnięcie w ziemię.
+    'trafiony': dict(bend=-0.30, p=2.0, sy=0.84, sx=0.08, stopy=0.04),
+    # Krok: faza „przejścia" — wyprostowany, lekko w przód, stopy w tył.
+    'krok': dict(bend=0.08, p=1.2, sy=1.07, sx=-0.05, stopy=-0.08),
+}
+
+
+def _probkuj(t: np.ndarray, xs: np.ndarray, ys: np.ndarray) -> np.ndarray:
+    """Próbkowanie dwuliniowe (premultiplied alpha) — poza obrazkiem zero."""
+    h, w = t.shape[:2]
+    x0 = np.floor(xs).astype(int)
+    y0 = np.floor(ys).astype(int)
+    fx = (xs - x0)[..., None]
+    fy = (ys - y0)[..., None]
+    wynik = np.zeros(xs.shape + (4,), np.float32)
+    for dy, wy in ((0, 1 - fy), (1, fy)):
+        for dx, wx in ((0, 1 - fx), (1, fx)):
+            xi, yi = x0 + dx, y0 + dy
+            ok = (xi >= 0) & (xi < w) & (yi >= 0) & (yi < h)
+            v = np.zeros(xs.shape + (4,), np.float32)
+            v[ok] = t[yi[ok], xi[ok]]
+            wynik += v * wx * wy
+    return wynik
+
+
+def wygnij(wzor: Image.Image, bend: float, p: float, sy: float, sx: float, stopy: float) -> Image.Image:
+    """Mistrz (256) → poza w kadrze pozy (384 × 256), odwzorowaniem odwrotnym:
+    dla każdego piksela wyjścia liczymy, skąd w mistrzu go wziąć."""
+    t = np.array(wzor.convert('RGBA')).astype(np.float32) / 255
+    t[..., :3] *= t[..., 3:4]
+    maska = t[..., 3] > 0.5
+    ys_, xs_ = np.nonzero(maska)
+    F = BOK_MISTRZA - MARGINES
+    wys = max(1, F - ys_.min())
+    x0 = xs_.mean()
+    # Nadpróbkowanie ×2 i zmniejszenie Lanczosem — krawędź zostaje gładka.
+    N = 2
+    oy, ox = np.mgrid[0:BOK_MISTRZA * N, 0:SZER_POZY * N].astype(np.float32)
+    oy = (oy + 0.5) / N - 0.5
+    ox = (ox + 0.5) / N - 0.5 - ODSUNIECIE_POZY
+    hs = (F - oy) / (sy * wys)
+    ys = F - (F - oy) / sy
+    hc = np.clip(hs, 0, 1)
+    # Stopy: przesunięcie dolnej ćwiartki, gasnące do zera na wysokości 0.3.
+    st = stopy * wys * np.clip(1 - hc / 0.3, 0, 1)
+    xs = x0 + (ox - x0 - bend * wys * hc ** p - st) / (1 + sx * hc)
+    wyj = _probkuj(t, xs, ys)
+    a = wyj[..., 3:4]
+    wyj[..., :3] = np.where(a > 1e-4, wyj[..., :3] / np.maximum(a, 1e-4), 0)
+    im = Image.fromarray((wyj.clip(0, 1) * 255).round().astype(np.uint8), 'RGBA')
+    return im.resize((SZER_POZY, BOK_MISTRZA), Image.LANCZOS)
+
+
+def pozyZMistrza(bok: int, ids: list[str], nadpisz: bool = False) -> None:
+    """Wygięte pozy dla każdej pozy BEZ wersji malowanej (albo wszystkich
+    z `nadpisz`). Nic nie kosztuje."""
+    MISTRZE_POZ.mkdir(parents=True, exist_ok=True)
+    GRA_POZ.mkdir(parents=True, exist_ok=True)
+    for sid in ids:
+        wzor = Image.open(MISTRZE / f'{sid}.png').convert('RGBA')
+        for poza, w in WYGIECIA.items():
+            if not nadpisz and wybranaPoza(sid, poza):
+                continue
+            # Szerokie sylwetki (Torrenar, Sporex, Vulkaron) przy pełnym
+            # wygięciu wychodzą poza kadr pozy — wtedy łagodzimy łuk, aż się
+            # zmieszczą, zamiast ucinać głowę.
+            w = dict(w)
+            for _ in range(8):
+                m = wygnij(wzor, **w)
+                if np.array(m.getchannel('A'))[:, [0, 1, -2, -1]].max() <= 8:
+                    break
+                w['bend'] *= 0.88
+                w['sx'] *= 0.8
+            m.save(MISTRZE_POZ / f'{sid}-{poza}.png', optimize=True)
+            m.resize((bok * SZER_POZY // BOK_MISTRZA, bok), Image.LANCZOS).save(GRA_POZ / f'{sid}-{poza}.png', optimize=True)
+        print(f'  {sid}: {" ".join(WYGIECIA)} (wygięte z mistrza)')
+
+
+def _dopasujDoMistrza(im: Image.Image, wzor: Image.Image, sila: float) -> Image.Image:
+    maska_i = np.array(im.getchannel('A')) > 200
+    maska_w = np.array(wzor.getchannel('A')) > 200
+    yi = np.array(im.convert('RGB').convert('YCbCr')).astype(np.float32)
+    yw = np.array(wzor.convert('RGB').convert('YCbCr')).astype(np.float32)
+    m1, s1 = yi[maska_i].mean(0), yi[maska_i].std(0)
+    m0, s0 = yw[maska_w].mean(0), yw[maska_w].std(0)
+    yi = yi * (1 - sila) + ((yi - m1) / np.maximum(s1, 1) * s0 + m0) * sila
+    wynik = Image.fromarray(yi.clip(0, 255).astype(np.uint8), 'YCbCr').convert('RGBA')
+    wynik.putalpha(im.getchannel('A'))
+    return wynik
+
+
+def kadrujPozy(bok: int, ids: list[str]) -> None:
+    MISTRZE_POZ.mkdir(parents=True, exist_ok=True)
+    GRA_POZ.mkdir(parents=True, exist_ok=True)
+    for sid in ids:
+        wzor = Image.open(MISTRZE / f'{sid}.png').convert('RGBA')
+        for poza in POZY:
+            z = wybranaPoza(sid, poza)
+            if not z:
+                continue
+            m = kadrPozy(wycinek(z, z.stem in ODBIJ_POZ), wzor)
+            m.save(MISTRZE_POZ / f'{sid}-{poza}.png', optimize=True)
+            m.resize((bok * SZER_POZY // BOK_MISTRZA, bok), Image.LANCZOS).save(GRA_POZ / f'{sid}-{poza}.png', optimize=True)
+            print(f'  {z.name}{" (odbity)" if z.stem in ODBIJ_POZ else ""} → {sid}-{poza}')
+
+
+def arkuszPoz(wyjscie: Path, wszystkie: bool) -> None:
+    """Mistrz | zamach | atak | trafiony | krok — każdy stworek w jednym
+    rzędzie, na łące z linią stóp i pionową kreską środka mistrza (widać, jak
+    daleko poza wychodzi w przód i w tył). `--wszystkie-wersje`: dodatkowo
+    każda surowa wersja malowana."""
+    kolumny = ['zamach', 'atak', 'trafiony', 'krok']
+    H = 150
+    W = H * SZER_POZY // BOK_MISTRZA
+    rzedy: list[list[tuple[str, Image.Image | None]]] = []
+    for sid in STWORKI:
+        wzor = Image.open(MISTRZE / f'{sid}.png').convert('RGBA')
+        m = Image.new('RGBA', (SZER_POZY, BOK_MISTRZA), (0, 0, 0, 0))
+        m.alpha_composite(wzor, (ODSUNIECIE_POZY, 0))
+        rz: list[tuple[str, Image.Image | None]] = [(f'{sid} {STWORKI[sid][0]}', m)]
+        for poza in kolumny:
+            pl = MISTRZE_POZ / f'{sid}-{poza}.png'
+            zrodlo = 'malowana' if wybranaPoza(sid, poza) else 'z mistrza'
+            rz.append((f'{poza} ({zrodlo})', Image.open(pl).convert('RGBA') if pl.exists() else None))
+            if wszystkie:
+                for n in wersjePozy(sid, poza):
+                    k = f'{sid}-{poza}-{n}'
+                    rz.append((k, kadrPozy(wycinek(WSAD_POZ / f'{k}.png', k in ODBIJ_POZ), wzor)))
+        rzedy.append(rz)
+    n_kol = max(len(r) for r in rzedy)
+    a = Image.new('RGB', (n_kol * W, len(rzedy) * (H + 14)), (118, 142, 72))
+    d = ImageDraw.Draw(a)
+    stopy = round(H * (BOK_MISTRZA - MARGINES) / BOK_MISTRZA)
+    for j, rz in enumerate(rzedy):
+        for i, (opis, im) in enumerate(rz):
+            x, y = i * W, j * (H + 14)
+            d.line([(x + W // 2, y + 14), (x + W // 2, y + 14 + H)], fill=(104, 128, 62))
+            d.line([(x + 4, y + 14 + stopy), (x + W - 4, y + 14 + stopy)], fill=(90, 110, 50))
+            if im is not None:
+                mm = im.resize((W, H), Image.LANCZOS)
+                a.paste(mm, (x, y + 14), mm)
+            else:
+                d.text((x + W // 2 - 12, y + 70), 'brak', fill=(60, 60, 40))
+            d.text((x + 4, y + 1), opis, fill=(255, 255, 230))
+            d.line([(x, y), (x, y + H + 14)], fill=(70, 90, 40))
+        d.line([(0, j * (H + 14)), (a.width, j * (H + 14))], fill=(70, 90, 40))
+    a.save(wyjscie)
+    print(f'arkusz póz: {wyjscie}')
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('stworki', nargs='*', help='id stworków (domyślnie wszystkie 18)')
@@ -570,6 +961,11 @@ def main() -> None:
     ap.add_argument('--bok', type=int, default=128, help='bok pliku w public/sprites')
     ap.add_argument('--arkusz', type=Path, help='zapisz podgląd wybranych mistrzów')
     ap.add_argument('--wszystkie-wersje', action='store_true', help='z --arkusz: każda surowa wersja')
+    ap.add_argument('--pozy', nargs='+', choices=list(POZY), help='pozy do bitwy przez OpenAI (kosztuje)')
+    ap.add_argument('--kadruj-pozy', action='store_true', help='surowe pozy → assets/stworki/pozy + public/sprites/pozy')
+    ap.add_argument('--pozy-z-mistrza', action='store_true', help='wygięte pozy z mistrza tam, gdzie nie ma malowanych (darmowe)')
+    ap.add_argument('--nadpisz', action='store_true', help='z --pozy-z-mistrza: także tam, gdzie są malowane')
+    ap.add_argument('--arkusz-poz', type=Path, help='zapisz arkusz mistrz | atak | trafiony | krok')
     args = ap.parse_args()
 
     ids = args.stworki or list(STWORKI)
@@ -600,6 +996,18 @@ def main() -> None:
         with ThreadPoolExecutor(max_workers=max(1, args.rownolegle)) as pula:
             tryb = f'poprawka:{args.poprawka}' if args.poprawka else 'matowy' if args.matowy else 'mapa'
             list(pula.map(lambda s: generuj(s, czysc=tryb), ids))
+    if args.pozy:
+        # Krok tylko dla tych z wpisem w KROKI — reszta podskakuje tweenem.
+        cele = [(s, p) for p in args.pozy for s in ids if p != 'krok' or s in KROKI]
+        print(f'pozy {len(cele)}: model {MODEL}, jakość {JAKOSC}, wydane na pozy ${wydaneNaPozy():.2f} z ${LIMIT_POZ_USD:.2f}')
+        with ThreadPoolExecutor(max_workers=max(1, args.rownolegle)) as pula:
+            list(pula.map(lambda c: generujPoze(*c), cele))
+    if args.kadruj_pozy:
+        kadrujPozy(args.bok, ids)
+    if args.pozy_z_mistrza:
+        pozyZMistrza(args.bok, ids, args.nadpisz)
+    if args.arkusz_poz:
+        arkuszPoz(args.arkusz_poz, args.wszystkie_wersje)
     if args.kadruj:
         kadruj(args.bok)
     if args.arkusz:

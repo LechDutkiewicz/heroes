@@ -121,6 +121,8 @@ export interface UnitViewSpec {
    * tapety, a nie jak żywe stwory.
    */
   seed: number;
+  /** Poziom oddziału (1–6) — od niego zależy wielkość sylwetki na planszy. */
+  tier?: number;
 }
 
 export interface UnitViewState {
@@ -168,6 +170,14 @@ export interface UnitView {
   moveSquash?: Phaser.Tweens.Tween;
   moveLean?: Phaser.Tweens.Tween;
   moveShadow?: Phaser.Tweens.Tween;
+  /** Klucz tekstury stojącego stworka — do niego wraca każda poza. */
+  restKey: string;
+  /** Poza na ekranie (`null` — stoi). */
+  pose: PoseName | null;
+  /** Tween ruchu pozy (odrzut, wypad) — jeden na raz, jak tweeny ruchu. */
+  poseTween?: Phaser.Tweens.Tween;
+  /** Zegar przebierania kroku / trzepotu w czasie przejścia. */
+  gait?: Phaser.Time.TimerEvent;
 }
 
 // ---------- barwy pomocnicze ----------
@@ -432,15 +442,95 @@ function drawPlatform(g: Phaser.GameObjects.Graphics, color: number, deep: numbe
  * obiektu. Dzięki temu skalowanie cienia w ruchu ściąga go do własnego środka,
  * a nie do środka hexa — inaczej przy podskoku plama uciekałaby w górę.
  */
-const SHADOW_Y = FEET_Y + 2;
+const SHADOW_Y = FEET_Y + 1;
 const SHADOW_REST = 0.75;
 
-function drawShadow(g: Phaser.GameObjects.Graphics) {
+function drawShadow(g: Phaser.GameObjects.Graphics, w = 42) {
+  // Szerokość z ODCISKU stóp (patrz `silhouetteOf`): Pyroko stoi na szerokim
+  // brzuchu, Sporina na jednym czubku. Wspólna elipsa 42 px wystawała spod
+  // wąskich jak podkładka, a pod szerokimi ginęła.
   for (let i = 4; i >= 1; i--) {
     g.fillStyle(C.shadow, 0.107);
-    g.fillEllipse(0, 0, 18 + i * 6, 3 + i * 1.8);
+    g.fillEllipse(0, 0, w * (0.43 + i * 0.143), 2 + i * 1.5);
   }
+  // Jądro cienia kontaktowego: ciasne i ciemne tuż pod stopami. To ono
+  // „stawia" stworka na podeście — sama miękka plama czytała się jak mgiełka.
+  g.fillStyle(C.shadow, 0.34);
+  g.fillEllipse(0, -0.5, w * 0.62, 3.2);
 }
+
+// ---------- wielkość sylwetki ----------
+//
+// Kadr każdego stworka to kwadrat, w który sylwetka jest wpisana DŁUŻSZYM
+// bokiem. Na planszy dawało to przypadkową hierarchię: okrągły Pyroko
+// (drobnica, poziom 1) zajmował dwa razy więcej trawy niż Vulkaron (czempion,
+// poziom 6), bo ten jest szeroki i niski. W Heroes 3 wielkość na polu niesie
+// informację — czempion jest największy. Tu wielkość liczymy z POLA sylwetki
+// (pierwiastek z liczby pikseli), rosnącego z poziomem, i dopiero przycinamy
+// do geometrii pola: wysokość do dawnych 50 px (nad nią leży nazwa), szerokość
+// do 60 px (szerzej wchodziłby na sąsiedni heks).
+
+interface Silhouette {
+  /** Pierwiastek z pola sylwetki, obrys i odcisk stóp — w pikselach tekstury. */
+  sqrtArea: number;
+  w: number;
+  h: number;
+  foot: number;
+}
+
+const silhouettes = new Map<string, Silhouette>();
+
+/** Pomiar sylwetki z samej tekstury (raz na klucz). */
+function silhouetteOf(scene: Phaser.Scene, key: string): Silhouette | null {
+  const cached = silhouettes.get(key);
+  if (cached) return cached;
+  const src = scene.textures.get(key)?.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
+  if (!src || !src.width) return null;
+  const c = document.createElement('canvas');
+  c.width = src.width;
+  c.height = src.height;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  if (!g) return null;
+  g.drawImage(src, 0, 0);
+  let data: Uint8ClampedArray;
+  try {
+    data = g.getImageData(0, 0, c.width, c.height).data;
+  } catch {
+    return null;
+  }
+  let area = 0;
+  let x0 = c.width, x1 = -1, y0 = c.height, y1 = -1;
+  for (let y = 0; y < c.height; y++) {
+    for (let x = 0; x < c.width; x++) {
+      if (data[(y * c.width + x) * 4 + 3] > 128) {
+        area++;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  if (x1 < 0) return null;
+  // Odcisk: szerokość nieprzezroczystego w dolnych 7% wysokości sylwetki.
+  let f0 = c.width, f1 = -1;
+  for (let y = Math.max(y0, Math.round(y1 - (y1 - y0) * 0.07)); y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if (data[(y * c.width + x) * 4 + 3] > 128) {
+        if (x < f0) f0 = x;
+        if (x > f1) f1 = x;
+      }
+    }
+  }
+  const s: Silhouette = { sqrtArea: Math.sqrt(area), w: x1 - x0 + 1, h: y1 - y0 + 1, foot: Math.max(1, f1 - f0 + 1) };
+  silhouettes.set(key, s);
+  return s;
+}
+
+/** Docelowy pierwiastek z pola sylwetki na ekranie: od 26 px (poziom 1) do 36 px (poziom 6). */
+const AREA_BY_TIER = (tier: number) => 26 + 2 * (Phaser.Math.Clamp(tier, 1, 6) - 1);
+const MAX_SIL_H = SPRITE_H;
+const MAX_SIL_W = 60;
 
 // ---------- budowa ----------
 
@@ -464,7 +554,6 @@ export function buildUnitView(scene: Phaser.Scene, spec: UnitViewSpec): UnitView
   activeRing.setVisible(false);
 
   const shadow = scene.add.graphics({ x: 0, y: SHADOW_Y });
-  drawShadow(shadow);
   // Cień jest rysowany MOCNIEJ niż wygląda w spoczynku, a przygaszany alfą
   // obiektu. Dzięki temu w ruchu jest gdzie iść w OBIE strony: przy zetknięciu
   // do pełnej mocy, w powietrzu poniżej stanu spoczynkowego.
@@ -484,6 +573,19 @@ export function buildUnitView(scene: Phaser.Scene, spec: UnitViewSpec): UnitView
     .setOrigin(0.5, 1)
     .setFlipX(spec.side !== 'player');
   sprite.setDisplaySize(SPRITE_H * (sprite.width / sprite.height), SPRITE_H);
+  // Wielkość z pola sylwetki i poziomu (patrz `silhouetteOf`). Bez pomiaru
+  // (brak tekstury) zostaje dawny kadr „dłuższy bok = 50 px".
+  const sil = silhouetteOf(scene, spec.spriteKey);
+  let footW = 30;
+  if (sil) {
+    const perPx = SPRITE_H / sprite.height;
+    let k = AREA_BY_TIER(spec.tier ?? 3) / (sil.sqrtArea * perPx);
+    k = Math.min(k, MAX_SIL_H / (sil.h * perPx), MAX_SIL_W / (sil.w * perPx));
+    k = Math.max(k, 0.8);
+    sprite.setScale(sprite.scaleX * k, sprite.scaleY * k);
+    footW = sil.foot * perPx * k;
+  }
+  drawShadow(shadow, Phaser.Math.Clamp(footW * 1.25, 22, 58));
 
   // Nazwa jak logo z bajki: gruby ciemny kontur i cień pod spodem. Leży nad
   // głową, bo to jedyne miejsce, gdzie nie zasłania liczb.
@@ -526,8 +628,10 @@ export function buildUnitView(scene: Phaser.Scene, spec: UnitViewSpec): UnitView
 
   const container = scene.add.container(spec.x, spec.y, [
     activeRing,
-    shadow,
     platform,
+    // Cień NAD podestem: pod nim krążek w barwie strony zasłaniał go całkiem
+    // i stworek stał na płaskiej naklejce, bez żadnego kontaktu z podłożem.
+    shadow,
     sprite,
     typeBg,
     typeIcon,
@@ -554,6 +658,8 @@ export function buildUnitView(scene: Phaser.Scene, spec: UnitViewSpec): UnitView
     baseScaleX: sprite.scaleX,
     baseScaleY: sprite.scaleY,
     seed: spec.seed,
+    restKey: spec.spriteKey,
+    pose: null,
   };
 
   startBreathing(scene, view, spec.seed);
@@ -770,6 +876,169 @@ export function setUnitActive(scene: Phaser.Scene, view: UnitView, active: boole
   }
 }
 
+// ---------- pozy ----------
+//
+// Każdy stworek ma obok obrazka „stoi" kilka klatek-póz
+// (`public/sprites/pozy/<id>-<poza>.png`, `tools/stworki_przemaluj.py`):
+// zamach, cios, trafienie i krok. Pozy nie zastępują tweenów, tylko się z nimi
+// przeplatają — tween niesie PRZESUNIĘCIE (wypad, odrzut, podskok), poza niesie
+// KSZTAŁT (korpus w przód, zgięcie w pasie). Dopiero razem czytają się jak
+// klatki z Heroes 3: wyczekanie, akcja, uderzenie, powrót.
+//
+// Tekstura pozy jest szersza od stojącej (192 × 128 zamiast 128 × 128), ale ma
+// tę samą gęstość pikseli, a kwadrat stojącego stworka leży w niej dokładnie
+// pośrodku. Podmiana tekstury nie rusza więc ani skali, ani punktu zaczepienia
+// (środek dołu), a odbicie wroga (`flipX`) działa bez przeliczeń. Brak pliku
+// pozy nie jest błędem — stworek zostaje wtedy przy obrazku „stoi".
+
+export type PoseName = 'zamach' | 'atak' | 'trafiony' | 'krok';
+export const POSES: PoseName[] = ['zamach', 'atak', 'trafiony', 'krok'];
+export const poseKey = (sprite: string, pose: PoseName) => `poza-${sprite}-${pose}`;
+
+/** Strona, w którą stworek patrzy: gracz w prawo, wróg (odbity) w lewo. */
+const facing = (view: UnitView) => (view.sprite.flipX ? -1 : 1);
+
+/** Podmiana klatki. `null` — powrót do obrazka „stoi". */
+export function setPose(view: UnitView, pose: PoseName | null) {
+  if (!alive(view)) return;
+  const key = pose ? poseKey(view.restKey, pose) : view.restKey;
+  const use = pose && view.sprite.scene.textures.exists(key) ? key : view.restKey;
+  view.pose = use === view.restKey ? null : pose;
+  if (view.sprite.texture.key !== use) view.sprite.setTexture(use);
+}
+
+/**
+ * Jeden tween pozy na raz: ugięcie (mnożnik skali bazowej) i przesunięcie
+ * sylwetki w poziomie, liczone w stronę, w którą stworek PATRZY. Zdejmuje też
+ * domykające ugięcie po przejściu — cios zaczyna się tuż po lądowaniu i dwa
+ * tweeny na tej samej skali szarpałyby sylwetką.
+ */
+function poseMotion(
+  scene: Phaser.Scene,
+  view: UnitView,
+  o: { sx: number; sy: number; dx: number; duration: number; ease?: string; onComplete?: () => void }
+) {
+  if (!alive(view)) return;
+  view.poseTween?.remove();
+  view.moveSquash?.remove();
+  view.moveSquash = undefined;
+  view.poseTween = scene.tweens.add({
+    targets: view.sprite,
+    scaleX: view.baseScaleX * o.sx,
+    scaleY: view.baseScaleY * o.sy,
+    x: o.dx * facing(view),
+    duration: o.duration,
+    ease: o.ease ?? E.snap,
+    onComplete: () => {
+      view.poseTween = undefined;
+      o.onComplete?.();
+    },
+  });
+}
+
+/**
+ * Cios wręcz, faza po fazie. Scena prowadzi kontener (dojście do celu), a tu
+ * pracuje sama sylwetka. Czasy muszą się zgadzać z `meleeLunge` w scenie:
+ *   zamach  — odchylenie i przysiad (wyczekanie),
+ *   cios    — poza ciosu z wyciągnięciem, w chwili ruszenia do przodu,
+ *   powrót  — trzyma pozę przez uderzenie, wraca do „stoi" w drodze powrotnej.
+ */
+export function poseWindup(scene: Phaser.Scene, view: UnitView, duration: number) {
+  setPose(view, 'zamach');
+  poseMotion(scene, view, { sx: 1.07, sy: 0.9, dx: -3, duration, ease: 'Sine.easeOut' });
+}
+
+export function poseStrike(scene: Phaser.Scene, view: UnitView, duration: number) {
+  setPose(view, 'atak');
+  poseMotion(scene, view, { sx: 1.08, sy: 1.02, dx: 5, duration, ease: 'Quad.easeOut' });
+}
+
+export function poseRecover(scene: Phaser.Scene, view: UnitView, hold: number, duration: number) {
+  if (!alive(view)) return;
+  // Uderzenie trzyma pozę ciosu przez chwilę (zatrzymanie na trafieniu);
+  // dopiero potem wraca, z krótkim dociśnięciem, zanim stanie prosto.
+  view.poseTween?.remove();
+  view.poseTween = scene.tweens.add({
+    targets: view.sprite,
+    scaleX: view.baseScaleX * 1.1,
+    scaleY: view.baseScaleY * 0.96,
+    duration: hold,
+    ease: 'Sine.easeOut',
+    onComplete: () => {
+      setPose(view, null);
+      poseMotion(scene, view, { sx: 1, sy: 1, dx: 0, duration, ease: E.out });
+    },
+  });
+}
+
+/**
+ * Strzał: zamach (naciągnięcie) → poza ciosu z odrzutem w tył w chwili
+ * wypuszczenia pocisku → powrót. `onRelease` pada dokładnie na zmianę pozy,
+ * więc pocisk wylatuje z otwartej paszczy, a nie ze stojącego stworka.
+ */
+export function playShootPose(scene: Phaser.Scene, view: UnitView, onRelease: () => void) {
+  const DRAW = 130;
+  setPose(view, 'zamach');
+  poseMotion(scene, view, {
+    sx: 1.06,
+    sy: 0.9,
+    dx: -3,
+    duration: DRAW,
+    ease: 'Sine.easeOut',
+    onComplete: () => {
+      setPose(view, 'atak');
+      onRelease();
+      // Odrzut: sylwetka wystrzeliwuje do przodu kształtem, ale ciałem
+      // cofa się o włos — to czyta się jako siła wystrzału.
+      poseMotion(scene, view, {
+        sx: 1.1,
+        sy: 1.03,
+        dx: 2,
+        duration: 70,
+        onComplete: () => poseRecover(scene, view, 150, 170),
+      });
+    },
+  });
+}
+
+/**
+ * Trafienie: poza „oberwał", odrzut OD napastnika, wciśnięcie w ziemię,
+ * krótkie przytrzymanie i powrót. `fromDirX` — znak kierunku, z którego
+ * przyszedł cios (napastnik → cel).
+ */
+export function playHitPose(scene: Phaser.Scene, view: UnitView, fromDirX: number) {
+  if (!alive(view)) return;
+  setPose(view, 'trafiony');
+  // Odrzut liczony w układzie ekranu, a `poseMotion` mnoży przez zwrot
+  // stworka — stąd dzielenie przez `facing`.
+  const push = (fromDirX >= 0 ? 1 : -1) * 6 * facing(view);
+  poseMotion(scene, view, {
+    sx: 1.08,
+    sy: 0.88,
+    dx: push,
+    duration: 70,
+    ease: 'Quad.easeOut',
+    onComplete: () => {
+      if (!alive(view)) return;
+      view.poseTween = scene.tweens.add({
+        targets: view.sprite,
+        scaleX: view.baseScaleX * 1.04,
+        scaleY: view.baseScaleY * 0.93,
+        x: push * 0.8 * facing(view),
+        duration: 150,
+        ease: 'Sine.easeInOut',
+        onComplete: () => {
+          setPose(view, null);
+          poseMotion(scene, view, { sx: 1, sy: 1, dx: 0, duration: 180, ease: E.out });
+        },
+      });
+    },
+  });
+}
+
+/** Przebieranie klatek w czasie lotu: „skrzydła" w górę i w dół. */
+const FLAP_MS = 120;
+
 // ---------- przemieszczanie ----------
 //
 // Sprite'y stworków to pojedyncze statyczne PNG — nie ma klatek chodu, więc
@@ -814,6 +1083,8 @@ function resetMoveTweens(view: UnitView) {
   view.moveLean?.remove();
   view.moveShadow?.remove();
   view.moveHop = view.moveSquash = view.moveLean = view.moveShadow = undefined;
+  view.gait?.remove();
+  view.gait = undefined;
 }
 
 /** Przygotowanie do przejścia: gasimy oddech, żeby nie walczył o `y` sylwetki. */
@@ -826,6 +1097,19 @@ export function beginUnitMove(scene: Phaser.Scene, view: UnitView, flying: boole
   view.shadow.setPosition(0, SHADOW_Y).setScale(1).setAlpha(SHADOW_REST);
 
   if (!flying) return;
+
+  // Trzepot: dwie klatki na zmianę w stałym rytmie, niezależnym od pól
+  // trasy — jak skrzydła, które nie wiedzą o heksach.
+  let gora = true;
+  setPose(view, 'krok');
+  view.gait = scene.time.addEvent({
+    delay: FLAP_MS,
+    loop: true,
+    callback: () => {
+      gora = !gora;
+      setPose(view, gora ? 'krok' : 'zamach');
+    },
+  });
 
   // Latacz: wznosi się RAZ, przed pierwszym polem, i dopiero na górze zaczyna
   // sinus. Wznoszenie i sinus to dwa tweeny na to samo `y`, więc drugi startuje
@@ -894,6 +1178,9 @@ export function stepUnitMove(
   // `yoyo` domyka cykl dokładnie na granicy pola, więc następny krok zaczyna
   // się z tego samego stanu, w którym poprzedni skończył.
   const half = duration / 2;
+  // Klatka kroku w fazie oderwania, klatka „stoi" przy zetknięciu —
+  // dwie klatki na pole dają rytm chodu zamiast sunięcia naklejki.
+  setPose(view, 'krok');
   view.moveHop?.remove();
   view.moveHop = scene.tweens.add({
     targets: view.sprite,
@@ -901,6 +1188,7 @@ export function stepUnitMove(
     duration: half,
     ease: 'Sine.easeOut',
     yoyo: true,
+    onYoyo: () => setPose(view, null),
   });
 
   view.moveSquash?.remove();
@@ -937,6 +1225,7 @@ export function endUnitMove(scene: Phaser.Scene, view: UnitView, flying: boolean
     return;
   }
   resetMoveTweens(view);
+  setPose(view, null);
 
   const land = flying ? 260 : 140;
   view.moveHop = scene.tweens.add({
@@ -946,7 +1235,10 @@ export function endUnitMove(scene: Phaser.Scene, view: UnitView, flying: boolean
     ease: flying ? 'Sine.easeIn' : E.snap,
     onComplete: () => {
       if (!alive(view)) return;
-      view.sprite.setPosition(0, FEET_Y).setAngle(0).setScale(view.baseScaleX, view.baseScaleY);
+      // Cios potrafi ruszyć tuż po lądowaniu — wtedy skalą i położeniem
+      // w poziomie rządzi już poza, a my prostujemy tylko resztę.
+      if (view.poseTween) view.sprite.setY(FEET_Y).setAngle(0);
+      else view.sprite.setPosition(0, FEET_Y).setAngle(0).setScale(view.baseScaleX, view.baseScaleY);
       view.moveHop = undefined;
       startBreathing(scene, view, view.seed);
     },
@@ -987,6 +1279,9 @@ export function playUnitDeath(scene: Phaser.Scene, view: UnitView, onDone: () =>
   // Ruch mógł zostać przerwany śmiercią — zdejmujemy jego tweeny, żeby nic nie
   // dociągało sylwetki w trakcie rozsypki.
   resetMoveTweens(view);
+  view.poseTween?.remove();
+  view.poseTween = undefined;
+  setPose(view, 'trafiony');
   scene.tweens.killTweensOf(view.activeRing);
   view.activeRing.setVisible(false);
 

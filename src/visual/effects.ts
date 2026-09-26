@@ -1333,6 +1333,15 @@ export function flashTarget(
     .setBlendMode(Phaser.BlendModes.ADD)
     .setAlpha(0);
   if (parent) parent.add(lit);
+  // Kopia idzie za sylwetką: trafiony stworek odskakuje i kuli się (poza
+  // trafienia w unitView.ts), a rozbłysk ma leżeć na nim, nie obok.
+  const follow = () => {
+    if (!lit.active || !sprite.active) return;
+    lit.setPosition(sprite.x, sprite.y).setScale(sprite.scaleX, sprite.scaleY).setAngle(sprite.angle);
+    if (lit.texture.key !== sprite.texture.key) lit.setTexture(sprite.texture.key);
+  };
+  scene.events.on('postupdate', follow);
+  lit.once('destroy', () => scene.events.off('postupdate', follow));
   scene.tweens.add({
     targets: lit,
     alpha: 0.55,
