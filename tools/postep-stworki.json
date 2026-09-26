@@ -1,10 +1,10 @@
 {
- "updated": "Stwory na mapie: 5 rund, 0/15. Test kontrolny: nasze obiekty mapy przegrywają z HoMM3 tak samo (0/3) — stwory doszły do pułapu mapy. Decyzja gracza w toku.",
+ "updated": "Nowa poprzeczka (decyzja gracza): stwory oceniane względem NASZEJ mapy, test „co nie pasuje\". Porównanie z HotA nie ma sensu — nasze obiekty mapy też z nim przegrywają.",
  "pieces": [
   {
    "name": "Stwory na mapie przygody (malowane rysunki, stos na mapie)",
    "status": "critic",
-   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3. Od 2026-09-26 (decyzja gracza): storki zostają urocze — krytyk nie ocenia klimatu (uroczy vs ponury), tylko spójność stworów z ich własnym światem i UI.",
+   "bar": "Od 2026-09-26 (decyzja gracza): poprzeczką jest NASZA mapa, nie HotA. Krytyk dostaje sam nasz kadr, wskazuje element, który najmniej pasuje, i ocenia, czy stwory pasują do naszej mapy. Wygrana: w 2 z 3 kadrów najgorszym elementem nie jest stwór i werdykt brzmi PASUJĄ.",
    "note": "Wszystkie 18 stworów przemalowane w stylu mapy; stos neutralny na mapie: skala, cień, osadzenie w terenie.",
    "rounds": [
     {
@@ -102,7 +102,7 @@
   {
    "name": "Najechanie na stos (mapa przygody)",
    "status": "todo",
-   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3. Od 2026-09-26 (decyzja gracza): storki zostają urocze — krytyk nie ocenia klimatu (uroczy vs ponury), tylko spójność stworów z ich własnym światem i UI.",
+   "bar": "Od 2026-09-26 (decyzja gracza): poprzeczką jest NASZA mapa, nie HotA. Krytyk dostaje sam nasz kadr, wskazuje element, który najmniej pasuje, i ocenia, czy stwory pasują do naszej mapy. Wygrana: w 2 z 3 kadrów najgorszym elementem nie jest stwór i werdykt brzmi PASUJĄ.",
    "note": "Drobna animacja stosu po najechaniu kursorem, jak w HotA.",
    "rounds": []
   },
