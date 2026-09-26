@@ -17,13 +17,12 @@ Runda 1 portretów przegrała ślepo 0/3 i krytyk wskazał dokładnie, czemu:
     wyglądały jak błyszczące maskotki naklejone na obraz;
 Stąd dwie zasady tej wersji:
 
-  1. JEDEN SZABLON KADRU. Każdy stwór ma w tabeli `GLOWA` tylko pomiar:
-     środek głowy w poziomie, wysokość OCZU i wielkość głowy (w pikselach
-     mistrza 256 × 256). Kadr liczy się z pomiaru jednym wzorem: bok =
-     `SZABLON_BOK` × wielkość głowy, oczy na `SZABLON_OCZY` wysokości od góry.
-     Głowa z ramionami wypełnia wtedy ~80% wysokości ramki u każdego stwora,
-     a oczy stoją w całym rzędzie na jednej linii. Stwory bez twarzy
-     (Obsydian) mierzy się po „czole" bryły.
+  1. JEDEN SZABLON KADRU. Każdy stwór ma w tabeli `GLOWA` ręcznie zmierzone
+     pudełko głowy (w pikselach mistrza 256 × 256), a kadr liczy się z niego
+     jednym wzorem: cała głowa w kadrze, ten sam zapas nad czubkiem, głowa
+     na ~2/3 szerokości ramki — ta sama odległość kamery w całym rzędzie.
+     Stwory bez wyraźnej głowy (Obsydian, bryła Pyroko) mierzy się tak, żeby
+     w kadrze było ich „popiersie"; brakujące oko dorysowuje `OCZY`.
   2. JEDNO TŁO I JEDNO ŚWIATŁO NA FRAKCJĘ. Tło to ten sam wycinek
      malowanego krajobrazu miasta (`public/miasto/tlo-<f>.png`: niebo,
      horyzont, grunt) dla wszystkich stworów frakcji, ocieplony pod
@@ -69,47 +68,50 @@ OKRAGLY = (56, 56)
 #
 # (środek głowy x, oczy y, wielkość głowy) w pikselach mistrza 256 × 256.
 # Wielkość głowy = od czubka głowy (bez czuba, grzebienia, kiełka) do brody.
-GLOWA: dict[str, tuple[float, float, float]] = {
+GLOWA: dict[str, tuple[float, float, float, float]] = {
     # Bór
-    '00193': (195, 157, 90),  # Pyroko — głowa i tułów to jedna bryła: mierzona twarz z przodu
-    '00020': (78, 82, 40),  # Flamir — mała ptasia głowa z dziobem (bez grzebienia)
-    '00218': (100, 56, 125),  # Aquino
-    '00030': (172, 118, 105),  # Torrenar — pysk w czaszce-hełmie (bez płyt karku)
-    '00096': (160, 139, 90),  # Verdiko — kula głowy (bez kiełka)
-    '00227': (118, 72, 45),  # Silvena — twarz pod koroną płatków
+    '00193': (120, 60, 250, 210),  # Pyroko — głowa i tułów to jedna bryła: przód bryły z twarzą
+    '00020': (42, 60, 104, 108),  # Flamir — głowa z dziobem (grzebień poza pudełkiem)
+    '00218': (45, 4, 170, 132),  # Aquino — kula głowy
+    '00030': (95, 10, 250, 170),  # Torrenar — czaszka-hełm z pyskiem
+    '00096': (100, 95, 205, 185),  # Verdiko — kula głowy (kiełek poza pudełkiem)
+    '00227': (90, 40, 158, 100),  # Silvena — twarz z włosami-płatkami
     # Grota
-    '00246': (162, 54, 38),  # Glacyn — głowa na długiej szyi
-    '00002': (113, 107, 85),  # Sporex — twarz pod kapeluszem płatków
-    '00263': (130, 76, 65),  # Cindro — twarz w kapturze (bez uszu)
-    '00250': (112, 61, 50),  # Sporina — główka nad strąkiem
-    '00220': (150, 66, 45),  # Aquator — głowa z dziobem
-    '00196': (128, 100, 96),  # Vulkaron — maska: czerwone „brwi" jako linia oczu
+    '00246': (140, 40, 190, 78),  # Glacyn — głowa z pyskiem (pętla czuba poza pudełkiem)
+    '00002': (60, 85, 170, 170),  # Sporex — twarz pod kapeluszem płatków
+    '00263': (95, 25, 180, 115),  # Cindro — głowa w kapturze z uszami
+    '00250': (88, 30, 155, 95),  # Sporina — główka z uszami
+    '00220': (125, 45, 196, 95),  # Aquator — głowa z dziobem
+    '00196': (70, 60, 190, 225),  # Vulkaron — korona i pierścień-twarz
     # Zbocze
-    '00074': (185, 107, 60),  # Bazalt — głowa w grzywie
-    '00058': (130, 50, 88),  # Ashko — puszysta głowa z maską
-    '00095': (128, 70, 96),  # Obsydian — bez twarzy: biały trzon jako głowa
-    '00023': (178, 103, 70),  # Cynder
-    '00077': (114, 79, 50),  # Lawina — hełm z czerwonymi oczami
-    '00041': (118, 66, 80),  # Sadzin — głowa bez grzebienia
+    '00074': (155, 80, 225, 145),  # Bazalt — głowa w grzywie
+    '00058': (70, 5, 195, 95),  # Ashko — puszysta głowa z maską
+    '00095': (80, 20, 180, 150),  # Obsydian — bez głowy: trzon i szczyt bryły jak popiersie
+    '00023': (132, 60, 228, 140),  # Cynder
+    '00077': (80, 50, 150, 105),  # Lawina — hełm z pierścieniem
+    '00041': (85, 40, 150, 145),  # Sadzin — głowa z dziobem i koralami
 }
 
-# Bok kadru w wielkościach głowy i położenie oczu (ułamek wysokości od góry).
-# Runda 2 (1.8 głowy) przegrała, bo stwór „pływał mały na środku kafla".
-# W Heroes popiersie WYPEŁNIA portret i rama tnie je bez litości: 1.3 głowy
-# daje głowę na ~75% wysokości, ramiona ucięte dolną krawędzią, a boki
-# głowy (uszy, grzebień, kolce) mogą wyjść za ramę. Oczy na ~0.4.
-# Mały portret jest jeszcze ciaśniejszy — przy 26 px liczy się tylko twarz.
-#
-# Runda 3: „odległość kamery różna w rzędzie" — kadr liczył się z głowy
-# zmierzonej niekonsekwentnie (u Pyroko cała bryła, u Flamira głowa z piersią).
-# Teraz `GLOWA` to zawsze czaszka od czubka (bez czubów, uszu, płatków) do
-# brody, i ŻADNEGO dolnego progu boku: głowa ma w każdym portrecie tę samą
-# wysokość i te same oczy, nawet jeśli mała głowa wymaga powiększenia ~2×.
-# Duży: głowa ~57% wysokości, ramiona do dolnej krawędzi. Mały: sama twarz,
-# ~80% wysokości — przy 28 px liczy się tylko ona.
-SZABLON_BOK = {'duzy': 1.75, 'maly': 1.25}
-SZABLON_OCZY = {'duzy': 0.40, 'maly': 0.44}
-MIN_BOK = {'duzy': 0, 'maly': 0}
+# Oczy, których na mistrzu nie widać przy wielkości portretu (Flamir ma
+# oko-kreskę 2 px). Portret dorysowuje je w pikselach mistrza: (x, y, promień).
+# Runda 4: „Flamir to dziób i pierś, bez oka" — rzędu nie da się czytać,
+# kiedy jeden stwór nie patrzy.
+OCZY: dict[str, tuple[float, float, float]] = {
+    '00020': (72, 76, 3.6),
+}
+
+# Szablon — JEDNO ujęcie „średniego planu" dla wszystkich:
+#   głowa (pudełko z `GLOWA`) w całości w kadrze, zawsze z tym samym
+#   zapasem nad czubkiem (`ZAPAS`), szeroka na `SZEROKOSC` ramki, a gdy
+#   głowa jest wysoka i wąska — wysoka na najwyżej `WYSOKOSC` ramki.
+# Runda 4 normowała wielkością „czaszki od czubka do brody" i przy dziwnej
+# anatomii to się sypało: Pyroko (bryła) wychodził obcięty, Flamir jako dziób
+# z piersią, Obsydian jako zbliżenie. Pudełko głowy mierzone ręcznie na
+# arkuszu (`--pomiar`) + jeden wzór = ta sama odległość kamery w rzędzie.
+SZEROKOSC = {'duzy': 0.66, 'maly': 0.74}
+WYSOKOSC = {'duzy': 0.72, 'maly': 0.8}
+ZAPAS = {'duzy': 0.12, 'maly': 0.08}
+
 
 # ————————————————————————————————————————————————— tło i światło frakcji
 #
@@ -133,10 +135,17 @@ FRAKCJA = {
 # ram i kremowy napis na drewnie), wspólne dla wszystkich: stwory stoją
 # w świetle TEGO interfejsu, a nie każdy w swoim.
 SWIATLO = (255, 214, 150)
-# Tło małych portretów — JEDNO dla wszystkich (panel mapy miesza frakcje;
-# trzy różne, głośne tła w jednym rzędzie 28 px to był szum): rozmyty
-# krajobraz Boru przełożony na dwa tony ciemnego drewna i złota ramy.
-TLO_MALE = {'frakcja': 'bor', 'okno': (470, 0, 210), 'ciemny': (38, 22, 10), 'jasny': (176, 124, 66)}
+# Wspólny ton dużych teł: krajobraz każdej frakcji przekładany na tę samą
+# skalę ciepłego brązu i złota (`CIEN_TLA` → `SWIATLO_TLA`), z `BARWA_TLA`
+# oryginalnej barwy — w rundzie 4 Grota była sinoszara, Bór oliwkowy,
+# Zbocze brązowe i rząd mieszanej armii wyglądał jak trzy komplety.
+CIEN_TLA = (46, 28, 14)
+SWIATLO_TLA = (214, 168, 108)
+BARWA_TLA = 0.2
+# Tło małych portretów — JEDNO dla wszystkich: ciepły pergamin z winietą
+# w drewno. Runda 4 miała tu prawie czerń i ciemne stwory (Lawina,
+# Vulkaron) w niej znikały.
+TLO_MALE = {'srodek': (226, 190, 136), 'brzeg': (122, 80, 40)}
 
 
 def frakcje() -> dict[str, str]:
@@ -164,39 +173,44 @@ def krajobraz(frakcja: str) -> Image.Image:
 
 
 def tlo_frakcji(kraj: Image.Image, f: dict, rozmiar: tuple[int, int]) -> Image.Image:
-    """Tło dużego portretu: wycinek krajobrazu frakcji, ciemny, ciepły, rozmyty."""
+    """Tło dużego portretu: krajobraz frakcji, rozmyty, we wspólnym ciepłym tonie."""
     w, h = rozmiar
     lewo, gora, bok = f['okno']
     kawal = kraj.crop((lewo, gora, lewo + bok, gora + bok)).resize((w, h), Image.LANCZOS)
     # Głębia ostrości: dal miękka, ostry jest tylko stwór.
     kawal = kawal.filter(ImageFilter.GaussianBlur(2.2))
     a = np.asarray(kawal).astype(np.float32) / 255
-    szar = (a * np.array([0.3, 0.55, 0.15])).sum(axis=2, keepdims=True)
-    a = szar + (a - szar) * 0.7
-    cieplo = np.array(f['cieplo'], np.float32) / 255
-    a = a * (1 - f['moc'] + f['moc'] * cieplo)
-    # Ciemniej niż krajobraz miasta i światło z góry-lewa, jak na stworze.
-    yy = np.linspace(0, 1, h)[:, None, None]
-    xx = np.linspace(0, 1, w)[None, :, None]
-    swiatlo = 0.78 - 0.16 * xx - 0.3 * yy**1.4
-    return Image.fromarray((np.clip(a * swiatlo, 0, 1) * 255).astype(np.uint8), 'RGB')
-
-
-def tlo_male(kraj: Image.Image, rozmiar: tuple[int, int]) -> Image.Image:
-    """Wspólne tło małych portretów: rozmyty krajobraz w dwóch tonach drewna."""
-    w, h = rozmiar
-    lewo, gora, bok = TLO_MALE['okno']
-    kawal = kraj.crop((lewo, gora, lewo + bok, gora + bok)).resize((w, h), Image.LANCZOS)
-    kawal = kawal.filter(ImageFilter.GaussianBlur(2.0))
-    a = np.asarray(kawal).astype(np.float32) / 255
     jas = (a * np.array([0.3, 0.55, 0.15])).sum(axis=2, keepdims=True)
-    ciem = np.array(TLO_MALE['ciemny'], np.float32) / 255
-    jasn = np.array(TLO_MALE['jasny'], np.float32) / 255
-    a = ciem + (jasn - ciem) * np.clip(jas * 1.1, 0, 1)
+    cien = np.array(CIEN_TLA, np.float32) / 255
+    swiatlo_tla = np.array(SWIATLO_TLA, np.float32) / 255
+    # Jasność wyrównana między frakcjami (Grota jest ciemną jaskinią, Bór
+    # słoneczną łąką) — średnia zawsze ta sama, zostaje tylko rysunek światła.
+    jas = jas * (0.5 / max(float(jas.mean()), 1e-3))
+    ton = cien + (swiatlo_tla - cien) * np.clip(jas, 0, 1)
+    # Odrobina własnej barwy krajobrazu (niebo, lawa, las) — ale w tonie.
+    a = ton * (1 - BARWA_TLA) + a * (ton.mean() / max(a.mean(), 1e-3)) * BARWA_TLA
     yy = np.linspace(0, 1, h)[:, None, None]
     xx = np.linspace(0, 1, w)[None, :, None]
-    a *= 0.95 - 0.25 * xx - 0.3 * yy
+    a = a * (1.0 - 0.18 * xx - 0.28 * yy**1.4)
     return Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8), 'RGB')
+
+
+def tlo_male(rozmiar: tuple[int, int]) -> Image.Image:
+    """Wspólne tło małych portretów: pergamin ze światłem z góry-lewa i winietą w drewno."""
+    w, h = rozmiar
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    rr = np.hypot((xx - w * 0.42) / w, (yy - h * 0.36) / h)
+    t = np.clip((rr - 0.12) / 0.55, 0, 1)[..., None] ** 1.2
+    srodek = np.array(TLO_MALE['srodek'], np.float32)
+    brzeg = np.array(TLO_MALE['brzeg'], np.float32)
+    a = srodek + (brzeg - srodek) * t
+    # Faktura papieru: miękki szum w niskiej częstotliwości — bez niego tło
+    # jest płaskim gradientem z arkusza stylów.
+    rng = np.random.default_rng(7)
+    szum = Image.fromarray((rng.random((h // 3 + 1, w // 3 + 1)) * 255).astype(np.uint8))
+    szum = np.asarray(szum.resize((w, h), Image.BICUBIC).filter(ImageFilter.GaussianBlur(1)), np.float32) / 255
+    a = a * (0.94 + 0.12 * szum[..., None])
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), 'RGB')
 
 
 # ————————————————————————————————————————————————— stwór
@@ -204,10 +218,11 @@ def tlo_male(kraj: Image.Image, rozmiar: tuple[int, int]) -> Image.Image:
 
 def kadr(sid: str, rodzaj: str) -> tuple[float, float, float, float]:
     """Pudełko kadru (lewo, góra, prawo, dół) w pikselach mistrza — z szablonu."""
-    hx, oczy, glowa = GLOWA[sid]
-    bok = max(MIN_BOK[rodzaj], glowa * SZABLON_BOK[rodzaj])
-    gora = oczy - bok * SZABLON_OCZY[rodzaj]
-    return (hx - bok / 2, gora, hx + bok / 2, gora + bok)
+    x0, y0, x1, y1 = GLOWA[sid]
+    bok = max((x1 - x0) / SZEROKOSC[rodzaj], (y1 - y0) / WYSOKOSC[rodzaj])
+    gora = y0 - bok * ZAPAS[rodzaj]
+    sx = (x0 + x1) / 2
+    return (sx - bok / 2, gora, sx + bok / 2, gora + bok)
 
 
 def wytnij(mistrz: Image.Image, box, rozmiar: tuple[int, int]) -> Image.Image:
@@ -252,8 +267,19 @@ def w_swietle(stwor: Image.Image, f: dict, maly: bool) -> Image.Image:
 
 
 def zloz(stwor: Image.Image, tlo: Image.Image, maly: bool) -> Image.Image:
-    """Stwór na tle, z miękkim cieniem rzuconym w prawo-dół (od światła)."""
+    """Stwór na tle, z miękkim cieniem rzuconym w prawo-dół (od światła).
+
+    Mały portret dostaje jeszcze cienki ciemny kontur wokół sylwetki: na
+    jasnym pergaminie jasne stwory (Aquino, Silvena) inaczej się w nim
+    rozpływają, a ciemne i tak się odcinają.
+    """
     A = stwor.getchannel('A')
+    if maly:
+        obrys = A.filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(0.6))
+        o = np.asarray(obrys, np.float32)[..., None] / 255 * 0.55
+        t = np.asarray(tlo, np.float32)
+        t = t * (1 - o) + np.array([40, 22, 8], np.float32) * o
+        tlo = Image.fromarray(np.clip(t, 0, 255).astype(np.uint8), 'RGB')
     cien = A.filter(ImageFilter.GaussianBlur(3.5 if not maly else 1.8))
     cien = ImageChops.offset(cien, 3 if not maly else 1, 3 if not maly else 1)
     c = np.asarray(cien, np.float32)[..., None] / 255 * 0.5
@@ -304,14 +330,28 @@ def wytnij_kolo(im: Image.Image) -> Image.Image:
 # ————————————————————————————————————————————————— składanie
 
 
+def dorysuj_oko(mistrz: Image.Image, x: float, y: float, r: float) -> Image.Image:
+    """Oko w stylu reszty stworów: ciemna źrenica z jasnym błyskiem od światła."""
+    k = 4
+    duzy = mistrz.resize((mistrz.width * k, mistrz.height * k), Image.LANCZOS)
+    d = ImageDraw.Draw(duzy)
+    X, Y, R = x * k, y * k, r * k
+    d.ellipse((X - R * 1.15, Y - R * 1.25, X + R * 1.15, Y + R * 1.25), fill=(60, 30, 18, 255))
+    d.ellipse((X - R * 0.9, Y - R, X + R * 0.9, Y + R), fill=(22, 12, 8, 255))
+    d.ellipse((X - R * 0.55, Y - R * 0.75, X - R * 0.05, Y - R * 0.25), fill=(255, 248, 230, 255))
+    return duzy.resize(mistrz.size, Image.LANCZOS)
+
+
 def portret(sid: str, frakcja: str, kraj: Image.Image, rodzaj: str) -> Image.Image:
     rozmiar = {'duzy': DUZY, 'maly': MALY, 'okragly': OKRAGLY}[rodzaj]
     szablon = 'duzy' if rodzaj == 'duzy' else 'maly'
     maly = szablon == 'maly'
     f = FRAKCJA[frakcja]
     mistrz = Image.open(MISTRZOWIE / f'{sid}.png').convert('RGBA')
+    if sid in OCZY:
+        mistrz = dorysuj_oko(mistrz, *OCZY[sid])
     stw = w_swietle(wytnij(mistrz, kadr(sid, szablon), rozmiar), f, maly)
-    tlo = tlo_male(krajobraz(TLO_MALE['frakcja']), rozmiar) if maly else tlo_frakcji(kraj, f, rozmiar)
+    tlo = tlo_male(rozmiar) if maly else tlo_frakcji(kraj, f, rozmiar)
     im = zloz(stw, tlo, maly)
     return wytnij_kolo(im) if rodzaj == 'okragly' else ramka(im)
 
@@ -323,8 +363,8 @@ def pomiar(ids: list[str], plik: str):
     for i, sid in enumerate(ids):
         ox, oy = (i % 6) * 256, (i // 6) * 256
         ark.alpha_composite(Image.open(MISTRZOWIE / f'{sid}.png').convert('RGBA'), (ox, oy))
-        hx, oczy, glowa = GLOWA[sid]
-        d.line([(ox + hx - glowa / 2, oy + oczy), (ox + hx + glowa / 2, oy + oczy)], fill=(255, 255, 0, 255))
+        x0, y0, x1, y1 = GLOWA[sid]
+        d.rectangle([ox + x0, oy + y0, ox + x1, oy + y1], outline=(255, 255, 0, 255))
         l, g, p, dl = kadr(sid, 'duzy')
         d.rectangle([ox + l, oy + g, ox + p, oy + dl], outline=(255, 80, 80, 255))
         l, g, p, dl = kadr(sid, 'maly')
@@ -332,6 +372,28 @@ def pomiar(ids: list[str], plik: str):
         d.text((ox + 3, oy + 3), sid, fill=(255, 255, 0, 255))
     ark.save(plik)
     print(f'pomiar: {plik}')
+
+
+def arkusz(gotowe, plik: str):
+    """Arkusz kontrolny w wielkościach z gry: duży przy 94 px (slot ekranu
+    bohatera) i mały przy 28 px (panel mapy), na drewnie, w ramkach.
+    Ma pokazać, czy odległość kamery jest równa w całym rzędzie."""
+    D, M = 94, 28
+    kol = 6
+    rz = (len(gotowe) + kol - 1) // kol
+    cw, ch = D + 14 + M + 14, D + 14
+    ark = Image.new('RGB', (kol * cw + 10, rz * ch + 10), (58, 36, 18))
+    d = ImageDraw.Draw(ark)
+    for i, (sid, duzy, maly) in enumerate(gotowe):
+        x, y = (i % kol) * cw + 10, (i // kol) * ch + 10
+        d.rectangle([x - 3, y - 3, x + D + 2, y + D + 2], outline=(200, 145, 42), width=3)
+        ark.paste(duzy.resize((D, D), Image.LANCZOS), (x, y))
+        mx = x + D + 12
+        d.rectangle([mx - 1, y - 1, mx + M, y + M], outline=(200, 145, 42), width=1)
+        ark.paste(maly.resize((M, M), Image.LANCZOS), (mx, y))
+        d.text((mx, y + M + 4), sid, fill=(248, 230, 184))
+    ark.save(plik)
+    print(f'arkusz: {plik}')
 
 
 def main():
@@ -362,18 +424,7 @@ def main():
     print(f'portrety: {len(gotowe)} → {WYJSCIE.relative_to(KORZEN)}/')
 
     if args.arkusz:
-        kol = 6
-        rz = (len(gotowe) + kol - 1) // kol
-        cw, ch = DUZY[0] + MALY[0] + 28 + 12, DUZY[1] + 8
-        ark = Image.new('RGB', (kol * cw, rz * ch), (40, 30, 20))
-        for i, (sid, d, m) in enumerate(gotowe):
-            x, y = (i % kol) * cw + 4, (i // kol) * ch + 4
-            ark.paste(d, (x, y))
-            ark.paste(m, (x + DUZY[0] + 4, y))
-            ark.paste(m.resize((28, 28), Image.LANCZOS), (x + DUZY[0] + 4, y + MALY[1] + 4))
-        ark.save(args.arkusz)
-        print(f'arkusz: {args.arkusz}')
-
+        arkusz([(sid, d, m) for sid, d, m in gotowe], args.arkusz)
 
 if __name__ == '__main__':
     main()

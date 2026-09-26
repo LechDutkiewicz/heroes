@@ -106,15 +106,34 @@ export function oprawPortret(
  * odbicie przy dolnej krawędzi (światło z góry, jak w `rama.ts`).
  */
 export function dnoGniazda(g: Phaser.GameObjects.Graphics, x: number, y: number, bok: number) {
-  g.fillStyle(0x24160a, 1);
+  // Dno: ciemne drewno, odrobinę jaśniejsze ku środkowi — wnęka ma głębię,
+  // a nie jest czarną dziurą.
+  g.fillStyle(0x1e1208, 1);
   g.fillRect(x, y, bok, bok);
+  const k = Math.max(2, bok * 0.12);
+  g.fillStyle(0x3a2512, 0.55);
+  g.fillRect(x + k, y + k, bok - 2 * k, bok - 2 * k);
+  g.fillStyle(0x4a3018, 0.35);
+  g.fillRect(x + k * 1.8, y + k * 1.8, bok - 3.6 * k, bok - 3.6 * k);
+  // Cień od górnej i lewej krawędzi (światło z góry-lewa pada do wnęki).
   const gleb = Math.max(3, bok * 0.16);
   for (let i = 0; i < 5; i++) {
-    g.fillStyle(0x000000, 0.28 * (1 - i / 5));
+    g.fillStyle(0x000000, 0.3 * (1 - i / 5));
     g.fillRect(x, y + (i * gleb) / 5, bok, gleb / 5 + 0.5);
+    g.fillRect(x + (i * gleb) / 5, y, gleb / 5 + 0.5, bok);
   }
-  g.fillStyle(0xf8e6b8, 0.08);
-  g.fillRect(x + 2, y + bok - 3, bok - 4, 2);
+  // Odbicie na dolnej i prawej wardze.
+  g.fillStyle(0xf8e6b8, 0.1);
+  g.fillRect(x + 2, y + bok - 2, bok - 3, 1.5);
+  g.fillRect(x + bok - 2, y + 2, 1.5, bok - 3);
+  // Rytowana ramka w dnie — gniazdo jest zaprojektowanym miejscem, nie brakiem.
+  if (bok >= 40) {
+    const r = bok * 0.2;
+    g.lineStyle(1, 0x000000, 0.35);
+    g.strokeRect(x + r, y + r, bok - 2 * r, bok - 2 * r);
+    g.lineStyle(1, 0xc8912a, 0.14);
+    g.strokeRect(x + r + 1, y + r + 1, bok - 2 * r, bok - 2 * r);
+  }
 }
 
 export interface OpcjeGniazda {

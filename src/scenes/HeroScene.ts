@@ -851,8 +851,9 @@ export class HeroScene extends Phaser.Scene {
       // to ramka na obrazek, a nie półka, na której stoi figurka. Liczba
       // siedzi na odznace w rogu ramy, nie na portrecie.
       const m = (SLOT_BOK - PORTRET_W_SLOCIE) / 2;
+      // Bez numeru na pustym gnieździe: duża cyfra na środku czytała się jak
+      // liczebność stosu (runda 4). Numer slotu mówi podpowiedź po najechaniu.
       const gniazdo = new GniazdoPortretu(this, x + m, y + m, PORTRET_W_SLOCIE, {
-        numer: String(i + 1),
         rozmiarLiczby: 15,
       });
       gniazdo.kontener.setDepth(Z.hud + 2);
