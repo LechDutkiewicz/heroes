@@ -5,7 +5,9 @@
 """
 import json, sys
 from pathlib import Path
-P = Path(__file__).resolve().parent / 'postep-kampania.json'
+import os
+# POSTEP=postep-stworki.json wybiera inny dziennik pętli (domyślnie kampania).
+P = Path(__file__).resolve().parent / os.environ.get('POSTEP', 'postep-kampania.json')
 a = [x for x in sys.argv[1:] if not x.startswith('--status')]
 status = next((x.split('=', 1)[1] for x in sys.argv[1:] if x.startswith('--status=')), None)
 d = json.loads(P.read_text(encoding='utf-8'))

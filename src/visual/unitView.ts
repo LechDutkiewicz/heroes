@@ -475,7 +475,14 @@ export function buildUnitView(scene: Phaser.Scene, spec: UnitViewSpec): UnitView
 
   // Punkt zaczepienia u stóp: dzięki temu stworek stoi na podeście niezależnie
   // od tego, jak wysoki jest jego rysunek.
-  const sprite = scene.add.image(0, FEET_Y, spec.spriteKey).setOrigin(0.5, 1);
+  // Wszystkie stworki są namalowane przodem w prawo (`tools/stworki_przemaluj.py`),
+  // więc strona przeciwnika, stojąca po prawej, dostaje odbicie — patrzy
+  // na nasz oddział, a nie w bok planszy. Odbicie nie rusza skali, więc
+  // ugięcia i doskoki (`baseScaleX`) działają bez zmian.
+  const sprite = scene.add
+    .image(0, FEET_Y, spec.spriteKey)
+    .setOrigin(0.5, 1)
+    .setFlipX(spec.side !== 'player');
   sprite.setDisplaySize(SPRITE_H * (sprite.width / sprite.height), SPRITE_H);
 
   // Nazwa jak logo z bajki: gruby ciemny kontur i cień pod spodem. Leży nad

@@ -1,0 +1,77 @@
+{
+ "updated": "Stwory na mapie, runda 2: 0/3 — winny sam rysunek (maskotkowe twarze, fiolet/magenta, gładki render). Runda 3: przemalowanie wzorców pędzlem mapy.",
+ "pieces": [
+  {
+   "name": "Stwory na mapie przygody (malowane rysunki, stos na mapie)",
+   "status": "critic",
+   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3.",
+   "note": "Wszystkie 18 stworów przemalowane w stylu mapy; stos neutralny na mapie: skala, cień, osadzenie w terenie.",
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Nasycone kolory (magenta/turkus) spoza palety mapy, gruby jednolity obrys jak naklejka, brak cienia kontaktowego zgodnego ze światłem mapy.",
+     "blind": "tools/postep-obrazy/stwory-mapa-polana-r1.jpg",
+     "note": "Runda 1, Polana; wzorzec: stosy HoMM3 (szkielet, centaur)."
+    },
+    {
+     "win": false,
+     "gap": "Pastelowy błękit Glacyna nie występuje nigdzie na mapie; brak uziemienia; gładkie wektorowe gradienty zamiast teksturowanego cieniowania.",
+     "blind": "tools/postep-obrazy/stwory-mapa-bagna-r1.jpg",
+     "note": "Runda 1, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Twarde ciemne obrysy i płaskie cieniowanie na miękkiej malowanej zimie; płaska niebieska elipsa zamiast miękkiego cienia w kierunku światła.",
+     "blind": "tools/postep-obrazy/stwory-mapa-twierdza-r1.jpg",
+     "note": "Runda 1, Twierdza. Wynik 0/3."
+    },
+    {
+     "win": false,
+     "gap": "Sporex nadal nasycony fiolet i kreskówkowa twarz-maskotka, gruba ciemna krawędź na miękkiej trawie.",
+     "blind": "tools/postep-obrazy/stwory-mapa-polana-r2.jpg",
+     "note": "Runda 2 (barwy z okolicy, cień rzucany), Polana."
+    },
+    {
+     "win": false,
+     "gap": "Glacyn teraz wyprany, pastelowa mięta, za mały zakres jasności wobec chaty i wierzby.",
+     "blind": "tools/postep-obrazy/stwory-mapa-bagna-r2.jpg",
+     "note": "Runda 2, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Rysunek maskotkowy: czyste kreskówkowe twarze, fiolet i magenta na zimowej mapie; szare placki cienia.",
+     "blind": "tools/postep-obrazy/stwory-mapa-twierdza-r2.jpg",
+     "note": "Runda 2, Twierdza. 0/3 — obróbka w grze nie wystarcza, trzeba przemalować wzorce."
+    }
+   ]
+  },
+  {
+   "name": "Najechanie na stos (mapa przygody)",
+   "status": "todo",
+   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3.",
+   "note": "Drobna animacja stosu po najechaniu kursorem, jak w HotA.",
+   "rounds": []
+  },
+  {
+   "name": "Stwory na polu bitwy",
+   "status": "todo",
+   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3.",
+   "note": "Wygląd oddziału w bitwie: rysunek, skala, cień, licznik.",
+   "rounds": []
+  },
+  {
+   "name": "Animacje w bitwie: ruch, lot, atak, obrona, strzał",
+   "status": "todo",
+   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3.",
+   "note": "Klatki póz zamiast samego przesuwania obrazka.",
+   "rounds": []
+  },
+  {
+   "name": "Portrety i ikony stworów (sloty armii, kolejka tury, bohater, miasto)",
+   "status": "todo",
+   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3.",
+   "note": "Małe portrety w interfejsie z tego samego malowanego rysunku.",
+   "rounds": []
+  }
+ ]
+}

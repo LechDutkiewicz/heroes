@@ -19,7 +19,10 @@ from pathlib import Path
 from PIL import Image
 
 KORZEN = Path(__file__).resolve().parent.parent
-DANE = KORZEN / 'tools' / 'postep-kampania.json'
+import os
+# POSTEP=postep-stworki.json wybiera inny dziennik pętli, TYTUL — tytuł strony.
+DANE = KORZEN / 'tools' / os.environ.get('POSTEP', 'postep-kampania.json')
+TYTUL = os.environ.get('TYTUL', 'Kampania Pokemon Heroes')
 
 
 def obraz(sciezka: str, szer: int = 760) -> str:
@@ -174,7 +177,7 @@ def main():
     tresc = (''.join(kawalek(k) for k in otwarte) + grafiki()
              + (f'<h2 class="odlozone">Wygrywają ślepo ({len(zamkniete)})</h2>' if zamkniete else '')
              + ''.join(kawalek(k) for k in zamkniete))
-    strona = f'''<title>Kampania Pokemon Heroes</title>
+    strona = f'''<title>{TYTUL}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
@@ -224,7 +227,7 @@ def main():
 </style>
 <div class="strona">
   <div class="glowa">
-    <h1>Kampania: postęp prac</h1>
+    <h1>{TYTUL}: postęp prac</h1>
     <p>Każdy ekran jest porównywany na ślepo z Heroes of Might and Magic II: The Succession Wars. Kawałek jest skończony dopiero wtedy, gdy krytyk bez podpisów wybierze nasz.</p>
     <p class="suma">{gotowe} z {len(kawalki)} kawałków wygrywa · aktualizacja {teraz} (czas polski)</p>
     <p>{e(dane.get('updated', ''))}</p>
