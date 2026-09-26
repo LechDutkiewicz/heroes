@@ -199,27 +199,18 @@ const STWOREK_KRAWEDZ_SWIATLA = 0.35;
  * w prawo-dół od światła. Barwa: ciepła czerń jak pod skrzynią; na śniegu
  * szaroniebieska (`STWOREK_STYK_SNIEG`), nie nasycony błękit.
  */
-const STWOREK_STYK = 0.66;
+const STWOREK_STYK = 0.85;
 const STWOREK_STYK_SNIEG = 0x3e4a5e;
 /** Krycie cienia rzuconego w kształcie stworka (nad plamą styku). */
-const STWOREK_CIEN = 0.35;
+const STWOREK_CIEN = 0.45;
 /** Chłodna barwa strony cienia na śniegu (`STWOREK_SNIEG`). */
 const STWOREK_CHLOD = [96, 112, 140];
-/**
- * Obrys stworka na planszach, które obrysowują obiekty (`obrysObiektow`).
- * Runda 6: prawie czarny pierścień 0x1c1408 czytał się jak naklejka, a brzegi
- * chaty i mostu są cienkie, ciepło-brązowe. Obrys jest więc w teksturze:
- * pierścień ok. 1,2 piksela świata w barwie przyciemnionego brzegu stworka
- * zmieszanej po połowie z ciepłym brązem (`STWOREK_BRAZ`).
- */
-const STWOREK_OBRYS_PX = 1.2;
-const STWOREK_BRAZ = [66, 44, 24];
 /**
  * Klimat śnieżny (plansza z `cienNaSniegu`, jak Twierdza): obiekty stoją tam
  * w chłodnym, rozproszonym świetle. Stworek: mniej nasycenia i kontrastu,
  * odcień lekko ku barwie okolicy, jasna chłodna krawędź od strony światła.
  */
-const STWOREK_SNIEG = { nasycenie: 0.75, kontrast: 0.8, odcien: 0.15, krawedz: 0.3 };
+const STWOREK_SNIEG = { nasycenie: 0.65, kontrast: 0.72, odcien: 0.2, krawedz: 0.3 };
 /** Bryła: rozjaśnienie lewej-góry i przyciemnienie prawej-dołu sylwetki (±). */
 const STWOREK_BRYLA = 0.16;
 /**
@@ -229,7 +220,7 @@ const STWOREK_BRYLA = 0.16;
  */
 const OBIEKTY_WZORCOWE = ['m-chatka', 'm-skrzynia', 'm-woz', 'm-wieza-obserwacyjna', 'm-kopalnia'];
 /** Zakres barw obiektów planszy — patrz `barwyObiektow`. Klucz: id planszy. */
-const BARWY_OBIEKTOW = new Map<string, { nas: number; sufit: number; jas: number; roz: number }>();
+const BARWY_OBIEKTOW = new Map<string, { med: number; nas: number; sufit: number; jas: number; roz: number }>();
 /**
  * Piksel [r, g, b] z odcieniem różu/magenty (320–360°) przesunięty ku
  * ciepłej czerwieni (ok. 8°) — o 70% drogi, im bliżej różu, tym mocniej.
@@ -714,10 +705,10 @@ export class AdventureScene extends Phaser.Scene {
 
   /**
    * Zakres barw obiektów tej planszy (`OBIEKTY_WZORCOWE`, te, które są):
-   * 85. i 95. percentyl chromy (`nas`, `sufit`), średnia i odchylenie
+   * mediana, 85. i 95. percentyl chromy (`med`, `nas`, `sufit`), średnia i odchylenie
    * jasności pikseli nieprzezroczystych. Liczone raz na planszę.
    */
-  private barwyObiektow(): { nas: number; sufit: number; jas: number; roz: number } | null {
+  private barwyObiektow(): { med: number; nas: number; sufit: number; jas: number; roz: number } | null {
     const znane = BARWY_OBIEKTOW.get(this.stan.mapa ?? '');
     if (znane) return znane;
     const nas: number[] = [];
@@ -751,6 +742,7 @@ export class AdventureScene extends Phaser.Scene {
     nas.sort((a, b) => a - b);
     const jas = suma / n;
     const wynik = {
+      med: nas[Math.floor(nas.length * 0.5)],
       nas: nas[Math.floor(nas.length * 0.85)],
       sufit: nas[Math.floor(nas.length * 0.95)],
       jas,
@@ -778,8 +770,10 @@ export class AdventureScene extends Phaser.Scene {
    *    i nogi czytają się jak kilka kształtów, a nie szum.
    * 5. Jasna krawędź od strony światła: na śniegu chłodna u każdego, gdzie
    *    indziej tylko u ciemnych (Vulkaron), żeby nie zlewały się z gruntem.
-   * 6. Obrys w barwie brzegu (`STWOREK_OBRYS_PX`) — tylko na planszach,
-   *    które obrysowują obiekty.
+   * 6. Obrys: NIE w teksturze, tylko ten sam co pod skrzynią i chatą
+   *    (`obrysRysunku`, w `obrazyStworka`). Runda 8: obrys 1,2 px w teksturze
+   *    znikał po zmniejszeniu — na zbliżeniu skrzynia miała wyraźny ciemny
+   *    kontur, stworek żadnego.
    * 7. Cień rzucony: sylwetka spłaszczona i pochylona w prawo-dół (od
    *    światła z lewej-góry), rozmyta, w ciemnej barwie okolicy.
    *
@@ -850,7 +844,7 @@ export class AdventureScene extends Phaser.Scene {
     const srL = ileL > 0 ? sumaL / ileL : 128;
     const rozL = ileL > 0 ? Math.sqrt(Math.max(0, suma2 / ileL - srL * srL)) : 40;
     nasS.sort((a, b) => a - b);
-    const nas85 = nasS.length ? nasS[Math.floor(nasS.length * 0.85)] : 100;
+    const nas50 = nasS.length ? nasS[Math.floor(nasS.length * 0.5)] : 70;
     const ciemny = srL < STWOREK_PROG_CIEMNY;
     const ph = Math.max(1, y1 - y0);
     const sx = (x0 + x1) / 2;
@@ -863,7 +857,10 @@ export class AdventureScene extends Phaser.Scene {
     let kontrast = snieg ? STWOREK_SNIEG.kontrast : 1;
     let jasnosc = 1;
     if (obiekty) {
-      if (nas85 > obiekty.nas) nasycenie *= Math.max(0.6, obiekty.nas / nas85);
+      // Mediana chromy stworka najwyżej 1,15 × mediany obiektów. Runda 8
+      // mierzyła 85. percentyl — a przy nim neonowy Sporex (cały jaskrawy,
+      // bez ciemnych partii) mieścił się „w normie" drewnianego wozu.
+      if (nas50 > obiekty.med * 1.15) nasycenie *= Math.max(0.55, (obiekty.med * 1.15) / nas50);
       if (rozL > obiekty.roz * 1.1) kontrast *= Math.max(0.7, (obiekty.roz * 1.1) / rozL);
       if (srL < obiekty.jas * 0.85) jasnosc = Math.min(1.35, (obiekty.jas * 0.85) / srL);
     }
@@ -935,50 +932,6 @@ export class AdventureScene extends Phaser.Scene {
         }
       }
 
-    // 6. Obrys w barwie brzegu: piksele poza sylwetką (alfa < 128) w promieniu
-    // `STWOREK_OBRYS_PX` od niej dostają przyciemnioną barwę sąsiadów
-    // zmieszaną z ciepłym brązem.
-    const krycieObrysu = ust?.obrysObiektow;
-    if (krycieObrysu) {
-      // Piksel świata to `ZOOM_MAPY × STWOREK_NADPROBKA` pikseli tekstury.
-      const r = STWOREK_OBRYS_PX * ZOOM_MAPY * STWOREK_NADPROBKA;
-      const zasieg = Math.ceil(r);
-      const A = Math.min(0.75, 0.35 + krycieObrysu * 0.6);
-      const zrodloA = new Uint8ClampedArray(wynik);
-      for (let y = 0; y < hh; y++)
-        for (let x = 0; x < w; x++) {
-          const i = (y * w + x) * 4;
-          const a = zrodloA[i + 3];
-          if (a >= 128) continue;
-          const barwa = [0, 0, 0];
-          let ile = 0;
-          let blisko = Infinity;
-          for (let dy = -zasieg; dy <= zasieg; dy++)
-            for (let dx = -zasieg; dx <= zasieg; dx++) {
-              const xx = x + dx;
-              const yy = y + dy;
-              if (xx < 0 || yy < 0 || xx >= w || yy >= hh) continue;
-              const j = (yy * w + xx) * 4;
-              if (zrodloA[j + 3] < 160) continue;
-              const odl = Math.hypot(dx, dy);
-              if (odl > r + 0.5) continue;
-              blisko = Math.min(blisko, odl);
-              barwa[0] += zrodloA[j];
-              barwa[1] += zrodloA[j + 1];
-              barwa[2] += zrodloA[j + 2];
-              ile++;
-            }
-          if (!ile) continue;
-          // Pełne krycie w promieniu r, wygaszenie na ostatnim pół pikselu.
-          const ak = A * Phaser.Math.Clamp(r + 0.5 - blisko, 0, 1);
-          const t = a / 255;
-          for (let c = 0; c < 3; c++) {
-            const pierscien = (barwa[c] / ile) * 0.4 * 0.5 + STWOREK_BRAZ[c] * 0.5;
-            wynik[i + c] = zrodloA[i + c] * t + pierscien * (1 - t);
-          }
-          wynik[i + 3] = Math.max(a, 255 * (t + ak * (1 - t)));
-        }
-    }
     obr.data.set(wynik);
     ctx.putImageData(obr, 0, 0);
     this.textures.addCanvas(cel, plotno);
@@ -1023,7 +976,8 @@ export class AdventureScene extends Phaser.Scene {
 
   /**
    * Wszystkie obrazki strażnika, w kolejności rysowania, względem środka
-   * jego pola: plama styku, cień rzucony i na końcu sam stworek (`im`, do
+   * jego pola: plama styku, cień rzucony, obrys planszy i na końcu sam
+   * stworek (`im`, do
    * trafień kliknięciem). Jedno miejsce dla sceny i dla arkusza porównania
    * (`tools/zrzut-stwory-porownanie.mjs`), żeby arkusz pokazywał dokładnie
    * to, co gra.
@@ -1031,8 +985,8 @@ export class AdventureScene extends Phaser.Scene {
    * Cień jest własny, a nie podkładka skrzyń (`cienKontaktowy`): runda 6 —
    * na Twierdzy płaski, nasycony niebieski owal PONIŻEJ stóp czytał się jak
    * znacznik zaznaczenia, a smok nad nim wisiał. Plama styku leży dokładnie
-   * pod stopami i na nie zachodzi, w barwie gruntu pod stworkiem, miękka
-   * i półprzezroczysta.
+   * pod stopami i na nie zachodzi, z ciemnym rdzeniem jak pod skrzynią
+   * (runda 8: słabsza ginęła na ciemnej trawie), na śniegu szaroniebieska.
    */
   private obrazyStworka(
     klucz: string,
@@ -1048,8 +1002,8 @@ export class AdventureScene extends Phaser.Scene {
       const yStop = im.y - naMape.cien.stopy * sk;
       const szer = (im.width - 2 * naMape.margines) * sk * (this.podstawaRysunku(klucz).widocznaSzer ?? 0.8);
       const snieg = !!planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienNaSniegu;
-      const szerC = Math.max(KAFEL * 0.5, szer * 0.9);
-      const wysC = szerC * 0.34;
+      const szerC = Math.max(KAFEL * 0.55, szer * 1.0);
+      const wysC = szerC * 0.36;
       obrazy.push(
         // Rdzeń zachodzi na stopy (środek plamy o 0,15 jej wysokości NAD
         // linią stóp), reszta wychodzi w prawo-dół.
@@ -1066,6 +1020,9 @@ export class AdventureScene extends Phaser.Scene {
           .setAlpha(STWOREK_CIEN)
       );
     }
+    // Obrys planszy — ten sam co pod skrzynią (grubość, barwa, krycie).
+    const obrys = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.obrysObiektow;
+    if (obrys) obrazy.push(...this.obrysRysunku(im, obrys));
     obrazy.push(im);
     return { obrazy, im };
   }
@@ -1076,7 +1033,7 @@ export class AdventureScene extends Phaser.Scene {
    * rysunkiem. Bagna, runda 6: „obiekty interaktywne zlewają się
    * z dekoracją — bez konturu i kontrastu". Drzewa i skały obrysu nie mają,
    * więc to, co da się podnieść, odwiedzić albo pokonać, odcina się od tła.
-   * Stworki mają obrys własny, w teksturze (`STWOREK_OBRYS_PX`).
+   * Stworki dostają ten sam obrys (`obrazyStworka`).
    */
   private obrysRysunku(im: Phaser.GameObjects.Image, krycie: number): Phaser.GameObjects.Image[] {
     const d = 2.5;
@@ -2151,6 +2108,43 @@ export class AdventureScene extends Phaser.Scene {
       kont.setData('obiekt', o);
       this.ikonyObiektow[o.id] = kont;
       this.swiat.add(kont);
+    }
+    this.strazePodKorony();
+  }
+
+  /**
+   * Kępy lasu i drzewa są w świecie przed obiektami, więc korona drzewa
+   * z niższego rzędu nie mogła zasłonić strażnika stojącego nad nią —
+   * stworek stał NA koronie (Bagna, runda 8). Strażnika przestawiamy na
+   * liście tuż przed pierwszą nachodzącą na niego przeszkodą o większej
+   * głębokości — o ile między nią a nim nie leży przeszkoda płytsza, która
+   * wtedy zasłoniłaby go od przodu (tego przypadku nie ruszamy).
+   */
+  private strazePodKorony() {
+    const lista = this.swiat.list as Phaser.GameObjects.GameObject[];
+    // Tylko drzewa i kępy lasu — góra z niższego rzędu zasłaniała strażnika
+    // w całości (Twierdza), a strażnik ma być widoczny.
+    const przeszkoda = (e: Phaser.GameObjects.GameObject) =>
+      e instanceof Phaser.GameObjects.Image && /^m-(kepa-las|drzewo|sosna)/.test(e.texture.key);
+    for (const kont of Object.values(this.ikonyObiektow)) {
+      const o = kont.getData('obiekt') as Obiekt | undefined;
+      if (o?.rodzaj !== 'potwor' || o.zebrany) continue;
+      const b = kont.getBounds();
+      const gi = lista.indexOf(kont);
+      let j = -1;
+      let plytsza = false;
+      for (let i = 0; i < gi; i++) {
+        const e = lista[i];
+        if (!przeszkoda(e)) continue;
+        const im = e as Phaser.GameObjects.Image;
+        if (!Phaser.Geom.Rectangle.Overlaps(b, im.getBounds())) continue;
+        if (im.depth > kont.depth) {
+          if (j < 0) j = i;
+        } else if (j >= 0) plytsza = true;
+      }
+      if (j < 0 || plytsza) continue;
+      lista.splice(gi, 1);
+      lista.splice(j, 0, kont);
     }
   }
 

@@ -15,7 +15,8 @@
 // pary — stos najbliższy bohatera. Wybór zależy tylko od danych planszy,
 // więc zrzut jest powtarzalny między rundami.
 //
-// Wynik: `tools/shots/stwory-mapa-<id>.png` (512 × 384).
+// Wynik: `tools/shots/stwory-mapa-<id>.png` (512 × 384) i zbliżenia
+// `zoom-<stworek|obiekt>-<id>.png` (60 × 50 px gry, ×8).
 
 import { chromium } from 'playwright';
 import { mkdir } from 'node:fs/promises';
@@ -110,6 +111,13 @@ for (const mapa of MAPY) {
       cx,
       cy,
       stosy: [o, s].filter(Boolean).map((p) => `${p.nazwa ?? '?'} (${p.oddzialy[0].sprite}) @${p.x},${p.y}`),
+      // Do zbliżeń: pola pokazanych stworków i najbliższego obiektu-nie-stworka.
+      pola: [o, s].filter(Boolean).map((p) => ({ x: p.x, y: p.y, sprite: p.oddzialy[0].sprite })),
+      obiekt: (() => {
+        const inne = stan.obiekty.filter((q) => q.rodzaj !== 'potwor' && !q.zebrany && ['skrzynia', 'budynek', 'surowiec', 'artefakt'].includes(q.rodzaj));
+        inne.sort((p, q) => Math.hypot(p.x - o.x, p.y - o.y) - Math.hypot(q.x - o.x, q.y - o.y));
+        return inne[0] ? { x: inne[0].x, y: inne[0].y, rodzaj: inne[0].rodzaj } : null;
+      })(),
       sprite: [o, s].filter(Boolean).map((p) => p.oddzialy[0].sprite),
     };
   }, pokazane);
@@ -120,12 +128,18 @@ for (const mapa of MAPY) {
   // kamerę (brzeg planszy, bohater), a kadr ma iść za tym, co naprawdę widać.
   Object.assign(
     cel,
-    await page.evaluate(({ cx, cy }) => {
+    await page.evaluate(({ cx, cy, pola, obiekt }) => {
       const scena = window.__game.scene.getScene('adventure');
       const stan = window.__game.registry.get('stan-mapy');
       const k = scena.kamera;
       const KAFEL = scena.mapaW / stan.szer;
+      const naEkr = (px, py) => ({
+        x: scena.mapaX + ((px + 0.5) * KAFEL - k.scrollX) * k.zoom,
+        y: scena.mapaY + ((py + 0.5) * KAFEL - k.scrollY) * k.zoom,
+      });
       return {
+        ekrPola: pola.map((p) => ({ ...naEkr(p.x, p.y), sprite: p.sprite })),
+        ekrObiektu: obiekt ? { ...naEkr(obiekt.x, obiekt.y), rodzaj: obiekt.rodzaj } : null,
         x: scena.mapaX + ((cx + 0.5) * KAFEL - k.scrollX) * k.zoom,
         y: scena.mapaY + ((cy + 0.5) * KAFEL - k.scrollY) * k.zoom,
         ramka: { x: scena.mapaX, y: scena.mapaY, w: scena.oknoW, h: scena.oknoH },
@@ -164,6 +178,34 @@ for (const mapa of MAPY) {
   const plik = `${OUT}/stwory-mapa-${mapa}.png`;
   const { writeFile } = await import('node:fs/promises');
   await writeFile(plik, Buffer.from(powiekszony, 'base64'));
+  // Zbliżenia: każdy pokazany stworek i najbliższy obiekt, 60 × 50 px gry
+  // wokół pola, ×8 najbliższym sąsiadem (×2 kadru krytyka razy 4) —
+  // tu widać obrys i cień piksel po pikselu.
+  const zblizenia = [
+    ...cel.ekrPola.map((p) => ({ ...p, nazwa: `zoom-${p.sprite}-${mapa}` })),
+    ...(cel.ekrObiektu ? [{ ...cel.ekrObiektu, nazwa: `zoom-${cel.ekrObiektu.rodzaj}-${mapa}` }] : []),
+  ];
+  for (const z of zblizenia) {
+    const zx = Math.round(Math.min(Math.max(z.x - 30, r.x), r.x + r.w - 60));
+    const zy = Math.round(Math.min(Math.max(z.y - 28, r.y), r.y + r.h - 50));
+    const bufor = await page.screenshot({ clip: { x: plotno.x + zx, y: plotno.y + zy, width: 60, height: 50 } });
+    const duzy = await page.evaluate(
+      async ({ b64, k }) => {
+        const img = new Image();
+        img.src = `data:image/png;base64,${b64}`;
+        await img.decode();
+        const c = document.createElement('canvas');
+        c.width = img.width * k;
+        c.height = img.height * k;
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        return c.toDataURL('image/png').split(',')[1];
+      },
+      { b64: bufor.toString('base64'), k: POWIEKSZENIE * 4 }
+    );
+    await writeFile(`${OUT}/${z.nazwa}.png`, Buffer.from(duzy, 'base64'));
+  }
   console.log(`zrzut: ${plik}  — ${cel.stosy.join(', ')}`);
 }
 
