@@ -51,13 +51,9 @@
   },
   {
    "name": "Uwagi gracza: nowe stworki i linie ewolucyjne (OpenAI)",
-   "status": "build",
+   "status": "done",
    "bar": "Stacki stworków w stylu malowanych plansz; pełne linie ewolucyjne jako grafiki. Ślepy krytyk vs HotA.",
-   "live": {
-    "round": 6,
-    "stage": "builder pracuje (pojedyncza malowana figura z sylwetką, większa)"
-   },
-   "note": "Builder r1: 18 stworków przemalowanych przez OpenAI w stylu plansz, każdy z dwoma etapami ewolucji (54 grafiki, $2.90); linie w src/data/ewolucje.ts (jeszcze bez mechaniki); sprite'y patrzą w prawo, stopy na dole kadru, ciemny obrys.",
+   "note": "Builder r1: 18 stworków przemalowanych przez OpenAI w stylu plansz, każdy z dwoma etapami ewolucji (54 grafiki, $2.90); linie w src/data/ewolucje.ts (jeszcze bez mechaniki); sprite'y patrzą w prawo, stopy na dole kadru, ciemny obrys. Rundy 2–6: skala (budowle > bohater 1,9 > strażnik 1,5 > znajdźka 0,58), proporzec bohatera, cień rzucany i podstawka, przygaszone znajdźki, osobne malowane figury strażników na mapę (public/sprites/mapa-*.png).",
    "rounds": [
     {
      "win": false,
@@ -116,6 +112,18 @@
      "build": "Osobne malowane wersje strażników na mapę (OpenAI gpt-image-1.5, wzór: sprite + arkusz stylu obiektów mapy): oddziały 2–3 stworków w rzucie 3/4, 7 gatunków; chorągiewki zdjęte. $0.76.",
      "gap": "Zarzut „maskotek z innej gry” zniknął; teraz: grupki w skali 1,1–1,4 pola czytają się jak grudki bez sylwetki postaci, kolorem i rozmiarem jak kryształy obok; fioletowe jak krzaki.",
      "note": "Krytyk 3 wybrał nasze: ten sam malarski rendering, czytelne sylwetki, znaczniki bohatera. Dwaj: HotA — sylwetka postaci z kończynami i pozą."
+    },
+    {
+     "win": true,
+     "label": "Runda 6 (HotA, 3/3)",
+     "blinds": [
+      "tools/postep-obrazy/stworki-r6-w1.jpg",
+      "tools/postep-obrazy/stworki-r6-w2.jpg",
+      "tools/postep-obrazy/stworki-r6-w3.jpg"
+     ],
+     "build": "Strażnik na mapie = jedna malowana figura z pozą (kończyny, ogon, skrzydła), 1,5 pola; podstawka i cień widoczne na każdej planszy (też śnieg); znajdźki 0,58 pola i przygaszone do 4,5 pola od strażnika. $0.37.",
+     "gap": "Słabości zwycięzcy: ten sam model strażnika powtarza się kilka razy; lekko ostrzejszy kontur niż teren; kwiato-potwory bywają czytane jak roślinki.",
+     "note": "Wszyscy trzej: nasze — wyraźna sylwetka i poza, od razu widać strażnika, nie myli się z łupem; bohater z proporcem i pierścieniem czytelny. HotA: stwory giną w gęstym terenie."
     }
    ]
   },
