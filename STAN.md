@@ -1,6 +1,52 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-09-24 (plansze kampanii: Polana, Bagna, Twierdza; silnik generatora).
+Ostatnia aktualizacja: 2026-09-26 (storki w stylu mapy: rysunki, portrety, animacje).
+
+## Storki w stylu mapy — pętla „gauntlet" (2026-09-26)
+
+Cel gracza: stwory mają pasować do malowanej mapy przygody; do tego klatki
+animacji w bitwie i drobna animacja stosu po najechaniu, jak w HotA.
+Dziennik rund: `tools/postep-stworki.json` (strona: `POSTEP=postep-stworki.json
+TYTUL="Storki w stylu mapy" python3 tools/postep_kampania.py <plik.html>`,
+artefakt https://claude.ai/artifact/3GzRBQe4BmoWXxCwWXPhtW).
+
+| Kawałek | Stan | Jak mierzone |
+|---|---|---|
+| Stwory na mapie | zamknięte decyzją gracza (9 rund) | patrz niżej — oba testy okazały się stronnicze |
+| Portrety | zamknięte decyzją gracza, wersja B (cała postać) | test dopasowania do naszego UI |
+| Animacje w bitwie | wygrana 3/5 (atak, trafienie, strzał); potem lot 2/2, chód 1/2 | ślepo z paskami HotA, tylko czytelność ruchu |
+| Najechanie na stos | wygrana 2/3 | ślepo z animacjami stworów na mapie HotA |
+
+**Decyzje gracza:** storki zostają urocze (krytyk nie ocenia klimatu);
+strażnicy na mapie bez chorągiewek (są neutralni); poprzeczką jest nasza
+gra, nie HotA.
+
+**Lekcja pomiarowa:** dwa testy kontrolne. (1) Porównanie A/B z HotA
+przegrywają też nasze OBIEKTY mapy (chata, most, skrzynia) — 0/3. (2) Test
+„co najmniej pasuje" na samym kadrze oblewa też oryginalne HoMM3 — 0/3,
+bo surowy krytyk zawsze wskazuje stwora. Żaden z nich nie rozróżnia dobrych
+stworów od złych. Porównania ANIMACJI (sam ruch, bez stylu) rozróżniają.
+
+**Gdzie co jest:**
+- wzorce: `assets/stworki/<id>.png` (256², w prawo, stopy na y=252), gra
+  ładuje `public/sprites/<id>.png`; stare płaskie: `assets/sprites-stare/`;
+  generator: `tools/stworki_przemaluj.py` (OpenAI edits, dziennik kosztów
+  `tools/wsad/koszty-openai.jsonl`, limit `OPENAI_LIMIT_USD`, dotąd $19,06);
+- pozy do bitwy: `assets/stworki/pozy/`, `public/sprites/pozy/`
+  (`--pozy`, `--pozy-z-mistrza` — wygięte wzorce jako zapas), arkusz
+  `tools/shots/pozy-arkusz.png`;
+- strażnicy na mapie: `stworekNaMape` w `AdventureScene.ts` (obrys i cień jak
+  u skrzyni, barwy w zakresie obiektów planszy, animacja po najechaniu);
+- portrety: `tools/stworki_portrety.py` → `public/portrety/`, `src/visual/portrety.ts`
+  (po zmianie wzorców uruchomić ponownie);
+- zrzuty: `tools/zrzut-stwory-mapa.mjs`, `zrzut-portrety.mjs`,
+  `zrzut-anim.mjs`, `zrzut-najechanie.mjs`; wzorce HotA w `tools/reference/homm3/`
+  (poza gitem, źródła w `ZRODLA.md` tamże).
+
+**Do zrobienia przy okazji:** ikona kosztu to pokeball (ryzyko znaku
+towarowego); w animacji najechania widać półprzezroczysty ślad w klatce
+przenikania; drugi krok chodu za mało różni się od pierwszego; ekran bitwy
+(tło, HUD) wciąż w starym stylu.
 
 ## Plansze kampanii: Polana, Bagna, Twierdza (2026-09-24)
 

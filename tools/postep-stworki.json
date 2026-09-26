@@ -1,5 +1,5 @@
 {
- "updated": "Wszystkie kawałki zamknięte: animacje w bitwie 3/5, najechanie na stos 2/3; mapa i portrety zamknięte decyzją gracza. Chód i lot — ostatnie dopracowanie w toku.",
+ "updated": "Koniec pętli. Animacje w bitwie 3/5 (runda 2), po dopracowaniu lot 2/2 i chód 1/2; najechanie 2/3; mapa i portrety zamknięte decyzją gracza. OpenAI: $19,06 z $20.",
  "pieces": [
   {
    "name": "Stwory na mapie przygody (malowane rysunki, stos na mapie)",
@@ -329,6 +329,30 @@
      "gap": "Skok z rozłożeniem skrzydeł — brak uderzenia w dół pod linię brzucha.",
      "blind": "tools/postep-obrazy/anim-lot2-r3.jpg",
      "note": "Runda 3, lot vs archanioł."
+    },
+    {
+     "win": false,
+     "gap": "Dwie trzymane pozy (wyprost, wypad) zamiast ciągłego cyklu; druga noga niemal jak pierwsza.",
+     "blind": "tools/postep-obrazy/anim-ruch-r4.jpg",
+     "note": "Runda 4 (klatka przejścia z uniesioną nogą), chód vs miecznik."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: czytelne pozy kontaktu i przejścia, nogi się rozchodzą i schodzą, ogon w przeciwruchu.",
+     "blind": "tools/postep-obrazy/anim-ruch2-r4.jpg",
+     "note": "Runda 4, chód vs pikinier."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: pełny cykl skrzydeł w 8 klatkach, ciało pochyla się i wyciąga z uderzeniem; słabe unoszenie.",
+     "blind": "tools/postep-obrazy/anim-lot-r4.jpg",
+     "note": "Runda 4, lot vs gryf."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: pełne uderzenie skrzydeł (góra, rozpostarte, pod brzuchem, powrót), ciało pochyla się z każdym uderzeniem.",
+     "blind": "tools/postep-obrazy/anim-lot2-r4.jpg",
+     "note": "Runda 4, lot vs archanioł. Lot 2/2, chód 1/2."
     }
    ]
   },
