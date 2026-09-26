@@ -86,10 +86,29 @@
   },
   {
    "name": "Portrety i ikony stworów (sloty armii, kolejka tury, bohater, miasto)",
-   "status": "todo",
+   "status": "critic",
    "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3.",
    "note": "Małe portrety w interfejsie z tego samego malowanego rysunku.",
-   "rounds": []
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Niespójny kadr (cały stwór / pół głowy), błyszczące maskotki w cienkich złotych ramkach na płaskim niebieskim panelu jak z aplikacji webowej.",
+     "blind": "tools/postep-obrazy/portrety-bohater-r1.jpg",
+     "note": "Runda 1, ekran bohatera; wzorzec: rząd armii HoMM3."
+    },
+    {
+     "win": false,
+     "gap": "Portrety w pasku za małe (~24 px), jasnoniebieskie zaokrąglone pudełka zamiast ramy ze świata gry.",
+     "blind": "tools/postep-obrazy/portrety-miasto-r1.jpg",
+     "note": "Runda 1, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Nasycone kolory kłócą się z pergaminowo-złotym panelem, liczniki zasłaniają dolną trzecią portretu.",
+     "blind": "tools/postep-obrazy/portrety-hud-r1.jpg",
+     "note": "Runda 1, HUD. 0/3."
+    }
+   ]
   }
  ]
 }
