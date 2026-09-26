@@ -589,7 +589,7 @@ export class TownScene extends Phaser.Scene {
    * w poprzek ekranu.
    */
   private rysujPasekDolny() {
-    const y = GORA + PAN_H;
+    const y = PASEK_Y;
     const h = OKNO_H - y;
     // Pasek załogi z zestawu: drewno ze złotą listwą u góry, a w nim gniazda
     // portretów — te same co na ekranie bohatera. Wcześniej: niebieska belka
@@ -610,15 +610,15 @@ export class TownScene extends Phaser.Scene {
     g.fillStyle(this.profil.barwa, 0.8);
     g.fillRect(0, y + 3, OKNO_W, 1);
 
-    // Portret 42 px — ciasny kadr na twarz (mały portret), z ramą wypełnia
-    // wysokość paska. Liczba na odznace przy prawej krawędzi ramy: pod
-    // gniazdem nie ma już miejsca, a na portrecie zasłaniałaby twarz.
-    const bok = h - 12;
+    // Portret 50 px — ciasny kadr na twarz (mały portret). Pasek jest wyższy
+    // niż panorama zostawiała (72 px, wchodzi 18 px na krzaki pierwszego
+    // planu), bo przy 42 px twarzy nie było widać z odległości ekranu.
+    // Liczba na odznace w prawym dolnym rogu ramy — na ramie, nie na twarzy.
+    const bok = 50;
     for (let i = 0; i < 6; i++) {
-      const gniazdo = new GniazdoPortretu(this, 12 + i * 96, y + (h - bok) / 2 + 1, bok, {
+      const gniazdo = new GniazdoPortretu(this, 14 + i * 96, y + 7, bok, {
         maly: true,
-        odznaka: 'bok',
-        rozmiarLiczby: 14,
+        rozmiarLiczby: 13,
       });
       gniazdo.kontener.setDepth(Z.hud + 1);
       this.slotyArmii[i] = gniazdo;
@@ -677,10 +677,10 @@ export class TownScene extends Phaser.Scene {
    * budynek, zobacz cenę, potwierdź.
    */
   private rysujKarte() {
-    const w = 300;
+    const w = 336;
     const h = 196;
     const x = 14;
-    const y = GORA + PAN_H - h - 14;
+    const y = PASEK_Y - h - 12;
     this.karta = this.add.container(x, y).setDepth(Z.hud + 4).setVisible(false);
     // Karta na pergaminie z zestawu, w cienkiej złotej ramie — jak okna na
     // mapie przygody. Mleczny panel z zaokrąglonymi rogami był z innej gry.
@@ -1173,7 +1173,10 @@ export class TownScene extends Phaser.Scene {
 }
 
 /** Bok portretu stwora na karcie siedliska. */
-const PORTRET_NA_KARCIE = 76;
+const PORTRET_NA_KARCIE = 100;
+
+/** Górna krawędź dolnego paska (załoga, przyciski); pasek ma 72 px. */
+const PASEK_Y = OKNO_H - 72;
 
 /** Identyfikatory budynków — kolejność wczytywania grafik. */
 const BUDYNKI_ID = [

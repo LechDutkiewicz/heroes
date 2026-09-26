@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { kluczPortretu, oprawPortret, wczytajPortrety } from '../visual/portrety';
+import { dnoGniazda, kluczPortretu, oprawPortret, wczytajPortrety } from '../visual/portrety';
 import { ZESTAWY_KLIMATU } from '../data/zestawy-klimatu';
 import {
   BUDOWLE,
@@ -2283,18 +2283,19 @@ export class AdventureScene extends Phaser.Scene {
     // Rysunek i licznik powstają ZAWSZE, także dla pustego slotu, i są tylko
     // chowane: ekran bohatera przekłada oddziały między slotami, więc panel
     // musi umieć pokazać każdą zawartość każdego slotu bez przebudowy.
-    const slotBok = 28;
-    const odstep = 3;
+    // 30 px i odstęp 1: siedem gniazd wypełnia szerokość karty (218 px).
+    const slotBok = 30;
+    const odstep = 1;
     const rzadX = wnetrzeX + (wnetrzeW - (SLOTY_ARMII * slotBok + (SLOTY_ARMII - 1) * odstep)) / 2;
     const rzadY = kartaY + 86;
     for (let i = 0; i < SLOTY_ARMII; i++) {
       const sx = rzadX + i * (slotBok + odstep);
-      // Gniazdo: ciemniejszy papier z kreską atramentu, jak kratka w księdze.
+      // Gniazdo: ciemne drewno wpuszczone w pergamin — puste miejsce ma być
+      // DZIURĄ, w którą wchodzi portret, a nie beżowym prostokątem.
       const g = this.add.graphics();
-      g.fillStyle(0x8a5a2a, 0.16);
-      g.fillRoundedRect(0, 0, slotBok, slotBok + 12, 4);
-      g.lineStyle(1.2, BARWA.kreska, 0.6);
-      g.strokeRoundedRect(0, 0, slotBok, slotBok + 12, 4);
+      g.fillStyle(0x6b4a26, 0.5);
+      g.fillRect(0, 0, slotBok, slotBok);
+      dnoGniazda(g, 1, 1, slotBok - 2);
       // Portret, nie figurka: przy 28 px cały stworek był plamką z nóżkami,
       // a ciasny kadr twarzy (mały portret, jak w Heroes) czyta się od razu.
       // Oprawa rysowana osobno, bo pusty slot ma zostać samą kratką.
@@ -2552,7 +2553,7 @@ export class AdventureScene extends Phaser.Scene {
       const licznik = slot.getData('licznik') as Phaser.GameObjects.Text;
       if (od) {
         im.setTexture(kluczPortretu(od.sprite, true)).setVisible(true);
-        im.setDisplaySize(26, 26);
+        im.setDisplaySize(28, 28);
         (slot.getData('oprawa') as Phaser.GameObjects.Graphics).setVisible(true);
         licznik.setText(String(od.ile));
       } else {

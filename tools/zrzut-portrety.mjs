@@ -34,7 +34,10 @@ const ARMIA = [
 ].map((o) => (o ? { sprite: o[0], nazwa: o[1], ile: o[2], frakcja: 'bor', tier: o[3] } : null));
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const page = await browser.newPage({ viewport: { width: 960, height: 694 }, deviceScaleFactor: 1 });
+// Skala 2: wzorce (portrety z Heroes 3) są powiększone 2×, więc nasze kadry
+// też — te same wycinki, dwa razy więcej pikseli. Przy skali 1 nasze
+// portrety wyglądały obok wzorca na o połowę mniejsze (runda 3).
+const page = await browser.newPage({ viewport: { width: 960, height: 694 }, deviceScaleFactor: 2 });
 const bledy = [];
 page.on('pageerror', (e) => bledy.push(String(e)));
 page.on('requestfinished', async (r) => {
@@ -77,9 +80,9 @@ const hud = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   const pierwszy = s.slotyArmii[0];
   const ostatni = s.slotyArmii[s.slotyArmii.length - 1];
-  return { x: pierwszy.x, y: pierwszy.y, x2: ostatni.x + 28 };
+  return { x: pierwszy.x, y: pierwszy.y, x2: ostatni.x + 30 };
 });
-await kadr('portrety-hud', Math.round(hud.x - 16), Math.round(hud.y - 96), Math.round(hud.x2 - hud.x + 32), 150);
+await kadr('portrety-hud', Math.round(hud.x - 16), Math.round(hud.y - 96), Math.round(hud.x2 - hud.x + 32), 152);
 
 // 2. Ekran bohatera: pas armii.
 await page.evaluate(() => {
@@ -119,7 +122,7 @@ await page.evaluate(() => {
 });
 await page.waitForTimeout(1500);
 const r = await page.locator('canvas').boundingBox();
-await kadr('portrety-miasto', 0, Math.round(r.height - 290), 640, 290);
+await kadr('portrety-miasto', 0, Math.round(r.height - 290), 660, 290);
 
 if (bledy.length) console.log('BŁĘDY:\n' + bledy.join('\n'));
 await browser.close();

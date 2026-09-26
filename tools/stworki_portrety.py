@@ -71,26 +71,26 @@ OKRAGLY = (56, 56)
 # Wielkość głowy = od czubka głowy (bez czuba, grzebienia, kiełka) do brody.
 GLOWA: dict[str, tuple[float, float, float]] = {
     # Bór
-    '00193': (178, 158, 96),  # Pyroko — twarz z przodu bryły
-    '00020': (92, 88, 84),  # Flamir — ptasia głowa z grzebieniem po lewej
-    '00218': (100, 62, 100),  # Aquino
-    '00030': (182, 122, 104),  # Torrenar — głowa w pancerzu
-    '00096': (148, 142, 88),  # Verdiko
-    '00227': (128, 70, 60),  # Silvena — twarz pod koroną płatków
+    '00193': (195, 157, 90),  # Pyroko — głowa i tułów to jedna bryła: mierzona twarz z przodu
+    '00020': (78, 82, 40),  # Flamir — mała ptasia głowa z dziobem (bez grzebienia)
+    '00218': (100, 56, 125),  # Aquino
+    '00030': (172, 118, 105),  # Torrenar — pysk w czaszce-hełmie (bez płyt karku)
+    '00096': (160, 139, 90),  # Verdiko — kula głowy (bez kiełka)
+    '00227': (118, 72, 45),  # Silvena — twarz pod koroną płatków
     # Grota
-    '00246': (166, 58, 46),  # Glacyn
-    '00002': (131, 116, 104),  # Sporex — twarz pod kapeluszem
-    '00263': (139, 80, 78),  # Cindro
-    '00250': (117, 64, 44),  # Sporina — główka nad strąkiem
-    '00220': (160, 66, 64),  # Aquator — głowa z dziobem
-    '00196': (128, 120, 132),  # Vulkaron — maska na tułowiu
+    '00246': (162, 54, 38),  # Glacyn — głowa na długiej szyi
+    '00002': (113, 107, 85),  # Sporex — twarz pod kapeluszem płatków
+    '00263': (130, 76, 65),  # Cindro — twarz w kapturze (bez uszu)
+    '00250': (112, 61, 50),  # Sporina — główka nad strąkiem
+    '00220': (150, 66, 45),  # Aquator — głowa z dziobem
+    '00196': (128, 100, 96),  # Vulkaron — maska: czerwone „brwi" jako linia oczu
     # Zbocze
-    '00074': (178, 106, 62),  # Bazalt — głowa w grzywie
-    '00058': (130, 46, 92),  # Ashko — maska w puszystej głowie
-    '00095': (128, 62, 110),  # Obsydian — bez twarzy: szczyt białego trzonu
-    '00023': (180, 96, 80),  # Cynder
-    '00077': (108, 72, 58),  # Lawina
-    '00041': (120, 66, 88),  # Sadzin
+    '00074': (185, 107, 60),  # Bazalt — głowa w grzywie
+    '00058': (130, 50, 88),  # Ashko — puszysta głowa z maską
+    '00095': (128, 70, 96),  # Obsydian — bez twarzy: biały trzon jako głowa
+    '00023': (178, 103, 70),  # Cynder
+    '00077': (114, 79, 50),  # Lawina — hełm z czerwonymi oczami
+    '00041': (118, 66, 80),  # Sadzin — głowa bez grzebienia
 }
 
 # Bok kadru w wielkościach głowy i położenie oczu (ułamek wysokości od góry).
@@ -99,32 +99,44 @@ GLOWA: dict[str, tuple[float, float, float]] = {
 # daje głowę na ~75% wysokości, ramiona ucięte dolną krawędzią, a boki
 # głowy (uszy, grzebień, kolce) mogą wyjść za ramę. Oczy na ~0.4.
 # Mały portret jest jeszcze ciaśniejszy — przy 26 px liczy się tylko twarz.
-SZABLON_BOK = {'duzy': 1.3, 'maly': 1.12}
-SZABLON_OCZY = {'duzy': 0.42, 'maly': 0.45}
-# Najmniejszy bok kadru w pikselach mistrza — poniżej tego portret 128 px
-# byłby powiększeniem ponad 2× i rozmyłby się.
-MIN_BOK = {'duzy': 64, 'maly': 48}
+#
+# Runda 3: „odległość kamery różna w rzędzie" — kadr liczył się z głowy
+# zmierzonej niekonsekwentnie (u Pyroko cała bryła, u Flamira głowa z piersią).
+# Teraz `GLOWA` to zawsze czaszka od czubka (bez czubów, uszu, płatków) do
+# brody, i ŻADNEGO dolnego progu boku: głowa ma w każdym portrecie tę samą
+# wysokość i te same oczy, nawet jeśli mała głowa wymaga powiększenia ~2×.
+# Duży: głowa ~57% wysokości, ramiona do dolnej krawędzi. Mały: sama twarz,
+# ~80% wysokości — przy 28 px liczy się tylko ona.
+SZABLON_BOK = {'duzy': 1.75, 'maly': 1.25}
+SZABLON_OCZY = {'duzy': 0.40, 'maly': 0.44}
+MIN_BOK = {'duzy': 0, 'maly': 0}
 
 # ————————————————————————————————————————————————— tło i światło frakcji
 #
 # Jedno tło na frakcję: kwadratowy wycinek malowanego krajobrazu miasta
 # (`public/miasto/tlo-<f>.png`, 960 × 596, bez budynków) — niebo, horyzont
-# i grunt, z horyzontem mniej więcej w połowie, żeby głowa stwora stała na
-# tle nieba albo dali, a ramiona na tle ziemi. Runda 2 dawała tu mocno
-# rozmyty, odbarwiony wycinek z winietą i krytyk widział w nim „płaskie
-# plamy koloru"; teraz krajobraz zostaje krajobrazem — lekko zmiękczony
-# i ocieplony pod drewno i pergamin interfejsu.
+# i grunt. Runda 3: jasna łąka w rozproszonym świetle dnia gryzła się
+# z mahoniem i złotem paneli i była płaska obok stwora. Teraz tło jest
+# ciemniejsze, cieplejsze i rozmyte jak głębia ostrości — stwór odrywa się od
+# niego, a barwy siedzą w palecie drewna.
 #   `okno`   — (lewo, góra, bok) wycinka w pikselach krajobrazu;
-#   `cieplo` — barwa lekkiego przemnożenia (ciepło papieru), `moc` — ile go;
-#   `swiatlo` — barwa światła kluczowego na stworze (ta sama, co w tle).
+#   `cieplo` — barwa przemnożenia, `moc` — ile go.
 FRAKCJA = {
-    # Bór: niebo z chmurami, pasmo gór, las i skraj łąki.
-    'bor': {'okno': (470, 0, 210), 'cieplo': (255, 228, 180), 'moc': 0.5, 'swiatlo': (255, 234, 190)},
-    # Grota: sklepienie, snop księżycowego światła, jezioro i posadzka.
-    'grota': {'okno': (400, 0, 230), 'cieplo': (250, 222, 200), 'moc': 0.45, 'swiatlo': (240, 226, 236)},
+    # Bór: niebo, pasmo gór, las i skraj łąki.
+    'bor': {'okno': (470, 0, 210), 'cieplo': (255, 200, 140), 'moc': 0.6},
+    # Grota: sklepienie, snop światła, jezioro.
+    'grota': {'okno': (400, 0, 230), 'cieplo': (255, 196, 150), 'moc': 0.55},
     # Zbocze: zachód słońca, wulkan, pole lawy.
-    'zbocze': {'okno': (540, 0, 220), 'cieplo': (255, 220, 180), 'moc': 0.35, 'swiatlo': (255, 216, 175)},
+    'zbocze': {'okno': (540, 0, 220), 'cieplo': (255, 205, 160), 'moc': 0.4},
 }
+# Światło kluczowe i obwódka na stworze — z palety interfejsu (ciepłe złoto
+# ram i kremowy napis na drewnie), wspólne dla wszystkich: stwory stoją
+# w świetle TEGO interfejsu, a nie każdy w swoim.
+SWIATLO = (255, 214, 150)
+# Tło małych portretów — JEDNO dla wszystkich (panel mapy miesza frakcje;
+# trzy różne, głośne tła w jednym rzędzie 28 px to był szum): rozmyty
+# krajobraz Boru przełożony na dwa tony ciemnego drewna i złota ramy.
+TLO_MALE = {'frakcja': 'bor', 'okno': (470, 0, 210), 'ciemny': (38, 22, 10), 'jasny': (176, 124, 66)}
 
 
 def frakcje() -> dict[str, str]:
@@ -151,29 +163,40 @@ def krajobraz(frakcja: str) -> Image.Image:
     return Image.open(MIASTO / f'tlo-{frakcja}.png').convert('RGB')
 
 
-def tlo_frakcji(kraj: Image.Image, f: dict, rozmiar: tuple[int, int], maly: bool) -> Image.Image:
-    """Wspólne tło frakcji: wycinek krajobrazu, ocieplony, światło z góry-lewa."""
+def tlo_frakcji(kraj: Image.Image, f: dict, rozmiar: tuple[int, int]) -> Image.Image:
+    """Tło dużego portretu: wycinek krajobrazu frakcji, ciemny, ciepły, rozmyty."""
     w, h = rozmiar
     lewo, gora, bok = f['okno']
     kawal = kraj.crop((lewo, gora, lewo + bok, gora + bok)).resize((w, h), Image.LANCZOS)
-    # Dal lekko miękka — ostry ma być stwór, ale pędzel tła ma być widać.
-    kawal = kawal.filter(ImageFilter.GaussianBlur(0.5 if not maly else 0.9))
+    # Głębia ostrości: dal miękka, ostry jest tylko stwór.
+    kawal = kawal.filter(ImageFilter.GaussianBlur(2.2))
     a = np.asarray(kawal).astype(np.float32) / 255
-    # Ocieplenie pod drewno i pergamin: przemnożenie barwą papieru z mocą `moc`
-    # i odrobina mniej nasycenia — tło nie może krzyczeć głośniej od stwora.
+    szar = (a * np.array([0.3, 0.55, 0.15])).sum(axis=2, keepdims=True)
+    a = szar + (a - szar) * 0.7
     cieplo = np.array(f['cieplo'], np.float32) / 255
     a = a * (1 - f['moc'] + f['moc'] * cieplo)
-    szar = (a * np.array([0.3, 0.55, 0.15])).sum(axis=2, keepdims=True)
-    a = szar + (a - szar) * 0.85
-    # Światło z góry-lewa, jak na stworze: łagodny spadek w prawo-dół.
+    # Ciemniej niż krajobraz miasta i światło z góry-lewa, jak na stworze.
     yy = np.linspace(0, 1, h)[:, None, None]
     xx = np.linspace(0, 1, w)[None, :, None]
-    swiatlo = 1.0 - 0.18 * xx - 0.22 * yy**1.5
-    if maly:
-        # Mały portret: tło ciemniejsze, bo przy 26 px twarz ma się od niego
-        # odcinać — ale to dalej krajobraz, nie jednolita plama.
-        swiatlo *= 0.7
+    swiatlo = 0.78 - 0.16 * xx - 0.3 * yy**1.4
     return Image.fromarray((np.clip(a * swiatlo, 0, 1) * 255).astype(np.uint8), 'RGB')
+
+
+def tlo_male(kraj: Image.Image, rozmiar: tuple[int, int]) -> Image.Image:
+    """Wspólne tło małych portretów: rozmyty krajobraz w dwóch tonach drewna."""
+    w, h = rozmiar
+    lewo, gora, bok = TLO_MALE['okno']
+    kawal = kraj.crop((lewo, gora, lewo + bok, gora + bok)).resize((w, h), Image.LANCZOS)
+    kawal = kawal.filter(ImageFilter.GaussianBlur(2.0))
+    a = np.asarray(kawal).astype(np.float32) / 255
+    jas = (a * np.array([0.3, 0.55, 0.15])).sum(axis=2, keepdims=True)
+    ciem = np.array(TLO_MALE['ciemny'], np.float32) / 255
+    jasn = np.array(TLO_MALE['jasny'], np.float32) / 255
+    a = ciem + (jasn - ciem) * np.clip(jas * 1.1, 0, 1)
+    yy = np.linspace(0, 1, h)[:, None, None]
+    xx = np.linspace(0, 1, w)[None, :, None]
+    a *= 0.95 - 0.25 * xx - 0.3 * yy
+    return Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8), 'RGB')
 
 
 # ————————————————————————————————————————————————— stwór
@@ -201,7 +224,7 @@ def w_swietle(stwor: Image.Image, f: dict, maly: bool) -> Image.Image:
     s = np.asarray(stwor).astype(np.float32) / 255
     rgb, alfa = s[..., :3], s[..., 3:4]
     h, w = rgb.shape[:2]
-    swiatlo = np.array(f['swiatlo'], np.float32)[None, None, :] / 255
+    swiatlo = np.array(SWIATLO, np.float32)[None, None, :] / 255
 
     # Połysk: miękkie kolano na jasnościach — lśniące plamy tracą biel,
     # zostaje malowana bryła.
@@ -224,7 +247,7 @@ def w_swietle(stwor: Image.Image, f: dict, maly: bool) -> Image.Image:
     krawedz = np.clip(np.asarray(A, np.float32) - np.asarray(przes, np.float32), 0, 255)
     krawedz = np.asarray(Image.fromarray(krawedz.astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.7)), np.float32)
     krawedz = np.clip(krawedz[..., None] / 255 * 1.4, 0, 1) * (1 - yy * 0.8)
-    rgb = rgb + (swiatlo - rgb) * krawedz * 0.35
+    rgb = rgb + (swiatlo - rgb) * krawedz * 0.5
     return Image.fromarray((np.concatenate([np.clip(rgb, 0, 1), alfa], axis=2) * 255).astype(np.uint8), 'RGBA')
 
 
@@ -241,14 +264,25 @@ def zloz(stwor: Image.Image, tlo: Image.Image, maly: bool) -> Image.Image:
 
 
 def ramka(im: Image.Image) -> Image.Image:
-    """Ciemna ramka z fazką (1 px) — złoto dokłada interfejs."""
+    """Cień wewnętrzny przy krawędzi: obraz siedzi POD złotą fazką ramy.
+
+    Runda 3 miała tu jasną fazkę od góry-lewa — obraz wyglądał na leżący NA
+    ramie. Złota rama interfejsu rzuca cień do środka, mocniejszy od góry
+    (światło pada z góry), więc brzegi obrazu ciemnieją, a 1 px przy samej
+    krawędzi jest prawie czarny.
+    """
     a = np.asarray(im, np.float32)
-    ciemna = np.array([30, 18, 8], np.float32)
+    h, w = a.shape[:2]
+    pas = max(3.0, w * 0.09)
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    od_gory = np.clip(yy / (pas * 1.4), 0, 1)
+    od_lewej = np.clip(xx / pas, 0, 1)
+    od_prawej = np.clip((w - 1 - xx) / pas, 0, 1)
+    od_dolu = np.clip((h - 1 - yy) / pas, 0, 1)
+    cien = (0.45 + 0.55 * od_gory**0.8) * (0.6 + 0.4 * od_lewej) * (0.6 + 0.4 * od_prawej) * (0.65 + 0.35 * od_dolu)
+    a = a * cien[..., None]
+    ciemna = np.array([22, 12, 5], np.float32)
     a[0, :], a[-1, :], a[:, 0], a[:, -1] = ciemna, ciemna, ciemna, ciemna
-    a[1, 1:-1] = a[1, 1:-1] * 0.6 + np.array([255, 226, 170]) * 0.4
-    a[1:-1, 1] = a[1:-1, 1] * 0.65 + np.array([255, 226, 170]) * 0.35
-    a[-2, 1:-1] *= 0.55
-    a[1:-1, -2] *= 0.6
     return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), 'RGB')
 
 
@@ -277,7 +311,8 @@ def portret(sid: str, frakcja: str, kraj: Image.Image, rodzaj: str) -> Image.Ima
     f = FRAKCJA[frakcja]
     mistrz = Image.open(MISTRZOWIE / f'{sid}.png').convert('RGBA')
     stw = w_swietle(wytnij(mistrz, kadr(sid, szablon), rozmiar), f, maly)
-    im = zloz(stw, tlo_frakcji(kraj, f, rozmiar, maly), maly)
+    tlo = tlo_male(krajobraz(TLO_MALE['frakcja']), rozmiar) if maly else tlo_frakcji(kraj, f, rozmiar)
+    im = zloz(stw, tlo, maly)
     return wytnij_kolo(im) if rodzaj == 'okragly' else ramka(im)
 
 

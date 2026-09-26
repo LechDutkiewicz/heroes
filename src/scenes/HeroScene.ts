@@ -100,10 +100,12 @@ const TRESC_Y = RAMA.y + NAGLOWEK_H + 12;
 const TRESC_H = 388;
 
 /** Pas armii na dole — siedem slotów w jednym rzędzie, jak u bohatera w H3. */
-const SLOT_BOK = 92;
-const SLOT_ODSTEP = 12;
+// Sloty armii: duże portrety w ciasnym rzędzie, jak 58 × 64 w Heroes.
+// Przy 92 px portret był małym obrazkiem w pustej drewnianej płycie.
+const SLOT_BOK = 104;
+const SLOT_ODSTEP = 14;
 /** Bok portretu w slocie armii: gniazdo minus wąski margines na złotą oprawę. */
-const PORTRET_W_SLOCIE = SLOT_BOK - 12;
+const PORTRET_W_SLOCIE = SLOT_BOK - 10;
 const ARMIA_Y = TRESC_Y + TRESC_H + 32;
 
 /** Kolejność klas — karta pokazuje domyślnie najmocniejszy noszony artefakt. */
@@ -819,7 +821,7 @@ export class HeroScene extends Phaser.Scene {
     const pasX = RAMA.x + 12;
     const pasW = RAMA.w - 24;
     const pasY = ARMIA_Y - 26;
-    const pasH = SLOT_BOK + 62;
+    const pasH = SLOT_BOK + 50;
     // Pas armii z zestawu: ciemne drewno w cienkiej złotej ramie — ten sam
     // materiał co panel bohatera na mapie. Wcześniej był tu płaski niebieski
     // prostokąt z zaokrąglonymi rogami, a w nim siedem mlecznych kafelków —
