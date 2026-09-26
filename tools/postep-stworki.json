@@ -96,6 +96,24 @@
      "gap": "Najostrzejsze i najbardziej nasycone rzeczy na ekranie na miękkim, zamglonym śniegu.",
      "blind": "tools/postep-obrazy/stwory-mapa-twierdza-r5.jpg",
      "note": "Runda 5, Twierdza. 0/3. TEST KONTROLNY na tych samych kadrach: nasze OBIEKTY (chata, most, skrzynia, wóz) też przegrywają 0/3 z identycznym zarzutem — stwory dorównały obiektom mapy; pułap wyznacza sama mapa (obrysowane obiekty na miękkim terenie)."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Sporex — zamulony szaro-fioletowo-oliwkowy, miękki i mało kontrastowy przy ciepłych, nasyconych, obrysowanych obiektach; bez cienia kontaktowego.",
+     "blind": "tools/postep-obrazy/dopasowanie-polana-r5.jpg",
+     "note": "Nowy test (sam nasz kadr, co nie pasuje), runda 5, Polana: NIE PASUJĄ."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: stwór na ścieżce — twardy ciemny obrys 1 px, chłodny fiolet, brak cienia; chata i trzcina mają miękkie malowane krawędzie. Stwory za małe przy trzcinie.",
+     "blind": "tools/postep-obrazy/dopasowanie-bagna-r5.jpg",
+     "note": "Runda 5, Bagna: NIE PASUJĄ."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: fioletowo-złoty stwór — najbardziej kontrastowy kształt, brak chłodnego światła śniegu i niebieskoszarej podkładki cienia jak pod skałami i skrzynią.",
+     "blind": "tools/postep-obrazy/dopasowanie-twierdza-r5.jpg",
+     "note": "Runda 5, Twierdza: NIE PASUJĄ. 0/3 w nowym teście."
     }
    ]
   },
