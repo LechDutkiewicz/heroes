@@ -305,6 +305,24 @@
      "gap": "Najmniej pasuje: portret bohatera. Portrety: NIE — różna odległość kamery, blady 227 ginie na bladym tle.",
      "blind": "tools/postep-obrazy/dopasowanie-portrety-hud-r6.jpg",
      "note": "Runda 6, HUD. 0/3 — kadr od oczu zawodzi przy stworach-kulach (Pyroko)."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: bladoniebieskie panele nad rzędem (stary zestaw UI). Portrety: NIE — Pyroko od krawędzi do krawędzi, Flamir ucięty z prawej, 227 mały i ucięty u góry.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-bohater-r7.jpg",
+     "note": "Runda 7 (cała głowa / cała kula, jeden margines), bohater."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: pokeball przy cenie. Portrety: NIE — Pyroko ucięty, różny zapas nad głową, na karcie Flamira ucięte ciało i obcy fragment przy prawej krawędzi.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-miasto-r7.jpg",
+     "note": "Runda 7, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: portret bohatera. Portrety: NIE — różne tła i kadry, blade stwory giną.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-hud-r7.jpg",
+     "note": "Runda 7, HUD. 0/3 — kolejna zmiana: cała postać zamiast popiersia."
     }
    ]
   }
