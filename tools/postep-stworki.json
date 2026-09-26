@@ -132,6 +132,24 @@
      "gap": "Najmniej pasuje: Lawina — ostry obrys, kontrastowy fiolet z ochrą, cienka przeostrzona sylwetka; płaskie nasycone niebieskie elipsy pod stworami jak znaczniki zaznaczenia.",
      "blind": "tools/postep-obrazy/dopasowanie-twierdza-r6.jpg",
      "note": "Runda 6, Twierdza: NIE PASUJĄ. 0/3."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Sporex — szarozielone ciało, miękkie niskokontrastowe cieniowanie, bez obrysu i cienia; nieco za mały przy moście.",
+     "blind": "tools/postep-obrazy/dopasowanie-polana-r7.jpg",
+     "note": "Runda 7 (cień u stóp 0,42, obrys w kolorze krawędzi, barwy w zakresie obiektów), Polana."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: różowy stwór z latarnią — cukierkowy róż spoza palety, brak widocznego cienia; oba stwory ostrzejsze i mniej uziemione niż obiekty.",
+     "blind": "tools/postep-obrazy/dopasowanie-bagna-r7.jpg",
+     "note": "Runda 7, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: fioletowy pająk — płaski nasycony wycinek z ostrym obrysem, bez cienia i odbicia śniegu; smok na zboczu unosi się.",
+     "blind": "tools/postep-obrazy/dopasowanie-twierdza-r7.jpg",
+     "note": "Runda 7, Twierdza. 0/3. Cień u stóp niewidoczny na ciemnym gruncie."
     }
    ]
   },
