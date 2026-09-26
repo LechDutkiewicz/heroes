@@ -114,6 +114,24 @@
      "gap": "Najmniej pasuje: fioletowo-złoty stwór — najbardziej kontrastowy kształt, brak chłodnego światła śniegu i niebieskoszarej podkładki cienia jak pod skałami i skrzynią.",
      "blind": "tools/postep-obrazy/dopasowanie-twierdza-r5.jpg",
      "note": "Runda 5, Twierdza: NIE PASUJĄ. 0/3 w nowym teście."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Sporex — mętny, bez czytelnego kierunku światła, poszarpana sylwetka z cienkich macek; obiekty mają czyste, obrysowane bryły w ciepłym świetle.",
+     "blind": "tools/postep-obrazy/dopasowanie-polana-r6.jpg",
+     "note": "Runda 6 (obróbka z ustawień planszy), Polana: NIE PASUJĄ."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Cindro — najbardziej nasycony na bagnie, prawie czarny obrys przy cienkich ciepłobrązowych krawędziach chaty i mostu, brak cienia pod stopami.",
+     "blind": "tools/postep-obrazy/dopasowanie-bagna-r6.jpg",
+     "note": "Runda 6, Bagna: NIE PASUJĄ."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Lawina — ostry obrys, kontrastowy fiolet z ochrą, cienka przeostrzona sylwetka; płaskie nasycone niebieskie elipsy pod stworami jak znaczniki zaznaczenia.",
+     "blind": "tools/postep-obrazy/dopasowanie-twierdza-r6.jpg",
+     "note": "Runda 6, Twierdza: NIE PASUJĄ. 0/3."
     }
    ]
   },
