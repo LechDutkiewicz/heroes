@@ -85,6 +85,7 @@ import {
   RAMA_MAPY_H,
   RAMA_MAPY_W,
   STWORKI_NA_MAPIE,
+  STRAZNIK_MALOWANY,
   BOHATER_NA_MAPIE,
   SZER_STRAZNIKA_MAX,
   WYS_BOHATERA,
@@ -95,6 +96,7 @@ import {
 import { dodajWode } from '../visual/woda';
 import { MGLA_GESTOSC, MalarzMgly } from '../visual/mgla';
 import { wersjonujZasoby } from '../visual/zasoby';
+import { STRAZNICY_MAPOWI } from '../data/strazniki-mapa';
 import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
 import {
   MUZYKA_MAPA,
@@ -406,6 +408,13 @@ export class AdventureScene extends Phaser.Scene {
     for (const o of zywe(stan.bohater.armia)) potrzebne.add(o.sprite);
     for (const ob of stan.obiekty) for (const o of ob.oddzialy ?? []) potrzebne.add(o.sprite);
     for (const s of potrzebne) this.load.image(`p-${s}`, `${b}sprites/${s}.png`);
+    // Malowani strażnicy NA MAPĘ (stworki runda 5): osobny rysunek grupki
+    // w rzucie planszy, tylko dla numerów z `STRAZNICY_MAPOWI` — inaczej
+    // brak pliku byłby błędem 404 w konsoli.
+    for (const ob of stan.obiekty) {
+      const s = ob.rodzaj === 'potwor' ? ob.oddzialy?.[0].sprite : undefined;
+      if (s && STRAZNICY_MAPOWI.has(s)) this.load.image(`pmapa-${s}`, `${b}sprites/mapa-${s}.png`);
+    }
   }
 
   /**
@@ -762,7 +771,15 @@ export class AdventureScene extends Phaser.Scene {
   private teksturaStworkaNaMape(klucz: string, x: number, y: number): string {
     const zrodlo = this.textures.get(klucz)?.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
     if (!zrodlo?.width) return klucz;
-    const ust = { ...STWORKI_NA_MAPIE, ...planszaPoId(this.stan.mapa).modul.USTAWIENIA?.stworkiNaMapie };
+    // Malowany strażnik mapowy (`pmapa-`) ma światło, paletę i brzeg już
+    // w rysunku i nie ma obwódki bitwy — dostaje tylko lekki przebieg
+    // (`STRAZNIK_MALOWANY`) i bez erozji.
+    const malowany = klucz.startsWith('pmapa-');
+    const ust = {
+      ...STWORKI_NA_MAPIE,
+      ...planszaPoId(this.stan.mapa).modul.USTAWIENIA?.stworkiNaMapie,
+      ...(malowany ? STRAZNIK_MALOWANY : {}),
+    };
     const grunt = this.barwaGruntu(x, y).map((v) => Math.round(v / 12) * 12) as [number, number, number];
     const nowy = `pm-${this.stan.mapa ?? ''}-${klucz}-${grunt.join('-')}`;
     if (this.textures.exists(nowy)) return nowy;
@@ -779,8 +796,8 @@ export class AdventureScene extends Phaser.Scene {
     const d = obraz.data;
     const a0 = new Uint8Array(W * H);
     for (let i = 0; i < a0.length; i++) a0[i] = d[i * 4 + 3];
-    if (!this.oswietlObszar(d, a0, W, { x: 0, y: 0, w: W, h: H }, ust, grunt, Math.max(2, Math.round((W / 128) * 3))))
-      return klucz;
+    const kr = Math.max(2, Math.round((W / 128) * 3));
+    if (!this.oswietlObszar(d, a0, W, { x: 0, y: 0, w: W, h: H }, ust, grunt, kr, !malowany)) return klucz;
     t.getContext().putImageData(obraz, 0, 0);
     t.refresh();
     return nowy;
@@ -1860,7 +1877,10 @@ export class AdventureScene extends Phaser.Scene {
       // pliku część wychodziła na plamkę. Szerokie sylwetki przycina
       // `SZER_STRAZNIKA_MAX`. Zwracana `wys` to nadal wysokość PLIKU, więc
       // cień kontaktowy, spód rysunku i trafienia kliknięciem idą za nią same.
-      const klucz = `p-${o.oddzialy?.[0].sprite ?? '00002'}`;
+      // Malowana wersja mapowa (`pmapa-`, stworki runda 5), gdy jest —
+      // inaczej sprite bitwy, jak dotąd.
+      const sprite = o.oddzialy?.[0].sprite ?? '00002';
+      const klucz = this.textures.exists(`pmapa-${sprite}`) ? `pmapa-${sprite}` : `p-${sprite}`;
       const p = this.podstawaRysunku(klucz);
       const zrodlo = this.textures.get(klucz).getSourceImage() as { width: number; height: number };
       const proporcja = (zrodlo.width || 1) / (zrodlo.height || 1);
@@ -1970,7 +1990,15 @@ export class AdventureScene extends Phaser.Scene {
       // Strażnik to jednostka, nie przedmiot: rzuca na grunt własną sylwetkę
       // (`cienRzucany`), której znajdźki nie mają.
       if (o.rodzaj === 'potwor') {
-        const rzut = this.cienRzucany(klucz, wys / this.textures.get(klucz).getSourceImage().height, 0, spod);
+        // Malowana grupka (`pmapa-`) jest widziana z góry: stopy tylnych
+        // stworków stoją wyżej niż przedniego, więc grunt, na który pada
+        // cień, zaczyna się kawałek nad dolną krawędzią rysunku — cień
+        // i podstawka podchodzą pod grupę (`STRAZNIK_MALOWANY.podGrupe`
+        // widocznej wysokości), zamiast leżeć pod nią jak plama obok.
+        const podGrupe = klucz.startsWith('pmapa-')
+          ? STRAZNIK_MALOWANY.podGrupe * (this.podstawaRysunku(klucz).widocznaWys ?? 1) * wys
+          : 0;
+        const rzut = this.cienRzucany(klucz, wys / this.textures.get(klucz).getSourceImage().height, 0, spod - podGrupe);
         if (rzut) kont.add(rzut);
         // Podstawka (stworki runda 4: „brak podstawki / znacznika strażnika"):
         // zwarta, ciemna plama gruntu wprost pod stopami — jednostka stoi
@@ -1985,7 +2013,7 @@ export class AdventureScene extends Phaser.Scene {
           kont.add(
             this.naSniegu(
               this.add
-                .image(srodekP + szerP * 0.05, spod + 1, CIEN_KONTAKTOWY)
+                .image(srodekP + szerP * 0.05, spod + 1 - podGrupe, CIEN_KONTAKTOWY)
                 .setDisplaySize(szerP, szerP * 0.3)
                 .setTint(0x0e0904)
                 .setTintMode(Phaser.TintModes.FILL)
@@ -2086,13 +2114,10 @@ export class AdventureScene extends Phaser.Scene {
         });
       }
 
-      if (o.rodzaj === 'potwor') {
-        // Chorągiewka NAD głową strażnika: stopka masztu wchodzi na czubek
-        // sylwetki o 0,1 pola, proporczyk jest cały nad nim. Liczone od
-        // widocznego spodu i wysokości sylwetki, więc idzie za skalą stworka.
-        const glowa = spod - (this.podstawaRysunku(klucz).widocznaWys ?? 1) * wys;
-        kont.add(this.chorag(C.foe).setY(glowa + KAFEL * 0.38));
-      }
+      // Strażnik nie ma chorągiewki (stworki runda 5: „różowe proporczyki nad
+      // stworami mylą się z flagą obiektu do przejęcia"). W HoMM3 też jej nie
+      // ma — potwora poznaje się po figurze, cieniu rzuconym i podstawce;
+      // kto pilnuje, mówi podpowiedź po najechaniu (`opisObiektu`).
       const doZajecia =
         o.rodzaj === 'kopalnia' ||
         o.rodzaj === 'zamek' ||
@@ -2117,7 +2142,10 @@ export class AdventureScene extends Phaser.Scene {
       // skrzynie, artefakty i stworki dostają tę samą nierówną krawędź gruntu
       // co budowle, tylko w skali drobnej rzeczy — spód grzęźnie w śniegu.
       const osadz = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.osadzZnajdzki;
-      if (osadz && !bryla && o.rodzaj !== 'budynek' && o.rodzaj !== 'jasnowidz')
+      // Malowana grupka strażników (`pmapa-`) bez tego: pas gruntu zakrywał
+      // stopy przedniego stworka razem z cieniem pod nim i grupa wisiała nad
+      // własnym cieniem (stworki runda 5).
+      if (osadz && !bryla && o.rodzaj !== 'budynek' && o.rodzaj !== 'jasnowidz' && !klucz.startsWith('pmapa-'))
         this.zaroslaPrzyPodstawie(o, im, kont, spod, osadz);
 
       kont.setData('obiekt', o);

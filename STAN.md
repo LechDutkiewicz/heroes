@@ -107,6 +107,35 @@ gpt-image-1 w stylu `obiekt`, razem z dwoma nowymi etapami ewolucji każdego
   `tools/blind/stworki-mapa-r4*.png`. Do sprawdzenia: bohater przy 1,9 jest
   chudy — strażnik szerokością bywa „cięższy"; wyróżnia go proporzec
   i pierścień.
+- **Mapa, runda 5** (ślepe z HotA r4 0/3, rdzeń od r1: „płasko cieniowane
+  maskotki chibi w innym stylu niż malarski teren", „różowe chorągiewki nad
+  stworami mylą się z flagą obiektu do przejęcia"). Strażnik na mapie ma
+  teraz OSOBNY rysunek: grupka 2–3 osobników tego samego gatunku w rzucie
+  3/4 z góry, malowana jak budowle plansz (`public/sprites/mapa-<numer>.png`,
+  7 gatunków — to wszyscy, którzy stoją na planszach: Grota Glacyn/Sporex/
+  Cindro, Zbocze Obsydian/Cynder/Lawina/Sadzin, `STRAZE` w `plansza.ts`).
+  Prompty: `PROMPTY-STWORKI.md`, „Strażnicy na mapie przygody" — dwa wzory
+  w `images/edits` (sprite bitwy + arkusz stylu `tools/wsad/wzor-styl-mapy.png`
+  z naszych obiektów mapy; `generuj_grafiki.py` przyjmuje `wzor: a,b`),
+  model **gpt-image-1.5** (gpt-image-1 dawał portret z przodu w fakturze
+  filcu, też z arkuszem). Do gry: `python3 tools/strazniki_wczytaj.py` —
+  zdejmuje jasny placek ziemi, który 1.5 dorysowuje, kwadrat 160 px, bez
+  podbicia nasycenia i bez obwódki; przepisuje `src/data/strazniki-mapa.ts`
+  (`STRAZNICY_MAPOWI`). AdventureScene wczytuje `pmapa-<numer>` tylko dla
+  numerów z listy (fallback: sprite bitwy przez `teksturaStworkaNaMape`
+  jak dotąd); malowany dostaje łagodny przebieg `STRAZNIK_MALOWANY`
+  (`uklad.ts`: bez erozji, nasycenie 1, światło 0,08, brzeg 0,12),
+  cień rzucany i podstawka wchodzą pod grupę o `podGrupe` 0,1 widocznej
+  wysokości, a `osadzZnajdzki` (Twierdza) go omija — pas gruntu zakrywał
+  stopy razem z cieniem i grupa wisiała. Chorągiewka nad strażnikiem zdjęta
+  (w HoMM3 jej nie ma); podpowiedź po najechaniu dalej mówi „Cindro / 4 ×
+  Cindro, 3 × Cindro". Skala bez zmian (grupki są szersze, więc częściej
+  przycina je `SZER_STRAZNIKA_MAX` — widoczna wysokość ~1,1–1,4 pola).
+  OpenAI $0.76 (15 obrazków, 7 w grze, reszta to próby pilota — poza
+  repo). Zrzuty `tools/blind/stworki-mapa-r5*.png`. Do sprawdzenia
+  w ślepym: stworki dalej mają „dziecięce" twarze (to projekt gry) —
+  zarzut stylu powinien zejść, zarzut „maskotek" może zostać; Sporex to
+  sporo fioletowych płatków, na łące czyta się trochę jak krzak kwiatów.
 
 ## Plansze kampanii: Polana, Bagna, Twierdza (2026-09-24)
 

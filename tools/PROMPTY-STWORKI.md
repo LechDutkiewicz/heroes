@@ -1314,3 +1314,295 @@ Evolution stage 3 of 3, the final form. The attached image is stage 2 of this li
 
 IMPORTANT: only the creature itself, with no white border around it. Everything around it is transparent, INCLUDING the area under its feet: no floor, no sand, no dirt, no puddle, no shadow.
 ```
+
+## Strażnicy na mapie przygody (stworki runda 5)
+
+Po czterech rundach ślepego porównania z HotA (0/2, 0/3, 1/3, 0/3) zarzut
+był ten sam: „stworki to płasko cieniowane maskotki chibi w innym stylu niż
+malarski teren — assety z innej gry mobilnej, nie strażnicy tej mapy".
+Skala, światło, cień rzucany i podstawka w kodzie tego nie naprawiły, bo
+na mapę szedł portret z bitwy. Tu są OSOBNE rysunki strażników tylko na
+mapę przygody, malowane tym samym językiem co budowle plansz
+(`PROMPTY-PLANSZE.md`): rzut 3/4 z góry, światło z lewej-góry, ta sama
+gęstość detalu i paleta. W HoMM3 figura na mapie reprezentuje oddział —
+stąd mała grupka dwóch-trzech osobników tego samego gatunku, ciasno.
+
+Dwa wzory na plik (`| wzor: a.png,b.png` — `generuj_grafiki.py` wysyła
+kilka obrazków do `images/edits`): pierwszy to malowany sprite bitwy
+(`stworek-<numer>.png` ze wsadu), żeby dziecko poznało stworka; drugi to
+**arkusz stylu** `wzor-styl-mapy.png` — cztery nasze obiekty mapy (obóz
+treningowy, kamienna wieża, zimowa chatka, zimowe ognisko) złożone
+w kwadrat. Bez arkusza model przemalowywał sam portret: wełnista faktura
+kredki, rzut z przodu na wysokości oczu (pilot, 2 próby). Blok stylu
+`obiekt` mówi o świetle „z prawej-góry" — akapit wspólny poniżej
+nadpisuje to wprost (cała plansza ma światło z lewej-góry). Nazwy
+stworków celowo poza promptem (filtr treści).
+
+**Model: `gpt-image-1.5`** (`OPENAI_IMAGE_MODEL`). `gpt-image-1` nawet
+z arkuszem stylu dawał portret z przodu w fakturze filcu; 1.5 trzyma rzut
+z góry, czystą malarską fakturę obiektów i małe proporcje. Dorysowuje za to
+jasny placek „ziemi" pod grupą — zdejmuje go `strazniki_wczytaj.py`.
+Filtr treści odrzuca ~1 na 4 zapytania losowo (ponowienie przechodzi).
+
+Nazwy: `straznik-<numer>.png` → `public/sprites/mapa-<numer>.png`
+(`tools/strazniki_wczytaj.py`, który dopisuje też listę gotowych numerów do
+`src/data/strazniki-mapa.ts`). Scena bierze wersję mapową, gdy numer jest
+na tej liście, inaczej — jak dotąd — sprite bitwy przepuszczony przez
+`teksturaStworkaNaMape`. Strażnicy na planszach to tylko siedem gatunków:
+Grota (`slaby`/`sredni`: poziomy 1–3) i Zbocze (`silny`/`straznik`/`wodz`:
+poziomy 3–6) — `STRAZE` w `src/data/plansza.ts`.
+
+    OPENAI_IMAGE_MODEL=gpt-image-1.5 OPENAI_IMAGE_QUALITY=medium python3 tools/generuj_grafiki.py straznik-00002.png
+    python3 tools/strazniki_wczytaj.py
+
+### Glacyn (Grota, poziom 1, woda)
+
+<!-- plik: straznik-00246.png | styl: obiekt | proporcje: 1:1 | wzor: stworek-00246.png,wzor-styl-mapy.png -->
+```
+A small band of wild creatures guarding a road on the adventure map of a
+fantasy strategy game, drawn as a Heroes of Might and Magic III adventure-map
+monster: a tiny map figure, not a character portrait. Seen from the SAME
+elevated three-quarter view from above as the map objects in the second
+attached image: we look down on the tops of their heads and backs. THREE
+individuals of the SAME species huddled tightly together as one compact
+group: one in front, two just behind it and higher up in the picture,
+overlapping, bodies turned towards the lower left, whole bodies visible down
+to the feet. Natural small-animal proportions, heads not oversized. The group
+is compact: about as tall as wide, never more than 1.3 times wider than tall.
+
+The second attached image is a STYLE SHEET of this game's map objects (tents,
+a stone tower, a snowy shelter, a campfire). Render the creatures in exactly
+that style: the same crisp digital painting with clean smooth edges, the same
+amount of fine detail and small highlights, the same saturation and warm
+palette, the same bright light FROM THE UPPER LEFT (ignore any other light
+direction) - sunlit tops and left sides, darker right sides and undersides,
+the feet darkest. They must look like they belong on the same map as those
+objects. Do NOT draw any of those objects themselves.
+
+Water creatures: small light-blue slender creatures like baby seahorses standing on two legs, curled fin tails, a little fin crest on each head, long necks, smooth wet-looking skin.
+
+The first attached image shows this very species: keep its body plan,
+colours and signature features so a child recognises it at once, but repaint
+the three of them completely in the map-object style of the second image,
+seen from above.
+
+IMPORTANT: only the three creatures, no white border around them. Everything
+around them is transparent, INCLUDING the area under their feet: no ground,
+no grass, no sand patch, no puddle, no shadow, no base, no flag, no text.
+```
+
+### Sporex (Grota, poziom 2, trawa)
+
+<!-- plik: straznik-00002.png | styl: obiekt | proporcje: 1:1 | wzor: stworek-00002.png,wzor-styl-mapy.png -->
+```
+A small band of wild creatures guarding a road on the adventure map of a
+fantasy strategy game, drawn as a Heroes of Might and Magic III adventure-map
+monster: a tiny map figure, not a character portrait. Seen from the SAME
+elevated three-quarter view from above as the map objects in the second
+attached image: we look down on the tops of their heads and backs. THREE
+individuals of the SAME species huddled tightly together as one compact
+group: one in front, two just behind it and higher up in the picture,
+overlapping, bodies turned towards the lower left, whole bodies visible down
+to the feet. Natural small-animal proportions, heads not oversized. The group
+is compact: about as tall as wide, never more than 1.3 times wider than tall.
+
+The second attached image is a STYLE SHEET of this game's map objects (tents,
+a stone tower, a snowy shelter, a campfire). Render the creatures in exactly
+that style: the same crisp digital painting with clean smooth edges, the same
+amount of fine detail and small highlights, the same saturation and warm
+palette, the same bright light FROM THE UPPER LEFT (ignore any other light
+direction) - sunlit tops and left sides, darker right sides and undersides,
+the feet darkest. They must look like they belong on the same map as those
+objects. Do NOT draw any of those objects themselves.
+
+Grass and plant creatures: round mint-green bulb creatures with friendly faces and rosy cheeks, each wearing a crown of long curling purple petals on top like a flower hat, thin purple leafy vine arms, short green stem legs; the petal crowns are modest so the bodies and faces stay clearly visible.
+
+The first attached image shows this very species: keep its body plan,
+colours and signature features so a child recognises it at once, but repaint
+the three of them completely in the map-object style of the second image,
+seen from above.
+
+IMPORTANT: only the three creatures, no white border around them. Everything
+around them is transparent, INCLUDING the area under their feet: no ground,
+no grass, no sand patch, no puddle, no shadow, no base, no flag, no text.
+```
+
+### Cindro (Grota, poziom 3, ogień)
+
+<!-- plik: straznik-00263.png | styl: obiekt | proporcje: 1:1 | wzor: stworek-00263.png,wzor-styl-mapy.png -->
+```
+A small band of wild creatures guarding a road on the adventure map of a
+fantasy strategy game, drawn as a Heroes of Might and Magic III adventure-map
+monster: a tiny map figure, not a character portrait. Seen from the SAME
+elevated three-quarter view from above as the map objects in the second
+attached image: we look down on the tops of their heads and backs. THREE
+individuals of the SAME species huddled tightly together as one compact
+group: one in front, two just behind it and higher up in the picture,
+overlapping, bodies turned towards the lower left, whole bodies visible down
+to the feet. Natural small-animal proportions, heads not oversized. The group
+is compact: about as tall as wide, never more than 1.3 times wider than tall.
+
+The second attached image is a STYLE SHEET of this game's map objects (tents,
+a stone tower, a snowy shelter, a campfire). Render the creatures in exactly
+that style: the same crisp digital painting with clean smooth edges, the same
+amount of fine detail and small highlights, the same saturation and warm
+palette, the same bright light FROM THE UPPER LEFT (ignore any other light
+direction) - sunlit tops and left sides, darker right sides and undersides,
+the feet darkest. They must look like they belong on the same map as those
+objects. Do NOT draw any of those objects themselves.
+
+Fire creatures: small cheeky fire lemurs with big round ears, rust-orange spiky manes, cream-coloured faces and bellies, orange paws, long ringed tails each with a little flame at the tip.
+
+The first attached image shows this very species: keep its body plan,
+colours and signature features so a child recognises it at once, but repaint
+the three of them completely in the map-object style of the second image,
+seen from above.
+
+IMPORTANT: only the three creatures, no white border around them. Everything
+around them is transparent, INCLUDING the area under their feet: no ground,
+no grass, no sand patch, no puddle, no shadow, no base, no flag, no text.
+```
+
+### Obsydian (Zbocze, poziom 3, trawa)
+
+<!-- plik: straznik-00095.png | styl: obiekt | proporcje: 1:1 | wzor: stworek-00095.png,wzor-styl-mapy.png -->
+```
+A small band of wild creatures guarding a road on the adventure map of a
+fantasy strategy game, drawn as a Heroes of Might and Magic III adventure-map
+monster: a tiny map figure, not a character portrait. Seen from the SAME
+elevated three-quarter view from above as the map objects in the second
+attached image: we look down on the tops of their heads and backs. THREE
+individuals of the SAME species huddled tightly together as one compact
+group: one in front, two just behind it and higher up in the picture,
+overlapping, bodies turned towards the lower left, whole bodies visible down
+to the feet. Natural small-animal proportions, heads not oversized. The group
+is compact: about as tall as wide, never more than 1.3 times wider than tall.
+
+The second attached image is a STYLE SHEET of this game's map objects (tents,
+a stone tower, a snowy shelter, a campfire). Render the creatures in exactly
+that style: the same crisp digital painting with clean smooth edges, the same
+amount of fine detail and small highlights, the same saturation and warm
+palette, the same bright light FROM THE UPPER LEFT (ignore any other light
+direction) - sunlit tops and left sides, darker right sides and undersides,
+the feet darkest. They must look like they belong on the same map as those
+objects. Do NOT draw any of those objects themselves.
+
+Grass and plant creatures: round squat deep-purple berry creatures shaped like big plums, a crown of cream-white petals on top of each head, small lavender feet, two tiny green leaves as arms, and on the front of each body one big shy eye looking at the viewer - clearly living little creatures walking on their feet, NOT fruit lying on the ground.
+
+The first attached image shows this very species: keep its body plan,
+colours and signature features so a child recognises it at once, but repaint
+the three of them completely in the map-object style of the second image,
+seen from above.
+
+IMPORTANT: only the three creatures, no white border around them. Everything
+around them is transparent, INCLUDING the area under their feet: no ground,
+no grass, no sand patch, no puddle, no shadow, no base, no flag, no text.
+```
+
+### Cynder (Zbocze, poziom 4, ogień)
+
+<!-- plik: straznik-00023.png | styl: obiekt | proporcje: 1:1 | wzor: stworek-00023.png,wzor-styl-mapy.png -->
+```
+A small band of wild creatures guarding a road on the adventure map of a
+fantasy strategy game, drawn as a Heroes of Might and Magic III adventure-map
+monster: a tiny map figure, not a character portrait. Seen from the SAME
+elevated three-quarter view from above as the map objects in the second
+attached image: we look down on the tops of their heads and backs. THREE
+individuals of the SAME species huddled tightly together as one compact
+group: one in front, two just behind it and higher up in the picture,
+overlapping, bodies turned towards the lower left, whole bodies visible down
+to the feet. Natural small-animal proportions, heads not oversized. The group
+is compact: about as tall as wide, never more than 1.3 times wider than tall.
+
+The second attached image is a STYLE SHEET of this game's map objects (tents,
+a stone tower, a snowy shelter, a campfire). Render the creatures in exactly
+that style: the same crisp digital painting with clean smooth edges, the same
+amount of fine detail and small highlights, the same saturation and warm
+palette, the same bright light FROM THE UPPER LEFT (ignore any other light
+direction) - sunlit tops and left sides, darker right sides and undersides,
+the feet darkest. They must look like they belong on the same map as those
+objects. Do NOT draw any of those objects themselves.
+
+Fire creatures: small red winged lizards with little horns and grins, dark teal bat-like wings half folded, teal lower bodies, little claws.
+
+The first attached image shows this very species: keep its body plan,
+colours and signature features so a child recognises it at once, but repaint
+the three of them completely in the map-object style of the second image,
+seen from above.
+
+IMPORTANT: only the three creatures, no white border around them. Everything
+around them is transparent, INCLUDING the area under their feet: no ground,
+no grass, no sand patch, no puddle, no shadow, no base, no flag, no text.
+```
+
+### Lawina (Zbocze, poziom 5, ogień)
+
+<!-- plik: straznik-00077.png | styl: obiekt | proporcje: 1:1 | wzor: stworek-00077.png,wzor-styl-mapy.png -->
+```
+A small band of wild creatures guarding a road on the adventure map of a
+fantasy strategy game, drawn as a Heroes of Might and Magic III adventure-map
+monster: a tiny map figure, not a character portrait. Seen from the SAME
+elevated three-quarter view from above as the map objects in the second
+attached image: we look down on the tops of their heads and backs. THREE
+individuals of the SAME species huddled tightly together as one compact
+group: one in front, two just behind it and higher up in the picture,
+overlapping, bodies turned towards the lower left, whole bodies visible down
+to the feet. Natural small-animal proportions, heads not oversized. The group
+is compact: about as tall as wide, never more than 1.3 times wider than tall.
+
+The second attached image is a STYLE SHEET of this game's map objects (tents,
+a stone tower, a snowy shelter, a campfire). Render the creatures in exactly
+that style: the same crisp digital painting with clean smooth edges, the same
+amount of fine detail and small highlights, the same saturation and warm
+palette, the same bright light FROM THE UPPER LEFT (ignore any other light
+direction) - sunlit tops and left sides, darker right sides and undersides,
+the feet darkest. They must look like they belong on the same map as those
+objects. Do NOT draw any of those objects themselves.
+
+Fire creatures: golden mantis-like insect creatures standing upright, thin golden legs and arms, blue bodies, white translucent wings, small heads with antennae and a tiny flame on top.
+
+The first attached image shows this very species: keep its body plan,
+colours and signature features so a child recognises it at once, but repaint
+the three of them completely in the map-object style of the second image,
+seen from above.
+
+IMPORTANT: only the three creatures, no white border around them. Everything
+around them is transparent, INCLUDING the area under their feet: no ground,
+no grass, no sand patch, no puddle, no shadow, no base, no flag, no text.
+```
+
+### Sadzin (Zbocze, poziom 6, woda)
+
+<!-- plik: straznik-00041.png | styl: obiekt | proporcje: 1:1 | wzor: stworek-00041.png,wzor-styl-mapy.png -->
+```
+A small band of wild creatures guarding a road on the adventure map of a
+fantasy strategy game, drawn as a Heroes of Might and Magic III adventure-map
+monster: a tiny map figure, not a character portrait. Seen from the SAME
+elevated three-quarter view from above as the map objects in the second
+attached image: we look down on the tops of their heads and backs. THREE
+individuals of the SAME species huddled tightly together as one compact
+group: one in front, two just behind it and higher up in the picture,
+overlapping, bodies turned towards the lower left, whole bodies visible down
+to the feet. Natural small-animal proportions, heads not oversized. The group
+is compact: about as tall as wide, never more than 1.3 times wider than tall.
+
+The second attached image is a STYLE SHEET of this game's map objects (tents,
+a stone tower, a snowy shelter, a campfire). Render the creatures in exactly
+that style: the same crisp digital painting with clean smooth edges, the same
+amount of fine detail and small highlights, the same saturation and warm
+palette, the same bright light FROM THE UPPER LEFT (ignore any other light
+direction) - sunlit tops and left sides, darker right sides and undersides,
+the feet darkest. They must look like they belong on the same map as those
+objects. Do NOT draw any of those objects themselves.
+
+Water creatures: red-orange rooster-like creatures standing upright, yellow chests, red crest combs, red wing-like arms, orange fin-shaped feet like flippers, a little blue water drop mark on each chest.
+
+The first attached image shows this very species: keep its body plan,
+colours and signature features so a child recognises it at once, but repaint
+the three of them completely in the map-object style of the second image,
+seen from above.
+
+IMPORTANT: only the three creatures, no white border around them. Everything
+around them is transparent, INCLUDING the area under their feet: no ground,
+no grass, no sand patch, no puddle, no shadow, no base, no flag, no text.
+```

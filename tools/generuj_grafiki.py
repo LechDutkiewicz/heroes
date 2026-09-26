@@ -19,7 +19,9 @@ przed promptem (domyślnie `obiekt`), a `| proporcje: 4:3` prosi model o kadr
 inny niż kwadrat — ilustracja na cały ekran przycięta z kwadratu traci
 jedną trzecią kompozycji, a `| wzor: stare-sprites/00193.png` (ścieżka
 względem `tools/wsad/`) wysyła prompt do OpenAI `images/edits` z tym
-obrazkiem jako referencją — tak powstają stworki (PROMPTY-STWORKI.md).
+obrazkiem jako referencją — tak powstają stworki (PROMPTY-STWORKI.md);
+kilka wzorów po przecinku (`| wzor: stworek-00002.png,wzor-styl-mapy.png`)
+idzie jako kilka obrazków — tak strażnicy mapy dostają arkusz stylu.
 Filtr treści OpenAI bywa kapryśny przy edycji: odrzucony plik jest pomijany
 (reszta partii leci dalej), a `--bez-wzoru` generuje go z samego opisu.
 Bloki stylu są oznaczone tak samo:
@@ -419,8 +421,12 @@ def generujOpenAIZeWzoru(tresc: str, wzor: Path, proporcje: str | None, plik: st
     wydane = wydaneDotad()
     if wydane + NAJDROZSZY_OBRAZEK > LIMIT_USD:
         raise SystemExit(f'Limit wydatków: ${wydane:.2f} z ${LIMIT_USD:.2f} (OPENAI_LIMIT_USD). Nie wysyłam.')
-    if not wzor.exists():
-        raise SystemExit(f'Brak wzoru {wzor} (dla {plik}) — wygeneruj go najpierw.')
+    # Kilka wzorów po przecinku (`wzor: stworek-00002.png,wzor-styl-mapy.png`):
+    # pierwszy to rysunek do przemalowania, kolejne — np. arkusz stylu.
+    wzory = [wzor.parent / n for n in wzor.name.split(',')] if ',' in wzor.name else [wzor]
+    for w in wzory:
+        if not w.exists():
+            raise SystemExit(f'Brak wzoru {w} (dla {plik}) — wygeneruj go najpierw.')
     tresc = AKAPIT_CHROMY.sub('Transparent background: only the object itself, nothing around it.', tresc)
     pola = {
         'model': MODEL_OPENAI, 'prompt': tresc, 'size': rozmiarOpenAI(proporcje),
@@ -430,9 +436,11 @@ def generujOpenAIZeWzoru(tresc: str, wzor: Path, proporcje: str | None, plik: st
     cialo = bytearray()
     for k, v in pola.items():
         cialo += f'--{granica}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode()
-    cialo += (f'--{granica}\r\nContent-Disposition: form-data; name="image[]"; filename="{wzor.name}"\r\n'
-              'Content-Type: image/png\r\n\r\n').encode()
-    cialo += wzor.read_bytes() + f'\r\n--{granica}--\r\n'.encode()
+    for w in wzory:
+        cialo += (f'--{granica}\r\nContent-Disposition: form-data; name="image[]"; filename="{w.name}"\r\n'
+                  'Content-Type: image/png\r\n\r\n').encode()
+        cialo += w.read_bytes() + b'\r\n'
+    cialo += f'--{granica}--\r\n'.encode()
     naglowki = {k: v for k, v in naglowkiOpenAI().items() if k != 'Content-Type'}
     naglowki['Content-Type'] = f'multipart/form-data; boundary={granica}'
     import time

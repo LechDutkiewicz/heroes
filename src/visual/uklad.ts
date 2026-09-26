@@ -107,6 +107,17 @@ export const STWORKI_NA_MAPIE = {
 };
 
 /**
+ * Malowany strażnik NA MAPĘ (`public/sprites/mapa-<numer>.png`, stworki
+ * runda 5): grupka stworków malowana jak budowle plansz, ze światłem
+ * z lewej-góry już w rysunku. Nadpisuje `STWORKI_NA_MAPIE` łagodniej —
+ * bez zdejmowania nasycenia i z lekkim światłem/brzegiem; barwa gruntu
+ * i podstawka zostają. `podGrupe` — o tyle widocznej wysokości cień
+ * rzucany i podstawka wchodzą pod grupę (widzianą z góry stopy tylnych
+ * stworków stoją wyżej niż dolna krawędź rysunku).
+ */
+export const STRAZNIK_MALOWANY = { nasycenie: 1, swiatlo: 0.08, podcien: 0.16, krawedz: 0.12, podGrupe: 0.1 };
+
+/**
  * Bohater w świetle planszy (runda 4: „narysowany płasko, jak postać z innej
  * gry"): ten sam przebieg co u strażników (`STWORKI_NA_MAPIE`, bez barwy
  * gruntu — bohater chodzi po całej planszy), na każdej klatce arkusza osobno.
