@@ -17,7 +17,12 @@ Wiązanie prompt → plik robi znacznik w komentarzu HTML tuż nad blokiem kodu:
 Opcjonalnie `| styl: teren` albo `| styl: brak` wybiera blok stylu doklejany
 przed promptem (domyślnie `obiekt`), a `| proporcje: 4:3` prosi model o kadr
 inny niż kwadrat — ilustracja na cały ekran przycięta z kwadratu traci
-jedną trzecią kompozycji. Bloki stylu są oznaczone tak samo:
+jedną trzecią kompozycji, a `| wzor: stare-sprites/00193.png` (ścieżka
+względem `tools/wsad/`) wysyła prompt do OpenAI `images/edits` z tym
+obrazkiem jako referencją — tak powstają stworki (PROMPTY-STWORKI.md).
+Filtr treści OpenAI bywa kapryśny przy edycji: odrzucony plik jest pomijany
+(reszta partii leci dalej), a `--bez-wzoru` generuje go z samego opisu.
+Bloki stylu są oznaczone tak samo:
 
     <!-- styl: obiekt -->
 
@@ -79,6 +84,7 @@ DOKUMENTY = [
     KORZEN / 'tools' / 'PROMPTY-MENU.md',
     KORZEN / 'tools' / 'PROMPTY-KAMPANIA.md',
     KORZEN / 'tools' / 'PROMPTY-PLANSZE.md',
+    KORZEN / 'tools' / 'PROMPTY-STWORKI.md',
 ]
 
 API = 'https://generativelanguage.googleapis.com/v1beta'
@@ -94,12 +100,20 @@ MODELE = [
 
 ZNACZNIK = re.compile(
     r'<!--\s*(plik|styl):\s*([^|\s]+)\s*(?:\|\s*styl:\s*(\w+)\s*)?'
-    r'(?:\|\s*proporcje:\s*(\d+:\d+)\s*)?-->'
+    r'(?:\|\s*proporcje:\s*(\d+:\d+)\s*)?'
+    r'(?:\|\s*wzor:\s*([^|\s]+)\s*)?-->'
 )
 
 #: Proporcje kadru per plik — osobny słownik, a nie trzeci element krotki
 #: zadania, żeby reszta skryptu (lista, drukowanie) nie musiała o nich wiedzieć.
 PROPORCJE: dict[str, str] = {}
+
+#: Obrazek-wzór per plik (`| wzor: stare-sprites/00193.png`, ścieżka względem
+#: `tools/wsad/`). Taki plik idzie do OpenAI przez `images/edits` z wzorem jako
+#: referencją — tak powstają stworki: forma bazowa przemalowana ze starego
+#: sprite'a, kolejne etapy ewolucji z poprzedniego etapu, więc linia trzyma
+#: rysy i barwy. Tylko OpenAI.
+WZORY: dict[str, str] = {}
 
 
 def klucz() -> str:
@@ -161,6 +175,8 @@ def czytajPrompty() -> tuple[dict[str, str], dict[str, tuple[str, str]]]:
                 zadania[nazwa] = (tresc, styl)
                 if m.group(4):
                     PROPORCJE[nazwa] = m.group(4)
+                if m.group(5):
+                    WZORY[nazwa] = m.group(5)
             i = koniec + 1
     return style, zadania
 
@@ -392,6 +408,71 @@ def generujOpenAI(tresc: str, proporcje: str | None, przezroczyste: bool, plik: 
     raise SystemExit(f'Odpowiedź bez obrazka:\n{json.dumps(odp)[:400]}')
 
 
+class OdrzuconyPrzezFiltr(Exception):
+    pass
+
+
+def generujOpenAIZeWzoru(tresc: str, wzor: Path, proporcje: str | None, plik: str = '?') -> tuple[bytes, int]:
+    """Jak `generujOpenAI`, ale przez `images/edits` z obrazkiem-wzorem
+    (multipart). Zawsze przezroczyste tło — wzory są tylko dla obiektów."""
+    import uuid
+    wydane = wydaneDotad()
+    if wydane + NAJDROZSZY_OBRAZEK > LIMIT_USD:
+        raise SystemExit(f'Limit wydatków: ${wydane:.2f} z ${LIMIT_USD:.2f} (OPENAI_LIMIT_USD). Nie wysyłam.')
+    if not wzor.exists():
+        raise SystemExit(f'Brak wzoru {wzor} (dla {plik}) — wygeneruj go najpierw.')
+    tresc = AKAPIT_CHROMY.sub('Transparent background: only the object itself, nothing around it.', tresc)
+    pola = {
+        'model': MODEL_OPENAI, 'prompt': tresc, 'size': rozmiarOpenAI(proporcje),
+        'quality': JAKOSC_OPENAI, 'background': 'transparent', 'output_format': 'png', 'n': '1',
+    }
+    granica = uuid.uuid4().hex
+    cialo = bytearray()
+    for k, v in pola.items():
+        cialo += f'--{granica}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode()
+    cialo += (f'--{granica}\r\nContent-Disposition: form-data; name="image[]"; filename="{wzor.name}"\r\n'
+              'Content-Type: image/png\r\n\r\n').encode()
+    cialo += wzor.read_bytes() + f'\r\n--{granica}--\r\n'.encode()
+    naglowki = {k: v for k, v in naglowkiOpenAI().items() if k != 'Content-Type'}
+    naglowki['Content-Type'] = f'multipart/form-data; boundary={granica}'
+    import time
+    for proba in range(40):
+        req = urllib.request.Request(f'{API_OPENAI}/images/edits', data=bytes(cialo), headers=naglowki, method='POST')
+        try:
+            with urllib.request.urlopen(req, timeout=300) as r:
+                odp = json.loads(r.read())
+            break
+        except urllib.error.HTTPError as e:
+            blad = e.read().decode(errors='replace')[:1200]
+            if e.code in (500, 502, 503, 504) and proba < 5:
+                print(f'[{e.code}, ponawiam za 15 s] ', end='', flush=True)
+                time.sleep(15)
+                continue
+            if e.code == 429 and proba < 39:
+                m = re.search(r'try again in ([\d.]+)s', blad)
+                czekaj = float(m.group(1)) + 2 if m else 20
+                print(f'[429, czekam {czekaj:.0f} s] ', end='', flush=True)
+                time.sleep(czekaj)
+                continue
+            if 'moderation_blocked' in blad:
+                # Filtr treści odrzucił JEDEN obrazek — reszta partii nie musi
+                # przez to przepadać. Wynik: brak pliku, widoczny w --lista.
+                raise OdrzuconyPrzezFiltr(blad)
+            raise SystemExit(f'OpenAI odpowiedziało {e.code}:\n{blad}')
+    else:
+        raise SystemExit('OpenAI: limit zapytań nie ustąpił')
+    usage = dict(odp.get('usage', {}))
+    # Obrazek na wejściu kosztuje 10 $/M zamiast 5 $/M tekstu: dopisujemy
+    # różnicę jako tokeny tekstowe, żeby dziennik nie zaniżał sumy.
+    obr = int((usage.get('input_tokens_details') or {}).get('image_tokens') or 0)
+    usage['input_tokens'] = int(usage.get('input_tokens') or 0) + obr
+    zapiszKoszt(plik, MODEL_OPENAI, JAKOSC_OPENAI, rozmiarOpenAI(proporcje), usage)
+    for w in odp.get('data', []):
+        if w.get('b64_json'):
+            return base64.b64decode(w['b64_json']), int(usage.get('output_tokens') or 0)
+    raise SystemExit(f'Odpowiedź bez obrazka:\n{json.dumps(odp)[:400]}')
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('pliki', nargs='*', help='nazwy plików do wygenerowania')
@@ -402,6 +483,8 @@ def main() -> None:
                     help='wypisz gotowe prompty do wklejenia w kliencie, nic nie generuj')
     ap.add_argument('--wszystko', action='store_true', help='wygeneruj wszystko, czego brak')
     ap.add_argument('--nadpisz', action='store_true', help='nie omijaj istniejących plików')
+    ap.add_argument('--bez-wzoru', action='store_true',
+                    help='pomiń `wzor:` i generuj z samego opisu (gdy filtr treści uparcie odrzuca edycję wzoru)')
     ap.add_argument('--model', help='wymuś model zamiast wyboru z listy (tylko Gemini)')
     ap.add_argument('--silnik', choices=['openai', 'gemini'],
                     help='domyślnie openai, gdy jest OPENAI_API_KEY, inaczej gemini')
@@ -474,7 +557,15 @@ def main() -> None:
         prompt, styl = zadania[nazwa]
         print(f'  {nazwa} … ', end='', flush=True)
         tresc = pelnyPrompt(style, prompt, styl)
-        if silnik == 'openai':
+        if nazwa in WZORY and not args.bez_wzoru:
+            if silnik != 'openai':
+                sys.exit(f'{nazwa} ma wzór (images/edits) — tylko silnik openai.')
+            try:
+                obraz, tokeny = generujOpenAIZeWzoru(tresc, WSAD / WZORY[nazwa], PROPORCJE.get(nazwa), nazwa)
+            except OdrzuconyPrzezFiltr as e:
+                print(f'ODRZUCONY przez filtr treści, pomijam: {" ".join(str(e).split())[-160:]}')
+                continue
+        elif silnik == 'openai':
             obraz, tokeny = generujOpenAI(tresc, PROPORCJE.get(nazwa), styl in PRZEZROCZYSTE, nazwa)
         else:
             obraz, tokeny = generuj(model, tresc, PROPORCJE.get(nazwa))

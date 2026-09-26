@@ -1,6 +1,46 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-09-24 (plansze kampanii: Polana, Bagna, Twierdza; silnik generatora).
+Ostatnia aktualizacja: 2026-09-26 (profile graczy i sloty zapisu; wcześniej plansze kampanii i silnik generatora).
+
+## Malowane stworki i linie ewolucyjne (2026-09-26)
+
+Stare sprite'y 18 oddziałów zamków (`FACTIONS`; strażnicy plansz, AI,
+tytuły wyniku i nagrody kampanii biorą sprite'y z tej samej listy) odstawały
+od malowanych obiektów mapy. Teraz wszystkie są przemalowane przez
+gpt-image-1 w stylu `obiekt`, razem z dwoma nowymi etapami ewolucji każdego
+— 54 rysunki, $2.90 (dziennik `tools/wsad/koszty-openai.jsonl`, pliki
+`stworek-*`).
+
+- **Linie ewolucyjne** — `src/data/ewolucje.ts` (`LINIE_EWOLUCJI`,
+  `nastepnyEtap`, `SPRITE_EWOLUCJI`): każdy oddział ma linię forma bazowa →
+  etap 2 → etap 3 w obrębie SWOJEGO poziomu (jak ulepszone siedliska HoMM3).
+  Pary tego samego żywiołu w frakcjach (Bór 1–2, 3–4, 5–6 itd.) sprawdzone
+  i odrzucone — powody w komentarzu pliku. Numery: baza = obecny sprite,
+  etap 2 = `01xxx`, etap 3 = `02xxx`. **Mechaniki jeszcze nie ma** (budynek,
+  koszt w kamieniach/jagodach, statystyki etapów, AI — osobne zadanie);
+  pliki nowych etapów leżą w `public/sprites/` i nikt ich jeszcze nie wczytuje.
+- **Prompty** — `tools/PROMPTY-STWORKI.md`. Nowy znacznik `| wzor: …`
+  w `generuj_grafiki.py`: plik idzie przez `images/edits` z obrazkiem-
+  referencją (baza ze starego sprite'a `tools/wsad/stare-sprites/`, każdy
+  etap z poprzedniego), więc linia trzyma barwy i rysy. Filtr treści OpenAI
+  odrzucał ~30% edycji (kategoria „other", losowo; pewne wyzwalacze: nazwa
+  stworka w prompcie, „bakłażan") — odrzucony plik jest pomijany, a
+  `--bez-wzoru` robi go z samego opisu (tak powstały Torrenar, Silvena,
+  Vulkaron i Verdilo). Kosztuje tylko to, co przeszło.
+- **Do gry** — `python3 tools/stworki_wczytaj.py`: zdejmuje białą obwódkę
+  „naklejki" i placek piasku pod stopami (model dorysowuje je mimo zakazu),
+  odbija w poziomie wszystko poza `W_PRAWO` (armia patrzy w prawo, model
+  kierunku nie trzyma), kwadrat 128 px, **stopy na dole kwadratu** (stare
+  były wyśrodkowane — bitwa stawia sprite originem na linii stóp, więc
+  szeroki stworek wisiał), +12% nasycenia i ciemna obwódka 1 px (bez niej
+  zielone stworki ginęły w trawie). Stare sprite'y: `tools/wsad/stare-sprites/`.
+- Kod scen bez zmian — skalowanie (mapa z widocznej sylwetki, bitwa
+  z wysokości pliku, miasto/bohater/kampania/wynik `min(1, bok/wysokość)`)
+  działa na nowych plikach. Zrzuty: `tools/blind/stworki-{mapa,bitwa,miasto,bohater,linie}.png`.
+- Słabsze miejsca: etap 2 bywa bardzo podobny do bazy (Torrenos, Bazaltor,
+  Vulkarex, Cynderos); Aquilon ma resztkę placka pod stopami; Flamidor ma
+  żółtą poświatę po obrysie. Każdy da się dorobić jednym plikiem
+  (`generuj_grafiki.py --nadpisz stworek-<numer>.png`, potem wczytaj).
 
 ## Plansze kampanii: Polana, Bagna, Twierdza (2026-09-24)
 
@@ -521,6 +561,50 @@ Zmiany (wszystkie per plansza, układ i rozstawienie bez zmian):
   10 × 6, szczyt z lodospadem mniejszy na progu nad stawem.
 - Grafiki: 3 obrazki medium, ≈ $0,17.
 
+## Profile graczy i sloty zapisu (2026-09-26)
+
+Zgłoszenie taty Eli i Janka: „Nowa gra → Kampania" kontynuowała ostatnią
+grę, a zapis był jeden na całą przeglądarkę. Teraz:
+
+- **Profile** (`src/data/profile.ts`): rejestr `heroes-profile-v1` (lista
+  i aktywny), dane profilu pod `heroes-profil-<id>-kampania` i
+  `heroes-profil-<id>-zapis-<1..6|auto>`. Imię gracza ≠ trener; ekran wyboru
+  trenera podpowiada kartę, gdy imię się zgadza („Ela, kliknij trenera…").
+  Najwyżej 6 profili, imię do 14 znaków. Każdy dostęp do localStorage
+  w try/catch (`czytajKlucz`/`piszKlucz`); bez magazynu rejestr żyje w pamięci.
+  Zapis bez aktywnego profilu (np. `?ekran=mapa`) zakłada profil „Gracz"
+  (`wymusProfil`).
+- **Menu**: tabliczka „Gracz: …" w lewym górnym rogu otwiera zwój „Kto gra?"
+  (`pokazProfile` w `menuOkna.ts`: wybór, „+ Nowy gracz" z wpisywaniem
+  z klawiatury, krzyżyk usuwa profil po pytaniu). Pierwsze uruchomienie bez
+  profili samo otwiera zwój. Deski: Nowa gra / Wczytaj grę / Rekordy /
+  Autorzy; „Wczytaj grę" → Kontynuuj (najświeższy zapis toczącej się gry,
+  bez zapisu — ekran kampanii) / Zapisane gry (okno slotów) / Kampania / Wróć.
+- **„Nowa gra → Kampania" zawsze zaczyna od nowa**; przy kampanii w toku
+  (`kampaniaWToku`) pyta „Zacząć od nowa?" z Od nowa / Kontynuuj / Anuluj.
+  Od nowa kasuje postęp i autozapis misji kampanii; sloty zostają.
+- **Okna zapisu** (`src/visual/oknoZapisu.ts`, materiał zestawu): 6 slotów
+  (+ autozapis przy wczytaniu) z nazwą misji, tygodniem/dniem, trenerem
+  i datą; nadpisanie, wczytanie na mapie i usunięcie pytają (`pytanie()`).
+  Całe okno w jednym kontenerze-korzeniu, który `AdventureScene` oddaje
+  kamerze nakładek przez `naWierzchu`. Autozapis: start misji
+  (`KampaniaScene.start`), początek każdego dnia (`koniecTury`) i „Zapisz
+  i wyjdź".
+- **Migracja**: przy każdym odczycie rejestru stare klucze
+  `heroes-kampania-v1` / `heroes-zapis-mapy-v1` przechodzą do profilu
+  nazwanego jak trener (pusty profil o tym imieniu albo nowy, „Janek 2");
+  Ola → Ela w postępie i w bohaterze zapisu; zapis ląduje w slocie 1
+  („z dawnej wersji"). Stary klucz znika dopiero po udanym zapisie
+  i odczycie nowego. Dzięki temu narzędzia wkładające stary klucz
+  (`zrzut-kampania.mjs`, `zrzut-wynik.mjs`) dalej działają.
+- Sondy: `node tools/probe-profile.mjs` (cały scenariusz rodziny + migracja,
+  zrzuty `tools/blind/profile-*.png`); `wynik-wspolne.mjs` czyta i pisze
+  postęp aktywnego profilu (profil „Sonda").
+- Zostało: na dotyku imię wpisuje się przez `window.prompt` (brak ekranowej
+  klawiatury w płótnie); stan mapy ma do ~135 tys. znaków, więc 3 profile ×
+  7 slotów to ~3 mln znaków z ~5 mln limitu przeglądarki — przy pełnym
+  magazynie zapis mówi „Nie udało się zapisać gry" i można usunąć stare sloty.
+
 ## HUD mapy przygody na wspólnym zestawie (2026-09-24)
 
 - Mapa stoi na tym samym materiale co kampania i okna misji
@@ -768,6 +852,7 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `python3 tools/generuj_grafiki.py --lista` | które grafiki z promptów są, a których brak |
 | `python3 tools/generuj_grafiki.py plik.png` | generuje grafikę z promptu — OpenAI (prawdziwa przezroczystość obiektów), gdy jest `OPENAI_API_KEY` i dostęp do `api.openai.com`; inaczej Gemini z tłem magenty do wycięcia |
 | `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia, artefakt, bitwa, zamek, powrót |
+| `node tools/probe-profile.mjs` | profile graczy, sloty zapisu, autozapis, „Nowa gra" od zera, migracja starego zapisu |
 | `node tools/probe-klik.mjs` | czy KLIKNIĘCIE prowadzi bohatera tam, gdzie się kliknęło |
 | `npx tsx tools/probe-armia.ts` | arytmetyka slotów armii: 40 tys. losowych ruchów z niezmiennikami |
 | `npx tsx tools/probe-umiejetnosci.ts` | czy każda z ośmiu umiejętności NAPRAWDĘ zmienia zasady gry |
