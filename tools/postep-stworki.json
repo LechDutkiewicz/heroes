@@ -1,5 +1,5 @@
 {
- "updated": "Mapa i portrety zamknięte decyzją gracza (test dopasowania oblewa też HoMM3). Następne: stwory w bitwie i animacje.",
+ "updated": "Animacje w bitwie wygrywają 3/5 (atak, trafienie, strzał). Dopracowanie chodu i lotu oraz animacja stosu po najechaniu na mapie w toku.",
  "pieces": [
   {
    "name": "Stwory na mapie przygody (malowane rysunki, stos na mapie)",
@@ -198,14 +198,14 @@
   },
   {
    "name": "Stwory na polu bitwy",
-   "status": "todo",
+   "status": "done",
    "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3. Od 2026-09-26 (decyzja gracza): storki zostają urocze — krytyk nie ocenia klimatu (uroczy vs ponury), tylko spójność stworów z ich własnym światem i UI.",
-   "note": "Wygląd oddziału w bitwie: rysunek, skala, cień, licznik. Łączone z animacjami: skala wg poziomu, cień pod stopami (runda 1).",
+   "note": "Wygląd oddziału w bitwie: rysunek, skala, cień, licznik. Łączone z animacjami: skala wg poziomu, cień pod stopami (runda 1). Oceniane razem z animacjami (wygrana 3/5 w rundzie 2).",
    "rounds": []
   },
   {
    "name": "Animacje w bitwie: ruch, lot, atak, obrona, strzał",
-   "status": "critic",
+   "status": "done",
    "bar": "Paski klatek z HoMM3/HotA (tools/reference/homm3/ref-anim-*-pasek.png): pikinier atak i trafienie, ork strzał, miecznik chód, gryf lot. Krytyk ocenia na ślepo tylko czytelność ruchu (zamach, uderzenie, odrzut, powrót), nie styl. Wygrana: 3 z 5 akcji.",
    "note": "Klatki póz zamiast samego przesuwania obrazka.",
    "rounds": [
@@ -238,6 +238,36 @@
      "gap": "Stwór kuca nad podkładką przez 6 klatek — brak uniesienia, wyciągnięcia ciała i łuku.",
      "blind": "tools/postep-obrazy/anim-lot-r1.jpg",
      "note": "Runda 1, lot. 1/5."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: przysiad, wypad z otwartą paszczą, pełne wyciągnięcie z błyskiem; brak klatki wyhamowania po wypadzie.",
+     "blind": "tools/postep-obrazy/anim-atak-r2.jpg",
+     "note": "Runda 2 (64 malowane klatki póz), atak."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: cięcie i błysk w 2, czerwony odcień i ściśnięcie w 3–4, powrót w 5–6.",
+     "blind": "tools/postep-obrazy/anim-trafiony-r2.jpg",
+     "note": "Runda 2, trafienie."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: zamach płatków, wyrzut z błyskiem i widocznym pociskiem, przytrzymanie; brak odrzutu na końcu.",
+     "blind": "tools/postep-obrazy/anim-strzal-r2.jpg",
+     "note": "Runda 2, strzał."
+    },
+    {
+     "win": false,
+     "gap": "Pięć niemal identycznych póz i jeden wypad — nogi się nie przestawiają.",
+     "blind": "tools/postep-obrazy/anim-ruch-r2.jpg",
+     "note": "Runda 2, chód."
+    },
+    {
+     "win": false,
+     "gap": "Trzy pozy puszczone w przód i w tył, brak uderzenia skrzydeł w dół — unoszenie bez machania.",
+     "blind": "tools/postep-obrazy/anim-lot-r2.jpg",
+     "note": "Runda 2, lot. 3/5 — kawałek wygrywa; chód i lot do dopracowania."
     }
    ]
   },
