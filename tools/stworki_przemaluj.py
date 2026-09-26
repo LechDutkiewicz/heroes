@@ -134,6 +134,9 @@ WYBOR: dict[str, int] = {
     # Runda 4 (matowo, mniej „chibi"): 00263-4 i 00041-4 wyszły brązowe —
     # zostają wersje pod mapę z rundy 3.
     '00263': 3, '00041': 3,
+    # Runda 5 (sędzią nasze obiekty): matowy 00002-6 wyszedł szarofioletowo-
+    # oliwkowym mułem obok nasyconej skrzyni i wieży — wraca wersja pod mapę.
+    '00002': 4,
 }
 
 #: Surowe wersje namalowane przodem w lewo — odbijane w poziomie przy

@@ -48,18 +48,18 @@ export const KAFEL_EKRAN = KAFEL * ZOOM_MAPY;
  */
 export const WYS_BOHATERA = 1.5;
 /**
- * Strażnik: 1,2 → 1,0 pola (runda 3 wzorca „stwory na mapie", trzech
- * krytyków: smok Cynder szeroki jak pomost mostu i wielki jak góra; stwory
- * Heroes 3 na mapie mają mniej więcej jedno pole). Od kupki surowca
- * odróżnia go dalej sylwetka i cień rzucony, a nie wzrost.
+ * Strażnik na mapie: skala z MASY sylwetki, nie z wysokości. Runda 3 wzorca
+ * „stwory na mapie": 1,2 pola wysokości robiło ze smoka Cyndera górę; runda
+ * 5: przy 1,0 pola chudy stworek na Bagnach był „zabawką" obok trzcin
+ * i mostu. `MASA_STRAZNIKA` to pierwiastek z pola widocznej sylwetki,
+ * w polach — przysadzisty i chudy stworek zajmują na mapie tyle samo
+ * miejsca; typowy wychodzi na ok. 1,05–1,1 pola wysokości. Wysokość
+ * trzymają granice MIN/MAX, a szerokie sylwetki (węże, smok) — SZER.
  */
-export const WYS_STRAZNIKA = 1.0;
-/**
- * Szerokie stworki (węże, płaszczki, smok) przy pełnej wysokości rozlewałyby
- * się na dwa-trzy pola i zasłaniały sąsiadów — sylwetkę ograniczamy
- * szerokością, do 1,3 pola.
- */
-export const SZER_STRAZNIKA_MAX = 1.3;
+export const MASA_STRAZNIKA = 0.75;
+export const WYS_STRAZNIKA_MIN = 0.85;
+export const WYS_STRAZNIKA_MAX = 1.25;
+export const SZER_STRAZNIKA_MAX = 1.4;
 
 export const PANEL_W = 250;
 export const PASEK_H = 34;
