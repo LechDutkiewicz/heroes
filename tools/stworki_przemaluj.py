@@ -577,8 +577,8 @@ MISTRZE_POZ = MISTRZE / 'pozy'
 GRA_POZ = GRA / 'pozy'
 
 #: Ile ta część (pozy) może wydać łącznie — osobno od limitu całego projektu
-#: (runda 1–2: $3.50, runda 3: +$2.00).
-LIMIT_POZ_USD = float(os.environ.get('POZY_LIMIT_USD', '5.00'))
+#: (runda 1–2: $3.50, runda 3: +$2.00 — wydane $1.39, runda 4: +$1.20).
+LIMIT_POZ_USD = float(os.environ.get('POZY_LIMIT_USD', '5.60'))
 
 #: Opis pozy dla modelu. `{akcja}` — cios właściwy dla stworka (AKCJE),
 #: `{nogi}` — jak chodzi (NOGI), `{lot}` — czym bije w locie (LOTY).
@@ -628,6 +628,18 @@ POZY: dict[str, str] = {
         'near-side arm (if any) swung forward, far-side arm back, tail swung '
         'the opposite way. Body low and leaning slightly forward. No jumping.'
     ),
+    # Runda 4: faza PRZEJŚCIA między rozkrokami — noga w powietrzu mija
+    # stojącą. Bez niej chód skakał z „stoi" do głębokiego wypadu.
+    'krok3': (
+        'WALKING to the right, side view, PASSING pose of a walk cycle: {nogi} '
+        'The supporting leg stands straight under the body, the other leg is '
+        'LIFTED off the ground with the knee bent, its foot swinging forward '
+        'past the standing leg (legs crossing under the body). Body upright '
+        'and at its highest point of the stride, slight forward lean. Only '
+        'one foot touches the ground line. Legs CLOSE TOGETHER under the '
+        'body — NOT a wide stride, NOT a lunge; the lifted knee is raised '
+        'high, like a marching step.'
+    ),
     # Lot, dwie fazy skrzydła. Ciało wyciągnięte w poziomie, nogi podkulone.
     'lot': (
         'FLYING to the right, WINGS-UP phase: {lot_gora} Body stretched out '
@@ -637,6 +649,12 @@ POZY: dict[str, str] = {
     'lot3': (
         'FLYING to the right, MID-STROKE phase: {lot_srodek} Body stretched '
         'out horizontally toward the right, legs tucked up under the body, '
+        'nothing touching the ground — clearly airborne.'
+    ),
+    'lot4': (
+        'FLYING to the right, RECOVERY phase of the wingbeat (wings coming '
+        'back up after the downstroke): {lot_powrot} Body stretched out '
+        'horizontally toward the right, legs tucked up under the body, '
         'nothing touching the ground — clearly airborne.'
     ),
     'lot2': (
@@ -674,9 +692,15 @@ LOTY_SRODEK: dict[str, str] = {
     '00250': 'its leaf-shaped pod body half open, edges held level, the white orb above.',
 }
 
+LOTY_POWROT: dict[str, str] = {
+    '00023': 'its teal wing folded half-way, the wing bent at the wrist and being pulled UP and BACK, the wingtip trailing behind and below, membrane edge-on.',
+    '00030': 'its armoured body gathering itself, head slightly down, tail curling back up.',
+    '00250': 'its leaf-shaped pod body folding back up from below, edges curling upward, the white orb above.',
+}
+
 LOTY: dict[str, tuple[str, str]] = {
     '00023': ('its teal cape-like wing flap spread open as a real wing and raised HIGH above its back.',
-              'its teal cape-like wing flap spread open as a real wing and swept DOWN below its belly.'),
+              'its teal cape-like wing flap spread open as a real bat-like wing, fully extended and swept DOWN so the wingtip points below the belly line, the membrane lit and clearly visible in front of the body with its finger bones readable — not a dark shadow.'),
     '00030': ('its armoured body arched upward, head raised, tail and back plates lifted.',
               'its armoured body curled slightly, head forward, tail swept down like a stroke.'),
     '00250': ('its leaf-shaped pod body flared wide open like a wing, the white orb above.',
@@ -746,7 +770,7 @@ def generujPoze(sid: str, poza: str) -> Path | None:
     try:
         gora, dol = LOTY.get(sid, ('', ''))
         opis = POZY[poza].format(akcja=AKCJE[sid], nogi=NOGI.get(sid, ''), lot_gora=gora, lot_dol=dol,
-                                 lot_srodek=LOTY_SRODEK.get(sid, ''))
+                                 lot_srodek=LOTY_SRODEK.get(sid, ''), lot_powrot=LOTY_POWROT.get(sid, ''))
         prompt = PROMPT_POZA.format(poza=opis, opis=STWORKI[sid][1])
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as t:
             Image.open(MISTRZE / f'{sid}.png').convert('RGBA').resize((1024, 1024), Image.LANCZOS).save(t.name)
@@ -817,6 +841,8 @@ ODRZUC_POZ: set[str] = {
     # na bokach — po jednej ponownej próbie.
     '00196-krok-3', '00196-krok2-1', '00077-krok-2', '00077-krok2-2',
     '00074-krok-2', '00074-krok2-2', '00220-krok-2', '00220-krok2-2',
+    # Runda 4: przejście Glacyna wyszło kolejnym szerokim rozkrokiem.
+    '00246-krok3-1',
 }
 
 
@@ -901,6 +927,9 @@ WYGIECIA: dict[str, dict[str, float]] = {
     'lot': dict(bend=0.12, p=1.3, sy=1.05, sx=0.10, stopy=-0.12),
     'lot2': dict(bend=0.04, p=1.3, sy=0.88, sx=0.22, stopy=-0.16),
     'lot3': dict(bend=0.08, p=1.3, sy=0.96, sx=0.16, stopy=-0.14),
+    'lot4': dict(bend=0.10, p=1.3, sy=1.0, sx=0.13, stopy=-0.13),
+    # Przejście: wyprostowany, najwyżej, stopy lekko pod korpusem.
+    'krok3': dict(bend=0.05, p=1.2, sy=1.04, sx=-0.03, stopy=0.03),
 }
 
 
@@ -1122,9 +1151,9 @@ def main() -> None:
     if args.pozy:
         # Kroki tylko dla chodzących (NOGI), fazy lotu tylko dla lataczy (LOTY).
         def pasuje(s: str, p: str) -> bool:
-            if p in ('krok', 'krok2'):
+            if p in ('krok', 'krok2', 'krok3'):
                 return s in NOGI
-            if p in ('lot', 'lot2', 'lot3'):
+            if p in ('lot', 'lot2', 'lot3', 'lot4'):
                 return s in LOTY
             return True
         cele = [(s, p) for p in args.pozy for s in ids if pasuje(s, p)]

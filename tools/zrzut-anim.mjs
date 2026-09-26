@@ -5,9 +5,11 @@
 //                             [--tylko atak,trafiony,strzal,ruch,lot]
 //
 // Pięć pasków: `anim-atak.png` (cios wręcz), `anim-trafiony.png`,
-// `anim-strzal.png`, `anim-ruch.png` (chód), `anim-lot.png`. Każdy to sześć
-// RÓWNO rozłożonych klatek całej akcji, od pierwszej klatki ruchu do powrotu
-// do spoczynku, wykadrowanych wokół stworka w powiększeniu ×2.
+// `anim-strzal.png`, `anim-ruch.png` (chód), `anim-lot.png`. Cios, trafienie
+// i strzał to sześć RÓWNO rozłożonych klatek całej akcji, od pierwszej klatki
+// ruchu do powrotu do spoczynku; chód i lot — osiem równo rozłożonych klatek
+// jednego pełnego cyklu (dwa pola chodu, jedno uderzenie skrzydeł). Wszystko
+// wykadrowane wokół stworka w powiększeniu ×2.
 //
 // Jak mierzymy (patrz STAN.md, „Rzecz, o której warto pamiętać"):
 // Nie ma tu ani jednej podróży Playwright → przeglądarka w trakcie akcji.
@@ -61,7 +63,7 @@ async function open(page, frakcje) {
 }
 
 /** Cały próbnik — jedna funkcja wykonywana w stronie, jedna podróż. */
-function nagraj({ akcja, stwor }) {
+function nagraj({ akcja, stwor, FLAP_FRAME }) {
   const game = window.__game;
   const scene = game.scene.getScene('battle');
   const DT = 1000 / 60;
@@ -147,14 +149,17 @@ function nagraj({ akcja, stwor }) {
     };
     koniecAkcji = () => wypuscil && spokoj(sub.view);
   } else {
-    // Chód i lot: po trzy pola (pełny cykl chodu: rozkrok A, przejście, rozkrok B). Kadr jedzie za stworkiem w poziomie,
+    // Chód: trzy pola (pełny cykl: rozkrok A, przejście, rozkrok B, przejście). Kadr jedzie za stworkiem w poziomie,
     // w pionie stoi — podskok i wznoszenie mają być widać względem ziemi.
     postaw(wrog, 9, 0);
+    // Lot: siedem pól, żeby jedno pełne uderzenie skrzydeł zmieściło się
+    // w przelocie PRZED lądowaniem (krótszy przelot łapał już opadanie).
+    if (akcja === 'lot') postaw(sub, 1, row);
     sledz = true;
     let doszedl = false;
     start = () => {
       zero = krok;
-      scene.performMove(sub, { col: sub.col + 3, row }, () => {
+      scene.performMove(sub, { col: sub.col + (akcja === 'lot' ? 7 : 3), row }, () => {
         doszedl = true;
       });
     };
@@ -172,6 +177,7 @@ function nagraj({ akcja, stwor }) {
   const kanwas = game.canvas;
 
   const klatki = [];
+  const meta = [];
   const zapisz = () => {
     const cx = sledz ? sub.container.x : srodekX;
     cam.centerOn(cx, baza.y - KH / 2 + 26);
@@ -194,6 +200,8 @@ function nagraj({ akcja, stwor }) {
       KH * ZOOM
     );
     klatki.push(c);
+    // Stan cyklu w tej klatce — do wyboru okna jednego cyklu chodu / trzepotu.
+    meta.push({ krokow: sub.view.gaitStep, trzepot: sub.view.fly?.t ?? null, poza: sub.view.pose, hop: !!sub.view.moveHop });
   };
   const krokGry = () => {
     teraz += DT;
@@ -215,19 +223,42 @@ function nagraj({ akcja, stwor }) {
       zapisz();
       if (zero !== null && koniecAkcji()) koniec = krok;
     }
-    if (zero === null || koniec === null) return { blad: `akcja ${akcja} nie domknęła się` };
+    if (zero === null || koniec === null)
+      return { blad: `akcja ${akcja} nie domknęła się: ` + meta.map((m, i) => (i === 0 || m.poza !== meta[i - 1].poza || m.hop !== meta[i - 1].hop) ? `${i}:${m.poza}/${m.hop ? 'H' : '-'}/${m.trzepot === null ? '-' : Math.round(m.trzepot)}` : '').filter(Boolean).join(' ') };
     // Klatki są numerowane krokami; klatka k odpowiada krokowi k (po 6 krokach
     // rozbiegu klatka i = krok i + 1).
-    const od = zero;
-    const doK = koniec;
+    // Cios, trafienie, strzał: sześć klatek od początku do końca akcji.
+    // Chód i lot: OSIEM klatek jednego pełnego CYKLU (chód: rozkrok A,
+    // przejście, rozkrok B, przejście — dwa pola; lot: jedno uderzenie
+    // skrzydeł), jak paski ruchu we wzorcu. Klatka k ↔ krok gry k (patrz niżej).
+    let od = zero;
+    let doK = koniec;
+    let n = 6;
+    const pierwsza = (war) => {
+      const i = meta.findIndex((m, j) => j + 1 > zero && war(m));
+      return i < 0 ? null : i + 1;
+    };
+    if (akcja === 'ruch') {
+      const a = pierwsza((m) => m.krokow >= 1);
+      const b = pierwsza((m) => m.krokow >= 3);
+      if (a !== null && b !== null) [od, doK, n] = [a, b, 8];
+    } else if (akcja === 'lot') {
+      const okres = 4 * FLAP_FRAME;
+      const a = pierwsza((m) => m.trzepot !== null && m.trzepot >= okres);
+      const b = pierwsza((m) => m.trzepot !== null && m.trzepot >= 2 * okres);
+      if (a !== null && b !== null) [od, doK, n] = [a, b, 8];
+    }
     const wybor = [];
-    for (let i = 0; i < 6; i++) wybor.push(Math.round(od + ((doK - od) * i) / 5));
-    // Pasek: komórki obok siebie, podpis „i/6", ciemna kreska między nimi —
-    // układ jak w paskach wzorca.
+    // Cykl: n klatek w [od, doK) — ostatnia nie powtarza pierwszej.
+    // Akcja: n klatek w [od, doK] — z końcowym spoczynkiem.
+    const cykl = n === 8;
+    for (let i = 0; i < n; i++) wybor.push(Math.round(od + ((doK - od) * i) / (cykl ? n : n - 1)));
     const W = KW * ZOOM;
     const H = KH * ZOOM;
+    // Pasek: komórki obok siebie, podpis „i/n", ciemna kreska między nimi —
+    // układ jak w paskach wzorca.
     const pasek = document.createElement('canvas');
-    pasek.width = W * 6 + 5 * 2;
+    pasek.width = W * n + (n - 1) * 2;
     pasek.height = H;
     const g = pasek.getContext('2d');
     g.fillStyle = '#1c1c1c';
@@ -237,9 +268,9 @@ function nagraj({ akcja, stwor }) {
       g.drawImage(klatki[Math.min(klatki.length - 1, Math.max(0, k - 1))], x, 0);
       g.font = '13px sans-serif';
       g.fillStyle = '#000';
-      g.fillText(`${i + 1}/6`, x + 5, 16);
+      g.fillText(`${i + 1}/${n}`, x + 5, 16);
       g.fillStyle = '#fff';
-      g.fillText(`${i + 1}/6`, x + 4, 15);
+      g.fillText(`${i + 1}/${n}`, x + 4, 15);
     });
     return {
       png: pasek.toDataURL('image/png'),
@@ -262,7 +293,8 @@ const main = async () => {
     const a = AKCJE[akcja];
     if (!a) throw new Error(`nieznana akcja ${akcja}`);
     await open(page, a.frakcje);
-    const w = await page.evaluate(nagraj, { akcja, stwor: a.stwor });
+    // Długość klatki trzepotu musi się zgadzać z FLAP_FRAME w src/visual/unitView.ts.
+    const w = await page.evaluate(nagraj, { akcja, stwor: a.stwor, FLAP_FRAME: 70 });
     if (w.blad) {
       console.error(`  ! ${akcja}: ${w.blad}`);
       continue;
