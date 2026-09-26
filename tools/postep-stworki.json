@@ -287,6 +287,30 @@
      "gap": "Trzy pozy puszczone w przód i w tył, brak uderzenia skrzydeł w dół — unoszenie bez machania.",
      "blind": "tools/postep-obrazy/anim-lot-r2.jpg",
      "note": "Runda 2, lot. 3/5 — kawałek wygrywa; chód i lot do dopracowania."
+    },
+    {
+     "win": false,
+     "gap": "Przeskok między wyprostem a głębokim wypadem bez klatek pośrednich; brak fazy przejścia z uniesioną stopą.",
+     "blind": "tools/postep-obrazy/anim-ruch-r3.jpg",
+     "note": "Runda 3 (dopracowanie), chód vs miecznik."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: szerokie kroki z pochyleniem i ogonem w przeciwruchu; ale 4 z 6 klatek to prawie wyprost.",
+     "blind": "tools/postep-obrazy/anim-ruch2-r3.jpg",
+     "note": "Runda 3, chód vs pikinier."
+    },
+    {
+     "win": false,
+     "gap": "Sztywne ciało na łuku podskoku, dwa stany skrzydeł, zawieszenie w szczycie.",
+     "blind": "tools/postep-obrazy/anim-lot-r3.jpg",
+     "note": "Runda 3, lot vs gryf."
+    },
+    {
+     "win": false,
+     "gap": "Skok z rozłożeniem skrzydeł — brak uderzenia w dół pod linię brzucha.",
+     "blind": "tools/postep-obrazy/anim-lot2-r3.jpg",
+     "note": "Runda 3, lot vs archanioł."
     }
    ]
   },
