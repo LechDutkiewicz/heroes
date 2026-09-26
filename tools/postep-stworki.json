@@ -1,12 +1,31 @@
 {
- "updated": "Start pętli: rozpoznanie, wzorce z HotA, próba przemalowania.",
+ "updated": "Stwory na mapie, runda 1: 0/3 — kolory spoza palety, obrys-naklejka, brak cienia. Runda 2 w toku.",
  "pieces": [
   {
    "name": "Stwory na mapie przygody (malowane rysunki, stos na mapie)",
-   "status": "todo",
+   "status": "critic",
    "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3.",
    "note": "Wszystkie 18 stworów przemalowane w stylu mapy; stos neutralny na mapie: skala, cień, osadzenie w terenie.",
-   "rounds": []
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Nasycone kolory (magenta/turkus) spoza palety mapy, gruby jednolity obrys jak naklejka, brak cienia kontaktowego zgodnego ze światłem mapy.",
+     "blind": "tools/postep-obrazy/stwory-mapa-polana-r1.jpg",
+     "note": "Runda 1, Polana; wzorzec: stosy HoMM3 (szkielet, centaur)."
+    },
+    {
+     "win": false,
+     "gap": "Pastelowy błękit Glacyna nie występuje nigdzie na mapie; brak uziemienia; gładkie wektorowe gradienty zamiast teksturowanego cieniowania.",
+     "blind": "tools/postep-obrazy/stwory-mapa-bagna-r1.jpg",
+     "note": "Runda 1, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Twarde ciemne obrysy i płaskie cieniowanie na miękkiej malowanej zimie; płaska niebieska elipsa zamiast miękkiego cienia w kierunku światła.",
+     "blind": "tools/postep-obrazy/stwory-mapa-twierdza-r1.jpg",
+     "note": "Runda 1, Twierdza. Wynik 0/3."
+    }
+   ]
   },
   {
    "name": "Najechanie na stos (mapa przygody)",
