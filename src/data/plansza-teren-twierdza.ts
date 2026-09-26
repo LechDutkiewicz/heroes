@@ -434,7 +434,7 @@ export const USTAWIENIA = {
   },
   "cienZnajdzek": {
     "szer": 1.25,
-    "krycie": 1.6
+    "krycie": 1
   },
   "cienNaSniegu": {
     "barwa": 3820152,

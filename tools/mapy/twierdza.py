@@ -600,7 +600,10 @@ USTAWIENIA = {
     # Runda 11 (HotA): „skrzynki, kryształy i stwory nie mają cieni
     # kontaktowych — unoszą się nad śniegiem". Na jasnym, sinawym śniegu
     # zwykły cień ginął: pod drobnymi rzeczami szerszy i wyraźniejszy.
-    'cienZnajdzek': {'szer': 1.25, 'krycie': 1.6},
+    # Stwory na mapie, runda 6: przy 1,6 (razy mnożnik `cienNaSniegu`)
+    # podkładka wychodziła pełnym, płaskim niebieskim owalem — jak znacznik
+    # zaznaczenia. 1,0: dalej wyraźna na śniegu, ale miękka.
+    'cienZnajdzek': {'szer': 1.25, 'krycie': 1.0},
     # Runda 12 (HotA): „obiekty drobne, bez cienia, jak ikony wklejone na
     # śnieg; góry wiszą na białym tle". Ciepła czerń cienia na bieli ginęła
     # w szarości — cień na śniegu jest sinoniebieski (jak w HoMM3) i mocniejszy;
