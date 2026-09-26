@@ -1,5 +1,5 @@
 {
- "updated": "Stwory na mapie, runda 4: 0/3 — tym razem za miękkie i zamulone. Runda 5: renderować stwory jak chatę i most z naszej mapy (ostra kreska, cel, pełna rozdzielczość).",
+ "updated": "Stwory na mapie: 5 rund, 0/15. Test kontrolny: nasze obiekty mapy przegrywają z HoMM3 tak samo (0/3) — stwory doszły do pułapu mapy. Decyzja gracza w toku.",
  "pieces": [
   {
    "name": "Stwory na mapie przygody (malowane rysunki, stos na mapie)",
@@ -78,6 +78,24 @@
      "gap": "Fioletowe smoki bez uziemienia i bez chłodnego światła śniegu, smok na szczycie góry.",
      "blind": "tools/postep-obrazy/stwory-mapa-twierdza-r4.jpg",
      "note": "Runda 4, Twierdza. 0/3 — przestrzelone w miękkość; wzorcem ma być rysunek chaty i mostu z naszej mapy."
+    },
+    {
+     "win": false,
+     "gap": "Mały stwór z ciemniejszym, twardszym obrysem niż miękka trawa i rzeka; brak ciepłego cienia kontaktowego.",
+     "blind": "tools/postep-obrazy/stwory-mapa-polana-r5.jpg",
+     "note": "Runda 5 (stwory renderowane jak obiekty mapy), Polana."
+    },
+    {
+     "win": false,
+     "gap": "Gruby równy czarny obrys i płaskie dwutonowe cieniowanie na malarskim bagnie.",
+     "blind": "tools/postep-obrazy/stwory-mapa-bagna-r5.jpg",
+     "note": "Runda 5, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Najostrzejsze i najbardziej nasycone rzeczy na ekranie na miękkim, zamglonym śniegu.",
+     "blind": "tools/postep-obrazy/stwory-mapa-twierdza-r5.jpg",
+     "note": "Runda 5, Twierdza. 0/3. TEST KONTROLNY na tych samych kadrach: nasze OBIEKTY (chata, most, skrzynia, wóz) też przegrywają 0/3 z identycznym zarzutem — stwory dorównały obiektom mapy; pułap wyznacza sama mapa (obrysowane obiekty na miękkim terenie)."
     }
    ]
   },
