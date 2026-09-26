@@ -152,14 +152,16 @@ const wyglad = await page.evaluate(() => {
   return {
     umiejetnosci: tekstury.filter((k) => k.startsWith('bh-umiejetnosc-')).length,
     artefakty: obrazy.filter((k) => k.startsWith('bh-artefakt-')).length,
-    portret: obrazy.some((k) => k.startsWith('k-portret-')),
+    // Runda 2: w prawym polu lalka — postać w całej sylwetce (`bh-postac-`),
+    // głowa zostaje w medalionie (`k-glowa-`).
+    portret: obrazy.some((k) => k.startsWith('bh-postac-')) && obrazy.some((k) => k.startsWith('k-glowa-')),
     ikonyStat: ['k-ikona-miecz', 'k-ikona-tarcza', 'k-ikona-buty'].every((k) => obrazy.includes(k)),
     strefy: s.strefyOpisu.size,
   };
 });
 sprawdz('wczytane malowane ikony ośmiu umiejętności', wyglad.umiejetnosci === 8, `${wyglad.umiejetnosci}`);
 sprawdz('osiem gniazd artefaktów z malowanymi ikonami', wyglad.artefakty >= 8, `${wyglad.artefakty}`);
-sprawdz('portret bohatera w prawym polu', wyglad.portret);
+sprawdz('postać bohatera na lalce i głowa w medalionie', wyglad.portret);
 sprawdz('atak, obrona i ruch jako malowane ikony', wyglad.ikonyStat);
 
 // Wolne gniazdo umiejętności widać (bohater z mapy startuje bez umiejętności).

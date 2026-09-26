@@ -10,14 +10,20 @@
  *  - lewe pole: kim jest bohater (poziom, doświadczenie), trzy umiejętności
  *    pierwszorzędne jako malowane ikony z liczbą (atak, obrona, ruch)
  *    i siatka gniazd umiejętności drugorzędnych z malowanymi ikonami;
- *  - prawe pole: portret w grubej złotej ramie, a wokół niego gniazda
- *    artefaktów — jak lalka z HoMM3, ale bez przypisania do części ciała
- *    (u nas artefakt działa samym posiadaniem; lalka z hełmem i butami
- *    obiecywałaby zasadę, której nie ma). Każdy artefakt ma swoje stałe
- *    gniazdo: brakujące widać jako cień — zbieranie ma widoczny koniec;
- *  - dół: `PanelArmii` (klik-klik, przeciąganie, Shift = okno podziału,
- *    Ctrl = jeden stworek, drugi klik / prawy klik = okno stworka), obok
- *    komunikat z tabliczką „Podziel" i wyjście — jak w mieście.
+ *  - prawe pole: lalka jak w HoMM3 — bohater w całej postaci na ciemnym
+ *    suknie w grubej złotej ramie, a gniazda artefaktów leżą NA nim: głowa,
+ *    szyja, tułów, ręce, pas, stopy, plecy. Każdy artefakt ma swoje stałe
+ *    gniazdo (opaska na głowie, pazur w ręce, buty na stopie…); brakujący to
+ *    cień w półprzezroczystym gnieździe — zbieranie ma widoczny koniec,
+ *    a postać prześwituje;
+ *  - dół: blok armii na całą szerokość (ta sama ciężka rama i te same sloty
+ *    co w mieście — `PanelArmii`: klik-klik, przeciąganie, Shift = okno
+ *    podziału, Ctrl = jeden stworek, drugi klik / prawy klik = okno
+ *    stworka), obok linia statusu, „Podziel" i wyjście.
+ *
+ * Stałych napisów-samouczków nie ma (runda 2 ślepego porównania: „wygląda
+ * jak samouczek w formularzu"). Podpowiedź jest w dymku po najechaniu i w
+ * linii statusu.
  *
  * Najechanie na umiejętność, artefakt, statystykę albo doświadczenie
  * pokazuje dymek z opisem (pergamin w złotej ramie); klik albo prawy klik
@@ -57,7 +63,7 @@ import {
   type Umiejetnosc,
 } from '../data/umiejetnosci';
 import { C, Z } from '../visual/theme';
-import { PanelArmii } from '../visual/panelArmii';
+import { PanelArmii, blokArmii, wnekaHerbu } from '../visual/panelArmii';
 import { GORA, MARGINES, OKNO_H, OKNO_W } from '../visual/uklad';
 import { wersjonujZasoby } from '../visual/zasoby';
 import {
@@ -83,30 +89,57 @@ const KLUCZ_POWROTU = 'powrot-z-bohatera';
 
 /*
  * Geometria. Podział na kolumny jest ten sam co w mieście: lewa kończy się
- * na x = 568, prawa zaczyna na 586 — pasek armii i komunikat stoją dokładnie
- * tam, gdzie w mieście rząd bohatera i komunikat z „Podziel".
+ * na x = 568, prawa zaczyna na 586. Dół to blok armii w ciężkiej ramie —
+ * te same sloty 68 px co w mieście.
  */
 const POLA_Y = GORA + 12;
-const POLA_H = 510;
+const SLOT = 68;
+const SLOT_ODSTEP = 6;
+const BLOK_PAD = 9;
+const BLOK_X = MARGINES;
+const BLOK_W = OKNO_W - MARGINES * 2;
+const BLOK_H = BLOK_PAD * 2 + SLOT;
+const BLOK_Y = OKNO_H - 8 - 13 - BLOK_H;
+const POLA_H = BLOK_Y - 13 - 12 - POLA_Y;
 const LEWA = { x: MARGINES + 5, w: 568 - (MARGINES + 5) };
 const PRAWA = { x: 586, w: OKNO_W - MARGINES - 5 - 586 };
-/** Pasek armii i prawa kolumna dołu. */
-const DOL_Y = POLA_Y + POLA_H + 18;
-const RZAD_H = 76;
-const RZAD_Y = DOL_Y + 8;
-const SLOT = 58;
-const SLOT_ODSTEP = 4;
-const KOMUNIKAT_H = 54;
-const WYJSCIE_Y = OKNO_H - 26;
+/** Herb (figurka z mapy) i siedem slotów; po prawej status, „Podziel", wyjście. */
+const HERB_X = BLOK_X + BLOK_PAD;
+const RZAD_X = HERB_X + SLOT + 10;
+const RZAD_Y = BLOK_Y + BLOK_PAD;
+const STATUS_X = RZAD_X + 7 * SLOT + 6 * SLOT_ODSTEP + 16;
+const STATUS_W = BLOK_X + BLOK_W - 10 - STATUS_X;
+const STATUS_Y = BLOK_Y + 5;
+const STATUS_H = 38;
+const PRZYCISKI_Y = BLOK_Y + BLOK_H - 6 - 16;
 
-/** Portret w prawym polu i gniazda artefaktów po jego bokach (po cztery). */
-const PORTRET_W = 176;
-const PORTRET_H = Math.round(PORTRET_W * (892 / 620));
-const PORTRET_X = PRAWA.x + PRAWA.w / 2;
-const PORTRET_Y = POLA_Y + 60;
-const ART_BOK = 52;
-/** Kolejność gniazd: lewa kolumna z góry na dół, potem prawa. */
-const GNIAZDA_ARTEFAKTOW = ['opaska', 'pazur', 'mistrz', 'buty', 'kamizelka', 'tarcza', 'skrzydla', 'rower'];
+/**
+ * Lalka: wnętrze grubej ramy w prawej kolumnie, postać w całej sylwetce
+ * (`public/bohater/postac-<kto>.png`, 600 px wysokości) i gniazda na niej.
+ */
+const LALKA = { x: PRAWA.x + 13, y: POLA_Y + 13, w: PRAWA.w - 26, h: POLA_H - 26 };
+const POSTAC_H = 404;
+const POSTAC_Y = LALKA.y + 10;
+const POSTAC_CX = LALKA.x + LALKA.w / 2;
+const ART_BOK = 46;
+
+/**
+ * Gniazda lalki: część ciała, artefakt, który tam siedzi, i punkt na
+ * postaci (ułamki szerokości i wysokości rysunku). Punkty zmierzone na
+ * obu postaciach (Janek i Ela stoją w tej samej pozie; Ela ma pas wyżej). Szyja jest na
+ * amulet — cel misji (Księżycowy Kamień), gdy bohater go niesie.
+ */
+const GNIAZDA_LALKI: Array<{ czesc: string; id: string | null; fx: number; fy: number; ela?: { fx: number; fy: number } }> = [
+  { czesc: 'głowa', id: 'opaska', fx: 0.14, fy: 0.07 },
+  { czesc: 'plecy', id: 'skrzydla', fx: 0.9, fy: 0.13 },
+  { czesc: 'szyja', id: null, fx: 0.5, fy: 0.385 },
+  { czesc: 'tułów', id: 'kamizelka', fx: 0.22, fy: 0.47 },
+  { czesc: 'pas', id: 'mistrz', fx: 0.5, fy: 0.585, ela: { fx: 0.5, fy: 0.515 } },
+  { czesc: 'prawa ręka', id: 'pazur', fx: 0.04, fy: 0.665 },
+  { czesc: 'lewa ręka', id: 'tarcza', fx: 0.96, fy: 0.665 },
+  { czesc: 'stopy', id: 'buty', fx: 0.24, fy: 0.925 },
+  { czesc: 'pojazd', id: 'rower', fx: 0.86, fy: 0.925 },
+];
 
 /** Gniazdo umiejętności drugorzędnej. */
 const UM_BOK = 56;
@@ -132,7 +165,6 @@ export class HeroScene extends Phaser.Scene {
   private stan!: StanMapy;
   panel!: PanelArmii;
   private komunikat!: Phaser.GameObjects.Text;
-  private podsumowanieArmii!: Phaser.GameObjects.Text;
   private dymek: Phaser.GameObjects.Container | null = null;
   /** Klucz opisu w dymku i czy jest przypięty (klik / tablet). */
   dymekKlucz = '';
@@ -151,6 +183,9 @@ export class HeroScene extends Phaser.Scene {
     wczytajZestaw(this);
     const b = import.meta.env.BASE_URL;
     this.load.spritesheet('bohater', `${b}mapa/bohater.png`, { frameWidth: 64, frameHeight: 64 });
+    if (!this.textures.exists('bohaterka')) {
+      this.load.spritesheet('bohaterka', `${b}mapa/bohaterka.png`, { frameWidth: 64, frameHeight: 64 });
+    }
     // Sprite'y z armii, którą naprawdę mamy. Ekran bohatera potrafi być
     // pierwszą sceną po wczytaniu strony, więc nie zakładamy, że tekstury
     // wgrała już mapa.
@@ -159,7 +194,7 @@ export class HeroScene extends Phaser.Scene {
     }
     const kto = this.kto;
     // Te same klucze, co w ekranie kampanii — jeśli tam już są, nie idą drugi raz.
-    if (!this.textures.exists(`k-portret-${kto}`)) this.load.image(`k-portret-${kto}`, `${b}kampania/portret-${kto}.jpg`);
+    this.load.image(`bh-postac-${kto}`, `${b}bohater/postac-${kto}.png`);
     if (!this.textures.exists(`k-glowa-${kto}`)) this.load.image(`k-glowa-${kto}`, `${b}kampania/glowa-${kto}.png`);
     for (const n of ['miecz', 'tarcza', 'buty', 'gwiazda']) {
       if (!this.textures.exists(`k-ikona-${n}`)) this.load.image(`k-ikona-${n}`, `${b}kampania/ikona-${n}.png`);
@@ -367,17 +402,6 @@ export class HeroScene extends Phaser.Scene {
       const ky = uy + 30 + Math.floor(i / 2) * (komH + 8);
       this.rysujUmiejetnosc(kx, ky, komW, komH, mam[i]);
     }
-    this.add
-      .text(
-        x + w / 2,
-        y + POLA_H - 18,
-        mam.length < MAKS_UMIEJETNOSCI
-          ? 'Nową umiejętność wybierasz przy awansie na kolejny poziom.'
-          : 'Wszystkie miejsca zajęte — awans może już tylko ulepszać to, co masz.',
-        { ...stylAtramentu(12, 'miekki'), fontFamily: KROJ.kursywa }
-      )
-      .setOrigin(0.5)
-      .setDepth(Z.hud + 1);
   }
 
   /** Jedna komórka siatki umiejętności: gniazdo z ikoną, poziom, nazwa, wartość. */
@@ -420,54 +444,49 @@ export class HeroScene extends Phaser.Scene {
         kg.strokeCircle(kx, ky, 4.5);
       }
     } else {
-      this.add.text(tx, y + h / 2 - 20, 'Wolne miejsce', stylEtykiety(14, BARWA.atramentMiekki)).setAlpha(0.85).setDepth(Z.hud + 1);
       this.add
-        .text(tx, y + h / 2 + 2, 'na umiejętność z awansu', { ...stylAtramentu(12, 'miekki'), fontFamily: KROJ.kursywa })
-        .setAlpha(0.85)
+        .text(tx, y + h / 2, 'Wolne miejsce', stylEtykiety(14, BARWA.atramentMiekki))
+        .setOrigin(0, 0.5)
+        .setAlpha(0.8)
         .setDepth(Z.hud + 1);
     }
     this.strefaOpisu({ x, y, w, h }, () => this.opisUmiejetnosci(wpis));
   }
 
-  // ————————————————————————————————————————— prawe pole: portret i artefakty
+  // ————————————————————————————————————————— prawe pole: lalka z artefaktami
 
   private rysujPrawePole() {
-    const { x, w } = PRAWA;
-    const y = POLA_Y;
-    panelPergaminu(this, x, y, w, POLA_H).forEach((c) => c.setDepth(Z.hud));
+    const L = LALKA;
+    blokArmii(this, L.x, L.y, L.w, L.h).forEach((c) => c.setDepth(Z.hud));
     const b = this.stan.bohater;
-    this.add.text(x + w / 2, y + 14, 'Artefakty', stylEtykiety(18)).setOrigin(0.5, 0).setDepth(Z.hud + 1);
-    ozdobnik(this, x + 40, y + 44, w - 80).setDepth(Z.hud + 1);
 
-    // Portret w grubej złotej ramie — jak obraz planszy i panoramy miasta.
-    const px = PORTRET_X - PORTRET_W / 2;
-    const portret = this.add.image(px, PORTRET_Y, `k-portret-${this.kto}`).setOrigin(0).setDepth(Z.hud + 1);
-    portret.setDisplaySize(PORTRET_W, PORTRET_H);
-    ramaZlota(this, px, PORTRET_Y, PORTRET_W, PORTRET_H, true).setDepth(Z.hud + 2);
-    this.strefaOpisu({ x: px, y: PORTRET_Y, w: PORTRET_W, h: PORTRET_H }, () => this.opisBohatera());
+    // Światło za postacią i cień pod stopami — postać stoi na suknie, nie wisi.
+    const g = this.add.graphics().setDepth(Z.hud + 1);
+    for (let i = 7; i >= 1; i--) {
+      g.fillStyle(0xffdc9a, 0.035);
+      g.fillEllipse(POSTAC_CX, POSTAC_Y + POSTAC_H * 0.45, 60 * i, 78 * i);
+    }
+    g.fillStyle(0x000000, 0.35);
+    g.fillEllipse(POSTAC_CX, POSTAC_Y + POSTAC_H - 6, 190, 26);
 
-    // Gniazda po bokach portretu, po cztery.
-    const miejsce = (a: Artefakt) => {
-      const i = GNIAZDA_ARTEFAKTOW.indexOf(a.id);
-      return i < 0 ? 99 : i;
-    };
-    const kolejne = [...ARTEFAKTY_LOSOWE].sort((p, q) => miejsce(p) - miejsce(q));
-    const odstepY = (PORTRET_H - 4 * ART_BOK) / 3;
-    const lewaX = px - 13 - 14 - ART_BOK;
-    const prawaX = px + PORTRET_W + 13 + 14;
-    kolejne.slice(0, 8).forEach((a, i) => {
-      const gx = i < 4 ? lewaX : prawaX;
-      const gy = PORTRET_Y + (i % 4) * (ART_BOK + odstepY);
-      this.rysujArtefakt(gx, gy, ART_BOK, a, b.artefakty.includes(a.id));
-    });
+    const postac = this.add.image(POSTAC_CX, POSTAC_Y, `bh-postac-${this.kto}`).setOrigin(0.5, 0).setDepth(Z.hud + 2);
+    postac.setScale(POSTAC_H / postac.height);
+    const pw = postac.displayWidth;
+    const px = POSTAC_CX - pw / 2;
+    this.strefaOpisu({ x: px + pw * 0.3, y: POSTAC_Y + POSTAC_H * 0.12, w: pw * 0.4, h: POSTAC_H * 0.16 }, () => this.opisBohatera());
 
-    // Pod portretem: ile zebrano, co to razem daje, cel misji.
+    // Gniazda na postaci.
+    const misja = ARTEFAKTY.find((a) => a.klasa === 'misja' && b.artefakty.includes(a.id));
+    for (const gn of GNIAZDA_LALKI) {
+      const { fx, fy } = (this.kto === 'ela' && gn.ela) || gn;
+      const cx = Phaser.Math.Clamp(px + pw * fx, L.x + ART_BOK / 2 + 8, L.x + L.w - ART_BOK / 2 - 8);
+      const cy = POSTAC_Y + POSTAC_H * fy;
+      const a = gn.id ? artefaktPoId(gn.id) : misja;
+      this.rysujArtefakt(cx - ART_BOK / 2, cy - ART_BOK / 2, ART_BOK, a ?? null, !!a && b.artefakty.includes(a.id), gn.czesc);
+    }
+
+    // Pod stopami: ile zebrano i co to razem daje — jedna linijka na suknie.
     const zebrane = b.artefakty.filter((id) => ARTEFAKTY_LOSOWE.some((a) => a.id === id));
-    const dy = PORTRET_Y + PORTRET_H + 28;
-    this.add
-      .text(x + w / 2, dy, `Zebrane: ${zebrane.length} z ${ARTEFAKTY_LOSOWE.length}`, stylEtykiety(15, BARWA.atrament))
-      .setOrigin(0.5, 0)
-      .setDepth(Z.hud + 1);
     const suma = { atak: 0, obrona: 0, ruch: 0 };
     for (const id of b.artefakty) {
       const a = artefaktPoId(id);
@@ -481,45 +500,56 @@ export class HeroScene extends Phaser.Scene {
       suma.obrona ? `+${suma.obrona} obrony` : '',
       suma.ruch ? `+${suma.ruch} ruchu` : '',
     ].filter(Boolean);
+    const dy = L.y + L.h - (co.length ? 40 : 28);
     this.add
-      .text(x + w / 2, dy + 24, co.length ? `Razem dają: ${co.join(', ')}` : 'Jeszcze nic — na razie liczysz na siebie.', {
-        ...stylAtramentu(13, co.length ? 'zielony' : 'miekki', w - 40),
-        align: 'center',
+      .text(L.x + L.w / 2, dy, `Artefakty ${zebrane.length} z ${ARTEFAKTY_LOSOWE.length}`, {
+        fontFamily: KROJ.tytul,
+        fontSize: '15px',
+        color: BARWA.krem,
+        stroke: BARWA.braz,
+        strokeThickness: 3,
       })
-      .setOrigin(0.5, 0)
-      .setDepth(Z.hud + 1);
-
-    const misja = ARTEFAKTY.filter((a) => a.klasa === 'misja' && b.artefakty.includes(a.id));
-    const my = y + POLA_H - 64;
-    if (misja.length) {
-      const a = misja[0];
-      const bok = 44;
-      const gx = x + 30;
-      this.rysujArtefakt(gx, my, bok, a, true);
-      this.add.text(gx + bok + 12, my + 2, a.nazwa, stylEtykiety(14, BARWA.atramentCzerwony)).setDepth(Z.hud + 1);
+      .setOrigin(0.5, 0.5)
+      .setDepth(Z.hud + 3);
+    if (co.length) {
       this.add
-        .text(gx + bok + 12, my + 22, 'cel misji — zanieś go, dokąd trzeba', { ...stylAtramentu(12, 'miekki'), fontFamily: KROJ.kursywa })
-        .setDepth(Z.hud + 1);
-    } else {
-      this.add
-        .text(x + w / 2, my + 8, 'Artefakty leżą na mapie i wypadają ze skrzyń.\nNajedź na gniazdo, żeby zobaczyć, co daje.', {
-          ...stylAtramentu(12, 'miekki'),
-          fontFamily: KROJ.kursywa,
-          align: 'center',
+        .text(L.x + L.w / 2, dy + 20, co.join(' · '), {
+          fontFamily: KROJ.tekst,
+          fontSize: '13px',
+          fontStyle: 'bold',
+          color: '#b8f0a0',
+          stroke: BARWA.braz,
+          strokeThickness: 3,
         })
-        .setOrigin(0.5, 0)
-        .setDepth(Z.hud + 1);
+        .setOrigin(0.5, 0.5)
+        .setDepth(Z.hud + 3);
     }
   }
 
-  private rysujArtefakt(x: number, y: number, bok: number, a: Artefakt, ma: boolean) {
-    this.gniazdo(x, y, bok, ma);
-    const im = this.add.image(x + bok / 2, y + bok / 2, `bh-artefakt-${a.id}`).setDepth(Z.hud + 3);
-    im.setScale((bok - (ma ? 6 : 14)) / Math.max(im.width, im.height));
-    // Brakujący artefakt to cień w gnieździe: widać, CO jeszcze jest do
-    // zebrania, ale nie da się go pomylić z noszonym.
-    if (!ma) im.setTint(0x6b4a2a).setAlpha(0.3);
-    this.strefaOpisu({ x, y, w: bok, h: bok }, () => this.opisArtefaktu(a, ma));
+  /**
+   * Gniazdo lalki. Noszony artefakt: ciemne gniazdo w złotej ramce z ikoną.
+   * Brakujący: półprzezroczysta wnęka z cieniem ikony — widać, co jeszcze
+   * jest do zebrania, a postać pod spodem prześwituje.
+   */
+  private rysujArtefakt(x: number, y: number, bok: number, a: Artefakt | null, ma: boolean, czesc?: string) {
+    const g = this.add.graphics().setDepth(Z.hud + 3);
+    g.fillStyle(BARWA.cien, ma ? 0.45 : 0.3);
+    g.fillRoundedRect(x + 1, y + 3, bok, bok, 3);
+    g.fillStyle(BARWA_GNIAZDA, ma ? 0.92 : 0.5);
+    g.fillRoundedRect(x, y, bok, bok, 3);
+    g.fillStyle(0x000000, ma ? 0.3 : 0.15);
+    g.fillRect(x + 2, y + 2, bok - 4, 4);
+    if (ma) ramaZlota(this, x + 1, y + 1, bok - 2, bok - 2, false).setDepth(Z.hud + 4);
+    else {
+      g.lineStyle(1.5, C.goldDeep, 0.75);
+      g.strokeRoundedRect(x, y, bok, bok, 3);
+    }
+    if (a) {
+      const im = this.add.image(x + bok / 2, y + bok / 2, `bh-artefakt-${a.id}`).setDepth(Z.hud + 5);
+      im.setScale((bok - (ma ? 6 : 14)) / Math.max(im.width, im.height));
+      if (!ma) im.setTint(0xb89a70).setAlpha(0.3);
+    }
+    this.strefaOpisu({ x, y, w: bok, h: bok }, () => (a ? this.opisArtefaktu(a, ma, czesc) : this.opisWolnegoGniazda(czesc)));
   }
 
   /**
@@ -539,7 +569,7 @@ export class HeroScene extends Phaser.Scene {
     return g;
   }
 
-  // ————————————————————————————————————————— dół: armia, komunikat, wyjście
+  // ————————————————————————————————————————— dół: armia, status, wyjście
 
   private rysujDol() {
     this.panel = new PanelArmii(this, {
@@ -552,18 +582,18 @@ export class HeroScene extends Phaser.Scene {
       },
     });
 
-    // --- rząd armii: pergamin, podpis, siedem slotów ---
-    const { x } = LEWA;
-    const w = 568 - x;
-    panelPergaminu(this, x, RZAD_Y, w, RZAD_H).forEach((c) => c.setDepth(Z.hud));
-    const rzadX = x + w - 10 - (7 * SLOT + 6 * SLOT_ODSTEP);
-    this.add.text(x + 12, RZAD_Y + 10, 'Armia', stylEtykiety(16, BARWA.atrament)).setDepth(Z.hud + 1);
-    this.podsumowanieArmii = this.add
-      .text(x + 12, RZAD_Y + 32, '', stylAtramentu(12, 'miekki', rzadX - x - 20))
-      .setDepth(Z.hud + 1);
+    // --- blok armii: ciężka rama, figurka z mapy w pierwszej wnęce, 7 slotów ---
+    blokArmii(this, BLOK_X, BLOK_Y, BLOK_W, BLOK_H).forEach((c) => c.setDepth(Z.hud));
+    wnekaHerbu(this, HERB_X, RZAD_Y, SLOT, SLOT, Z.hud + 1);
+    const figurka = this.kto === 'ela' && this.textures.exists('bohaterka') ? 'bohaterka' : 'bohater';
+    if (this.textures.exists(figurka)) {
+      const f = this.add.image(HERB_X + SLOT / 2, RZAD_Y + SLOT / 2 - 1, figurka, 0).setDepth(Z.hud + 3);
+      f.setScale((SLOT - 6) / f.height);
+    }
+    this.strefaOpisu({ x: HERB_X, y: RZAD_Y, w: SLOT, h: SLOT }, () => this.opisArmii());
     this.panel.dodajPasek({
-      x: rzadX,
-      y: RZAD_Y + (RZAD_H - SLOT) / 2,
+      x: RZAD_X,
+      y: RZAD_Y,
       slotW: SLOT,
       slotH: SLOT,
       odstep: SLOT_ODSTEP,
@@ -573,38 +603,36 @@ export class HeroScene extends Phaser.Scene {
       dokad: 'do bohatera',
     });
 
-    // --- komunikat z tabliczką „Podziel" (jak w mieście) ---
-    const kx = PRAWA.x;
-    const kw = PRAWA.w;
-    const ky = DOL_Y;
-    const podzielW = 92;
-    panelPergaminu(this, kx, ky, kw, KOMUNIKAT_H).forEach((c) => c.setDepth(Z.hud));
+    // --- linia statusu (pergamin w bloku) ---
+    panelPergaminu(this, STATUS_X, STATUS_Y + 3, STATUS_W, STATUS_H).forEach((c) => c.setDepth(Z.hud + 1));
     this.komunikat = this.add
-      .text(kx + 10, ky + KOMUNIKAT_H / 2, '', { ...stylAtramentu(13), lineSpacing: 1 })
+      .text(STATUS_X + 9, STATUS_Y + 3 + STATUS_H / 2, '', { ...stylAtramentu(13), lineSpacing: 0 })
       .setOrigin(0, 0.5)
-      .setDepth(Z.hud + 1)
-      .setWordWrapWidth(kw - podzielW - 26);
+      .setDepth(Z.hud + 2)
+      .setWordWrapWidth(STATUS_W - 18);
+
+    // --- „Podziel" i wyjście (złota tabliczka — jedyny „następny krok") ---
+    const podzielW = 96;
     new Przycisk(this, {
-      x: kx + kw - podzielW / 2 - 8,
-      y: ky + KOMUNIKAT_H / 2,
+      x: STATUS_X + podzielW / 2,
+      y: PRZYCISKI_Y,
       w: podzielW,
-      h: 34,
+      h: 32,
       tekst: 'Podziel',
       rozmiar: 13,
       glebia: Z.hud + 2,
       akcja: () => this.panel.podziel(),
     });
-
-    // --- wyjście: złota tabliczka, jedyny „następny krok" tego ekranu ---
     const doMiasta = this.registry.get(KLUCZ_POWROTU) === 'zamek';
+    const wyjscieW = STATUS_W - podzielW - 8;
     new Przycisk(this, {
-      x: kx + kw / 2,
-      y: WYJSCIE_Y,
-      w: kw,
-      h: 38,
+      x: STATUS_X + STATUS_W - wyjscieW / 2,
+      y: PRZYCISKI_Y,
+      w: wyjscieW,
+      h: 32,
       tekst: doMiasta ? 'Do miasta' : 'Na mapę',
       glowny: true,
-      rozmiar: 17,
+      rozmiar: 16,
       glebia: Z.hud + 2,
       akcja: () => this.zamknij(),
     });
@@ -614,24 +642,26 @@ export class HeroScene extends Phaser.Scene {
   }
 
   private odswiezArmie() {
+    this.panel.odswiez();
+    if (!this.dymekPrzypiety) this.powiedz();
+  }
+
+  /** Stan armii jednym zdaniem — domyślna treść linii statusu. */
+  private stanArmii() {
     const a = this.stan.bohater.armia;
     const ile = lacznie(a);
     const stosy = zywe(a).length;
-    this.podsumowanieArmii.setText(`${ile} ${ile === 1 ? 'stworek' : 'stworków'}\nw ${stosy} ${stosy === 1 ? 'oddziale' : 'oddziałach'}`);
-    this.panel.odswiez();
+    return `${this.stan.bohater.imie} prowadzi ${ile} ${ile === 1 ? 'stworka' : 'stworków'} w ${stosy} ${stosy === 1 ? 'oddziale' : 'oddziałach'}.`;
   }
 
-  /** Komunikat: najpierw 13 px, a gdy się nie mieści — mniej (jak w mieście). */
+  /** Linia statusu: najpierw 13 px, a gdy się nie mieści — mniej (jak w mieście). */
   private powiedz(tekst?: string) {
     const k = this.komunikat;
     if (!k) return;
     k.setFontSize(13);
-    k.setText(
-      tekst ??
-        'Kliknij stworka, potem inny slot — przeniesiesz, zamienisz albo połączysz. Prawy klik: opis. Ctrl: jeden stworek.'
-    );
+    k.setText(tekst ?? this.stanArmii());
     for (const rozmiar of [12, 11]) {
-      if (k.height <= KOMUNIKAT_H - 6) break;
+      if (k.height <= STATUS_H - 4) break;
       k.setFontSize(rozmiar);
     }
   }
@@ -828,7 +858,32 @@ export class HeroScene extends Phaser.Scene {
     };
   }
 
-  private opisArtefaktu(a: Artefakt, ma: boolean): Opis {
+  private opisArmii(): Opis {
+    const b = this.stan.bohater;
+    return {
+      klucz: 'armia',
+      tytul: 'Armia',
+      podtytul: this.stanArmii(),
+      tresc:
+        'Kliknij stworka, potem inny slot — przeniesiesz, zamienisz albo połączysz oddziały. ' +
+        'Możesz też przeciągnąć. Shift: podział z suwakiem, Ctrl: jeden stworek. ' +
+        `Prawy klik albo drugi klik: opis stworka.\n\n${b.imie} nie może zostać bez ani jednego oddziału.`,
+    };
+  }
+
+  private opisWolnegoGniazda(czesc?: string): Opis {
+    return {
+      klucz: `gniazdo-${czesc ?? ''}`,
+      tytul: czesc ? czesc[0].toUpperCase() + czesc.slice(1) : 'Wolne gniazdo',
+      podtytul: 'wolne gniazdo',
+      tresc:
+        czesc === 'szyja'
+          ? 'Tu bohater nosi amulet — na przykład Księżycowy Kamień, gdy misja każe go odnaleźć i zanieść.'
+          : 'Artefakty leżą na mapie i wypadają ze skrzyń.',
+    };
+  }
+
+  private opisArtefaktu(a: Artefakt, ma: boolean, czesc?: string): Opis {
     const co = [
       a.atak ? `+${a.atak} do ataku` : '',
       a.obrona ? `+${a.obrona} do obrony` : '',
@@ -838,13 +893,16 @@ export class HeroScene extends Phaser.Scene {
     return {
       klucz: `artefakt-${a.id}`,
       tytul: a.nazwa,
-      podtytul: `${klasa} · ${ma ? 'noszony' : 'jeszcze go nie masz'}`,
+      podtytul: `${klasa}${czesc ? ` · ${czesc}` : ''} · ${ma ? 'noszony' : 'jeszcze go nie masz'}`,
       ikona: `bh-artefakt-${a.id}`,
-      tresc:
+      tresc: (
         co.join('\n') +
-        (ma
-          ? '\n\nDziała, dopóki bohater go nosi.'
-          : '\n\nSzukaj go na mapie i w skrzyniach — zacznie działać, gdy tylko go podniesiesz.'),
+        (a.klasa === 'misja'
+          ? '\n\nCel misji — zanieś go tam, dokąd każe misja.'
+          : ma
+            ? '\n\nDziała, dopóki bohater go nosi.'
+            : '\n\nSzukaj go na mapie i w skrzyniach — zacznie działać, gdy tylko go podniesiesz.')
+      ).trim(),
     };
   }
 

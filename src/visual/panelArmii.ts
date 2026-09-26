@@ -33,7 +33,134 @@ import {
 } from '../data/armia';
 import { pokazOknoStworka, type OknoStworka } from './oknoStworka';
 import { C } from './theme';
-import { BARWA, KROJ, Przycisk, medalion, ozdobnik, panelPergaminu, stylAtramentu, stylEtykiety } from './zestaw';
+import {
+  BARWA,
+  KROJ,
+  Przycisk,
+  cienPanelu,
+  latki,
+  medalion,
+  ozdobnik,
+  panelPergaminu,
+  ramaZlota,
+  stylAtramentu,
+  stylEtykiety,
+} from './zestaw';
+
+/*
+ * Materiał paska — runda 2 ślepego porównania z HotA. Krytyk: „paski płaskie,
+ * pastelowe, bez wagi; puste sloty to beżowe kafle jak placeholdery;
+ * liczebności wciśnięte w róg". W HotA armia leży w CIĘŻKIEJ ramie na
+ * ciemnym materiale, każdy slot ma własną złotą ramkę, pusty jest ciemną
+ * skórzaną wnęką, a liczba stoi na ciemnej plakietce. Tu to samo naszym
+ * zestawem: pergamin zabarwiony na ciemną skórę (ta sama tekstura, więc to ta
+ * sama gra), cienka złota rama slotu, gruba złota rama bloku.
+ */
+/** Barwa skóry bloku (tint pergaminu). */
+const SKORA_BLOKU = 0x6a4428;
+/** Pusta wnęka — ciemniejsza, z przeszyciem. */
+const SKORA_PUSTA = 0x4a2e18;
+/** Zajęty slot — cieplejsze tło, na którym stworek „stoi w świetle". */
+const SKORA_PELNA = 0x9a7244;
+
+/**
+ * Ciężki blok armii: cień, ciemna skóra, gruba złota rama (ta sama co wokół
+ * panoramy i planszy). Zwraca obiekty — scena ustawia im głębię.
+ */
+export function blokArmii(scena: Phaser.Scene, x: number, y: number, w: number, h: number) {
+  const skora = latki(scena, 'z-pergamin', x, y, w, h, 48).setTint(SKORA_BLOKU);
+  const g = scena.add.graphics();
+  // Winieta do środka: brzegi pod ramą ciemniejsze, jak wpuszczone.
+  for (let i = 0; i < 6; i++) {
+    g.lineStyle(2, BARWA.cien, 0.16 - i * 0.025);
+    g.strokeRect(x + i * 2 + 1, y + i * 2 + 1, w - i * 4 - 2, h - i * 4 - 2);
+  }
+  return [cienPanelu(scena, x, y, w, h, 0.9), skora, g, ramaZlota(scena, x, y, w, h, true)];
+}
+
+/**
+ * Złota listwa między rzędami (garnizon / bohater) — w HotA łańcuch
+ * ozdobnika dzieli dwa rzędy; u nas podwójna złota kreska z rombami.
+ */
+export function listwaArmii(scena: Phaser.Scene, x: number, y: number, w: number) {
+  const g = scena.add.graphics();
+  g.fillStyle(BARWA.cien, 0.5);
+  g.fillRect(x, y - 3, w, 7);
+  g.fillStyle(C.goldDeep, 1);
+  g.fillRect(x, y - 2, w, 1.5);
+  g.fillRect(x, y + 2, w, 1.5);
+  g.fillStyle(C.goldLight, 0.55);
+  g.fillRect(x, y - 2, w, 0.7);
+  const krok = 38;
+  for (let px = x + krok / 2; px < x + w - 6; px += krok) {
+    g.fillStyle(C.goldDeep, 1);
+    g.fillPoints(
+      [
+        new Phaser.Math.Vector2(px, y - 5),
+        new Phaser.Math.Vector2(px + 5, y + 0.5),
+        new Phaser.Math.Vector2(px, y + 6),
+        new Phaser.Math.Vector2(px - 5, y + 0.5),
+      ],
+      true
+    );
+    g.fillStyle(C.gold, 1);
+    g.fillCircle(px, y + 0.5, 2);
+  }
+  return g;
+}
+
+/**
+ * Wnęka pod herb / portret — wygląda jak zajęty slot (ta sama skóra, ta sama
+ * złota ramka), żeby portret stał w rzędzie jak pierwszy „slot" HotA.
+ * Obrazek scena kładzie sama na głębi `glebia + 2`.
+ */
+export function wnekaHerbu(scena: Phaser.Scene, x: number, y: number, w: number, h: number, glebia: number) {
+  const skora = latki(scena, 'z-pergamin', x, y, w, h, 48).setTint(0xb08a58).setDepth(glebia);
+  const g = scena.add.graphics().setDepth(glebia);
+  rysujWneke(g, w, h, true);
+  g.setPosition(x, y);
+  const rama = ramaZlota(scena, x + 2, y + 2, w - 4, h - 4, false).setDepth(glebia + 3);
+  return [skora, g, rama];
+}
+
+/**
+ * Cienie i blaski wnęki (bez skóry — ta jest pod spodem jako tekstura):
+ * pusty slot dostaje przeszycie jak skórzane pole, zajęty — światło od środka
+ * i cień pod stworkiem, żeby nie wisiał w powietrzu.
+ */
+function rysujWneke(g: Phaser.GameObjects.Graphics, w: number, h: number, pelna: boolean) {
+  g.clear();
+  // Wewnętrzny cień od góry i z lewej — wnęka jest wpuszczona w blok.
+  for (let i = 0; i < 5; i++) {
+    g.fillStyle(0x000000, (pelna ? 0.2 : 0.3) - i * 0.05);
+    g.fillRect(3, 3 + i * 2, w - 6, 2);
+    g.fillRect(3 + i * 2, 3, 2, h - 6);
+  }
+  g.fillStyle(0xffe2a8, pelna ? 0.1 : 0.06);
+  g.fillRect(4, h - 6, w - 8, 2);
+  if (pelna) {
+    // Światło za stworkiem i cień pod nim.
+    for (let i = 5; i >= 1; i--) {
+      g.fillStyle(0xffe6b0, 0.045);
+      g.fillEllipse(w / 2, h * 0.46, w * 0.18 * i, h * 0.16 * i);
+    }
+    g.fillStyle(0x000000, 0.28);
+    g.fillEllipse(w / 2, h - 13, w * 0.56, 9);
+  } else {
+    // Przeszycie — przerywana kreska jak szew na skórze.
+    g.lineStyle(1, 0xc8965a, 0.4);
+    const r = 9;
+    const krok = 5;
+    for (let px = r; px < w - r; px += krok) {
+      g.lineBetween(px, r, px + 2.5, r);
+      g.lineBetween(px, h - r, px + 2.5, h - r);
+    }
+    for (let py = r; py < h - r; py += krok) {
+      g.lineBetween(r, py, r, py + 2.5);
+      g.lineBetween(w - r, py, w - r, py + 2.5);
+    }
+  }
+}
 
 export interface OpcjePaska {
   /** Lewy górny róg pierwszego slotu. */
@@ -66,9 +193,11 @@ export interface OpcjePaneluArmii {
 
 interface WidokSlotu {
   kontener: Phaser.GameObjects.Container;
+  skora: Phaser.GameObjects.NineSlice;
   tlo: Phaser.GameObjects.Graphics;
   zaznaczenie: Phaser.GameObjects.Graphics;
   rysunek: Phaser.GameObjects.Image;
+  plakietka: Phaser.GameObjects.Graphics;
   licznik: Phaser.GameObjects.Text;
   x: number;
   y: number;
@@ -127,31 +256,37 @@ export class PanelArmii {
   }
 
   dodajPasek(opcje: OpcjePaska) {
-    const pasek: Pasek = { odstep: 4, ...opcje, sloty: [] };
+    const pasek: Pasek = { odstep: 6, ...opcje, sloty: [] };
     const { slotW, slotH } = pasek;
     for (let i = 0; i < SLOTY_ARMII; i++) {
-      const x = pasek.x + i * (slotW + (pasek.odstep ?? 4));
+      const x = pasek.x + i * (slotW + (pasek.odstep ?? 6));
       const y = pasek.y;
+      const skora = latki(this.scena, 'z-pergamin', 0, 0, slotW, slotH, 48).setTint(SKORA_PUSTA);
       const tlo = this.scena.add.graphics();
+      // Złota ramka slotu — cienka rama zestawu, wpuszczona 2 px do środka,
+      // żeby między sąsiednimi slotami została ciemna szczelina.
+      const rama = ramaZlota(this.scena, 2, 2, slotW - 4, slotH - 4, false);
       const zaznaczenie = this.scena.add.graphics().setVisible(false);
-      zaznaczenie.fillStyle(0xffe9a8, 0.6);
-      zaznaczenie.fillRoundedRect(0, 0, slotW, slotH, 4);
-      zaznaczenie.lineStyle(3, C.goldDeep, 1);
-      zaznaczenie.strokeRoundedRect(-1, -1, slotW + 2, slotH + 2, 5);
-      zaznaczenie.lineStyle(1.5, C.goldLight, 0.9);
-      zaznaczenie.strokeRoundedRect(1.5, 1.5, slotW - 3, slotH - 3, 3);
-      const rysunek = this.scena.add.image(slotW / 2, slotH / 2 - 2, '__DEFAULT').setVisible(false);
+      zaznaczenie.fillStyle(0xffe9a8, 0.22);
+      zaznaczenie.fillRect(3, 3, slotW - 6, slotH - 6);
+      zaznaczenie.lineStyle(4, C.gold, 1);
+      zaznaczenie.strokeRect(-1, -1, slotW + 2, slotH + 2);
+      zaznaczenie.lineStyle(1.5, C.goldLight, 1);
+      zaznaczenie.strokeRect(3, 3, slotW - 6, slotH - 6);
+      const rysunek = this.scena.add.image(slotW / 2, slotH / 2 - 3, '__DEFAULT').setVisible(false);
+      const plakietka = this.scena.add.graphics();
       const licznik = this.scena.add
-        .text(slotW - 4, slotH - 1, '', {
+        .text(slotW - 7, slotH - 5, '', {
           fontFamily: KROJ.tytul,
-          fontSize: '13px',
-          color: BARWA.krem,
-          stroke: BARWA.braz,
-          strokeThickness: 3,
+          fontSize: `${Math.max(14, Math.round(slotH * 0.25))}px`,
+          fontStyle: 'bold',
+          color: '#fff4d6',
+          stroke: '#1a0c03',
+          strokeThickness: 3.5,
         })
         .setOrigin(1, 1);
       const kontener = this.scena.add
-        .container(x, y, [tlo, zaznaczenie, rysunek, licznik])
+        .container(x, y, [skora, tlo, rysunek, rama, zaznaczenie, plakietka, licznik])
         .setDepth(this.o.glebia);
       const m: Miejsce = { pasek, slot: i };
       this.scena.add
@@ -160,7 +295,7 @@ export class PanelArmii {
         .setDepth(this.o.glebia + 2)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', (p: Phaser.Input.Pointer) => this.wcisnieto(m, p));
-      pasek.sloty.push({ kontener, tlo, zaznaczenie, rysunek, licznik, x, y });
+      pasek.sloty.push({ kontener, skora, tlo, zaznaczenie, rysunek, plakietka, licznik, x, y });
     }
     this.paski.push(pasek);
     this.odswiez();
@@ -174,20 +309,30 @@ export class PanelArmii {
       pasek.sloty.forEach((s, i) => {
         const o = armia[i];
         const wybrany = this.wybor?.pasek === pasek && this.wybor.slot === i;
-        s.tlo.clear();
-        s.tlo.fillStyle(0x8a5a2a, o ? 0.2 : 0.12);
-        s.tlo.fillRoundedRect(0, 0, pasek.slotW, pasek.slotH, 4);
-        s.tlo.lineStyle(1.2, BARWA.kreska, 0.6);
-        s.tlo.strokeRoundedRect(0, 0, pasek.slotW, pasek.slotH, 4);
+        s.skora.setTint(o ? SKORA_PELNA : SKORA_PUSTA);
+        rysujWneke(s.tlo, pasek.slotW, pasek.slotH, !!o);
         s.zaznaczenie.setVisible(wybrany);
-        s.kontener.setAlpha(aktywny ? 1 : 0.55);
+        s.kontener.setAlpha(aktywny ? 1 : 0.6);
+        s.plakietka.clear();
         if (o) {
           const klucz = `p-${o.sprite}`;
           if (this.scena.textures.exists(klucz)) {
             s.rysunek.setTexture(klucz).setVisible(true);
-            s.rysunek.setScale(Math.min(1, (pasek.slotH - 6) / s.rysunek.height, (pasek.slotW - 4) / s.rysunek.width));
+            // Stworek na cały slot: sprite ma przezroczysty margines, więc
+            // skala liczy się z wysokości slotu, a nie z wnętrza ramki.
+            s.rysunek.setScale(Math.min((pasek.slotH + 2) / s.rysunek.height, (pasek.slotW + 2) / s.rysunek.width));
           } else s.rysunek.setVisible(false);
           s.licznik.setText(String(o.ile));
+          // Ciemna plakietka pod liczbą — czytelna na każdym stworku.
+          const pw = Math.max(20, s.licznik.width + 6);
+          const ph = s.licznik.height - 4;
+          const px = pasek.slotW - 4 - pw;
+          const py = pasek.slotH - 4 - ph;
+          s.plakietka.fillStyle(0x1a0c03, 0.82);
+          s.plakietka.fillRoundedRect(px, py, pw, ph, 3);
+          s.plakietka.lineStyle(1, C.goldDeep, 0.9);
+          s.plakietka.strokeRoundedRect(px, py, pw, ph, 3);
+          s.licznik.setPosition(pasek.slotW - 4 - pw / 2 + s.licznik.width / 2, pasek.slotH - 3);
         } else {
           s.rysunek.setVisible(false);
           s.licznik.setText('');

@@ -190,3 +190,44 @@ treasured amulet. Chunky, bold, simple silhouette that stays readable at 24
 pixels, painted soft storybook style with glossy highlights. No chain, no
 sparkles around it, no crystals.
 ```
+
+## 3. Postać bohatera na lalce (ekran bohatera, runda 2)
+
+W HoMM3 prawe pole ekranu bohatera to lalka: sylwetka postaci, a gniazda
+artefaktów leżą NA niej (głowa, szyja, tułów, ręce, pas, stopy, plecy).
+U nas stał tam drugi, wielki portret z kampanii — ta sama twarz co
+w medalionie. Tu: ten sam trener w całej postaci, na przezroczystym tle
+(tło — ciemne sukno z ramą — rysuje scena, gniazda kładzie na wierzch).
+Wzór to portret z kampanii (`images/edits`), więc twarz, czapka i ubranie
+zostają te same. Do gry: `python3 tools/bohater_postac.py` →
+`public/bohater/postac-<janek|ela>.png`.
+
+<!-- plik: postac-janek.png | styl: kampania | proporcje: 2:3 | wzor: kampania-janek.png -->
+```
+The same boy from the reference portrait, now shown as a FULL-BODY standing
+figure from the top of his cap down to his shoes, whole body inside the frame
+with a little empty space above the cap and below the shoes. Standing straight
+facing the viewer, symmetrical heroic pose like a paper doll, feet slightly
+apart, arms relaxed a little away from the body with open hands at hip height,
+friendly confident grin. Keep exactly the same face, the red-and-white
+baseball cap with a plain white circle (no letters), messy brown hair, blue
+short-sleeved jacket over a white t-shirt, brown shoulder bag strap across the
+chest; add brown belt, blue-grey shorts or trousers, and sturdy brown hiking
+boots. Same painted storybook style as the reference. Transparent background:
+only the character, no ground, no shadow, no scenery, no frame.
+```
+
+<!-- plik: postac-ela.png | styl: kampania | proporcje: 2:3 | wzor: kampania-ela.png -->
+```
+The same girl from the reference portrait, now shown as a FULL-BODY standing
+figure from the top of her cap down to her shoes, whole body inside the frame
+with a little empty space above the cap and below the shoes. Standing straight
+facing the viewer, symmetrical heroic pose like a paper doll, feet slightly
+apart, arms relaxed a little away from the body with open hands at hip height,
+determined warm smile. Keep exactly the same face, short black bob hair, green
+newsboy cap, white long-sleeved shirt under a teal-green vest, brown leather
+satchel strap across the chest; add a brown belt, dark green trousers and
+sturdy brown boots. Same painted storybook style as the reference.
+Transparent background: only the character, no ground, no shadow, no scenery,
+no frame.
+```

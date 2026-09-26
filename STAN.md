@@ -48,6 +48,31 @@ Zrzuty: `node tools/zrzut-bohater.mjs [--stan pelny|ela|pusty|po-bitwie]
 [--opis <id umiejętności>|artefakt-<id>|atak] [--okno]` → płótno 960 × 695;
 `tools/blind/bohater-hud.png`, `bohater-hud-opis.png`.
 
+**Runda 2 (po ślepym 1/2).** Krytyk: stałe teksty pomocy jak samouczek
+w formularzu, portret powtórzony (medalion + wielki obraz), gniazda
+w kolumnach zamiast na postaci, pasek armii mały w rogu. Zmiany: usunięte
+napisy „Nową umiejętność wybierasz…", „na umiejętność z awansu",
+„Artefakty leżą na mapie…" i domyślny „Kliknij stworka…" — to samo jest
+w dymkach (nowe: dymek armii na figurce w bloku, dymek wolnego gniazda),
+a linia statusu domyślnie mówi stan armii. Prawe pole to LALKA: postać
+w całej sylwetce (`public/bohater/postac-<janek|ela>.png`, OpenAI
+`images/edits` z portretem kampanii jako wzorem, prompty w
+`PROMPTY-BOHATER.md` §3, import `python3 tools/bohater_postac.py`, koszt
+$0.13 za dwa obrazki) na ciemnym suknie w grubej złotej ramie, gniazda NA
+postaci: głowa (opaska), plecy (skrzydła), szyja (amulet = cel misji,
+Księżycowy Kamień), tułów (kamizelka), pas (Pas Mistrza), ręce (pazur,
+tarcza), stopy (buty), pojazd przy stopie (rower). Punkty to ułamki rysunku
+(`GNIAZDA_LALKI`, Ela ma własny pas). Brakujący artefakt = półprzezroczysta
+wnęka z cieniem ikony, więc postać prześwituje. Medalion z głową zostaje.
+Dół: blok armii na całą szerokość (ta sama rama i sloty 68 px co w mieście,
+figurka z mapy w pierwszej wnęce), obok linia statusu, „Podziel" i wyjście.
+Decyzja zmieniona: wcześniej „lalka bez części ciała" — teraz gniazda mają
+części ciała, choć artefakt dalej działa samym posiadaniem (każdy ma stałe,
+pasujące miejsce, więc nic nie obiecuje fałszywej zasady). Sonda
+`probe-bohater` sprawdza teraz `bh-postac-` + `k-glowa-` zamiast portretu.
+Zrzut: `tools/blind/bohater-hud-r2.png`. Ślepe porównanie r2 — do zrobienia
+przez krytyka.
+
 **Co zostało.** Nie było ślepego porównania z HotA przez świeżego krytyka.
 Brak przycisków HoMM3 „zwolnij bohatera" / „lista zadań" (gra ma jednego
 bohatera i nie miała ich wcześniej). Ruch pokazuje zapas na dzień
@@ -108,6 +133,27 @@ ruchów; obrońcy zamku; AI pod bramą: przytłaczająca armia bierze zamek
 i płaci stratami, ta sama armia, która bierze zamek z samą strażą, przy
 garnizonie nie rusza). Zrzuty: `tools/blind/miasto-armia.png`,
 `okno-stworka.png`, `miasto-podziel.png`.
+
+**Runda 2 (po ślepym 0/2).** Krytyk: paski płaskie, pastelowe, ~12 %
+wysokości, puste sloty jak beżowe placeholdery, liczby wciśnięte w róg, brak
+ramy i herbu. Zmiany we wspólnym `panelArmii.ts` (od razu miasto i bohater):
+slot to pergamin zabarwiony na ciemną skórę z wewnętrznym cieniem i cienką
+złotą ramką; pusty — ciemniejsza wnęka z przeszyciem, zajęty — cieplejsze tło,
+światło i cień pod stworkiem; stworek na cały slot; liczba 17 px pogrubiona
+na ciemnej plakietce w złotej obwódce. Nowe eksporty: `blokArmii` (cień,
+ciemna skóra, GRUBA złota rama), `listwaArmii` (złota listwa z rombami między
+rzędami), `wnekaHerbu` (pierwsza wnęka pod herb/portret). Domyślny odstęp
+slotów 6. Miasto: blok ~29 % wysokości (sloty 68 px, dwa rzędy, herb ratusza
+z plakietką „straż N" i portret bohatera z kampanii z plakietką imienia;
+najechanie mówi szczegóły w komunikacie, podpisów przy rzędach już nie ma),
+okno panoramy 423 px, a panorama przesunięta w górę o `PRZESUN_PANORAMY`
+= 50 (znika pas nieba, budynki zostają całe). Prawa kolumna: nowy panel
+„Przyrost na tydzień" (stworek każdego siedliska, +dzienny×7 z fortem,
+nie postawione jako cień, „czeka N"; klik w postawione → karta werbunku),
+komunikat z „Podziel", surowce (układane za sobą, bo „394 +40" zderzał się
+z jagodami), „Buduj" (dalej obejmuje (664, 663)) i „Wyjdź". Zrzut:
+`node tools/zrzut-miasto-armia.mjs --url … --out tools/blind/miasto-armia-r2.png
+[--poza]`. Ślepe porównanie r2 — do zrobienia przez krytyka.
 
 **Co zostało.**
 - (zrobione) Ekran bohatera ma już wspólny `PanelArmii` — patrz sekcja wyżej.
