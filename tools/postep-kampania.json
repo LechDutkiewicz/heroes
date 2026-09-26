@@ -54,9 +54,8 @@
    "status": "build",
    "bar": "Stacki stworków w stylu malowanych plansz; pełne linie ewolucyjne jako grafiki. Ślepy krytyk vs HotA.",
    "live": {
-    "round": 2,
-    "stage": "krytycy oceniają (3 pary)",
-    "build": "Strażnicy 1,2 → 1,6 pola, bohater 1,5 → 1,9; własny rozmyty cień rzucany w prawo-dół; znajdźki bez zmian, więc różnią się od jednostek; jednolita skala na wszystkich planszach."
+    "round": 3,
+    "stage": "builder pracuje (hierarchia skali, bohater z flagą, cieniowanie stworków)"
    },
    "note": "Builder r1: 18 stworków przemalowanych przez OpenAI w stylu plansz, każdy z dwoma etapami ewolucji (54 grafiki, $2.90); linie w src/data/ewolucje.ts (jeszcze bez mechaniki); sprite'y patrzą w prawo, stopy na dole kadru, ciemny obrys.",
    "rounds": [
@@ -69,6 +68,18 @@
      ],
      "gap": "Strażnik nie odróżnia się od znajdźki: ta sama wielkość, nasycenie i brak cienia co kryształy, jagody, skrzynie; Janek wielkości kryształu.",
      "note": "Obaj krytycy: HotA — stwory tą samą techniką co teren, cienie, skala jednostki; nasze wyglądają jak naklejki. Słabość HotA: ciemne stwory giną w lesie."
+    },
+    {
+     "win": false,
+     "label": "Runda 2 (HotA, 0/3)",
+     "blinds": [
+      "tools/postep-obrazy/stworki-r2-w1.jpg",
+      "tools/postep-obrazy/stworki-r2-w2.jpg",
+      "tools/postep-obrazy/stworki-r2-w3.jpg"
+     ],
+     "build": "Strażnicy 1,2 → 1,6 pola, bohater 1,5 → 1,9; własny rozmyty cień rzucany w prawo-dół; znajdźki bez zmian, więc różnią się od jednostek; jednolita skala na wszystkich planszach.",
+     "gap": "Hierarchia skali odwrócona: strażnicy więksi od bohatera i wielkości chat; ta sama waga i nasycenie co kryształy/skrzynie; chibi-cieniowanie odstaje od malarskiego terenu; bohater bez flagi i podstawki.",
+     "note": "Wszyscy trzej: HotA — stwory, bohater i teren z jednego procesu, bohater na koniu z flagą od razu widoczny. Słabość HotA: stwory drobne, giną w terenie."
     }
    ]
   },
