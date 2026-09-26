@@ -20,6 +20,7 @@ Trzy kroki, każdy osobno
     python3 tools/stworki_przemaluj.py --lista              # stan: co jest, co wybrane
     python3 tools/stworki_przemaluj.py --generuj 00020 00030  # nowe wersje (kosztuje)
     python3 tools/stworki_przemaluj.py --generuj --brakujace  # tylko te bez żadnej wersji
+    python3 tools/stworki_przemaluj.py --czysc 00246 00074   # zdejmij namalowany grunt (kosztuje)
     python3 tools/stworki_przemaluj.py --kadruj              # wersje → gra (darmowe)
     python3 tools/stworki_przemaluj.py --arkusz out.png      # podgląd wszystkich wybranych
 
@@ -32,9 +33,14 @@ które model namalował przodem w lewo.
 Kadr
 ----
 Mistrz: `assets/stworki/<id>.png`, 256 × 256. Sylwetka wpisana w kwadrat
-240 px (margines 8 px) z zachowaniem proporcji, wyśrodkowana w poziomie,
-STOPY NA LINII y = 248 (dolny margines 8 px) — każdy stworek stoi na tej
-samej linii, przodem w prawo. Do gry idzie `public/sprites/<id>.png`
+248 px (margines 4 px) z zachowaniem proporcji, wyśrodkowana w poziomie,
+STOPY NA LINII y = 252 (dolny margines 4 px) — każdy stworek stoi na tej
+samej linii, przodem w prawo, bez namalowanego gruntu (cień rysuje gra).
+Margines 4/256 to ten sam ułamek co w starych plikach (sylwetka w 124 px
+ze 128), a sceny skalują stworka po wysokości PLIKU (slot armii, karta
+w mieście, bitwa) — przy innym ułamku każdy stworek w grze zmieniłby
+rozmiar. Różnica względem starych plików: szerokie sylwetki (Cynder,
+Bazalt) stały wyśrodkowane w pionie, teraz stoją na linii stóp jak reszta. Do gry idzie `public/sprites/<id>.png`
 w `--bok` (domyślnie 128) — ten sam kadr zmniejszony Lanczosem. 128 px, a nie
 256, bo nigdzie w grze stworek nie jest większy niż 72 px (karta w mieście),
 a Phaser zmniejsza bez mipmap: z 256 px do 24 px w slocie armii próbkowałby co
@@ -62,6 +68,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -92,7 +99,7 @@ NAJDROZSZE = 0.10
 
 #: Mistrz: bok kwadratu i marginesy. Stopy zawsze na `BOK_MISTRZA - MARGINES`.
 BOK_MISTRZA = 256
-MARGINES = 8
+MARGINES = 4
 
 #: Stworki frakcji: id → (nazwa w grze, opis dla modelu). Opis mówi, CO ma
 #: zostać z oryginału — model bez niego „poprawiał" anatomię (dokładał łapy,
@@ -127,7 +134,18 @@ WYBOR: dict[str, int] = {}
 
 #: Surowe wersje namalowane przodem w lewo — odbijane w poziomie przy
 #: kadrowaniu (klucz: `<id>-<n>`). Taniej niż generować jeszcze raz.
-ODBIJ: set[str] = set()
+ODBIJ: set[str] = {
+    '00020-3', '00218-3', '00030-3', '00096-2', '00220-2', '00074-2', '00023-2',
+}
+
+#: Barwy z innej surowej wersji (klucz → wzór). Sprzątanie gruntu
+#: (`--czysc`) potrafi przesunąć barwę: Torrenar z niebiesko-szarego pancerza
+#: wyszedł kremowo-biały. Średnią i rozrzut barwy (YCbCr) bierzemy wtedy
+#: z wersji sprzed sprzątania, z górnych 72% sylwetki — dół to namalowany
+#: grunt, który przekłamałby statystykę.
+BARWY_Z: dict[str, str] = {
+    '00030-3': '00030-1',
+}
 
 PROMPT = (
     'Repaint the creature from the FIRST image as a creature sprite for a '
@@ -148,6 +166,27 @@ PROMPT = (
     'out on a fully transparent background with NOTHING under its feet: no '
     'ground patch, no dirt, no sand, no grass tuft, no base, no pedestal, no '
     'cast shadow, no glow, no aura, no frame, no text.'
+)
+
+#: Drugie przejście — sprzątanie gotowego rysunku. Mimo „nothing under its
+#: feet" model w pierwszym przejściu podkładał prawie każdemu stworkowi
+#: namalowany grunt: jasny krążek piasku, kępę trawy z kamykami, raz nawet
+#: prostokąt terenu. Na mapie gra rysuje własny cień kontaktowy na własnej
+#: trawie, więc taki krążek wyglądał jak podstawka figurki. Tu wejściem jest
+#: sam namalowany stworek (nie oryginał), więc styl i tożsamość już są —
+#: model ma tylko wyciąć to, co pod stopami.
+PROMPT_CZYSC = (
+    'This is a finished hand-painted creature sprite for a fantasy strategy '
+    'game. Output the SAME picture: the same creature, same pose, same '
+    'painting style, same colours, same warm sunlight from the upper left, '
+    'same painted texture, same outline, same size and '
+    'the same position in the frame — change nothing about the creature. The '
+    'ONLY change: remove everything that is not the creature itself — the '
+    'painted ground under it (sand disc, dirt patch, grass tuft, pebbles, '
+    'shadow ellipse, any background). Where the ground hid parts of the feet, '
+    'complete the feet naturally. Result: only the creature, cut out on a '
+    'fully transparent background, nothing under its feet, no shadow, no '
+    'glow, no frame, no text.'
 )
 
 
@@ -186,20 +225,62 @@ def wersje(sid: str) -> list[int]:
     return sorted(int(p.stem.split('-')[1]) for p in WSAD.glob(f'{sid}-*.png'))
 
 
-def generuj(sid: str) -> Path | None:
-    """Jedno zapytanie `images/edits`. Zwraca ścieżkę nowej surowej wersji."""
-    if wydaneDotad() + NAJDROZSZE > LIMIT_USD:
-        raise SystemExit(f'Limit wydatków: ${wydaneDotad():.2f} z ${LIMIT_USD:.2f} (OPENAI_LIMIT_USD). Nie wysyłam.')
-    styl = arkuszStylu()
-    # Oryginał 256 px na białym tle powiększony do 512: przy małym obrazku
-    # wejściowym model gorzej trzyma szczegóły (oczy, znaczenia).
-    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as t:
-        Image.open(ZRODLA / f'{sid}.png').convert('RGB').resize((512, 512), Image.LANCZOS).save(t.name)
-        wejscie = t.name
-    prompt = PROMPT.format(opis=STWORKI[sid][1])
+#: Zapytania w locie. Limit sprawdzamy z nimi, bo przy kilku wątkach każdy
+#: z osobna widziałby jeszcze wolne miejsce i razem przebiłyby limit.
+_zamek = threading.Lock()
+_w_locie = 0
+
+
+def _rezerwuj() -> None:
+    global _w_locie
+    with _zamek:
+        if wydaneDotad() + (_w_locie + 1) * NAJDROZSZE > LIMIT_USD:
+            raise SystemExit(f'Limit wydatków: ${wydaneDotad():.2f} z ${LIMIT_USD:.2f} (OPENAI_LIMIT_USD). Nie wysyłam.')
+        _w_locie += 1
+
+
+def _zwolnij() -> None:
+    global _w_locie
+    with _zamek:
+        _w_locie -= 1
+
+
+def generuj(sid: str, czysc: bool = False) -> Path | None:
+    """Jedno zapytanie `images/edits`. Zwraca ścieżkę nowej surowej wersji.
+
+    `czysc`: zamiast przemalowywać oryginał, bierze wybraną surową wersję
+    i zdejmuje z niej namalowany grunt (`PROMPT_CZYSC`)."""
+    _rezerwuj()
+    try:
+        return _generuj(sid, czysc)
+    finally:
+        _zwolnij()
+
+
+def _generuj(sid: str, czysc: bool) -> Path | None:
+    if czysc:
+        zrodlo = wybrana(sid)
+        if not zrodlo:
+            print(f'  {sid}: nie ma czego czyścić')
+            return None
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as t:
+            shutil.copy2(zrodlo, t.name)
+            wejscie = t.name
+        obrazy = ['-F', f'image[]=@{wejscie}']
+        prompt = PROMPT_CZYSC
+        print(f'  {sid}: czyszczę {zrodlo.name}', flush=True)
+    else:
+        styl = arkuszStylu()
+        # Oryginał 256 px na białym tle powiększony do 512: przy małym obrazku
+        # wejściowym model gorzej trzyma szczegóły (oczy, znaczenia).
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as t:
+            Image.open(ZRODLA / f'{sid}.png').convert('RGB').resize((512, 512), Image.LANCZOS).save(t.name)
+            wejscie = t.name
+        obrazy = ['-F', f'image[]=@{wejscie}', '-F', f'image[]=@{styl}']
+        prompt = PROMPT.format(opis=STWORKI[sid][1])
     polecenie = [
         'curl', '-s', '--max-time', '120', 'https://api.openai.com/v1/images/edits',
-        '-F', f'model={MODEL}', '-F', f'image[]=@{wejscie}', '-F', f'image[]=@{styl}',
+        '-F', f'model={MODEL}', *obrazy,
         '-F', f'size={ROZMIAR}', '-F', f'quality={JAKOSC}', '-F', 'background=transparent',
         '-F', 'output_format=png', '-F', f'prompt={prompt}',
     ]
@@ -243,6 +324,28 @@ def generuj(sid: str) -> Path | None:
 
 # ————————————————————————————————————————————— kadrowanie
 
+def _statBarwy(im: Image.Image, gora: float = 1.0) -> tuple[np.ndarray, np.ndarray]:
+    """Średnia i odchylenie YCbCr pikseli sylwetki (alfa > 200), tylko
+    z górnej części `gora` jej wysokości."""
+    maska = np.array(im.getchannel('A')) > 200
+    ys = np.nonzero(maska.any(1))[0]
+    maska[ys.min() + int((ys.max() - ys.min()) * gora):] = False
+    ycc = np.array(im.convert('RGB').convert('YCbCr')).astype(np.float32)
+    return ycc[maska].mean(0), ycc[maska].std(0)
+
+
+def dopasujBarwy(im: Image.Image, wzor: Image.Image, sila: float = 0.8) -> Image.Image:
+    """Przenosi średnią i rozrzut barwy z `wzor` na `im` (transfer Reinharda
+    w YCbCr), w `sila` proporcji. Alfa zostaje bez zmian."""
+    m1, s1 = _statBarwy(im)
+    m0, s0 = _statBarwy(wzor, 0.72)
+    ycc = np.array(im.convert('RGB').convert('YCbCr')).astype(np.float32)
+    ycc = ycc * (1 - sila) + ((ycc - m1) / np.maximum(s1, 1) * s0 + m0) * sila
+    wynik = Image.fromarray(ycc.clip(0, 255).astype(np.uint8), 'YCbCr').convert('RGBA')
+    wynik.putalpha(im.getchannel('A'))
+    return wynik
+
+
 def wycinek(sciezka: Path, odbij: bool) -> Image.Image:
     """Surowe wyjście → sama sylwetka z czystą alfą, przycięta do obrysu.
 
@@ -252,6 +355,8 @@ def wycinek(sciezka: Path, odbij: bool) -> Image.Image:
     gładka), a potem wyrzucamy odłamki niepołączone z główną sylwetką.
     """
     im = Image.open(sciezka).convert('RGBA')
+    if sciezka.stem in BARWY_Z:
+        im = dopasujBarwy(im, Image.open(WSAD / f'{BARWY_Z[sciezka.stem]}.png').convert('RGBA'))
     t = np.array(im).astype(np.float32)
     a = t[..., 3]
     a = np.clip((a - 90) / (230 - 90), 0, 1)
@@ -360,6 +465,7 @@ def main() -> None:
     ap.add_argument('--lista', action='store_true')
     ap.add_argument('--generuj', action='store_true', help='nowa wersja przez OpenAI (kosztuje)')
     ap.add_argument('--brakujace', action='store_true', help='z --generuj: tylko stworki bez żadnej wersji')
+    ap.add_argument('--czysc', action='store_true', help='zdejmij namalowany grunt z wybranej wersji (kosztuje)')
     ap.add_argument('--rownolegle', type=int, default=3, help='ile zapytań naraz (limit ~5/min)')
     ap.add_argument('--kadruj', action='store_true', help='wybrane wersje → assets/stworki + public/sprites')
     ap.add_argument('--bok', type=int, default=128, help='bok pliku w public/sprites')
@@ -382,6 +488,12 @@ def main() -> None:
         print(f'generuję {len(cele)}: model {MODEL}, jakość {JAKOSC}')
         with ThreadPoolExecutor(max_workers=max(1, args.rownolegle)) as pula:
             list(pula.map(generuj, cele))
+    if args.czysc:
+        if not args.stworki:
+            raise SystemExit('--czysc wymaga listy id (świadomie: każde to zapytanie płatne)')
+        print(f'czyszczę {len(ids)}: model {MODEL}, jakość {JAKOSC}')
+        with ThreadPoolExecutor(max_workers=max(1, args.rownolegle)) as pula:
+            list(pula.map(lambda s: generuj(s, czysc=True), ids))
     if args.kadruj:
         kadruj(args.bok)
     if args.arkusz:

@@ -164,6 +164,22 @@ const MINIATURA = 'plansza-mini';
 /** Krycie cienia kontaktowego: pod znajdźką, stworkiem i bohaterem / pod dużą bryłą. */
 const KRYCIE_CIENIA = 0.48;
 const KRYCIE_CIENIA_BRYLY = 0.38;
+/**
+ * Kontur stworka na mapie (`stworekNaMape`): przesunięcia o piksel ekranu
+ * i ich krycie — pełne w pionie i poziomie, słabsze po skosie. Barwa to
+ * ciemny ciepły brąz, jak kontury malowanych budowli i drzew.
+ */
+const KONTUR_STWORKA: ReadonlyArray<readonly [number, number, number]> = [
+  [-1, 0, 0.8],
+  [1, 0, 0.8],
+  [0, -1, 0.8],
+  [0, 1, 0.8],
+  [-1, -1, 0.45],
+  [1, -1, 0.45],
+  [-1, 1, 0.45],
+  [1, 1, 0.45],
+];
+const BARWA_KONTURU_STWORKA = '#2a1a0c';
 
 
 const DOMYSLNA_PODPOWIEDZ =
@@ -580,6 +596,67 @@ export class AdventureScene extends Phaser.Scene {
     if (c.barwa !== undefined) im.setTint(c.barwa).setTintMode(Phaser.TintModes.FILL);
     if (c.krycie !== undefined) im.setAlpha(Math.min(1, im.alpha * c.krycie));
     return im;
+  }
+
+  /**
+   * Stworek-strażnik pomniejszony z wyprzedzeniem do rozmiaru, w jakim
+   * naprawdę stoi na ekranie (`wys` pikseli świata × `ZOOM_MAPY`).
+   *
+   * Malowany stworek ma 128 px, a na mapie zostaje z niego ok. 40. Phaser
+   * zmniejsza bez mipmap: karta graficzna brała co trzeci-czwarty piksel,
+   * cienki ciemny kontur z rysunku rwał się na kropki, a futro i łuski
+   * zamieniały się w szum — stworek wyglądał jak wklejony z gorszego zrzutu
+   * obok gładko zmniejszonych drzew i budowli. Tu zmniejszamy płótnem
+   * (schodki po połowie, wygładzanie „high"), raz na klucz i rozmiar, tak
+   * samo jak `WynikScene.gladka`. Proporcje pliku zostają te same, więc
+   * `wys / im.height`, cień kontaktowy i trafienia kliknięciem działają bez
+   * zmian; pomiary podstawy i marginesu dalej idą z oryginału (`klucz`).
+   */
+  private stworekNaMape(klucz: string, wys: number): string {
+    const h = Math.max(8, Math.round(wys * ZOOM_MAPY));
+    const cel = `${klucz}@mapa${h}`;
+    if (this.textures.exists(cel)) return cel;
+    const zrodlo = this.textures.get(klucz).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    if (!zrodlo?.width || zrodlo.height <= h) return klucz;
+    let obraz: HTMLImageElement | HTMLCanvasElement = zrodlo;
+    while (obraz.height / 2 >= h * 1.4) {
+      const c = document.createElement('canvas');
+      c.width = Math.round(obraz.width / 2);
+      c.height = Math.round(obraz.height / 2);
+      const x = c.getContext('2d')!;
+      x.imageSmoothingQuality = 'high';
+      x.drawImage(obraz, 0, 0, c.width, c.height);
+      obraz = c;
+    }
+    const w = Math.max(1, Math.round((zrodlo.width * h) / zrodlo.height));
+    const maly = document.createElement('canvas');
+    maly.width = w;
+    maly.height = h;
+    const m = maly.getContext('2d')!;
+    m.imageSmoothingQuality = 'high';
+    m.drawImage(obraz, 0, 0, w, h);
+    // Kontur. Rysunek ma cienki ciemny obrys, ale po zmniejszeniu ponad
+    // trzykrotnym zostaje z niego półprzezroczysta mgiełka i jasny stworek
+    // rozpływa się w trawie — a drzewa, chaty i skały obok mają wyraźny,
+    // ciemny, ciepły kontur. Odtwarzamy go w skali ekranu: sylwetka
+    // przesunięta o piksel w ośmiu kierunkach, zalana brązem, pod rysunkiem
+    // (po skosie słabiej, żeby kontur nie wyszedł kanciasty).
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const x = c.getContext('2d')!;
+    for (const [dx, dy, a] of KONTUR_STWORKA) {
+      x.globalAlpha = a;
+      x.drawImage(maly, dx, dy);
+    }
+    x.globalAlpha = 1;
+    x.globalCompositeOperation = 'source-in';
+    x.fillStyle = BARWA_KONTURU_STWORKA;
+    x.fillRect(0, 0, w, h);
+    x.globalCompositeOperation = 'source-over';
+    x.drawImage(maly, 0, 0);
+    this.textures.addCanvas(cel, c);
+    return cel;
   }
 
   /**
@@ -1550,8 +1627,11 @@ export class AdventureScene extends Phaser.Scene {
       // Budowle z bryłą stoją ZA polem wejścia, a nie na nim: podstawa siada na
       // górnej krawędzi tego pola, więc brama zostaje odsłonięta i widać, że
       // jest po niej gdzie chodzić. Reszta obiektów stoi na swoim polu.
+      // Stworek dostaje kopię zmniejszoną do rozmiaru na ekranie
+      // (`stworekNaMape`); reszta rysunków mapy ma pliki już w tej skali.
+      const rysunek = o.rodzaj === 'potwor' ? this.stworekNaMape(klucz, wys) : klucz;
       const im = this.add
-        .image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, klucz)
+        .image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, rysunek)
         .setOrigin(0.5, 1);
       im.setScale(wys / im.height);
       // Obrys obiektów gry (`USTAWIENIA.obrysObiektow`, per plansza): ciemna
