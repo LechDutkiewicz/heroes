@@ -150,6 +150,24 @@
      "gap": "Najmniej pasuje: fioletowy pająk — płaski nasycony wycinek z ostrym obrysem, bez cienia i odbicia śniegu; smok na zboczu unosi się.",
      "blind": "tools/postep-obrazy/dopasowanie-twierdza-r7.jpg",
      "note": "Runda 7, Twierdza. 0/3. Cień u stóp niewidoczny na ciemnym gruncie."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Sporex — neonowa limonka i magenta, bez obrysu i bez widocznego cienia (skrzynia obok ma gruby obrys i cień; sprawdzone w powiększeniu).",
+     "blind": "tools/postep-obrazy/dopasowanie-polana-r8.jpg",
+     "note": "Runda 8 (cień jak pod obiektami — nie widać go w kadrze), Polana."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Sporex na koronie drzewa — neonowe barwy, brak cienia, stoi na liściach zamiast na ziemi.",
+     "blind": "tools/postep-obrazy/dopasowanie-bagna-r8.jpg",
+     "note": "Runda 8, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: fioletowy pająk — barwy spoza mapy, ostrzejszy niż malowane skały, bez cienia; smok wisi na urwisku.",
+     "blind": "tools/postep-obrazy/dopasowanie-twierdza-r8.jpg",
+     "note": "Runda 8, Twierdza. 0/3."
     }
    ]
   },
