@@ -125,6 +125,24 @@
      "gap": "Nasycone kolory kłócą się z pergaminowo-złotym panelem, liczniki zasłaniają dolną trzecią portretu.",
      "blind": "tools/postep-obrazy/portrety-hud-r1.jpg",
      "note": "Runda 1, HUD. 0/3."
+    },
+    {
+     "win": false,
+     "gap": "Stwory pływają małe na środku kafla na oliwkowej winiecie bez otoczenia; urocze renderowanie chibi przy rzeźbionym drewnie.",
+     "blind": "tools/postep-obrazy/portrety-bohater-r2.jpg",
+     "note": "Runda 2 (jeden szablon kadru, ramki z zestawu), bohater."
+    },
+    {
+     "win": false,
+     "gap": "Płaskie tła czerwone/brązowe zamiast malowanego otoczenia; stwory za małe w slocie; karta ucięta na szyi.",
+     "blind": "tools/postep-obrazy/portrety-miasto-r2.jpg",
+     "note": "Runda 2, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Nieczytelne plamy przy tej wielkości, licznik zasłania dolną trzecią, chłodne szare tła przy ciepłym pergaminie.",
+     "blind": "tools/postep-obrazy/portrety-hud-r2.jpg",
+     "note": "Runda 2, HUD. 0/3."
     }
    ]
   }
