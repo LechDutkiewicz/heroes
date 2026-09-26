@@ -2,6 +2,24 @@
  "updated": "Wszystko wygrywa ślepo: plansze Polana, Bagna, Twierdza przeciw mapom kampanii HoMM3/HotA; ekran kampanii (3/3) i sceny wyniku (2/3) z nowymi ilustracjami OpenAI przeciw prawdziwym ekranom HoMM2/HotA.",
  "pieces": [
   {
+   "name": "HUD bohatera spójny z grą (ikony umiejętności i artefaktów)",
+   "status": "build",
+   "bar": "Ekran bohatera w stylu mapy i miasta, malowane ikony 8 umiejętności i 9 artefaktów; ślepy krytyk vs ekran bohatera HoMM3.",
+   "live": {
+    "round": 1,
+    "stage": "builder pracuje"
+   }
+  },
+  {
+   "name": "Armia jak w HotA: zarządzanie, garnizon, okno stworka",
+   "status": "build",
+   "bar": "Wspólny pasek armii (zamiana, łączenie, dzielenie), garnizon miasta, okno stworka po kliknięciu, miniatura bohatera w mieście → ekran bohatera.",
+   "live": {
+    "round": 1,
+    "stage": "builder pracuje"
+   }
+  },
+  {
    "name": "Uwagi gracza: profile graczy i wiele zapisów",
    "status": "done",
    "bar": "Profile Ela / Janek / Tata z osobnymi kampaniami, kilka slotów zapisu jak w HoMM3, Nowa gra zaczyna od zera, migracja starego zapisu.",
