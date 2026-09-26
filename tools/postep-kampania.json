@@ -3,18 +3,15 @@
  "pieces": [
   {
    "name": "Uwagi gracza: profile graczy i wiele zapisów",
-   "status": "build",
+   "status": "done",
    "bar": "Profile Ela / Janek / Tata z osobnymi kampaniami, kilka slotów zapisu jak w HoMM3, Nowa gra zaczyna od zera, migracja starego zapisu.",
-   "live": {
-    "round": 1,
-    "stage": "builder pracuje"
-   }
+   "note": "Builder: profile graczy (tabliczka „Gracz: …” w menu, zwój „Kto gra?”, nowy gracz z klawiatury, usuwanie z potwierdzeniem); każdy profil ma własną kampanię, 6 slotów zapisu i autozapis (start misji, każdy dzień, wyjście). „Nowa gra → Kampania” pyta „Zacząć od nowa?”. Stary zapis przechodzi do profilu nazwanego jak trener (Ola → Ela). Sonda tools/probe-profile.mjs sprawdza scenariusz Ela / Janek / nowa gra / migracja."
   },
   {
    "name": "Uwagi gracza: nieosiągalna kopalnia na Polanie",
    "status": "done",
    "bar": "Sonda osiągalności wszystkich obiektów na każdej planszy; poprawka źródeł map.",
-   "note": "Builder: kopalnię dało się osiągnąć według zasad, ale szeroka grań skalna zasłaniała na rysunku jedyny pas ziemi przy rzece — kieszeń wyglądała na zamkniętą. Grań zamieniona na węższą, pas widać. Nowa sonda tools/probe-osiagalnosc.ts sprawdza na każdej planszy dojście do każdego obiektu według zasad gry i „okiem gracza” (pola zakryte rysunkiem). Dodatkowo: klik w strzeżony obiekt bez trasy ma prowadzić do strażnika jak w HoMM3 (builder w toku)."
+   "note": "Builder: kopalnię dało się osiągnąć według zasad, ale szeroka grań skalna zasłaniała na rysunku jedyny pas ziemi przy rzece — kieszeń wyglądała na zamkniętą. Grań zamieniona na węższą, pas widać. Nowa sonda tools/probe-osiagalnosc.ts sprawdza na każdej planszy dojście do każdego obiektu według zasad gry i „okiem gracza” (pola zakryte rysunkiem). Dodatkowo: klik w strzeżony obiekt bez trasy ma prowadzić do strażnika jak w HoMM3 — zrobione: trasa do strażnika i podpowiedź „Drogę zagradza: Sporex. Pokonaj go, żeby przejść.”; bez drogi „Nie ma tam drogi.”."
   },
   {
    "name": "Uwagi gracza: HUD miasta spójny z mapą",
@@ -58,7 +55,8 @@
    "bar": "Stacki stworków w stylu malowanych plansz; pełne linie ewolucyjne jako grafiki. Ślepy krytyk vs HotA.",
    "live": {
     "round": 2,
-    "stage": "builder pracuje (skala i cień stacków na mapie)"
+    "stage": "krytycy oceniają (3 pary)",
+    "build": "Strażnicy 1,2 → 1,6 pola, bohater 1,5 → 1,9; własny rozmyty cień rzucany w prawo-dół; znajdźki bez zmian, więc różnią się od jednostek; jednolita skala na wszystkich planszach."
    },
    "note": "Builder r1: 18 stworków przemalowanych przez OpenAI w stylu plansz, każdy z dwoma etapami ewolucji (54 grafiki, $2.90); linie w src/data/ewolucje.ts (jeszcze bez mechaniki); sprite'y patrzą w prawo, stopy na dole kadru, ciemny obrys.",
    "rounds": [
