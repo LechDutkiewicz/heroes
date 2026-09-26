@@ -70,7 +70,7 @@ const PROBEK = 13;
 let zleSeedy = 0;
 for (const seed of SEEDS) {
   const przed = bledy.length;
-  await page.goto(`${BASE}/?seed=${seed}`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${BASE}/?ekran=bitwa&seed=${seed}`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(
     () => window.__game?.scene.getScene('battle')?.sys.settings.status === 5,
     null,

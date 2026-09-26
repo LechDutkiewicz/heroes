@@ -44,6 +44,21 @@ import Phaser from 'phaser';
 /** Ile pikseli świata przypada na jeden bok tekstury zmarszczek. */
 const BOK_ZMARSZCZEK = 512;
 
+/**
+ * Barwy tafli planszy (\`USTAWIENIA.wodaBarwy\`). Bagna, runda 6: turkusowa
+ * płycizna i biała piana robiły z mętnego trzęsawiska tropikalną zatokę.
+ * Składowe 0–1. Brak = dawne stałe, czyli woda innych plansz bez zmian.
+ */
+export interface BarwyWody {
+  plytka?: [number, number, number];
+  gleboka?: [number, number, number];
+  piana?: [number, number, number];
+  /** Mnożnik krycia piany przy brzegu (1 = jak dotąd). */
+  pianaMoc?: number;
+  /** Mnożnik iskier słońca na grzbietach fal (1 = jak dotąd). */
+  iskry?: number;
+}
+
 const FRAGMENT = `
 // Czas rośnie bez końca i mnoży się przez prędkości fal, więc przy średniej
 // precyzji po kilku minutach gry przesunięcia zaczynają skakać co pół piksela.
@@ -60,10 +75,19 @@ uniform float uCzas;
 uniform vec2 uKafelki;
 // Rozmiar planszy w pikselach świata.
 uniform vec2 uPlanszaPx;
-// Lewy górny róg ramy mapy na ekranie, a po nim przesunięcie kamery.
+// Punkt zaczepienia kamery na ekranie (róg ramy + origin), a po nim ten sam
+// punkt w świecie (przewinięcie + origin). Patrz ustaw('uWidok', …) niżej.
 uniform vec4 uWidok;
+// Zoom kamery: ile pikseli ekranu przypada na piksel świata.
+uniform vec2 uZoom;
 // Wysokość bufora: gl_FragCoord liczy od DOŁU, a scena od góry.
 uniform float uWysokoscBufora;
+// Barwy tafli per plansza (\`USTAWIENIA.wodaBarwy\`); domyślne = dawne stałe.
+uniform vec3 uPlytka;
+uniform vec3 uGleboka;
+uniform vec3 uPiana;
+uniform float uPianaMoc;
+uniform float uIskry;
 
 // Wysokość fali w danym punkcie: dwie warstwy szumu płynące osobno.
 // Prędkości są celowo niewspółmierne (0.021 i 0.017 to nie jest ta sama
@@ -82,8 +106,11 @@ void main() {
   // kamerą i przycinany maską — współrzędne kwadratu tego nie odwzorowują.
   // Droga przez ekran jest dłuższa, ale liczy dokładnie to, co widać: piksel
   // ramy mapy przeliczony na piksel świata i dopiero potem na teksturę.
+  // Kamera planszy jest oddalona, więc odległość na ekranie dzielimy przez
+  // zoom — bez tego woda przesuwała się szybciej niż tło i rozjeżdżała z nim
+  // tym bardziej, im dalej od rogu ramy.
   vec2 ekran = vec2(gl_FragCoord.x, uWysokoscBufora - gl_FragCoord.y);
-  vec2 swiat = ekran - uWidok.xy + uWidok.zw;
+  vec2 swiat = (ekran - uWidok.xy) / uZoom + uWidok.zw;
   vec2 uv = swiat / uPlanszaPx;
   // Phaser wgrywa obrazy do karty odwrócone w pionie, więc próbkowanie planszy
   // i maski idzie po odbitej współrzędnej. Bez tego shader czytał teren
@@ -120,9 +147,7 @@ void main() {
 
   // Barwa głębi. Mieszamy z obrazem, a nie zastępujemy go, żeby woda została
   // spójna z resztą namalowanego terenu.
-  vec3 plytka = vec3(0.62, 0.93, 0.93);
-  vec3 gleboka = vec3(0.16, 0.53, 0.76);
-  vec3 barwa = mix(plytka, gleboka, clamp(glebia * 0.9 + dno * 0.2, 0.0, 1.0));
+  vec3 barwa = mix(uPlytka, uGleboka, clamp(glebia * 0.9 + dno * 0.2, 0.0, 1.0));
   // Namalowana woda ma już własne kaustyki i mocny kolor — i to ona ma zostać.
   // Przy mocniejszym mieszaniu shader ją po prostu zamalowywał: ruch owszem był,
   // ale jezioro robiło się szare i wypadało z palety reszty mapy. Barwa głębi
@@ -140,7 +165,7 @@ void main() {
   // mnożnika rozświetlone są długie grzbiety i wychodzi z tego biała koronka
   // rozciągnięta po całej tafli.
   float grzbiet = smoothstep(0.70, 0.95, h);
-  woda += pow(odbicie, 6.0) * grzbiet * (0.28 + 0.22 * glebia);
+  woda += pow(odbicie, 6.0) * grzbiet * (0.28 + 0.22 * glebia) * uIskry;
 
   // Piana przy brzegu. Próg oddycha wolno (fala przypływu), a szum sprawia,
   // że krawędź jest poszarpana zamiast być równoległą do brzegu wstążką.
@@ -148,7 +173,7 @@ void main() {
   float prog = 0.20 + 0.08 * oddech;
   float piana = smoothstep(prog, prog - 0.11, glebia) * smoothstep(0.01, 0.10, glebia);
   piana *= 0.25 + 0.75 * smoothstep(0.35, 0.75, h);
-  woda = mix(woda, vec3(0.95, 0.98, 1.0), clamp(piana, 0.0, 0.7));
+  woda = mix(woda, uPiana, clamp(piana * uPianaMoc, 0.0, 0.7));
 
   // Na samym styku z lądem woda wtapia się w to, co namalowano — inaczej
   // shader rysowałby własny brzeg tuż obok brzegu z tekstury. Wygaszenie idzie
@@ -172,7 +197,8 @@ export function dodajWode(
   scena: Phaser.Scene,
   szer: number,
   wys: number,
-  kamera: () => Phaser.Cameras.Scene2D.Camera
+  kamera: () => Phaser.Cameras.Scene2D.Camera,
+  barwy: BarwyWody = {}
 ): Phaser.GameObjects.Shader | null {
   if (scena.game.renderer.type !== Phaser.WEBGL) return null;
   if (!scena.textures.exists('woda-maska') || !scena.textures.exists('woda-zmarszczki')) return null;
@@ -193,11 +219,23 @@ export function dodajWode(
           ustaw('uCzas', (scena.time.now / 1000) % 3600);
           ustaw('uKafelki', [szer / BOK_ZMARSZCZEK, wys / BOK_ZMARSZCZEK]);
           ustaw('uPlanszaPx', [szer, wys]);
+          // Macierz kamery Phasera: ekran = róg + o + zoom · (świat − scroll − o),
+          // gdzie o = rozmiar × origin. Mapa ma origin (0, 0), więc o = 0,
+          // ale podgląd całej planszy (`zrzut-mapa.mjs --caly`) ustawia
+          // origin 0,5 — wzór ogólny obsługuje oba przypadki.
           const k = kamera();
-          ustaw('uWidok', [k.x, k.y, k.scrollX, k.scrollY]);
+          const ox = k.width * k.originX;
+          const oy = k.height * k.originY;
+          ustaw('uWidok', [k.x + ox, k.y + oy, k.scrollX + ox, k.scrollY + oy]);
+          ustaw('uZoom', [k.zoomX, k.zoomY]);
           // Phaser trzyma płótno w rozmiarze gry (skalowanie idzie stylami CSS),
           // więc wysokość gry jest tu zarazem wysokością bufora karty.
           ustaw('uWysokoscBufora', scena.scale.height);
+          ustaw('uPlytka', barwy.plytka ?? [0.62, 0.93, 0.93]);
+          ustaw('uGleboka', barwy.gleboka ?? [0.16, 0.53, 0.76]);
+          ustaw('uPiana', barwy.piana ?? [0.95, 0.98, 1.0]);
+          ustaw('uPianaMoc', barwy.pianaMoc ?? 1);
+          ustaw('uIskry', barwy.iskry ?? 1);
         },
       },
       0,

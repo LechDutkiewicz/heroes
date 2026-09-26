@@ -18,7 +18,7 @@ import {
 } from '../src/data/mapa';
 import { planszaPrzygody } from '../src/data/plansza';
 import { nowaTura } from '../src/data/mapa';
-import { MAPA_H, MAPA_W, OKNO_H, OKNO_W } from '../src/visual/uklad';
+import { KAFEL, KAFEL_EKRAN, KOL, MAPA_H, MAPA_W, OKNO_H, OKNO_W, RAMA_MAPY_H, RAMA_MAPY_W, WIE, ZOOM_MAPY } from '../src/visual/uklad';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
@@ -40,7 +40,15 @@ console.log('\n=== układ mieści się w oknie gry ===');
 sprawdz('szerokość', MAPA_W <= OKNO_W, `${MAPA_W} ≤ ${OKNO_W}`);
 sprawdz('wysokość', MAPA_H <= OKNO_H, `${MAPA_H} ≤ ${OKNO_H}`);
 // Plansza jest teraz większa od okna — to ona wymusiła przewijanie.
-sprawdz('plansza większa od okna (jest co przewijać)', s.szer > 14 && s.wys > 12, `${s.szer} × ${s.wys}`);
+sprawdz('plansza większa od okna (jest co przewijać)', s.szer > KOL && s.wys > WIE, `${s.szer} × ${s.wys} wobec ${KOL} × ${WIE}`);
+// Pole na ekranie ma 32 px jak w Heroes 3, choć świat jest liczony po 48 px.
+sprawdz('pole mapy ma na ekranie 32 px', KAFEL_EKRAN === 32 && KAFEL * ZOOM_MAPY === 32, `${KAFEL} × ${ZOOM_MAPY.toFixed(4)}`);
+// Rama mieści całe pola — inaczej prawy i dolny brzeg mapy byłyby ucięte w pół pola.
+sprawdz(
+  'rama mapy to całe pola',
+  RAMA_MAPY_W === KOL * KAFEL_EKRAN && RAMA_MAPY_H === WIE * KAFEL_EKRAN && Number.isInteger(RAMA_MAPY_W) && Number.isInteger(RAMA_MAPY_H),
+  `${RAMA_MAPY_W} × ${RAMA_MAPY_H} px = ${KOL} × ${WIE} pól`
+);
 
 console.log('\n=== tło zgodne z rysunkiem planszy ===');
 // Tło jest generowane z `RYSUNEK` przez tools/render_mapa.py. Bez tej kontroli

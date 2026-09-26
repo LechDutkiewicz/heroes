@@ -43,3 +43,6 @@ tools/dbg*.mjs
 # Pliki Pythona po kompilacji — artefakt narzędzi, nie źródło.
 __pycache__/
 *.pyc
+
+# Robocze kopie repozytorium dla równoległych builderów
+.claude/worktrees/

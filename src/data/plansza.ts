@@ -1,4 +1,4 @@
-import { PUNKTY, ROZSTAWIENIE, TEREN } from './plansza-teren';
+import { planszaPoId } from './mapy';
 import {
   CHATKA_ILE,
   OGNISKO_SUROWIEC,
@@ -11,6 +11,7 @@ import {
 } from './zasady-h3';
 import {
   ARTEFAKTY,
+  ARTEFAKTY_LOSOWE,
   BUDOWLE,
   KLUCZE,
   PRZYROST_ODDZIALU,
@@ -203,7 +204,21 @@ function wielkoscStosu(co: Surowiec, losuj: () => number) {
   return min + Math.floor(losuj() * (max - min + 1));
 }
 
-export function planszaPrzygody(): StanMapy {
+/**
+ * Plansza wskazana w adresie strony (`?ekran=mapa&mapa=polana`). Tak wchodzą
+ * narzędzia do zrzutów i sondy — i tak można zagrać w pojedynczą mapę
+ * kampanii bez przechodzenia poprzednich misji. Poza przeglądarką (sondy
+ * w Node) adresu nie ma i zostaje plansza domyślna.
+ */
+function mapaZAdresu(): string | undefined {
+  if (typeof location === 'undefined') return undefined;
+  return new URLSearchParams(location.search).get('mapa') ?? undefined;
+}
+
+export function planszaPrzygody(mapaId?: string): StanMapy {
+  const plansza = planszaPoId(mapaId ?? mapaZAdresu());
+  const { TEREN, PUNKTY, ROZSTAWIENIE } = plansza.modul;
+  const ust = plansza.modul.USTAWIENIA ?? {};
   const losuj = losowarka(20260812);
   const teren: Teren[][] = TEREN.map((w) => [...w].map((z) => ZNAKI[z] ?? 'trawa'));
 
@@ -239,7 +254,7 @@ export function planszaPrzygody(): StanMapy {
         rodzaj: 'skrzynia',
         nazwa: 'Skrzynia',
         wariant: Math.floor(losuj() * 3),
-        artefakt: artefakt ? ARTEFAKTY[Math.floor(losuj() * ARTEFAKTY.length)].id : undefined,
+        artefakt: artefakt ? ARTEFAKTY_LOSOWE[Math.floor(losuj() * ARTEFAKTY_LOSOWE.length)].id : undefined,
       });
     } else if (wpis.rodzaj === 'artefakt') {
       // O klasie artefaktu decyduje STRONA GRZBIETU, a nie odległość od startu.
@@ -252,7 +267,10 @@ export function planszaPrzygody(): StanMapy {
       const klasa =
         wpis.strefa === 'wroga' ? 'relikt' : wpis.strefa === 'pogranicze' ? 'znaczny' : 'drobny';
       const pula = ARTEFAKTY.filter((a) => a.klasa === klasa);
-      const a = pula[Math.floor(losuj() * pula.length)];
+      const losowy = pula[Math.floor(losuj() * pula.length)];
+      // Artefakt-cel misji stoi w rozstawieniu z nazwy; losowanie i tak
+      // idzie, żeby reszta planszy nie przesunęła się o jedno losowanie.
+      const a = (wpis.artefakt && ARTEFAKTY.find((x) => x.id === wpis.artefakt)) || losowy;
       obiekty.push({ ...wspolne, rodzaj: 'artefakt', nazwa: a.nazwa, artefakt: a.id });
     } else if (wpis.rodzaj === 'budynek') {
       const b = BUDOWLE[wpis.budynek ?? ''];
@@ -353,21 +371,34 @@ export function planszaPrzygody(): StanMapy {
     // linia obrony gracza, dopóki jego bohater akurat gdzie indziej eksploruje
     // albo buduje, więc ma reprezentować całą miejską straż, nie jeden
     // tygodniowy przyrost.
-    oddzialy: garnizonZamku('bor', [0, 1]).map((o) => ({ ...o, ile: o.ile * 5 })),
+    // Plansza może dać mocniejszą załogę: w Twierdzy przeciwnik naciera od
+    // trzeciego tygodnia, a bohater gracza jest wtedy daleko na północy.
+    oddzialy: garnizonZamku('bor', ust.garnizonGracza?.poziomy ?? [0, 1]).map((o) => ({
+      ...o,
+      ile: o.ile * (ust.garnizonGracza?.tygodnie ?? 5),
+    })),
   });
-  obiekty.push({
+  // Każdy punkt zaczynający się od „zamek wroga" stawia zamek przeciwnika —
+  // plansze kampanii mają ich po kilka. Pierwszy (bez przyrostka) jest stolicą.
+  const zamkiWroga = Object.keys(PUNKTY).filter((k) => k.startsWith('zamek wroga'));
+  zamkiWroga.forEach((klucz, i) => obiekty.push({
     id: id++,
     rodzaj: 'zamek',
-    x: PUNKTY['zamek wroga'].x,
-    y: PUNKTY['zamek wroga'].y,
-    nazwa: 'Grota Księżycowa',
+    x: PUNKTY[klucz].x,
+    y: PUNKTY[klucz].y,
+    nazwa:
+      ust.nazwyZamkowWroga?.[i] ??
+      (i === 0 ? 'Grota Księżycowa' : `Grota Księżycowa ${['II', 'III', 'IV'][i - 1] ?? i + 1}`),
     wlasciciel: 'wrog',
     frakcjaZamku: 'grota',
     // Zamek przeciwnika stoi rozbudowany dalej niż nasz. To nie jest kaprys:
     // jak długo nikt nim nie gra, jego stan widać dopiero po zdobyciu — a wtedy
-    // ma być nagrodą, a nie pustym placem.
-    postawione: ['ratusz1', 'ratusz2', 'fort', 'siedlisko1', 'siedlisko2', 'siedlisko3'],
-    dostepne: [6, 4, 3, 0, 0, 0],
+    // ma być nagrodą, a nie pustym placem. Plansza może to zmienić: stary fort
+    // na Polanie ma być słabszy od naszego zamku, a nie mocniejszy.
+    postawione: [
+      ...(ust.budynkiWroga ?? ['ratusz1', 'ratusz2', 'fort', 'siedlisko1', 'siedlisko2', 'siedlisko3']),
+    ],
+    dostepne: [...(ust.dostepneWroga ?? [6, 4, 3, 0, 0, 0])],
     // Garnizon. Bez niego zamek nie miał jak się bronić i gra nie miała
     // zakończenia — dziecko dochodziło przez pół planszy do celu i dostawało
     // komunikat, że celu nie ma.
@@ -375,10 +406,12 @@ export function planszaPrzygody(): StanMapy {
     // Skład bierzemy z gniazd, które w tym zamku stoją, i po jednym pełnym
     // przyroście tygodniowym z każdego. To jest najsilniejsza bitwa w grze
     // i tak ma być: zdobycie miasta ma być końcem wyprawy, a nie kolejnym
-    // posterunkiem po drodze.
-    oddzialy: garnizonZamku('grota', [0, 1, 2]),
-
-  });
+    // posterunkiem po drodze. Ile tygodni przyrostu, mówi plansza.
+    oddzialy: garnizonZamku('grota', ust.garnizonWroga?.poziomy ?? [0, 1, 2]).map((o) => ({
+      ...o,
+      ile: Math.max(1, Math.round(o.ile * (ust.garnizonWroga?.tygodnie ?? 1))),
+    })),
+  }));
 
   // Armia startowa: cztery najniższe oddziały Boru. Punkty ruchu liczymy
   // z szybkości najwolniejszego, dokładnie jak w Heroes 3 — dzięki temu
@@ -405,7 +438,9 @@ export function planszaPrzygody(): StanMapy {
     grota.units.slice(0, 4).map((u, i) => ({
       sprite: u.sprite,
       nazwa: u.name,
-      ile: [20, 9, 6, 4][i],
+      // Mnożnik z planszy: na Polanie bohater wroga siedzi w forcie i jego
+      // armia nie gra roli, w Twierdzy ma być groźniejszy niż zwykle.
+      ile: Math.max(1, Math.round([20, 9, 6, 4][i] * (ust.armiaWroga ?? 1))),
       frakcja: grota.id,
       tier: i,
     }))
@@ -414,6 +449,7 @@ export function planszaPrzygody(): StanMapy {
   const wrogRuchMax = ruchNaDzien(wrogNajwolniejszy);
 
   const stan: StanMapy = {
+    mapa: plansza.id,
     szer: TEREN[0].length,
     wys: TEREN.length,
     teren,
@@ -433,10 +469,12 @@ export function planszaPrzygody(): StanMapy {
     // Skarbiec startowy: tyle, żeby dało się w pierwszym tygodniu podjąć jedną
     // decyzję (siedlisko albo garść oddziałów), a nie żeby było na wszystko.
     // Przy 15 pokeballach dzień pierwszy był tylko klikaniem „dalej".
-    skarbiec: { pokeball: 40, jagoda: 6, kamien: 1, odlamek: 4 },
+    skarbiec: { ...(ust.skarbiec ?? { pokeball: 40, jagoda: 6, kamien: 1, odlamek: 4 }) },
     wrogBohater: {
-      x: PUNKTY['zamek wroga'].x,
-      y: PUNKTY['zamek wroga'].y,
+      // Bez zamku wroga (misja bez przeciwnika) bohater wroga stoi poza
+      // grą w rogu mapy i nigdy nie dostaje tury — patrz `turaAI`.
+      x: (PUNKTY[zamkiWroga[0]] ?? { x: 0 }).x,
+      y: (PUNKTY[zamkiWroga[0]] ?? { y: 0 }).y,
       ruch: wrogRuchMax,
       ruchMax: wrogRuchMax,
       imie: 'Grota',
@@ -448,7 +486,12 @@ export function planszaPrzygody(): StanMapy {
     },
     // Ten sam startowy skarbiec co gracz — inaczej różnica tempa na starcie
     // byłaby przypadkiem liczb, a nie decyzją o trudności.
-    wrogSkarbiec: { pokeball: 40, jagoda: 6, kamien: 1, odlamek: 4 },
+    wrogSkarbiec: { ...(ust.wrogSkarbiec ?? { pokeball: 40, jagoda: 6, kamien: 1, odlamek: 4 }) },
+    // Charakter przeciwnika na tej planszy — czyta go `turaAI` w `wrog-ai.ts`.
+    wrogTryb: ust.wrog,
+    dzienNatarcia: ust.dzienNatarcia,
+    natarcie: ust.natarcie,
+    wrogBuduje: ust.wrogBuduje,
     dzien: 1,
     klucze: [],
     // Przeciwnik startuje w krainie wroga — za OBOMA bramami, licząc od
@@ -468,6 +511,8 @@ export function planszaPrzygody(): StanMapy {
     wrogOdkryte: TEREN.map(() => new Array(TEREN[0].length).fill(false)),
   };
   odslon(stan);
+  for (const m of ust.odkryte ?? []) odslon(stan, m.promien, { x: m.x, y: m.y });
   odslon(stan, undefined, undefined, 'wrog');
+  for (const m of ust.wrogOdkryte ?? []) odslon(stan, m.promien, { x: m.x, y: m.y }, 'wrog');
   return stan;
 }

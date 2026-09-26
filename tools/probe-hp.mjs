@@ -25,7 +25,7 @@ const main = async () => {
   const page = await browser.newPage({ viewport: { width: 1000, height: 900 }, deviceScaleFactor: 2 });
   page.on('pageerror', (e) => console.error('BŁĄD STRONY:', e.message));
 
-  await page.goto(`${BASE}/?seed=7&terrain=laka`, { waitUntil: 'load' });
+  await page.goto(`${BASE}/?ekran=bitwa&seed=7&terrain=laka`, { waitUntil: 'load' });
   await page.waitForFunction(
     () => window.__game?.scene.getScene('battle')?.sys.settings.status === 5,
     null,

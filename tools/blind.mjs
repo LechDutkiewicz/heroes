@@ -65,7 +65,7 @@ const main = async () => {
 
   const html = `<style>
     body { margin:0; background:#2b2b2b; font:600 26px "Trebuchet MS",sans-serif; color:#fff; }
-    .row { display:flex; align-items:flex-start; }
+    .row { display:inline-flex; align-items:flex-start; }
     .col { display:flex; flex-direction:column; align-items:center; padding:18px; }
     .col + .col { border-left:3px solid #111; }
     img { display:block; max-width:none; }
@@ -91,6 +91,16 @@ const main = async () => {
   const page = await browser.newPage({ viewport: { width: vw, height: vh } });
   await page.setContent(html);
   await page.waitForTimeout(500);
+  // Okno dopasowane do tego, co naprawdę wyszło. Oszacowanie wyżej zakładało
+  // kadry 900 × 700, gdy wycinka nie podano — a pełne zrzuty 960 × 720 nie
+  // mieściły się w nim i prawy obraz tracił prawy brzeg i dół. Krytyk
+  // oceniał wtedy „ucięty panel" i „ucięty napis QUIT", których w grze nie ma.
+  const { w, h } = await page.evaluate(() => {
+    const r = document.querySelector('.row');
+    return { w: Math.ceil(r.scrollWidth), h: Math.ceil(r.scrollHeight) };
+  });
+  await page.setViewportSize({ width: Math.max(vw, w), height: Math.max(vh, h) });
+  await page.waitForTimeout(200);
   await page.locator('.row').screenshot({ path: `${OUT}/${name}.png` });
   await browser.close();
 

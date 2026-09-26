@@ -15,7 +15,9 @@ Wiązanie prompt → plik robi znacznik w komentarzu HTML tuż nad blokiem kodu:
     ```
 
 Opcjonalnie `| styl: teren` albo `| styl: brak` wybiera blok stylu doklejany
-przed promptem (domyślnie `obiekt`). Bloki stylu są oznaczone tak samo:
+przed promptem (domyślnie `obiekt`), a `| proporcje: 4:3` prosi model o kadr
+inny niż kwadrat — ilustracja na cały ekran przycięta z kwadratu traci
+jedną trzecią kompozycji. Bloki stylu są oznaczone tak samo:
 
     <!-- styl: obiekt -->
 
@@ -25,8 +27,26 @@ Nie dotyka `public/`. Zapisuje wyłącznie do `tools/wsad/`, bo to jest źródł
 z którego `wsad_wczytaj.py` robi sprite'y gry — i bo wygenerowany obrazek
 trzeba najpierw obejrzeć.
 
-Klucz
------
+Silniki: OpenAI albo Gemini
+---------------------------
+Domyślnie OpenAI, gdy jest `OPENAI_API_KEY`, inaczej Gemini (`--silnik`
+wymusza wybór). OpenAI jest pierwszym wyborem nie dla stylu, tylko dla
+PRZEZROCZYSTOŚCI: jego model obrazkowy oddaje PNG z prawdziwym kanałem
+alfa, a Gemini maluje kryjące tło, które trzeba potem wycinać z magenty
+— i przy tym wycinaniu powstają obwódki na krawędziach sylwetek. Obiekty
+mapy (styl `obiekt`) idą więc do OpenAI z przezroczystym tłem, a akapit
+o magencie znika z promptu; reszta stylów dostaje tło kryjące.
+
+Klucz OpenAI najlepiej trzymać jako „API credential" środowiska na host
+`api.openai.com` (nagłówek `Authorization`, przedrostek `Bearer`): proxy
+dokleja go samo, klucz nie trafia do sesji, a host jest wtedy osiągalny bez
+zmiany dostępu do sieci. Skryptowi wystarczy wtedy zmienna
+`OPENAI_API_KEY=proxy` — nie wysyła własnego nagłówka. Można też podać
+prawdziwy klucz w `OPENAI_API_KEY`. Model zmienia `OPENAI_IMAGE_MODEL`
+(domyślnie `gpt-image-1`).
+
+Klucz Gemini
+------------
 Zmienna `GEMINI_API_KEY` (albo `GOOGLE_API_KEY`). W sesji w chmurze dodaje się
 ją w ustawieniach środowiska; sesja czyta zmienne przy starcie, więc po dodaniu
 trzeba otworzyć nową. Można też trzymać klucz poza kontenerem jako „API
@@ -35,6 +55,7 @@ nagłówek samo i skryptowi wystarczy `GEMINI_API_KEY=proxy`.
 
     python3 tools/generuj_grafiki.py --lista            # co jest do zrobienia
     python3 tools/generuj_grafiki.py --modele           # do czego klucz ma dostęp
+    python3 tools/generuj_grafiki.py --silnik gemini x.png   # wymuś silnik
     python3 tools/generuj_grafiki.py straznica.png      # jeden plik
     python3 tools/generuj_grafiki.py --wszystko         # wszystko, czego brak
 """
@@ -51,7 +72,14 @@ from pathlib import Path
 
 KORZEN = Path(__file__).resolve().parent.parent
 WSAD = KORZEN / 'tools' / 'wsad'
-DOKUMENTY = [KORZEN / 'tools' / 'PROMPTY-BUDYNKI.md', KORZEN / 'tools' / 'PROMPTY-MAPA-2.md']
+DOKUMENTY = [
+    KORZEN / 'tools' / 'PROMPTY-BUDYNKI.md',
+    KORZEN / 'tools' / 'PROMPTY-MAPA-2.md',
+    KORZEN / 'tools' / 'PROMPTY-WYNIK.md',
+    KORZEN / 'tools' / 'PROMPTY-MENU.md',
+    KORZEN / 'tools' / 'PROMPTY-KAMPANIA.md',
+    KORZEN / 'tools' / 'PROMPTY-PLANSZE.md',
+]
 
 API = 'https://generativelanguage.googleapis.com/v1beta'
 
@@ -64,7 +92,14 @@ MODELE = [
     'gemini-2.5-flash-image',
 ]
 
-ZNACZNIK = re.compile(r'<!--\s*(plik|styl):\s*([^|\s]+)\s*(?:\|\s*styl:\s*(\w+)\s*)?-->')
+ZNACZNIK = re.compile(
+    r'<!--\s*(plik|styl):\s*([^|\s]+)\s*(?:\|\s*styl:\s*(\w+)\s*)?'
+    r'(?:\|\s*proporcje:\s*(\d+:\d+)\s*)?-->'
+)
+
+#: Proporcje kadru per plik — osobny słownik, a nie trzeci element krotki
+#: zadania, żeby reszta skryptu (lista, drukowanie) nie musiała o nich wiedzieć.
+PROPORCJE: dict[str, str] = {}
 
 
 def klucz() -> str:
@@ -124,6 +159,8 @@ def czytajPrompty() -> tuple[dict[str, str], dict[str, tuple[str, str]]]:
                 style[nazwa] = tresc
             else:
                 zadania[nazwa] = (tresc, styl)
+                if m.group(4):
+                    PROPORCJE[nazwa] = m.group(4)
             i = koniec + 1
     return style, zadania
 
@@ -156,12 +193,15 @@ def dostepnyModel() -> str:
 CENA_ZA_MILION = 120.0
 
 
-def generuj(model: str, tresc: str) -> tuple[bytes, int]:
+def generuj(model: str, tresc: str, proporcje: str | None = None) -> tuple[bytes, int]:
+    konfig: dict = {'responseModalities': ['IMAGE']}
+    if proporcje:
+        konfig['imageConfig'] = {'aspectRatio': proporcje}
     odp = zapytaj(
         f'models/{model}:generateContent',
         {
             'contents': [{'parts': [{'text': tresc}]}],
-            'generationConfig': {'responseModalities': ['IMAGE']},
+            'generationConfig': konfig,
         },
     )
     zuzycie = odp.get('usageMetadata', {})
@@ -175,19 +215,204 @@ def generuj(model: str, tresc: str) -> tuple[bytes, int]:
     raise SystemExit(f'Odpowiedź bez obrazka:\n{powod}')
 
 
+# ————————————————————————————————————————————————————————— OpenAI
+
+API_OPENAI = 'https://api.openai.com/v1'
+MODEL_OPENAI = os.environ.get('OPENAI_IMAGE_MODEL', 'gpt-image-1')
+
+#: Style, których obrazki są OBIEKTAMI do wycięcia i dostają przezroczyste
+#: tło. Ilustracje (tła menu, kampanii, wyniku) i kafle terenu mają tło
+#: kryjące — przezroczystość by im tylko zaszkodziła.
+PRZEZROCZYSTE = {'obiekt'}
+
+#: Dolary za milion tokenów obrazu na wyjściu. Liczone z tego, co API
+#: zwraca w `usage`, tak samo jak przy Gemini. Stawka z cennika OpenAI dla
+#: gpt-image-1 w chwili pisania — przy zmianie modelu warto ją sprawdzić.
+CENA_OPENAI_ZA_MILION = 40.0
+
+#: Cennik per model: (wejście tekstowe, wyjście obrazowe) w $ za milion
+#: tokenów. Model spoza tabeli liczy się stawką gpt-image-1 — to szacunek
+#: z góry, a nie rachunek; rachunek jest w panelu OpenAI.
+CENNIK_OPENAI = {
+    'gpt-image-1': (5.0, 40.0),
+    'gpt-image-1-mini': (2.0, 8.0),
+    'gpt-image-1.5': (5.0, 32.0),
+}
+
+#: Jakość obrazka OpenAI (`low`, `medium`, `high`). `high` kosztuje ~4×
+#: więcej niż `medium`; naklejka terenu malowana na 30 px różnicy nie pokaże.
+JAKOSC_OPENAI = os.environ.get('OPENAI_IMAGE_QUALITY', 'high')
+
+#: Dziennik wydatków: jedna linia JSON na obrazek. Trzymany w repozytorium,
+#: żeby suma przeżyła kontener — API z kluczem projektu nie podaje salda
+#: (`/organization/costs` wymaga klucza administratora).
+DZIENNIK_KOSZTOW = Path(__file__).resolve().parent / 'wsad' / 'koszty-openai.jsonl'
+
+#: Twardy limit łącznych wydatków z dziennika. Skrypt nie wyśle zapytania,
+#: które mogłoby go przekroczyć (zakłada najdroższy obrazek, ~$0.40).
+LIMIT_USD = float(os.environ.get('OPENAI_LIMIT_USD', '20'))
+NAJDROZSZY_OBRAZEK = 0.40
+
+
+def kosztOpenAI(model: str, usage: dict) -> float:
+    wej, wyj = CENNIK_OPENAI.get(model, CENNIK_OPENAI['gpt-image-1'])
+    return (int(usage.get('input_tokens') or 0) * wej
+            + int(usage.get('output_tokens') or 0) * wyj) / 1_000_000
+
+
+def wydaneDotad() -> float:
+    if not DZIENNIK_KOSZTOW.exists():
+        return 0.0
+    return sum(json.loads(l)['usd'] for l in DZIENNIK_KOSZTOW.read_text().splitlines() if l.strip())
+
+
+def zapiszKoszt(plik: str, model: str, jakosc: str, rozmiar: str, usage: dict) -> float:
+    import datetime
+    usd = kosztOpenAI(model, usage)
+    wpis = {
+        'czas': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds'),
+        'plik': plik, 'model': model, 'jakosc': jakosc, 'rozmiar': rozmiar,
+        'wej': int(usage.get('input_tokens') or 0), 'wyj': int(usage.get('output_tokens') or 0),
+        'usd': round(usd, 4),
+    }
+    DZIENNIK_KOSZTOW.parent.mkdir(parents=True, exist_ok=True)
+    with DZIENNIK_KOSZTOW.open('a') as f:
+        f.write(json.dumps(wpis) + '\n')
+    return usd
+
+
+def pokazKoszty() -> None:
+    if not DZIENNIK_KOSZTOW.exists():
+        print('Dziennik pusty: nic jeszcze nie wygenerowano przez OpenAI.')
+        return
+    wpisy = [json.loads(l) for l in DZIENNIK_KOSZTOW.read_text().splitlines() if l.strip()]
+    razem = sum(w['usd'] for w in wpisy)
+    po_modelu: dict[str, list] = {}
+    for w in wpisy:
+        po_modelu.setdefault(f"{w['model']} {w['jakosc']}", []).append(w['usd'])
+    for k, v in sorted(po_modelu.items()):
+        print(f'  {k:28s} {len(v):4d} obr.  ${sum(v):7.2f}')
+    print(f'Razem: {len(wpisy)} obrazków ≈ ${razem:.2f}  ·  limit ${LIMIT_USD:.2f}'
+          f'  ·  zostaje ${LIMIT_USD - razem:.2f}')
+
+#: Akapit o tle chromakey w bloku stylu `obiekt`. Przy prawdziwej alfie jest
+#: szkodliwy: model posłusznie namalowałby magentę zamiast ją pominąć.
+AKAPIT_CHROMY = re.compile(r'Background: a single FLAT.*?exact colour\.', re.S)
+
+
+def kluczOpenAI() -> str:
+    k = os.environ.get('OPENAI_API_KEY')
+    if not k:
+        sys.exit(
+            'Brak OPENAI_API_KEY. Dodaj w ustawieniach środowiska „API credential"\n'
+            'na host api.openai.com i zmienną OPENAI_API_KEY=proxy (albo prawdziwy\n'
+            'klucz w tej zmiennej), potem otwórz NOWĄ sesję.'
+        )
+    return k
+
+
+def naglowkiOpenAI() -> dict[str, str]:
+    """Przy `OPENAI_API_KEY=proxy` klucz dokleja proxy środowiska — własny
+    nagłówek z napisem „proxy" by go tylko zasłonił."""
+    k = kluczOpenAI()
+    naglowki = {'Content-Type': 'application/json'}
+    if k != 'proxy':
+        naglowki['Authorization'] = f'Bearer {k}'
+    return naglowki
+
+
+def zapytajOpenAI(sciezka: str, dane: dict | None = None) -> dict:
+    req = urllib.request.Request(
+        f'{API_OPENAI}/{sciezka}',
+        data=json.dumps(dane).encode() if dane else None,
+        headers=naglowkiOpenAI(),
+        method='POST' if dane else 'GET',
+    )
+    # Limit organizacji to kilka obrazków na minutę: przy 429 czekamy,
+    # ile każe odpowiedź, zamiast przerywać całą partię.
+    import time
+    for proba in range(40):
+        try:
+            with urllib.request.urlopen(req, timeout=300) as odp:
+                return json.loads(odp.read())
+        except urllib.error.HTTPError as e:
+            tresc = e.read().decode(errors='replace')[:400]
+            if e.code in (500, 502, 503, 504) and proba < 5:
+                print(f'[{e.code}, ponawiam za 15 s] ', end='', flush=True)
+                time.sleep(15)
+                continue
+            if e.code == 429 and proba < 39:
+                m = re.search(r'try again in ([\d.]+)s', tresc)
+                czekaj = float(m.group(1)) + 2 if m else 20
+                print(f'[429, czekam {czekaj:.0f} s] ', end='', flush=True)
+                time.sleep(czekaj)
+                continue
+            raise SystemExit(f'OpenAI odpowiedziało {e.code}:\n{tresc}')
+    raise SystemExit('OpenAI: limit zapytań nie ustąpił')
+
+
+def rozmiarOpenAI(proporcje: str | None) -> str:
+    """OpenAI zna trzy kadry: kwadrat, poziomy 3:2 i pionowy 2:3."""
+    if not proporcje:
+        return '1024x1024'
+    w, h = (int(x) for x in proporcje.split(':'))
+    if w > h:
+        return '1536x1024'
+    if h > w:
+        return '1024x1536'
+    return '1024x1024'
+
+
+def generujOpenAI(tresc: str, proporcje: str | None, przezroczyste: bool, plik: str = '?') -> tuple[bytes, int]:
+    wydane = wydaneDotad()
+    if wydane + NAJDROZSZY_OBRAZEK > LIMIT_USD:
+        raise SystemExit(f'Limit wydatków: ${wydane:.2f} z ${LIMIT_USD:.2f} (OPENAI_LIMIT_USD). Nie wysyłam.')
+    if przezroczyste:
+        tresc = AKAPIT_CHROMY.sub(
+            'Transparent background: only the object itself, nothing around it.', tresc
+        )
+    odp = zapytajOpenAI(
+        'images/generations',
+        {
+            'model': MODEL_OPENAI,
+            'prompt': tresc,
+            'size': rozmiarOpenAI(proporcje),
+            'quality': JAKOSC_OPENAI,
+            'background': 'transparent' if przezroczyste else 'opaque',
+            'output_format': 'png',
+            'n': 1,
+        },
+    )
+    usage = odp.get('usage', {})
+    tokeny = int(usage.get('output_tokens') or 0)
+    zapiszKoszt(plik, MODEL_OPENAI, JAKOSC_OPENAI, rozmiarOpenAI(proporcje), usage)
+    for wpis in odp.get('data', []):
+        if wpis.get('b64_json'):
+            return base64.b64decode(wpis['b64_json']), tokeny
+    raise SystemExit(f'Odpowiedź bez obrazka:\n{json.dumps(odp)[:400]}')
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('pliki', nargs='*', help='nazwy plików do wygenerowania')
     ap.add_argument('--lista', action='store_true', help='pokaż zadania i ich stan')
     ap.add_argument('--modele', action='store_true', help='pokaż modele dostępne dla klucza')
+    ap.add_argument('--koszty', action='store_true', help='podsumuj dziennik wydatków OpenAI')
     ap.add_argument('--drukuj', action='store_true',
                     help='wypisz gotowe prompty do wklejenia w kliencie, nic nie generuj')
     ap.add_argument('--wszystko', action='store_true', help='wygeneruj wszystko, czego brak')
     ap.add_argument('--nadpisz', action='store_true', help='nie omijaj istniejących plików')
-    ap.add_argument('--model', help='wymuś model zamiast wyboru z listy')
+    ap.add_argument('--model', help='wymuś model zamiast wyboru z listy (tylko Gemini)')
+    ap.add_argument('--silnik', choices=['openai', 'gemini'],
+                    help='domyślnie openai, gdy jest OPENAI_API_KEY, inaczej gemini')
     args = ap.parse_args()
 
     style, zadania = czytajPrompty()
+    silnik = args.silnik or ('openai' if os.environ.get('OPENAI_API_KEY') else 'gemini')
+
+    if args.koszty:
+        pokazKoszty()
+        return
 
     if args.lista:
         print(f'{len(zadania)} zadań z {len([d for d in DOKUMENTY if d.exists()])} dokumentów:')
@@ -210,6 +435,12 @@ def main() -> None:
             print(pelnyPrompt(style, prompt, styl))
         return
 
+    if args.modele and silnik == 'openai':
+        dane = zapytajOpenAI('models')
+        for m in sorted(x['id'] for x in dane.get('data', []) if 'image' in x['id']):
+            print(' ', m)
+        return
+
     if args.modele:
         dane = zapytaj('models')
         for m in sorted(x['name'].split('/')[-1] for x in dane.get('models', [])):
@@ -227,8 +458,12 @@ def main() -> None:
     if nieznane:
         sys.exit(f'Nie ma promptu dla: {", ".join(nieznane)}. Zobacz --lista.')
 
-    model = args.model or dostepnyModel()
-    print(f'model: {model}')
+    if silnik == 'openai':
+        kluczOpenAI()
+        model, cena = MODEL_OPENAI, CENNIK_OPENAI.get(MODEL_OPENAI, (0, CENA_OPENAI_ZA_MILION))[1]
+    else:
+        model, cena = args.model or dostepnyModel(), CENA_ZA_MILION
+    print(f'silnik: {silnik}  ·  model: {model}')
     WSAD.mkdir(parents=True, exist_ok=True)
     razem = 0
     for nazwa in doZrobienia:
@@ -238,14 +473,20 @@ def main() -> None:
             continue
         prompt, styl = zadania[nazwa]
         print(f'  {nazwa} … ', end='', flush=True)
-        obraz, tokeny = generuj(model, pelnyPrompt(style, prompt, styl))
+        tresc = pelnyPrompt(style, prompt, styl)
+        if silnik == 'openai':
+            obraz, tokeny = generujOpenAI(tresc, PROPORCJE.get(nazwa), styl in PRZEZROCZYSTE, nazwa)
+        else:
+            obraz, tokeny = generuj(model, tresc, PROPORCJE.get(nazwa))
         cel.write_bytes(obraz)
         razem += tokeny
-        koszt = tokeny * CENA_ZA_MILION / 1_000_000
+        koszt = tokeny * cena / 1_000_000
         print(f'{cel.stat().st_size // 1024} kB  ·  {tokeny} tok.  ·  ${koszt:.3f}')
 
     if razem:
-        print(f'\nRazem: {razem} tokenów wyjścia ≈ ${razem * CENA_ZA_MILION / 1_000_000:.2f}')
+        print(f'\nRazem: {razem} tokenów wyjścia ≈ ${razem * cena / 1_000_000:.2f}')
+    if silnik == 'openai':
+        pokazKoszty()
     print('\nGotowe. Obejrzyj pliki w tools/wsad/, potem: python3 tools/wsad_wczytaj.py')
 
 

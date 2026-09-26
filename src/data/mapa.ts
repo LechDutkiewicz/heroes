@@ -141,7 +141,13 @@ export const KLUCZE: Record<Klucz, { nazwa: string; barwa: number }> = {
 export interface Artefakt {
   id: string;
   nazwa: string;
-  klasa: 'drobny' | 'znaczny' | 'relikt';
+  /**
+   * `misja` to artefakt-cel misji kampanii (np. Księżycowy Kamień). Leży na
+   * mapie w jednym, ustalonym miejscu i NIE MOŻE wypaść z żadnego losowania —
+   * skrzyni, wozu, chaty jasnowidza ani artefaktu leżącego luzem. Inaczej misja
+   * „odnajdź Kamień" kończyłaby się przypadkiem, w skrzyni przy zamku.
+   */
+  klasa: 'drobny' | 'znaczny' | 'relikt' | 'misja';
   atak?: number;
   obrona?: number;
   ruch?: number;
@@ -156,7 +162,18 @@ export const ARTEFAKTY: Artefakt[] = [
   { id: 'rower', nazwa: 'Rower Terenowy', klasa: 'znaczny', ruch: 300 },
   { id: 'mistrz', nazwa: 'Pas Mistrza Areny', klasa: 'relikt', atak: 3, obrona: 2 },
   { id: 'skrzydla', nazwa: 'Skrzydła Latającego', klasa: 'relikt', ruch: 450, obrona: 1 },
+  // Cel misji „Bagienny szlak". Dodatek skromny, na poziomie drobnego
+  // artefaktu: to jest trofeum i dowód wygranej, a nie nagroda, która
+  // rozstrzyga następną misję — bohater zabiera go ze sobą dalej.
+  { id: 'ksiezycowy-kamien', nazwa: 'Księżycowy Kamień', klasa: 'misja', atak: 1, obrona: 1 },
 ];
+
+/**
+ * Artefakty, które wolno losować — wszystko poza celami misji. Każde losowanie
+ * artefaktu (skrzynia, wóz, chata jasnowidza, artefakt na mapie) bierze pulę
+ * STĄD albo filtruje po klasie, która `misja` nie jest.
+ */
+export const ARTEFAKTY_LOSOWE: Artefakt[] = ARTEFAKTY.filter((a) => a.klasa !== 'misja');
 
 export const artefaktPoId = (id: string) => ARTEFAKTY.find((a) => a.id === id);
 
@@ -589,6 +606,34 @@ export function poziom(doswiadczenie: number) {
 }
 
 export interface StanMapy {
+  /** Identyfikator planszy z `MAPY` (src/data/mapy.ts). Brak = „Dwie Doliny". */
+  mapa?: string;
+  /** Misja kampanii, która się na tej planszy toczy. Brak = gra pojedyncza. */
+  misja?: string;
+  /**
+   * Czy gracz widział już okno „Warunki misji". Siedzi w stanie, a nie
+   * w scenie: mapa buduje się od nowa po każdej bitwie i wizycie w mieście,
+   * a okno ma wyskoczyć raz — na starcie misji, nie po każdym powrocie.
+   */
+  warunkiPokazane?: boolean;
+  /**
+   * Jak gra przeciwnik na tej planszy (z `USTAWIENIA` planszy): `aktywny` —
+   * pełna tura, bohater wyrusza po mapie; `obronca` — bohater zostaje w zamku,
+   * a przeciwnik co dzień werbuje do załogi, czyli umacnia się. Brak = aktywny.
+   */
+  wrogTryb?: 'aktywny' | 'obronca';
+  /** Od którego dnia AI wolno wycelować w zamek gracza. Brak = wartość domyślna AI. */
+  dzienNatarcia?: number;
+  /**
+   * Czy od dnia natarcia zamek gracza jest dla AI celem ponad wszystko
+   * (o ile go zna i da radę go zdobyć). Brak = AI najpierw odkrywa mapę.
+   */
+  natarcie?: boolean;
+  /**
+   * `false` — przeciwnik nie stawia nowych budynków; jego armia rośnie tylko
+   * z tego, co plansza postawiła w zamkach. Brak = buduje jak gracz.
+   */
+  wrogBuduje?: boolean;
   szer: number;
   wys: number;
   teren: Teren[][];

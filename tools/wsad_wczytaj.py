@@ -24,6 +24,7 @@ się powtórzyć po urwanej sesji.
     python3 tools/wsad_wczytaj.py
 """
 
+import json
 from collections import deque
 from pathlib import Path
 
@@ -587,12 +588,203 @@ TERENY = [
     # Krainy z drugiej dostawy. Kosztów ruchu jeszcze nie mają — tekstura
     # musi być pierwsza, bo bez niej nie ma czego postawić na planszy.
     'teren-bagno', 'teren-jalowa', 'teren-snieg',
+    # Plansze kampanii (`tools/PROMPTY-PLANSZE.md`): lód zamiast przebarwionej
+    # wody w Twierdzy, błoto bagienne pod oczkami wody.
+    'teren-lod', 'teren-bloto',
+    # Polana, runda 6: ubita brązowa ziemia pod skarpami (`TEKSTURY` Polany).
+    'teren-ziemia',
+    # Bagna, runda 6: mętna woda trzęsawiska i bruk grobli (`TEKSTURY` Bagien).
+    'teren-woda-bagno', 'teren-bruk',
 ]
+
+#: Naklejki terenu (`tools/PROMPTY-PLANSZE.md`) → `public/mapa/tlo/<nazwa>.png`,
+#: wysokość w pikselach (pole ma 48). Rysuje je `render_mapa.py` w tle planszy.
+TLO = MAPA / 'tlo'
+NAKLEJKI = {
+    'trzcina-1': 40, 'trzcina-2': 44, 'trzcina-3': 36,
+    'grazel-1': 22, 'grazel-2': 24,
+    'martwe-drzewo-1': 70, 'martwe-drzewo-2': 64,
+    'pniak-bagienny': 30,
+    'glaz-sniezny-1': 34, 'glaz-sniezny-2': 40, 'glaz-sniezny-3': 30,
+    'zaspa-1': 26, 'zaspa-2': 30,
+    'kra-lodu-1': 26, 'kra-lodu-2': 30,
+    'krzak-zimowy-1': 30,
+    'kwiaty-1': 20, 'kwiaty-2': 22,
+    # Bagna, runda 5 (wzorzec HotA): drobiazgi trzęsawiska.
+    'grzyby-bagienne': 22, 'kloda-mech': 24, 'kamienie-mech': 24, 'paproc': 28, 'irysy': 30,
+    # Twierdza, runda 3 (wzorzec HotA): ośnieżone świerczki na pustym śniegu.
+    'swierczek-sniezny-1': 46, 'swierczek-sniezny-2': 50,
+    # Polana, runda 6 (wzorzec HotA): drobiazgi łąki.
+    'pniak-lakowy': 30, 'glazy-lakowe': 26, 'kepa-kwiatow': 30,
+    # Bagna, runda 6: zatopione pnie i kępy turzycy na mętnej wodzie.
+    'pien-zatopiony': 30, 'kepa-turzycy': 34,
+    # Twierdza, runda 4 (HotA): pole śniegu — łaty ziemi, płyty skał, suche
+    # trawy i nawisy (surowe kremowe z API; we wsadzie przestudzone do bieli).
+    'lata-ziemi-snieg': 40, 'skalki-snieg': 42, 'trawy-snieg': 34, 'nawis-sniezny': 34,
+}
+
+#: Zestawy klimatu dla SCENY: `tools/wsad/<zestaw>-<nazwa>.png` →
+#: `public/mapa/<zestaw>/<nazwa>.png`. Nazwy i wysokości jak sprite'y, które
+#: zastępują (patrz STAN.md, „Grafiki plansz kampanii").
+ZESTAWY = {
+    'zima': {
+        'sosna': 144, 'sosna-b': 144, 'sosna-mala': 96, 'drzewo': 144, 'drzewo-b': 144,
+        'krzak': 84, 'krzak-2': 84, 'skala': 67, 'skala-2': 67,
+        'kepa-las-1': 216, 'kepa-las-2': 216, 'kepa-las-3': 216, 'kepa-las-4': 216,
+        'kepa-skaly-1': 216, 'kepa-skaly-2': 216, 'kepa-skaly-3': 216, 'kepa-skaly-4': 216,
+        'kopalnia-kamien': 160, 'kopalnia-odlamek': 160, 'kopalnia-pokeball': 160, 'sad': 160,
+        # Twierdza, runda 3: zielone budowle i omszałe kopce na śniegu
+        # („obok zasp rosną liściaste drzewa") — zimowe wersje.
+        'zamek-las': 384, 'zamek-ogien': 336, 'chatka': 115, 'ognisko': 86, 'wiatrak': 211,
+        'kopiec': 37, 'kopiec-2': 37,
+        # Twierdza, runda 3 (HotA): stosy surowców na śniegu (`USTAWIENIA.znajdzki`).
+        'stos-pokeball': 72, 'stos-jagody': 72, 'stos-odlamki': 72, 'stos-kamien-ewolucji': 72,
+        # Twierdza, runda 3 (HotA, kamera 32 px): budowle odwiedzane w śniegu
+        # zamiast omszałych i łąkowych (PROMPTY-PLANSZE §10b).
+        'oboz-treningowy': 154, 'kamienna-wieza': 192, 'arena': 144, 'drzewo-wiedzy': 230,
+        'wieza-obserwacyjna': 250, 'ranczo': 144, 'zrodlo': 106, 'gniazdo': 134,
+        'chata-jasnowidza': 154,
+        # Twierdza, runda 4 (HotA): wielopolowe góry rozstawiane ręcznie
+        # (`USTAWIENIA.masywy`) — scena skaluje je po szerokości w polach.
+        'gora-1': 340, 'gora-2': 380, 'gora-3': 280, 'gora-4': 220, 'gora-5': 240,
+        # Twierdza, runda 6 (HotA): skarpy i skalne progi na równinie (§18).
+        'gora-6': 240, 'gora-7': 200, 'gora-8': 240,
+        # Twierdza, runda 11 (HotA: „góry nie trzymają skali pola"): zwarte
+        # gromady małych szczytów i niski łańcuch (§26).
+        'gora-9': 300, 'gora-10': 260, 'gora-11': 260,
+        # Twierdza, runda 12 (HotA: „ten sam szczyt wklejony kilka razy"):
+        # masyw z kopułą i stołem, łańcuch o różnych sylwetkach, przedgórze (§27).
+        'gora-12': 340, 'gora-13': 340, 'gora-14': 260,
+    },
+    'bagno': {
+        'drzewo': 144, 'drzewo-b': 144, 'krzak': 84, 'krzak-2': 84,
+        'kepa-las-1': 216, 'kepa-las-2': 216, 'kepa-las-3': 216, 'kepa-las-4': 216,
+        'kopalnia-kamien': 160, 'kopalnia-odlamek': 160, 'kopalnia-pokeball': 160,
+        # Bagna, runda 5 („płaski teren bez wzniesień"): omszałe wzgórza
+        # z urwiskami torfu zamiast szarych głazów.
+        'kepa-skaly-1': 216, 'kepa-skaly-2': 216, 'kepa-skaly-3': 216, 'kepa-skaly-4': 216,
+        'skala': 67, 'skala-2': 67, 'kopiec': 37, 'kopiec-2': 37,
+        # Bagna, runda 5 (HotA): stosy surowców leżące na ziemi zamiast ikon
+        # z paska (scena bierze je przy `USTAWIENIA.znajdzki`).
+        'stos-pokeball': 72, 'stos-jagody': 72, 'stos-odlamki': 72, 'stos-kamien-ewolucji': 72,
+        # Bagna, runda 8 (HotA): pasma gór rozstawiane ręcznie
+        # (`USTAWIENIA.masywy`) zamiast osobnych stożków kęp.
+        'gora-1': 340, 'gora-2': 380, 'gora-3': 280, 'gora-4': 320, 'gora-5': 320, 'gora-6': 340,
+        # Bagna, runda 10 (HotA: „pojedyncze stożki"): zwarte masywy widziane
+        # z góry, kilka rzędów szczytów (PROMPTY-PLANSZE §19), i sad jagód
+        # jako chata zbieracza na torfowisku zamiast jabłoni z koszami.
+        'gora-7': 380, 'gora-8': 340, 'gora-9': 380, 'gora-10': 380, 'sad': 160,
+        # Bagna, runda 12 („identyczne stożki jak stemple"): skalny próg
+        # z półkami i wodospadem zamiast drugiego kłębu szpiców (§23).
+        'gora-11': 380,
+    },
+    # Polana: trawiaste góry z brązowymi urwiskami zamiast omszałych głazów
+    # (runda 3 ślepego porównania: „bez pasma gór w kadrze").
+    'polana': {
+        'kepa-skaly-1': 216, 'kepa-skaly-2': 216, 'kepa-skaly-3': 216, 'kepa-skaly-4': 216,
+        'skala': 67, 'skala-2': 67,
+        # Drobne kopce przy skałach: bez nich scena dokłada podstawowe
+        # omszałe głazy, obce obok trawiastych gór.
+        'kopiec': 37, 'kopiec-2': 37,
+        # Polana, runda 5 (HotA): stosy surowców na łące zamiast ikon z paska.
+        # Scena rysuje je na pół pola (`USTAWIENIA.znajdzki`), plik dwa razy
+        # większy — przy dużym zmniejszeniu w scenie krawędzie migotały.
+        'stos-pokeball': 48, 'stos-jagody': 48, 'stos-odlamki': 48, 'stos-kamien-ewolucji': 48,
+        # Polana, runda 6: dwa RÓŻNE nieregularne krzewy zamiast jednej
+        # okrągłej kuli z jagodami na co trzecim polu łąki.
+        'krzak': 84, 'krzak-2': 84,
+        # Polana, runda 9: zwarte masywy lasu zamiast rzadkich kęp drzewek
+        # (PROMPTY-PLANSZE §17).
+        'kepa-las-1': 216, 'kepa-las-2': 216, 'kepa-las-3': 216, 'kepa-las-4': 216,
+        'sosna': 144, 'sosna-b': 144, 'sosna-mala': 96, 'drzewo': 144, 'drzewo-b': 144,
+    },
+}
 
 #: Warianty tego samego terenu — druga i trzecia trawa, drugie skały i tak dalej.
 #: Nazwy z wsadu bywają pisane raz z łącznikiem, raz bez („teren-trawa2" obok
 #: „teren-trawa-2"), więc szukamy obu zamiast poprawiać plik po każdej dostawie.
 WARIANTY = [2, 3, 4]
+
+
+#: Budowle zestawu, których śnieżna „podstawka" ma się rozpłynąć w tle
+#: (`wtopPodstawe`). Twierdza, runda 7 (HotA): „budynki jak naklejki — każdy
+#: na owalnej wysepce śniegu z twardą krawędzią". Tylko zestaw 'zima'.
+WTOP_PODSTAWY = {
+    'zima': {
+        'wiatrak', 'sad', 'kopalnia-odlamek', 'kopalnia-pokeball', 'kamienna-wieza', 'chatka',
+        'oboz-treningowy', 'ranczo', 'gniazdo', 'chata-jasnowidza', 'wieza-obserwacyjna',
+        'drzewo-wiedzy', 'zamek-las', 'zamek-ogien', 'ognisko',
+        # (Twierdza, runda 10: bez stosów — rozpuszczona zaspa pod stosem
+        # zostawiała półprzezroczysty spód, cień kontaktowy siadał pod nim
+        # i kryształy wisiały nad własnym cieniem. Nowe stosy, §24, są
+        # wciśnięte w małą zaspę, którą scena podcina gruntem.)
+        # Twierdza, runda 12: gaje (§27) i nowe góry stoją na płacie śniegu —
+        # na sinawym tle to wysepka; płat rozpływa się jak pod budowlami.
+        'kepa-las-3', 'kepa-las-4', 'gora-12', 'gora-13', 'gora-14',
+    },
+}
+
+#: Twierdza, runda 8 (HotA): „budynki wiszą na śniegu jak naklejki". Śnieg
+#: tła przy budowlach jest sinawy (rzeźba, zaspy), a podstawka rysunku
+#: bielutka — jasny płat pod ścianą czytał się jak wysepka. Krótszy zasięg
+#: zaspy przy ścianach i barwa śniegu tła zamiast bieli.
+WTOP_PARAMY = {
+    'zima': {'zasieg': 0.03, 'przesun': 0.004, 'zimny': (196, 210, 228), 'lum0': 235.0,
+             'sila': 0.85, 'od': 0.35},
+}
+
+#: To samo dla naklejek tła, które mają śnieżny płat pod spodem (tylko Twierdza
+#: ich używa — `NAKLEJKI` w `tools/mapy/twierdza.py`).
+WTOP_NAKLEJKI = {
+    'trawy-snieg', 'glaz-sniezny-1', 'glaz-sniezny-2', 'glaz-sniezny-3',
+    'swierczek-sniezny-1', 'swierczek-sniezny-2', 'skalki-snieg',
+}
+
+
+def wtopPodstawe(im: Image.Image, ziarno: int = 0, zasieg: float = 0.055, przesun: float = 0.008,
+                 zimny: tuple = (226, 234, 246), lum0: float = 215.0, sila: float = 0.7,
+                 od: float = 0.0) -> Image.Image:
+    """Rozpuszcza śnieżną podstawkę pod budowlą w przezroczystość.
+
+    Model rysuje każdą budowlę na owalnym płacie śniegu z twardym, cieniowanym
+    brzegiem — na śnieżnym tle planszy to wysepka, a nie budynek w terenie.
+    W dolnej części sylwetki jasne, mało nasycone piksele (i sinawy brzeg
+    płata) to śnieg; ściany, drewno i rzeczy przy budowli to „ciało". Śnieg
+    gaśnie z odległością od ciała (z szumem — brzeg zaspy jest nierówny)
+    i chłodnieje ku bieli tła, więc przy ścianach zostają zaspy, a owal znika.
+    """
+    from scipy import ndimage as ndi
+    t = np.asarray(im.convert('RGBA')).astype(np.float32)
+    rgb, a = t[:, :, :3], t[:, :, 3] / 255.0
+    H, W = a.shape
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    lum = rgb.mean(-1)
+    sat = (rgb.max(-1) - rgb.min(-1)) / np.maximum(rgb.max(-1), 1)
+    wid = a > 0.05
+    wiersze = np.where(wid.any(1))[0]
+    if len(wiersze) == 0:
+        return im
+    y0, y1 = wiersze[0], wiersze[-1]
+    dolna = (np.arange(H)[:, None] >= y0 + 0.68 * (y1 - y0)) & np.ones((1, W), bool)
+    dout = ndi.distance_transform_edt(wid)
+    snieg = wid & dolna & (((lum > 190) & (sat < 0.4))
+                           | ((dout < H * 0.05) & (sat < 0.45) & (lum > 90))
+                           | ((dout < H * 0.035) & (b > r + 6) & (lum > 80) & (sat < 0.45)))
+    cialo = ndi.binary_opening(wid & ~snieg & (a > 0.5), iterations=max(2, round(H * 0.012)))
+    lab, n = ndi.label(cialo)
+    if n:
+        pola = ndi.sum(cialo, lab, range(1, n + 1))
+        cialo = np.isin(lab, 1 + np.where(pola > H * W * 0.002)[0])
+    cialo = ndi.binary_fill_holes(cialo | (wid & ~dolna))
+    d = ndi.distance_transform_edt(~cialo)
+    szum = ndi.gaussian_filter(np.random.default_rng(ziarno).standard_normal((H, W)), H * 0.03)
+    szum /= np.abs(szum).max() + 1e-6
+    x = np.clip((d + szum * H * 0.025 - H * przesun) / (H * zasieg), 0, 1)
+    t[:, :, 3] = np.where(cialo, a, a * (1 - x * x * (3 - 2 * x))) * 255
+    zimny = np.array(zimny, np.float32) * (lum[..., None] / lum0)
+    w = np.where(cialo, 0.0, sila * np.clip(od + x * 2.5, 0, 1))[..., None]
+    t[:, :, :3] = rgb * (1 - w) + zimny * w
+    return Image.fromarray(t.clip(0, 255).astype(np.uint8), 'RGBA')
 
 
 def warianty(nazwa: str):
@@ -628,6 +820,47 @@ def mapa():
         ostrzezOTle(nazwa, im)
         im.save(MAPA / f'{nazwa}.png')
         print(f'  {nazwa}.png  {im.width} × {im.height}')
+
+    # Naklejki terenu: ozdoby malowane w tle planszy przez `render_mapa.py`
+    # (`NAKLEJKI` w `tools/mapy/<id>.py`), bez cienia — tło ma własne światło.
+    TLO.mkdir(parents=True, exist_ok=True)
+    for nazwa, wys in NAKLEJKI.items():
+        zrodlo = WSAD / f'{nazwa}.png'
+        if not zrodlo.exists():
+            continue
+        im = dopasuj(wczytaj(nazwa), wys)
+        if nazwa in WTOP_NAKLEJKI:
+            im = wtopPodstawe(im)
+        im.save(TLO / f'{nazwa}.png')
+        print(f'  tlo/{nazwa}.png  {im.width} × {im.height}')
+
+    # Zestawy klimatu: te same nazwy co sprite'y sceny, w podkatalogu klimatu
+    # (`public/mapa/zima/sosna.png` obok `public/mapa/sosna.png`). Czyta je
+    # scena dla planszy, która ma `zestaw` w USTAWIENIACH — patrz STAN.md.
+    for zestaw, pliki in ZESTAWY.items():
+        (MAPA / zestaw).mkdir(parents=True, exist_ok=True)
+        for nazwa, wys in pliki.items():
+            zrodlo = WSAD / f'{zestaw}-{nazwa}.png'
+            if not zrodlo.exists():
+                continue
+            im = dopasuj(wczytaj(f'{zestaw}-{nazwa}'), wys)
+            if nazwa in WTOP_PODSTAWY.get(zestaw, ()):
+                im = wtopPodstawe(im, **WTOP_PARAMY.get(zestaw, {}))
+            ostrzezOTle(f'{zestaw}-{nazwa}', im)
+            im.save(MAPA / zestaw / f'{nazwa}.png')
+            print(f'  {zestaw}/{nazwa}.png  {im.width} × {im.height}')
+
+    # Scena podmienia tylko sprite'y, które w zestawie naprawdę są —
+    # brakujący plik dałby na serwerze deweloperskim stronę HTML zamiast
+    # obrazka (Phaser nie zgłasza tego jako błędu ładowania, sprite znika).
+    spis = {z: sorted(n for n in pliki if (MAPA / z / f'{n}.png').exists())
+            for z, pliki in ZESTAWY.items()}
+    (KORZEN / 'src' / 'data' / 'zestawy-klimatu.ts').write_text(
+        '// Generowany przez tools/wsad_wczytaj.py — nie edytować ręcznie.\n'
+        '// Sprite\'y `m-<nazwa>`, które plansza z `USTAWIENIA.zestaw` bierze z\n'
+        '// `public/mapa/<zestaw>/<nazwa>.png` zamiast `public/mapa/<nazwa>.png`.\n'
+        'export const ZESTAWY_KLIMATU: Record<string, readonly string[]> = '
+        + json.dumps(spis, indent=2) + ';\n', encoding='utf-8')
 
     TEREN.mkdir(parents=True, exist_ok=True)
     for nazwa in TERENY:

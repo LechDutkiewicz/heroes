@@ -32,7 +32,7 @@ const ready = (page) =>
   );
 
 async function zmierz(page, lata, opcje = {}) {
-  await page.goto(`${BASE}/?seed=7&terrain=laka`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${BASE}/?ekran=bitwa&seed=7&terrain=laka`, { waitUntil: 'domcontentloaded' });
   await ready(page);
   await page.waitForTimeout(400);
 

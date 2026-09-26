@@ -86,8 +86,8 @@ const opis = async (url) => {
   await p.close();
   return JSON.stringify(w);
 };
-const a = await opis(`${BASE}/?seed=4242`);
-const b = await opis(`${BASE}/?seed=4242`);
+const a = await opis(`${BASE}/?ekran=bitwa&seed=4242`);
+const b = await opis(`${BASE}/?ekran=bitwa&seed=4242`);
 sprawdz('to samo ziarno = ta sama bitwa', a === b, a === b ? '' : `${a}\n       vs ${b}`);
 
 await browser.close();

@@ -4,7 +4,7 @@ const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
 });
 const page = await browser.newPage({ viewport: { width: 1000, height: 760 }, deviceScaleFactor: 2 });
-await page.goto('http://localhost:4173/?seed=7', { waitUntil: 'domcontentloaded' });
+await page.goto('http://localhost:4173/?ekran=bitwa&seed=7', { waitUntil: 'domcontentloaded' });
 await page.waitForFunction(
   () => window.__game?.scene.getScene('battle')?.sys.settings.status === 5,
   null, { timeout: 30000 }

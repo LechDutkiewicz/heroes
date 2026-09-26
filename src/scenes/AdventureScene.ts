@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
+import { ZESTAWY_KLIMATU } from '../data/zestawy-klimatu';
 import {
   BUDOWLE,
   SUROWCE,
   SUROWIEC_INFO,
   TEREN_INFO,
+  artefaktPoId,
   brylaNa,
   brylaObiektu,
   budowlaPoId,
@@ -15,6 +17,7 @@ import {
   odslon,
   odwiedz,
   odpowiedzNaPytanie,
+  polaBryly,
   bonusPoziomu,
   poziom,
   postepPoziomu,
@@ -34,9 +37,12 @@ import {
   type WyborSkrzyni,
 } from '../data/mapa';
 import { planszaPrzygody } from '../data/plansza';
+import { planszaPoId } from '../data/mapy';
 import { turaWroga } from '../data/wrog-ai';
 import { SLOTY_ARMII, dolacz, pustaArmia, zywe } from '../data/armia';
 import { jestZapis, wczytajGre, zapiszGre } from '../data/zapis';
+import { KAMPANIA, misjaPoId, wczytajPostep } from '../data/kampania';
+import { celSlowami, coSieStalo, ocenGre, przyczynaPorazki, warunkiGry } from '../data/wynik';
 import {
   efekt,
   ofertaAwansu,
@@ -45,12 +51,43 @@ import {
   przyznaj,
   umiejetnoscPoId,
 } from '../data/umiejetnosci';
-import { C, E, FONT, H, Z, body, display } from '../visual/theme';
-import { drawPanelBody, makeHudButton, mix, plate } from '../visual/hud';
-import { cienPod, listwa, naroznik, wneka } from '../visual/rama';
+import { C, E, Z } from '../visual/theme';
+import { buildArtefakty, kluczArtefaktu } from '../visual/artefakty';
+import {
+  BARWA,
+  KROJ,
+  Przycisk,
+  cienPanelu,
+  tloDrewna,
+  krojeZestawu,
+  latki,
+  medalion,
+  napisNaDrewnie,
+  napisTytulowy,
+  ozdobnik,
+  panelPergaminu,
+  ramaZlota,
+  stylAtramentu,
+  stylEtykiety,
+  wczytajZestaw,
+  wstazka,
+} from '../visual/zestaw';
 import { ICON, buildIcons } from '../visual/icons';
-import { GORA, KAFEL, MARGINES, PANEL_W, PASEK_H } from '../visual/uklad';
+import {
+  GORA,
+  KAFEL,
+  MARGINES,
+  PANEL_W,
+  PASEK_H,
+  RAMA_MAPY_H,
+  RAMA_MAPY_W,
+  SZER_STRAZNIKA_MAX,
+  WYS_BOHATERA,
+  WYS_STRAZNIKA,
+  ZOOM_MAPY,
+} from '../visual/uklad';
 import { dodajWode } from '../visual/woda';
+import { MGLA_GESTOSC, MalarzMgly } from '../visual/mgla';
 import { wersjonujZasoby } from '../visual/zasoby';
 import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
 import {
@@ -73,18 +110,22 @@ import {
  * i polem komunikatu, na dole pasek surowców.
  *
  * Plansza ma 36 × 36 pól — rozmiar małej mapy z Heroes 3 — a w okno mieści się
- * 14 × 12. Dlatego wszystko, co leży na mapie, siedzi w jednym kontenerze
- * `swiat`, przyciętym maską do ramy i przesuwanym; HUD zostaje nieruchomy na
- * zewnątrz. To jedyne miejsce w tej scenie, gdzie współrzędne pola i piksela
- * się rozjeżdżają, więc przeliczenia idą wyłącznie przez `naEkran`/`zEkranu`.
+ * 21 × 18. Dlatego wszystko, co leży na mapie, siedzi w jednym kontenerze
+ * `swiat`, który rysuje osobna kamera przycięta do ramy i przewijana; HUD
+ * zostaje nieruchomy na zewnątrz. Kamera jest przy tym oddalona (`ZOOM_MAPY`):
+ * pole ma w świecie `KAFEL` = 48 px, a na ekranie 32 px, jak w Heroes 3.
+ * To jedyne miejsce w tej scenie, gdzie współrzędne pola i piksela się
+ * rozjeżdżają, więc przeliczenia idą wyłącznie przez `naEkran`/`zEkranu`/
+ * `swiatZEkranu`.
  *
  * Zasady siedzą w `src/data/mapa.ts` i `src/data/zasady-h3.ts`; scena je pokazuje.
  */
 
 /**
- * Prędkość przewijania kursorem przy krawędzi, w pikselach na sekundę.
- * Dobrane tak, żeby przejechanie całej planszy zajmowało jakieś trzy sekundy:
- * szybciej gubi się orientację, wolniej łatwiej sięgnąć po minimapę.
+ * Prędkość przewijania kursorem przy krawędzi, w pikselach ŚWIATA na sekundę
+ * (na ekranie to `ZOOM_MAPY` razy mniej). Dobrane tak, żeby przejechanie
+ * całej planszy zajmowało jakieś trzy sekundy: szybciej gubi się orientację,
+ * wolniej łatwiej sięgnąć po minimapę.
  */
 const PREDKOSC_PRZEWIJANIA = 560;
 
@@ -94,28 +135,42 @@ const KIERUNEK_WIERSZ = { dol: 0, lewo: 1, prawo: 2, gora: 3 } as const;
 type Kierunek = keyof typeof KIERUNEK_WIERSZ;
 
 /**
- * Ile pikseli płótna mgły przypada na jedno pole planszy.
- *
- * Przy jednym pikselu na pole obrazek był rozciągany czterdziestoośmiokrotnie
- * i rozmycie z filtrowania sięgało pół pola w głąb odsłoniętego terenu —
- * cała mapa wyglądała przez to na przyciemnioną. Przy czterech pikselach
- * na pole rozmycie ma kilkanaście pikseli: granica jest wciąż miękka,
- * a odsłonięty teren zostaje w pełnym kolorze.
+ * Widoczne piksele rysunku, w ułamkach wymiarów pliku (`podstawaRysunku`):
+ * pas podstawy w poziomie oraz szerokość i wysokość całej sylwetki.
  */
-const MGLA_GESTOSC = 4;
-/** Mgła nie jest czarna. Ma zasłaniać, ale nie odbierać planszy koloru. */
-const MGLA_ALFA = 0.88;
+type PodstawaRysunku = { lewo: number; prawo: number; widocznaSzer?: number; widocznaWys?: number };
+
+/**
+ * Położenie rysunku bohatera względem środka jego pola, w pikselach świata
+ * (`sylwetkaBohatera`): skala arkusza, dół klatki (`kotwica`), stopy, czubek
+ * głowy i pół szerokości.
+ */
+type SylwetkaBohatera = { skala: number; kotwica: number; stopy: number; glowa: number; polSzer: number };
+
 
 /** Klucze, pod którymi stan przeżywa przejście do bitwy i z powrotem. */
 const KLUCZ_STANU = 'stan-mapy';
 /** Skład armii sprzed bitwy (slot → liczebność) — z niego Uzdrowiciel liczy straty. */
 const KLUCZ_PRZED_BITWA = 'armia-przed-bitwa';
 const KLUCZ_WYNIKU = 'wynik-bitwy';
+/** Katalog tła, z którego wczytano `plansza-0` — patrz `preload`. */
+const KLUCZ_TLA = 'tlo-planszy';
+/** Zestaw klimatu, z którego wczytano sprite'y `m-…` — patrz `preload`. */
+const KLUCZ_ZESTAWU = 'zestaw-planszy';
+/** Tekstura miękkiego cienia kontaktowego — patrz `zbudujCien`. */
+const CIEN_KONTAKTOWY = 't-cien-miekki';
+/** Tło planszy pomniejszone do boku minimapy — patrz `zbudujMiniature`. */
+const MINIATURA = 'plansza-mini';
+/** Krycie cienia kontaktowego: pod znajdźką, stworkiem i bohaterem / pod dużą bryłą. */
+const KRYCIE_CIENIA = 0.48;
+const KRYCIE_CIENIA_BRYLY = 0.38;
+
 
 const DOMYSLNA_PODPOWIEDZ =
-  'Klik w pole pokazuje trasę, drugi klik w to samo miejsce — rusza.\n' +
+  'Kliknij pole — zobaczysz trasę.\n' +
+  'Kliknij drugi raz — bohater rusza.\n' +
   'Strzałki przesuwają mapę, spacja wraca do bohatera.\n' +
-  'Klik w bohatera otwiera jego ekran. F8 — dziennik do zgłoszenia błędu.';
+  'C — cele misji.';
 
 export class AdventureScene extends Phaser.Scene {
   private stan!: StanMapy;
@@ -142,6 +197,9 @@ export class AdventureScene extends Phaser.Scene {
   /** Kwadrat shadera z animowaną wodą; `null`, gdy karta go nie uciągnie. */
   private woda: Phaser.GameObjects.Shader | null = null;
   private mgla!: Phaser.GameObjects.Image;
+  /** Liczy teksele mgły i pamięta, co już namalował — patrz `visual/mgla.ts`. */
+  private malarzMgly: MalarzMgly | null = null;
+  private obrazMgly: ImageData | null = null;
   private warstwaTrasy!: Phaser.GameObjects.Graphics;
   private bohaterObj!: Phaser.GameObjects.Container;
   private bohaterSprite!: Phaser.GameObjects.Sprite;
@@ -171,14 +229,26 @@ export class AdventureScene extends Phaser.Scene {
   private kursorZnakTlo!: Phaser.GameObjects.Graphics;
   private kursorZnakIkona!: Phaser.GameObjects.Image;
   private kursorZnakTekst!: Phaser.GameObjects.Text;
+  /** Złota elipsa wejścia pokazana właśnie pod kursorem — patrz `podswietlWejscie`. */
+  private znakWejscia?: Phaser.GameObjects.Graphics;
 
   /** Zmierzone marginesy tekstur — liczone raz, bo to czytanie całego obrazka. */
   private marginesy = new Map<string, number>();
   /** Kanały alfa tekstur — do marginesów i do trafiania kliknięciem. */
   private alfy = new Map<string, { w: number; h: number; dane: Uint8Array } | null>();
+  /** Spód rysunku w poziomie, per tekstura — patrz `podstawaRysunku`. */
+  private podstawy = new Map<string, PodstawaRysunku>();
+  /** Zmierzona raz sylwetka bohatera — patrz `sylwetkaBohatera`. */
+  private sylwetka?: SylwetkaBohatera;
 
   private trasaBiezaca: Krok[] | null = null;
   private zajety = false;
+  /**
+   * Gra się rozstrzygnęła i scena odlicza do ekranu wyniku. Osobno od
+   * `zajety`, bo okna zamykane w tym czasie zdejmują `zajety` — a po
+   * rozstrzygnięciu nic już nie może oddać graczowi sterowania.
+   */
+  private rozstrzygnieta = false;
   /**
    * Czy trwa właśnie animacja marszu — w odróżnieniu od `zajety`, który blokuje
    * kliknięcia też przy bitwach i innych animacjach. Tylko podczas marszu ma
@@ -200,10 +270,35 @@ export class AdventureScene extends Phaser.Scene {
 
   preload() {
     wersjonujZasoby(this);
+    // Zestaw okien „między bitwami" — warunki misji, baner końca, pytanie
+    // o wyjście. Wczytywany raz, kolejne wejścia na mapę go pomijają.
+    wczytajZestaw(this);
     loadSfx(this, MUZYKA_MAPA);
     const b = import.meta.env.BASE_URL;
-    this.load.image('plansza-0', `${b}mapa/plansza-0.jpg`);
-    this.load.image('woda-maska', `${b}mapa/woda-maska.png`);
+    // Tło zależy od planszy, a klucze tekstur zostają te same (`plansza-0`,
+    // `woda-maska`) — sięga po nie kilka miejsc sceny i shader wody. Phaser
+    // nie wczytuje drugi raz klucza, który już zna, więc przy zmianie
+    // planszy (następna misja kampanii) stare tło trzeba najpierw usunąć.
+    const tlo = `${b}${planszaPoId(this.wczytajStan().mapa).tlo}`;
+    if (this.registry.get(KLUCZ_TLA) !== tlo) {
+      this.textures.remove('plansza-0');
+      this.textures.remove('woda-maska');
+      this.registry.set(KLUCZ_TLA, tlo);
+    }
+    // Zestaw klimatu podmienia sprite'y pod tymi samymi kluczami `m-…`,
+    // więc przy zmianie planszy trzeba zdjąć te z poprzedniego zestawu —
+    // inaczej Phaser zostawi zaśnieżone sosny na następnej misji.
+    const zestaw = planszaPoId(this.wczytajStan().mapa).modul.USTAWIENIA?.zestaw ?? '';
+    const zestawDotad = (this.registry.get(KLUCZ_ZESTAWU) as string | undefined) ?? '';
+    if (zestawDotad !== zestaw) {
+      for (const n of new Set([...(ZESTAWY_KLIMATU[zestawDotad] ?? []), ...(ZESTAWY_KLIMATU[zestaw] ?? [])])) {
+        this.textures.remove(`m-${n}`);
+      }
+      this.registry.set(KLUCZ_ZESTAWU, zestaw);
+    }
+    const zKlimatu = new Set(ZESTAWY_KLIMATU[zestaw] ?? []);
+    this.load.image('plansza-0', `${tlo}plansza-0.jpg`);
+    this.load.image('woda-maska', `${tlo}woda-maska.png`);
     this.load.image('woda-zmarszczki', `${b}mapa/woda-zmarszczki.png`);
     this.load.spritesheet('bohater', `${b}mapa/bohater.png`, {
       frameWidth: BOHATER_KLATKA,
@@ -251,7 +346,14 @@ export class AdventureScene extends Phaser.Scene {
       'namiot-klucznika-niebieski',
       'chata-jasnowidza',
     ]) {
-      this.load.image(`m-${n}`, `${b}mapa/${n}.png`);
+      this.load.image(`m-${n}`, `${b}mapa/${zKlimatu.has(n) ? `${zestaw}/` : ''}${n}.png`);
+    }
+    // Stosy surowców na mapie (`m-stos-<ikona>`) są tylko w zestawie klimatu,
+    // który je ma — ikona `m-<ikona>` zostaje ikoną paska surowców.
+    for (const n of zKlimatu) {
+      // Góry ręczne (`USTAWIENIA.masywy`) — też tylko z zestawu klimatu.
+      if (n.startsWith('stos-') || n.startsWith('gora-'))
+        this.load.image(`m-${n}`, `${b}mapa/${zestaw}/${n}.png`);
     }
     const stan = this.wczytajStan();
     const potrzebne = new Set<string>();
@@ -288,6 +390,11 @@ export class AdventureScene extends Phaser.Scene {
     // włączone po wyjściu do bitwy i po powrocie nie dało się już sterować
     // bohaterem. Reszta to tablice trzymające obiekty, których Phaser już nie ma.
     this.zajety = false;
+    this.rozstrzygnieta = false;
+    // `rozstrzygnij` wyłącza wejście całej sceny, a obiekt sceny (i jego
+    // wtyczka wejścia) przeżywa do następnej gry — tu je włączamy z powrotem.
+    this.input.enabled = true;
+    if (this.input.keyboard) this.input.keyboard.enabled = true;
     this.wRuchu = false;
     this.przerwijRuch = false;
     this.celPoPrzerwaniu = null;
@@ -304,6 +411,7 @@ export class AdventureScene extends Phaser.Scene {
     this.trafienia = [];
     this.marginesy.clear();
     this.alfy.clear();
+    this.podstawy.clear();
 
     this.stan = this.wczytajStan();
     // Stan mapy jest tym, czego brakuje najbardziej w zgłoszeniach typu
@@ -343,6 +451,19 @@ export class AdventureScene extends Phaser.Scene {
     this.zbudujKursor();
     this.odswiezWszystko();
     this.wysrodkujNaBohaterze(false);
+    // Kroje zestawu (Cinzel, Lora) wczytują się raz na grę. Przy wejściu
+    // prosto na mapę (np. `?ekran=mapa`) potrafią dojść po zbudowaniu HUD-u —
+    // wtedy przerysowujemy wszystkie napisy, które powstały krojem zapasowym.
+    void krojeZestawu().then(() => this.przerysujNapisy());
+
+    // Warunki misji — raz, na starcie, jak okno „Scenario Information"
+    // w Heroes 2. Chwila zwłoki, żeby najpierw było widać mapę, na której
+    // to wszystko się rozegra.
+    if (this.stan.misja && !this.stan.warunkiPokazane) {
+      this.time.delayedCall(450, () => {
+        if (!this.stan.warunkiPokazane) this.pokazWarunki();
+      });
+    }
 
     // Wyciszenie, ten sam skrót i ten sam powód co w walce: dźwięku nie da
     // się przeczekać wzrokiem, więc kto go nie chce, musi mieć czym wyłączyć
@@ -364,6 +485,7 @@ export class AdventureScene extends Phaser.Scene {
       // Bez tego znak-kursor zostawał zawieszony w powietrzu, kiedy mysz
       // wyjeżdżała za okno gry — a systemowy kursor jest tam wyłączony.
       this.kursorZnak.setVisible(false);
+      this.podswietlWejscie(undefined);
       this.input.setDefaultCursor('default');
     });
     // Strzałki przesuwają widok. Na planszy 36 × 36 samo podążanie za bohaterem
@@ -372,28 +494,138 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   /**
-   * Miękka plama cienia jako tekstura, rysowana raz na scenę.
+   * Miękki cień kontaktowy jako tekstura (`CIEN_KONTAKTOWY`), rysowana raz na grę.
    *
    * Elipsa z `fillEllipse` ma OSTRĄ krawędź, a cień kontaktowy nie ma żadnej —
    * gaśnie stopniowo. Ostry brzeg czyta się jak kałuża albo dziura w trawie,
-   * a nie jak cień. Kilkadziesiąt elips o rosnącym promieniu i malejącym
-   * kryciu daje zejście do zera, którego nie widać.
+   * a nie jak cień. Gradient radialny płótna, ściśnięty w pionie o połowę:
+   * pełny rdzeń (tak jak w Heroes 3 — plama ma być widać, a nie domyślać się
+   * jej) i długie, gładkie zejście do zera, bez krawędzi do wskazania palcem.
+   * Krycie ustawia dopiero obrazek (`cienKontaktowy`), tekstura jest pełna.
+   *
+   * Osobny klucz, a nie `t-cien`: ten robi też `TownScene` i kto pierwszy,
+   * ten wygrywa — po wizycie w mieście mapa dostawała cudzy kształt.
    */
   private zbudujCien() {
-    if (this.textures.exists('t-cien')) return;
-    const bok = 256;
-    const g = this.add.graphics();
-    const krokow = 72;
-    for (let i = krokow; i > 0; i--) {
-      const t = i / krokow;
-      // Trzecia potęga zamiast kwadratu: ogon schodzi do zera znacznie
-      // łagodniej, więc plama nie ma żadnej krawędzi, którą dałoby się
-      // wskazać palcem — a to po niej poznaje się namalowany cień.
-      g.fillStyle(0x000000, 0.03 * (1 - t) * (1 - t) * (1 - t));
-      g.fillEllipse(bok / 2, bok / 4, bok * t, (bok / 2) * t);
+    if (this.textures.exists(CIEN_KONTAKTOWY)) return;
+    const w = 128;
+    const t = this.textures.createCanvas(CIEN_KONTAKTOWY, w, w / 2);
+    if (!t) return;
+    const ctx = t.getContext();
+    ctx.setTransform(1, 0, 0, 0.5, 0, 0);
+    const g = ctx.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
+    g.addColorStop(0, 'rgba(14,9,4,1)');
+    g.addColorStop(0.4, 'rgba(14,9,4,0.92)');
+    g.addColorStop(0.7, 'rgba(14,9,4,0.5)');
+    g.addColorStop(0.88, 'rgba(14,9,4,0.16)');
+    g.addColorStop(1, 'rgba(14,9,4,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, w);
+    t.refresh();
+  }
+
+  /**
+   * Cień kontaktowy pod rysunkiem stojącym na ziemi — jeden przepis dla
+   * znajdziek, budowli, zamków, kopalń i stworków.
+   *
+   * Szerokość bierze się z PODSTAWY rysunku (`podstawaRysunku`), nie z jego
+   * prostokąta: wiatrak ma wąską wieżę i szerokie śmigła, stworek stoi na
+   * dwóch łapach. Cień szeroki jak prostokąt wystawał spod śmigieł w powietrze.
+   * Światło pada z lewej-góry (tak są cieniowane rysunki: blik na pokeballu,
+   * jasne lewe ściany), więc plama wychodzi spod podstawy w prawo i w dół.
+   *
+   * Żaden rysunek obiektu nie ma namalowanego cienia rzuconego (są wycięte do
+   * sylwetki; niektóre stosy mają tylko podstawkę z mchu albo śniegu), więc
+   * cień dajemy wszystkim — słabszy tylko tam, gdzie leży pod dużą bryłą.
+   */
+  private cienKontaktowy(
+    klucz: string,
+    wys: number,
+    x: number,
+    spod: number,
+    krycie: number,
+    mnoznikSzer = 1
+  ): Phaser.GameObjects.Image {
+    const zrodlo = this.textures.get(klucz).getSourceImage() as { width: number; height: number };
+    const skala = wys / (zrodlo.height || 1);
+    const p = this.podstawaRysunku(klucz);
+    const szerRysunku = zrodlo.width * skala;
+    // Środek podstawy względem osi rysunku (origin 0,5).
+    const srodek = ((p.lewo + p.prawo) / 2 - 0.5) * szerRysunku;
+    const szer =
+      Math.max(
+        (p.prawo - p.lewo) * szerRysunku * 1.2,
+        (p.widocznaSzer ?? 1) * szerRysunku * 0.6,
+        KAFEL * 0.34
+      ) * mnoznikSzer;
+    const wysC = Math.max(szer * 0.36, KAFEL * 0.14);
+    // Środek plamy trochę w prawo i w dół od środka podstawy: rysunek zasłania
+    // jej lewą-górną część, spod niego wychodzi prawy-dolny sierp — tak jak
+    // w Heroes 3. Plama dokładnie pod spodem chowała się pod rysunkiem cała.
+    return this.naSniegu(
+      this.add
+        .image(x + srodek + szer * 0.14, spod + wysC * 0.2, CIEN_KONTAKTOWY)
+        .setDisplaySize(szer, wysC)
+        .setAlpha(krycie)
+    );
+  }
+
+  /**
+   * `USTAWIENIA.cienNaSniegu` (per plansza): cień w barwie śniegu w cieniu
+   * i z mnożnikiem krycia. Bez ustawienia obrazek wraca bez zmian.
+   */
+  private naSniegu(im: Phaser.GameObjects.Image): Phaser.GameObjects.Image {
+    const c = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienNaSniegu;
+    if (!c) return im;
+    if (c.barwa !== undefined) im.setTint(c.barwa).setTintMode(Phaser.TintModes.FILL);
+    if (c.krycie !== undefined) im.setAlpha(Math.min(1, im.alpha * c.krycie));
+    return im;
+  }
+
+  /**
+   * Gdzie w poziomie leży spód rysunku — lewa i prawa krawędź widocznych
+   * pikseli w najniższym pasie rysunku (ułamki szerokości pliku) oraz
+   * szerokość całej sylwetki. Liczone z alfy i zapamiętane, jak margines.
+   */
+  private podstawaRysunku(klucz: string): PodstawaRysunku {
+    const znane = this.podstawy.get(klucz);
+    if (znane) return znane;
+    let wynik: PodstawaRysunku = { lewo: 0.2, prawo: 0.8 };
+    const a = this.alfa(klucz);
+    if (a) {
+      let dol = -1;
+      let gora = a.h;
+      let minX = a.w;
+      let maxX = -1;
+      for (let y = 0; y < a.h; y++)
+        for (let x = 0; x < a.w; x++)
+          if (a.dane[y * a.w + x] > 40) {
+            if (y > dol) dol = y;
+            if (y < gora) gora = y;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+          }
+      if (dol >= 0) {
+        // Pas podstawy: dolne 18% sylwetki, ale nie mniej niż dwa wiersze.
+        const pas = Math.max(2, Math.round((dol - gora + 1) * 0.18));
+        let l = a.w;
+        let r = -1;
+        for (let y = Math.max(0, dol - pas + 1); y <= dol; y++)
+          for (let x = 0; x < a.w; x++)
+            if (a.dane[y * a.w + x] > 40) {
+              if (x < l) l = x;
+              if (x > r) r = x;
+            }
+        wynik = {
+          lewo: l / a.w,
+          prawo: (r + 1) / a.w,
+          widocznaSzer: (maxX - minX + 1) / a.w,
+          widocznaWys: (dol - gora + 1) / a.h,
+        };
+      }
     }
-    g.generateTexture('t-cien', bok, bok / 2);
-    g.destroy();
+    this.podstawy.set(klucz, wynik);
+    return wynik;
   }
 
   private przygotujAnimacje() {
@@ -419,12 +651,27 @@ export class AdventureScene extends Phaser.Scene {
   private get mapaH() {
     return this.stan.wys * KAFEL;
   }
-  /** Ile mieści się w ramie — stąd wiadomo, o ile wolno przewinąć. */
+  /**
+   * Rama mapy na EKRANIE, w pikselach ekranu (672 × 576). Tyle zajmuje
+   * prostokąt kamery planszy — i tylko do rysowania ramy, HUD-u obok niej
+   * i do trafiania kursorem w ramę wolno tych liczb używać.
+   */
   private get oknoW() {
-    return 14 * KAFEL;
+    return RAMA_MAPY_W;
   }
   private get oknoH() {
-    return 12 * KAFEL;
+    return RAMA_MAPY_H;
+  }
+  /**
+   * Ile ŚWIATA widać w ramie, w pikselach świata — rama podzielona przez
+   * zoom kamery (21 × 18 pól po `KAFEL`). Stąd wiadomo, o ile wolno
+   * przewinąć i gdzie jest środek widoku.
+   */
+  private get widokW() {
+    return this.oknoW / ZOOM_MAPY;
+  }
+  private get widokH() {
+    return this.oknoH / ZOOM_MAPY;
   }
 
   /** Środek pola w układzie świata (bez przewinięcia). */
@@ -432,16 +679,23 @@ export class AdventureScene extends Phaser.Scene {
     return { x: x * KAFEL + KAFEL / 2, y: y * KAFEL + KAFEL / 2 };
   }
 
-  /** Pole pod kursorem. Uwzględnia i ramę, i przewinięcie. */
-  private zEkranu(px: number, py: number) {
-    // Punkt na ekranie → punkt świata: odejmujemy początek prostokąta kamery
-    // i dodajemy jej przewinięcie.
+  /**
+   * Punkt ekranu → punkt świata. Kamera planszy ma origin (0, 0), więc
+   * wystarczy odjąć róg ramy, podzielić przez zoom i dodać przewinięcie.
+   * Liczone z bieżącego stanu kamery, a nie z macierzy z ostatniej klatki —
+   * w trakcie płynnego przewijania macierz bywa o klatkę spóźniona.
+   */
+  private swiatZEkranu(px: number, py: number) {
     const sx = this.kamera?.scrollX ?? 0;
     const sy = this.kamera?.scrollY ?? 0;
-    return {
-      x: Math.floor((px - this.mapaX + sx) / KAFEL),
-      y: Math.floor((py - this.mapaY + sy) / KAFEL),
-    };
+    const zoom = this.kamera?.zoom ?? ZOOM_MAPY;
+    return { x: (px - this.mapaX) / zoom + sx, y: (py - this.mapaY) / zoom + sy };
+  }
+
+  /** Pole pod kursorem. Uwzględnia ramę, oddalenie i przewinięcie. */
+  private zEkranu(px: number, py: number) {
+    const s = this.swiatZEkranu(px, py);
+    return { x: Math.floor(s.x / KAFEL), y: Math.floor(s.y / KAFEL) };
   }
 
   private wGranicach(x: number, y: number) {
@@ -459,9 +713,14 @@ export class AdventureScene extends Phaser.Scene {
 
   // ---------- przewijanie ----------
 
+  /**
+   * `x`, `y` to przesunięcie świata względem ramy w pikselach ŚWIATA (≤ 0),
+   * czyli minus przewinięcie kamery. Granica: prawy/dolny brzeg planszy nie
+   * może odjechać od prawego/dolnego brzegu widoku (`widokW × widokH`).
+   */
   private przewin(x: number, y: number, plynnie = true) {
-    this.przewX = Phaser.Math.Clamp(x, this.oknoW - this.mapaW, 0);
-    this.przewY = Phaser.Math.Clamp(y, this.oknoH - this.mapaH, 0);
+    this.przewX = Phaser.Math.Clamp(x, Math.min(0, this.widokW - this.mapaW), 0);
+    this.przewY = Phaser.Math.Clamp(y, Math.min(0, this.widokH - this.mapaH), 0);
     if (!this.kamera) return;
     if (plynnie) {
       this.tweens.add({
@@ -479,7 +738,7 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   private wysrodkujNa(x: number, y: number, plynnie = true) {
-    this.przewin(this.oknoW / 2 - (x + 0.5) * KAFEL, this.oknoH / 2 - (y + 0.5) * KAFEL, plynnie);
+    this.przewin(this.widokW / 2 - (x + 0.5) * KAFEL, this.widokH / 2 - (y + 0.5) * KAFEL, plynnie);
   }
 
   private wysrodkujNaBohaterze(plynnie = true) {
@@ -492,13 +751,14 @@ export class AdventureScene extends Phaser.Scene {
    * i po kilku krokach nie wiadomo, gdzie się jest.
    */
   private dosunDoBohatera() {
-    // Margines to niemal trzecia część okna. Przy trzech polach trzeba było
-    // dojść niemal do samej krawędzi, żeby kadr drgnął — a wtedy człowiek
-    // idzie w ciemno, bo nie widzi, dokąd.
-    const margines = 4.5 * KAFEL;
+    // Margines to trzecia część widoku (ok. 6 pól przy 21 × 18). Przy trzech
+    // polach trzeba było dojść niemal do samej krawędzi, żeby kadr drgnął —
+    // a wtedy człowiek idzie w ciemno, bo nie widzi, dokąd. Wszystko tu jest
+    // w pikselach świata: pozycja bohatera, przesunięcie i rozmiar widoku.
+    const margines = Math.min(this.widokW, this.widokH) / 3;
     const ex = this.stan.bohater.x * KAFEL + this.przewX;
     const ey = this.stan.bohater.y * KAFEL + this.przewY;
-    if (ex < margines || ey < margines || ex > this.oknoW - margines || ey > this.oknoH - margines) {
+    if (ex < margines || ey < margines || ex > this.widokW - margines || ey > this.widokH - margines) {
       this.wysrodkujNaBohaterze();
     }
   }
@@ -507,7 +767,7 @@ export class AdventureScene extends Phaser.Scene {
    * Przewijanie kursorem przy krawędzi ramy — jak w Heroes 3.
    *
    * Strzałki i minimapa już były, ale obie wymagają oderwania się od tego,
-   * co się właśnie ogląda. Przy planszy 36 × 36, z której widać jedną trzecią,
+   * co się właśnie ogląda. Przy planszy 36 × 36, z której widać ledwie część,
    * zerknięcie „co jest kawałek dalej" to najczęstszy ruch w całej grze.
    *
    * Prędkość jest liczona z czasu klatki, a nie stała na klatkę: gra chodzi
@@ -515,11 +775,16 @@ export class AdventureScene extends Phaser.Scene {
    * wolniej dokładnie wtedy, gdy jest najwięcej do narysowania.
    */
   update(_czas: number, delta: number) {
+    // Marsz, bitwa czy okno: złota elipsa wejścia nie zostaje pod kursorem,
+    // choćby mysz się nie ruszyła — wróci przy następnym jej ruchu.
+    if (this.zajety && this.znakWejscia) this.podswietlWejscie(undefined);
     if (!this.kursor || this.zajety) return;
     const { x, y } = this.kursor;
     // Pas jest liczony od ramy mapy, nie od okna: po prawej stronie leży panel
     // i przewijanie miało się włączać nad mapą, a nie nad portretem bohatera.
-    const pas = KAFEL * 0.75;
+    // Pas ma 36 px EKRANU — to odległość dla ręki, a nie ułamek pola, więc
+    // nie maleje razem z oddaleniem kamery.
+    const pas = 36;
     const lewo = this.mapaX;
     const gora = this.mapaY;
     const prawo = this.mapaX + this.oknoW;
@@ -559,6 +824,10 @@ export class AdventureScene extends Phaser.Scene {
       e.preventDefault();
       this.kontynuujTrase();
     }
+    if (e.key === 'c' || e.key === 'C') {
+      e.preventDefault();
+      this.pokazWarunki();
+    }
   }
 
   /**
@@ -582,27 +851,63 @@ export class AdventureScene extends Phaser.Scene {
 
   // ---------- świat ----------
 
+  /** Przerysowuje każdy napis sceny, także w kontenerach — po wczytaniu krojów. */
+  private przerysujNapisy() {
+    if (!this.sys.isActive()) return;
+    const przejdz = (lista: Phaser.GameObjects.GameObject[]) => {
+      for (const o of lista) {
+        if (o instanceof Phaser.GameObjects.Text) o.updateText();
+        else if (o instanceof Phaser.GameObjects.Container) przejdz(o.list);
+      }
+    };
+    przejdz(this.children.list);
+  }
+
   private rysujTlo() {
-    const g = this.add.graphics().setDepth(Z.sky);
-    g.fillGradientStyle(C.skyTop, C.skyTop, C.skyBottom, C.skyBottom, 1);
-    g.fillRect(0, 0, this.scale.width, this.scale.height);
-    this.add
-      .text(MARGINES + 4, 10, 'MAPA PRZYGODY', display(19, H.goldLight))
-      .setOrigin(0, 0)
+    // Drewno na całe okno z belką nagłówka u góry — ten sam materiał co
+    // ekran kampanii i okna misji. Niebo z bitwy zostało w bitwie.
+    tloDrewna(this).setDepth(Z.sky);
+    // W misji nagłówek mówi, KTÓRA to misja — dziecko wraca do gry po
+    // tygodniu i pierwsze pytanie brzmi „gdzie ja jestem".
+    const m = misjaPoId(this.stan.misja);
+    napisNaDrewnie(this, MARGINES + 6, 20, m ? `Misja ${m.nr} · ${m.tytul}` : 'Mapa przygody', 19)
+      .setOrigin(0, 0.5)
       .setDepth(Z.hud);
+
+    // Cele i wyjście do menu w górnej belce nad panelem — jedyne wolne
+    // miejsce, które nie zabiera wysokości podpowiedziom ani minimapie.
+    const px = this.mapaX + this.oknoW + 14;
+    const polowa = (PANEL_W - 8) / 2;
+    new Przycisk(this, {
+      x: px + polowa / 2,
+      y: 19,
+      w: polowa,
+      h: 30,
+      tekst: 'Cele (C)',
+      rozmiar: 13,
+      glebia: Z.hud + 2,
+      akcja: () => this.pokazWarunki(),
+    });
+    new Przycisk(this, {
+      x: px + polowa + 8 + polowa / 2,
+      y: 19,
+      w: polowa,
+      h: 30,
+      tekst: 'Menu',
+      rozmiar: 13,
+      glebia: Z.hud + 2,
+      akcja: () => this.zapytajOWyjscie(),
+    });
   }
 
   private budujSwiat() {
     // Rama idzie NAD światem, nie pod nim. Pod spodem przykrywała ją mapa
     // (maska tnie równo z ramą, więc na styku nie zostawało miejsca na złotą
     // kreskę) — a w HotA rama i tak nachodzi na krawędź planszy.
-    const rama = this.add.graphics().setDepth(Z.hud - 1);
-    rama.fillStyle(C.shadow, 0.5);
-    rama.fillRoundedRect(this.mapaX - 8, this.mapaY - 8, this.oknoW + 16, this.oknoH + 16, 10);
-    rama.lineStyle(4, C.goldDeep, 1);
-    rama.strokeRoundedRect(this.mapaX - 6, this.mapaY - 6, this.oknoW + 12, this.oknoH + 12, 9);
-    rama.lineStyle(2, C.gold, 1);
-    rama.strokeRoundedRect(this.mapaX - 3, this.mapaY - 3, this.oknoW + 6, this.oknoH + 6, 7);
+    // Gruba złota rama z rozetami w rogach — jak obraz, bo w Heroes 2 mapa
+    // też siedzi w ozdobnej ramie, a nie w kresce.
+    cienPanelu(this, this.mapaX, this.mapaY, this.oknoW, this.oknoH, 0.8).setDepth(Z.hud - 2);
+    ramaZlota(this, this.mapaX, this.mapaY, this.oknoW, this.oknoH, true).setDepth(Z.hud - 1);
 
     this.swiat = this.add.container(0, 0).setDepth(Z.board);
     // Maska przycina świat do ramy. Bez niej mapa wychodzi na panel i na pasek
@@ -621,7 +926,13 @@ export class AdventureScene extends Phaser.Scene {
     // Woda leży NAD planszą i przepisuje ją w całości, więc namalowana plansza
     // zostaje widoczna tylko wtedy, gdy shader się nie utworzył. Jest w ten
     // sposób zapasem, a nie martwym obrazkiem pod spodem.
-    this.woda = dodajWode(this, this.mapaW, this.mapaH, () => this.kamera);
+    this.woda = dodajWode(
+      this,
+      this.mapaW,
+      this.mapaH,
+      () => this.kamera,
+      planszaPoId(this.stan.mapa).modul.USTAWIENIA?.wodaBarwy
+    );
     if (this.woda) {
       this.woda.setDepth(-0.5);
       this.swiat.add(this.woda);
@@ -635,8 +946,14 @@ export class AdventureScene extends Phaser.Scene {
     this.rysujBohatera();
     this.rysujMgle();
 
+    // Kamera oddalona do 32 px na pole, z originem (0, 0): wtedy `scrollX/Y`
+    // to wprost lewy górny róg widocznego wycinka świata, a zoom skaluje
+    // od rogu ramy — tak liczą `swiatZEkranu`, `przewin` i shader wody.
+    // Bez `setBounds`: Phaser przycina przewinięcie wzorem zakładającym
+    // origin 0,5, który przy oddaleniu i originie (0, 0) odcinał brzegi
+    // planszy. Granice pilnuje `przewin`.
     this.kamera = this.cameras.add(this.mapaX, this.mapaY, this.oknoW, this.oknoH);
-    this.kamera.setBounds(0, 0, this.mapaW, this.mapaH);
+    this.kamera.setOrigin(0, 0).setZoom(ZOOM_MAPY);
   }
 
   /**
@@ -704,7 +1021,13 @@ export class AdventureScene extends Phaser.Scene {
     tlo.strokeCircle(16, 16, 13);
     const ikona = this.add.image(16, 16, ICON.sword).setDisplaySize(16, 16).setVisible(false);
     const tekst = this.add
-      .text(31, 28, '', { ...display(12, H.goldLight), fontStyle: 'bold' })
+      .text(31, 28, '', {
+        fontFamily: KROJ.tytul,
+        fontSize: '13px',
+        color: BARWA.krem,
+        stroke: BARWA.braz,
+        strokeThickness: 3.5,
+      })
       .setOrigin(0, 0.5);
     this.kursorZnak = this.add
       .container(0, 0, [grot, tlo, ikona, tekst])
@@ -901,6 +1224,45 @@ export class AdventureScene extends Phaser.Scene {
       this.stan.teren[y][x] === t &&
       !zajete.has(`${x},${y}`);
 
+    // `USTAWIENIA.masywy` (per plansza): duże góry rozstawione ręcznie; pola
+    // skał pod nimi nie dostają kęp ani pojedynczych skał. Brak = jak dotąd.
+    // Kontener świata rysuje w kolejności dodania, nie po głębi — na planszy
+    // z górami drzewa, kępy i góry układamy na końcu po głębi (sortowanie
+    // stabilne), żeby las nad górą nie wchodził jej na zbocze.
+    const odIndeksu = this.swiat.list.length;
+    const gory: Phaser.GameObjects.Image[] = [];
+    // Cienie rzucane na grunt (`USTAWIENIA.cienNaSniegu`): wstawiane na
+    // początek warstwy, pod wszystkie drzewa, skały, góry i obiekty.
+    const cienie = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienNaSniegu;
+    const cienZiemi = (cx: number, cy: number, w: number, h: number, krycie: number) => {
+      const c = this.add.image(cx, cy, CIEN_KONTAKTOWY).setDisplaySize(w, h).setAlpha(krycie).setDepth(-1e6);
+      if (cienie?.barwa !== undefined) c.setTint(cienie.barwa).setTintMode(Phaser.TintModes.FILL);
+      this.swiat.addAt(c, odIndeksu);
+    };
+    for (const m of planszaPoId(this.stan.mapa).modul.USTAWIENIA?.masywy ?? []) {
+      if (!this.textures.exists(`m-${m.plik}`)) continue;
+      const [x0, y0, x1, y1] = m.pokrywa;
+      for (let y = y0; y <= y1; y++)
+        for (let x = x0; x <= x1; x++)
+          if (this.stan.teren[y]?.[x] === 'skaly') zajete.add(`${x},${y}`);
+      const im = this.add.image(m.x * KAFEL, m.y * KAFEL, `m-${m.plik}`).setOrigin(0.5, 1).setFlipX(!!m.odbij);
+      im.setScale((m.szer * KAFEL) / im.width).setDepth(m.y - 1);
+      gory.push(im);
+      // `USTAWIENIA.cienNaSniegu.gory` (per plansza): góra rzuca na śnieg
+      // miękki cień w prawo-dół, od światła — stoi na ziemi, nie wisi.
+      if (cienie?.gory) {
+        const szer = m.szer * KAFEL;
+        cienZiemi(m.x * KAFEL + szer * 0.24, m.y * KAFEL - KAFEL * 0.3, szer * 1.15, szer * 0.36, cienie.gory);
+      }
+    }
+    const wstawGory = () => {
+      if (!gory.length) return;
+      this.swiat.add(gory);
+      const lista = this.swiat.list as Phaser.GameObjects.Image[];
+      const czesc = lista.slice(odIndeksu).sort((a, b) => a.depth - b.depth);
+      lista.splice(odIndeksu, czesc.length, ...czesc);
+    };
+
     // Najpierw kępy — od góry, żeby dalsze rzędy szły pod bliższe.
     for (let y = 0; y < this.stan.wys; y++) {
       for (let x = 0; x < this.stan.szer; x++) {
@@ -920,13 +1282,22 @@ export class AdventureScene extends Phaser.Scene {
           for (let dx = 0; dx < 3; dx++) zajete.add(`${x + dx},${y + dy}`);
 
         const { x: ex, y: ey } = this.naEkran(x, y);
-        const nr = this.wariant(x, y, 4) + 1;
+        // `USTAWIENIA.kepySkal` (per plansza): rysunek kępy skał wybrany ręcznie.
+        const reczna =
+          t === 'skaly' ? planszaPoId(this.stan.mapa).modul.USTAWIENIA?.kepySkal?.[`${x},${y}`] : undefined;
+        const nr = reczna ? Math.abs(reczna) : this.wariant(x, y, 4) + 1;
         const im = this.add
           .image(ex + KAFEL, ey + KAFEL * 1.5, `m-kepa-${t}-${nr}`)
           .setOrigin(0.5, 1)
-          .setFlipX(this.wariant(y, x, 2) === 1)
+          .setFlipX(reczna ? reczna < 0 : this.wariant(y, x, 2) === 1)
           // Głębia z DOLNEGO rzędu kępy: to on decyduje, co ją zasłoni.
           .setDepth(y + 1);
+        // `USTAWIENIA.skalaKepLasu` (per plansza): mniejsze kępy lasu.
+        // Twierdza, runda 9: „choinki wyższe od zamku". Brak = 1.
+        const skalaKep = t === 'las' ? planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaKepLasu : undefined;
+        if (skalaKep) im.setScale(skalaKep);
+        if (t === 'las' && cienie?.las)
+          cienZiemi(ex + KAFEL * 1.35, ey + KAFEL * 1.3, KAFEL * 3.6 * (skalaKep ?? 1), KAFEL * 1.3, cienie.las);
         this.swiat.add(im);
       }
     }
@@ -985,9 +1356,14 @@ export class AdventureScene extends Phaser.Scene {
         }
       }
     }
+    wstawGory();
   }
 
   private rysujOzdoby() {
+    // `USTAWIENIA.bezOzdobTrawy` (per plansza; Twierdza, runda 10): krzak
+    // zestawu `zima` to zaspa, a łąka Twierdzy to teraz tundra — co trzecie
+    // pole dostawało białą „chmurkę". Tundrę ubierają naklejki tła.
+    if (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.bezOzdobTrawy) return;
     for (let y = 0; y < this.stan.wys; y++) {
       for (let x = 0; x < this.stan.szer; x++) {
         if (this.stan.teren[y][x] !== 'trawa') continue;
@@ -1023,12 +1399,17 @@ export class AdventureScene extends Phaser.Scene {
     const bryla = brylaObiektu(o);
     if (o.rodzaj === 'budynek') {
       const b = budowlaPoId(o.budynek);
-      return { klucz: `m-${b?.plik ?? 'skrzynia'}`, wys: KAFEL * (b?.wys ?? 1) };
+      // `USTAWIENIA.skalaBudowli` (per plansza): Polana, runda 6 — „wiatrak
+      // i wieża zajmują po kilka kafli". Brak ustawienia = dawne rozmiary.
+      const skala = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaBudowli ?? 1;
+      return { klucz: `m-${b?.plik ?? 'skrzynia'}`, wys: KAFEL * (b?.wys ?? 1) * skala };
     }
     if (o.rodzaj === 'zamek')
       return {
         klucz: o.wlasciciel === 'gracz' ? 'm-zamek-las' : 'm-zamek-ogien',
-        wys: KAFEL * (bryla ? 3.1 : 1.9),
+        // `USTAWIENIA.skalaZamku` (per plansza; Bagna, runda 9: „zamek
+        // wielkości chaty"). Brak = 1.
+        wys: KAFEL * (bryla ? 3.1 : 1.9) * (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaZamku ?? 1),
       };
     if (o.rodzaj === 'kopalnia')
       return {
@@ -1052,11 +1433,39 @@ export class AdventureScene extends Phaser.Scene {
     if (o.rodzaj === 'namiot')
       return { klucz: `m-namiot-klucznika-${o.klucz ?? 'zielony'}`, wys: KAFEL * 1.15 };
     if (o.rodzaj === 'jasnowidz') return { klucz: 'm-chata-jasnowidza', wys: KAFEL * 1.35 };
-    if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: KAFEL * 0.78 };
-    if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: KAFEL * 0.72 };
-    if (o.rodzaj === 'potwor')
-      return { klucz: `p-${o.oddzialy?.[0].sprite ?? '00002'}`, wys: KAFEL * 1.05 };
-    return { klucz: `m-${SUROWIEC_INFO[o.surowiec ?? 'pokeball'].ikona}`, wys: KAFEL * 0.7 };
+    // Znajdźki per plansza (`USTAWIENIA.znajdzki`): mniejsze, a stos surowca
+    // z zestawu klimatu (`m-stos-<ikona>`) zamiast ikony z paska surowców.
+    const znajdzki = this.znajdzki();
+    if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: KAFEL * (znajdzki ? znajdzki * 1.1 : 0.78) };
+    if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: KAFEL * (znajdzki ?? 0.72) };
+    if (o.rodzaj === 'potwor') {
+      // Strażnik ma mieć `WYS_STRAZNIKA` pola WIDOCZNEJ sylwetki, nie pliku:
+      // stworki mają różny przezroczysty margines, a przy jednej wysokości
+      // pliku część wychodziła na plamkę. Szerokie sylwetki przycina
+      // `SZER_STRAZNIKA_MAX`. Zwracana `wys` to nadal wysokość PLIKU, więc
+      // cień kontaktowy, spód rysunku i trafienia kliknięciem idą za nią same.
+      const klucz = `p-${o.oddzialy?.[0].sprite ?? '00002'}`;
+      const p = this.podstawaRysunku(klucz);
+      const zrodlo = this.textures.get(klucz).getSourceImage() as { width: number; height: number };
+      const proporcja = (zrodlo.width || 1) / (zrodlo.height || 1);
+      // `USTAWIENIA.skalaStrazy` (per plansza; Twierdza, runda 10: „stwory to
+      // malutkie naklejki w innej skali niż zamek"). Brak = 1.
+      const skalaStrazy = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaStrazy ?? 1;
+      const wys = Math.min(
+        (WYS_STRAZNIKA * skalaStrazy) / (p.widocznaWys ?? 1),
+        (SZER_STRAZNIKA_MAX * skalaStrazy) / ((p.widocznaSzer ?? 1) * proporcja)
+      );
+      return { klucz, wys: KAFEL * wys };
+    }
+    const ikona = SUROWIEC_INFO[o.surowiec ?? 'pokeball'].ikona;
+    if (znajdzki && this.textures.exists(`m-stos-${ikona}`))
+      return { klucz: `m-stos-${ikona}`, wys: KAFEL * znajdzki };
+    return { klucz: `m-${ikona}`, wys: KAFEL * (znajdzki ?? 0.7) };
+  }
+
+  /** `USTAWIENIA.znajdzki` bieżącej planszy (patrz `UstawieniaPlanszy`). */
+  private znajdzki(): number | undefined {
+    return planszaPoId(this.stan.mapa).modul.USTAWIENIA?.znajdzki;
   }
 
   private rysujObiekty() {
@@ -1077,52 +1486,66 @@ export class AdventureScene extends Phaser.Scene {
       const { klucz, wys } = this.grafikaObiektu(o);
       const bryla = brylaObiektu(o);
 
-      // Cień kontaktowy. Przy bryle siada na jej podstawie — czyli w rzędzie
-      // NAD polem wejścia, nie na samym wejściu; położony niżej odklejał się
-      // od budowli i cała rzecz zaczynała lewitować.
+      // Cień kontaktowy (`cienKontaktowy`) — pod KAŻDYM obiektem, także pod
+      // stworkiem. Przy bryle siada na jej podstawie — czyli w rzędzie NAD
+      // polem wejścia, nie na samym wejściu; położony niżej odklejał się od
+      // budowli i cała rzecz zaczynała lewitować.
       //
-      // Miękka tekstura, nie elipsa z `fillEllipse`: elipsa ma ostrą krawędź,
-      // a cień kontaktowy nie ma żadnej. Mnożenie zamiast przykrywania, bo
-      // czarna plama o krycia 0,3 rozjaśnia się do szarości i leży na trawie
-      // jak folia, zamiast przyciemniać to, co pod nią.
-      //
-      // Poprzednia wersja była za mała i siedziała dokładnie pod podstawą,
-      // więc bryła zasłaniała ją niemal w całości — porównanie z włączonym
-      // i wyłączonym cieniem nie pokazywało ŻADNEJ różnicy. Cień, którego nie
-      // widać, nie osadza niczego. Teraz jest szerszy od budowli, wychodzi
-      // spod niej w lewo i w dół (słońce stoi w prawym górnym rogu) i widać
-      // go na tyle, żeby robił swoją robotę.
       // Prawdziwy spód rysunku, a nie dolna krawędź pliku — patrz
       // `marginesPodRysunkiem`. Wszystko, co osadza budowlę w terenie, liczy
       // się od tej jednej wartości, więc nie da się już tego rozjechać
       // osobno dla cienia i osobno dla gruntu.
+      //
+      // Cień nie trafia do `trafienia`, więc nie łapie kliknięć — liczą się
+      // tylko widoczne piksele samego rysunku.
       const spod = (bryla ? -KAFEL * 0.5 : KAFEL * 0.46) - this.pustkaPodRysunkiem(klucz, wys);
-      const cien = this.add
-        .image(-KAFEL * (bryla ? 0.3 : 0.12), spod + KAFEL * (bryla ? 0.08 : 0.02), 't-cien')
-        // Szeroka i WYSOKA plama, nie pasek. Spłaszczona do jednej trzeciej
-        // wysokości czytała się jak ciemna kreska doklejona pod bryłą; cień
-        // widziany pod tym kątem jest owalny i sięga dalej, niż się wydaje.
-        .setDisplaySize(
-          KAFEL * (bryla ? bryla[0] * 1.15 : 0.9),
-          KAFEL * (bryla ? 1.0 : 0.42)
+      // `USTAWIENIA.cienBudowli` (per plansza): węższy i słabszy cień pod
+      // budowlami — bez ustawienia mnożniki 1, jak dotąd.
+      // `USTAWIENIA.cienZnajdzek` (per plansza): to samo dla drobnych rzeczy.
+      const cb =
+        bryla || o.rodzaj === 'budynek'
+          ? planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienBudowli
+          : o.rodzaj === 'jasnowidz'
+            ? undefined
+            : planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienZnajdzek;
+      kont.add(
+        this.cienKontaktowy(
+          klucz,
+          wys,
+          0,
+          spod,
+          (bryla ? KRYCIE_CIENIA_BRYLY : KRYCIE_CIENIA) * (cb?.krycie ?? 1),
+          cb?.szer ?? 1
         )
-        .setBlendMode(Phaser.BlendModes.MULTIPLY)
-        .setAlpha(bryla ? 0.85 : 0.7);
-      kont.add(cien);
+      );
       // Wejście do budowli z bryłą (zamek, kopalnia) nie ma żadnego
       // odrębnego oznaczenia na gruncie — z daleka wygląda jak zwykła
       // ścieżka POD budynkiem, więc nie widać, gdzie naprawdę trzeba
       // kliknąć, żeby wejść: budynek wygląda na jedną spójną bryłę, choć
-      // pole wejścia leży kawałek przed nią. Miękka złota poświata na tym
-      // polu nie zmienia mechaniki — to wciąż to samo pole — tylko robi je
-      // wreszcie widocznym jako osobne miejsce, a nie część muru.
-      if (bryla && (o.rodzaj === 'zamek' || o.rodzaj === 'kopalnia')) {
-        const wejscie = this.add.graphics();
-        wejscie.fillStyle(C.gold, 0.3);
-        wejscie.fillEllipse(0, KAFEL * 0.1, KAFEL * 0.85, KAFEL * 0.4);
-        wejscie.lineStyle(2, C.gold, 0.6);
-        wejscie.strokeEllipse(0, KAFEL * 0.1, KAFEL * 0.85, KAFEL * 0.4);
-        kont.add(wejscie);
+      // pole wejścia leży kawałek przed nią.
+      //
+      // Stała złota elipsa na tym polu czytała się jak znacznik debugowy
+      // (trzech krytyków, niezależnie). W Heroes 3 wejście nie ma znacznika:
+      // mówi o nim kształt budowli, flaga i kursor. Na stałe zostaje więc
+      // tylko wydeptany, ciemniejszy placek ziemi — miękki, bez obrysu —
+      // a złota elipsa pokazuje się dopiero po najechaniu kursorem na
+      // budowlę albo jej pole wejścia (`podswietlWejscie`).
+      if (bryla && o.rodzaj !== 'straznica') {
+        kont.add(
+          this.add
+            .image(0, KAFEL * 0.14, CIEN_KONTAKTOWY)
+            .setDisplaySize(KAFEL * 0.95, KAFEL * 0.5)
+            .setTint(0x3a2812)
+            .setTintMode(Phaser.TintModes.FILL)
+            .setAlpha(0.22)
+        );
+        const znak = this.add.graphics().setVisible(false);
+        znak.fillStyle(C.gold, 0.3);
+        znak.fillEllipse(0, KAFEL * 0.1, KAFEL * 0.85, KAFEL * 0.4);
+        znak.lineStyle(2, C.gold, 0.7);
+        znak.strokeEllipse(0, KAFEL * 0.1, KAFEL * 0.85, KAFEL * 0.4);
+        kont.add(znak);
+        kont.setData('znakWejscia', znak);
       }
       // Budowle z bryłą stoją ZA polem wejścia, a nie na nim: podstawa siada na
       // górnej krawędzi tego pola, więc brama zostaje odsłonięta i widać, że
@@ -1131,6 +1554,25 @@ export class AdventureScene extends Phaser.Scene {
         .image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, klucz)
         .setOrigin(0.5, 1);
       im.setScale(wys / im.height);
+      // Obrys obiektów gry (`USTAWIENIA.obrysObiektow`, per plansza): ciemna
+      // sylwetka przesunięta o 2,5 piksela świata w ośmiu kierunkach, pod rysunkiem.
+      // Bagna, runda 6: „obiekty interaktywne zlewają się z dekoracją — bez
+      // konturu i kontrastu". Drzewa i skały obrysu nie mają, więc to, co
+      // da się podnieść albo odwiedzić, odcina się od tła. Stworki bez obrysu.
+      const obrys = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.obrysObiektow;
+      if (obrys && o.rodzaj !== 'potwor') {
+        const d = 2.5;
+        for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]]) {
+          const cien = this.add
+            .image(im.x + ox * d, im.y + oy * d, klucz)
+            .setOrigin(0.5, 1)
+            .setScale(im.scaleX, im.scaleY)
+            .setTint(0x1c1408)
+            .setTintMode(Phaser.TintModes.FILL)
+            .setAlpha(obrys);
+          kont.add(cien);
+        }
+      }
       kont.add(im);
 
       // Klik w RYSUNEK ma celować w pole obiektu.
@@ -1157,7 +1599,13 @@ export class AdventureScene extends Phaser.Scene {
         });
       }
 
-      if (o.rodzaj === 'potwor') kont.add(this.chorag(C.foe));
+      if (o.rodzaj === 'potwor') {
+        // Chorągiewka NAD głową strażnika: stopka masztu wchodzi na czubek
+        // sylwetki o 0,1 pola, proporczyk jest cały nad nim. Liczone od
+        // widocznego spodu i wysokości sylwetki, więc idzie za skalą stworka.
+        const glowa = spod - (this.podstawaRysunku(klucz).widocznaWys ?? 1) * wys;
+        kont.add(this.chorag(C.foe).setY(glowa + KAFEL * 0.38));
+      }
       const doZajecia =
         o.rodzaj === 'kopalnia' ||
         o.rodzaj === 'zamek' ||
@@ -1177,6 +1625,13 @@ export class AdventureScene extends Phaser.Scene {
       }
 
       if (bryla) this.zaroslaPrzyPodstawie(o, im, kont, spod);
+      // `USTAWIENIA.osadzZnajdzki` (per plansza; Twierdza, runda 10: „zasoby
+      // i stwory to płaskie naklejki bez osadzenia w podłożu"): stosy,
+      // skrzynie, artefakty i stworki dostają tę samą nierówną krawędź gruntu
+      // co budowle, tylko w skali drobnej rzeczy — spód grzęźnie w śniegu.
+      const osadz = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.osadzZnajdzki;
+      if (osadz && !bryla && o.rodzaj !== 'budynek' && o.rodzaj !== 'jasnowidz')
+        this.zaroslaPrzyPodstawie(o, im, kont, spod, osadz);
 
       kont.setData('obiekt', o);
       this.ikonyObiektow[o.id] = kont;
@@ -1205,18 +1660,26 @@ export class AdventureScene extends Phaser.Scene {
     o: Obiekt,
     im: Phaser.GameObjects.Image,
     kont: Phaser.GameObjects.Container,
-    spod: number
+    spod: number,
+    skala = 1
   ) {
     const podstawa = kont.y + spod;
     const szer = im.displayWidth;
     const lewo = kont.x - szer / 2;
+    // Drobna rzecz (`skala` < 1, `USTAWIENIA.osadzZnajdzki`) da się podnieść
+    // albo pokonać — grunt i zaspy idą wtedy do jej kontenera i znikają razem
+    // z nią, zamiast zostać na pustym polu. Budowle zostają w świecie.
+    const dodaj = (ob: Phaser.GameObjects.Image) => {
+      if (skala < 1) kont.add(ob.setPosition(ob.x - kont.x, ob.y - kont.y));
+      else this.swiat.add(ob);
+    };
 
     // 1. Grunt podchodzi na spód rysunku.
     //
     // Wcześniej były trzy pasy o kryciu 0,4 / 0,72 / 1 — czyli trzy widoczne
     // stopnie zamiast przejścia. Teraz krycie rośnie po krzywej i pasów jest
     // tyle, że każdy ma dwa piksele: oko nie ma czego złapać jako krawędzi.
-    const pasmo = KAFEL * 0.3;
+    const pasmo = KAFEL * 0.3 * skala;
     const pasow = 10;
     for (let i = 0; i < pasow; i++) {
       const t = (i + 1) / pasow;
@@ -1233,7 +1696,7 @@ export class AdventureScene extends Phaser.Scene {
       // Tło planszy leży w świecie jeden do jednego od (0,0), więc piksel
       // świata jest wprost pikselem tekstury.
       kopia.setCrop(lewo, y, szer, wysPasa + 1);
-      this.swiat.add(kopia);
+      dodaj(kopia);
     }
 
     // 2. Ziemia podchodzi NIERÓWNO — każda kolumna na inną wysokość.
@@ -1252,7 +1715,7 @@ export class AdventureScene extends Phaser.Scene {
         .setOrigin(0, 0)
         .setDepth(o.y + 0.71);
       kopia.setCrop(lewo + (szer * i) / kolumn, podstawa - wysokosc, szer / kolumn + 1, wysokosc);
-      this.swiat.add(kopia);
+      dodaj(kopia);
     }
 
     // 3. Kilka krzaków przy samej podstawie.
@@ -1261,20 +1724,22 @@ export class AdventureScene extends Phaser.Scene {
     // żywopłot posadzony przez ogrodnika, a nie jak zarośla, które same tam
     // wyrosły. Środek zostaje pusty, bo tam jest brama — krzak przed wejściem
     // wygląda na przeszkodę, a właśnie tamtędy się do miasta wchodzi.
-    const ile = 7;
+    // Drobne rzeczy (`skala` < 1) bez zasp: przy stosie czy stworku białe
+    // kłęby czytały się jak podstawka z chmurki — wystarcza nierówny grunt.
+    const ile = skala < 1 ? 0 : 7;
     for (let i = 0; i < ile; i++) {
       const u = (i + 0.5) / ile;
       if (Math.abs(u - 0.5) < 0.12) continue;
       const los = this.wariant(o.x * 31 + i, o.y * 17 + i * 7, 1000) / 1000;
       if (los < 0.25) continue;
-      const kx = lewo + szer * u + (los - 0.5) * KAFEL * 0.3;
+      const kx = lewo + szer * u + (los - 0.5) * KAFEL * 0.3 * skala;
       const krzak = this.add
-        .image(kx, podstawa + (los - 0.4) * KAFEL * 0.2, los < 0.6 ? 'm-krzak' : 'm-krzak-2')
+        .image(kx, podstawa + (los - 0.4) * KAFEL * 0.2 * skala, los < 0.6 ? 'm-krzak' : 'm-krzak-2')
         .setOrigin(0.5, 1)
         .setDepth(o.y + 0.75)
         .setFlipX(los > 0.5);
-      krzak.setScale((KAFEL * (0.3 + los * 0.4)) / krzak.height);
-      this.swiat.add(krzak);
+      krzak.setScale((KAFEL * (0.3 + los * 0.4) * skala) / krzak.height);
+      dodaj(krzak);
     }
   }
 
@@ -1293,31 +1758,105 @@ export class AdventureScene extends Phaser.Scene {
     const { x, y } = this.naEkran(this.stan.bohater.x, this.stan.bohater.y);
     this.bohaterObj = this.add.container(x, y).setDepth(this.stan.bohater.y + 0.8);
 
-    const cien = this.add.graphics();
-    cien.fillStyle(C.shadow, 0.34);
-    cien.fillEllipse(0, KAFEL * 0.34, KAFEL * 0.5, KAFEL * 0.16);
+    // Ten sam miękki cień co pod obiektami (`cienKontaktowy`), tylko z ręki:
+    // rysunek bohatera to arkusz klatek, więc `cienKontaktowy` zmierzyłby cały
+    // plik zamiast jednej klatki. Wymiary idą za sylwetką (`sylwetkaBohatera`):
+    // plama 1,35 szerokości postaci, spłaszczona jak pod obiektami, wychodzi
+    // w prawo-dół, od światła.
+    const s = this.sylwetkaBohatera();
+    const szerC = s.polSzer * 2 * 1.35;
+    const wysC = szerC * 0.37;
+    const cien = this.naSniegu(
+      this.add
+        .image(szerC * 0.09, s.stopy - wysC * 0.125, CIEN_KONTAKTOWY)
+        .setDisplaySize(szerC, wysC)
+        .setAlpha(KRYCIE_CIENIA)
+    );
     this.bohaterObj.add(cien);
 
-    this.bohaterSprite = this.add.sprite(0, KAFEL * 0.4, 'bohater', 0).setOrigin(0.5, 1);
-    this.bohaterSprite.setScale((KAFEL * 1.15) / this.bohaterSprite.height);
+    // Punkt zaczepienia to dół KLATKI, a stopy stoją nad nim o przezroczysty
+    // margines — schodzimy o niego, żeby na `stopy` stały same stopy.
+    this.bohaterSprite = this.add.sprite(0, s.kotwica, 'bohater', 0).setOrigin(0.5, 1).setScale(s.skala);
     this.bohaterObj.add(this.bohaterSprite);
-    // Chorągiewka OBOK głowy, nie na niej. Domyślne położenie `chorag`
-    // wypadało dokładnie na wysokości twarzy sprite'a i wyglądało, jakby
-    // bohater miał wetknięty maszt w oko.
-    this.bohaterObj.add(this.chorag(C.ally).setPosition(KAFEL * 0.26, -KAFEL * 0.36));
+    // Chorągiewka OBOK głowy, nie na niej: maszt stoi tuż za prawym brzegiem
+    // sylwetki, proporczyk na wysokości czubka głowy, stopka przy uchu.
+    // Domyślne położenie `chorag` wypadało na twarzy i bohater wyglądał, jakby
+    // miał wetknięty maszt w oko; wyżej flaga wisiała w powietrzu.
+    this.bohaterObj.add(this.chorag(C.ally).setPosition(s.polSzer + KAFEL * 0.04, s.glowa + KAFEL * 0.5));
     this.swiat.add(this.bohaterObj);
   }
 
   /**
-   * Mgła wojny. Rysujemy ją na płótnie 36 × 36 — jeden piksel na pole — i
-   * rozciągamy na całą planszę. Filtrowanie robi z tego miękką granicę za
-   * darmo; tysiąc prostokątów przerysowywanych przy każdym kroku byłoby
-   * wolniejsze i wyglądałoby jak kratka.
+   * Skala i położenie rysunku bohatera — z `WYS_BOHATERA` i alfy arkusza.
+   *
+   * Arkusz ma 16 klatek, każda z innym przezroczystym marginesem (idąc w dół
+   * postać jest niższa niż z boku, przy kroku podskakuje). Skalę bierzemy ze
+   * ŚREDNIEJ widocznej wysokości klatek — jedna skala dla wszystkich, bo inna
+   * na klatkę pompowałaby postać w rytm chodu. Stopy (`stopy`) leżą 0,4 pola
+   * pod środkiem pola, jak wcześniej, więc trasa, kamera i klik w pole
+   * bohatera (to pole, nie rysunek — bohater nie jest w `trafienia`) się nie
+   * zmieniają; rośnie tylko to, co nad nimi.
+   */
+  private sylwetkaBohatera(): SylwetkaBohatera {
+    if (this.sylwetka) return this.sylwetka;
+    const K = BOHATER_KLATKA;
+    let wysSuma = 0;
+    let klatek = 0;
+    let szerMax = 0;
+    let pustka = K;
+    const a = this.alfa('bohater');
+    if (a)
+      for (let ky = 0; ky + K <= a.h; ky += K)
+        for (let kx = 0; kx + K <= a.w; kx += K) {
+          let gora = K;
+          let dol = -1;
+          let lewo = K;
+          let prawo = -1;
+          for (let y = 0; y < K; y++)
+            for (let x = 0; x < K; x++)
+              if (a.dane[(ky + y) * a.w + kx + x] > 40) {
+                if (y < gora) gora = y;
+                if (y > dol) dol = y;
+                if (x < lewo) lewo = x;
+                if (x > prawo) prawo = x;
+              }
+          if (dol < 0) continue;
+          wysSuma += dol - gora + 1;
+          klatek++;
+          szerMax = Math.max(szerMax, prawo - lewo + 1);
+          pustka = Math.min(pustka, K - 1 - dol);
+        }
+    // Bez alfy (np. zepsuty plik) — proporcje dzisiejszego arkusza.
+    const wys = klatek ? wysSuma / klatek : K * 0.84;
+    const szer = klatek ? szerMax : K * 0.35;
+    if (!klatek) pustka = 0;
+    const skala = (WYS_BOHATERA * KAFEL) / wys;
+    const stopy = KAFEL * 0.4;
+    this.sylwetka = {
+      skala,
+      kotwica: stopy + pustka * skala,
+      stopy,
+      glowa: stopy - WYS_BOHATERA * KAFEL,
+      polSzer: (szer * skala) / 2,
+    };
+    return this.sylwetka;
+  }
+
+  /**
+   * Mgła wojny. Płótno ma `MGLA_GESTOSC` tekseli na bok pola i jest
+   * rozciągnięte na całą planszę; brzeg (rozmyte pokrycie + szum, półcień po
+   * stronie odkrytej) liczy `MalarzMgly`. Tekstura przeżywa restart sceny,
+   * więc przy planszy innej wielkości trzeba ją założyć od nowa, a malarz
+   * zaczyna zawsze od czystej kartki.
    */
   private rysujMgle() {
-    if (!this.textures.exists('mgla')) {
-      this.textures.createCanvas('mgla', this.stan.szer * MGLA_GESTOSC, this.stan.wys * MGLA_GESTOSC);
-    }
+    const w = this.stan.szer * MGLA_GESTOSC;
+    const h = this.stan.wys * MGLA_GESTOSC;
+    const stara = this.textures.exists('mgla') ? this.textures.get('mgla') : null;
+    if (stara && (stara.source[0].width !== w || stara.source[0].height !== h)) this.textures.remove('mgla');
+    if (!this.textures.exists('mgla')) this.textures.createCanvas('mgla', w, h);
+    this.malarzMgly = new MalarzMgly(this.stan.szer, this.stan.wys);
+    this.obrazMgly = new ImageData(w, h);
     this.mgla = this.add.image(0, 0, 'mgla').setOrigin(0, 0).setDepth(this.stan.wys + 50);
     this.mgla.setDisplaySize(this.mapaW, this.mapaH);
     this.swiat.add(this.mgla);
@@ -1334,16 +1873,15 @@ export class AdventureScene extends Phaser.Scene {
 
   private malujMgle() {
     const tekstura = this.textures.get('mgla') as Phaser.Textures.CanvasTexture;
-    const ctx = tekstura.getContext();
-    const g = MGLA_GESTOSC;
-    ctx.clearRect(0, 0, this.stan.szer * g, this.stan.wys * g);
-    ctx.fillStyle = `rgba(10, 14, 28, ${MGLA_ALFA})`;
-    for (let y = 0; y < this.stan.wys; y++) {
-      for (let x = 0; x < this.stan.szer; x++) {
-        if (!this.stan.odkryte[y][x]) ctx.fillRect(x * g, y * g, g, g);
+    if (this.malarzMgly && this.obrazMgly) {
+      // Malarz porównuje z poprzednim malowaniem i oddaje tylko zmieniony
+      // prostokąt — krok bohatera przerysowuje okolicę, nie całą planszę.
+      const zmiana = this.malarzMgly.maluj(this.stan.odkryte, this.obrazMgly);
+      if (zmiana) {
+        tekstura.getContext().putImageData(this.obrazMgly, 0, 0, zmiana.x, zmiana.y, zmiana.w, zmiana.h);
+        tekstura.refresh();
       }
     }
-    tekstura.refresh();
     this.aktualizujWidocznoscObiektow();
   }
 
@@ -1353,7 +1891,15 @@ export class AdventureScene extends Phaser.Scene {
     const px = this.mapaX + this.oknoW + 14;
     const py = this.mapaY - 8;
     const ph = this.oknoH + 16;
-    drawPanelBody(this, px, py, PANEL_W, ph, 8);
+    // Prawa kolumna jak w Heroes 2: wpuszczone w drewno pole w cienkiej
+    // złotej ramie, a w nim minimapa, karta bohatera i przyciski — ten sam
+    // materiał co okna warunków i ekran kampanii. Wcześniej był tu mleczny
+    // panel z bitwy i mapa wyglądała jak inna gra niż jej własne okna.
+    cienPanelu(this, px, py, PANEL_W, ph, 0.7).setDepth(Z.hud - 2);
+    const tloPanelu = this.add.graphics().setDepth(Z.hud - 1);
+    tloPanelu.fillStyle(0x1c1006, 0.55);
+    tloPanelu.fillRect(px, py, PANEL_W, ph);
+    ramaZlota(this, px, py, PANEL_W, ph, false).setDepth(Z.hud - 1);
 
     const wnetrzeX = px + 16;
     const wnetrzeW = PANEL_W - 32;
@@ -1365,10 +1911,13 @@ export class AdventureScene extends Phaser.Scene {
     const mmX = wnetrzeX + (wnetrzeW - mmBok) / 2;
     const mmY = py + 26;
     const ramka = this.add.graphics().setDepth(Z.hud);
-    ramka.fillStyle(C.panelDeep, 1);
-    ramka.fillRoundedRect(mmX - 5, mmY - 5, mmBok + 10, mmBok + 10, 5);
-    ramka.lineStyle(2, C.gold, 0.95);
-    ramka.strokeRoundedRect(mmX - 5, mmY - 5, mmBok + 10, mmBok + 10, 5);
+    ramka.fillStyle(0x0d0904, 1);
+    ramka.fillRect(mmX, mmY, mmBok, mmBok);
+    // Pod minimapą leży SAMA plansza, pomniejszona — ten sam malowany teren
+    // co w oknie mapy, a nie kratka płaskich barw, która gryzła się z resztą.
+    if (this.zbudujMiniature(mmBok))
+      this.add.image(mmX, mmY, MINIATURA).setOrigin(0, 0).setDisplaySize(mmBok, mmBok).setDepth(Z.hud + 0.5);
+    ramaZlota(this, mmX, mmY, mmBok, mmBok, false).setDepth(Z.hud + 3);
     for (const [lit, dx, dy] of [
       ['N', mmBok / 2, -14],
       ['S', mmBok / 2, mmBok + 14],
@@ -1376,7 +1925,13 @@ export class AdventureScene extends Phaser.Scene {
       ['E', mmBok + 15, mmBok / 2],
     ] as Array<[string, number, number]>) {
       this.add
-        .text(mmX + dx, mmY + dy, lit, { ...body(11, H.goldLight), fontStyle: 'bold' })
+        .text(mmX + dx, mmY + dy, lit, {
+          fontFamily: KROJ.tytul,
+          fontSize: '12px',
+          color: BARWA.krem,
+          stroke: BARWA.braz,
+          strokeThickness: 3,
+        })
         .setOrigin(0.5)
         .setDepth(Z.hud);
     }
@@ -1399,55 +1954,48 @@ export class AdventureScene extends Phaser.Scene {
 
     const kartaY = this.rysujPasekWlasnosci(wnetrzeX, mmY + mmBok + 22, wnetrzeW) + 10;
     const kartaH = 134;
-    const karta = this.add.graphics().setDepth(Z.hud);
-    plate(karta, wnetrzeX, kartaY, wnetrzeW, kartaH, 9, C.panel, C.panelDeep, {
-      light: 0.2,
-      dark: 0.2,
-      gloss: 0.16,
-      edgeW: 2,
-    });
+    panelPergaminu(this, wnetrzeX, kartaY, wnetrzeW, kartaH).forEach((c) => c.setDepth(Z.hud));
 
     const b = this.stan.bohater;
     const portretBok = 50;
-    const ram = this.add.graphics().setDepth(Z.hud + 1);
-    ram.fillStyle(mix(C.panel, C.panelDeep, 0.35), 1);
-    ram.fillRoundedRect(wnetrzeX + 8, kartaY + 8, portretBok, portretBok, 6);
-    ram.lineStyle(2, C.goldDeep, 1);
-    ram.strokeRoundedRect(wnetrzeX + 8, kartaY + 8, portretBok, portretBok, 6);
+    medalion(this, wnetrzeX + 8 + portretBok / 2, kartaY + 8 + portretBok / 2, portretBok / 2, BARWA.papierCiemny).setDepth(
+      Z.hud + 1
+    );
     const portret = this.add
       .image(wnetrzeX + 8 + portretBok / 2, kartaY + 6 + portretBok / 2, 'bohater', 0)
       .setDepth(Z.hud + 2);
-    portret.setScale((portretBok - 4) / portret.height);
+    portret.setScale((portretBok - 8) / portret.height);
 
     this.add
-      .text(wnetrzeX + portretBok + 18, kartaY + 8, b.imie, display(15))
+      .text(wnetrzeX + portretBok + 18, kartaY + 7, b.imie, stylEtykiety(17, BARWA.atrament))
       .setOrigin(0, 0)
       .setDepth(Z.hud + 2);
     this.poziomTekst = this.add
-      .text(wnetrzeX + portretBok + 18, kartaY + 25, '', body(11, H.inkSoft))
+      .text(wnetrzeX + portretBok + 18, kartaY + 28, '', stylAtramentu(12, 'miekki'))
       .setOrigin(0, 0)
-      .setDepth(Z.hud + 2);
+      .setDepth(Z.hud + 2)
+      .setData('maks', wnetrzeW - portretBok - 24);
 
     // Pasek do awansu. Sama liczba „190/384" mówi, ILE brakuje, ale nie mówi,
     // czy to blisko — a to jest jedyne pytanie, które gracz sobie przy niej
     // zadaje. Pasek odpowiada na nie bez czytania.
     const pdX = wnetrzeX + portretBok + 18;
     const pdW = wnetrzeW - portretBok - 26;
-    const pdY = kartaY + 40;
+    const pdY = kartaY + 46;
     const rowek = this.add.graphics().setDepth(Z.hud + 1);
-    rowek.fillStyle(C.hpTrack, 1);
+    rowek.fillStyle(0x3a2410, 1);
     rowek.fillRoundedRect(pdX, pdY, pdW, 8, 4);
-    rowek.lineStyle(1.5, C.shadow, 0.5);
+    rowek.lineStyle(1.5, BARWA.kreska, 0.8);
     rowek.strokeRoundedRect(pdX, pdY, pdW, 8, 4);
     this.doswPasek = this.add.graphics().setDepth(Z.hud + 2);
     this.doswPasek.setData('x', pdX).setData('y', pdY).setData('w', pdW);
 
-    const statY = kartaY + 60;
+    const statY = kartaY + 70;
     [ICON.sword, ICON.shield, ICON.boot].forEach((klucz, i) => {
-      const sx = wnetrzeX + portretBok + 24 + i * 46;
-      this.add.image(sx, statY, klucz).setDisplaySize(17, 17).setDepth(Z.hud + 2);
+      const sx = wnetrzeX + 20 + i * 64;
+      this.add.image(sx, statY, klucz).setDisplaySize(18, 18).setDepth(Z.hud + 2);
       this.statTeksty[i] = this.add
-        .text(sx + 12, statY, '', display(14, i === 2 ? H.gold : H.white))
+        .text(sx + 13, statY, '', stylEtykiety(16, i === 2 ? BARWA.atramentZielony : BARWA.atrament))
         .setOrigin(0, 0.5)
         .setDepth(Z.hud + 2);
     });
@@ -1471,13 +2019,22 @@ export class AdventureScene extends Phaser.Scene {
     const rzadY = kartaY + 86;
     for (let i = 0; i < SLOTY_ARMII; i++) {
       const sx = rzadX + i * (slotBok + odstep);
+      // Gniazdo: ciemniejszy papier z kreską atramentu, jak kratka w księdze.
       const g = this.add.graphics();
-      g.fillStyle(mix(C.panel, C.panelDeep, 0.3), 1);
+      g.fillStyle(0x8a5a2a, 0.16);
       g.fillRoundedRect(0, 0, slotBok, slotBok + 12, 4);
-      g.lineStyle(1.5, C.panelDeep, 0.7);
+      g.lineStyle(1.2, BARWA.kreska, 0.6);
       g.strokeRoundedRect(0, 0, slotBok, slotBok + 12, 4);
       const im = this.add.image(slotBok / 2, slotBok / 2 - 1, 'bohater').setVisible(false);
-      const licznik = this.add.text(slotBok / 2, slotBok + 4, '', display(10)).setOrigin(0.5);
+      const licznik = this.add
+        .text(slotBok / 2, slotBok + 4, '', {
+          fontFamily: KROJ.tytul,
+          fontSize: '11px',
+          color: BARWA.krem,
+          stroke: BARWA.braz,
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5);
       const slot = this.add.container(sx, rzadY, [g, im, licznik]).setDepth(Z.hud + 1);
       slot.setData('licznik', licznik).setData('rysunek', im);
       this.slotyArmii.push(slot);
@@ -1492,59 +2049,42 @@ export class AdventureScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.otworzBohatera());
 
-    // Rząd zapisu stoi NAD „Zakończ turę" i zabiera panelowi podpowiedzi
-    // 37 px wysokości — tyle, ile zajmują przyciski (28) plus odstępy z obu
-    // stron (8 i 1) od sąsiadów. Zmiana tej liczby bez przeliczenia niżej
-    // rozjeżdża odstępy, tak jak już raz się zdarzyło z tekstem podpowiedzi.
-    const podY = kartaY + kartaH + 10;
-    const podH = py + ph - 56 - 27 - podY;
-    const ramkaPod = this.add.graphics().setDepth(Z.hud);
-    plate(ramkaPod, wnetrzeX, podY, wnetrzeW, podH, 9, mix(C.panel, C.panelDeep, 0.16), C.panelDeep, {
-      light: 0.14,
-      dark: 0.16,
-      gloss: 0.1,
-      edgeW: 2,
-    });
+    // Pole podpowiedzi kończy się nad rzędem zapisu; rząd zapisu (30 px)
+    // i „Zakończ turę" (40 px) stoją od dołu panelu. Liczby idą z jednego
+    // miejsca — przestawienie któregokolwiek bez reszty rozjeżdża odstępy.
+    const turaY = py + ph - 28;
+    const wierszAkcjiY = turaY - 40;
+    const podY = kartaY + kartaH + 12;
+    const podH = wierszAkcjiY - 21 - podY;
+    panelPergaminu(this, wnetrzeX, podY, wnetrzeW, podH).forEach((c) => c.setDepth(Z.hud));
     this.podpowiedz = this.add
-      .text(wnetrzeX + 10, podY + 6, DOMYSLNA_PODPOWIEDZ, { ...body(10, H.ink), lineSpacing: 1 })
+      .text(wnetrzeX + 9, podY + 6, DOMYSLNA_PODPOWIEDZ, { ...stylAtramentu(12), lineSpacing: 0 })
       .setOrigin(0, 0)
       .setDepth(Z.hud + 2)
-      .setWordWrapWidth(wnetrzeW - 20);
+      .setWordWrapWidth(wnetrzeW - 18);
+    // Lora jest szersza od dawnego kroju, a opisy obiektów bywają długie.
+    // Każdy nowy tekst podpowiedzi najpierw próbuje 12 px; dopiero gdy nie
+    // mieści się w polu, schodzi o piksel — zamiast wychodzić na przyciski.
+    const pp = this.podpowiedz;
+    const zwykly = pp.setText.bind(pp);
+    pp.setText = ((t: string | string[]) => {
+      pp.setFontSize(12);
+      zwykly(t);
+      for (const r of [11, 10]) {
+        if (pp.height <= podH - 8) break;
+        pp.setFontSize(r);
+      }
+      return pp;
+    }) as typeof pp.setText;
 
-    const wierszAkcjiY = py + ph - 65;
-    const polowaW = (wnetrzeW - 6) / 2;
-    const zapiszBtn = makeHudButton(this, {
-      x: wnetrzeX + polowaW / 2,
-      y: wierszAkcjiY,
-      w: polowaW,
-      h: 24,
-      tone: mix(C.panel, C.panelDeep, 0.1),
-      toneDeep: C.panelDeep,
-      onClick: () => this.zapiszStanGry(),
-    });
-    zapiszBtn.setLabel('Zapisz');
-    const wczytajBtn = makeHudButton(this, {
-      x: wnetrzeX + polowaW + 6 + polowaW / 2,
-      y: wierszAkcjiY,
-      w: polowaW,
-      h: 24,
-      tone: mix(C.panel, C.panelDeep, 0.1),
-      toneDeep: C.panelDeep,
-      onClick: () => this.wczytajStanGry(),
-    });
-    wczytajBtn.setLabel('Wczytaj');
-
-    const przycisk = makeHudButton(this, {
-      x: px + PANEL_W / 2,
-      y: py + ph - 30,
-      w: wnetrzeW,
-      h: 38,
-      icon: ICON.hourglass,
-      tone: C.gold,
-      toneDeep: C.goldDeep,
-      onClick: () => this.koniecTury(),
-    });
-    przycisk.setLabel('Zakończ turę');
+    const polowaW = (wnetrzeW - 8) / 2;
+    const guzik = (x: number, y: number, w: number, h: number, tekst: string, akcja: () => void, glowny = false) =>
+      new Przycisk(this, { x, y, w, h, tekst, glowny, rozmiar: glowny ? 17 : 13, glebia: Z.hud + 2, akcja });
+    guzik(wnetrzeX + polowaW / 2, wierszAkcjiY, polowaW, 30, 'Zapisz', () => this.zapiszStanGry());
+    guzik(wnetrzeX + polowaW + 8 + polowaW / 2, wierszAkcjiY, polowaW, 30, 'Wczytaj', () => this.wczytajStanGry());
+    // „Zakończ turę" jest JEDYNĄ złotą tabliczką na mapie — to jedyny krok,
+    // który zawsze da się zrobić, kiedy dziecko nie wie, co dalej.
+    guzik(px + PANEL_W / 2, turaY, wnetrzeW, 40, 'Zakończ turę', () => this.koniecTury(), true);
   }
 
   /** Zapis gry w przeglądarce — jeden slot, żeby dało się wrócić do planszy później. */
@@ -1615,10 +2155,9 @@ export class AdventureScene extends Phaser.Scene {
     for (const [i, w] of wpisy.entries()) {
       const sx = rzadX + i * (bok + odstep);
       const g = this.add.graphics().setDepth(Z.hud);
-      g.fillStyle(mix(C.panel, C.panelDeep, 0.3), 1);
-      g.fillRoundedRect(sx, y, bok, bok, 5);
-      g.lineStyle(2, C.goldDeep, 1);
-      g.strokeRoundedRect(sx, y, bok, bok, 5);
+      g.fillStyle(BARWA.papierCiemny, 1);
+      g.fillRect(sx, y, bok, bok);
+      ramaZlota(this, sx, y, bok, bok, false).setDepth(Z.hud + 2);
       const im = this.add.image(sx + bok / 2, y + bok / 2, w.klucz).setDepth(Z.hud + 1);
       im.setScale(Math.min((bok - 8) / im.width, (bok - 6) / im.height));
       this.add
@@ -1635,11 +2174,9 @@ export class AdventureScene extends Phaser.Scene {
     const y = this.mapaY + this.oknoH + 14;
     const x0 = this.mapaX - 8;
     const szer = this.oknoW + 16;
-    const g = this.add.graphics().setDepth(Z.hud);
-    g.fillStyle(C.panelDeep, 1);
-    g.fillRoundedRect(x0, y, szer, PASEK_H, 7);
-    g.lineStyle(2, C.goldDeep, 1);
-    g.strokeRoundedRect(x0, y, szer, PASEK_H, 7);
+    // Pergamin w cienkiej złotej ramie — surowce czyta się jak rachunek
+    // w księdze skarbnika, ciemnym atramentem na jasnym papierze.
+    panelPergaminu(this, x0, y, szer, PASEK_H).forEach((c) => c.setDepth(Z.hud));
 
     const krok = (szer - 24) / SUROWCE.length;
     SUROWCE.forEach((s, i) => {
@@ -1648,17 +2185,16 @@ export class AdventureScene extends Phaser.Scene {
       const im = this.add.image(sx, sy, `m-${SUROWIEC_INFO[s].ikona}`).setDepth(Z.hud + 1);
       im.setScale(Math.min(1, (PASEK_H - 10) / im.height));
       this.podpisy[s] = this.add
-        .text(sx + 17, sy, '0', display(15))
+        .text(sx + 17, sy, '0', stylEtykiety(17, BARWA.atrament))
         .setOrigin(0, 0.5)
         .setDepth(Z.hud + 1);
       this.dochody[s] = this.add
-        .text(sx + 17, sy, '', body(10, H.goldLight))
+        .text(sx + 17, sy + 1, '', { ...stylAtramentu(12, 'zielony'), fontStyle: 'bold' })
         .setOrigin(0, 0.5)
         .setDepth(Z.hud + 1);
     });
 
-    this.dataTekst = this.add
-      .text(this.mapaX + this.oknoW + 14 + PANEL_W / 2, y + PASEK_H / 2, '', display(13, H.goldLight))
+    this.dataTekst = napisNaDrewnie(this, this.mapaX + this.oknoW + 14 + PANEL_W / 2, y + PASEK_H / 2, '', 15)
       .setOrigin(0.5)
       .setDepth(Z.hud + 1);
   }
@@ -1678,6 +2214,11 @@ export class AdventureScene extends Phaser.Scene {
    */
   private sprawdzAwans() {
     if (this.zajety) return;
+    // Na starcie misji pierwsze są warunki. Bohater przenoszony z poprzedniej
+    // misji potrafi mieć nieodebrany awans (ostatnia bitwa dała poziom, a gra
+    // skończyła się, zanim okno zdążyło wyskoczyć) — i to okno zajmowało
+    // miejsce warunków, które przepadały. Awans poczeka na „Do dzieła!".
+    if (this.stan.misja && !this.stan.warunkiPokazane) return;
     const b = this.stan.bohater;
     const teraz = poziom(b.doswiadczenie);
     const odebrany = b.poziomOdebrany ?? 1;
@@ -1695,10 +2236,16 @@ export class AdventureScene extends Phaser.Scene {
     // blisko jest, ani co da. Licznik do awansu robi z doświadczenia widoczny
     // pasek postępu, a co awans daje — mówi komunikat w chwili awansu.
     const p = postepPoziomu(b.doswiadczenie);
-    this.poziomTekst.setText(
-      `poziom ${p.poziom}  ·  ${p.wPoziomie}/${p.doAwansu} do awansu` +
-        (b.artefakty.length ? `  ·  art. ${b.artefakty.length}` : '')
-    );
+    // Licznik artefaktów wypadł z tej linijki: przy dwucyfrowym doświadczeniu
+    // wychodził za kartę („…do awansu · ar"). Artefakty widać na ekranie
+    // bohatera; tu zostaje to, czego pasek pod spodem nie mówi sam — liczby.
+    // Gdyby i to się nie zmieściło (duże liczby na wysokich poziomach),
+    // napis traci „do awansu", a nie ucina się w pół słowa.
+    const maks = this.poziomTekst.getData('maks') as number | undefined;
+    this.poziomTekst.setText(`poziom ${p.poziom} · ${p.wPoziomie}/${p.doAwansu} do awansu`);
+    if (maks && this.poziomTekst.width > maks) {
+      this.poziomTekst.setText(`poziom ${p.poziom} · ${p.wPoziomie}/${p.doAwansu}`);
+    }
     const pdX = this.doswPasek.getData('x') as number;
     const pdY = this.doswPasek.getData('y') as number;
     const pdW = this.doswPasek.getData('w') as number;
@@ -1740,7 +2287,47 @@ export class AdventureScene extends Phaser.Scene {
     // Nieodebrany awans na samym końcu odświeżania — po tym, jak panel
     // pokazał już nowe liczby. Okno ma być ostatnią rzeczą, którą gracz
     // zobaczy, a nie pierwszą.
+    //
+    // Przed nim — rozstrzygnięcie gry. Tędy przechodzi KAŻDE zdarzenie, które
+    // może je zmienić (krok, obiekt, okno, bitwa, koniec tury z ruchem
+    // przeciwnika), więc to jedno wywołanie zastępuje pilnowanie końca gry
+    // w dziesięciu miejscach naraz.
+    if (this.sprawdzRozstrzygniecie()) return;
     this.sprawdzAwans();
+  }
+
+  /**
+   * Tło planszy (`plansza-0`) pomniejszone do boku minimapy, jako osobna
+   * tekstura. Obrazek 3456 px ściśnięty wprost przez kamerę do 176 px mieni
+   * się i gubi szczegóły, więc zmniejszamy go na płótnie po połowie — każdy
+   * krok uśrednia sąsiednie piksele, a nie wybiera co dwudziesty.
+   * Budowana przy każdym wejściu na mapę, bo tło zmienia się z planszą.
+   */
+  private zbudujMiniature(bok: number): boolean {
+    if (this.textures.exists(MINIATURA)) this.textures.remove(MINIATURA);
+    if (!this.textures.exists('plansza-0')) return false;
+    let zrodlo = this.textures.get('plansza-0').getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    let w = zrodlo.width;
+    let h = zrodlo.height;
+    while (w > bok * 2 || h > bok * 2) {
+      w = Math.max(bok, Math.round(w / 2));
+      h = Math.max(bok, Math.round(h / 2));
+      const krok = document.createElement('canvas');
+      krok.width = w;
+      krok.height = h;
+      const ctx = krok.getContext('2d');
+      if (!ctx) return false;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(zrodlo, 0, 0, w, h);
+      zrodlo = krok;
+    }
+    const t = this.textures.createCanvas(MINIATURA, bok, bok);
+    if (!t) return false;
+    const ctx = t.getContext();
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(zrodlo, 0, 0, bok, bok);
+    t.refresh();
+    return true;
   }
 
   private rysujMinimape() {
@@ -1751,40 +2338,76 @@ export class AdventureScene extends Phaser.Scene {
     const kw = bok / this.stan.szer;
     const kh = bok / this.stan.wys;
     g.clear();
-    const barwy: Record<string, number> = {
-      trawa: 0xa8c93a,
-      sciezka: 0xd0a468,
-      piasek: 0xf6d98a,
-      las: 0x3f7a3a,
-      skaly: 0x8a8a92,
-      woda: 0x2f9fe0,
-    };
+    // Teren to pomniejszona plansza pod spodem (`zbudujMiniature`); tu tylko
+    // mgła i znaczki. Minimapa pokazuje wyłącznie to, co odsłonięte — inaczej
+    // zdradza całą planszę i mgła wojny przestaje cokolwiek znaczyć.
+    //
+    // Mgła to ciemny brąz drewna ramy, nie granat: granatowa minimapa była
+    // jedyną zimną plamą w całym panelu. Pasami — jeden prostokąt na ciąg
+    // nieodkrytych pól w rzędzie — i z krawędziami liczonymi tym samym
+    // wzorem dla sąsiadów, bo przy półprzezroczystości każda zakładka
+    // dwóch prostokątów zostawiłaby ciemniejszą kreskę.
+    g.fillStyle(0x140b04, 1); // kryjąca: przez mgłę nie może prześwitywać układ nieodkrytej planszy
+    const kx = (x: number) => mx + x * kw;
+    const ky = (y: number) => my + y * kh;
     for (let y = 0; y < this.stan.wys; y++) {
-      for (let x = 0; x < this.stan.szer; x++) {
-        // Minimapa pokazuje tylko to, co odsłonięte — inaczej zdradza całą
-        // planszę i mgła wojny przestaje cokolwiek znaczyć.
-        g.fillStyle(
-          this.stan.odkryte[y][x] ? barwy[this.stan.teren[y][x]] ?? 0x888888 : 0x141a2c,
-          1
-        );
-        g.fillRect(mx + x * kw, my + y * kh, Math.ceil(kw), Math.ceil(kh));
+      let x = 0;
+      while (x < this.stan.szer) {
+        if (this.stan.odkryte[y][x]) {
+          x++;
+          continue;
+        }
+        const od = x;
+        while (x < this.stan.szer && !this.stan.odkryte[y][x]) x++;
+        g.fillRect(kx(od), ky(y), kx(x) - kx(od), ky(y + 1) - ky(y));
       }
     }
+
+    // Znaczki jak w Heroes 3: zajęte budowle w barwie właściciela na całej
+    // swojej bryle; stworki tylko drobną kropką.
+    // Surowców i skrzyń nie ma — to one robiły z minimapy konfetti.
+    const znak = (x0: number, y0: number, x1: number, y1: number, barwa: number) => {
+      const w = Math.max(4, kx(x1 + 1) - kx(x0));
+      const h = Math.max(4, ky(y1 + 1) - ky(y0));
+      const sx = (kx(x0) + kx(x1 + 1)) / 2 - w / 2;
+      const sy = (ky(y0) + ky(y1 + 1)) / 2 - h / 2;
+      g.fillStyle(0x1c1006, 0.9);
+      g.fillRect(sx - 1, sy - 1, w + 2, h + 2);
+      g.fillStyle(barwa, 1);
+      g.fillRect(sx, sy, w, h);
+    };
     for (const o of this.stan.obiekty) {
       if (o.zebrany || !this.stan.odkryte[o.y][o.x]) continue;
-      const barwa =
-        o.rodzaj === 'potwor'
-          ? C.foe
-          : o.rodzaj === 'zamek'
-            ? o.wlasciciel === 'gracz'
-              ? C.ally
-              : C.foe
-            : C.gold;
-      g.fillStyle(barwa, 1);
-      g.fillRect(mx + o.x * kw - 1, my + o.y * kh - 1, Math.ceil(kw) + 2, Math.ceil(kh) + 2);
+      if (o.rodzaj === 'potwor') {
+        g.fillStyle(0x1c1006, 0.8);
+        g.fillCircle(kx(o.x + 0.5), ky(o.y + 0.5), 2.2);
+        g.fillStyle(C.foe, 1);
+        g.fillCircle(kx(o.x + 0.5), ky(o.y + 0.5), 1.4);
+        continue;
+      }
+      const doZajecia =
+        o.rodzaj === 'zamek' || o.rodzaj === 'kopalnia' || budowlaPoId(o.budynek)?.efekt.typ === 'gniazdo';
+      // Niczyja kopalnia czy gniazdo nie ma znaczka — jak w Heroes 3, gdzie
+      // minimapa barwi tylko to, co ma flagę. Zamek bez właściciela broni
+      // garnizon, więc dostaje barwę przeciwnika, tak jak jego chorągiew.
+      if (!doZajecia || (!o.wlasciciel && o.rodzaj !== 'zamek')) continue;
+      const barwa = o.wlasciciel === 'gracz' ? C.ally : C.foe;
+      let [x0, y0, x1, y1] = [o.x, o.y, o.x, o.y];
+      for (const q of polaBryly(this.stan, o)) {
+        x0 = Math.min(x0, q.x);
+        y0 = Math.min(y0, q.y);
+        x1 = Math.max(x1, q.x);
+        y1 = Math.max(y1, q.y);
+      }
+      znak(x0, y0, x1, y1, barwa);
     }
+    // Bohater: kropka w barwie gracza w jasnej obwódce — największy znak na
+    // minimapie, bo to jego gracz szuka wzrokiem najczęściej.
+    const b = this.stan.bohater;
     g.fillStyle(C.white, 1);
-    g.fillRect(mx + this.stan.bohater.x * kw - 1, my + this.stan.bohater.y * kh - 1, kw + 3, kh + 3);
+    g.fillCircle(kx(b.x + 0.5), ky(b.y + 0.5), 4);
+    g.fillStyle(C.ally, 1);
+    g.fillCircle(kx(b.x + 0.5), ky(b.y + 0.5), 2.8);
     this.rysujRamkeWidoku();
   }
 
@@ -1795,20 +2418,43 @@ export class AdventureScene extends Phaser.Scene {
     const mx = this.minimapa.getData('x') as number;
     const my = this.minimapa.getData('y') as number;
     const bok = this.minimapa.getData('bok') as number;
-    const skala = bok / this.mapaW;
+    // Osobno w poziomie i w pionie, tak jak kafelki minimapy (`kw`, `kh`).
+    // Ramka obejmuje WIDOK w pikselach świata (21 × 18 pól), a nie ramę
+    // na ekranie — ta jest mniejsza o zoom kamery.
+    const skalaX = bok / this.mapaW;
+    const skalaY = bok / this.mapaH;
     g.clear();
     g.lineStyle(1.5, C.white, 0.9);
     g.strokeRect(
-      mx - this.przewX * skala,
-      my - this.przewY * skala,
-      this.oknoW * skala,
-      this.oknoH * skala
+      mx - this.przewX * skalaX,
+      my - this.przewY * skalaY,
+      Math.min(this.widokW, this.mapaW) * skalaX,
+      Math.min(this.widokH, this.mapaH) * skalaY
     );
   }
 
   // ---------- interakcja ----------
 
+  /**
+   * Budowla, której wejście ma się podświetlić: ta pod kursorem — jej rysunek,
+   * pole bryły albo samo pole wejścia. Tylko na odkrytym terenie planszy.
+   */
+  private wejscieDoPodswietlenia(p: Phaser.Input.Pointer): Obiekt | undefined {
+    if (this.zajety || !this.wRamie(p.x, p.y)) return undefined;
+    const { x, y } = this.zEkranu(p.x, p.y);
+    if (!this.wGranicach(x, y) || !this.stan.odkryte[y][x]) return undefined;
+    return this.obiektPodKursorem(p) ?? obiektNa(this.stan, x, y) ?? brylaNa(this.stan, x, y);
+  }
+
+  /** Złota elipsa wejścia widoczna tylko pod jedną budowlą naraz (albo żadną). */
+  private podswietlWejscie(o: Obiekt | undefined) {
+    const znak = o ? (this.ikonyObiektow[o.id]?.getData('znakWejscia') as Phaser.GameObjects.Graphics | undefined) : undefined;
+    if (this.znakWejscia && this.znakWejscia !== znak && this.znakWejscia.active) this.znakWejscia.setVisible(false);
+    this.znakWejscia = znak?.active ? znak.setVisible(true) : undefined;
+  }
+
   private ruchMyszy(p: Phaser.Input.Pointer) {
+    this.podswietlWejscie(this.wejscieDoPodswietlenia(p));
     if (this.zajety) {
       this.kursorZnak.setVisible(false);
       return;
@@ -1983,7 +2629,9 @@ export class AdventureScene extends Phaser.Scene {
    * więc to on ma pierwszeństwo, tak jak przy rysowaniu.
    */
   private obiektPodKursorem(p: Phaser.Input.Pointer) {
-    const swiatowy = this.kamera.getWorldPoint(p.x, p.y);
+    // Ten sam przelicznik co dla pola pod kursorem — z zoomem i przewinięciem
+    // z bieżącej chwili — żeby rysunek i pole nigdy nie liczyły się inaczej.
+    const swiatowy = this.swiatZEkranu(p.x, p.y);
     let najlepszy: Obiekt | undefined;
     for (const { o, im } of this.trafienia) {
       if (o.zebrany || !im.active) continue;
@@ -2221,85 +2869,87 @@ export class AdventureScene extends Phaser.Scene {
    */
   private zapytajOSkrzynie(w: WyborSkrzyni) {
     this.zajety = true;
-    const szer = 360;
+    const szer = 380;
     const wys = 176;
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
     // Okno nie należy ani do planszy (jechałoby razem z mapą), ani do HUD-u
     // (plansza rysuje się po nim i by je zakryła) — idzie do kamery okien.
-    const doOkna: Phaser.GameObjects.GameObject[] = [];
-
-    const zaslona = this.add
-      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.45)
-      .setOrigin(0, 0)
-      .setDepth(Z.overlay);
-    const tlo = this.add.graphics().setDepth(Z.overlay + 1);
-    plate(tlo, cx - szer / 2, cy - wys / 2, szer, wys, 12, C.panel, C.gold, {
-      light: 0.24,
-      dark: 0.22,
-      gloss: 0.2,
-      edgeW: 3,
-    });
-    const napisy = [
-      this.add
-        .text(cx, cy - wys / 2 + 24, 'Skrzynia!', display(20, H.gold))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2),
-      this.add
-        .text(cx, cy - wys / 2 + 54, 'Co wolisz?', body(13, H.ink))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2),
-    ];
-
-    doOkna.push(zaslona, tlo, ...napisy);
-    this.naWierzchu(...doOkna);
+    // Wszystko, co przybyło na liście sceny od tej chwili, jest oknem.
+    const nowe = this.znacznik();
+    this.oknoPergaminu(cx, cy, szer, wys);
+    this.add
+      .text(cx, cy - wys / 2 + 30, 'Skrzynia!', stylEtykiety(26))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    this.add
+      .text(cx, cy - wys / 2 + 62, 'Co wolisz?', stylAtramentu(17))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
 
     const zamknij = (co: 'pokeballe' | 'doswiadczenie') => {
       const opis = wezZeSkrzyni(this.stan, w, co);
-      [zaslona, tlo, ...napisy].forEach((x) => x.destroy());
-      przyciski.forEach((p) => p.destroy());
+      this.zamknijOkno(nowe());
       sfx(this, 'zbior');
       this.znikaj(w.obiekt);
       this.napisUlotny(opis);
       this.zajety = false;
       this.odswiezWszystko();
     };
+    // Dwie równorzędne odpowiedzi — obie drewniane; złota tabliczka
+    // podpowiadałaby, że jedna jest „tą właściwą".
+    this.guzikOkna(cx - 86, cy + 36, 160, `${w.pokeballe} pokeballi`, () => zamknij('pokeballe'));
+    this.guzikOkna(cx + 86, cy + 36, 160, `${w.doswiadczenie} dośw.`, () => zamknij('doswiadczenie'));
+    this.naWierzchu(...nowe());
+  }
 
-    // Przyciski powstają jako osobne obiekty sceny, więc trzeba je oddać
-    // kamerze okien tak samo jak tło. Notujemy, co przybyło na liście sceny,
-    // i przekazujemy dokładnie to.
-    const przedPrzyciskami = this.children.list.length;
-    const przyciski = [
-      makeHudButton(this, {
-        x: cx - 86,
-        y: cy + 36,
-        w: 156,
-        h: 42,
-        icon: ICON.star,
-        tone: C.gold,
-        toneDeep: C.goldDeep,
-        // Przyciski HUD siedzą domyślnie na głębokości 62, czyli POD zasłoną
-        // okna (100). Dlatego okno skrzyni wyglądało na puste: tło i napisy
-        // były, a jedyne, co miało w nim znaczenie — przyciski — chowało się
-        // pod przyciemnieniem.
-        depth: Z.overlay + 3,
-        onClick: () => zamknij('pokeballe'),
-      }),
-      makeHudButton(this, {
-        x: cx + 86,
-        y: cy + 36,
-        w: 156,
-        h: 42,
-        icon: ICON.banner,
-        tone: C.ally,
-        toneDeep: C.panelDeep,
-        depth: Z.overlay + 3,
-        onClick: () => zamknij('doswiadczenie'),
-      }),
-    ];
-    this.naWierzchu(...this.children.list.slice(przedPrzyciskami));
-    przyciski[0].setLabel(`${w.pokeballe} pokeballi`);
-    przyciski[1].setLabel(`${w.doswiadczenie} dośw.`);
+  /**
+   * Tło okna na mapie: przyciemnienie i pergamin w złotej ramie z zestawu.
+   * Wszystkie okna mapy (skrzynia, budowle, awans) stoją na tym samym
+   * papierze co okno warunków — jedna gra, jeden materiał.
+   */
+  private oknoPergaminu(cx: number, cy: number, szer: number, wys: number, zaciemnienie = 0.5) {
+    this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, zaciemnienie)
+      .setOrigin(0, 0)
+      .setDepth(Z.overlay)
+      .setInteractive();
+    panelPergaminu(this, cx - szer / 2, cy - wys / 2, szer, wys).forEach((c) => c.setDepth(Z.overlay + 1));
+  }
+
+  /** Drewniana (albo złota) tabliczka okna — nad zasłoną, dla kamery okien. */
+  private guzikOkna(x: number, y: number, w: number, tekst: string, akcja: () => void, glowny = false, h = 44) {
+    return new Przycisk(this, { x, y, w, h, tekst, glowny, rozmiar: 15, glebia: Z.overlay + 3, akcja });
+  }
+
+  /**
+   * Znacznik okna: zapamiętuje, co JUŻ jest na liście sceny, i zwraca
+   * funkcję oddającą wszystko, co przybyło później.
+   *
+   * Wcześniej okna liczyły to indeksem (`children.list.slice(n)`), ale lista
+   * sceny jest sortowana po głębokości — znak kursora (głębokość 205) potrafił
+   * wskoczyć za indeks okna i zniknąć razem z nim, a kawałek okna zostawał
+   * na ekranie. Porównanie z zapamiętanym zbiorem nie zależy od kolejności.
+   */
+  private znacznik(): () => Phaser.GameObjects.GameObject[] {
+    const byly = new Set(this.children.list);
+    return () => this.children.list.filter((o) => !byly.has(o));
+  }
+
+  /**
+   * Zamyka okno. Tweeny gasimy także na dzieciach kontenerów: tabliczka
+   * z zestawu przy kliknięciu podskakuje napisem, a okno zamyka się w tym
+   * samym kliknięciu — tween sięgał potem do zniszczonego napisu.
+   */
+  private zamknijOkno(obiekty: Phaser.GameObjects.GameObject[]) {
+    const zgas = (o: Phaser.GameObjects.GameObject) => {
+      this.tweens.killTweensOf(o);
+      if (o instanceof Phaser.GameObjects.Container) o.list.forEach(zgas);
+    };
+    for (const o of obiekty) {
+      zgas(o);
+      o.destroy();
+    }
   }
 
   /**
@@ -2326,38 +2976,24 @@ export class AdventureScene extends Phaser.Scene {
    */
   private zapytajOBudowle(p: Pytanie) {
     this.zajety = true;
-    const szer = 380;
+    const szer = 400;
     const wys = 176;
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
-
-    const zaslona = this.add
-      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.45)
-      .setOrigin(0, 0)
-      .setDepth(Z.overlay);
-    const tlo = this.add.graphics().setDepth(Z.overlay + 1);
-    plate(tlo, cx - szer / 2, cy - wys / 2, szer, wys, 12, C.panel, C.gold, {
-      light: 0.24,
-      dark: 0.22,
-      gloss: 0.2,
-      edgeW: 3,
-    });
-    const napisy = [
-      this.add
-        .text(cx, cy - wys / 2 + 24, p.tytul, display(20, H.gold))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2),
-      this.add
-        .text(cx, cy - wys / 2 + 56, p.tresc, body(13, H.ink))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2),
-    ];
-    this.naWierzchu(zaslona, tlo, ...napisy);
+    const nowe = this.znacznik();
+    this.oknoPergaminu(cx, cy, szer, wys);
+    this.add
+      .text(cx, cy - wys / 2 + 30, p.tytul, stylEtykiety(24))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    this.add
+      .text(cx, cy - wys / 2 + 64, p.tresc, { ...stylAtramentu(15, 'zwykly', szer - 40), align: 'center' })
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
 
     const zamknij = (klucz: string) => {
       const opis = odpowiedzNaPytanie(this.stan, p, klucz);
-      [zaslona, tlo, ...napisy].forEach((x) => x.destroy());
-      przyciski.forEach((b) => b.destroy());
+      this.zamknijOkno(nowe());
       if (p.obiekt.zebrany) {
         sfx(this, 'zbior');
         this.znikaj(p.obiekt);
@@ -2367,26 +3003,19 @@ export class AdventureScene extends Phaser.Scene {
       this.odswiezWszystko();
     };
 
-    // Przyciski powstają jako osobne obiekty sceny i trzeba je oddać kamerze
-    // okien tak samo jak tło — inaczej okno wygląda na puste, bo jedyne, co
-    // się w nim klika, chowa się pod przyciemnieniem.
-    const przedPrzyciskami = this.children.list.length;
+    // Pierwsza opcja to zwykle „tak" — złota; reszta drewniana.
     const odstep = 172;
-    const przyciski = p.opcje.map((opcja, i) =>
-      makeHudButton(this, {
-        x: cx + (i - (p.opcje.length - 1) / 2) * odstep,
-        y: cy + 36,
-        w: 160,
-        h: 42,
-        icon: i === 0 ? ICON.star : ICON.banner,
-        tone: i === 0 ? C.gold : C.ally,
-        toneDeep: i === 0 ? C.goldDeep : C.panelDeep,
-        depth: Z.overlay + 3,
-        onClick: () => zamknij(opcja.klucz),
-      })
+    p.opcje.forEach((opcja, i) =>
+      this.guzikOkna(
+        cx + (i - (p.opcje.length - 1) / 2) * odstep,
+        cy + 36,
+        164,
+        opcja.etykieta,
+        () => zamknij(opcja.klucz),
+        i === 0 && p.opcje.length > 1
+      )
     );
-    this.naWierzchu(...this.children.list.slice(przedPrzyciskami));
-    przyciski.forEach((b, i) => b.setLabel(p.opcje[i].etykieta));
+    this.naWierzchu(...nowe());
   }
 
   /**
@@ -2457,54 +3086,22 @@ export class AdventureScene extends Phaser.Scene {
     const oferty = ofertaAwansu(this.stan.bohater, (n) => Phaser.Math.RND.between(0, n - 1));
 
     const szer = 560;
-    const wys = oferty.length ? 330 : 190;
+    const wys = oferty.length ? 336 : 200;
     const cx = MARGINES + this.oknoW / 2;
     const cy = GORA + this.oknoH / 2;
-    const zaslona = this.add
-      .rectangle(0, 0, this.scale.width, this.scale.height, 0x04101a, 0.72)
-      .setOrigin(0, 0)
-      .setDepth(Z.overlay)
-      .setInteractive();
-    const tlo = this.add.graphics().setDepth(Z.overlay + 1);
-    cienPod(tlo, cx - szer / 2, cy - wys / 2, szer, wys, 16, 1);
-    plate(tlo, cx - szer / 2, cy - wys / 2, szer, wys, 16, C.panel, C.goldDeep, {
-      light: 0.2,
-      dark: 0.2,
-      gloss: 0.14,
-      drop: 0,
-      edgeW: 3,
-    });
-    listwa(tlo, cx - szer / 2 + 8, cy - wys / 2 + 8, szer - 16, 38, 10, C.panelDeep, C.gold);
-    naroznik(tlo, cx - szer / 2 + 14, cy - wys / 2 + 14, 1, 1, 24);
-    naroznik(tlo, cx + szer / 2 - 14, cy - wys / 2 + 14, -1, 1, 24);
-    naroznik(tlo, cx - szer / 2 + 14, cy + wys / 2 - 14, 1, -1, 24);
-    naroznik(tlo, cx + szer / 2 - 14, cy + wys / 2 - 14, -1, -1, 24);
+    const nowe = this.znacznik();
+    this.oknoPergaminu(cx, cy, szer, wys, 0.66);
+    wstazka(this, cx, cy - wys / 2 + 26, `AWANS NA POZIOM ${poziomPo}`).setDepth(Z.overlay + 2);
+    this.add
+      .text(cx, cy - wys / 2 + 62, zyski.join('   ·   ') || 'Statystyki bez zmian', {
+        ...stylAtramentu(17, 'zielony'),
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
 
-    const czesci: Phaser.GameObjects.GameObject[] = [zaslona, tlo];
-    const dodaj = <X extends Phaser.GameObjects.GameObject>(x: X) => {
-      czesci.push(x);
-      return x;
-    };
-    dodaj(
-      this.add
-        .text(cx, cy - wys / 2 + 27, `AWANS NA POZIOM ${poziomPo}`, {
-          ...display(19, H.goldLight),
-          letterSpacing: 1.5,
-        })
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2)
-    );
-    dodaj(
-      this.add
-        .text(cx, cy - wys / 2 + 60, zyski.join('   ·   ') || 'Statystyki bez zmian', body(13, H.ink))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2)
-    );
-
-    const przyciski: ReturnType<typeof makeHudButton>[] = [];
     const zamknij = (opis?: string) => {
-      czesci.forEach((x) => x.destroy());
-      przyciski.forEach((b) => b.destroy());
+      this.zamknijOkno(nowe());
       this.stan.bohater.poziomOdebrany = poziomPo;
       this.zajety = false;
       if (opis) this.napisUlotny(opis);
@@ -2516,118 +3113,69 @@ export class AdventureScene extends Phaser.Scene {
     if (!oferty.length) {
       // Cztery gniazda pełne, wszystko mistrzowskie — nie ma czego proponować.
       // Mówimy to wprost, zamiast pokazywać puste okno wyboru.
-      dodaj(
-        this.add
-          .text(cx, cy + 10, 'Wszystkie umiejętności na mistrzowskim poziomie.', body(12, H.inkSoft))
-          .setOrigin(0.5)
-          .setDepth(Z.overlay + 2)
-      );
-      const ok = makeHudButton(this, {
-        x: cx,
-        y: cy + wys / 2 - 34,
-        w: 180,
-        h: 40,
-        icon: ICON.star,
-        tone: C.gold,
-        toneDeep: C.goldDeep,
-        depth: Z.overlay + 3,
-        onClick: () => zamknij(),
-      });
-      ok.setLabel('Dalej');
-      przyciski.push(ok);
-      this.naWierzchu(...this.children.list.slice(this.children.list.length - 40));
+      this.add
+        .text(cx, cy + 10, 'Wszystkie umiejętności na mistrzowskim poziomie.', stylAtramentu(15, 'miekki'))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 2);
+      this.guzikOkna(cx, cy + wys / 2 - 36, 180, 'Dalej', () => zamknij(), true);
+      this.naWierzchu(...nowe());
       return;
     }
 
-    dodaj(
-      this.add
-        .text(cx, cy - wys / 2 + 84, 'WYBIERZ UMIEJĘTNOŚĆ', {
-          ...body(11, H.inkSoft),
-          fontStyle: 'bold',
-          letterSpacing: 1.2,
-        })
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2)
-    );
+    this.add
+      .text(cx, cy - wys / 2 + 90, 'Wybierz umiejętność', stylEtykiety(14, BARWA.atramentMiekki))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
 
     const kartaW = 236;
-    const kartaH = 150;
-    const kartaY = cy - wys / 2 + 104;
+    const kartaH = 156;
+    const kartaY = cy - wys / 2 + 106;
     oferty.forEach((oferta, i) => {
       const u = umiejetnoscPoId(oferta.id)!;
       const kx = cx + (i - (oferty.length - 1) / 2) * (kartaW + 20) - kartaW / 2;
-      const g = dodaj(this.add.graphics().setDepth(Z.overlay + 2)) as Phaser.GameObjects.Graphics;
-      wneka(g, kx, kartaY, kartaW, kartaH, 10, mix(C.panelDeep, C.shadow, 0.3), 1);
-      // Nowa umiejętność dostaje złotą wstążkę, ulepszenie — niebieską.
-      // Gracz ma widzieć różnicę „dokładam coś" kontra „podbijam coś",
-      // zanim przeczyta obie karty.
-      listwa(
-        g,
-        kx + 8,
-        kartaY + 8,
-        kartaW - 16,
-        24,
-        7,
-        oferta.nowa ? C.goldDeep : C.allyDeep,
-        oferta.nowa ? C.gold : C.ally
+      // Karta: ciemniejszy papier w cienkiej złotej ramce. Nowa umiejętność
+      // dostaje wstęgę z laku, ulepszenie — zieloną: gracz ma widzieć różnicę
+      // „dokładam coś" kontra „podbijam coś", zanim przeczyta obie karty.
+      const g = this.add.graphics().setDepth(Z.overlay + 2);
+      g.fillStyle(0x8a5a2a, 0.12);
+      g.fillRect(kx, kartaY, kartaW, kartaH);
+      ramaZlota(this, kx, kartaY, kartaW, kartaH, false).setDepth(Z.overlay + 2);
+      g.fillStyle(oferta.nowa ? BARWA.lak : 0x3f7a42, 1);
+      g.fillRect(kx + 10, kartaY + 9, kartaW - 20, 22);
+      g.fillStyle(0xffffff, 0.14);
+      g.fillRect(kx + 10, kartaY + 11, kartaW - 20, 3);
+      this.add
+        .text(kx + kartaW / 2, kartaY + 20, oferta.nowa ? 'NOWA' : 'ULEPSZENIE', stylEtykiety(12, '#fff4dc'))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      this.add
+        .text(kx + kartaW / 2, kartaY + 50, u.nazwa, stylEtykiety(20, BARWA.atrament))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      this.add
+        .text(kx + kartaW / 2, kartaY + 72, POZIOMY[oferta.poziom - 1], {
+          ...stylAtramentu(13, 'miekki'),
+          fontFamily: KROJ.kursywa,
+        })
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      this.add
+        .text(kx + kartaW / 2, kartaY + 96, opisWartosci(u, oferta.poziom), stylEtykiety(18, BARWA.atramentZielony))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      this.add
+        .text(kx + kartaW / 2, kartaY + 128, u.opis, { ...stylAtramentu(13, 'zwykly', kartaW - 24), align: 'center' })
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      // Dwie karty to dwie równorzędne decyzje — obie tabliczki drewniane.
+      this.guzikOkna(kx + kartaW / 2, cy + wys / 2 - 32, kartaW - 20, oferta.nowa ? 'Naucz się' : 'Ulepsz', () =>
+        zamknij(przyznaj(this.stan.bohater, oferta))
       );
-      dodaj(
-        this.add
-          .text(kx + kartaW / 2, kartaY + 20, oferta.nowa ? 'NOWA' : 'ULEPSZENIE', {
-            ...body(10, H.white),
-            fontStyle: 'bold',
-            letterSpacing: 1.2,
-          })
-          .setOrigin(0.5)
-          .setDepth(Z.overlay + 3)
-      );
-      dodaj(
-        this.add
-          .text(kx + kartaW / 2, kartaY + 52, u.nazwa, display(17, H.goldLight))
-          .setOrigin(0.5)
-          .setDepth(Z.overlay + 3)
-      );
-      dodaj(
-        this.add
-          .text(kx + kartaW / 2, kartaY + 74, POZIOMY[oferta.poziom - 1], body(11, '#9dc3d6'))
-          .setOrigin(0.5)
-          .setDepth(Z.overlay + 3)
-      );
-      dodaj(
-        this.add
-          .text(kx + kartaW / 2, kartaY + 96, opisWartosci(u, oferta.poziom), display(18, H.gold))
-          .setOrigin(0.5)
-          .setDepth(Z.overlay + 3)
-      );
-      dodaj(
-        this.add
-          .text(kx + kartaW / 2, kartaY + 124, u.opis, {
-            ...body(10.5, '#dff2fb'),
-            align: 'center',
-          })
-          .setOrigin(0.5)
-          .setDepth(Z.overlay + 3)
-          .setWordWrapWidth(kartaW - 24)
-      );
-
-      const b = makeHudButton(this, {
-        x: kx + kartaW / 2,
-        y: cy + wys / 2 - 32,
-        w: kartaW - 20,
-        h: 38,
-        icon: oferta.nowa ? ICON.star : ICON.banner,
-        tone: oferta.nowa ? C.gold : C.ally,
-        toneDeep: oferta.nowa ? C.goldDeep : C.allyDeep,
-        depth: Z.overlay + 3,
-        onClick: () => zamknij(przyznaj(this.stan.bohater, oferta)),
-      });
-      b.setLabel(oferta.nowa ? 'Naucz się' : 'Ulepsz');
-      przyciski.push(b);
     });
 
     // Okno musi trafić do kamery rysowanej PO planszy — inaczej mapa
     // zamalowuje je w tej samej klatce i gra wygląda na zawieszoną.
-    this.naWierzchu(...czesci);
+    this.naWierzchu(...nowe());
   }
 
   private pokazZamek(o: Obiekt) {
@@ -2690,50 +3238,440 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   /**
-   * Koniec gry: wszystkie zamki na mapie są nasze.
-   *
-   * Warunek jest ten sam co w Heroes 3 — zwycięża ten, kto ma wszystkie miasta.
-   * Sprawdzamy go po zdobyciu zamku, a nie co turę, bo tylko wtedy może się
-   * zmienić.
+   * Czy gra się rozstrzygnęła — misja kampanii albo gra pojedyncza (wszystkie
+   * zamki / utrata ostatniego). Zwraca `true`, gdy tak, i od tej chwili scena
+   * już tylko odlicza do ekranu wyniku.
    */
-  private sprawdzKoniec() {
-    const cudze = this.stan.obiekty.filter((o) => o.rodzaj === 'zamek' && o.wlasciciel !== 'gracz');
-    if (cudze.length > 0) return;
-    this.zajety = true;
+  private sprawdzRozstrzygniecie(): boolean {
+    if (this.rozstrzygnieta) return true;
+    const r = ocenGre(this.stan);
+    if (!r) return false;
+    this.rozstrzygnij(r);
+    return true;
+  }
 
+  /**
+   * Koniec gry na mapie: blokada sterowania, krótka chwila z banerem nad
+   * mapą (fanfara, gwiazdy — albo cichy, szary baner porażki) i przejście
+   * do ekranu wyniku. Bez tej chwili gra przeskakiwała na inny ekran
+   * w połowie ruchu i dziecko nie wiedziało, CO się właściwie stało.
+   */
+  private rozstrzygnij(r: 'wygrana' | 'przegrana') {
+    this.rozstrzygnieta = true;
+    this.zajety = true;
+    if (this.wRuchu) this.przerwijRuch = true;
+    // Blokada wejścia całej sceny, nie tylko `zajety`: okno zamknięte
+    // w tej chwili zdjęłoby `zajety` i oddało graczowi mysz na trzy sekundy
+    // przed zmianą ekranu.
+    this.input.enabled = false;
+    if (this.input.keyboard) this.input.keyboard.enabled = false;
+    this.kursorZnak?.setVisible(false);
+    this.warstwaTrasy?.clear();
+    this.registry.set(KLUCZ_STANU, this.stan);
+    zapisz('mapa', `rozstrzygnięcie: ${r}`, { dzien: this.stan.dzien, misja: this.stan.misja ?? '(pojedyncza)' });
+    // Po zdobyciu zamku najpierw wzlatuje napis „…jest twoja!" (900 ms po
+    // powrocie z bitwy) — baner wchodzi dopiero po nim.
+    this.time.delayedCall(r === 'wygrana' ? 1500 : 800, () => this.banerKonca(r === 'wygrana'));
+  }
+
+  /**
+   * Baner końca gry nad mapą: drewniana deska w grubej złotej ramie, jak
+   * szyld nad bramą, z pozłacanym napisem z zestawu. Zwycięstwo sypie
+   * gwiazdami, porażka jest cicha i przygaszona.
+   */
+  private banerKonca(wygrana: boolean) {
+    stopMusic(this);
+    stopAmbient(this);
+    if (wygrana) sfx(this, 'awans');
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
+    const nowe = this.znacznik();
+
     const zaslona = this.add
-      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.6)
+      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, wygrana ? 0.55 : 0.68)
+      .setOrigin(0, 0)
+      .setDepth(Z.overlay)
+      .setAlpha(0);
+    this.tweens.add({ targets: zaslona, alpha: 1, duration: 500 });
+
+    const szer = 520;
+    const wys = 128;
+    const cien = cienPanelu(this, -szer / 2, -wys / 2, szer, wys);
+    const deska = latki(this, 'z-tabliczka-drewno', -szer / 2, -wys / 2, szer, wys, 40, 40, 30, 30);
+    const rama = ramaZlota(this, -szer / 2, -wys / 2, szer, wys, true);
+    const napis = wygrana
+      ? napisTytulowy(this, 0, -16, 'Zwycięstwo!', 44)
+      : napisNaDrewnie(this, 0, -16, 'Koniec wyprawy', 40).setOrigin(0.5);
+    const pod = napisNaDrewnie(
+      this,
+      0,
+      32,
+      wygrana
+        ? this.stan.misja
+          ? 'Cel misji wykonany!'
+          : 'Wszystkie zamki należą do ciebie!'
+        : coSieStalo(przyczynaPorazki(this.stan)),
+      17
+    )
+      .setFontFamily(KROJ.tekst)
+      .setOrigin(0.5);
+    const baner = this.add
+      .container(cx, cy, [cien, deska, rama, napis, pod])
+      .setDepth(Z.overlay + 2)
+      .setScale(0.4)
+      .setAlpha(0);
+    if (!wygrana) deska.setTint(0xb0a8b8);
+    this.tweens.add({ targets: baner, scale: 1, alpha: 1, duration: 520, ease: E.out });
+
+    if (wygrana) {
+      // Wybuch gwiazdek zza szyldu — dwa, jeden po drugim, jak salwa.
+      const gwiazdy = this.add
+        .particles(cx, cy, ICON.star, {
+          speed: { min: 160, max: 420 },
+          angle: { min: 0, max: 360 },
+          scale: { start: 0.42, end: 0 },
+          rotate: { start: 0, end: 360 },
+          lifespan: 1500,
+          gravityY: 260,
+          emitting: false,
+        })
+        .setDepth(Z.overlay + 1);
+      this.time.delayedCall(260, () => gwiazdy.explode(36));
+      this.time.delayedCall(900, () => gwiazdy.explode(24));
+    }
+
+    // Ściemnienie do czerni i ekran wyniku. Stan idzie w danych sceny: ekran
+    // wyniku ma go pokazać i rozliczyć, a nie grać dalej.
+    const czern = this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 1)
+      .setOrigin(0, 0)
+      .setDepth(Z.overlay + 10)
+      .setAlpha(0);
+    this.naWierzchu(...nowe());
+    this.tweens.add({
+      targets: czern,
+      alpha: 1,
+      delay: wygrana ? 2700 : 2900,
+      duration: 550,
+      onComplete: () =>
+        this.scene.start('wynik', { rozstrzygniecie: wygrana ? 'wygrana' : 'przegrana', stan: this.stan }),
+    });
+  }
+
+  /**
+   * Okno „Warunki misji" — odpowiednik „Scenario Information" z Heroes 2:
+   * numer i tytuł misji, opis, warunek zwycięstwa i warunki porażki, każdy
+   * z własnym obrazkiem. Pergamin w złotej ramie z zestawu — ten sam papier,
+   * na którym ekran kampanii opisuje misję, więc okno czyta się jak jego
+   * dalszy ciąg. Pokazuje się samo na starcie misji, a potem pod „Cele"
+   * i klawiszem C — także w grze pojedynczej.
+   */
+  private pokazWarunki() {
+    if (this.zajety) return;
+    this.zajety = true;
+    // Kroje zestawu ładują się raz na całą grę; zwykle już są. Okno czeka
+    // na nie, żeby nie zmierzyć napisów krojem zapasowym.
+    void krojeZestawu().then(() => this.zbudujWarunki());
+  }
+
+  private zbudujWarunki() {
+    buildArtefakty(this);
+    const s = this.stan;
+    const m = misjaPoId(s.misja);
+    const w = warunkiGry(s);
+    const pierwszyRaz = !!m && !s.warunkiPokazane;
+    const cx = this.mapaX + this.oknoW / 2;
+    const cy = this.mapaY + this.oknoH / 2;
+    const szer = 556;
+    const wnetrze = szer - 80;
+    const nowe = this.znacznik();
+
+    this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.55)
       .setOrigin(0, 0)
       .setDepth(Z.overlay);
-    const tlo = this.add.graphics().setDepth(Z.overlay + 1);
-    plate(tlo, cx - 250, cy - 110, 500, 220, 14, C.panel, C.gold, {
-      light: 0.24,
-      dark: 0.22,
-      gloss: 0.2,
-      edgeW: 3,
+
+    // Treść w kontenerze o współrzędnych lokalnych: wysokość okna wychodzi
+    // dopiero z długości opisu, więc pergamin kładzie się na końcu, pod spodem.
+    const k = this.add.container(cx, 0).setDepth(Z.overlay + 1);
+    let y = 34;
+
+    const wst = wstazka(this, 0, y, m ? `MISJA ${m.nr} Z ${KAMPANIA.misje.length}` : 'GRA POJEDYNCZA');
+    k.add(wst);
+    y += 40;
+
+    const tytul = this.add
+      .text(0, y, m ? m.tytul : planszaPoId(s.mapa).nazwa, stylEtykiety(30))
+      .setOrigin(0.5);
+    k.add(tytul);
+    y += 26;
+
+    const opis = this.add
+      .text(
+        0,
+        y,
+        m
+          ? m.opis.join('\n')
+          : 'Dwie doliny, dwa zamki i przeciwnik, który też zbiera armię.\nKto pierwszy zdobędzie zamek rywala, ten wygrywa.',
+        { ...stylAtramentu(15, 'zwykly', wnetrze), align: 'center', lineSpacing: 4 }
+      )
+      .setOrigin(0.5, 0);
+    k.add(opis);
+    y += opis.height + 16;
+    k.add(ozdobnik(this, -wnetrze / 2, y, wnetrze));
+    y += 16;
+
+    // Wiersz warunku: obrazek w medalionie, etykieta Cinzelem, zdanie atramentem.
+    type Obrazek = (x: number, y: number) => Phaser.GameObjects.GameObject[];
+    const wierszWarunku = (obrazek: Obrazek, etykieta: string, barwa: string, zdanie: string) => {
+      const x0 = -wnetrze / 2;
+      const pas = this.add.graphics();
+      pas.fillStyle(0x8a5a2a, 0.09);
+      pas.fillRoundedRect(x0, y + 4, wnetrze, 58, 10);
+      const md = medalion(this, x0 + 34, y + 33, 29, BARWA.papier);
+      const et = this.add.text(x0 + 76, y + 20, etykieta, stylEtykiety(15, barwa)).setOrigin(0, 0.5);
+      const zd = this.add
+        .text(x0 + 76, y + 44, zdanie, { ...stylAtramentu(16), fontStyle: 'bold' })
+        .setOrigin(0, 0.5)
+        .setWordWrapWidth(wnetrze - 88);
+      k.add([pas, md, ...obrazek(x0 + 34, y + 33), et, zd]);
+      y += 68;
+    };
+
+    const obrazek =
+      (klucz: string, bok = 40): Obrazek =>
+      (x, yy) => {
+        const im = this.add.image(x, yy, klucz);
+        im.setScale(bok / Math.max(im.width, im.height));
+        return [im];
+      };
+    // Odznaka na medalionie: zielony „ptaszek" przy celu, czerwony krzyżyk
+    // przy porażce — czytelne, zanim dziecko przeczyta etykietę.
+    const zOdznaka =
+      (baza: Obrazek, dobra: boolean): Obrazek =>
+      (x, yy) => {
+        const o = this.add.graphics();
+        o.fillStyle(C.shadow, 0.4);
+        o.fillCircle(x + 22, yy + 22, 10);
+        o.fillStyle(dobra ? 0x3f8a4a : BARWA.lak, 1);
+        o.fillCircle(x + 22, yy + 20, 10);
+        o.lineStyle(2.5, 0xfff4dc, 1);
+        if (dobra) {
+          o.beginPath();
+          o.moveTo(x + 17, yy + 20);
+          o.lineTo(x + 21, yy + 24);
+          o.lineTo(x + 27, yy + 16);
+          o.strokePath();
+        } else {
+          o.lineBetween(x + 18, yy + 16, x + 26, yy + 24);
+          o.lineBetween(x + 26, yy + 16, x + 18, yy + 24);
+        }
+        return [...baza(x, yy), o];
+      };
+
+    // Zamek rysowany wektorem, nie zmniejszaną ilustracją: przy 48 px
+    // obrazek z mapy robił się poszarpany, a zdobyty i stracony zamek
+    // wyglądały identycznie. Tu zdobyty dostaje naszą chorągiew z gwiazdą,
+    // stracony — pęknięcie, osunięte kamienie i opuszczoną szarą flagę.
+    const rysowanyZamek =
+      (zdobyty: boolean): Obrazek =>
+      (x, yy) => {
+        const g = this.add.graphics();
+        const mur = zdobyty ? 0xd6d2c8 : 0xa4a2a0;
+        const cien = zdobyty ? 0x8a8478 : 0x6a6664;
+        const baza = yy + 17;
+        for (const dx of [-14, 14]) {
+          g.fillStyle(cien, 1);
+          g.fillRect(x + dx - 6, baza - 22, 12, 22);
+          g.fillStyle(mur, 1);
+          g.fillRect(x + dx - 6, baza - 22, 9, 22);
+          for (const zx of [-6, -1, 4]) g.fillRect(x + dx + zx, baza - 26, 3, 4);
+        }
+        g.fillStyle(mur, 1);
+        g.fillRect(x - 9, baza - 15, 18, 15);
+        for (const zx of [-9, -3, 3]) g.fillRect(x + zx, baza - 18, 3, 3);
+        g.fillStyle(0x4a3524, 1);
+        g.fillRoundedRect(x - 4, baza - 9, 8, 9, { tl: 4, tr: 4, bl: 0, br: 0 });
+        if (zdobyty) {
+          g.fillStyle(0x8a5a2b, 1);
+          g.fillRect(x - 1, baza - 38, 2.5, 23);
+          g.fillStyle(C.allyDeep, 1);
+          g.fillTriangle(x + 1.5, baza - 38, x + 21, baza - 32, x + 1.5, baza - 26);
+          g.fillStyle(C.ally, 1);
+          g.fillTriangle(x + 1.5, baza - 38, x + 18, baza - 33, x + 1.5, baza - 29);
+          g.fillStyle(C.gold, 1);
+          g.fillCircle(x, baza - 39, 2.2);
+        } else {
+          g.lineStyle(2, 0x2a1606, 1);
+          g.beginPath();
+          g.moveTo(x + 3, baza - 18);
+          g.lineTo(x - 1, baza - 12);
+          g.lineTo(x + 4, baza - 8);
+          g.lineTo(x, baza - 2);
+          g.strokePath();
+          g.fillStyle(0x7a7672, 1);
+          g.fillRect(x + 10, baza - 26, 10, 6);
+          for (const [kx, ky, r] of [
+            [20, -2, 3.5],
+            [15, 0, 2.5],
+            [24, -1, 2],
+          ] as const) g.fillCircle(x + kx, baza + ky, r);
+          g.fillStyle(0x8a5a2b, 1);
+          g.fillRect(x - 15, baza - 34, 2, 13);
+          g.fillStyle(0x8c8f98, 1);
+          g.fillTriangle(x - 13, baza - 28, x - 3, baza - 25, x - 13, baza - 21);
+        }
+        return [g];
+      };
+
+    const z = w.zwyciestwo;
+    const obrazZwyciestwa: Obrazek =
+      z.typ === 'artefakt'
+        ? obrazek(kluczArtefaktu(z.artefakt, artefaktPoId(z.artefakt)?.klasa ?? 'relikt'), 42)
+        : z.typ === 'zbierz'
+          ? obrazek(`m-${SUROWIEC_INFO[z.surowiec].ikona}`)
+          : z.typ === 'pokonaj'
+            ? obrazek(ICON.sword, 36)
+            : rysowanyZamek(true);
+    wierszWarunku(zOdznaka(obrazZwyciestwa, true), 'Zwycięstwo', BARWA.atramentZielony, celSlowami(z));
+    for (const p of w.porazka) {
+      wierszWarunku(
+        p.typ === 'termin' ? obrazek(ICON.hourglass, 38) : zOdznaka(rysowanyZamek(false), false),
+        'Porażka, jeśli…',
+        BARWA.atramentCzerwony,
+        p.typ === 'termin' ? `Minie ${p.dni} dni. Dziś jest dzień ${s.dzien}.` : 'Stracisz wszystkie swoje zamki.'
+      );
+    }
+
+    // Bonus wybrany na ekranie kampanii — przypomnienie, że już działa.
+    const postep = m ? wczytajPostep() : null;
+    const bonus = m && postep?.bonus !== undefined ? m.bonusy[postep.bonus] : undefined;
+    if (bonus) {
+      k.add(
+        this.add
+          .text(0, y + 14, `Twoja nagroda na start: ${bonus.opis}`, { ...stylAtramentu(16, 'zielony'), fontStyle: 'bold' })
+          .setOrigin(0.5)
+      );
+      y += 32;
+    }
+    y += 10;
+    const przyciskY = y + 26;
+    y += 58;
+    k.add(
+      this.add
+        .text(0, y + 6, 'Cele zawsze sprawdzisz przyciskiem „Cele" albo klawiszem C.', {
+          ...stylAtramentu(14, 'miekki'),
+          fontFamily: KROJ.kursywa,
+        })
+        .setOrigin(0.5)
+    );
+    y += 34;
+
+    const wys = y;
+    const gora = Math.round(cy - wys / 2);
+    k.setY(gora);
+    // Pergamin pod treścią — na sam spód kontenera.
+    const papier = panelPergaminu(this, -szer / 2, 0, szer, wys);
+    k.addAt(papier, 0);
+    k.setAlpha(0);
+    this.tweens.add({ targets: k, alpha: 1, y: { from: gora + 14, to: gora }, duration: 280, ease: E.snap });
+
+    new Przycisk(this, {
+      x: cx,
+      y: gora + przyciskY,
+      w: 240,
+      h: 50,
+      tekst: pierwszyRaz ? 'Do dzieła!' : 'Graj dalej',
+      glowny: true,
+      strzalka: pierwszyRaz,
+      glebia: Z.overlay + 3,
+      akcja: () => {
+        this.zamknijOkno(nowe());
+        s.warunkiPokazane = true;
+        this.zajety = false;
+        if (pierwszyRaz) this.napisUlotny('Powodzenia!');
+        this.odswiezWszystko();
+      },
     });
-    const napisy = [
-      this.add
-        .text(cx, cy - 62, 'Zwycięstwo!', display(30, H.gold))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2),
-      this.add
-        .text(
-          cx,
-          cy - 6,
-          `Wszystkie miasta należą do ciebie.\nJanek zdobył je w ${data(this.stan.dzien).tydzien} tygodni.`,
-          { ...body(14, H.ink), align: 'center' }
-        )
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2),
-      this.add
-        .text(cx, cy + 62, 'Odśwież stronę, żeby zagrać jeszcze raz.', body(12, H.inkSoft))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2),
+    this.naWierzchu(...nowe());
+  }
+
+  /**
+   * Wyjście do menu głównego. Pyta, bo kasuje wszystko od ostatniego
+   * zapisu — i od razu daje „Zapisz i wyjdź", żeby nie trzeba było wracać
+   * do przycisku zapisu.
+   */
+  private zapytajOWyjscie() {
+    if (this.zajety) return;
+    this.zajety = true;
+    void krojeZestawu().then(() => this.zbudujPytanieOWyjscie());
+  }
+
+  private zbudujPytanieOWyjscie() {
+    const cx = this.mapaX + this.oknoW / 2;
+    const cy = this.mapaY + this.oknoH / 2;
+    // Szerokości tabliczek z ZMIERZONYCH napisów, a okno z ich sumy:
+    // na sztywno wpisane liczby dawały „Zapisz i wyjdź" dotykające lewej
+    // krawędzi i nierówne odstępy między przyciskami.
+    const opcjeNapisy = ['Zapisz i wyjdź', 'Wyjdź', 'Zostań'];
+    const ROZMIAR = 15;
+    const ODSTEP = 18;
+    const miarka = this.add.text(0, 0, '', { fontFamily: KROJ.tytul, fontSize: `${ROZMIAR}px` });
+    const szerokosci = opcjeNapisy.map((t) => Math.max(120, Math.ceil(miarka.setText(t).width) + 56));
+    miarka.destroy();
+    const razem = szerokosci.reduce((a, b) => a + b, 0) + ODSTEP * (szerokosci.length - 1);
+    const szer = Math.max(500, razem + 64);
+    const wys = 200;
+    const nowe = this.znacznik();
+    this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.55)
+      .setOrigin(0, 0)
+      .setDepth(Z.overlay);
+    panelPergaminu(this, cx - szer / 2, cy - wys / 2, szer, wys).forEach((c) => c.setDepth(Z.overlay + 1));
+    this.add
+      .text(cx, cy - wys / 2 + 38, 'Wyjść do menu?', stylEtykiety(26))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    this.add
+      .text(cx, cy - 12, 'To, co zrobiłeś od ostatniego zapisu, przepadnie.', stylAtramentu(16))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+
+    const zamknij = () => {
+      this.zamknijOkno(nowe());
+      this.zajety = false;
+    };
+    const wyjdz = (zapisac: boolean) => {
+      if (zapisac) zapiszGre(this.stan);
+      stopMusic(this);
+      stopAmbient(this);
+      this.registry.set(KLUCZ_STANU, this.stan);
+      this.scene.start('menu');
+    };
+    // Złota tabliczka tylko dla bezpiecznego wyjścia — to jest „następny
+    // krok", który warto podsunąć. Reszta drewniana.
+    const akcje: Array<[boolean, () => void]> = [
+      [true, () => wyjdz(true)],
+      [false, () => wyjdz(false)],
+      [false, zamknij],
     ];
-    this.naWierzchu(zaslona, tlo, ...napisy);
+    let x = cx - razem / 2;
+    akcje.forEach(([glowny, akcja], i) => {
+      const w = szerokosci[i];
+      new Przycisk(this, {
+        x: x + w / 2,
+        y: cy + 50,
+        w,
+        h: 46,
+        tekst: opcjeNapisy[i],
+        glowny,
+        rozmiar: ROZMIAR,
+        glebia: Z.overlay + 3,
+        akcja,
+      });
+      x += w + ODSTEP;
+    });
+    this.naWierzchu(...nowe());
   }
 
   /** Po powrocie z bitwy: zwycięstwo usuwa strażnika, porażka cofa do zamku. */
@@ -2820,10 +3758,9 @@ export class AdventureScene extends Phaser.Scene {
         });
       }
 
-      // Zdobycie ostatniego cudzego zamku KOŃCZY grę. Bez tego wyprawa nie ma
-      // mety: dziecko przechodzi pół planszy, wygrywa najtrudniejszą bitwę
-      // w grze i nic się nie dzieje.
-      if (o?.rodzaj === 'zamek') this.time.delayedCall(1800, () => this.sprawdzKoniec());
+      // Zdobycie ostatniego cudzego zamku KOŃCZY grę — ale tego nie trzeba
+      // już pilnować tutaj: `create` woła `odswiezWszystko`, a ono sprawdza
+      // rozstrzygnięcie po każdym zdarzeniu, także po powrocie z bitwy.
 
     } else {
       // Przegrana nie kończy gry: bohater wraca do zamku i traci resztę dnia.
@@ -2841,21 +3778,28 @@ export class AdventureScene extends Phaser.Scene {
   private napisUlotny(tekst: string) {
     const { x, y } = this.naEkran(this.stan.bohater.x, this.stan.bohater.y);
     const t = this.add
-      .text(x, y - KAFEL * 0.7, tekst, {
-        fontFamily: FONT,
-        fontSize: '15px',
+      // Nad głową bohatera, nie na niej — głowa idzie za `WYS_BOHATERA`.
+      .text(x, y + this.sylwetkaBohatera().glowa - KAFEL * 0.07, tekst, {
+        // Lora pogrubiona, kremowa z brązowym konturem — ta sama para co
+        // napisy na drewnie, tylko krojem tekstu: ulotny napis bywa zdaniem
+        // („Porażka. Wracasz do zamku."), a zdanie kapitałami czyta się gorzej.
+        fontFamily: KROJ.tekst,
+        fontSize: '17px',
         fontStyle: 'bold',
-        color: H.goldLight,
-        stroke: H.shadow,
-        strokeThickness: 4,
+        color: BARWA.krem,
+        stroke: BARWA.braz,
+        strokeThickness: 5,
         align: 'center',
       })
       .setOrigin(0.5, 1)
+      // Napis leży w świecie, który kamera oddala — powiększamy go o tyle,
+      // o ile kamera zmniejsza, żeby na ekranie wciąż miał swoje 17 px.
+      .setScale(1 / ZOOM_MAPY)
       .setDepth(this.stan.wys + 100);
     this.swiat.add(t);
     this.tweens.add({
       targets: t,
-      y: t.y - 30,
+      y: t.y - 30 / ZOOM_MAPY,
       alpha: 0,
       duration: 1500,
       onComplete: () => t.destroy(),
@@ -2879,7 +3823,7 @@ export class AdventureScene extends Phaser.Scene {
         this.mapaX + this.oknoW / 2,
         this.mapaY + this.oknoH / 2,
         'Przetwarzanie tury…',
-        display(18, H.goldLight)
+        { fontFamily: KROJ.tytul, fontSize: '20px', color: BARWA.krem, stroke: BARWA.braz, strokeThickness: 4 }
       )
       .setOrigin(0.5)
       .setDepth(Z.overlay + 1);

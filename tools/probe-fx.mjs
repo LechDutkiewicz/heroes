@@ -30,7 +30,7 @@ const main = async () => {
   page.on('console', (m) => console.log('KONSOLA:', m.type(), m.text()));
 
   for (const terrain of ['laka', 'snieg']) {
-    await page.goto(`${BASE}/?seed=7&terrain=${terrain}`, { waitUntil: 'load' });
+    await page.goto(`${BASE}/?ekran=bitwa&seed=7&terrain=${terrain}`, { waitUntil: 'load' });
     await ready(page);
     await page.evaluate(() => {
       const scene = window.__game.scene.getScene('battle');
