@@ -141,7 +141,7 @@
   {
    "name": "Portrety i ikony stworów (sloty armii, kolejka tury, bohater, miasto)",
    "status": "critic",
-   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3. Od 2026-09-26 (decyzja gracza): storki zostają urocze — krytyk nie ocenia klimatu (uroczy vs ponury), tylko spójność stworów z ich własnym światem i UI.",
+   "bar": "Od 2026-09-26 (decyzja gracza): poprzeczką jest NASZ interfejs, nie HotA. Krytyk dostaje sam nasz ekran (×2), wskazuje element, który najmniej pasuje, i ocenia, czy portrety pasują. Wygrana: w 2 z 3 ekranów najgorszym elementem nie jest portret i werdykt PASUJĄ.",
    "note": "Małe portrety w interfejsie z tego samego malowanego rysunku.",
    "rounds": [
     {
@@ -197,6 +197,24 @@
      "gap": "Twarze nieczytelne przy ~20 px, każde tło w innym głośnym kolorze, pusty slot jak płaski beżowy prostokąt.",
      "blind": "tools/postep-obrazy/portrety-hud-r3.jpg",
      "note": "Runda 3, HUD. 0/3. Błąd pomiaru: wzorzec ×2, nasze ×1 — od rundy 4 oba ×2."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: pusty slot z dużą cyfrą. Portrety: NIE — kadr skacze (dziób i pierś, ucięta głowa, skrajne zbliżenie, plan średni).",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-bohater-r4.jpg",
+     "note": "Runda 4 (×2, nowy test), bohater."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: ikona kosztu (błyszczący pokeball — też ryzyko praw). Portrety: NIE — Flamir to sam dziób, tła różne (brąz, szaroniebieskie, oliwka).",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-miasto-r4.jpg",
+     "note": "Runda 4, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: portret bohatera w złotym kole. Portrety: NIE — kadry bez wspólnego szablonu, ciemne tło połyka ciemne stwory.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-hud-r4.jpg",
+     "note": "Runda 4, HUD. Portret nigdzie nie jest najgorszym elementem, ale werdykt 0/3 przez niespójny kadr."
     }
    ]
   }
