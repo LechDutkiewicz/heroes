@@ -113,33 +113,46 @@ export function oprawPortret(
  * odbicie przy dolnej krawędzi (światło z góry, jak w `rama.ts`).
  */
 export function dnoGniazda(g: Phaser.GameObjects.Graphics, x: number, y: number, bok: number) {
-  // Dno: ciemne drewno, odrobinę jaśniejsze ku środkowi — wnęka ma głębię,
-  // a nie jest czarną dziurą.
-  g.fillStyle(0x1e1208, 1);
+  // Dno: ciepłe ciemne drewno, jaśniejsze ku środkowi — wnęka ma głębię, a nie
+  // jest czarną dziurą (runda 6: „przygaszona czarna dziura").
+  g.fillStyle(0x2e1c0c, 1);
   g.fillRect(x, y, bok, bok);
-  const k = Math.max(2, bok * 0.12);
-  g.fillStyle(0x3a2512, 0.55);
-  g.fillRect(x + k, y + k, bok - 2 * k, bok - 2 * k);
-  g.fillStyle(0x4a3018, 0.35);
-  g.fillRect(x + k * 1.8, y + k * 1.8, bok - 3.6 * k, bok - 3.6 * k);
+  for (let i = 1; i <= 4; i++) {
+    const k = (bok * i) / 14;
+    g.fillStyle(0x5a3a1c, 0.18);
+    g.fillRect(x + k, y + k, bok - 2 * k, bok - 2 * k);
+  }
   // Cień od górnej i lewej krawędzi (światło z góry-lewa pada do wnęki).
-  const gleb = Math.max(3, bok * 0.16);
+  const gleb = Math.max(3, bok * 0.14);
   for (let i = 0; i < 5; i++) {
-    g.fillStyle(0x000000, 0.3 * (1 - i / 5));
+    g.fillStyle(0x000000, 0.26 * (1 - i / 5));
     g.fillRect(x, y + (i * gleb) / 5, bok, gleb / 5 + 0.5);
     g.fillRect(x + (i * gleb) / 5, y, gleb / 5 + 0.5, bok);
   }
-  // Odbicie na dolnej i prawej wardze.
-  g.fillStyle(0xf8e6b8, 0.1);
+  g.fillStyle(0xf8e6b8, 0.12);
   g.fillRect(x + 2, y + bok - 2, bok - 3, 1.5);
   g.fillRect(x + bok - 2, y + 2, 1.5, bok - 3);
-  // Rytowana ramka w dnie — gniazdo jest zaprojektowanym miejscem, nie brakiem.
+  // Rytowany znak w dnie — koło z przepaską jak na pokeballu: gniazdo jest
+  // zaprojektowanym miejscem na stworka, nie brakiem obrazka. Ryt = ciemna
+  // kreska i jasna tuż pod nią (światło z góry).
   if (bok >= 40) {
+    const cx = x + bok / 2;
+    const cy = y + bok / 2;
     const r = bok * 0.2;
-    g.lineStyle(1, 0x000000, 0.35);
-    g.strokeRect(x + r, y + r, bok - 2 * r, bok - 2 * r);
-    g.lineStyle(1, 0xc8912a, 0.14);
-    g.strokeRect(x + r + 1, y + r + 1, bok - 2 * r, bok - 2 * r);
+    for (const [dy, barwa, alfa] of [
+      [1, 0xf8e6b8, 0.16],
+      [0, 0x120a04, 0.55],
+    ] as const) {
+      g.lineStyle(Math.max(1.5, bok / 40), barwa, alfa);
+      g.strokeCircle(cx, cy + dy, r);
+      g.beginPath();
+      g.moveTo(cx - r, cy + dy);
+      g.lineTo(cx - r * 0.34, cy + dy);
+      g.moveTo(cx + r * 0.34, cy + dy);
+      g.lineTo(cx + r, cy + dy);
+      g.strokePath();
+      g.strokeCircle(cx, cy + dy, r * 0.3);
+    }
   }
 }
 
@@ -151,11 +164,11 @@ export interface OpcjeGniazda {
   /** Wielkość liczby na odznace; domyślnie z boku gniazda. */
   rozmiarLiczby?: number;
   /**
-   * Gdzie przypiąć odznakę: `dol` — na dolnej krawędzi ramy w prawym rogu
-   * (domyślnie); `bok` — na prawej krawędzi ramy przy dole, gdy pod
+   * Gdzie stoi tabliczka z liczbą — zawsze POZA obrazem: `pod` — pod ramą,
+   * na środku (domyślnie); `bok` — z prawej strony ramy przy dole, gdy pod
    * gniazdem nie ma miejsca (pasek załogi w mieście).
    */
-  odznaka?: 'dol' | 'bok';
+  odznaka?: 'pod' | 'bok';
 }
 
 /**
@@ -239,19 +252,21 @@ export class GniazdoPortretu {
     } else {
       this.obraz.setVisible(false);
     }
-    this.rama.setAlpha(jest ? 1 : 0.55);
+    // Rama pełnym złotem także przy pustym gnieździe — przygaszona czytała
+    // się jak wyłączony przycisk.
+    this.rama.setAlpha(1);
     this.numer?.setVisible(!jest);
     this.odznaka.clear();
     const napis = jest && ile !== undefined ? String(ile) : '';
     this.liczba.setText(napis).setVisible(napis !== '');
     if (!napis) return;
-    // Odznaka: drewniana tabliczka ze złotym obrzeżem, dosunięta do prawego
-    // dolnego rogu ramy — środkiem na dolnej krawędzi ramy.
+    // Tabliczka: drewno ze złotym obrzeżem, POZA obrazem — runda 6: liczba
+    // na rogu portretu i tak zachodziła na stwora.
     const h = Math.round(this.liczba.height * 0.9) + 2;
-    const w = Math.max(h + 2, this.liczba.width + 10);
     const zBoku = this.opcje.odznaka === 'bok';
-    const x = zBoku ? this.bok + 3 - w / 2 : this.bok + 3 - w;
-    const y = zBoku ? this.bok - h + 1 : this.bok + 3 - h / 2;
+    const w = Math.max(zBoku ? h + 2 : this.bok * 0.46, this.liczba.width + 12);
+    const x = zBoku ? this.bok + 8 : (this.bok - w) / 2;
+    const y = zBoku ? this.bok - h : this.bok + 8;
     this.odznaka.fillStyle(0x000000, 0.35);
     this.odznaka.fillRoundedRect(x + 1, y + 2, w, h, h / 2.4);
     this.odznaka.fillStyle(0x7a4f14, 1);

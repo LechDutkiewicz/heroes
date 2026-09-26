@@ -821,7 +821,8 @@ export class HeroScene extends Phaser.Scene {
     const pasX = RAMA.x + 12;
     const pasW = RAMA.w - 24;
     const pasY = ARMIA_Y - 26;
-    const pasH = SLOT_BOK + 50;
+    // Pod ramami miejsce na tabliczki z liczbą (liczba nie wchodzi na obraz).
+    const pasH = SLOT_BOK + 58;
     // Pas armii z zestawu: ciemne drewno w cienkiej złotej ramie — ten sam
     // materiał co panel bohatera na mapie. Wcześniej był tu płaski niebieski
     // prostokąt z zaokrąglonymi rogami, a w nim siedem mlecznych kafelków —

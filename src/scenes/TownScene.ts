@@ -613,11 +613,13 @@ export class TownScene extends Phaser.Scene {
     // Portret 50 px — ciasny kadr na twarz (mały portret). Pasek jest wyższy
     // niż panorama zostawiała (72 px, wchodzi 18 px na krzaki pierwszego
     // planu), bo przy 42 px twarzy nie było widać z odległości ekranu.
-    // Liczba na odznace w prawym dolnym rogu ramy — na ramie, nie na twarzy.
+    // Liczba na tabliczce z prawej strony ramy — pod ramą nie ma miejsca,
+    // a na obrazie zasłaniałaby stwora.
     const bok = 50;
     for (let i = 0; i < 6; i++) {
       const gniazdo = new GniazdoPortretu(this, 14 + i * 96, y + 7, bok, {
         maly: true,
+        odznaka: 'bok',
         rozmiarLiczby: 13,
       });
       gniazdo.kontener.setDepth(Z.hud + 1);
