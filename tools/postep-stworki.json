@@ -1,5 +1,5 @@
 {
- "updated": "Animacje w bitwie wygrywają 3/5 (atak, trafienie, strzał). Dopracowanie chodu i lotu oraz animacja stosu po najechaniu na mapie w toku.",
+ "updated": "Wszystkie kawałki zamknięte: animacje w bitwie 3/5, najechanie na stos 2/3; mapa i portrety zamknięte decyzją gracza. Chód i lot — ostatnie dopracowanie w toku.",
  "pieces": [
   {
    "name": "Stwory na mapie przygody (malowane rysunki, stos na mapie)",
@@ -191,7 +191,7 @@
   },
   {
    "name": "Najechanie na stos (mapa przygody)",
-   "status": "critic",
+   "status": "done",
    "bar": "Paski animacji stworów na mapie HotA (satyr, pirat, leprikon; tools/reference/homm3/ref-anim-mapa-hota-*-pasek-x2.png). Krytyk ocenia na ślepo tylko animację (gest, rytm, waga, ruch wtórny, czysta pętla), nie styl. Wygrana: 2 z 3.",
    "note": "Drobna animacja stosu po najechaniu kursorem, jak w HotA.",
    "rounds": [
@@ -212,6 +212,24 @@
      "gap": "Wygrywa: oddech, wymach liści, kołysanie głowy z opóźnieniem, czysty powrót.",
      "blind": "tools/postep-obrazy/najechanie-lep-r1.jpg",
      "note": "Runda 1, wzór: leprikon. 1/3."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: jeden czytelny gest (skręt i rozwinięcie z koroną w ruchu wtórnym); słabość: przenikanie w klatce 4 zamiast klatek pośrednich.",
+     "blind": "tools/postep-obrazy/najechanie-satyr-r2.jpg",
+     "note": "Runda 2 (gest z przytrzymaniem, sprężynujące wyciągnięcie), wzór: satyr."
+    },
+    {
+     "win": false,
+     "gap": "Stoi–nagła przemiana–stoi; potrzebny ciągły oddech przez całą pętlę i płynne przejście.",
+     "blind": "tools/postep-obrazy/najechanie-pirat-r2.jpg",
+     "note": "Runda 2, wzór: pirat."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: czytelny gest macką, korona dosiada z opóźnieniem, czysty szew pętli.",
+     "blind": "tools/postep-obrazy/najechanie-leprechaun-r2.jpg",
+     "note": "Runda 2, wzór: leprikon. 2/3 — kawałek wygrywa."
     }
    ]
   },
