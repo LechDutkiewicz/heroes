@@ -200,15 +200,46 @@
    "name": "Stwory na polu bitwy",
    "status": "todo",
    "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3. Od 2026-09-26 (decyzja gracza): storki zostają urocze — krytyk nie ocenia klimatu (uroczy vs ponury), tylko spójność stworów z ich własnym światem i UI.",
-   "note": "Wygląd oddziału w bitwie: rysunek, skala, cień, licznik.",
+   "note": "Wygląd oddziału w bitwie: rysunek, skala, cień, licznik. Łączone z animacjami: skala wg poziomu, cień pod stopami (runda 1).",
    "rounds": []
   },
   {
    "name": "Animacje w bitwie: ruch, lot, atak, obrona, strzał",
-   "status": "todo",
-   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3. Od 2026-09-26 (decyzja gracza): storki zostają urocze — krytyk nie ocenia klimatu (uroczy vs ponury), tylko spójność stworów z ich własnym światem i UI.",
+   "status": "critic",
+   "bar": "Paski klatek z HoMM3/HotA (tools/reference/homm3/ref-anim-*-pasek.png): pikinier atak i trafienie, ork strzał, miecznik chód, gryf lot. Krytyk ocenia na ślepo tylko czytelność ruchu (zamach, uderzenie, odrzut, powrót), nie styl. Wygrana: 3 z 5 akcji.",
    "note": "Klatki póz zamiast samego przesuwania obrazka.",
-   "rounds": []
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Sztywny rysunek przechylony i przesunięty po heksie; błysk uderzenia dopiero po cofnięciu — cios bez wagi.",
+     "blind": "tools/postep-obrazy/anim-atak-r1.jpg",
+     "note": "Runda 1 (pozy z wygiętych wzorców — OpenAI bez środków), atak."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: przysiad i wzdrygnięcie w klatkach 2–3, powrót w 4–6; błysk zasłania pozę kontaktu.",
+     "blind": "tools/postep-obrazy/anim-trafiony-r1.jpg",
+     "note": "Runda 1, trafienie."
+    },
+    {
+     "win": false,
+     "gap": "Prawie trzymana poza, pocisk znikąd, bez zamachu i odrzutu.",
+     "blind": "tools/postep-obrazy/anim-strzal-r1.jpg",
+     "note": "Runda 1, strzał."
+    },
+    {
+     "win": false,
+     "gap": "Podskoki z obiema nogami w powietrzu zamiast kroku; brak naprzemienności nóg (bez nowych klatek nie do zrobienia).",
+     "blind": "tools/postep-obrazy/anim-ruch-r1.jpg",
+     "note": "Runda 1, chód."
+    },
+    {
+     "win": false,
+     "gap": "Stwór kuca nad podkładką przez 6 klatek — brak uniesienia, wyciągnięcia ciała i łuku.",
+     "blind": "tools/postep-obrazy/anim-lot-r1.jpg",
+     "note": "Runda 1, lot. 1/5."
+    }
+   ]
   },
   {
    "name": "Portrety i ikony stworów (sloty armii, kolejka tury, bohater, miasto)",
