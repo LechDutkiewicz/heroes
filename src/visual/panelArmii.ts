@@ -8,7 +8,8 @@
  *    (garnizon ↔ bohater odwiedzający);
  *  - przeciągnięcie robi to samo jednym ruchem;
  *  - Shift przy drugim kliku (albo przy upuszczeniu), albo tabliczka
- *    „Podziel", otwiera okno podziału z suwakiem;
+ *    „Podziel", otwiera okno podziału z suwakiem; Ctrl odkłada jednego
+ *    stworka bez okna;
  *  - drugi klik w zaznaczony oddział, prawy klik albo przytrzymanie palca
  *    otwiera okno stworka (`oknoStworka.ts`).
  *
@@ -95,7 +96,7 @@ export class PanelArmii {
   private wybor: Miejsce | null = null;
   /** Po „Podziel": następny klik w slot otwiera okno podziału. */
   private trybPodzialu = false;
-  private wcisk: { m: Miejsce; x: number; y: number; shift: boolean } | null = null;
+  private wcisk: { m: Miejsce; x: number; y: number; shift: boolean; ctrl: boolean } | null = null;
   private ciagnie = false;
   private duch: Phaser.GameObjects.Container | null = null;
   private zegarPrzytrzymania: Phaser.Time.TimerEvent | null = null;
@@ -248,7 +249,7 @@ export class PanelArmii {
       return;
     }
     const e = p.event as MouseEvent | undefined;
-    this.wcisk = { m, x: p.x, y: p.y, shift: !!e?.shiftKey };
+    this.wcisk = { m, x: p.x, y: p.y, shift: !!e?.shiftKey, ctrl: !!(e?.ctrlKey || e?.metaKey) };
     this.ciagnie = false;
     this.zegarPrzytrzymania?.remove();
     if (oddzial) {
@@ -312,19 +313,42 @@ export class PanelArmii {
         return;
       }
       if (e?.shiftKey || w.shift) this.oknoPodzialu(w.m, cel);
+      else if (e?.ctrlKey || e?.metaKey || w.ctrl) this.odlozJednego(w.m, cel);
       else this.wykonaj(w.m, cel);
       return;
     }
-    this.klik(w.m, w.shift);
+    this.klik(w.m, w.shift, w.ctrl);
   }
 
-  private klik(m: Miejsce, shift: boolean) {
+  /**
+   * Ctrl przy upuszczeniu (albo przy drugim kliku) odkłada JEDNEGO stworka —
+   * skrót z HotA: pojedynczy stworek na osobnym slocie przyjmuje pierwszy
+   * cios, a przez okno z suwakiem robiłoby się to kilka razy na turę.
+   */
+  private odlozJednego(z: Miejsce, doc: Miejsce) {
+    const w = podzielMiedzy(z.pasek.armia(), z.slot, doc.pasek.armia(), doc.slot, 1, !!z.pasek.chroniona);
+    this.wybor = null;
+    this.trybPodzialu = false;
+    if (!w.ok) {
+      this.o.powiedz(w.powod);
+      this.drgnij(doc);
+      this.odswiez();
+      return;
+    }
+    this.o.poZmianie(w.opis);
+    this.o.powiedz(w.opis);
+    this.odswiez();
+    this.blysk(doc);
+  }
+
+  private klik(m: Miejsce, shift: boolean, ctrl = false) {
     const armia = m.pasek.armia();
     const w = this.wybor;
     const tenSam = !!w && w.pasek === m.pasek && w.slot === m.slot;
 
     if (w && !tenSam) {
       if (this.trybPodzialu || shift) this.oknoPodzialu(w, m);
+      else if (ctrl) this.odlozJednego(w, m);
       else this.wykonaj(w, m);
       return;
     }

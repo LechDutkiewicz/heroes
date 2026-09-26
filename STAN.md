@@ -1,6 +1,57 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-09-26 (garnizon miasta i wspólny pasek armii; profile graczy i sloty zapisu; wcześniej plansze kampanii i silnik generatora).
+Ostatnia aktualizacja: 2026-09-26 (ekran bohatera na zestawie; garnizon miasta i wspólny pasek armii; profile graczy i sloty zapisu; wcześniej plansze kampanii i silnik generatora).
+
+## Ekran bohatera na wspólnym zestawie (2026-09-26)
+
+Zgłoszenie: ekran bohatera był w starym mlecznoniebieskim stylu `hud.ts`
+i nie miał grafik umiejętności ani artefaktów.
+
+**Co działa.** `src/scenes/HeroScene.ts` przepisany na materiał mapy
+i miasta (`zestaw.ts`): drewno z belką (imię, kursywą charakter bohatera jak
+motto miasta, data), dwa pergaminowe pola, podział kolumn jak w mieście
+(lewa do x = 568, prawa od 586). Lewe pole: głowa w medalionie z oczkiem
+poziomu, „Poziom N · trener/trenerka", pasek doświadczenia z gwiazdą,
+atak/obrona/ruch jako malowane ikony kampanii (`k-ikona-miecz/tarcza/buty`)
+w gniazdach z liczbą i zielonym dodatkiem, wiersz „W bitwie: +X% / −Y%"
+(wzór z `battle.ts`), siatka 2 × 2 umiejętności drugorzędnych
+(`public/bohater/umiejetnosc-<id>.png`, poziom słownie + trzy kropki,
+wartość; puste gniazdo „Wolne miejsce"). Prawe pole: portret
+`public/kampania/portret-<janek|ela>.jpg` w grubej złotej ramie, po bokach
+8 gniazd artefaktów (`public/bohater/artefakt-<id>.png`; brakujące jako cień,
+noszone w cienkiej złotej ramie), „Zebrane: X z 8", suma bonusów, cel misji
+(Księżycowy Kamień) w osobnym gnieździe, gdy go niesie. Dół: wspólny
+`PanelArmii` (jak w mieście), komunikat z „Podziel", złota tabliczka
+„Na mapę" / „Do miasta" (klucz `powrot-z-bohatera`). Najechanie na
+umiejętność, artefakt, statystykę, doświadczenie albo portret → dymek
+(pergamin w złotej ramie; statystyka rozpisuje „skąd to masz": bohater,
+awanse, artefakty, Zwiad, ranczo); klik/prawy klik przypina, klik obok
+albo Escape zdejmuje. Escape przy otwartym oknie stworka/podziału zamyka
+tylko okno. Portret wybierany z imienia (`/^el/i` → Ela, reszta → Janek).
+
+**Decyzje.** Lalka bez części ciała: artefakt działa samym posiadaniem, więc
+gniazda stoją wokół portretu, ale żadne nie jest „na hełm". Ikona obrony to
+ta sama tarcza co artefakt „Tarcza z Łusek" — tak samo robi kampania przy
+nagrodach obrony. Ekran buduje się po `krojeZestawu()`; sondy czekają na
+`scena.gotowy`. Dawne skróty ekranu (Shift = połowa, Alt = okno) zastąpił
+zestaw `PanelArmii`: Shift = okno podziału (startuje od połowy, Enter
+zatwierdza); do `PanelArmii` doszło Ctrl = odłóż jednego stworka (działa
+też w mieście).
+
+**Sondy.** `probe-bohater.mjs` (sloty czytane z `panel.paski[0]`, nowe
+sprawdzenia: malowane ikony, portret, wolne gniazda, dymek najechanie/
+przypięcie/zdjęcie, opis artefaktu, okno stworka i Escape), `probe-awans`
+(napis „Wolne miejsce"; wyjście z ekranu bohatera Escape'em — start mapy
+wprost z sondy zostawiał ekran bohatera działający nad mapą i jego strefy
+łapały klik w okno awansu), `probe-armia`, `probe-misja` — przechodzą.
+Zrzuty: `node tools/zrzut-bohater.mjs [--stan pelny|ela|pusty|po-bitwie]
+[--opis <id umiejętności>|artefakt-<id>|atak] [--okno]` → płótno 960 × 695;
+`tools/blind/bohater-hud.png`, `bohater-hud-opis.png`.
+
+**Co zostało.** Nie było ślepego porównania z HotA przez świeżego krytyka.
+Brak przycisków HoMM3 „zwolnij bohatera" / „lista zadań" (gra ma jednego
+bohatera i nie miała ich wcześniej). Ruch pokazuje zapas na dzień
+(dzisiejszy stan jest w dymku).
 
 ## Garnizon miasta i wspólny pasek armii (2026-09-26)
 
@@ -59,9 +110,7 @@ garnizonie nie rusza). Zrzuty: `tools/blind/miasto-armia.png`,
 `okno-stworka.png`, `miasto-podziel.png`.
 
 **Co zostało.**
-- Ekran bohatera dalej ma własny pas armii — podpięcie `PanelArmii`
-  i `pokazOknoStworka` tam to zadanie innego wątku (wejście/powrót z miasta
-  już jest).
+- (zrobione) Ekran bohatera ma już wspólny `PanelArmii` — patrz sekcja wyżej.
 - Obrona zamku przed AI jest rozstrzygana symulacją w turze przeciwnika (jak
   każda bitwa AI), a nie bitwą, którą gracz prowadzi na ekranie. Prawdziwa
   obrona wymagałaby przerwania tury AI w pół i wznowienia po `BattleScene`.
