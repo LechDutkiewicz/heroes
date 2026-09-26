@@ -57,9 +57,22 @@
    "status": "build",
    "bar": "Stacki stworków w stylu malowanych plansz; pełne linie ewolucyjne jako grafiki. Ślepy krytyk vs HotA.",
    "live": {
-    "round": 1,
-    "stage": "builder pracuje"
-   }
+    "round": 2,
+    "stage": "builder pracuje (skala i cień stacków na mapie)"
+   },
+   "note": "Builder r1: 18 stworków przemalowanych przez OpenAI w stylu plansz, każdy z dwoma etapami ewolucji (54 grafiki, $2.90); linie w src/data/ewolucje.ts (jeszcze bez mechaniki); sprite'y patrzą w prawo, stopy na dole kadru, ciemny obrys.",
+   "rounds": [
+    {
+     "win": false,
+     "label": "Runda 1 (HotA, 0/2)",
+     "blinds": [
+      "tools/postep-obrazy/stworki-r1-w1.jpg",
+      "tools/postep-obrazy/stworki-r1-w2.jpg"
+     ],
+     "gap": "Strażnik nie odróżnia się od znajdźki: ta sama wielkość, nasycenie i brak cienia co kryształy, jagody, skrzynie; Janek wielkości kryształu.",
+     "note": "Obaj krytycy: HotA — stwory tą samą techniką co teren, cienie, skala jednostki; nasze wyglądają jak naklejki. Słabość HotA: ciemne stwory giną w lesie."
+    }
+   ]
   },
   {
    "name": "Sceny wyniku: zwycięstwo, porażka, koniec kampanii (grafiki OpenAI)",
