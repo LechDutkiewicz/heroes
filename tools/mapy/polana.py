@@ -572,7 +572,14 @@ USTAWIENIA = {
         # przykrywała rozwidlenie i przyczółek mostu — droga „urywała się
         # przy moście". Węższe szare zęby kończą pasmo na przełęczy.
         '2,25': 4, '5,25': 2, '8,25': -1,
-        '18,28': 3, '21,28': 1,
+        # Zgłoszenie gracza (po rundzie 11): „kopalnia w dole na środku, pod
+        # strażą — nie da się do niej dojść". Zasadami gry się dało, ale
+        # jedyne wejście do kieszeni, pas ziemi (17, 27)–(17, 29) między
+        # rzeką a pasmem, leżało w całości pod szeroką granią (3, prawie
+        # dziesięć pól): na ekranie kieszeń była zamknięta górą i rzeką.
+        # Wąski masyw z wodospadem (2, 5⅓ pola) odsłania pas wzdłuż brzegu
+        # (`tools/probe-osiagalnosc.ts`, część „okiem gracza").
+        '18,28': 2, '21,28': 1,
         '22,30': -2, '22,32': 4, '22,34': -1,
     },
     # Runda 11 (gracz): cztery odsłonięte rogi kadru z rundy 6 wyglądały na
