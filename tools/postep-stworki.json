@@ -341,6 +341,24 @@
      "gap": "Najmniej pasuje: portret bohatera. Portrety: NIE — różne tła i kadry, blade stwory giną.",
      "blind": "tools/postep-obrazy/dopasowanie-portrety-hud-r7.jpg",
      "note": "Runda 7, HUD. 0/3 — kolejna zmiana: cała postać zamiast popiersia."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: bladoniebieskie panele starego UI. Portrety: NIE — skala skacze (kula 85%, smok i wróżka 50%), brak wspólnej linii ziemi.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-bohater-r8.jpg",
+     "note": "Runda 8 (cała postać), bohater."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: pokeball. Portrety: NIE — kula wypełnia slot, reszta pływa mała w ciemnych studniach.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-miasto-r8.jpg",
+     "note": "Runda 8, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: same stwory w slotach — chłodne, bez obrysu, na ciemnym, nieoświetlonym tle.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-hud-r8.jpg",
+     "note": "Runda 8, HUD. 0/3 — przy popiersiu zarzut „kadr skacze”, przy całej postaci „skala skacze”."
     }
    ]
   }
