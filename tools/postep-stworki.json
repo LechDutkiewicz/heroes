@@ -269,6 +269,24 @@
      "gap": "Najmniej pasuje: portret bohatera. Portrety: NIE — miękkie, lekko rozmyte przy ostrych ramkach; blade stwory giną na bladoszarym tle.",
      "blind": "tools/postep-obrazy/dopasowanie-portrety-hud-r5.jpg",
      "note": "Runda 5, HUD. 0/3 — kadr od ramki głowy zawodzi przy nietypowej budowie; następnie kadr od oczu."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: pusty slot (przygaszona rama, czarna dziura). Portrety: NIE — Pyroko skrajne zbliżenie bez twarzy, duch przyklejony do ramy, kiełek i 227 za daleko.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-bohater-r6.jpg",
+     "note": "Runda 6 (kadr od oczu, jedno ciepłe tło), bohater."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: pokeball. Portrety: NIE — Pyroko bez twarzy, plakietki zasłaniają ciało w różnych miejscach, pusty slot bez oprawy.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-miasto-r6.jpg",
+     "note": "Runda 6, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: portret bohatera. Portrety: NIE — różna odległość kamery, blady 227 ginie na bladym tle.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-hud-r6.jpg",
+     "note": "Runda 6, HUD. 0/3 — kadr od oczu zawodzi przy stworach-kulach (Pyroko)."
     }
    ]
   }
