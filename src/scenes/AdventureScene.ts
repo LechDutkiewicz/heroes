@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { kluczPortretu, oprawPortret, wczytajPortrety } from '../visual/portrety';
 import { ZESTAWY_KLIMATU } from '../data/zestawy-klimatu';
 import {
   BUDOWLE,
@@ -374,6 +375,8 @@ export class AdventureScene extends Phaser.Scene {
     for (const o of zywe(stan.bohater.armia)) potrzebne.add(o.sprite);
     for (const ob of stan.obiekty) for (const o of ob.oddzialy ?? []) potrzebne.add(o.sprite);
     for (const s of potrzebne) this.load.image(`p-${s}`, `${b}sprites/${s}.png`);
+    // Sloty armii w panelu pokazują małe portrety (`src/visual/portrety.ts`).
+    wczytajPortrety(this, { male: true });
   }
 
   /**
@@ -2291,7 +2294,15 @@ export class AdventureScene extends Phaser.Scene {
       g.fillRoundedRect(0, 0, slotBok, slotBok + 12, 4);
       g.lineStyle(1.2, BARWA.kreska, 0.6);
       g.strokeRoundedRect(0, 0, slotBok, slotBok + 12, 4);
-      const im = this.add.image(slotBok / 2, slotBok / 2 - 1, 'bohater').setVisible(false);
+      // Portret, nie figurka: przy 28 px cały stworek był plamką z nóżkami,
+      // a popiersie na tle miasta (jak w Heroes) ma twarz na pół slotu.
+      // Oprawa rysowana osobno, bo pusty slot ma zostać samą kratką.
+      const oprawa = this.add.graphics().setVisible(false);
+      oprawPortret(oprawa, 1, 1, slotBok - 2, 1);
+      const im = this.add
+        .image(slotBok / 2, slotBok / 2, 'bohater')
+        .setDisplaySize(slotBok - 2, slotBok - 2)
+        .setVisible(false);
       const licznik = this.add
         .text(slotBok / 2, slotBok + 4, '', {
           fontFamily: KROJ.tytul,
@@ -2301,8 +2312,8 @@ export class AdventureScene extends Phaser.Scene {
           strokeThickness: 3,
         })
         .setOrigin(0.5);
-      const slot = this.add.container(sx, rzadY, [g, im, licznik]).setDepth(Z.hud + 1);
-      slot.setData('licznik', licznik).setData('rysunek', im);
+      const slot = this.add.container(sx, rzadY, [g, oprawa, im, licznik]).setDepth(Z.hud + 1);
+      slot.setData('licznik', licznik).setData('rysunek', im).setData('oprawa', oprawa);
       this.slotyArmii.push(slot);
     }
 
@@ -2530,11 +2541,13 @@ export class AdventureScene extends Phaser.Scene {
       const im = slot.getData('rysunek') as Phaser.GameObjects.Image;
       const licznik = slot.getData('licznik') as Phaser.GameObjects.Text;
       if (od) {
-        im.setTexture(`p-${od.sprite}`).setVisible(true);
-        im.setScale(24 / im.height);
+        im.setTexture(kluczPortretu(od.sprite, true)).setVisible(true);
+        im.setDisplaySize(26, 26);
+        (slot.getData('oprawa') as Phaser.GameObjects.Graphics).setVisible(true);
         licznik.setText(String(od.ile));
       } else {
         im.setVisible(false);
+        (slot.getData('oprawa') as Phaser.GameObjects.Graphics).setVisible(false);
         licznik.setText('');
       }
     }

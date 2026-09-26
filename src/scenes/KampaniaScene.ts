@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { kluczPortretuOkraglego, wczytajPortrety } from '../visual/portrety';
 import { sledzScene, migawkaStanu } from '../dev/dziennik';
 import {
   KAMPANIA,
@@ -319,7 +320,8 @@ export class KampaniaScene extends Phaser.Scene {
     this.load.image('k-deseczka', `${b}menu/deseczka.png`);
     for (const s of Object.values(SUROWIEC_INFO)) this.load.image(`m-${s.ikona}`, `${b}mapa/${s.ikona}.png`);
     const bor = factionById('bor') ?? FACTIONS[0];
-    for (const u of bor.units) this.load.image(`p-${u.sprite}`, `${b}sprites/${u.sprite}.png`);
+    // Nagroda „oddział" pokazuje okrągły portret stwora w medalionie karty.
+    wczytajPortrety(this, { okragle: true }, bor.units.map((u) => u.sprite));
   }
 
   create() {
@@ -1706,7 +1708,14 @@ export class KampaniaScene extends Phaser.Scene {
     if (b.typ === 'oddzial') {
       const f = factionById('bor') ?? FACTIONS[0];
       const u = f.units[b.tier];
-      return { tekstura: `p-${u?.sprite ?? f.units[0].sprite}`, nazwa: u?.name ?? b.opis, liczba: `×${b.ile}`, bok: 50 };
+      // Portret wypełnia całe ciemne dno medalionu (średnica 52) — jak
+      // portret stwora w premii kampanii w Heroes, a nie figurka na dnie.
+      return {
+        tekstura: kluczPortretuOkraglego(u?.sprite ?? f.units[0].sprite),
+        nazwa: u?.name ?? b.opis,
+        liczba: `×${b.ile}`,
+        bok: 53,
+      };
     }
     const atak = b.atak ?? 0;
     return {

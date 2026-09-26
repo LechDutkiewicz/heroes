@@ -76,6 +76,7 @@ import { C, E, H, T, Z, body, display } from '../visual/theme';
 import { makeHudButton, mix, plate } from '../visual/hud';
 import { ICON, buildIcons, icon } from '../visual/icons';
 import { BARWA_KLASY, OBRYS_KLASY, buildArtefakty, kluczArtefaktu } from '../visual/artefakty';
+import { oprawPortret, kluczPortretu, wczytajPortrety } from '../visual/portrety';
 import { cienPod, faktura, listwa, naroznik, pierscien, wneka, zabkowanie } from '../visual/rama';
 import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
 
@@ -100,6 +101,8 @@ const TRESC_H = 388;
 /** Pas armii na dole — siedem slotów w jednym rzędzie, jak u bohatera w H3. */
 const SLOT_BOK = 92;
 const SLOT_ODSTEP = 12;
+/** Bok portretu w slocie armii: gniazdo minus wąski margines na złotą oprawę. */
+const PORTRET_W_SLOCIE = SLOT_BOK - 10;
 const ARMIA_Y = TRESC_Y + TRESC_H + 32;
 
 /** Kolejność klas — karta pokazuje domyślnie najmocniejszy noszony artefakt. */
@@ -152,13 +155,10 @@ export class HeroScene extends Phaser.Scene {
       frameWidth: 64,
       frameHeight: 64,
     });
-    // Sprite'y ładujemy z armii, którą naprawdę mamy — nie z całej listy
-    // frakcji. Ekran bohatera potrafi być pierwszą sceną po wczytaniu strony
-    // (przeładowanie z otwartym ekranem), więc nie wolno zakładać, że tekstury
-    // wgrała już mapa.
-    for (const o of zywe(this.wczytajStan().bohater.armia)) {
-      this.load.image(`p-${o.sprite}`, `${b}sprites/${o.sprite}.png`);
-    }
+    // Portrety (duże) ładujemy tu, a nie liczymy na mapę: ekran bohatera
+    // potrafi być pierwszą sceną po wczytaniu strony (przeładowanie
+    // z otwartym ekranem).
+    wczytajPortrety(this, { duze: true });
   }
 
   private wczytajStan(): StanMapy {
@@ -843,7 +843,9 @@ export class HeroScene extends Phaser.Scene {
       const y = ARMIA_Y + 6;
       const tlo = this.add.graphics();
       const ramka = this.add.graphics();
-      const rysunek = this.add.image(SLOT_BOK / 2, SLOT_BOK / 2 - 8, 'bohater').setVisible(false);
+      // Portret wypełnia gniazdo prawie do krawędzi, jak w Heroes: slot armii
+      // to ramka na obrazek, a nie półka, na której stoi figurka.
+      const rysunek = this.add.image(SLOT_BOK / 2, SLOT_BOK / 2, 'bohater').setVisible(false);
       const nazwa = this.add
         .text(SLOT_BOK / 2, SLOT_BOK - 26, '', { ...display(10), strokeThickness: 3 })
         .setOrigin(0.5)
@@ -957,8 +959,8 @@ export class HeroScene extends Phaser.Scene {
   private zbudujDucha(i: number, p: Phaser.Input.Pointer) {
     const o = this.stan.bohater.armia[i];
     if (!o) return;
-    const im = this.add.image(0, 0, `p-${o.sprite}`);
-    im.setScale(Math.min(1, (SLOT_BOK - 26) / im.height));
+    const im = this.add.image(0, 0, kluczPortretu(o.sprite));
+    im.setDisplaySize(PORTRET_W_SLOCIE, PORTRET_W_SLOCIE);
     const licznik = this.add.text(0, SLOT_BOK / 2 - 14, String(o.ile), display(15)).setOrigin(0.5);
     this.duch = this.add
       .container(p.x, p.y, [im, licznik])
@@ -1457,6 +1459,9 @@ export class HeroScene extends Phaser.Scene {
       if (!o) {
         s.tlo.fillStyle(C.shadow, 0.22);
         s.tlo.fillRoundedRect(6, 6, SLOT_BOK - 12, SLOT_BOK - 12, 7);
+      } else {
+        const m = (SLOT_BOK - PORTRET_W_SLOCIE) / 2;
+        oprawPortret(s.tlo, m, m, PORTRET_W_SLOCIE, 2, wybrany);
       }
 
       s.ramka.clear();
@@ -1468,10 +1473,12 @@ export class HeroScene extends Phaser.Scene {
       }
 
       if (o) {
-        s.rysunek.setTexture(`p-${o.sprite}`).setVisible(true);
-        s.rysunek.setScale(Math.min(1, (SLOT_BOK - 26) / s.rysunek.height));
+        s.rysunek.setTexture(kluczPortretu(o.sprite)).setVisible(true);
+        s.rysunek.setDisplaySize(PORTRET_W_SLOCIE, PORTRET_W_SLOCIE);
         s.rysunek.setAlpha(this.ciagniety === s.indeks ? 0.3 : 1);
-        s.nazwa.setText(o.nazwa).setVisible(true);
+        // Nazwa nie idzie na portret: zasłaniałaby pierś stwora tuż nad
+        // plakietką z liczbą. Mówi ją podpowiedź po najechaniu, jak w Heroes.
+        s.nazwa.setText(o.nazwa).setVisible(false);
         s.licznik.setText(String(o.ile)).setVisible(true);
         (s.kontener.getData('plakietka') as Phaser.GameObjects.Graphics).setVisible(true);
         s.pusty.setVisible(false);

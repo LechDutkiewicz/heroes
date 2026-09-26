@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { kluczPortretu, oprawPortret, wczytajPortrety } from '../visual/portrety';
 import {
   KOSZT_ODDZIALU,
   PRZYROST_ODDZIALU,
@@ -130,6 +131,7 @@ export class TownScene extends Phaser.Scene {
   private kartaKoszt!: Phaser.GameObjects.Container;
   private kartaPrzycisk!: ReturnType<typeof makeHudButton>;
   private kartaStworek!: Phaser.GameObjects.Image;
+  private kartaOprawa!: Phaser.GameObjects.Graphics;
   private zachety: Phaser.GameObjects.Image[] = [];
   private przyciskBudowy!: ReturnType<typeof makeHudButton>;
   private wybrany?: Budynek;
@@ -145,7 +147,8 @@ export class TownScene extends Phaser.Scene {
     loadSfx(this, MUZYKA_MIASTO);
     const b = import.meta.env.BASE_URL;
     for (const s of SUROWCE) this.load.image(`m-${SUROWIEC_INFO[s].ikona}`, `${b}mapa/${SUROWIEC_INFO[s].ikona}.png`);
-    for (const f of FACTIONS) for (const u of f.units) this.load.image(`p-${u.sprite}`, `${b}sprites/${u.sprite}.png`);
+    // Portrety zamiast całych stworków: duży na kartę werbunku, mały do załogi.
+    wczytajPortrety(this);
     for (const f of ['bor', 'grota', 'zbocze']) {
       this.load.image(`t-tlo-${f}`, `${b}miasto/tlo-${f}.png`);
       this.load.image(`t-znak-${f}`, `${b}miasto/znak-${f}.png`);
@@ -601,9 +604,14 @@ export class TownScene extends Phaser.Scene {
         gloss: 0.1,
         edgeW: 2,
       });
-      const im = this.add.image(24, 0, 'p-00193').setVisible(false);
+      // Mały portret na lewym końcu tabliczki, liczba obok — jak w pasku
+      // załogi w Heroes. Oprawa tylko pod zajętym slotem.
+      const oprawa = this.add.graphics().setVisible(false);
+      oprawPortret(oprawa, 5, -16, 32, 1);
+      const im = this.add.image(21, 0, 'bohater').setDisplaySize(32, 32).setVisible(false);
       const t = this.add.text(48, 0, '—', body(12, H.inkSoft)).setOrigin(0, 0.5);
-      kont.add([tlo, im, t]);
+      kont.add([tlo, oprawa, im, t]);
+      kont.setData('rysunek', im).setData('liczba', t).setData('oprawa', oprawa);
       this.slotyArmii[i] = kont;
     }
 
@@ -668,12 +676,22 @@ export class TownScene extends Phaser.Scene {
     const tlo = drawPanelBody(this, 0, 0, w, h, 8, this.karta);
     tlo.setDepth(0);
 
-    this.kartaStworek = this.add.image(w - 54, 62, 'p-00193').setVisible(false);
+    // Portret stwora w prawym górnym rogu karty — popiersie na tle jego
+    // miasta w złotej oprawie, jak na karcie siedliska w Heroes. Cały
+    // stworek zmniejszony do 72 px był figurką na mlecznym papierze.
+    const bokPortretu = PORTRET_NA_KARCIE;
+    const px = w - 16 - bokPortretu;
+    this.kartaOprawa = this.add.graphics().setVisible(false);
+    oprawPortret(this.kartaOprawa, px, 16, bokPortretu, 2);
+    this.kartaStworek = this.add
+      .image(px + bokPortretu / 2, 16 + bokPortretu / 2, 'bohater')
+      .setDisplaySize(bokPortretu, bokPortretu)
+      .setVisible(false);
     this.kartaTytul = this.add.text(18, 16, '', display(16)).setOrigin(0, 0);
     this.kartaOpis = this.add
       .text(18, 42, '', body(12, H.inkSoft))
       .setOrigin(0, 0)
-      .setWordWrapWidth(w - 90);
+      .setWordWrapWidth(w - 44 - PORTRET_NA_KARCIE);
     this.kartaKoszt = this.add.container(18, 112);
     this.kartaPrzycisk = makeHudButton(this, {
       x: x + w / 2,
@@ -686,7 +704,7 @@ export class TownScene extends Phaser.Scene {
       onClick: () => this.dzialaj(),
       depth: Z.hud + 6,
     });
-    this.karta.add([this.kartaStworek, this.kartaTytul, this.kartaOpis, this.kartaKoszt]);
+    this.karta.add([this.kartaOprawa, this.kartaStworek, this.kartaTytul, this.kartaOpis, this.kartaKoszt]);
     // Przycisk zostaje osobnym obiektem sceny — `makeHudButton` sam wiesza go
     // na scenie i wciągnięcie go do kontenera rozjeżdża jego strefę kliknięcia.
     // Widoczność prowadzimy więc razem z kartą, ręcznie.
@@ -731,8 +749,9 @@ export class TownScene extends Phaser.Scene {
       this.kartaOpis.setText(
         `${u.name}\nczeka: ${ile} · przybywa ${dziennie} dziennie\natak ${u.atk} · życie ${u.hp}`
       );
-      this.kartaStworek.setTexture(`p-${u.sprite}`).setVisible(true);
-      this.kartaStworek.setScale(Math.min(1, 72 / this.kartaStworek.height));
+      this.kartaStworek.setTexture(kluczPortretu(u.sprite)).setVisible(true);
+      this.kartaStworek.setDisplaySize(PORTRET_NA_KARCIE, PORTRET_NA_KARCIE);
+      this.kartaOprawa.setVisible(true);
       this.pokazKoszt({ pokeball: KOSZT_ODDZIALU[b.poziom] }, ' za sztukę');
       const stac = this.stan.skarbiec.pokeball >= KOSZT_ODDZIALU[b.poziom];
       this.kartaPrzycisk.setLabel(
@@ -743,6 +762,7 @@ export class TownScene extends Phaser.Scene {
     }
 
     this.kartaStworek.setVisible(false);
+    this.kartaOprawa.setVisible(false);
     if (stoi) {
       this.kartaOpis.setText(`${this.dzialanie(b, true)}\n\nJuż stoi.`);
       this.pokazKoszt({});
@@ -1142,14 +1162,17 @@ export class TownScene extends Phaser.Scene {
     for (let i = 0; i < 6; i++) {
       const a = this.stan.bohater.armia[i];
       const kont = this.slotyArmii[i];
-      const im = kont.list[1] as Phaser.GameObjects.Image;
-      const t = kont.list[2] as Phaser.GameObjects.Text;
+      const im = kont.getData('rysunek') as Phaser.GameObjects.Image;
+      const t = kont.getData('liczba') as Phaser.GameObjects.Text;
+      const oprawa = kont.getData('oprawa') as Phaser.GameObjects.Graphics;
       if (a) {
-        im.setTexture(`p-${a.sprite}`).setVisible(true);
-        im.setScale(Math.min(1, 32 / im.height));
+        im.setTexture(kluczPortretu(a.sprite, true)).setVisible(true);
+        im.setDisplaySize(32, 32);
+        oprawa.setVisible(true);
         t.setText(String(a.ile)).setStyle(display(14, H.ink));
       } else {
         im.setVisible(false);
+        oprawa.setVisible(false);
         t.setText('—').setStyle(body(12, H.inkSoft));
       }
     }
@@ -1159,6 +1182,9 @@ export class TownScene extends Phaser.Scene {
     if (this.wybrany) this.odswiezKarte();
   }
 }
+
+/** Bok portretu stwora na karcie siedliska. */
+const PORTRET_NA_KARCIE = 76;
 
 /** Identyfikatory budynków — kolejność wczytywania grafik. */
 const BUDYNKI_ID = [
