@@ -164,22 +164,20 @@ const MINIATURA = 'plansza-mini';
 /** Krycie cienia kontaktowego: pod znajdźką, stworkiem i bohaterem / pod dużą bryłą. */
 const KRYCIE_CIENIA = 0.48;
 const KRYCIE_CIENIA_BRYLY = 0.38;
-/**
- * Kontur stworka na mapie (`stworekNaMape`): przesunięcia o piksel ekranu
- * i ich krycie — pełne w pionie i poziomie, słabsze po skosie. Barwa to
- * ciemny ciepły brąz, jak kontury malowanych budowli i drzew.
- */
-const KONTUR_STWORKA: ReadonlyArray<readonly [number, number, number]> = [
-  [-1, 0, 0.8],
-  [1, 0, 0.8],
-  [0, -1, 0.8],
-  [0, 1, 0.8],
-  [-1, -1, 0.45],
-  [1, -1, 0.45],
-  [-1, 1, 0.45],
-  [1, 1, 0.45],
-];
-const BARWA_KONTURU_STWORKA = '#2a1a0c';
+/** Stworek na mapie (`stworekNaMape`): ile nasycenia zostaje z malowanego rysunku. */
+const STWOREK_NASYCENIE = 0.6;
+/** …jak mocno odcień idzie za średnią barwą okolicy (0 — wcale, 1 — w pełni). */
+const STWOREK_ODCIEN = 0.45;
+/** …siła lokalnego kontrastu (faktura) i amplituda ziarna pędzla. */
+const STWOREK_DETAL = 0.9;
+const STWOREK_ZIARNO = 0.1;
+/** Gotowe stworki na mapę: klucz tekstury → rysunek i cień (tekstury są globalne). */
+/** Krycie cienia rzuconego stworka. */
+const STWOREK_CIEN = 0.68;
+const STWORKI_MAPY = new Map<
+  string,
+  { rysunek: string; cien?: { klucz: string; ox: number; oy: number; stopy: number } }
+>();
 
 
 const DOMYSLNA_PODPOWIEDZ =
@@ -599,25 +597,85 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   /**
-   * Stworek-strażnik pomniejszony z wyprzedzeniem do rozmiaru, w jakim
-   * naprawdę stoi na ekranie (`wys` pikseli świata × `ZOOM_MAPY`).
-   *
-   * Malowany stworek ma 128 px, a na mapie zostaje z niego ok. 40. Phaser
-   * zmniejsza bez mipmap: karta graficzna brała co trzeci-czwarty piksel,
-   * cienki ciemny kontur z rysunku rwał się na kropki, a futro i łuski
-   * zamieniały się w szum — stworek wyglądał jak wklejony z gorszego zrzutu
-   * obok gładko zmniejszonych drzew i budowli. Tu zmniejszamy płótnem
-   * (schodki po połowie, wygładzanie „high"), raz na klucz i rozmiar, tak
-   * samo jak `WynikScene.gladka`. Proporcje pliku zostają te same, więc
-   * `wys / im.height`, cień kontaktowy i trafienia kliknięciem działają bez
-   * zmian; pomiary podstawy i marginesu dalej idą z oryginału (`klucz`).
+   * Średnia barwa namalowanego tła planszy (`plansza-0`) w prostokącie
+   * pól wokół (x, y) — światło i kolor miejsca, w którym stoi stworek.
    */
-  private stworekNaMape(klucz: string, wys: number): string {
+  private barwaOkolicy(x: number, y: number, promien = 3): [number, number, number] {
+    const domyslna: [number, number, number] = [120, 130, 90];
+    if (!this.textures.exists('plansza-0')) return domyslna;
+    const zrodlo = this.textures.get('plansza-0').getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    if (!zrodlo?.width) return domyslna;
+    const skala = zrodlo.width / this.mapaW;
+    const bok = (2 * promien + 1) * KAFEL * skala;
+    const c = document.createElement('canvas');
+    c.width = 16;
+    c.height = 16;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return domyslna;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(zrodlo, ((x + 0.5) * KAFEL) * skala - bok / 2, ((y + 0.5) * KAFEL) * skala - bok / 2, bok, bok, 0, 0, 16, 16);
+    const d = ctx.getImageData(0, 0, 16, 16).data;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 128) continue;
+      r += d[i];
+      g += d[i + 1];
+      b += d[i + 2];
+      n++;
+    }
+    return n ? [r / n, g / n, b / n] : domyslna;
+  }
+
+  /**
+   * Stworek-strażnik przemalowany na mapę: pomniejszony do rozmiaru, w jakim
+   * naprawdę stoi na ekranie (`wys` pikseli świata × `ZOOM_MAPY`), w barwach
+   * miejsca, w którym stoi, z własnym cieniem rzuconym.
+   *
+   * Dlaczego to wszystko (runda 1 wzorca „stwory na mapie", trzech krytyków
+   * na trzech, jednym głosem): stworki miały cukierkowe barwy, których nie ma
+   * nigdzie indziej na mapie (fiolet, błękit), gładkie „wektorowe" przejścia
+   * zamiast malowanej faktury, obwódkę jak naklejka i płaską elipsę zamiast
+   * cienia. Drzewa, chaty i skały obok są zmniejszone gładko, malowane
+   * fakturą, a krawędź mają ciemniejszą barwą własną, nie czarną linią.
+   *
+   * Kroki, wszystkie w skali ekranu (ok. 40 px):
+   * 1. Zmniejszenie płótnem schodkami po połowie (Phaser zmniejsza bez
+   *    mipmap — kontur i futro rwały się w szum).
+   * 2. Barwa: nasycenie w dół, odcień w stronę średniej barwy okolicy
+   *    (`barwaOkolicy`) — ta sama idea co `zabarw` w `tools/render_mapa.py`,
+   *    którym plansza dostaje swój klimat. Na Polanie ciepła zieleń, na
+   *    Bagnach mętna oliwka, w Twierdzy wypłowiały szaroniebieski.
+   * 3. Bryła: jaśniej z lewej-góry, ciemniej z prawej-dołu (światło mapy).
+   * 4. Faktura: lokalny kontrast (luminancja minus jej rozmycie) i drobne
+   *    ziarno pędzla w plamkach 2 × 2 — gładki gradient przestaje być gładki.
+   * 5. Krawędź: skrajny piksel sylwetki przyciemniony w jego WŁASNEJ barwie,
+   *    mocniej po stronie cienia (prawy-dół), słabiej od światła — tak jak
+   *    brzegi malowanych obiektów, a nie obwódka stałej grubości.
+   * 6. Cień rzucony: sylwetka spłaszczona i pochylona w prawo-dół (od
+   *    światła z lewej-góry), rozmyta, w ciemnej barwie okolicy — jak
+   *    stwory w Heroes 3, które mają cień własnego kształtu, a nie owal.
+   *
+   * Proporcje pliku zostają, więc `wys / im.height` i trafienia kliknięciem
+   * działają bez zmian; pomiary podstawy i marginesu idą z oryginału.
+   */
+  private stworekNaMape(
+    klucz: string,
+    wys: number,
+    tlo: [number, number, number]
+  ): { rysunek: string; cien?: { klucz: string; ox: number; oy: number; stopy: number } } {
     const h = Math.max(8, Math.round(wys * ZOOM_MAPY));
-    const cel = `${klucz}@mapa${h}`;
-    if (this.textures.exists(cel)) return cel;
+    // Barwa okolicy zaokrąglona, żeby stworki na podobnym gruncie dzieliły teksturę.
+    const [tr, tg, tb] = tlo.map((v) => Math.round(v / 8) * 8);
+    const cel = `${klucz}@mapa${h}-${tr}-${tg}-${tb}`;
+    const znany = STWORKI_MAPY.get(cel);
+    if (znany && this.textures.exists(cel)) return znany;
     const zrodlo = this.textures.get(klucz).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
-    if (!zrodlo?.width || zrodlo.height <= h) return klucz;
+    if (!zrodlo?.width || zrodlo.height <= h) return { rysunek: klucz };
+
+    // 1. Zmniejszenie.
     let obraz: HTMLImageElement | HTMLCanvasElement = zrodlo;
     while (obraz.height / 2 >= h * 1.4) {
       const c = document.createElement('canvas');
@@ -629,34 +687,139 @@ export class AdventureScene extends Phaser.Scene {
       obraz = c;
     }
     const w = Math.max(1, Math.round((zrodlo.width * h) / zrodlo.height));
-    const maly = document.createElement('canvas');
-    maly.width = w;
-    maly.height = h;
-    const m = maly.getContext('2d')!;
-    m.imageSmoothingQuality = 'high';
-    m.drawImage(obraz, 0, 0, w, h);
-    // Kontur. Rysunek ma cienki ciemny obrys, ale po zmniejszeniu ponad
-    // trzykrotnym zostaje z niego półprzezroczysta mgiełka i jasny stworek
-    // rozpływa się w trawie — a drzewa, chaty i skały obok mają wyraźny,
-    // ciemny, ciepły kontur. Odtwarzamy go w skali ekranu: sylwetka
-    // przesunięta o piksel w ośmiu kierunkach, zalana brązem, pod rysunkiem
-    // (po skosie słabiej, żeby kontur nie wyszedł kanciasty).
-    const c = document.createElement('canvas');
-    c.width = w;
-    c.height = h;
-    const x = c.getContext('2d')!;
-    for (const [dx, dy, a] of KONTUR_STWORKA) {
-      x.globalAlpha = a;
-      x.drawImage(maly, dx, dy);
-    }
-    x.globalAlpha = 1;
-    x.globalCompositeOperation = 'source-in';
-    x.fillStyle = BARWA_KONTURU_STWORKA;
-    x.fillRect(0, 0, w, h);
-    x.globalCompositeOperation = 'source-over';
-    x.drawImage(maly, 0, 0);
-    this.textures.addCanvas(cel, c);
-    return cel;
+    const plotno = document.createElement('canvas');
+    plotno.width = w;
+    plotno.height = h;
+    const ctx = plotno.getContext('2d', { willReadFrequently: true })!;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(obraz, 0, 0, w, h);
+    const obr = ctx.getImageData(0, 0, w, h);
+    const d = obr.data;
+
+    // Obrys sylwetki: do bryły (krok 3) i do stóp cienia (krok 6).
+    let x0 = w;
+    let x1 = -1;
+    let y0 = h;
+    let y1 = -1;
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++)
+        if (d[(y * w + x) * 4 + 3] > 40) {
+          x0 = Math.min(x0, x);
+          x1 = Math.max(x1, x);
+          y0 = Math.min(y0, y);
+          y1 = Math.max(y1, y);
+        }
+    if (x1 < 0) return { rysunek: klucz };
+    const sx = (x0 + x1) / 2;
+    const pw = Math.max(1, (x1 - x0) / 2);
+    const ph = Math.max(1, y1 - y0);
+
+    // Alfa: krótsza rampa. Po zmniejszeniu brzeg ma 2–3 piksele półprzejrzystej
+    // mgiełki, a malowane obiekty mapy mają brzeg twardy.
+    for (let i = 3; i < d.length; i += 4) d[i] = Phaser.Math.Clamp(((d[i] - 70) / 130) * 255, 0, 255);
+
+    // 2–3. Barwa i bryła.
+    const sr = (tr + tg + tb) / 3 || 1;
+    const amb = [tr / sr, tg / sr, tb / sr];
+    const lum = new Float32Array(w * h);
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (!d[i + 3]) continue;
+        let r = d[i] / 255;
+        let g = d[i + 1] / 255;
+        let b = d[i + 2] / 255;
+        const L = 0.299 * r + 0.587 * g + 0.114 * b;
+        r = L + (r - L) * STWOREK_NASYCENIE;
+        g = L + (g - L) * STWOREK_NASYCENIE;
+        b = L + (b - L) * STWOREK_NASYCENIE;
+        const k = STWOREK_ODCIEN;
+        r *= 1 - k + k * amb[0];
+        g *= 1 - k + k * amb[1];
+        b *= 1 - k + k * amb[2];
+        const nx = (x - sx) / pw;
+        const ny = (y - y0) / ph;
+        const bryla = 1 - 0.13 * nx - 0.26 * (ny - 0.4);
+        r *= bryla;
+        g *= bryla;
+        b *= bryla;
+        d[i] = Phaser.Math.Clamp(r * 255, 0, 255);
+        d[i + 1] = Phaser.Math.Clamp(g * 255, 0, 255);
+        d[i + 2] = Phaser.Math.Clamp(b * 255, 0, 255);
+        lum[y * w + x] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      }
+
+    // 4–5. Faktura i krawędź — z kopii, żeby sąsiedzi byli sprzed zmian.
+    const alfa = (x: number, y: number) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : d[(y * w + x) * 4 + 3]);
+    const ziarno = (x: number, y: number) => {
+      let n = (x * 374761393 + y * 668265263) ^ 0x5bd1e995;
+      n = Math.imul(n ^ (n >>> 13), 1274126177);
+      return (((n ^ (n >>> 16)) >>> 0) % 1000) / 1000 - 0.5;
+    };
+    const wynik = new Uint8ClampedArray(d);
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (!d[i + 3]) continue;
+        // Luminancja rozmyta 3 × 3 po samej sylwetce.
+        let suma = 0;
+        let ile = 0;
+        let kx = 0;
+        let ky = 0;
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -1; dx <= 1; dx++) {
+            if (alfa(x + dx, y + dy) > 100) {
+              suma += lum[(y + dy) * w + x + dx];
+              ile++;
+            } else {
+              // Kierunek „na zewnątrz" sylwetki.
+              kx += dx;
+              ky += dy;
+            }
+          }
+        const detal = ile ? (lum[y * w + x] - suma / ile) * STWOREK_DETAL : 0;
+        let mnoz =
+          1 + STWOREK_ZIARNO * (0.65 * ziarno(x >> 1, y >> 1) + 0.35 * ziarno(x + 101, y + 57));
+        if (ile < 9) {
+          // Krawędź: po stronie światła (lewa-góra) jaśniej, w cieniu ciemniej.
+          const dl = Math.hypot(kx, ky) || 1;
+          const odSwiatla = (kx + ky) / dl / Math.SQRT2;
+          mnoz *= 0.66 - 0.16 * odSwiatla;
+        }
+        for (let c = 0; c < 3; c++) wynik[i + c] = Phaser.Math.Clamp((d[i + c] + detal) * mnoz, 0, 255);
+      }
+    obr.data.set(wynik);
+    ctx.putImageData(obr, 0, 0);
+    this.textures.addCanvas(cel, plotno);
+
+    // 6. Cień rzucony: y' = stopy − (stopy − y)·SPLASZCZ, x' = x + (stopy − y)·POCHYL.
+    const p = 3;
+    const stopy = y1 + 1;
+    const pochyl = 0.62;
+    const splaszcz = 0.3;
+    const cw = w + Math.ceil(ph * pochyl) + 2 * p;
+    const chh = Math.ceil(stopy * splaszcz) + 2 * p;
+    const cc = document.createElement('canvas');
+    cc.width = cw;
+    cc.height = chh;
+    const cx = cc.getContext('2d')!;
+    cx.filter = 'blur(1.2px)';
+    cx.setTransform(1, 0, -pochyl, splaszcz, stopy * pochyl + p, chh - p - stopy * splaszcz);
+    cx.drawImage(plotno, 0, 0);
+    cx.setTransform(1, 0, 0, 1, 0, 0);
+    cx.filter = 'none';
+    cx.globalCompositeOperation = 'source-in';
+    // Ciemna barwa okolicy — na śniegu szaroniebieska, w trawie brunatnozielona.
+    cx.fillStyle = `rgb(${Math.round(tr * 0.22 + 12)},${Math.round(tg * 0.2 + 8)},${Math.round(tb * 0.2 + 4)})`;
+    cx.fillRect(0, 0, cw, chh);
+    const kluczCienia = `${cel}-cien`;
+    this.textures.addCanvas(kluczCienia, cc);
+    const wpis = {
+      rysunek: cel,
+      cien: { klucz: kluczCienia, ox: (w / 2 + p) / cw, oy: (chh - p) / chh, stopy: h - stopy },
+    };
+    STWORKI_MAPY.set(cel, wpis);
+    return wpis;
   }
 
   /**
@@ -1585,16 +1748,19 @@ export class AdventureScene extends Phaser.Scene {
           : o.rodzaj === 'jasnowidz'
             ? undefined
             : planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienZnajdzek;
-      kont.add(
-        this.cienKontaktowy(
-          klucz,
-          wys,
-          0,
-          spod,
-          (bryla ? KRYCIE_CIENIA_BRYLY : KRYCIE_CIENIA) * (cb?.krycie ?? 1),
-          cb?.szer ?? 1
-        )
-      );
+      // Stworek ma własny cień rzucony (`stworekNaMape`), dodawany niżej.
+      const naMape = o.rodzaj === 'potwor' ? this.stworekNaMape(klucz, wys, this.barwaOkolicy(o.x, o.y)) : null;
+      if (!naMape?.cien)
+        kont.add(
+          this.cienKontaktowy(
+            klucz,
+            wys,
+            0,
+            spod,
+            (bryla ? KRYCIE_CIENIA_BRYLY : KRYCIE_CIENIA) * (cb?.krycie ?? 1),
+            cb?.szer ?? 1
+          )
+        );
       // Wejście do budowli z bryłą (zamek, kopalnia) nie ma żadnego
       // odrębnego oznaczenia na gruncie — z daleka wygląda jak zwykła
       // ścieżka POD budynkiem, więc nie widać, gdzie naprawdę trzeba
@@ -1629,11 +1795,31 @@ export class AdventureScene extends Phaser.Scene {
       // jest po niej gdzie chodzić. Reszta obiektów stoi na swoim polu.
       // Stworek dostaje kopię zmniejszoną do rozmiaru na ekranie
       // (`stworekNaMape`); reszta rysunków mapy ma pliki już w tej skali.
-      const rysunek = o.rodzaj === 'potwor' ? this.stworekNaMape(klucz, wys) : klucz;
       const im = this.add
-        .image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, rysunek)
+        .image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, naMape?.rysunek ?? klucz)
         .setOrigin(0.5, 1);
       im.setScale(wys / im.height);
+      if (naMape?.cien) {
+        // Cień rzucony stoi stopami w stopach stworka; pod nim mały, miękki
+        // rdzeń styku, żeby stopy nie wisiały nad trawą.
+        const sk = im.scaleY;
+        const yStop = im.y - naMape.cien.stopy * sk;
+        kont.add(
+          this.add
+            .image(0, yStop, naMape.cien.klucz)
+            .setOrigin(naMape.cien.ox, naMape.cien.oy)
+            .setScale(sk)
+            .setAlpha(STWOREK_CIEN)
+        );
+        kont.add(
+          this.add
+            .image(KAFEL * 0.05, yStop, CIEN_KONTAKTOWY)
+            .setDisplaySize(im.displayWidth * 0.62, im.displayWidth * 0.16)
+            .setTint(0x140c04)
+            .setTintMode(Phaser.TintModes.FILL)
+            .setAlpha(0.32)
+        );
+      }
       // Obrys obiektów gry (`USTAWIENIA.obrysObiektow`, per plansza): ciemna
       // sylwetka przesunięta o 2,5 piksela świata w ośmiu kierunkach, pod rysunkiem.
       // Bagna, runda 6: „obiekty interaktywne zlewają się z dekoracją — bez
