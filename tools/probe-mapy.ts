@@ -14,6 +14,11 @@
 //     losowania (skrzynia, wóz, chata jasnowidza).
 //
 //   npx tsx tools/probe-mapy.ts
+//
+// Dojścia liczone tu własnym, uproszczonym modelem („obiekt ma osiągalnego
+// sąsiada"). Dokładnie zasadami `trasa()` — i okiem gracza, czyli bez przejść
+// schowanych pod rysunkiem góry albo lasu — liczy je `probe-osiagalnosc.ts`.
+// Po każdej zmianie planszy puszcza się obie.
 
 import {
   ARTEFAKTY,

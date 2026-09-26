@@ -14,15 +14,16 @@
 
 import { chromium } from 'playwright';
 import {
-  KLUCZ_POSTEPU,
   KLUCZ_REKORDOW,
   POSTEP_PRZED_OSTATNIA,
   aktywne,
   czekajNaNapis,
+  czytajPostep,
   gdziePrzycisk,
   klikPrzycisk,
   scena,
   startMisji,
+  usunPostep,
   wymusWygrana,
 } from './wynik-wspolne.mjs';
 import { zamknijAwans } from './sonda-wspolne.mjs';
@@ -46,7 +47,8 @@ page.on('pageerror', (e) => {
   console.log('  BŁĄD JS —', String(e));
 });
 
-const postep = () => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), KLUCZ_POSTEPU);
+// Postęp aktywnego profilu gracza (src/data/profile.ts) — nie jeden globalny klucz.
+const postep = () => czytajPostep(page);
 const stanMapy = () =>
   page.evaluate(() => {
     const s = window.__game.scene.getScene('adventure');
@@ -83,13 +85,8 @@ const oknoWidac = (napis) =>
 
 await page.goto(`${BASE}/?ekran=mapa`, { waitUntil: 'domcontentloaded' });
 await scena(page, 'adventure');
-await page.evaluate(
-  ([a, b]) => {
-    localStorage.removeItem(a);
-    localStorage.removeItem(b);
-  },
-  [KLUCZ_POSTEPU, KLUCZ_REKORDOW]
-);
+await usunPostep(page);
+await page.evaluate((k) => localStorage.removeItem(k), KLUCZ_REKORDOW);
 
 // ————————————————————————————————————————————— start misji 1
 console.log('\n=== start misji 1 przez rozpocznijMisje ===');

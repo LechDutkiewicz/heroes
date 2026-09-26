@@ -5,17 +5,17 @@ Po co
 -----
 Druga runda porównania z Heroes 2: „trener i złoczyńcy to twardy pixel art
 wklejony na miękkie, malowane tła — zastępstwa z innej gry". Pierwsza runda
-miała odwrotny zarzut (Janek malowany, Ola pikselowa), więc ujednolicamy
+miała odwrotny zarzut (Janek malowany, Ola — dziś Ela — pikselowa), więc ujednolicamy
 W GÓRĘ: wszystko malowane.
 
 Malowany jest tylko Janek (`tools/wsad/bohater-dol.png`, `bohater-prawo.png`).
 Model graficzny od dwóch rund odpowiada 402, więc reszta jest z niego
 WYPROWADZONA, a nie wygenerowana:
 
- - Ola: ten sam rysunek przemalowany maskami barw (czapka zielona, kurtka
+ - Ela: ten sam rysunek przemalowany maskami barw (czapka zielona, kurtka
    morska, czarne włosy, ciemne spodenki, brązowe trzewiki), z dorysowaną za
    głową fryzurą „na pazia" i odbity w poziomie. Cieniowanie zostaje oryginalne
-   — podmieniamy barwę, nie jasność — więc Ola jest z tej samej ręki co Janek.
+   — podmieniamy barwę, nie jasność — więc Ela jest z tej samej ręki co Janek.
  - Srebrne płaszcze: Janek z profilu i z przodu pod kapturem i płaszczem,
    zanurzony w cieniu z księżycowym światłem krawędziowym i świecącymi oczami.
    Twarz ginie w cieniu celowo — złoczyńca ma być tajemnicą, nie drugim Jankiem.
@@ -38,7 +38,7 @@ W = str(KORZEN / 'tools' / 'wsad') + '/'
 CEL = KORZEN / 'public' / 'kampania'
 
 
-# ————————————————————————————————————————————————— Janek i Ola
+# ————————————————————————————————————————————————— Janek i Ela
 
 def wczytaj():
     im = Image.open(W + 'bohater-dol.png').convert('RGBA')
@@ -81,7 +81,7 @@ def przemaluj(im, kolory):
     return Image.fromarray((np.dstack([out, al]) * 255).clip(0, 255).astype(np.uint8), 'RGBA')
 
 
-def ola():
+def ela():
     im = wczytaj()
     res = przemaluj(im, {
         'kurtka': ((30, 140, 125), 1.0), 'czapka': ((58, 122, 52), 1.0), 'daszek': ((96, 150, 78), 0.8),
@@ -358,11 +358,11 @@ def main():
     CEL.mkdir(parents=True, exist_ok=True)
     # Figurki w 2× tego, co na ekranie wyboru (270 px).
     janek = zmniejsz(wczytaj(), 540)
-    ola_ = zmniejsz(ola(), 540)
+    ela_ = zmniejsz(ela(), 540)
     janek.save(CEL / 'janek.png', optimize=True)
-    ola_.save(CEL / 'ola.png', optimize=True)
+    ela_.save(CEL / 'ela.png', optimize=True)
     # Głowy do medalionu: kwadrat z twarzą (bez daszka czapki po bokach).
-    for nazwa, f in (('janek', janek), ('ola', ola_)):
+    for nazwa, f in (('janek', janek), ('ela', ela_)):
         w, h = f.size
         g = f.crop((int(w * 0.18), int(h * 0.02), int(w * 0.82), int(h * 0.38)))
         bok = max(g.size)
@@ -381,6 +381,10 @@ def main():
     for n in ('pokeball', 'jagody', 'kamien', 'odlamki'):
         zrodla.append((n, Image.open(W + f's-{n}.png').convert('RGBA')))
     for nazwa, im in zrodla:
+        # Rower, tarcza i miecz mają od 2026-09-26 malowane wersje z modelu
+        # (`kampania_ikony.py`) — rysunek stąd zostaje zapasem, gdy wsadu brak.
+        if (Path(W) / f'ikona-{nazwa}.png').exists():
+            continue
         gotowa(im).save(CEL / f'ikona-{nazwa}.png', optimize=True)
     print(f'zapisano postacie i ikony do {CEL}')
 

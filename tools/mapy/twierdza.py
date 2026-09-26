@@ -545,20 +545,14 @@ USTAWIENIA = {
     # ale nie wyrok w trzecim tygodniu.
     'garnizonGracza': {'poziomy': [0, 1, 2], 'tygodnie': 8},
     'wrogOdkryte': [{'x': 10, 'y': 64, 'promien': 5}],
-    # I odwrotnie: gracz wie, gdzie stoją obie twierdze — misja mówi „na
-    # północy", a mapa to pokazuje. Zagadką jest droga, nie szukanie celu.
-    # Dolina gracza jest mu znana — to jego ziemia od trzech misji — więc na
-    # starcie widać cały pierwszy ekran, a nie wyspę w czarnej mgle.
+    # I odwrotnie: gracz wie, gdzie stoją obie twierdze — misja mówi „zdobądź
+    # obie na północy", a mapa to pokazuje. Zagadką jest droga, nie szukanie celu.
+    # Runda 11 (gracz): same twierdze, po małej łatce. Odsłonięta zachodnia
+    # połowa doliny gracza (rundy 8) zniknęła — jak w Heroes, na starcie widać
+    # okolicę bohatera i własnego zamku (`nowaGra` w `plansza.ts`).
     'odkryte': [
-        {'x': 58, 'y': 8, 'promien': 4},
-        {'x': 13, 'y': 10, 'promien': 4},
-        # Runda 8 (HotA): „świat kończy się na ramce — rogi i prawy brzeg kadru
-        # w ciemnej winiecie mgły; minimapa to sam granat z jednym rogiem".
-        # Zachodnia połowa doliny gracza jest mu znana, z zapasem na miękki
-        # brzeg mgły poza kadrem, aż po wyjazd na przełęcz (x 29). Reszta —
-        # wschód doliny, tundra, twierdze — do odkrycia (sonda: < 20% planszy).
-        {'x': 13, 'y': 62, 'promien': 16},
-        {'x': 34, 'y': 62, 'promien': 9},
+        {'x': 58, 'y': 8, 'promien': 2},
+        {'x': 13, 'y': 10, 'promien': 2},
     ],
     # Runda 3 (wzorzec HotA): znajdźki na pół pola z cieniem i rysunkiem stosu
     # leżącego w śniegu (`public/mapa/zima/stos-*.png`) zamiast ikon z paska.
@@ -573,9 +567,12 @@ USTAWIENIA = {
     # (PROMPTY-PLANSZE §24: kryształy, skrzynka, kosz wciśnięte w zaspę)
     # trochę większe, spód grzęźnie w śniegu (`osadzZnajdzki`), strażnicy
     # o jedną piątą wyżsi — prawie jak bohater (1,5 pola).
+    # Stworki, runda 2: strażnicy i bohater urośli we wszystkich planszach
+    # (`WYS_STRAZNIKA` 1,6, `WYS_BOHATERA` 1,9 w `src/visual/uklad.ts`),
+    # więc mnożnik wraca do 1 — skala stworów taka sama jak na Polanie i Bagnach.
     'znajdzki': 0.72,
     'osadzZnajdzki': 0.2,
-    'skalaStrazy': 1.2,
+    'skalaStrazy': 1.0,
     # Runda 10: łąka to tundra — bez białych zasp sceny na co trzecim polu.
     'bezOzdobTrawy': True,
     # Runda 9 (HotA): „zamek ledwie większy od chaty i młyna — powiększyć

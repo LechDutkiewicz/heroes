@@ -646,23 +646,11 @@ USTAWIENIA = {
     'zestaw': 'bagno',
     # Wyspa Księżyca odsłonięta od pierwszego dnia: gracz ma wiedzieć, DOKĄD
     # jedzie — zagadką jest droga i wódz, a nie szukanie igły w trzęsawisku.
+    # Runda 11 (gracz): tylko sam cel, mały (Kamień i wódz), jak w Heroes.
+    # Łatki w rogach kadru z rund 6–9 wyglądały jak wyspy rozsiane po mgle —
+    # usunięte; okolicę bohatera i zamku odsłania `nowaGra` w `plansza.ts`.
     'odkryte': [
-        {'x': WYSPA[0], 'y': WYSPA[1], 'promien': 7},
-        # Runda 6: rogi pierwszego ekranu za Strugą — bez nich mgła rysowała
-        # w kadrze czarne zęby (jak na Polanie).
-        {'x': 25, 'y': 35, 'promien': 3},
-        {'x': 25, 'y': 53, 'promien': 3},
-        # Runda 7: górne rogi kadru (za mostem i nad wzgórzami) — ciemna plama
-        # mgły w prawym górnym rogu czytała się jak pusta połać.
-        {'x': 22, 'y': 38, 'promien': 3},
-        {'x': 4, 'y': 37, 'promien': 3},
-        # Runda 8: lewy skraj kadru pod pasmami gór (lewy dolny róg i pas
-        # nad wiatrakiem) — czarne zęby mgły ucinały góry w pół.
-        {'x': 2, 'y': 52, 'promien': 3},
-        {'x': 2, 'y': 40, 'promien': 4},
-        # Runda 9: prawy skraj kadru za Strugą (miękki brzeg mgły kładł
-        # ciemny klin na łące przy ramie).
-        {'x': 26, 'y': 44, 'promien': 4},
+        {'x': WYSPA[0], 'y': WYSPA[1], 'promien': 2},
     ],
     # Runda 5 (wzorzec HotA; wcześniej runda 3: „płaska ikona pokeballa
     # wygląda na wklejoną z innej gry"): znajdźki to STOSY leżące na ziemi

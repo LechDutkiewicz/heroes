@@ -1,7 +1,7 @@
 // Zrzuty ekranu kampanii w czterech powtarzalnych stanach, plus sprawdzenie,
 // że „Graj" naprawdę uruchamia mapę przygody.
 //
-// Stan kampanii żyje w localStorage (`heroes-kampania-v1`), więc każdy zrzut
+// Stan kampanii żyje w localStorage (klucz profilu „Sonda”), więc każdy zrzut
 // zaczyna się od wpisania tam gotowego postępu i dopiero potem otwiera grę.
 // Bez tego dwie rundy pętli jakości różniłyby się tym, co akurat zostało
 // w przeglądarce, a nie rzemiosłem ekranu.
@@ -21,7 +21,9 @@ const arg = (n, d) => {
 };
 const BASE = arg('--url', 'http://localhost:4175');
 const KATALOG = 'tools/shots';
-const KLUCZ = 'heroes-kampania-v1';
+// Postęp należy do aktywnego profilu — zrzuty grają profilem „Sonda”.
+const KLUCZ = 'heroes-profil-sonda-kampania';
+const REJESTR = JSON.stringify({ v: 1, aktywny: 'sonda', profile: [{ id: 'sonda', imie: 'Sonda', utworzony: '2026-01-01T00:00:00.000Z' }] });
 
 // Układ ekranu (współrzędne gry) — te same liczby co w KampaniaScene.ts.
 const KARTA_NAGRODY = (i) => ({ x: 22 + 18 + i * 190 + 92, y: 546 + 42 + 43 });
@@ -71,15 +73,16 @@ async function otworz(stan) {
     if (r.status() >= 400 && !r.url().endsWith('favicon.ico')) bledy.push(`${r.status()}: ${r.url()}`);
   });
   await page.addInitScript(
-    ([klucz, wartosc]) => {
+    ([klucz, wartosc, rejestr]) => {
       // Tylko przy pierwszym wczytaniu — przeładowanie w trakcie testu ma
       // widzieć to, co zapisała gra, a nie nasz stan startowy.
       if (sessionStorage.getItem('zrzut-zasiany')) return;
       sessionStorage.setItem('zrzut-zasiany', '1');
+      localStorage.setItem('heroes-profile-v1', rejestr);
       if (wartosc === null) localStorage.removeItem(klucz);
       else localStorage.setItem(klucz, wartosc);
     },
-    [KLUCZ, stan === null ? null : JSON.stringify(stan)]
+    [KLUCZ, stan === null ? null : JSON.stringify(stan), REJESTR]
   );
   await page.goto(`${BASE}/?ekran=kampania`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__game?.scene.getScene('kampania')?.sys.settings.status === 5, null, {
@@ -135,7 +138,7 @@ async function zrzut(page, nazwa) {
   );
   await zrzut(page, 'kampania-wstep.png');
   const zapisany = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), KLUCZ);
-  if (zapisany?.trener !== 'Ola') bledy.push(`wybór trenera nie zapisał postępu: ${JSON.stringify(zapisany)}`);
+  if (zapisany?.trener !== 'Ela') bledy.push(`wybór trenera nie zapisał postępu: ${JSON.stringify(zapisany)}`);
   await page.close();
 }
 
@@ -173,7 +176,7 @@ async function zrzut(page, nazwa) {
 
 // 3. Misje 1–2 zrobione, bieżąca 3, nagroda wybrana.
 {
-  const page = await otworz(postep('Ola', 2));
+  const page = await otworz(postep('Ela', 2));
   await klik(page, KARTA_NAGRODY(1));
   await page.waitForTimeout(500);
   await zrzut(page, 'kampania-m3.png');

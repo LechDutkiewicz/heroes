@@ -40,19 +40,140 @@ export const KAFEL_EKRAN = KAFEL * ZOOM_MAPY;
  *
  * Wysokości to WIDOCZNA sylwetka (od stóp do czubka głowy, bez przezroczystego
  * marginesu pliku), w polach. Hierarchia jak w Heroes 3: bohater jest
- * największą ruchomą rzeczą na mapie (~1,5 pola), strażnik ~1,2 pola — zawsze
- * wyraźnie większy od kupki surowca (0,45–0,8 pola, `USTAWIENIA.znajdzki`
- * planszy), a mniejszy od budowli. Wcześniej bohater miał 0,9 pola, czyli
+ * największą ruchomą rzeczą na mapie (1,8 pola), strażnik 1,45 pola — zawsze
+ * wyraźnie większy od kupki surowca (0,62 pola, `ZNAJDZKI_NA_MAPIE`),
+ * a mniejszy od budowli. Wcześniej bohater miał 0,9 pola, czyli
  * mniej niż kryształ przy drodze, a strażnik 1,0 — oba ginęły między
  * znajdźkami. Znajdźek i budowli te liczby nie dotyczą.
+ *
+ * Stworki, runda 2 (ślepe porównanie z HotA, 0/2): „strażnika nie da się
+ * odróżnić od znajdźki", „Janek jest wielkości kryształu" — stąd 1,6 i 1,9
+ * i cień rzucany (`cienRzucany` w scenie mapy).
+ *
+ * Stworki, runda 3 (0/3): „hierarchia odwrócona — strażnicy więksi od
+ * bohatera, wielkości chat i wieży; Janek ginie przy zamku". Bohater jest
+ * chudy (chłopiec, nie jeździec na koniu), więc przy 1,9 pola strażnik
+ * szeroki na dwa pola i tak zajmował więcej ekranu. Teraz bohater 2,2 pola
+ * i proporzec gracza nad nim (`PROPORZEC`), strażnik 1,3 pola, najwyżej
+ * 1,6 wszerz — dwa razy więcej niż kupka surowca, dużo mniej niż budowla.
+ *
+ * Stworki, runda 4 (r3 1/3): „Janek wyższy niż tawerna, sięga połowy
+ * wiatraka", „stwory tej samej wielkości co znajdźki obok", „kolaż naklejek,
+ * a nie mapa z jedną regułą skali". Jedna reguła, jak w HotA: budowla >
+ * bohater (1,8) > strażnik (1,45, do 1,8 wszerz) > znajdźka (0,62,
+ * `ZNAJDZKI_NA_MAPIE.wys`) — każdy stopień wyraźnie mniejszy od
+ * poprzedniego, na wszystkich planszach te same liczby.
+ *
+ * Stworki, runda 6 (r5 1/3: „drobne grudki bez sylwetki postaci"): strażnik
+ * to teraz JEDNA malowana figura z pozą (`public/sprites/mapa-<numer>.png`),
+ * nie grupka — 1,5 pola wysokości, nadal niżej od bohatera; figura z ogonem
+ * albo rozłożonymi ramionami jest szersza, stąd 1,8 wszerz (przy 1,65
+ * ściskało ją do ~1,3 pola).
  */
-export const WYS_BOHATERA = 1.5;
-export const WYS_STRAZNIKA = 1.2;
+export const WYS_BOHATERA = 1.9;
+export const WYS_STRAZNIKA = 1.5;
 /**
- * Szerokie stworki (węże, płaszczki) przy 1,2 pola wysokości rozlewałyby się
+ * Szerokie stworki (węże, płaszczki) przy pełnej wysokości rozlewałyby się
  * na trzy pola i zasłaniały sąsiadów — ich sylwetkę ograniczamy szerokością.
  */
-export const SZER_STRAZNIKA_MAX = 1.6;
+export const SZER_STRAZNIKA_MAX = 1.8;
+
+/**
+ * Proporzec bohatera w kolorze gracza (runda 3: „bez flagi, podstawki ani
+ * obrysu"), w polach: drzewce od stóp do `ponadGlowe` nad czubkiem głowy,
+ * płat `dlugosc` × `wysokosc`. W HoMM3 bohatera znajduje się wzrokiem po
+ * flagi nad koniem — tu po proporcu nad głową.
+ */
+export const PROPORZEC = { ponadGlowe: 0.4, dlugosc: 0.8, wysokosc: 0.45 };
+
+/**
+ * Jak stworki-strażnicy siadają w oświetleniu planszy (runda 3: „cieniowane
+ * płasko, wklejone z innej gry"). Pliki `public/sprites/` mają +12%
+ * nasycenia i ciemną obwódkę 1 px pod bitwę (`tools/stworki_wczytaj.py`);
+ * mapa robi z nich własną teksturę (`teksturaStworkaNaMape` w scenie):
+ * - `nasycenie` — mnożnik nasycenia (0,9 zdejmuje te +12%),
+ * - `swiatlo` — jaśniej od lewej-góry, ciemniej ku prawemu-dołowi (±),
+ * - `podcien` — przyciemnienie dołu sylwetki przy ziemi (dolne ~35%),
+ * - `krawedz` — ciemniejszy brzeg po stronie cienia (prawy-dolny),
+ * - `paleta` — ile barwy gruntu spod strażnika wchodzi w barwę stworka,
+ * - `otoczenie` — ile samego gruntu przebija przez stworka (powietrze),
+ * - `podstawka` — krycie ciemnej, zwartej plamy gruntu pod stopami (runda 4:
+ *   „brak podstawki / znacznika strażnika") — cień kontaktowy jednostki,
+ *   ciemniejszy i węższy niż pod znajdźką, bez poświaty.
+ * Bitwa, miasto i HUD dalej biorą oryginalne pliki.
+ */
+export const STWORKI_NA_MAPIE = {
+  nasycenie: 0.95,
+  swiatlo: 0.2,
+  podcien: 0.24,
+  krawedz: 0.24,
+  paleta: 0.12,
+  otoczenie: 0.03,
+  podstawka: 0.42,
+};
+
+/**
+ * Malowany strażnik NA MAPĘ (`public/sprites/mapa-<numer>.png`, stworki
+ * runda 5–6): figura stworka malowana jak budowle plansz, ze światłem
+ * z lewej-góry już w rysunku. Nadpisuje `STWORKI_NA_MAPIE` łagodniej —
+ * bez zdejmowania nasycenia i z lekkim światłem/brzegiem; barwa gruntu
+ * i podstawka zostają. `podGrupe` — o tyle widocznej wysokości cień
+ * rzucany i podstawka wchodzą pod rysunek. Przy grupce z rundy 5 było 0,1
+ * (stopy tylnych stworków stały wyżej niż dolna krawędź); pojedyncza
+ * figura z rundy 6 stoi stopami na dolnej krawędzi, więc tylko 0,03 —
+ * przy 0,1 podstawka chowała się za figurą.
+ * `podstawka` — krycie ciemnej plamy pod stopami (nadpisuje
+ * `STWORKI_NA_MAPIE.podstawka`), `szerPodstawki` — jej szerokość względem
+ * rozstawu stóp, `podstawkaWyzej` — o tyle jej wysokości środek plamy stoi
+ * NAD linią stóp: figurę widać lekko z góry, więc grunt za stopami (między
+ * nogami) leży w rysunku wyżej niż one; plama z górną krawędzią na linii
+ * stóp wyglądała na śniegu jak cień pod unoszącą się naklejką.
+ */
+export const STRAZNIK_MALOWANY = {
+  nasycenie: 1,
+  swiatlo: 0.08,
+  podcien: 0.16,
+  krawedz: 0.12,
+  podGrupe: 0.03,
+  podstawka: 0.55,
+  szerPodstawki: 1.25,
+  podstawkaWyzej: 0.3,
+};
+
+/**
+ * Bohater w świetle planszy (runda 4: „narysowany płasko, jak postać z innej
+ * gry"): ten sam przebieg co u strażników (`STWORKI_NA_MAPIE`, bez barwy
+ * gruntu — bohater chodzi po całej planszy), na każdej klatce arkusza osobno.
+ * `obrys` — krycie ciemnego obrysu z kopii klatki (runda 3 dała 0,6; twarda
+ * ciemna linia robiła „naklejkę", teraz sylwetkę niesie światło i cień).
+ */
+export const BOHATER_NA_MAPIE = { nasycenie: 1, swiatlo: 0.16, podcien: 0.2, krawedz: 0.26, obrys: 0 };
+
+/**
+ * Znajdźki (stosy, skrzynie, artefakty) — runda 3: „strażnicy mają tę samą
+ * wagę i nasycenie co kryształy i jagody"; runda 4: „turkusowe smoczki przy
+ * turkusowych kryształach, fioletowe potwory przy fioletowych jagodach".
+ * Łup to drobiazg przy gruncie, tło dla strażnika:
+ * - `wys` — widoczna wysokość w polach (jedna na wszystkie plansze; dawniej
+ *   0,39–0,63 z `USTAWIENIA.znajdzki`), `szerMax` — najwyżej tyle wszerz,
+ * - `nasycenie`, `kontrast` (ściśnięcie jasności ku średniej), `jasnosc`,
+ * - `obrys` — mnożnik `USTAWIENIA.obrysObiektow` (ciemna linia wokół łupu
+ *   wyciągała go na pierwszy plan jak naklejkę),
+ * - `przyStrazniku` — znajdźka do `pola` od strażnika o barwie bliższej niż
+ *   `roznica` stopni odcienia gaśnie mocniej (`nasycenie`, `jasnosc`), żeby
+ *   jedno nie zlewało się z drugim.
+ */
+export const ZNAJDZKI_NA_MAPIE = {
+  // Stworki runda 6: 0,62 → 0,58 i przygaszanie przy strażniku z 3 do 4,5
+  // pola („stwory kolorem i kształtem prawie jak kryształy obok").
+  wys: 0.58,
+  szerMax: 0.9,
+  nasycenie: 0.55,
+  kontrast: 0.82,
+  jasnosc: 0.94,
+  obrys: 0.35,
+  przyStrazniku: { pola: 4.5, roznica: 42, nasycenie: 0.25, jasnosc: 0.86 },
+};
 
 export const PANEL_W = 250;
 export const PASEK_H = 34;
