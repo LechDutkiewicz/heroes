@@ -1,5 +1,5 @@
 {
- "updated": "Nowa poprzeczka (decyzja gracza): stwory oceniane względem NASZEJ mapy, test „co nie pasuje\". Porównanie z HotA nie ma sensu — nasze obiekty mapy też z nim przegrywają.",
+ "updated": "Stwory na mapie: 9 rund. Kontrola 2: oryginalne HoMM3 też przegrywa test dopasowania 0/3 — test nie rozróżnia. Decyzja gracza w toku.",
  "pieces": [
   {
    "name": "Stwory na mapie przygody (malowane rysunki, stos na mapie)",
@@ -168,6 +168,24 @@
      "gap": "Najmniej pasuje: fioletowy pająk — barwy spoza mapy, ostrzejszy niż malowane skały, bez cienia; smok wisi na urwisku.",
      "blind": "tools/postep-obrazy/dopasowanie-twierdza-r8.jpg",
      "note": "Runda 8, Twierdza. 0/3."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Sporex — cieńszy obrys niż u mostu i skrzyni, zachodzi na barierkę mostu.",
+     "blind": "tools/postep-obrazy/dopasowanie-polana-r9.jpg",
+     "note": "Runda 9 (obrys i cień jak u skrzyni), Polana."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: różowy smok — prawie czarny obrys, płaskie cieniowanie, magenta spoza palety.",
+     "blind": "tools/postep-obrazy/dopasowanie-bagna-r9.jpg",
+     "note": "Runda 9, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: pająk na ścieżce — cienka ciemna sylwetka bez objętości.",
+     "blind": "tools/postep-obrazy/dopasowanie-twierdza-r9.jpg",
+     "note": "Runda 9, Twierdza. 0/3. TEST KONTROLNY 2: ten sam test na trzech kadrach oryginalnego HoMM3/HotA — też 0/3 (demon, oko, stwór z grzebieniem wskazane jako najgorsze, werdykt NIE). Test „co nie pasuje” zawsze wskazuje stwory, więc nie rozróżnia dobrych od złych."
     }
    ]
   },
