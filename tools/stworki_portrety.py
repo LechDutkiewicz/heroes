@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Portrety stworów: twarz w środku kadru, jedno tło i jedno światło dla wszystkich.
+"""Portrety stworów: cała postać w kadrze, jedno tło i jedno światło dla wszystkich.
 
 Po co
 -----
@@ -8,20 +8,22 @@ w mieście, kolejka tur w bitwie, kampania, wynik) pokazywały CAŁEGO stworka
 zmniejszonego do kwadratu: przy 28 px kolorowa plamka z nóżkami. W Heroes 3
 portret stwora to osobny obrazek — popiersie przycięte ciasno, w ramce.
 
-Czego nauczyło pięć rund ślepych porównań
------------------------------------------
+Czego nauczyło siedem rund ślepych porównań
+-------------------------------------------
 Rzędu portretów nie ocenia się po jednym portrecie, tylko po tym, czy
-wszystkie są zrobione TĄ SAMĄ KAMERĄ. Każda próba ustawienia kadru po
-sylwetce (pudełko stwora, czaszka od czubka do brody, pudełko głowy)
-sypała się na dziwnej anatomii: Pyroko to jedna bryła z twarzą z boku,
-Flamir ma głowę mniejszą od grzebienia, Obsydian nie ma twarzy wcale.
-Krytyk mierzył linię oczu i dostawał 35–60% wysokości ramki.
+wszystkie są zrobione TĄ SAMĄ KAMERĄ. Siedem rund kadrowania popiersia
+(pudełko stwora, czaszka, pudełko głowy, oczy) nie zbiegło się: anatomia
+jest zbyt różna — Pyroko to bryła z twarzą z boku, Flamir ma głowę
+mniejszą od grzebienia, Obsydian nie ma twarzy wcale — i krytyk za każdym
+razem widział inną odległość kamery.
 
-Dlatego kadr liczy się z ręcznie zmierzonego PUDEŁKA CAŁEJ GŁOWY (`GLOWA`)
-jednym wzorem: głowa w całości w kadrze z równym zapasem, na ~60% jego
-wysokości, oczy na ~40% od góry. U stworów, których ciało jest głową (bryła
-Pyroko, butla Obsydiana), „głowa" to bryła. Wyjątki — środek kadru albo
-wypełnienie — są w tabeli przy stworze, a nie w kodzie.
+Dlatego portret pokazuje CAŁĄ POSTAĆ, liczoną automatycznie z alfy
+mistrza, bez żadnej tabeli: nic nie jest ucięte z żadnej strony, postać
+wpasowana z tym samym zapasem (`ZAPAS` na ciaśniejszej osi), stopy na
+jednej linii (`PODSTAWA` od dołu), środek w poziomie po środku masy
+sylwetki. Tylko w panelu mapy (28 px) wysokie postacie byłyby okruchami —
+tam kadr bierze górne `GORA_PANELU` postaci (ta sama zasada, cięcie
+wyłącznie od dołu).
 
 Tło i światło: JEDNO dla wszystkich — ciepła, ciemna winieta pergaminu
 przechodząca w drewno (barwy ram i paneli interfejsu), światło kluczowe
@@ -46,7 +48,7 @@ Gra ładuje je jako `pd-`, `pm-`, `pp-`, `po-<id>` (`src/visual/portrety.ts`).
     python3 tools/stworki_portrety.py --pomiar out.png  # mistrzowie z naniesionymi oczami i kadrem
 
 Po przemalowaniu mistrzów wystarczy puścić skrypt; jeśli stwór zmienił pozę,
-poprawić jego wiersz w `GLOWA` (`--pomiar` pokazuje pudełko głowy i kadr).
+nic nie trzeba poprawiać — kadr liczy się z alfy (`--pomiar` go pokazuje).
 """
 
 from __future__ import annotations
@@ -69,39 +71,7 @@ ROZMIARY = {
     'okragly': (56, '-o'),
 }
 
-# ————————————————————————————————————————————————— pomiar twarzy
-#
-# (oczy x, oczy y, szerokość twarzy, czubek głowy y) w pikselach mistrza.
-# Oczy x/y = środek między oczami. Czubek głowy — bez grzebieni, uszu,
-# płatków i kiełków (te mogą wyjść za ramę).
-GLOWA: dict[str, tuple] = {
-    # (lewo, góra, prawo, dół głowy, oczy y[, opcje]) w pikselach mistrza.
-    # Głowa = cała głowa z czubem/grzebieniem/uszami, które mają się
-    # zmieścić; u stworów, których ciało JEST głową (bryły), cała bryła.
-    # Opcje: `x` — środek kadru w poziomie (domyślnie środek głowy),
-    # `wyp` — ile wysokości kadru zajmuje głowa (domyślnie `WYPELNIENIE`).
-    # Bór
-    '00193': (13, 4, 243, 215, 156, {'wyp': 0.84, 'x': 150}),  # Pyroko — cała bryła z twarzą
-    '00020': (42, 5, 125, 106, 78),  # Flamir — głowa z grzebieniem i dziobem
-    '00218': (45, 4, 170, 132, 55, {'wyp': 0.55, 'x': 122}),  # Aquino — głowa i ramię-kula w kadrze
-    '00030': (95, 10, 250, 170, 124),  # Torrenar — czaszka-hełm
-    '00096': (100, 95, 205, 185, 139),  # Verdiko — kula głowy (kiełek może wyjść)
-    '00227': (88, 25, 160, 100, 72),  # Silvena — twarz z koroną płatków
-    # Grota
-    '00246': (138, 38, 192, 80, 54),  # Glacyn — głowa z pyskiem
-    '00002': (55, 35, 200, 172, 107),  # Sporex — twarz z dolnymi płatkami
-    '00263': (100, 20, 178, 118, 76),  # Cindro — głowa w kapturze
-    '00250': (88, 30, 155, 92, 61),  # Sporina — główka z uszami
-    '00220': (125, 20, 200, 95, 66),  # Aquator — głowa z kolcami i dziobem
-    '00196': (70, 55, 190, 225, 118),  # Vulkaron — korona i pierścień-paszcza
-    # Zbocze
-    '00074': (150, 75, 228, 145, 107),  # Bazalt — głowa w grzywie
-    '00058': (70, 5, 195, 95, 52),  # Ashko — puszysta głowa z maską
-    '00095': (58, 5, 197, 150, 70, {'wyp': 0.84}),  # Obsydian — bez twarzy: górne 60% bryły
-    '00023': (132, 45, 228, 140, 102),  # Cynder
-    '00077': (78, 45, 152, 108, 79),  # Lawina — hełm z pierścieniem
-    '00041': (85, 35, 152, 145, 66),  # Sadzin — głowa z dziobem i koralami
-}
+# ————————————————————————————————————————————————— kadr
 
 # Oczy, których na mistrzu nie widać przy wielkości portretu (Flamir ma
 # oko-kreskę 2 px). Portret dorysowuje je w pikselach mistrza: (x, y, promień).
@@ -109,23 +79,17 @@ OKO: dict[str, tuple[float, float, float]] = {
     '00020': (72, 76, 3.6),
 }
 
-# Szablon (runda 7, ustalony z koordynatorem po arkuszu kontrolnym):
-#   cała głowa w kadrze z równym zapasem (`ZAPAS` z każdej strony), głowa
-#   zajmuje `WYPELNIENIE` wysokości kadru (i najwyżej `SZER_MAX` szerokości),
-#   oczy na `OCZY_Y` od góry — chyba że wtedy głowa wyszłaby za ramę: zapas
-#   ma pierwszeństwo przed linią oczu.
-# Runda 6 kotwiczyła w samych oczach i skala z „szerokości twarzy" dawała
-# bryłę Pyroko w zbliżeniu, a Verdiko i Silvenę za daleko.
-WYPELNIENIE = {'duzy': 0.6, 'maly': 0.7}
-SZER_MAX = {'duzy': 0.8, 'maly': 0.86}
-OCZY_Y = {'duzy': 0.40, 'maly': 0.42}
-ZAPAS = {'duzy': 0.08, 'maly': 0.06}
+# Zapas od ramy (ułamek boku kadru) na ciaśniejszej osi i linia stóp
+# (ułamek boku od dołu). Panel mapy: górna część postaci, cięta od dołu.
+ZAPAS = 0.08
+PODSTAWA = 0.10
+GORA_PANELU = 0.7
 
 # ————————————————————————————————————————————————— tło i światło
 #
 # Jedno tło dla wszystkich: ciemny, ciepły pergamin ze światłem z góry-lewa,
 # ku brzegom wpadający w drewno ram.
-TLO = {'srodek': (156, 112, 66), 'brzeg': (58, 34, 15)}
+TLO = {'srodek': (184, 140, 88), 'brzeg': (56, 32, 14)}
 # Światło kluczowe i obwódka na stworze — złoto ram i krem napisów.
 SWIATLO = (255, 214, 150)
 # Kontur wokół stwora — barwa ciemnego brązu z napisów na drewnie.
@@ -149,9 +113,11 @@ def frakcje() -> dict[str, str]:
 
 def tlo(bok: int) -> Image.Image:
     """Wspólne tło: winieta ciepłego pergaminu w drewno, z fakturą papieru."""
+    # Jaśniejszy środek za postacią (a nie w rogu) — czerwone, brązowe,
+    # szare i białe stwory odcinają się od tej samej plamy światła.
     yy, xx = np.mgrid[0:bok, 0:bok].astype(np.float32) / bok
-    rr = np.hypot(xx - 0.4, yy - 0.34)
-    t = np.clip((rr - 0.08) / 0.62, 0, 1)[..., None] ** 1.3
+    rr = np.hypot(xx - 0.47, (yy - 0.48) * 0.95)
+    t = np.clip((rr - 0.06) / 0.6, 0, 1)[..., None] ** 1.25
     srodek = np.array(TLO['srodek'], np.float32)
     brzeg = np.array(TLO['brzeg'], np.float32)
     a = srodek + (brzeg - srodek) * t
@@ -168,21 +134,28 @@ def tlo(bok: int) -> Image.Image:
 # ————————————————————————————————————————————————— kadr
 
 
-def kadr(sid: str, rodzaj: str) -> tuple[float, float, float, float]:
-    """Pudełko kadru (lewo, góra, prawo, dół) w pikselach mistrza — z szablonu."""
-    sz = 'duzy' if rodzaj == 'duzy' else 'maly'
-    x0, y0, x1, y1, oczy, *reszta = GLOWA[sid]
-    opcje = reszta[0] if reszta else {}
-    wyp = opcje.get('wyp', WYPELNIENIE['duzy']) * WYPELNIENIE[sz] / WYPELNIENIE['duzy']
-    wyp = min(wyp, 0.88)
-    zapas = ZAPAS[sz]
-    bok = max((y1 - y0) / wyp, (x1 - x0) / SZER_MAX[sz])
-    # Głowa musi się zmieścić z zapasem u góry i u dołu.
-    bok = max(bok, (y1 - y0) / (1 - 2 * zapas))
-    gora = oczy - bok * OCZY_Y[sz]
-    gora = min(max(gora, y1 + zapas * bok - bok), y0 - zapas * bok)
-    sx = opcje.get('x', (x0 + x1) / 2)
-    return (sx - bok / 2, gora, sx + bok / 2, gora + bok)
+def kadr(mistrz: Image.Image, rodzaj: str) -> tuple[float, float, float, float]:
+    """Pudełko kadru (lewo, góra, prawo, dół) w pikselach mistrza — cała postać."""
+    alfa = np.asarray(mistrz.getchannel('A'), np.float32)
+    ys, xs = np.nonzero(alfa > 24)
+    x0, x1, y0, y1 = xs.min(), xs.max() + 1, ys.min(), ys.max() + 1
+    # Środek masy sylwetki w poziomie (ważony alfą) — nie środek pudełka:
+    # ogon czy wyciągnięta łapa nie mają odpychać tułowia od środka.
+    wagi = alfa[alfa > 24]
+    cx = float((xs * wagi).sum() / wagi.sum())
+    polowa = max(cx - x0, x1 - cx)
+    po_wysokosci = (y1 - y0) / (1 - ZAPAS - PODSTAWA)
+    po_szerokosci = 2 * polowa / (1 - 2 * ZAPAS)
+    if rodzaj == 'panel' and po_wysokosci > po_szerokosci:
+        # Wysoka postać w panelu: górne `GORA_PANELU`, z tym samym zapasem
+        # u góry i po bokach; cięta wyłącznie dolną krawędzią kadru.
+        # (Szerokiej to nic nie da — jej skalę i tak wyznacza szerokość.)
+        bok = max((y1 - y0) * GORA_PANELU / (1 - ZAPAS), po_szerokosci)
+        gora = y0 - ZAPAS * bok
+        return (cx - bok / 2, gora, cx + bok / 2, gora + bok)
+    bok = max(po_wysokosci, po_szerokosci)
+    dol = y1 + PODSTAWA * bok
+    return (cx - bok / 2, dol - bok, cx + bok / 2, dol)
 
 
 def wytnij(mistrz: Image.Image, box, bok: int) -> Image.Image:
@@ -232,6 +205,18 @@ def zloz(stwor: Image.Image, t: Image.Image, bok: int) -> Image.Image:
     """Stwór na tle: cień rzucony w prawo-dół i cienki ciemny kontur sylwetki."""
     A = stwor.getchannel('A')
     grub = 1 if bok < 40 else 2
+    # Cień kontaktowy pod stopami: miękka elipsa na linii podstawy — postać
+    # stoi na ziemi, a nie wisi w winiecie.
+    alfa = np.asarray(A, np.float32)
+    ys, xs = np.nonzero(alfa > 24)
+    if len(ys) and ys.max() < bok - 2:
+        el = Image.new('L', (bok * 4, bok * 4), 0)
+        szer = (xs.max() - xs.min()) * 0.5 * 4
+        sx, sy = xs.mean() * 4, ys.max() * 4
+        ImageDraw.Draw(el).ellipse((sx - szer, sy - szer * 0.16, sx + szer, sy + szer * 0.16), fill=255)
+        el = el.resize((bok, bok), Image.LANCZOS).filter(ImageFilter.GaussianBlur(bok / 40))
+        e = np.asarray(el, np.float32)[..., None] / 255 * 0.5
+        t = Image.fromarray(np.clip(np.asarray(t, np.float32) * (1 - e), 0, 255).astype(np.uint8), 'RGB')
     cien = ImageChops.offset(A.filter(ImageFilter.GaussianBlur(bok / 36)), grub + 1, grub + 1)
     c = np.asarray(cien, np.float32)[..., None] / 255 * 0.45
     tt = np.asarray(t, np.float32) * (1 - c)
@@ -286,7 +271,7 @@ def portret(sid: str, rodzaj: str) -> Image.Image:
     mistrz = Image.open(MISTRZOWIE / f'{sid}.png').convert('RGBA')
     if sid in OKO:
         mistrz = dorysuj_oko(mistrz, *OKO[sid])
-    stw = wytnij(mistrz, kadr(sid, rodzaj), bok)
+    stw = wytnij(mistrz, kadr(mistrz, rodzaj), bok)
     # Lekkie wyostrzenie po zmniejszeniu — tylko na stworze, tło ma zostać miękkie.
     rgb = stw.convert('RGB').filter(ImageFilter.UnsharpMask(radius=0.8 if bok < 60 else 1.0, percent=70, threshold=2))
     stw = Image.merge('RGBA', (*rgb.split(), stw.getchannel('A')))
@@ -295,17 +280,15 @@ def portret(sid: str, rodzaj: str) -> Image.Image:
 
 
 def pomiar(ids: list[str], plik: str):
-    """Mistrzowie z naniesionymi oczami, czubkiem głowy i kadrem dużego/małego."""
+    """Mistrzowie z naniesionym kadrem dużego (czerwony) i panelu (zielony)."""
     ark = Image.new('RGBA', (6 * 256, ((len(ids) + 5) // 6) * 256), (90, 110, 140, 255))
     d = ImageDraw.Draw(ark)
     for i, sid in enumerate(ids):
         ox, oy = (i % 6) * 256, (i // 6) * 256
-        ark.alpha_composite(Image.open(MISTRZOWIE / f'{sid}.png').convert('RGBA'), (ox, oy))
-        x0, y0, x1, y1, oczy, *_ = GLOWA[sid]
-        d.rectangle([ox + x0, oy + y0, ox + x1, oy + y1], outline=(255, 255, 0, 255))
-        d.line([(ox + x0, oy + oczy), (ox + x1, oy + oczy)], fill=(0, 255, 255, 255))
-        for rodzaj, barwa in (('duzy', (255, 80, 80, 255)), ('maly', (80, 255, 120, 255))):
-            l, g, p, dl = kadr(sid, rodzaj)
+        mistrz = Image.open(MISTRZOWIE / f'{sid}.png').convert('RGBA')
+        ark.alpha_composite(mistrz, (ox, oy))
+        for rodzaj, barwa in (('duzy', (255, 80, 80, 255)), ('panel', (80, 255, 120, 255))):
+            l, g, p, dl = kadr(mistrz, rodzaj)
             d.rectangle([ox + l, oy + g, ox + p, oy + dl], outline=barwa)
         d.text((ox + 3, oy + 3), sid, fill=(255, 255, 0, 255))
     ark.save(plik)
@@ -315,7 +298,7 @@ def pomiar(ids: list[str], plik: str):
 def arkusz(gotowe, plik: str):
     """Arkusz kontrolny w wielkościach z gry: duży przy 94 px (ekran
     bohatera), mały przy 50 px (miasto) i 28 px (panel mapy), w ramkach.
-    Czerwona kreska: linia oczu — ma być na tej samej wysokości wszędzie."""
+    Czerwona kreska: linia stóp — ma być na tej samej wysokości wszędzie."""
     D = 94
     kol = 6
     rz = (len(gotowe) + kol - 1) // kol
@@ -326,7 +309,7 @@ def arkusz(gotowe, plik: str):
         x, y = (i % kol) * cw + 10, (i // kol) * ch + 10
         d.rectangle([x - 3, y - 3, x + D + 2, y + D + 2], outline=(200, 145, 42), width=3)
         ark.paste(pliki['duzy'].resize((D, D), Image.LANCZOS), (x, y))
-        d.line([(x - 6, y + D * OCZY_Y['duzy']), (x - 2, y + D * OCZY_Y['duzy'])], fill=(255, 60, 40))
+        d.line([(x - 6, y + D * (1 - PODSTAWA)), (x - 2, y + D * (1 - PODSTAWA))], fill=(255, 60, 40))
         mx = x + D + 10
         d.rectangle([mx - 2, y - 2, mx + 51, y + 51], outline=(200, 145, 42), width=2)
         ark.paste(pliki['maly'], (mx, y))
@@ -345,9 +328,9 @@ def main():
     args = p.parse_args()
 
     fr = frakcje()
-    brak = set(fr) ^ set(GLOWA)
+    brak = [sid for sid in fr if not (MISTRZOWIE / f'{sid}.png').exists()]
     if brak:
-        raise SystemExit(f'GLOWA i factions.ts się rozjechały: {sorted(brak)}')
+        raise SystemExit(f'brak mistrzów: {brak}')
     ids = [s for s in fr if not args.ids or s in args.ids]
     if args.pomiar:
         pomiar(ids, args.pomiar)
