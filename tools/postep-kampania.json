@@ -54,8 +54,8 @@
    "status": "build",
    "bar": "Stacki stworków w stylu malowanych plansz; pełne linie ewolucyjne jako grafiki. Ślepy krytyk vs HotA.",
    "live": {
-    "round": 3,
-    "stage": "builder pracuje (hierarchia skali, bohater z flagą, cieniowanie stworków)"
+    "round": 4,
+    "stage": "builder pracuje (skala pośrednia, separacja od znajdziek)"
    },
    "note": "Builder r1: 18 stworków przemalowanych przez OpenAI w stylu plansz, każdy z dwoma etapami ewolucji (54 grafiki, $2.90); linie w src/data/ewolucje.ts (jeszcze bez mechaniki); sprite'y patrzą w prawo, stopy na dole kadru, ciemny obrys.",
    "rounds": [
@@ -80,6 +80,18 @@
      "build": "Strażnicy 1,2 → 1,6 pola, bohater 1,5 → 1,9; własny rozmyty cień rzucany w prawo-dół; znajdźki bez zmian, więc różnią się od jednostek; jednolita skala na wszystkich planszach.",
      "gap": "Hierarchia skali odwrócona: strażnicy więksi od bohatera i wielkości chat; ta sama waga i nasycenie co kryształy/skrzynie; chibi-cieniowanie odstaje od malarskiego terenu; bohater bez flagi i podstawki.",
      "note": "Wszyscy trzej: HotA — stwory, bohater i teren z jednego procesu, bohater na koniu z flagą od razu widoczny. Słabość HotA: stwory drobne, giną w terenie."
+    },
+    {
+     "win": false,
+     "label": "Runda 3 (HotA, 1/3)",
+     "blinds": [
+      "tools/postep-obrazy/stworki-r3-w1.jpg",
+      "tools/postep-obrazy/stworki-r3-w2.jpg",
+      "tools/postep-obrazy/stworki-r3-w3.jpg"
+     ],
+     "build": "Bohater 2,2 pola z falującym proporcem w kolorze gracza i pierścieniem; strażnicy 1,3 pola, na mapie bez obwódki, w świetle planszy i barwie gruntu; znajdźki o 12% mniejsze i mniej nasycone.",
+     "gap": "Janek teraz za duży (wyższy od tawerny, pół zamku), narysowany płasko; stwory nadal wielkości i barwy kryształów obok (turkus przy turkusie, fiolet przy fiolecie), bez podstawki.",
+     "note": "Krytyk 3 wybrał nasze: czytelność, pierścień bohatera, spójny cel-shading. Dwaj: HotA — jedna reguła skali."
     }
    ]
   },
