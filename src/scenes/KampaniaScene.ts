@@ -179,6 +179,12 @@ const KONIEC: Ilustracja = {
   pylki: { barwa: 0xfff2b0, x: 40, y: 180, w: 880, h: 420 },
 };
 
+/**
+ * Wysokości winiety misji, od największej: `odswiezTresc` schodzi po nich,
+ * gdy opis się nie mieści. Każda ma własny plik miniatury pokazywany 1 : 1.
+ */
+const WINIETA_WYS = [92, 74, 60, 50] as const;
+
 /** Przesunięcie winiety misji w bok (ułamek mapy), gdy jej miejsce nie stoi za znacznikiem. */
 const WINIETA_W_BOK: Record<string, number> = { 'bagienny-szlak': 0.13 };
 
@@ -330,6 +336,10 @@ export class KampaniaScene extends Phaser.Scene {
     for (const i of ['buty', 'rower', 'tarcza', 'miecz', 'pokeball', 'jagody', 'kamien', 'odlamki', ...Object.keys(IKONA)])
       this.load.image(`k-ikona-${i}`, `${b}kampania/ikona-${i}.png`);
     this.load.image('k-ognisko', `${b}mapa/ognisko.png`);
+    // Miniatury misji na zwoju: kadr celu misji z planszy wyrenderowanej przez
+    // grę, osobny plik na każdą wysokość winiety (`tools/kampania_miniatury.py`).
+    for (const m of KAMPANIA.misje)
+      for (const h of WINIETA_WYS) this.load.image(`k-mini-${m.id}-${h}`, `${b}kampania/mini-${m.id}-${h}.jpg`);
     this.load.image('k-deseczka', `${b}menu/deseczka.png`);
     for (const s of Object.values(SUROWIEC_INFO)) this.load.image(`m-${s.ikona}`, `${b}mapa/${s.ikona}.png`);
     const bor = factionById('bor') ?? FACTIONS[0];
@@ -1370,13 +1380,9 @@ export class KampaniaScene extends Phaser.Scene {
     // różnych misji miały różny układ). Gdy się nie mieści, maleją winieta
     // i tekst, stopniami, aż się zmieści.
     const doly = ZWOJ.y + PAPIER.dol - (this.pokazana && this.pokazana !== biezacaMisja(this.postep!) ? 52 : 4);
-    for (const [winieta, rozmiar] of [
-      [92, 14.5],
-      [74, 14],
-      [60, 13.5],
-      [50, 13],
-    ] as const)
-      if (this.zbudujTresc(winieta, rozmiar) <= doly) return;
+    const rozmiary = [14.5, 14, 13.5, 13];
+    for (const [i, winieta] of WINIETA_WYS.entries())
+      if (this.zbudujTresc(winieta, rozmiary[i]) <= doly) return;
   }
 
   private zbudujTresc(wysWiniety: number, rozmiar: number): number {
@@ -1536,36 +1542,43 @@ export class KampaniaScene extends Phaser.Scene {
   }
 
   /**
-   * Winieta: miejsce misji z mapy krainy, powiększone i oprawione jak
-   * miniatura w liście. Mapa pokazuje fort wielkości paznokcia — tu dziecko
-   * widzi, DOKĄD idzie, zanim przeczyta, po co.
+   * Winieta: cel misji (fort, grota, wyspa z Kamieniem) wycięty z planszy tej
+   * misji i oprawiony jak miniatura w liście — dziecko widzi, DOKĄD idzie,
+   * zanim przeczyta, po co. Plik ma dokładnie rozmiar winiety i leży na
+   * całych pikselach: skalowany wycinek malowanej mapy krainy rozmywał się
+   * w zieloną plamę (ślepy krytyk: „niedokończony placeholder").
    */
   private winieta(k: Phaser.GameObjects.Container, cx: number, y: number, w: number, h: number, m: Misja) {
+    const x = Math.round(cx - w / 2);
+    y = Math.round(y);
+    const klucz = `k-mini-${m.id}-${h}`;
+    const img = this.textures.exists(klucz)
+      ? this.add.image(x, y, klucz).setOrigin(0).setCrop(0, 0, w, h)
+      : this.wycinekMapyKrainy(x, y, w, h, m);
+    const f = this.add.graphics();
+    // Ciemna fuga od góry: obrazek leży POD ramką, nie na niej.
+    for (let i = 0; i < 3; i++) {
+      f.fillStyle(0x2a1a08, 0.1 * (3 - i));
+      f.fillRect(x, y + i * 2, w, 2);
+    }
+    k.add([img, f, this.ramaZlota(x, y, w, h, false)]);
+  }
+
+  /** Zapas dla misji bez przygotowanej miniatury: miejsce misji z mapy krainy, bez skalowania. */
+  private wycinekMapyKrainy(x: number, y: number, w: number, h: number, m: Misja) {
     const tex = this.textures.get('k-mapa').getSourceImage() as { width: number; height: number };
     // Malowana mapa ma szerokie plamy zamiast drobnych obiektów — wycinek
     // szerszy niż przy mapie składanej, żeby winieta pokazała miejsce, nie plamę.
-    const skala = 0.6;
-    const cw = w / skala;
-    const ch = h / skala;
     // Środek wycinka trochę nad znacznikiem — budowla misji stoi za nim.
     // Bagno leży nie za znacznikiem, a na prawo od niego (znacznik stoi na
     // brzegu, bo na wodzie by zginął) — tam przesuwamy wycinek.
     const przes = WINIETA_W_BOK[m.id] ?? 0;
-    const sx = Phaser.Math.Clamp((m.naMapie.x + przes) * tex.width - cw / 2, 0, tex.width - cw);
-    const sy = Phaser.Math.Clamp(m.naMapie.y * tex.height - ch * 0.78, 0, tex.height - ch);
-    const x = cx - w / 2;
-    const img = this.add
-      .image(x - sx * skala, y - sy * skala, 'k-mapa')
+    const sx = Math.round(Phaser.Math.Clamp((m.naMapie.x + przes) * tex.width - w / 2, 0, tex.width - w));
+    const sy = Math.round(Phaser.Math.Clamp(m.naMapie.y * tex.height - h * 0.78, 0, tex.height - h));
+    return this.add
+      .image(x - sx, y - sy, 'k-mapa')
       .setOrigin(0)
-      .setScale(skala)
-      .setCrop(sx, sy, cw, ch);
-    const f = this.add.graphics();
-    // Ciemna fuga od góry: obrazek leży POD ramką, nie na niej.
-    for (let i = 0; i < 4; i++) {
-      f.fillStyle(0x2a1a08, 0.12 * (4 - i));
-      f.fillRect(x, y + i * 2, w, 2);
-    }
-    k.add([img, f, this.ramaZlota(x, y, w, h, false)]);
+      .setCrop(sx, sy, w, h);
   }
 
   /** Link „wróć do bieżącej misji" na dole zwoju, gdy pokazana jest inna. */
