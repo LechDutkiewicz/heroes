@@ -12,12 +12,9 @@
   },
   {
    "name": "Uwagi gracza: nieosiągalna kopalnia na Polanie",
-   "status": "build",
+   "status": "done",
    "bar": "Sonda osiągalności wszystkich obiektów na każdej planszy; poprawka źródeł map.",
-   "live": {
-    "round": 1,
-    "stage": "builder pracuje"
-   }
+   "note": "Builder: kopalnię dało się osiągnąć według zasad, ale szeroka grań skalna zasłaniała na rysunku jedyny pas ziemi przy rzece — kieszeń wyglądała na zamkniętą. Grań zamieniona na węższą, pas widać. Nowa sonda tools/probe-osiagalnosc.ts sprawdza na każdej planszy dojście do każdego obiektu według zasad gry i „okiem gracza” (pola zakryte rysunkiem). Dodatkowo: klik w strzeżony obiekt bez trasy ma prowadzić do strażnika jak w HoMM3 (builder w toku)."
   },
   {
    "name": "Uwagi gracza: HUD miasta spójny z mapą",
