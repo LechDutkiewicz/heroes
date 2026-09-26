@@ -165,22 +165,30 @@ const MINIATURA = 'plansza-mini';
 const KRYCIE_CIENIA = 0.48;
 const KRYCIE_CIENIA_BRYLY = 0.38;
 /**
- * Stworek na mapie (`stworekNaMape`): ile nasycenia zostaje z malowanego rysunku.
- * Runda 3: mistrzowie są już przemalowani pod obiekty mapy (stonowane barwy,
- * własne cienie rdzeniowe), więc obróbka w grze jest lekka — mocniejsza
- * (nasycenie 0,6, odcień 0,45, bryła ±26%) robiła z nich szarobury muł.
+ * Stworek-strażnik na mapie (`stworekNaMape`, `obrazyStworka`).
+ *
+ * Wzorcem są NASZE obiekty mapy (chata, most, wieża, skrzynia) w tej samej
+ * skali, a nie opisy krytyków — cztery rundy przerzucały nas między „za
+ * ostre naklejki" a „rozmyty muł". Obiekty mają pliki ok. 1,5–2,5 raza
+ * większe niż na ekranie i zmniejsza je karta graficzna; stąd ich ostrość.
+ * Stworek idzie tą samą drogą: tekstura `STWOREK_NADPROBKA` raza większa
+ * od ekranu, zmniejszana dalej przez kartę, z lekkim wyostrzeniem.
  */
+const STWOREK_NADPROBKA = 2;
+/** …nasycenie względem mistrza (1 — bez zmian); dobrane do obiektów w arkuszu porównania. */
 const STWOREK_NASYCENIE = 1;
-/** …jak mocno odcień idzie za średnią barwą okolicy (0 — wcale, 1 — w pełni). */
-const STWOREK_ODCIEN = 0.1;
-/** …siła lokalnego kontrastu (faktura) i amplituda ziarna pędzla. */
-const STWOREK_DETAL = 0.2;
-const STWOREK_ZIARNO = 0.02;
-/** …próg jasności (0–255), powyżej którego ściskamy bliki. */
-const STWOREK_BLIK = 185;
-/** Gotowe stworki na mapę: klucz tekstury → rysunek i cień (tekstury są globalne). */
+/** …siła wyostrzenia (maska nieostra 3 × 3 w pikselach tekstury). */
+const STWOREK_OSTROSC = 0.7;
+/**
+ * …ciemny stworek na ciemnym gruncie: jasna krawędź od strony światła
+ * (lewa-góra), jak u obiektów. Włącza się poniżej tej średniej jasności
+ * sylwetki (0–255); siła — ile dokłada do piksela krawędzi.
+ */
+const STWOREK_PROG_CIEMNY = 105;
+const STWOREK_KRAWEDZ_SWIATLA = 0.35;
 /** Krycie cienia rzuconego stworka. */
 const STWOREK_CIEN = 0.78;
+/** Gotowe stworki na mapę: klucz tekstury → rysunek i cień (tekstury są globalne). */
 const STWORKI_MAPY = new Map<
   string,
   { rysunek: string; cien?: { klucz: string; ox: number; oy: number; stopy: number; barwa: number } }
@@ -637,34 +645,20 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   /**
-   * Stworek-strażnik przemalowany na mapę: pomniejszony do rozmiaru, w jakim
-   * naprawdę stoi na ekranie (`wys` pikseli świata × `ZOOM_MAPY`), w barwach
-   * miejsca, w którym stoi, z własnym cieniem rzuconym.
+   * Stworek-strażnik przygotowany na mapę: tekstura w rozmiarze bliskim
+   * ekranowi i własny cień rzucony. Zasady — patrz `STWOREK_NADPROBKA`.
    *
-   * Dlaczego to wszystko (runda 1 wzorca „stwory na mapie", trzech krytyków
-   * na trzech, jednym głosem): stworki miały cukierkowe barwy, których nie ma
-   * nigdzie indziej na mapie (fiolet, błękit), gładkie „wektorowe" przejścia
-   * zamiast malowanej faktury, obwódkę jak naklejka i płaską elipsę zamiast
-   * cienia. Drzewa, chaty i skały obok są zmniejszone gładko, malowane
-   * fakturą, a krawędź mają ciemniejszą barwą własną, nie czarną linią.
-   *
-   * Kroki, wszystkie w skali ekranu (ok. 40 px):
-   * 1. Zmniejszenie płótnem schodkami po połowie (Phaser zmniejsza bez
-   *    mipmap — kontur i futro rwały się w szum).
-   * 2. Barwa: nasycenie w dół, odcień w stronę średniej barwy okolicy
-   *    (`barwaOkolicy`) — ta sama idea co `zabarw` w `tools/render_mapa.py`,
-   *    którym plansza dostaje swój klimat. Na Polanie ciepła zieleń, na
-   *    Bagnach mętna oliwka, w Twierdzy wypłowiały szaroniebieski.
-   * 3. Bryła: jaśniej z lewej-góry, ciemniej z prawej-dołu (światło mapy).
-   * 4. Faktura: lokalny kontrast (luminancja minus jej rozmycie) i drobne
-   *    ziarno pędzla w plamkach 2 × 2 — gładki gradient przestaje być gładki.
-   * 5. Bliki i brzeg: góra skali jasności ściśnięta (matowa farba zamiast
-   *    lśniącego plastiku), jasna obwódka światła na brzegu ściągnięta do
-   *    barwy wnętrza. Brzeg zostaje miękki, bez ciemnego obrysu — tak
-   *    wyglądają wieża, skrzynia i chata w tej samej skali (runda 3).
-   * 6. Cień rzucony: sylwetka spłaszczona i pochylona w prawo-dół (od
-   *    światła z lewej-góry), rozmyta, w ciemnej barwie okolicy — jak
-   *    stwory w Heroes 3, które mają cień własnego kształtu, a nie owal.
+   * 1. Zmniejszenie z pliku płótnem, schodkami po połowie (każdy krok
+   *    uśrednia, jak mipmapa), do `STWOREK_NADPROBKA` × rozmiar na ekranie.
+   *    Resztę zmniejsza karta graficzna — tak jak pliki chaty i wieży.
+   * 2. Lekka maska nieostra: schodki po połowie zmiękczają krawędzie
+   *    bardziej niż jedno zmniejszenie Lanczosem, którym robione są obiekty.
+   * 3. Ciemny stworek (Vulkaron, czerwony Cindro na bagnie) dostaje jasną
+   *    krawędź od strony światła — obiekty mapy mają ją namalowaną; bez niej
+   *    ciemna sylwetka zlewała się z ciemnym gruntem w plamę.
+   * 4. Cień rzucony: sylwetka spłaszczona i pochylona w prawo-dół (od
+   *    światła z lewej-góry), rozmyta, w ciemnej barwie okolicy — na śniegu
+   *    chłodny szaroniebieski, w trawie brunatny.
    *
    * Proporcje pliku zostają, więc `wys / im.height` i trafienia kliknięciem
    * działają bez zmian; pomiary podstawy i marginesu idą z oryginału.
@@ -674,7 +668,7 @@ export class AdventureScene extends Phaser.Scene {
     wys: number,
     tlo: [number, number, number]
   ): { rysunek: string; cien?: { klucz: string; ox: number; oy: number; stopy: number; barwa: number } } {
-    const h = Math.max(8, Math.round(wys * ZOOM_MAPY));
+    const h = Math.max(8, Math.round(wys * ZOOM_MAPY * STWOREK_NADPROBKA));
     // Barwa okolicy zaokrąglona, żeby stworki na podobnym gruncie dzieliły teksturę.
     const [tr, tg, tb] = tlo.map((v) => Math.round(v / 8) * 8);
     const cel = `${klucz}@mapa${h}-${tr}-${tg}-${tb}`;
@@ -685,7 +679,7 @@ export class AdventureScene extends Phaser.Scene {
 
     // 1. Zmniejszenie.
     let obraz: HTMLImageElement | HTMLCanvasElement = zrodlo;
-    while (obraz.height / 2 >= h * 1.4) {
+    while (obraz.height / 2 >= h) {
       const c = document.createElement('canvas');
       c.width = Math.round(obraz.width / 2);
       c.height = Math.round(obraz.height / 2);
@@ -704,99 +698,63 @@ export class AdventureScene extends Phaser.Scene {
     const obr = ctx.getImageData(0, 0, w, h);
     const d = obr.data;
 
-    // Obrys sylwetki: do bryły (krok 3) i do stóp cienia (krok 6).
-    let x0 = w;
-    let x1 = -1;
-    let y0 = h;
+    // Obrys sylwetki i średnia jasność (do kroków 3 i 4).
     let y1 = -1;
-    for (let y = 0; y < h; y++)
-      for (let x = 0; x < w; x++)
-        if (d[(y * w + x) * 4 + 3] > 40) {
-          x0 = Math.min(x0, x);
-          x1 = Math.max(x1, x);
-          y0 = Math.min(y0, y);
-          y1 = Math.max(y1, y);
-        }
-    if (x1 < 0) return { rysunek: klucz };
-    const sx = (x0 + x1) / 2;
-    const pw = Math.max(1, (x1 - x0) / 2);
-    const ph = Math.max(1, y1 - y0);
-
-    // Alfa zostaje taka, jak ją dało zmniejszenie: miękki, wygładzony brzeg
-    // jak u wieży, skrzyni i chaty w tej samej skali. Runda 3 wzorca: rampa
-    // progowa i ciemny brzeg dawały „chrupiący, niskorozdzielczy sprite
-    // z twardym obrysem wklejony w miękko malowaną mapę".
-
-    // 2–3. Barwa i bryła.
-    const sr = (tr + tg + tb) / 3 || 1;
-    const amb = [tr / sr, tg / sr, tb / sr];
-    const lum = new Float32Array(w * h);
+    let y0 = h;
+    let sumaL = 0;
+    let ileL = 0;
     for (let y = 0; y < h; y++)
       for (let x = 0; x < w; x++) {
         const i = (y * w + x) * 4;
-        if (!d[i + 3]) continue;
-        let r = d[i] / 255;
-        let g = d[i + 1] / 255;
-        let b = d[i + 2] / 255;
-        const L = 0.299 * r + 0.587 * g + 0.114 * b;
-        r = L + (r - L) * STWOREK_NASYCENIE;
-        g = L + (g - L) * STWOREK_NASYCENIE;
-        b = L + (b - L) * STWOREK_NASYCENIE;
-        const k = STWOREK_ODCIEN;
-        r *= 1 - k + k * amb[0];
-        g *= 1 - k + k * amb[1];
-        b *= 1 - k + k * amb[2];
-        const nx = (x - sx) / pw;
-        const ny = (y - y0) / ph;
-        const bryla = 1 - 0.05 * nx - 0.08 * (ny - 0.5);
-        r *= bryla;
-        g *= bryla;
-        b *= bryla;
-        d[i] = Phaser.Math.Clamp(r * 255, 0, 255);
-        d[i + 1] = Phaser.Math.Clamp(g * 255, 0, 255);
-        d[i + 2] = Phaser.Math.Clamp(b * 255, 0, 255);
-        lum[y * w + x] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        if (d[i + 3] <= 40) continue;
+        y0 = Math.min(y0, y);
+        y1 = Math.max(y1, y);
+        if (d[i + 3] > 200) {
+          sumaL += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          ileL++;
+        }
       }
+    if (y1 < 0) return { rysunek: klucz };
+    const ciemny = ileL > 0 && sumaL / ileL < STWOREK_PROG_CIEMNY;
+    const ph = Math.max(1, y1 - y0);
 
-    // 4–5. Faktura, bliki i brzeg — z kopii, żeby sąsiedzi byli sprzed zmian.
+    // 2–3. Nasycenie, wyostrzenie, jasna krawędź od światła — z kopii,
+    // żeby sąsiedzi byli sprzed zmian.
     const alfa = (x: number, y: number) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : d[(y * w + x) * 4 + 3]);
-    const ziarno = (x: number, y: number) => {
-      let n = (x * 374761393 + y * 668265263) ^ 0x5bd1e995;
-      n = Math.imul(n ^ (n >>> 13), 1274126177);
-      return (((n ^ (n >>> 16)) >>> 0) % 1000) / 1000 - 0.5;
-    };
     const wynik = new Uint8ClampedArray(d);
     for (let y = 0; y < h; y++)
       for (let x = 0; x < w; x++) {
         const i = (y * w + x) * 4;
         if (!d[i + 3]) continue;
-        // Luminancja rozmyta 3 × 3 po samej sylwetce.
-        let suma = 0;
+        const rozmyte = [0, 0, 0];
         let ile = 0;
+        let swiatlo = false;
         for (let dy = -1; dy <= 1; dy++)
-          for (let dx = -1; dx <= 1; dx++)
-            if (alfa(x + dx, y + dy) > 100) {
-              suma += lum[(y + dy) * w + x + dx];
+          for (let dx = -1; dx <= 1; dx++) {
+            const a = alfa(x + dx, y + dy);
+            if (a > 100) {
+              const j = ((y + dy) * w + x + dx) * 4;
+              rozmyte[0] += d[j];
+              rozmyte[1] += d[j + 1];
+              rozmyte[2] += d[j + 2];
               ile++;
-            }
-        const L = lum[y * w + x];
-        const srednia = ile ? suma / ile : L;
-        const detal = (L - srednia) * STWOREK_DETAL;
-        let mnoz =
-          1 + STWOREK_ZIARNO * (0.65 * ziarno(x >> 1, y >> 1) + 0.35 * ziarno(x + 101, y + 57));
-        // Bliki: górę skali jasności ściskamy (lśniący plastik → matowa farba).
-        if (L > STWOREK_BLIK) mnoz *= (STWOREK_BLIK + (L - STWOREK_BLIK) * 0.35) / L;
-        // Obwódka światła: piksel brzegu jaśniejszy od wnętrza obok ściągamy
-        // do wnętrza. Tylko rozjaśnienia — ciemnego obrysu nie dokładamy.
-        if (ile < 9 && L > srednia && L > 0) mnoz *= (srednia + (L - srednia) * 0.35) / L;
-        for (let c = 0; c < 3; c++) wynik[i + c] = Phaser.Math.Clamp((d[i + c] + detal) * mnoz, 0, 255);
+            } else if (dx + dy < 0) swiatlo = true;
+          }
+        const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        for (let c = 0; c < 3; c++) {
+          let v = d[i + c];
+          v = L + (v - L) * STWOREK_NASYCENIE;
+          if (ile) v += (d[i + c] - rozmyte[c] / ile) * STWOREK_OSTROSC;
+          if (ciemny && swiatlo) v += (255 - v) * STWOREK_KRAWEDZ_SWIATLA;
+          wynik[i + c] = v;
+        }
       }
     obr.data.set(wynik);
     ctx.putImageData(obr, 0, 0);
     this.textures.addCanvas(cel, plotno);
 
-    // 6. Cień rzucony: y' = stopy − (stopy − y)·SPLASZCZ, x' = x + (stopy − y)·POCHYL.
-    const p = 3;
+    // 4. Cień rzucony: y' = stopy − (stopy − y)·SPLASZCZ, x' = x + (stopy − y)·POCHYL.
+    const p = 3 * STWOREK_NADPROBKA;
     const stopy = y1 + 1;
     const pochyl = 0.62;
     const splaszcz = 0.3;
@@ -806,7 +764,7 @@ export class AdventureScene extends Phaser.Scene {
     cc.width = cw;
     cc.height = chh;
     const cx = cc.getContext('2d')!;
-    cx.filter = 'blur(1.2px)';
+    cx.filter = `blur(${1.2 * STWOREK_NADPROBKA}px)`;
     cx.setTransform(1, 0, -pochyl, splaszcz, stopy * pochyl + p, chh - p - stopy * splaszcz);
     cx.drawImage(plotno, 0, 0);
     cx.setTransform(1, 0, 0, 1, 0, 0);
@@ -830,6 +788,67 @@ export class AdventureScene extends Phaser.Scene {
     };
     STWORKI_MAPY.set(cel, wpis);
     return wpis;
+  }
+
+  /**
+   * Wszystkie obrazki strażnika, w kolejności rysowania, względem środka
+   * jego pola: cień rzucony, plama styku w barwie gruntu, obrys planszy
+   * (`USTAWIENIA.obrysObiektow` — ten sam co pod skrzynią i chatą) i na
+   * końcu sam stworek (`im`, do trafień kliknięciem). Jedno miejsce dla
+   * sceny i dla arkusza porównania (`tools/zrzut-stwory-porownanie.mjs`),
+   * żeby arkusz pokazywał dokładnie to, co gra.
+   */
+  private obrazyStworka(
+    klucz: string,
+    wys: number,
+    tlo: [number, number, number]
+  ): { obrazy: Phaser.GameObjects.Image[]; im: Phaser.GameObjects.Image } {
+    const naMape = this.stworekNaMape(klucz, wys, tlo);
+    const im = this.add.image(0, KAFEL * 0.46, naMape.rysunek).setOrigin(0.5, 1);
+    im.setScale(wys / im.height);
+    const obrazy: Phaser.GameObjects.Image[] = [];
+    if (naMape.cien) {
+      const sk = im.scaleY;
+      const yStop = im.y - naMape.cien.stopy * sk;
+      obrazy.push(
+        this.add
+          .image(0, yStop, naMape.cien.klucz)
+          .setOrigin(naMape.cien.ox, naMape.cien.oy)
+          .setScale(sk)
+          .setAlpha(STWOREK_CIEN),
+        this.add
+          .image(KAFEL * 0.05, yStop, CIEN_KONTAKTOWY)
+          .setDisplaySize(im.displayWidth * 0.62, im.displayWidth * 0.16)
+          .setTint(naMape.cien.barwa)
+          .setTintMode(Phaser.TintModes.FILL)
+          .setAlpha(0.55)
+      );
+    }
+    const obrys = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.obrysObiektow;
+    if (obrys) obrazy.push(...this.obrysRysunku(im, obrys));
+    obrazy.push(im);
+    return { obrazy, im };
+  }
+
+  /**
+   * Obrys obiektów gry (`USTAWIENIA.obrysObiektow`, per plansza): ciemna
+   * sylwetka przesunięta o 2,5 piksela świata w ośmiu kierunkach, pod
+   * rysunkiem. Bagna, runda 6: „obiekty interaktywne zlewają się
+   * z dekoracją — bez konturu i kontrastu". Drzewa i skały obrysu nie mają,
+   * więc to, co da się podnieść, odwiedzić albo pokonać, odcina się od tła.
+   */
+  private obrysRysunku(im: Phaser.GameObjects.Image, krycie: number): Phaser.GameObjects.Image[] {
+    const d = 2.5;
+    return [[-1, 0], [1, 0], [0, -1], [0, 1], [-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]].map(
+      ([ox, oy]) =>
+        this.add
+          .image(im.x + ox * d, im.y + oy * d, im.texture.key)
+          .setOrigin(0.5, 1)
+          .setScale(im.scaleX, im.scaleY)
+          .setTint(0x1c1408)
+          .setTintMode(Phaser.TintModes.FILL)
+          .setAlpha(krycie)
+    );
   }
 
   /**
@@ -1719,7 +1738,12 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   private rysujObiekty() {
-    for (const o of this.stan.obiekty) {
+    // Kontener świata rysuje w kolejności dodania, nie po `depth` — obiekty
+    // idą więc od górnego rzędu do dolnego. W kolejności z listy planszy
+    // budowla z rzędu wyżej, dodana później, zasłaniała strażnika stojącego
+    // pod nią (stwory na mapie, runda 4). Sortowanie stabilne: w jednym
+    // rzędzie kolejność zostaje ta z planszy.
+    for (const o of [...this.stan.obiekty].sort((a, b) => a.y - b.y)) {
       if (o.zebrany) continue;
       const { x, y } = this.naEkran(o.x, o.y);
       const kont = this.add.container(x, y).setDepth(o.y + 0.5);
@@ -1758,9 +1782,9 @@ export class AdventureScene extends Phaser.Scene {
           : o.rodzaj === 'jasnowidz'
             ? undefined
             : planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienZnajdzek;
-      // Stworek ma własny cień rzucony (`stworekNaMape`), dodawany niżej.
-      const naMape = o.rodzaj === 'potwor' ? this.stworekNaMape(klucz, wys, this.barwaOkolicy(o.x, o.y)) : null;
-      if (!naMape?.cien)
+      // Stworek ma własny cień rzucony (`obrazyStworka`), dodawany niżej.
+      const stworek = o.rodzaj === 'potwor' ? this.obrazyStworka(klucz, wys, this.barwaOkolicy(o.x, o.y)) : null;
+      if (!stworek)
         kont.add(
           this.cienKontaktowy(
             klucz,
@@ -1803,54 +1827,19 @@ export class AdventureScene extends Phaser.Scene {
       // Budowle z bryłą stoją ZA polem wejścia, a nie na nim: podstawa siada na
       // górnej krawędzi tego pola, więc brama zostaje odsłonięta i widać, że
       // jest po niej gdzie chodzić. Reszta obiektów stoi na swoim polu.
-      // Stworek dostaje kopię zmniejszoną do rozmiaru na ekranie
-      // (`stworekNaMape`); reszta rysunków mapy ma pliki już w tej skali.
-      const im = this.add
-        .image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, naMape?.rysunek ?? klucz)
-        .setOrigin(0.5, 1);
-      im.setScale(wys / im.height);
-      if (naMape?.cien) {
-        // Cień rzucony stoi stopami w stopach stworka; pod nim mały, miękki
-        // rdzeń styku, żeby stopy nie wisiały nad trawą — w ciemnej barwie
-        // okolicy, więc na śniegu chłodny, w trawie brunatny.
-        const sk = im.scaleY;
-        const yStop = im.y - naMape.cien.stopy * sk;
-        kont.add(
-          this.add
-            .image(0, yStop, naMape.cien.klucz)
-            .setOrigin(naMape.cien.ox, naMape.cien.oy)
-            .setScale(sk)
-            .setAlpha(STWOREK_CIEN)
-        );
-        kont.add(
-          this.add
-            .image(KAFEL * 0.05, yStop, CIEN_KONTAKTOWY)
-            .setDisplaySize(im.displayWidth * 0.62, im.displayWidth * 0.16)
-            .setTint(naMape.cien.barwa)
-            .setTintMode(Phaser.TintModes.FILL)
-            .setAlpha(0.5)
-        );
+      // Stworek ma gotowy komplet obrazków (`obrazyStworka`: cień, obrys,
+      // rysunek); reszta obiektów — rysunek z pliku i obrys planszy.
+      let im: Phaser.GameObjects.Image;
+      if (stworek) {
+        kont.add(stworek.obrazy);
+        im = stworek.im;
+      } else {
+        im = this.add.image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, klucz).setOrigin(0.5, 1);
+        im.setScale(wys / im.height);
+        const obrys = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.obrysObiektow;
+        if (obrys) kont.add(this.obrysRysunku(im, obrys));
+        kont.add(im);
       }
-      // Obrys obiektów gry (`USTAWIENIA.obrysObiektow`, per plansza): ciemna
-      // sylwetka przesunięta o 2,5 piksela świata w ośmiu kierunkach, pod rysunkiem.
-      // Bagna, runda 6: „obiekty interaktywne zlewają się z dekoracją — bez
-      // konturu i kontrastu". Drzewa i skały obrysu nie mają, więc to, co
-      // da się podnieść albo odwiedzić, odcina się od tła. Stworki bez obrysu.
-      const obrys = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.obrysObiektow;
-      if (obrys && o.rodzaj !== 'potwor') {
-        const d = 2.5;
-        for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]]) {
-          const cien = this.add
-            .image(im.x + ox * d, im.y + oy * d, klucz)
-            .setOrigin(0.5, 1)
-            .setScale(im.scaleX, im.scaleY)
-            .setTint(0x1c1408)
-            .setTintMode(Phaser.TintModes.FILL)
-            .setAlpha(obrys);
-          kont.add(cien);
-        }
-      }
-      kont.add(im);
 
       // Klik w RYSUNEK ma celować w pole obiektu.
       //
