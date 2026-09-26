@@ -191,7 +191,7 @@ export const USTAWIENIA = {
   "znajdzki": 0.68,
   "obrysObiektow": 0.35,
   "skalaStrazy": 1.1,
-  "skalaBudowli": 0.8,
+  "skalaBudowli": 1.0,
   "kepySkal": {
     "0,23": 1,
     "3,23": 3,
@@ -199,32 +199,10 @@ export const USTAWIENIA = {
     "2,25": 4,
     "5,25": 2,
     "8,25": -1,
-    "18,28": 3,
+    "18,28": 2,
     "21,28": 1,
     "22,30": -2,
     "22,32": 4,
     "22,34": -1
-  },
-  "odkryte": [
-    {
-      "x": 4,
-      "y": 19,
-      "promien": 3
-    },
-    {
-      "x": 23,
-      "y": 20,
-      "promien": 4
-    },
-    {
-      "x": 24,
-      "y": 34,
-      "promien": 2
-    },
-    {
-      "x": 3,
-      "y": 35,
-      "promien": 2
-    }
-  ]
+  }
 };

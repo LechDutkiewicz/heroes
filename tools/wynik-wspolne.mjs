@@ -6,8 +6,35 @@
 // trafia w wyliczony punkt, przestaje działać przy pierwszym przesunięciu
 // karty — i zgłasza wtedy zepsuty przycisk, choć zepsuty jest pomiar.
 
-export const KLUCZ_POSTEPU = 'heroes-kampania-v1';
 export const KLUCZ_REKORDOW = 'heroes-rekordy-v1';
+
+/**
+ * Postęp kampanii należy do profilu gracza (src/data/profile.ts): rejestr
+ * `heroes-profile-v1` mówi, który profil jest aktywny, a postęp leży pod
+ * `heroes-profil-<id>-kampania`. Sondy grają profilem „Sonda" — zakładanym
+ * tu, gdy żaden nie jest aktywny.
+ */
+export const KLUCZ_REJESTRU = 'heroes-profile-v1';
+
+/** Klucz postępu aktywnego profilu (w przeglądarce); zakłada profil „Sonda", gdy trzeba. */
+export const kluczPostepuWStronie = `(() => {
+  let r = null;
+  try { r = JSON.parse(localStorage.getItem('heroes-profile-v1') ?? 'null'); } catch {}
+  if (!r || !Array.isArray(r.profile)) r = { v: 1, aktywny: null, profile: [] };
+  if (!r.profile.some((p) => p.id === r.aktywny)) {
+    if (!r.profile.some((p) => p.id === 'sonda')) r.profile.push({ id: 'sonda', imie: 'Sonda', utworzony: new Date().toISOString() });
+    r.aktywny = 'sonda';
+    localStorage.setItem('heroes-profile-v1', JSON.stringify(r));
+  }
+  return 'heroes-profil-' + r.aktywny + '-kampania';
+})()`;
+
+/** Postęp kampanii aktywnego profilu. */
+export const czytajPostep = (page) =>
+  page.evaluate((kod) => JSON.parse(localStorage.getItem(eval(kod)) ?? 'null'), kluczPostepuWStronie);
+
+/** Kasuje postęp kampanii aktywnego profilu. */
+export const usunPostep = (page) => page.evaluate((kod) => localStorage.removeItem(eval(kod)), kluczPostepuWStronie);
 
 export const scena = (page, nazwa, timeout = 120000) =>
   page.waitForFunction((n) => window.__game?.scene.getScene(n)?.sys.settings.status === 5, nazwa, { timeout });
@@ -22,10 +49,10 @@ export const aktywne = (page) => page.evaluate(() => window.__game.scene.getScen
  */
 export async function startMisji(page, idMisji, postep, { bezWarunkow = false } = {}) {
   await page.evaluate(
-    ({ id, p, klucz, bez }) => {
+    ({ id, p, kod, bez }) => {
       const K = window.__kampania;
       const pelny = { ...K.nowyPostep(p.trener ?? 'Janek'), ...p };
-      localStorage.setItem(klucz, JSON.stringify(pelny));
+      localStorage.setItem(eval(kod), JSON.stringify(pelny));
       const m = K.misjaPoId(id);
       const s = K.rozpocznijMisje(pelny, m, pelny.bonus ?? 0);
       // Okno warunków planuje się w `create`, więc flagę trzeba ustawić
@@ -36,7 +63,7 @@ export async function startMisji(page, idMisji, postep, { bezWarunkow = false } 
       const zywa = g.scene.getScenes(true)[0];
       zywa.scene.start('adventure');
     },
-    { id: idMisji, p: postep, klucz: KLUCZ_POSTEPU, bez: bezWarunkow }
+    { id: idMisji, p: postep, kod: kluczPostepuWStronie, bez: bezWarunkow }
   );
   await page.waitForTimeout(300);
   await scena(page, 'adventure');

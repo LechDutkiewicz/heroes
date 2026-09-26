@@ -35,7 +35,7 @@ Co wychodzi
     public/kampania/mapa.json     droga między misjami w ułamkach 0–1
     public/kampania/zwoj.png      pusty zwój pergaminu pod opis misji (2×)
     public/kampania/janek.png     figurki trenerów na ekran wyboru
-    public/kampania/ola.png
+    public/kampania/ela.png
 
     python3 tools/kampania_grafiki.py              # tylko figurki trenerów
     python3 tools/kampania_grafiki.py --skladana   # całość, NADPISUJE malowaną mapę

@@ -71,10 +71,10 @@ export interface UstawieniaPlanszy {
    */
   zestaw?: 'zima' | 'bagno' | 'polana';
   /**
-   * Wysokość znajdziek leżących na ziemi (stos surowca, skrzynia, artefakt)
-   * w polach. Brak = dawne rozmiary (0,7 / 0,78 / 0,72). Przy ustawionej
-   * znajdźka dostaje też ciaśniejszy, ciemniejszy cień kontaktowy —
-   * mała rzecz bez cienia wygląda na ikonę wklejoną w tło.
+   * Znajdźki jako stos z zestawu klimatu (`m-stos-<ikona>`) zamiast ikony
+   * z paska surowców. Od stworków rundy 4 liczba już nie ustala wielkości —
+   * ta jest jedna na wszystkie plansze (`ZNAJDZKI_NA_MAPIE.wys` w
+   * `uklad.ts`); liczy się tylko to, czy pole jest ustawione.
    */
   znajdzki?: number;
   /**
@@ -83,6 +83,34 @@ export interface UstawieniaPlanszy {
    * niż zamek". Brak = 1.
    */
   skalaStrazy?: number;
+  /**
+   * Stworki-strażnicy w oświetleniu planszy — nadpisuje pola
+   * `STWORKI_NA_MAPIE` z `src/visual/uklad.ts` (nasycenie, światło z lewej-
+   * góry, podcień, ciemny brzeg, barwa gruntu). Stworki runda 3: „cieniowane
+   * płasko, wklejone z innej gry". Brak = wartości z `uklad.ts`.
+   */
+  stworkiNaMapie?: {
+    nasycenie?: number;
+    swiatlo?: number;
+    podcien?: number;
+    krawedz?: number;
+    paleta?: number;
+    otoczenie?: number;
+    podstawka?: number;
+  };
+  /**
+   * Znajdźki (stosy, skrzynie, artefakty): wysokość i wyciszenie barw —
+   * nadpisuje pola `ZNAJDZKI_NA_MAPIE` z `uklad.ts`. Brak = wartości
+   * z `uklad.ts` (jedna skala na wszystkie plansze, stworki runda 4).
+   */
+  znajdzkiNaMapie?: {
+    wys?: number;
+    szerMax?: number;
+    nasycenie?: number;
+    kontrast?: number;
+    jasnosc?: number;
+    obrys?: number;
+  };
   /**
    * Osadzenie drobnych rzeczy w gruncie: stosy, skrzynie, artefakty
    * i strażnicy dostają nierówną krawędź tła na spodzie rysunku i drobne

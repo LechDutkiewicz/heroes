@@ -9,14 +9,14 @@ Prompty są w `tools/PROMPTY-KAMPANIA.md`, obrazki leżą w `tools/wsad/`
     public/kampania/wstep.jpg        noc: strażnik z latarnią, pochód z wozem, grota
     public/kampania/koniec.jpg       poranek: stworki wracają, strażnik macha
     public/kampania/portret-janek.jpg  portrety na karty wyboru trenera
-    public/kampania/portret-ola.jpg
+    public/kampania/portret-ela.jpg
     public/kampania/mapa.jpg         malowana mapa krainy (1232 × 924, 2× ekranu)
     public/kampania/woda-a.png       połysk wody na tej mapie, dwie fazy
     public/kampania/woda-b.png
     public/kampania/mapa.json        droga między misjami (ułamki 0–1 mapy)
     public/kampania/zwoj.png         pusty zwój z wyciętym tłem (alfa)
 
-`janek.png` / `ola.png` (figurki) zostają, bo stoją na mapie przy bieżącej
+`janek.png` / `ela.png` (figurki) zostają, bo stoją na mapie przy bieżącej
 misji i w scenie wyniku — portrety są osobnymi plikami.
 
 Kadry
@@ -84,7 +84,7 @@ KARTA = (620, 892)
 
 
 def portrety():
-    for imie in ('janek', 'ola'):
+    for imie in ('janek', 'ela'):
         im = Image.open(WSAD / f'kampania-{imie}.png').convert('RGB')
         w, h = im.size
         kh = round(w * KARTA[1] / KARTA[0])

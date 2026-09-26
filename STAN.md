@@ -1,6 +1,6 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-09-26 (storki w stylu mapy: rysunki, portrety, animacje).
+Ostatnia aktualizacja: 2026-09-26 (scalenie: storki w stylu mapy — rysunki, portrety, animacje — z ekranem bohatera, garnizonem, paskiem armii, ewolucjami, profilami i zapisami).
 
 ## Storki w stylu mapy — pętla „gauntlet" (2026-09-26)
 
@@ -47,6 +47,346 @@ stworów od złych. Porównania ANIMACJI (sam ruch, bez stylu) rozróżniają.
 towarowego); w animacji najechania widać półprzezroczysty ślad w klatce
 przenikania; drugi krok chodu za mało różni się od pierwszego; ekran bitwy
 (tło, HUD) wciąż w starym stylu.
+
+**Scalenie z gałęzią główną (#6, #8).** Obie strony przemalowały 18 stworków
+zamków; w `public/sprites/<id>.png` zostały storki z tej pętli (kadr ten sam:
+128 px, stopy przy dolnej krawędzi, w prawo). Uwaga: `tools/stworki_wczytaj.py`
+z gałęzi głównej przepisuje te pliki z `tools/wsad/stworek-*.png` — nie
+puszczać go dla form bazowych. Etapy ewolucji (`01xxx`, `02xxx`,
+`src/data/ewolucje.ts`) są z gałęzi głównej, w jej stylu i bez portretów
+(pasek armii i okno podziału biorą wtedy cały sprite). Strażnicy na mapie:
+`stworekNaMape` i skala z masy (`MASA_STRAZNIKA`), malowane figury
+`public/sprites/mapa-<id>.png` (`STRAZNICY_MAPOWI`) leżą, ale gra ich nie
+wczytuje; z gałęzi głównej zostały bohater 1,9 pola z proporcem, cień
+rzucany bohatera i przygaszanie łupu. Portrety wpięte w nowy `PanelArmii`
+(sloty bohatera i garnizonu — `pd-`, okno podziału — `po-`) i w medalion
+karty siedliska; okno stworka i „Przyrost na tydzień" pokazują cały storek.
+
+## Ekran bohatera na wspólnym zestawie (2026-09-26)
+
+Zgłoszenie: ekran bohatera był w starym mlecznoniebieskim stylu `hud.ts`
+i nie miał grafik umiejętności ani artefaktów.
+
+**Co działa.** `src/scenes/HeroScene.ts` przepisany na materiał mapy
+i miasta (`zestaw.ts`): drewno z belką (imię, kursywą charakter bohatera jak
+motto miasta, data), dwa pergaminowe pola, podział kolumn jak w mieście
+(lewa do x = 568, prawa od 586). Lewe pole: głowa w medalionie z oczkiem
+poziomu, „Poziom N · trener/trenerka", pasek doświadczenia z gwiazdą,
+atak/obrona/ruch jako malowane ikony kampanii (`k-ikona-miecz/tarcza/buty`)
+w gniazdach z liczbą i zielonym dodatkiem, wiersz „W bitwie: +X% / −Y%"
+(wzór z `battle.ts`), siatka 2 × 2 umiejętności drugorzędnych
+(`public/bohater/umiejetnosc-<id>.png`, poziom słownie + trzy kropki,
+wartość; puste gniazdo „Wolne miejsce"). Prawe pole: portret
+`public/kampania/portret-<janek|ela>.jpg` w grubej złotej ramie, po bokach
+8 gniazd artefaktów (`public/bohater/artefakt-<id>.png`; brakujące jako cień,
+noszone w cienkiej złotej ramie), „Zebrane: X z 8", suma bonusów, cel misji
+(Księżycowy Kamień) w osobnym gnieździe, gdy go niesie. Dół: wspólny
+`PanelArmii` (jak w mieście), komunikat z „Podziel", złota tabliczka
+„Na mapę" / „Do miasta" (klucz `powrot-z-bohatera`). Najechanie na
+umiejętność, artefakt, statystykę, doświadczenie albo portret → dymek
+(pergamin w złotej ramie; statystyka rozpisuje „skąd to masz": bohater,
+awanse, artefakty, Zwiad, ranczo); klik/prawy klik przypina, klik obok
+albo Escape zdejmuje. Escape przy otwartym oknie stworka/podziału zamyka
+tylko okno. Portret wybierany z imienia (`/^el/i` → Ela, reszta → Janek).
+
+**Decyzje.** Lalka bez części ciała: artefakt działa samym posiadaniem, więc
+gniazda stoją wokół portretu, ale żadne nie jest „na hełm". Ikona obrony to
+ta sama tarcza co artefakt „Tarcza z Łusek" — tak samo robi kampania przy
+nagrodach obrony. Ekran buduje się po `krojeZestawu()`; sondy czekają na
+`scena.gotowy`. Dawne skróty ekranu (Shift = połowa, Alt = okno) zastąpił
+zestaw `PanelArmii`: Shift = okno podziału (startuje od połowy, Enter
+zatwierdza); do `PanelArmii` doszło Ctrl = odłóż jednego stworka (działa
+też w mieście).
+
+**Sondy.** `probe-bohater.mjs` (sloty czytane z `panel.paski[0]`, nowe
+sprawdzenia: malowane ikony, portret, wolne gniazda, dymek najechanie/
+przypięcie/zdjęcie, opis artefaktu, okno stworka i Escape), `probe-awans`
+(napis „Wolne miejsce"; wyjście z ekranu bohatera Escape'em — start mapy
+wprost z sondy zostawiał ekran bohatera działający nad mapą i jego strefy
+łapały klik w okno awansu), `probe-armia`, `probe-misja` — przechodzą.
+Zrzuty: `node tools/zrzut-bohater.mjs [--stan pelny|ela|pusty|po-bitwie]
+[--opis <id umiejętności>|artefakt-<id>|atak] [--okno]` → płótno 960 × 695;
+`tools/blind/bohater-hud.png`, `bohater-hud-opis.png`.
+
+**Runda 2 (po ślepym 1/2).** Krytyk: stałe teksty pomocy jak samouczek
+w formularzu, portret powtórzony (medalion + wielki obraz), gniazda
+w kolumnach zamiast na postaci, pasek armii mały w rogu. Zmiany: usunięte
+napisy „Nową umiejętność wybierasz…", „na umiejętność z awansu",
+„Artefakty leżą na mapie…" i domyślny „Kliknij stworka…" — to samo jest
+w dymkach (nowe: dymek armii na figurce w bloku, dymek wolnego gniazda),
+a linia statusu domyślnie mówi stan armii. Prawe pole to LALKA: postać
+w całej sylwetce (`public/bohater/postac-<janek|ela>.png`, OpenAI
+`images/edits` z portretem kampanii jako wzorem, prompty w
+`PROMPTY-BOHATER.md` §3, import `python3 tools/bohater_postac.py`, koszt
+$0.13 za dwa obrazki) na ciemnym suknie w grubej złotej ramie, gniazda NA
+postaci: głowa (opaska), plecy (skrzydła), szyja (amulet = cel misji,
+Księżycowy Kamień), tułów (kamizelka), pas (Pas Mistrza), ręce (pazur,
+tarcza), stopy (buty), pojazd przy stopie (rower). Punkty to ułamki rysunku
+(`GNIAZDA_LALKI`, Ela ma własny pas). Brakujący artefakt = półprzezroczysta
+wnęka z cieniem ikony, więc postać prześwituje. Medalion z głową zostaje.
+Dół: blok armii na całą szerokość (ta sama rama i sloty 68 px co w mieście,
+figurka z mapy w pierwszej wnęce), obok linia statusu, „Podziel" i wyjście.
+Decyzja zmieniona: wcześniej „lalka bez części ciała" — teraz gniazda mają
+części ciała, choć artefakt dalej działa samym posiadaniem (każdy ma stałe,
+pasujące miejsce, więc nic nie obiecuje fałszywej zasady). Sonda
+`probe-bohater` sprawdza teraz `bh-postac-` + `k-glowa-` zamiast portretu.
+Zrzut: `tools/blind/bohater-hud-r2.png`. Ślepe porównanie r2 — do zrobienia
+przez krytyka.
+
+**Co zostało.** Nie było ślepego porównania z HotA przez świeżego krytyka.
+Brak przycisków HoMM3 „zwolnij bohatera" / „lista zadań" (gra ma jednego
+bohatera i nie miała ich wcześniej). Ruch pokazuje zapas na dzień
+(dzisiejszy stan jest w dymku).
+
+## Garnizon miasta i wspólny pasek armii (2026-09-26)
+
+Zgłoszenie: w HotA miasto i ekran bohatera mają ten sam pasek armii z
+zarządzaniem, okno stworka i miniaturę bohatera w mieście; u nas miasto
+pokazywało tylko podgląd armii.
+
+**Co działa.**
+- `src/visual/panelArmii.ts` — `PanelArmii` prowadzi dowolną liczbę rzędów
+  slotów naraz (jedno zaznaczenie na ekran): klik zaznacza, klik w inny slot
+  przenosi / zamienia / łączy (także między rzędami), przeciągnięcie robi to
+  samo, Shift+klik albo Shift przy upuszczeniu albo tabliczka „Podziel" →
+  okno podziału (dwie liczby, suwak, ±, strzałki, Enter/Escape). Drugi klik
+  w zaznaczony oddział, prawy klik albo przytrzymanie (520 ms, tablet) →
+  okno stworka. Rząd może być `chroniona` (bohater — nie oddaje ostatniego
+  stosu) i `aktywny: () => bool` (bohater poza zamkiem — tylko podgląd).
+  Uchwyt dla sond: `panel.podzial` (otwarte okno podziału), `panel.okno`.
+- `src/visual/oknoStworka.ts` — `pokazOknoStworka(scena, { oddzial, glebia,
+  zwolnij?, gdzie? })`: portret w medalionie, poziom, żywioł, atak/życie
+  (sztuka i oddział), szybkość, strzały, mocny/słaby, umiejętność, etap
+  ewolucji (informacyjnie), „Zwolnij" z pytaniem i „Zamknij". Obrony ani
+  licznika strzał nie ma, bo model walki ich nie ma — okno pokazuje to, co
+  działa. Nie wczytany portret dociąga w locie.
+- Arytmetyka dwóch armii w `src/data/armia.ts`: `przeniesMiedzy`,
+  `maksPodzialuMiedzy`, `podzielMiedzy`, `zwolnij` (dla tej samej tablicy
+  oddają sprawę starym `przenies`/`podziel`).
+- **Garnizon zamku to nowe pole `Obiekt.garnizon?: Armia`** (7 slotów z
+  dziurami). `oddzialy` zamku gracza zostało tym, czym było: STRAŻĄ MIEJSKĄ
+  z planszy (`garnizonGracza` w USTAWIENIACH, np. 105 Pyroko + 70 + 70 na
+  Dwóch Dolinach). Decyzja: straży NIE pokazujemy w slotach i nie da się jej
+  zabrać — inaczej pierwszego dnia bohater dostawałby za darmo kilkaset
+  stworków i balans kampanii by się rozsypał. Miasto pisze ją jedną linijką
+  pod „Garnizon" („+ straż 245").
+- Broni zamku straż + garnizon naraz: `obroncyZamku(o)` w mapa.ts (łączy po
+  gatunku — bitwa ma sześć rzędów startowych). Używają go `odwiedz`,
+  AI (ocena „czy wygram" i `rozstrzygnijBitwe`) i `AdventureScene` (bitwa
+  gracza o zamek). Po odpartym szturmie AI na zamek gracza straty rozkłada
+  `rozdzielStratyZamku` (najpierw straż, potem garnizon); po zdobyciu zamku
+  oba znikają. Na nowy dzień mapa mówi „X odparła szturm!" / „Wróg zdobył X!".
+- Miasto: panorama niższa (okno 470 px zamiast 492, obcięty tylko przedplan),
+  pod nią dwa rzędy: garnizon (herb-ratusz w medalionie) i bohater
+  odwiedzający (portret; klik → `HeroScene`, „Do miasta" / Escape wraca do
+  miasta przez klucz rejestru `powrot-z-bohatera`). Po prawej komunikat
+  z tabliczką „Podziel", surowce i „Buduj"/„Wyjdź" (Buduj dalej w x = 664).
+- Werbunek: bez bohatera → garnizon (zdjęta dawna blokada „nie werbujesz bez
+  bohatera"); z bohaterem → do niego, a przy pełnych slotach do garnizonu.
+- Zapis: `garnizon` jedzie w stanie; `czytajPlik` normalizuje go do siedmiu
+  slotów, brak pola = pusty garnizon.
+
+**Sondy.** `node tools/probe-armia.mjs --url … [--zrzuty]` (gesty myszą,
+okno stworka, portret → bohater → miasto, zapis/odczyt i stary zapis),
+`npx tsx tools/probe-garnizon.ts` (dwie armie: przypadki i 40 tys. losowych
+ruchów; obrońcy zamku; AI pod bramą: przytłaczająca armia bierze zamek
+i płaci stratami, ta sama armia, która bierze zamek z samą strażą, przy
+garnizonie nie rusza). Zrzuty: `tools/blind/miasto-armia.png`,
+`okno-stworka.png`, `miasto-podziel.png`.
+
+**Runda 2 (po ślepym 0/2).** Krytyk: paski płaskie, pastelowe, ~12 %
+wysokości, puste sloty jak beżowe placeholdery, liczby wciśnięte w róg, brak
+ramy i herbu. Zmiany we wspólnym `panelArmii.ts` (od razu miasto i bohater):
+slot to pergamin zabarwiony na ciemną skórę z wewnętrznym cieniem i cienką
+złotą ramką; pusty — ciemniejsza wnęka z przeszyciem, zajęty — cieplejsze tło,
+światło i cień pod stworkiem; stworek na cały slot; liczba 17 px pogrubiona
+na ciemnej plakietce w złotej obwódce. Nowe eksporty: `blokArmii` (cień,
+ciemna skóra, GRUBA złota rama), `listwaArmii` (złota listwa z rombami między
+rzędami), `wnekaHerbu` (pierwsza wnęka pod herb/portret). Domyślny odstęp
+slotów 6. Miasto: blok ~29 % wysokości (sloty 68 px, dwa rzędy, herb ratusza
+z plakietką „straż N" i portret bohatera z kampanii z plakietką imienia;
+najechanie mówi szczegóły w komunikacie, podpisów przy rzędach już nie ma),
+okno panoramy 423 px, a panorama przesunięta w górę o `PRZESUN_PANORAMY`
+= 50 (znika pas nieba, budynki zostają całe). Prawa kolumna: nowy panel
+„Przyrost na tydzień" (stworek każdego siedliska, +dzienny×7 z fortem,
+nie postawione jako cień, „czeka N"; klik w postawione → karta werbunku),
+komunikat z „Podziel", surowce (układane za sobą, bo „394 +40" zderzał się
+z jagodami), „Buduj" (dalej obejmuje (664, 663)) i „Wyjdź". Zrzut:
+`node tools/zrzut-miasto-armia.mjs --url … --out tools/blind/miasto-armia-r2.png
+[--poza]`. Ślepe porównanie r2 — do zrobienia przez krytyka.
+
+**Co zostało.**
+- (zrobione) Ekran bohatera ma już wspólny `PanelArmii` — patrz sekcja wyżej.
+- Obrona zamku przed AI jest rozstrzygana symulacją w turze przeciwnika (jak
+  każda bitwa AI), a nie bitwą, którą gracz prowadzi na ekranie. Prawdziwa
+  obrona wymagałaby przerwania tury AI w pół i wznowienia po `BattleScene`.
+- Bohater stojący w zamku nie broni go razem z garnizonem (HotA tak ma).
+- Nie było ślepego porównania z HotA (brak krytyka w tej sesji).
+- Bitwa ma sześć rzędów startowych, a armia/garnizon siedem slotów — siódmy
+  stos w bitwie AI dostaje rząd `undefined` (stary problem `createBattle`,
+  nie ruszany).
+
+## Malowane stworki i linie ewolucyjne (2026-09-26)
+
+Stare sprite'y 18 oddziałów zamków (`FACTIONS`; strażnicy plansz, AI,
+tytuły wyniku i nagrody kampanii biorą sprite'y z tej samej listy) odstawały
+od malowanych obiektów mapy. Teraz wszystkie są przemalowane przez
+gpt-image-1 w stylu `obiekt`, razem z dwoma nowymi etapami ewolucji każdego
+— 54 rysunki, $2.90 (dziennik `tools/wsad/koszty-openai.jsonl`, pliki
+`stworek-*`).
+
+- **Linie ewolucyjne** — `src/data/ewolucje.ts` (`LINIE_EWOLUCJI`,
+  `nastepnyEtap`, `SPRITE_EWOLUCJI`): każdy oddział ma linię forma bazowa →
+  etap 2 → etap 3 w obrębie SWOJEGO poziomu (jak ulepszone siedliska HoMM3).
+  Pary tego samego żywiołu w frakcjach (Bór 1–2, 3–4, 5–6 itd.) sprawdzone
+  i odrzucone — powody w komentarzu pliku. Numery: baza = obecny sprite,
+  etap 2 = `01xxx`, etap 3 = `02xxx`. **Mechaniki jeszcze nie ma** (budynek,
+  koszt w kamieniach/jagodach, statystyki etapów, AI — osobne zadanie);
+  pliki nowych etapów leżą w `public/sprites/` i nikt ich jeszcze nie wczytuje.
+- **Prompty** — `tools/PROMPTY-STWORKI.md`. Nowy znacznik `| wzor: …`
+  w `generuj_grafiki.py`: plik idzie przez `images/edits` z obrazkiem-
+  referencją (baza ze starego sprite'a `tools/wsad/stare-sprites/`, każdy
+  etap z poprzedniego), więc linia trzyma barwy i rysy. Filtr treści OpenAI
+  odrzucał ~30% edycji (kategoria „other", losowo; pewne wyzwalacze: nazwa
+  stworka w prompcie, „bakłażan") — odrzucony plik jest pomijany, a
+  `--bez-wzoru` robi go z samego opisu (tak powstały Torrenar, Silvena,
+  Vulkaron i Verdilo). Kosztuje tylko to, co przeszło.
+- **Do gry** — `python3 tools/stworki_wczytaj.py`: zdejmuje białą obwódkę
+  „naklejki" i placek piasku pod stopami (model dorysowuje je mimo zakazu),
+  odbija w poziomie wszystko poza `W_PRAWO` (armia patrzy w prawo, model
+  kierunku nie trzyma), kwadrat 128 px, **stopy na dole kwadratu** (stare
+  były wyśrodkowane — bitwa stawia sprite originem na linii stóp, więc
+  szeroki stworek wisiał), +12% nasycenia i ciemna obwódka 1 px (bez niej
+  zielone stworki ginęły w trawie). Stare sprite'y: `tools/wsad/stare-sprites/`.
+- Kod scen bez zmian — skalowanie (mapa z widocznej sylwetki, bitwa
+  z wysokości pliku, miasto/bohater/kampania/wynik `min(1, bok/wysokość)`)
+  działa na nowych plikach. Zrzuty: `tools/blind/stworki-{mapa,bitwa,miasto,bohater,linie}.png`.
+- Słabsze miejsca: etap 2 bywa bardzo podobny do bazy (Torrenos, Bazaltor,
+  Vulkarex, Cynderos); Aquilon ma resztkę placka pod stopami; Flamidor ma
+  żółtą poświatę po obrysie. Każdy da się dorobić jednym plikiem
+  (`generuj_grafiki.py --nadpisz stworek-<numer>.png`, potem wczytaj).
+- **Mapa, runda 2** (ślepe z HotA r1 0/2: „strażnika nie da się odróżnić od
+  znajdźki", „Janek wielkości kryształu"): `WYS_STRAZNIKA` 1,2 → 1,6,
+  `SZER_STRAZNIKA_MAX` 1,6 → 2,1, `WYS_BOHATERA` 1,5 → 1,9 (`uklad.ts`);
+  Twierdza `skalaStrazy` 1,2 → 1,0 (ta sama skala na wszystkich planszach).
+  Strażnik i bohater rzucają na grunt własną sylwetkę (`cienRzucany`,
+  `CIEN_RZUT` w AdventureScene: położona w prawo-dół od światła, rozmyta,
+  gasnąca ku głowie, na śniegu w barwie `cienNaSniegu`); znajdźki zostają
+  z samym cieniem kontaktowym — to je odróżnia. Cień bohatera jest z klatki 0
+  (nie idzie za krokiem). Poświaty dla ciemnych stworków nie dałem — nasze
+  stworki są jasne, a jasna obwódka to właśnie ta „naklejka", którą
+  `stworki_wczytaj.py` zdejmuje. Zrzuty `tools/blind/stworki-mapa-r2*.png`.
+- **Mapa, runda 3** (ślepe z HotA r2 0/3: „hierarchia odwrócona — strażnicy
+  więksi od bohatera, wielkości chat; Janek bez flagi, podstawki i obrysu",
+  „strażnik ma tę samą wagę co kryształy", „stworki płaskie, wklejone z innej
+  gry"). Skala (`uklad.ts`): `WYS_BOHATERA` 1,9 → 2,2, `WYS_STRAZNIKA` 1,6 →
+  1,3, `SZER_STRAZNIKA_MAX` 2,1 → 1,6. Bohater (`rysujBohatera`): proporzec
+  gracza rysowany w kodzie (`zbudujProporzec`, wymiary `PROPORZEC`) — drzewce
+  ze złotą gałką przy prawym boku, płat w pogłębionym `C.ally` z wcięciem,
+  fałdami od światła, złotą lamówką i białym pokeballem, faluje w 4 klatkach
+  (`ozywBohatera` z `update`); pierścień w barwie gracza pod stopami
+  (`t-podstawa-bohatera`); ciemny obrys z 4 kopii bieżącej klatki. Stary mały
+  `chorag` przy głowie zdjęty. Strażnik na mapie ma własną teksturę
+  `pm-<mapa>-p-<numer>-<barwa gruntu>` (`teksturaStworkaNaMape`): erozja alfy
+  o 1 px (zdejmuje obwódkę z `stworki_wczytaj.py`), nasycenie ×0,9, chroma
+  gruntu spod stworka (`barwaGruntu` z `plansza-0`), gradient światła z
+  lewej-góry, podcień dołu, ciemny brzeg od strony cienia, jasny brzeg od
+  światła — parametry `STWORKI_NA_MAPIE` (`uklad.ts`), per plansza
+  `USTAWIENIA.stworkiNaMapie` (`mapy.ts`). Znajdźki: ×0,88 wielkości
+  i nasycenie ×0,8 (tekstura `pz-…`, `ZNAJDZKI_NA_MAPIE`, per plansza
+  `znajdzkiNaMapie`). Pliki `public/sprites/` bez zmian — bitwa, miasto, HUD
+  biorą oryginały. OpenAI $0. Zrzuty `tools/blind/stworki-mapa-r3*.png`.
+  Do sprawdzenia w ślepym: zielone/niebieskie stworki w trawie Bagien po
+  zejściu z nasycenia czytają się słabiej (został im cień rzucany
+  i chorągiewka); bohater to nadal chudy chłopiec, nie jeździec — jeśli
+  krytyk dalej chce „figury jak na koniu", następny krok to szerszy arkusz
+  bohatera (OpenAI).
+- **Mapa, runda 4** (ślepe z HotA r3 1/3: „Janek wyższy niż tawerna, sięga
+  połowy wiatraka, narysowany płasko", „stwory tej wielkości, barwy i podania
+  co znajdźki obok — turkusowy smoczek przy turkusowych kryształach", „kolaż
+  naklejek bez jednej reguły skali"). Jedna reguła na wszystkich planszach
+  (widoczna sylwetka, pola): budowla ≥ 2,2 > bohater 1,9 > strażnik 1,4
+  (≤ 1,65 wszerz) > znajdźka 0,62 (skrzynia 0,65). `uklad.ts`:
+  `WYS_BOHATERA` 2,2 → 1,9, `WYS_STRAZNIKA` 1,3 → 1,4, `SZER_STRAZNIKA_MAX`
+  1,6 → 1,65, `PROPORZEC` mniejszy (0,4 / 0,8 / 0,45). Znajdźki: wielkość
+  już nie z `USTAWIENIA.znajdzki` (było 0,39 Bagna / 0,6 Polana / 0,63
+  Twierdza), tylko `ZNAJDZKI_NA_MAPIE.wys` 0,62 i `szerMax` 0,95
+  (`wysZnajdzki`); `znajdzki` planszy decyduje już tylko o rysunku stosu.
+  Wyciszenie łupu: nasycenie 0,55, kontrast ×0,82 ku średniej, jasność ×0,94,
+  obrys `obrysObiektow` ×0,35; łup do 3 pól od strażnika o bliskiej barwie
+  (`barwyRysunku` — odcienie ≥12% nasyconych pikseli, różnica ≤ 42°) gaśnie
+  do nasycenia 0,3 i jasności ×0,83 (turkusowy kryształ przy smoczku robi
+  się szaroniebieski, fioletowy przy kwiatowym stworze — szaroliliowy).
+  Rozsuwanie w generatorze niepotrzebne. Strażnik: ciemna „podstawka" pod
+  stopami (`STWORKI_NA_MAPIE.podstawka` 0,42, zwarta plama `CIEN_KONTAKTOWY`
+  w barwie 0x0e0904) + cień rzucany; światło mocniejsze (nasycenie 0,95,
+  światło 0,2, krawędź 0,24). Bohater: arkusz `bohater-mapa`
+  (`teksturaBohateraNaMape`, wspólny `oswietlObszar` ze strażnikami, bez
+  erozji — kreska arkusza to rysunek), światło z lewej-góry 0,16, podcień
+  0,2, krawędź 0,26 (`BOHATER_NA_MAPIE`); ciemny obrys z 4 kopii zdjęty
+  (`obrys` 0), pierścień węższy (1,15 pola). Animacje `chod-*` z nowego
+  arkusza, portret w HUD-zie z oryginału. Polana: `skalaBudowli` 0,8 → 1,0
+  (wiatrak miał 1,76 pola, niżej niż bohater; `tools/mapy/polana.py`
+  i `plansza-teren-polana.ts`). OpenAI $0. Zrzuty
+  `tools/blind/stworki-mapa-r4*.png`. Do sprawdzenia: bohater przy 1,9 jest
+  chudy — strażnik szerokością bywa „cięższy"; wyróżnia go proporzec
+  i pierścień.
+- **Mapa, runda 5** (ślepe z HotA r4 0/3, rdzeń od r1: „płasko cieniowane
+  maskotki chibi w innym stylu niż malarski teren", „różowe chorągiewki nad
+  stworami mylą się z flagą obiektu do przejęcia"). Strażnik na mapie ma
+  teraz OSOBNY rysunek: grupka 2–3 osobników tego samego gatunku w rzucie
+  3/4 z góry, malowana jak budowle plansz (`public/sprites/mapa-<numer>.png`,
+  7 gatunków — to wszyscy, którzy stoją na planszach: Grota Glacyn/Sporex/
+  Cindro, Zbocze Obsydian/Cynder/Lawina/Sadzin, `STRAZE` w `plansza.ts`).
+  Prompty: `PROMPTY-STWORKI.md`, „Strażnicy na mapie przygody" — dwa wzory
+  w `images/edits` (sprite bitwy + arkusz stylu `tools/wsad/wzor-styl-mapy.png`
+  z naszych obiektów mapy; `generuj_grafiki.py` przyjmuje `wzor: a,b`),
+  model **gpt-image-1.5** (gpt-image-1 dawał portret z przodu w fakturze
+  filcu, też z arkuszem). Do gry: `python3 tools/strazniki_wczytaj.py` —
+  zdejmuje jasny placek ziemi, który 1.5 dorysowuje, kwadrat 160 px, bez
+  podbicia nasycenia i bez obwódki; przepisuje `src/data/strazniki-mapa.ts`
+  (`STRAZNICY_MAPOWI`). AdventureScene wczytuje `pmapa-<numer>` tylko dla
+  numerów z listy (fallback: sprite bitwy przez `teksturaStworkaNaMape`
+  jak dotąd); malowany dostaje łagodny przebieg `STRAZNIK_MALOWANY`
+  (`uklad.ts`: bez erozji, nasycenie 1, światło 0,08, brzeg 0,12),
+  cień rzucany i podstawka wchodzą pod grupę o `podGrupe` 0,1 widocznej
+  wysokości, a `osadzZnajdzki` (Twierdza) go omija — pas gruntu zakrywał
+  stopy razem z cieniem i grupa wisiała. Chorągiewka nad strażnikiem zdjęta
+  (w HoMM3 jej nie ma); podpowiedź po najechaniu dalej mówi „Cindro / 4 ×
+  Cindro, 3 × Cindro". Skala bez zmian (grupki są szersze, więc częściej
+  przycina je `SZER_STRAZNIKA_MAX` — widoczna wysokość ~1,1–1,4 pola).
+  OpenAI $0.76 (15 obrazków, 7 w grze, reszta to próby pilota — poza
+  repo). Zrzuty `tools/blind/stworki-mapa-r5*.png`. Do sprawdzenia
+  w ślepym: stworki dalej mają „dziecięce" twarze (to projekt gry) —
+  zarzut stylu powinien zejść, zarzut „maskotek" może zostać; Sporex to
+  sporo fioletowych płatków, na łące czyta się trochę jak krzak kwiatów.
+- **Mapa, runda 6** (ślepe z HotA r5 1/3: „drobne niebieskie i fioletowe
+  grudki bez sylwetki postaci, kolorem i kształtem jak kryształy obok",
+  „brak cienia kontaktowego — naklejki nad ziemią"). Strażnik to teraz
+  JEDNA malowana figura z pozą zamiast grupki (te same pliki
+  `public/sprites/mapa-<numer>.png`, 7 gatunków, gpt-image-1.5 z tymi samymi
+  dwoma wzorami; prompty w `PROMPTY-STWORKI.md`, sekcja „Strażnicy na mapie
+  przygody", akapit rundy 6). Pilot na Glacynie/Sporeksie/Cindrze na
+  zrzutach czytał się jak postacie, więc zrobiłem resztę tak samo; dwóch
+  figur nie próbowałem (mniejsza miałaby wielkość znajdźki). `uklad.ts`:
+  `WYS_STRAZNIKA` 1,4 → 1,5, `SZER_STRAZNIKA_MAX` 1,65 → 1,8 (figura
+  z ogonem/rozłożonymi ramionami nie jest ściskana); `STRAZNIK_MALOWANY`:
+  `podGrupe` 0,1 → 0,03 (przy 0,1 podstawka chowała się za pojedynczą
+  figurą — to była przyczyna „braku podstawki"), własna `podstawka` 0,55,
+  `szerPodstawki` 1,25 rozstawu stóp, `podstawkaWyzej` 0,3 (środek plamy
+  nad linią stóp — grunt między nogami widać lekko z góry). Na śniegu cień
+  rzucany i podstawka rysują się (sprawdzone zrzutem z ukrytą figurą), są
+  w barwie `cienNaSniegu`. Znajdźki: `ZNAJDZKI_NA_MAPIE.wys` 0,62 → 0,58,
+  `szerMax` 0,95 → 0,9, przygaszanie przy strażniku 3 → 4,5 pola
+  (nasycenie 0,25, jasność 0,86). `strazniki_wczytaj.py` zdejmuje też
+  beżowo-piaskowy placek (S ≤ 0,55, odcień 15–50°, tylko dolne 22%
+  sylwetki) — Cindro, Obsydian i Sadzin go miały. OpenAI $0.37 (8 obrazków,
+  7 w grze; Sporex: filtr odrzucił 5 z 6 zapytań, darmowo — w grze jest
+  wersja w dużym kroku z jedną stopą w górze). Zrzuty
+  `tools/blind/stworki-mapa-r6*.png`. Do sprawdzenia w ślepym: figury
+  patrzą prawie z boku (jak potwory HoMM3), nie z góry; Sporex na trawie
+  Polany jest zielony na zielonym (niesie go fioletowy kapelusz i poza);
+  Obsydian dalej jest kulą (to projekt stworka), ale ma nogi i krok.
 
 ## Plansze kampanii: Polana, Bagna, Twierdza (2026-09-24)
 
@@ -567,6 +907,50 @@ Zmiany (wszystkie per plansza, układ i rozstawienie bez zmian):
   10 × 6, szczyt z lodospadem mniejszy na progu nad stawem.
 - Grafiki: 3 obrazki medium, ≈ $0,17.
 
+## Profile graczy i sloty zapisu (2026-09-26)
+
+Zgłoszenie taty Eli i Janka: „Nowa gra → Kampania" kontynuowała ostatnią
+grę, a zapis był jeden na całą przeglądarkę. Teraz:
+
+- **Profile** (`src/data/profile.ts`): rejestr `heroes-profile-v1` (lista
+  i aktywny), dane profilu pod `heroes-profil-<id>-kampania` i
+  `heroes-profil-<id>-zapis-<1..6|auto>`. Imię gracza ≠ trener; ekran wyboru
+  trenera podpowiada kartę, gdy imię się zgadza („Ela, kliknij trenera…").
+  Najwyżej 6 profili, imię do 14 znaków. Każdy dostęp do localStorage
+  w try/catch (`czytajKlucz`/`piszKlucz`); bez magazynu rejestr żyje w pamięci.
+  Zapis bez aktywnego profilu (np. `?ekran=mapa`) zakłada profil „Gracz"
+  (`wymusProfil`).
+- **Menu**: tabliczka „Gracz: …" w lewym górnym rogu otwiera zwój „Kto gra?"
+  (`pokazProfile` w `menuOkna.ts`: wybór, „+ Nowy gracz" z wpisywaniem
+  z klawiatury, krzyżyk usuwa profil po pytaniu). Pierwsze uruchomienie bez
+  profili samo otwiera zwój. Deski: Nowa gra / Wczytaj grę / Rekordy /
+  Autorzy; „Wczytaj grę" → Kontynuuj (najświeższy zapis toczącej się gry,
+  bez zapisu — ekran kampanii) / Zapisane gry (okno slotów) / Kampania / Wróć.
+- **„Nowa gra → Kampania" zawsze zaczyna od nowa**; przy kampanii w toku
+  (`kampaniaWToku`) pyta „Zacząć od nowa?" z Od nowa / Kontynuuj / Anuluj.
+  Od nowa kasuje postęp i autozapis misji kampanii; sloty zostają.
+- **Okna zapisu** (`src/visual/oknoZapisu.ts`, materiał zestawu): 6 slotów
+  (+ autozapis przy wczytaniu) z nazwą misji, tygodniem/dniem, trenerem
+  i datą; nadpisanie, wczytanie na mapie i usunięcie pytają (`pytanie()`).
+  Całe okno w jednym kontenerze-korzeniu, który `AdventureScene` oddaje
+  kamerze nakładek przez `naWierzchu`. Autozapis: start misji
+  (`KampaniaScene.start`), początek każdego dnia (`koniecTury`) i „Zapisz
+  i wyjdź".
+- **Migracja**: przy każdym odczycie rejestru stare klucze
+  `heroes-kampania-v1` / `heroes-zapis-mapy-v1` przechodzą do profilu
+  nazwanego jak trener (pusty profil o tym imieniu albo nowy, „Janek 2");
+  Ola → Ela w postępie i w bohaterze zapisu; zapis ląduje w slocie 1
+  („z dawnej wersji"). Stary klucz znika dopiero po udanym zapisie
+  i odczycie nowego. Dzięki temu narzędzia wkładające stary klucz
+  (`zrzut-kampania.mjs`, `zrzut-wynik.mjs`) dalej działają.
+- Sondy: `node tools/probe-profile.mjs` (cały scenariusz rodziny + migracja,
+  zrzuty `tools/blind/profile-*.png`); `wynik-wspolne.mjs` czyta i pisze
+  postęp aktywnego profilu (profil „Sonda").
+- Zostało: na dotyku imię wpisuje się przez `window.prompt` (brak ekranowej
+  klawiatury w płótnie); stan mapy ma do ~135 tys. znaków, więc 3 profile ×
+  7 slotów to ~3 mln znaków z ~5 mln limitu przeglądarki — przy pełnym
+  magazynie zapis mówi „Nie udało się zapisać gry" i można usunąć stare sloty.
+
 ## HUD mapy przygody na wspólnym zestawie (2026-09-24)
 
 - Mapa stoi na tym samym materiale co kampania i okna misji
@@ -814,8 +1198,11 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `python3 tools/generuj_grafiki.py --lista` | które grafiki z promptów są, a których brak |
 | `python3 tools/generuj_grafiki.py plik.png` | generuje grafikę z promptu — OpenAI (prawdziwa przezroczystość obiektów), gdy jest `OPENAI_API_KEY` i dostęp do `api.openai.com`; inaczej Gemini z tłem magenty do wycięcia |
 | `node tools/probe-przygoda.mjs` | pełna pętla: mgła, skrzynia, artefakt, bitwa, zamek, powrót |
+| `node tools/probe-profile.mjs` | profile graczy, sloty zapisu, autozapis, „Nowa gra" od zera, migracja starego zapisu |
 | `node tools/probe-klik.mjs` | czy KLIKNIĘCIE prowadzi bohatera tam, gdzie się kliknęło |
 | `npx tsx tools/probe-armia.ts` | arytmetyka slotów armii: 40 tys. losowych ruchów z niezmiennikami |
+| `npx tsx tools/probe-garnizon.ts` | dwie armie (garnizon ↔ bohater) i czy garnizon broni zamku w turze AI |
+| `node tools/probe-armia.mjs` | pasek armii w mieście myszą: zamiana, łączenie, podział, okno stworka, portret → bohater, zapis garnizonu |
 | `npx tsx tools/probe-umiejetnosci.ts` | czy każda z ośmiu umiejętności NAPRAWDĘ zmienia zasady gry |
 | `node tools/probe-bohater.mjs` | ekran bohatera prawdziwą myszą: przenieś, zamień, scal, podziel |
 | `node tools/probe-awans.mjs` | czy wygrana z awansem pokazuje okno wyboru i czy wybór działa |
@@ -1679,3 +2066,19 @@ Morał jest ten sam, co zwykle w tym projekcie, tylko z drugiej strony: tym
 razem to nie zły pomiar udawał złą pracę, tylko BRAK pomiaru pozwolił złej
 pracy przejść. Mapa przeszła wszystkie sondy i cztery ślepe porównania
 z prawdziwymi mapami Heroes 3, mając w sobie portal donikąd.
+
+## Klik w cel za strażnikiem (2026-09-26)
+
+Klik w miejsce bez trasy nie milczy. `zagradzaDroge()` w `src/data/mapa.ts`
+liczy trasę „na próbę" (strefy i pola potworów przejezdne, reszta jak w
+`trasa`) i bierze pierwszego potwora, w którego strefę ta trasa wchodzi;
+scena (`celujW`) wytycza prawdziwą trasę do niego, a podpowiedź mówi
+„Drogę zagradza: X. Pokonaj go, żeby przejść." (zostaje przy ruchu myszy nad
+tym celem, drugi klik w cel rusza do strażnika = bitwa). Strażnik spod mgły
+się nie liczy — podpowiedź nie zdradza nieodkrytego. Bez przejścia (woda,
+mur, brama bez trasy, ukryty strażnik) — „Nie ma tam drogi.". Klik w
+zamkniętą bramę przechodzi teraz do `trasa` (wcześniej `celujW` odrzucał ją
+po `kosztPola === null` i klik milczał). Polana: kopalnia (19,30) na starcie →
+trasa do Sporexa przy moście (16,25), zrzut `tools/blind/klik-strazony.png`.
+Uwaga: serwer na portach 5200–5229 nie obserwuje plików — po zmianie kodu
+trzeba go zrestartować, inaczej sondy i zrzuty idą na starej wersji.

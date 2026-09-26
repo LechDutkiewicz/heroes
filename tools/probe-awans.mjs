@@ -165,7 +165,7 @@ const naEkranie = await page.evaluate(() => {
   const s = window.__game.scene.getScene('bohater');
   const u = Object.keys(s.stan.bohater.umiejetnosci ?? {})[0];
   const nazwy = window.__teksty(s).map((t) => t.text);
-  return { u, pustych: nazwy.filter((t) => t === 'MIEJSCE NA UMIEJĘTNOŚĆ').length, nazwy };
+  return { u, pustych: nazwy.filter((t) => t === 'Wolne miejsce').length, nazwy };
 });
 sprawdz(
   'ekran bohatera pokazuje zdobytą umiejętność',
@@ -181,13 +181,16 @@ sprawdz(
 // doświadczeniem dodanym do stanu i ZWYKŁĄ akcją gracza (koniec tury), a nie
 // wołaniem okna wprost — inaczej sonda sprawdzałaby samo okno, nie drogę
 // do niego.
-await page.evaluate(() => {
-  const s = window.__game.scene.getScene('adventure');
-  s.registry.set('stan-mapy', s.stan);
-  s.scene.start('adventure');
-});
+// Z ekranu bohatera wychodzimy drogą gracza (Escape → mapa). Start mapy
+// wprost z sondy zostawiał ekran bohatera działający NAD mapą i jego strefy
+// (dymki opisu) przechwytywały kliknięcia w okno awansu.
+await page.keyboard.press('Escape');
 await scena('adventure');
 await page.waitForTimeout(900);
+sprawdz(
+  'ekran bohatera zamknięty po powrocie na mapę',
+  !(await page.evaluate(() => window.__game.scene.isActive('bohater')))
+);
 
 const poSkrzyni = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');

@@ -12,8 +12,20 @@
  */
 
 import Phaser from 'phaser';
-import { KAMPANIA, wczytajPostep } from '../data/kampania';
+import { KAMPANIA, biezacaMisja, imieTrenera, kampaniaUkonczona, wczytajPostep } from '../data/kampania';
 import { ILE_REKORDOW, wczytajRekordy, type Rekord } from '../data/rekordy';
+import {
+  MAKS_DLUGOSC_IMIENIA,
+  MAKS_PROFILI,
+  type Profil,
+  aktywnyProfil,
+  dodajProfil,
+  listaProfili,
+  usunProfil,
+  ustawAktywny,
+} from '../data/profile';
+import { listaZapisow } from '../data/zapis';
+import { pytanie } from './oknoZapisu';
 
 /** Kroje menu — rejestruje je MenuScene (`wczytajKroje`). */
 export const KROJ = {
@@ -49,7 +61,13 @@ function zwoj(
   scene: Phaser.Scene,
   tytul: string,
   tresc: (k: Phaser.GameObjects.Container, szer: number) => void,
-  o: { depth: number; poZamknieciu: () => void; dzwiek: () => void }
+  o: {
+    depth: number;
+    poZamknieciu: () => void;
+    dzwiek: () => void;
+    /** Własna obsługa klawiszy (np. wpisywanie imienia); `true` — klawisz obsłużony, bez domyślnego zamknięcia. */
+    klawisz?: (e: KeyboardEvent) => boolean;
+  }
 ): Zwoj {
   let otwarty = true;
   const cien = scene.add
@@ -96,9 +114,13 @@ function zwoj(
   o.dzwiek();
 
   const naKlawisz = (e: KeyboardEvent) => {
+    if (o.klawisz?.(e)) return;
     if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') zamknijOkno();
   };
-  scene.input.keyboard?.on('keydown', naKlawisz);
+  // Od następnej klatki: Enter, który otworzył okno, nie może go od razu zamknąć.
+  scene.time.delayedCall(0, () => {
+    if (otwarty) scene.input.keyboard?.on('keydown', naKlawisz);
+  });
   cien.on('pointerdown', () => zamknijOkno());
 
   function zamknijOkno() {
@@ -220,7 +242,7 @@ export function deseczka(
  */
 export const LEGENDY: Omit<Rekord, 'data'>[] = [
   { imie: 'Stary Strażnik', punkty: 3100, dni: 64 },
-  { imie: 'Leśna Ola', punkty: 2590, dni: 98 },
+  { imie: 'Leśna Ela', punkty: 2590, dni: 98 },
   { imie: 'Kapitan Tomek', punkty: 2200, dni: 124 },
   { imie: 'Zosia z Polany', punkty: 1750, dni: 154 },
   { imie: 'Wędrowny Bartek', punkty: 1300, dni: 184 },
@@ -288,7 +310,7 @@ export function pokazRekordy(
         );
         const barwa = r.legenda ? ATRAMENT.blady : ATRAMENT.tekst;
         const imie = scene.add
-          .text(kol.imie, y + 1, r.imie, { fontFamily: KROJ.tekst, fontSize: '18px', color: barwa })
+          .text(kol.imie, y + 1, imieTrenera(r.imie), { fontFamily: KROJ.tekst, fontSize: '18px', color: barwa })
           .setOrigin(0, 0);
         k.add(imie);
         if (r.legenda) {
@@ -478,4 +500,304 @@ export function pokazAutorow(
     },
     o
   );
+}
+
+// ————————————————————————————————————————————————————————— gracze
+
+/** Co profil ma rozegrane — jednym wierszem pod imieniem. */
+function opisProfilu(p: Profil): string {
+  const postep = wczytajPostep(p.id);
+  const zapisow = listaZapisow(p.id).filter((z) => z !== null).length;
+  const kampania = !postep
+    ? 'kampania jeszcze nie zaczęta'
+    : kampaniaUkonczona(postep)
+      ? `kampania ukończona (${postep.trener})`
+      : `kampania: misja ${biezacaMisja(postep)?.nr ?? 1}, trener ${postep.trener}`;
+  const zapisy = zapisow === 0 ? 'bez zapisów' : zapisow === 1 ? '1 zapis' : zapisow < 5 ? `${zapisow} zapisy` : `${zapisow} zapisów`;
+  return `${kampania} · ${zapisy}`;
+}
+
+/** Znaki, które wolno wpisać w imię: litery (też ą, ł, ż…), cyfry, spacja, myślnik, apostrof. */
+const ZNAK_IMIENIA = /^[\p{L}\p{N} '\-]$/u;
+
+/**
+ * „Kto gra?" — wybór profilu gracza, jak ekran graczy w grach dla całej
+ * rodziny. Każdy profil ma własną kampanię i własne zapisy
+ * (src/data/profile.ts). Kliknięcie imienia wybiera gracza i zamyka zwój;
+ * „Nowy gracz" przełącza ostatni wiersz w pole do wpisania imienia
+ * z klawiatury; krzyżyk usuwa profil po potwierdzeniu.
+ */
+export function pokazProfile(
+  scene: Phaser.Scene,
+  o: {
+    depth: number;
+    /** Po zamknięciu zwoju; `wybrany` — profil wybrany albo założony (brak — zamknięty bez wyboru). */
+    poZamknieciu: (wybrany?: Profil) => void;
+    dzwiek: () => void;
+    /** Od razu w trybie wpisywania — pierwsze uruchomienie gry. */
+    nowy?: boolean;
+  }
+): Zwoj {
+  let wpisywanie = false;
+  let imie = '';
+  let blad = '';
+  let pytanieOtwarte = false;
+  let lista: Phaser.GameObjects.Container | undefined;
+  let szerokosc = 0;
+  let okno: Zwoj | undefined;
+  let wybrany: Profil | undefined;
+  /** Kursor w polu imienia: miga co pół sekundy. */
+  let kursor = true;
+  const migacz = scene.time.addEvent({
+    delay: 500,
+    loop: true,
+    callback: () => {
+      kursor = !kursor;
+      if (wpisywanie) rysuj();
+    },
+  });
+
+  // Dotyk bez klawiatury: okno systemowe z polem tekstowym zamiast
+  // wpisywania z klawiatury, której na tablecie nie ma pod ręką.
+  const bezKlawiatury = () => typeof window.matchMedia === 'function' && !window.matchMedia('(pointer: fine)').matches;
+
+  const zatwierdz = () => {
+    const w = dodajProfil(imie);
+    if (!w.ok) {
+      blad = w.blad;
+      // Następna klatka: `rysuj` niszczy też tabliczkę „Gotowe", której
+      // kliknięcie właśnie obsługujemy.
+      scene.time.delayedCall(0, rysuj);
+      return;
+    }
+    wybrany = w.profil;
+    okno?.zamknij();
+  };
+
+  const zacznijWpisywanie = () => {
+    if (listaProfili().length >= MAKS_PROFILI) return;
+    if (bezKlawiatury()) {
+      const podane = window.prompt('Jak ma na imię nowy gracz?', '');
+      if (podane === null) return;
+      imie = podane.slice(0, MAKS_DLUGOSC_IMIENIA);
+      zatwierdz();
+      return;
+    }
+    wpisywanie = true;
+    imie = '';
+    blad = '';
+    o.dzwiek();
+    rysuj();
+  };
+
+  function rysuj() {
+    const k = lista;
+    if (!k) return;
+    k.removeAll(true);
+    const szer = szerokosc;
+    const profile = listaProfili();
+    const aktywny = aktywnyProfil();
+    k.add(
+      scene.add
+        .text(szer / 2, 0, profile.length ? 'Kliknij swoje imię albo dopisz nowego gracza.' : 'Jak masz na imię? Wpisz je z klawiatury.', {
+          fontFamily: KROJ.tekst,
+          fontSize: '16px',
+          color: ATRAMENT.blady,
+        })
+        .setOrigin(0.5, 0)
+    );
+    const g = scene.add.graphics();
+    k.add(g);
+    const x0 = 20;
+    const w = szer - 40;
+    const H = 40;
+    const KROK = 44;
+    profile.forEach((p, i) => {
+      const y = 30 + i * KROK;
+      const jest = p.id === aktywny?.id;
+      g.fillStyle(jest ? 0xe9c46a : 0x8a5a2a, jest ? 0.35 : 0.09);
+      g.fillRoundedRect(x0, y, w, H, 8);
+      if (jest) {
+        g.lineStyle(2, 0xa0701e, 0.9);
+        g.strokeRoundedRect(x0, y, w, H, 8);
+      }
+      pieczec(g, x0 + 24, y + H / 2, true);
+      k.add(
+        scene.add
+          .text(x0 + 24, y + H / 2, p.imie.slice(0, 1).toLocaleUpperCase('pl'), {
+            fontFamily: KROJ.szyld,
+            fontSize: '15px',
+            fontStyle: '900',
+            color: '#fff1c8',
+          })
+          .setOrigin(0.5)
+      );
+      k.add(
+        scene.add.text(x0 + 50, y + 2, p.imie, { fontFamily: KROJ.szyld, fontSize: '19px', fontStyle: '900', color: ATRAMENT.tytul })
+      );
+      k.add(scene.add.text(x0 + 50, y + 23, opisProfilu(p), { fontFamily: KROJ.tekst, fontSize: '12px', color: ATRAMENT.blady }));
+      if (jest) {
+        k.add(
+          scene.add
+            .text(x0 + w - 44, y + H / 2, 'gra teraz', { fontFamily: KROJ.tekst, fontSize: '13px', fontStyle: 'italic', color: '#7a3a10' })
+            .setOrigin(1, 0.5)
+        );
+      }
+      const nad = scene.add.graphics().setVisible(false);
+      nad.fillStyle(0xffffff, 0.16);
+      nad.fillRoundedRect(x0, y, w, H, 8);
+      k.addAt(nad, k.list.indexOf(g) + 1);
+      const strefa = scene.add.zone(x0, y, w - 40, H).setOrigin(0).setInteractive({ useHandCursor: true });
+      strefa.on('pointerover', () => nad.setVisible(true));
+      strefa.on('pointerout', () => nad.setVisible(false));
+      strefa.on('pointerdown', () => {
+        if (pytanieOtwarte) return;
+        ustawAktywny(p.id);
+        wybrany = p;
+        okno?.zamknij();
+      });
+      k.add(strefa);
+      // Krzyżyk usuwania: mały, na brzegu wiersza — żeby nie trafić w niego
+      // przypadkiem, klikając imię.
+      const kx = x0 + w - 20;
+      const ky = y + H / 2;
+      const krzyz = scene.add.graphics();
+      const rysujKrzyz = (nad: boolean) => {
+        krzyz.clear();
+        krzyz.fillStyle(nad ? 0xa3261b : 0x8a6a48, nad ? 1 : 0.35);
+        krzyz.fillCircle(kx, ky, 11);
+        krzyz.lineStyle(2.5, nad ? 0xfff1c8 : 0x5e3a1a, 1);
+        krzyz.lineBetween(kx - 4.5, ky - 4.5, kx + 4.5, ky + 4.5);
+        krzyz.lineBetween(kx + 4.5, ky - 4.5, kx - 4.5, ky + 4.5);
+      };
+      rysujKrzyz(false);
+      const strefaK = scene.add.zone(kx, ky, 30, 30).setInteractive({ useHandCursor: true });
+      strefaK.on('pointerover', () => rysujKrzyz(true));
+      strefaK.on('pointerout', () => rysujKrzyz(false));
+      strefaK.on('pointerdown', () => {
+        if (pytanieOtwarte) return;
+        pytanieOtwarte = true;
+        pytanie(scene, {
+          glebia: o.depth + 10,
+          dzwiek: o.dzwiek,
+          tytul: 'Usunąć gracza?',
+          tekst: `Gracz „${p.imie}" zniknie razem ze swoją kampanią\ni wszystkimi zapisanymi grami. Tego nie da się cofnąć.`,
+          opcje: [
+            { tekst: 'Usuń gracza', akcja: () => usunProfil(p.id) },
+            { tekst: 'Nie', glowny: true },
+          ],
+          poZamknieciu: () =>
+            scene.time.delayedCall(0, () => {
+              pytanieOtwarte = false;
+              rysuj();
+            }),
+        });
+      });
+      k.add([krzyz, strefaK]);
+    });
+
+    // Ostatni wiersz: „Nowy gracz" albo pole do wpisania imienia.
+    const y = 30 + profile.length * KROK;
+    const pelno = profile.length >= MAKS_PROFILI;
+    if (wpisywanie) {
+      g.fillStyle(0xfff6dc, 0.95);
+      g.fillRoundedRect(x0, y, w, H, 8);
+      g.lineStyle(2, 0xa0701e, 1);
+      g.strokeRoundedRect(x0, y, w, H, 8);
+      const t = imie
+        ? scene.add.text(x0 + 16, y + H / 2, imie + (kursor ? '|' : ' '), {
+            fontFamily: KROJ.szyld,
+            fontSize: '20px',
+            fontStyle: '900',
+            color: ATRAMENT.tytul,
+          })
+        : scene.add.text(x0 + 16, y + H / 2, (kursor ? '|' : ' ') + ' np. Ela, Janek, Tata', {
+            fontFamily: KROJ.tekst,
+            fontSize: '17px',
+            fontStyle: 'italic',
+            color: ATRAMENT.blady,
+          });
+      k.add(t.setOrigin(0, 0.5));
+      k.add(deseczka(scene, x0 + w - 96, y + H / 2, 'Gotowe', () => zatwierdz()));
+      k.add(
+        scene.add
+          .text(szer / 2, y + H + 6, blad || 'Wpisz imię i naciśnij Enter. Escape — rezygnuję.', {
+            fontFamily: KROJ.tekst,
+            fontSize: '14px',
+            color: blad ? '#a3261b' : ATRAMENT.blady,
+          })
+          .setOrigin(0.5, 0)
+      );
+    } else {
+      g.lineStyle(1.5, 0x8a5a2a, pelno ? 0.25 : 0.6);
+      for (let dx = 0; dx < w; dx += 14) g.lineBetween(x0 + dx, y, x0 + Math.min(dx + 7, w), y);
+      for (let dx = 0; dx < w; dx += 14) g.lineBetween(x0 + dx, y + H, x0 + Math.min(dx + 7, w), y + H);
+      const t = scene.add
+        .text(szer / 2, y + H / 2, pelno ? `Może być najwyżej ${MAKS_PROFILI} graczy` : '+  Nowy gracz', {
+          fontFamily: KROJ.szyld,
+          fontSize: '18px',
+          fontStyle: '900',
+          color: pelno ? ATRAMENT.blady : ATRAMENT.naglowek,
+        })
+        .setOrigin(0.5);
+      k.add(t);
+      if (!pelno) {
+        const strefa = scene.add.zone(x0, y, w, H).setOrigin(0).setInteractive({ useHandCursor: true });
+        strefa.on('pointerover', () => t.setColor(ATRAMENT.tytul));
+        strefa.on('pointerout', () => t.setColor(ATRAMENT.naglowek));
+        strefa.on('pointerdown', () => {
+          if (!pytanieOtwarte) scene.time.delayedCall(0, zacznijWpisywanie);
+        });
+        k.add(strefa);
+      }
+    }
+  }
+
+  const klawisz = (e: KeyboardEvent): boolean => {
+    if (pytanieOtwarte) return true;
+    if (!wpisywanie) return false;
+    // Skróty z Ctrl albo Cmd nie piszą. Uwaga: AltGr (ą, ł, ż na Windows)
+    // przychodzi jako Ctrl + Alt — to jest litera, nie skrót.
+    if ((e.ctrlKey && !e.altKey) || e.metaKey) return true;
+    if (e.key === 'Enter') zatwierdz();
+    else if (e.key === 'Escape') {
+      wpisywanie = false;
+      blad = '';
+      rysuj();
+    } else if (e.key === 'Backspace') {
+      imie = [...imie].slice(0, -1).join('');
+      blad = '';
+      rysuj();
+    } else if (ZNAK_IMIENIA.test(e.key) && [...imie].length < MAKS_DLUGOSC_IMIENIA) {
+      if (e.key === ' ' && (!imie || imie.endsWith(' '))) return true;
+      imie += e.key;
+      blad = '';
+      kursor = true;
+      rysuj();
+    }
+    // Każdy klawisz w trakcie wpisywania należy do pola — spacja nie może zamknąć zwoju.
+    e.preventDefault();
+    return true;
+  };
+
+  okno = zwoj(
+    scene,
+    'Kto gra?',
+    (k, szer) => {
+      lista = k;
+      szerokosc = szer;
+      if (o.nowy && !listaProfili().length && !bezKlawiatury()) wpisywanie = true;
+      rysuj();
+    },
+    {
+      depth: o.depth,
+      dzwiek: o.dzwiek,
+      klawisz,
+      poZamknieciu: () => {
+        migacz.remove();
+        o.poZamknieciu(wybrany);
+      },
+    }
+  );
+  return okno;
 }

@@ -23,12 +23,13 @@ const sprawdz = (nazwa, warunek, szczegol = '') => {
   console.log(`${warunek ? 'OK  ' : 'BŁĄD'} ${nazwa}${szczegol ? ` — ${szczegol}` : ''}`);
 };
 
-/** Geometria pasa slotów — te same liczby co w `HeroScene`. */
-const SLOT_BOK = 92;
-const SLOT_ODSTEP = 12;
-const SLOTY = 7;
-const PAS_Y = 548;
-const slotX = (i) => (960 - (SLOTY * SLOT_BOK + (SLOTY - 1) * SLOT_ODSTEP)) / 2 + i * (SLOT_BOK + SLOT_ODSTEP) + SLOT_BOK / 2;
+/**
+ * Środki slotów paska armii — czytane ze sceny (wspólny `PanelArmii`, ten
+ * sam co w mieście), po wejściu na ekran. Klikamy w nie prawdziwą myszą.
+ */
+let SLOTY_XY = [];
+const slotX = (i) => SLOTY_XY[i].x;
+let PAS_Y = 0;
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 const page = await browser.newPage({ viewport: { width: 960, height: 694 } });
@@ -75,7 +76,11 @@ const ustaw = (wpisy) =>
     gra.registry.set('stan-mapy', stan);
     const s = gra.scene.getScene('bohater');
     if (s?.sys.settings.status === 5) s.scene.restart();
-  }, wpisy);
+  }, wpisy).then(() => gotowy());
+
+/** Ekran zbudowany (buduje się po wczytaniu krojów zestawu). */
+const gotowy = () =>
+  page.waitForFunction(() => window.__game.scene.getScene('bohater')?.gotowy === true, null, { timeout: 30000 });
 
 /** Czy okno podziału stoi otwarte — pytamy scenę, nie zgadujemy z pikseli. */
 const oknoOtwarte = () =>
@@ -123,6 +128,93 @@ sprawdz(
   (await aktywna()).includes('bohater'),
   (await aktywna()).join(', ')
 );
+await gotowy();
+({ SLOTY_XY, PAS_Y } = await page.evaluate(() => {
+  const p = window.__game.scene.getScene('bohater').panel.paski[0];
+  const xy = p.sloty.map((s) => ({ x: s.x + p.slotW / 2, y: s.y + p.slotH / 2 }));
+  return { SLOTY_XY: xy, PAS_Y: xy[0].y };
+}));
+sprawdz('pasek armii to wspólny PanelArmii z siedmioma slotami', SLOTY_XY.length === 7, `${SLOTY_XY.length}`);
+
+// ---------- wygląd: malowane ikony, gniazda, dymki ----------
+
+const wyglad = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('bohater');
+  const tekstury = s.textures.getTextureKeys();
+  const obrazy = [];
+  const przejdz = (lista) => {
+    for (const o of lista) {
+      if (o.type === 'Image') obrazy.push(o.texture.key);
+      else if (o.type === 'Container') przejdz(o.list);
+    }
+  };
+  przejdz(s.children.list);
+  return {
+    umiejetnosci: tekstury.filter((k) => k.startsWith('bh-umiejetnosc-')).length,
+    artefakty: obrazy.filter((k) => k.startsWith('bh-artefakt-')).length,
+    // Runda 2: w prawym polu lalka — postać w całej sylwetce (`bh-postac-`),
+    // głowa zostaje w medalionie (`k-glowa-`).
+    portret: obrazy.some((k) => k.startsWith('bh-postac-')) && obrazy.some((k) => k.startsWith('k-glowa-')),
+    ikonyStat: ['k-ikona-miecz', 'k-ikona-tarcza', 'k-ikona-buty'].every((k) => obrazy.includes(k)),
+    strefy: s.strefyOpisu.size,
+  };
+});
+sprawdz('wczytane malowane ikony ośmiu umiejętności', wyglad.umiejetnosci === 8, `${wyglad.umiejetnosci}`);
+sprawdz('osiem gniazd artefaktów z malowanymi ikonami', wyglad.artefakty >= 8, `${wyglad.artefakty}`);
+sprawdz('postać bohatera na lalce i głowa w medalionie', wyglad.portret);
+sprawdz('atak, obrona i ruch jako malowane ikony', wyglad.ikonyStat);
+
+// Wolne gniazdo umiejętności widać (bohater z mapy startuje bez umiejętności).
+const wolne = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('bohater');
+  const mam = Object.keys(s.stan.bohater.umiejetnosci ?? {}).length;
+  const napisy = s.children.list.filter((o) => o.type === 'Text' && o.text === 'Wolne miejsce').length;
+  return { mam, napisy };
+});
+sprawdz('puste gniazda umiejętności są widoczne', wolne.napisy === 4 - wolne.mam, JSON.stringify(wolne));
+
+// Najechanie na gniazdo umiejętności pokazuje dymek, klik go przypina,
+// klik obok zdejmuje. Prawdziwą myszą w środek strefy.
+const strefa = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('bohater');
+  for (const z of s.strefyOpisu) {
+    z.emit('pointerover');
+    const k = s.dymekKlucz;
+    z.emit('pointerout');
+    if (k.startsWith('umiejetnosc-')) return { x: z.x + z.width / 2, y: z.y + z.height / 2 };
+  }
+  return null;
+});
+if (strefa) {
+  await page.mouse.move(strefa.x, strefa.y);
+  await page.waitForTimeout(150);
+  const najechany = await page.evaluate(() => window.__game.scene.getScene('bohater').dymekKlucz);
+  sprawdz('najechanie na umiejętność pokazuje dymek z opisem', najechany.startsWith('umiejetnosc-'), najechany);
+  await page.mouse.down();
+  await page.mouse.up();
+  await page.mouse.move(strefa.x + 400, 30);
+  await page.waitForTimeout(150);
+  const przypiety = await page.evaluate(() => window.__game.scene.getScene('bohater').dymekKlucz);
+  sprawdz('klik przypina dymek (zostaje po zjechaniu myszą)', przypiety === najechany, przypiety);
+  await page.mouse.click(480, 30);
+  await page.waitForTimeout(150);
+  const zdjety = await page.evaluate(() => window.__game.scene.getScene('bohater').dymekKlucz);
+  sprawdz('klik obok zdejmuje dymek', zdjety === '', zdjety);
+} else sprawdz('jest strefa opisu umiejętności', false);
+
+// Artefakt: dymek mówi, co daje.
+const artefakt = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('bohater');
+  for (const z of s.strefyOpisu) {
+    z.emit('pointerover');
+    const k = s.dymekKlucz;
+    const teksty = s.dymek ? s.dymek.list.filter((o) => o.type === 'Text').map((o) => o.text).join(' ') : '';
+    z.emit('pointerout');
+    if (k.startsWith('artefakt-')) return teksty;
+  }
+  return '';
+});
+sprawdz('dymek artefaktu opisuje efekt', /do ataku|do obrony|punktów ruchu/.test(artefakt), artefakt.slice(0, 80));
 
 // ---------- przenoszenie ----------
 
@@ -133,16 +225,16 @@ await ustaw([
 ]);
 await page.waitForTimeout(500);
 
-// Geometria okna podziału — te same liczby co w `HeroScene`.
-const OW = 380;
-const OH = 230;
-const OX = (960 - OW) / 2;
-const OY = (694 - OH) / 2;
-const PRZYCISK = (i) => ({ x: OX + 62 + i * 128, y: OY + 152 });
-const PODZIEL = { x: OX + OW * 0.68, y: OY + 196 };
+// Geometria okna podziału — te same liczby co w `PanelArmii.oknoPodzialu`.
+const OW = 420;
+const OH = 270;
+const OX = Math.round((960 - OW) / 2);
+const OY = Math.round((694 - OH) / 2);
+const SUWAK = { x: OX + 140, w: OW - 280, y: OY + 110 };
+const PODZIEL = { x: OX + OW / 2 + 90, y: OY + OH - 36 };
 
 // Zwykłe przeciągnięcie na puste miejsce PRZENOSI cały stos. Okno z liczbą
-// siedzi pod Altem — przekładanie oddziału robi się dużo częściej niż podział.
+// siedzi pod Shiftem — przekładanie oddziału robi się dużo częściej niż podział.
 await przeciagnij(0, 5);
 let a = await armia();
 sprawdz('zwykłe przeciągnięcie na pusty slot nie otwiera okna', !(await oknoOtwarte()));
@@ -159,13 +251,12 @@ await ustaw([
   [2, 2, 6],
 ]);
 await page.waitForTimeout(400);
-await przeciagnij(0, 5, 'Alt');
-sprawdz('Alt otwiera okno podziału', await oknoOtwarte());
+await przeciagnij(0, 5, 'Shift');
+sprawdz('Shift otwiera okno podziału', await oknoOtwarte());
 
-// „Wszystko" plus „Podziel": maksimum na pusty slot to n-1, więc w źródle
-// zostanie dokładnie jeden — bohater nigdy nie zostaje z pustym stosem.
-const wszystko = PRZYCISK(2);
-await page.mouse.click(wszystko.x, wszystko.y);
+// Suwak do końca plus „Podziel": maksimum na pusty slot to n-1, więc
+// w źródle zostanie dokładnie jeden — bohater nigdy nie zostaje z pustym stosem.
+await page.mouse.click(SUWAK.x + SUWAK.w + 8, SUWAK.y);
 await page.waitForTimeout(150);
 await page.mouse.click(PODZIEL.x, PODZIEL.y);
 await page.waitForTimeout(350);
@@ -186,8 +277,11 @@ await ustaw([
 ]);
 await page.waitForTimeout(400);
 await przeciagnij(0, 4, 'Shift');
+// Okno podziału startuje od połowy — Enter ją zatwierdza.
+await page.keyboard.press('Enter');
+await page.waitForTimeout(300);
 a = await armia();
-sprawdz('Shift dzieli stos na pół', a[0]?.ile === 10 && a[4]?.ile === 10, JSON.stringify([a[0], a[4]]));
+sprawdz('Shift + Enter dzieli stos na pół', a[0]?.ile === 10 && a[4]?.ile === 10, JSON.stringify([a[0], a[4]]));
 
 await ustaw([
   [0, 0, 20],
@@ -233,6 +327,15 @@ await page.mouse.click(slotX(1), PAS_Y);
 await page.waitForTimeout(300);
 a = await armia();
 sprawdz('dwa kliknięcia zamieniają sloty bez przeciągania', a[0]?.ile === 5 && a[1]?.ile === 12, JSON.stringify([a[0], a[1]]));
+
+// ---------- okno stworka ----------
+
+await page.mouse.click(slotX(0), PAS_Y, { button: 'right' });
+await page.waitForTimeout(300);
+sprawdz('prawy klik w oddział otwiera okno stworka', await oknoOtwarte());
+await page.keyboard.press('Escape');
+await page.waitForTimeout(300);
+sprawdz('Escape zamyka okno stworka, a nie cały ekran', !(await oknoOtwarte()) && (await aktywna()).includes('bohater'));
 
 // ---------- powrót na mapę ----------
 

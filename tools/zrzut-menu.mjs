@@ -61,6 +61,16 @@ if (Z_ZAPISEM) {
   });
 }
 
+// Gracz już wybrany (profil „Ela", src/data/profile.ts) — bez niego menu
+// przy pierwszym uruchomieniu samo otwiera zwój „Kto gra?" i zasłania deski.
+// Przy `--z-zapisem` profil zakłada migracja starego postępu.
+await page.addInitScript(() => {
+  if (localStorage.getItem('heroes-profile-v1') || localStorage.getItem('heroes-kampania-v1')) return;
+  localStorage.setItem(
+    'heroes-profile-v1',
+    JSON.stringify({ v: 1, aktywny: 'zrzut', profile: [{ id: 'zrzut', imie: 'Ela', utworzony: '2026-09-26T00:00:00.000Z' }] })
+  );
+});
 await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
 await page.waitForFunction(() => window.__game?.scene.getScene('menu')?.gotowe === true, null, {
   timeout: 30000,
@@ -130,6 +140,7 @@ if (Z_ZAPISEM) {
   await page.evaluate(() => {
     localStorage.removeItem('heroes-kampania-v1');
     localStorage.removeItem('heroes-rekordy-v1');
+    for (const k of Object.keys(localStorage)) if (k.startsWith('heroes-profil')) localStorage.removeItem(k);
   });
 }
 

@@ -261,3 +261,102 @@ export function zamiar(
   if (!cel) return { rodzaj: 'przenies' };
   return cel.sprite === zrodlo.sprite ? { rodzaj: 'scal' } : { rodzaj: 'zamien' };
 }
+
+/*
+ * ————————————————————————————————————————— dwie armie naraz
+ *
+ * Miasto ma DWA rzędy slotów: garnizon zamku i bohatera, który w nim stoi
+ * (jak w Heroes 3). Oddział przechodzi między nimi tym samym gestem, którym
+ * przestawia się go w obrębie jednej armii — więc i arytmetyka jest ta sama,
+ * tylko źródło i cel mogą być różnymi tablicami. Gdy są tą samą tablicą,
+ * funkcje niżej oddają sprawę zwykłym `przenies` / `podziel` / `maksPodzialu`,
+ * żeby reguły jednej armii dalej miały jedno miejsce.
+ *
+ * Jedyna reguła, która dochodzi przy dwóch armiach: armia CHRONIONA (bohatera)
+ * nie może oddać ostatniego stosu. Garnizon może zostać pusty — zamek bez
+ * załogi to zwykły stan w Heroes 3, bohater bez armii nie istnieje.
+ */
+
+const BEZ_ARMII = 'Bohater nie może zostać bez ani jednego stworka.';
+
+/** Przełożenie całego stosu z `za[z]` do `doA[doc]`: przenieś, scal albo zamień. */
+export function przeniesMiedzy(za: Armia, z: number, doA: Armia, doc: number, chronionaZ = false): Wynik {
+  if (za === doA) return przenies(za, z, doc);
+  if (!wSlocie(za, z) || !wSlocie(doA, doc)) return zle('Slot poza armią.');
+  const zrodlo = za[z];
+  if (!zrodlo) return zle('Pusty slot — nie ma czego przenieść.');
+  const cel = doA[doc];
+  // Zamiana nie zmniejsza liczby stosów po żadnej stronie, więc wolno ją
+  // zawsze; przeniesienie i scalenie zabierają stos ze źródła.
+  const zabiera = !cel || cel.sprite === zrodlo.sprite;
+  if (zabiera && chronionaZ && ostatniStos(za)) return zle(BEZ_ARMII);
+
+  if (!cel) {
+    doA[doc] = zrodlo;
+    za[z] = null;
+    return { ok: true, opis: `${zrodlo.nazwa} przeszedł na drugą stronę.` };
+  }
+  if (cel.sprite === zrodlo.sprite) {
+    cel.ile += zrodlo.ile;
+    za[z] = null;
+    return { ok: true, opis: `${cel.nazwa} — stosy scalone, razem ${cel.ile}.` };
+  }
+  doA[doc] = zrodlo;
+  za[z] = cel;
+  return { ok: true, opis: `${zrodlo.nazwa} ↔ ${cel.nazwa}.` };
+}
+
+/**
+ * Ile najwięcej wolno oddać z `za[z]` do `doA[doc]`. Między dwiema armiami
+ * można oddać cały stos (to wtedy zwykłe przeniesienie), chyba że źródło
+ * jest chronione i to jego ostatni stos — wtedy jeden zostaje.
+ */
+export function maksPodzialuMiedzy(za: Armia, z: number, doA: Armia, doc: number, chronionaZ = false): number {
+  if (za === doA) return maksPodzialu(za, z, doc);
+  if (!wSlocie(za, z) || !wSlocie(doA, doc)) return 0;
+  const zrodlo = za[z];
+  if (!zrodlo) return 0;
+  const cel = doA[doc];
+  if (cel && cel.sprite !== zrodlo.sprite) return 0;
+  return chronionaZ && ostatniStos(za) ? zrodlo.ile - 1 : zrodlo.ile;
+}
+
+/** Podział stosu między armiami: `ile` stworków z `za[z]` ląduje w `doA[doc]`. */
+export function podzielMiedzy(
+  za: Armia,
+  z: number,
+  doA: Armia,
+  doc: number,
+  ile: number,
+  chronionaZ = false
+): Wynik {
+  if (za === doA) return podziel(za, z, doc, ile);
+  if (!wSlocie(za, z) || !wSlocie(doA, doc)) return zle('Slot poza armią.');
+  const zrodlo = za[z];
+  if (!zrodlo) return zle('Pusty slot — nie ma czego dzielić.');
+  const cel = doA[doc];
+  if (cel && cel.sprite !== zrodlo.sprite) return zle('W tym slocie stoi ktoś inny.');
+  if (!Number.isInteger(ile) || ile < 1) return zle('Trzeba oddać co najmniej jednego.');
+  const maks = maksPodzialuMiedzy(za, z, doA, doc, chronionaZ);
+  if (maks < 1) return zle(BEZ_ARMII);
+  if (ile > maks) return zle(`Najwięcej ${maks}.`);
+
+  zrodlo.ile -= ile;
+  if (cel) cel.ile += ile;
+  else doA[doc] = { ...zrodlo, ile };
+  if (zrodlo.ile === 0) za[z] = null;
+  return { ok: true, opis: `${ile} × ${zrodlo.nazwa} przeszło na drugą stronę.` };
+}
+
+/**
+ * Zwolnienie oddziału — stworki odchodzą na zawsze. Z armii chronionej nie
+ * wolno zwolnić ostatniego stosu (ta sama zasada co przy przenoszeniu).
+ */
+export function zwolnij(a: Armia, i: number, chroniona = false): Wynik {
+  if (!wSlocie(a, i)) return zle('Slot poza armią.');
+  const o = a[i];
+  if (!o) return zle('Pusty slot — nie ma kogo zwolnić.');
+  if (chroniona && ostatniStos(a)) return zle(BEZ_ARMII);
+  a[i] = null;
+  return { ok: true, opis: `${o.ile} × ${o.nazwa} odchodzi do lasu.` };
+}

@@ -1,12 +1,20 @@
 import Phaser from 'phaser';
 import { sledzScene } from '../dev/dziennik';
-import { KAMPANIA, biezacaMisja, kampaniaUkonczona, wczytajPostep } from '../data/kampania';
-import { jestZapis, wczytajGre } from '../data/zapis';
+import {
+  KAMPANIA,
+  biezacaMisja,
+  kampaniaWToku,
+  usunPostep,
+  wczytajPostep,
+} from '../data/kampania';
+import { type Slot, listaZapisow, najnowszyZapis, usunZapis, wczytajGre } from '../data/zapis';
+import { aktywnyProfil, listaProfili } from '../data/profile';
 import { MUZYKA_MIASTO, initSfx, startMusic, stopMusic } from '../audio/mapSfx';
 import { gradientText } from '../visual/hud';
 import { TEX, ZM, ozywTlo, stworek, zbudujTekstury } from '../visual/menuZycie';
-import { krojeZestawu } from '../visual/zestaw';
-import { KROJ, pokazAutorow, pokazRekordy, type Zwoj } from '../visual/menuOkna';
+import { krojeZestawu, wczytajZestaw } from '../visual/zestaw';
+import { KROJ, pokazAutorow, pokazProfile, pokazRekordy, type Zwoj } from '../visual/menuOkna';
+import { pokazWczytanie, pytanie } from '../visual/oknoZapisu';
 
 /**
  * Menu główne — ulica wioski trenerów z drogowskazem.
@@ -73,6 +81,13 @@ const ZAKLADKA = 22;
 
 /** Tabliczka dźwięku: przybita do grubego słupka płotu po prawej. */
 const DZWIEK = { x: 908, y: 0, sznurek: 46 };
+
+/**
+ * Tabliczka gracza: wisi na dwóch sznurkach w lewym górnym rogu, para dla
+ * tabliczki dźwięku z prawego. Mówi, czyja gra jest teraz otwarta, i po
+ * kliknięciu otwiera „Kto gra?".
+ */
+const GRACZ = { x: 112, sznurek: 16 };
 
 const Z = {
   logo: 20,
@@ -164,6 +179,7 @@ export class MenuScene extends Phaser.Scene {
   /** Sztandar i liny, którymi jest przywiązany — liny przerysowujemy co klatkę. */
   private sztandar?: Phaser.GameObjects.Image;
   private liny?: Phaser.GameObjects.Graphics;
+  private napisGracza?: Phaser.GameObjects.Text;
   /** Flaga dla narzędzi (tools/zrzut-menu.mjs): menu zbudowane i po wejściu. */
   gotowe = false;
 
@@ -190,6 +206,8 @@ export class MenuScene extends Phaser.Scene {
     // później, w tle — 4 MB nie może trzymać czarnego ekranu.
     this.load.audio('wejscie', `${B}audio/wejscie.wav`);
     this.load.audio('krok', `${B}audio/krok.ogg`);
+    // Pergamin i tabliczki zestawu — okno zapisanych gier i pytania.
+    wczytajZestaw(this);
     void wczytajKroje();
   }
 
@@ -201,6 +219,7 @@ export class MenuScene extends Phaser.Scene {
     this.zajety = false;
     this.okno = undefined;
     this.dymek = undefined;
+    this.napisGracza = undefined;
     this.gotowe = false;
 
     this.jednaTeksturaNaRaz();
@@ -245,6 +264,7 @@ export class MenuScene extends Phaser.Scene {
     this.logo();
     this.zbudujDrogowskaz();
     this.przelacznikDzwieku();
+    this.tabliczkaGracza();
 
     this.bohater();
 
@@ -478,66 +498,83 @@ export class MenuScene extends Phaser.Scene {
     this.tweens.add({ targets: rdzen, alpha: 0.55, scale: rdzen.scale * 0.92, duration: 170, yoyo: true, repeat: -1, repeatDelay: 380 });
   }
 
-  /** Pozycje menu na danym poziomie — liczone przy każdym wejściu, bo zapis mógł się zmienić. */
+  /** Pozycje menu na danym poziomie — liczone przy każdym wejściu, bo zapis albo gracz mogły się zmienić. */
   private pozycje(p: Poziom): (Pozycja | undefined)[] {
     if (p === 'nowa') {
       return [
-        { napis: 'Kampania', podpis: KAMPANIA.tytul, wlaczona: true, akcja: () => this.idz('kampania') },
+        { napis: 'Kampania', podpis: KAMPANIA.tytul, wlaczona: true, akcja: () => this.nowaKampania() },
         {
           napis: 'Pojedyncza mapa',
           wlaczona: true,
-          akcja: () => {
-            this.registry.remove('stan-mapy');
-            this.idz('adventure');
-          },
+          akcja: () =>
+            this.zProfilem(() => {
+              this.registry.remove('stan-mapy');
+              this.idz('adventure');
+            }),
         },
         { napis: 'Szybka bitwa', wlaczona: true, akcja: () => this.idz('battle') },
         { napis: 'Wróć', wlaczona: true, akcja: () => this.pokazPoziom('glowne') },
       ];
     }
-    const kampania = this.kampaniaWToku();
-    const mapa = jestZapis() ? wczytajGre() : null;
+    const profil = aktywnyProfil();
+    const cel = this.celKontynuacji();
+    const postep = wczytajPostep();
+    const zapisow = listaZapisow().filter((z) => z !== null).length;
     if (p === 'wczytaj') {
+      const m = postep && biezacaMisja(postep);
       return [
-        kampania ? { napis: 'Kampania', podpis: kampania, wlaczona: true, akcja: () => this.idz('kampania') } : undefined,
-        mapa ? {
-          napis: 'Zapisana mapa',
-          podpis: `dzień ${mapa.dzien}`,
-          wlaczona: true,
-          akcja: () => this.wczytajMape(),
-        } : undefined,
-        undefined,
+        {
+          napis: 'Kontynuuj',
+          podpis: cel?.podpis ?? 'Nie ma jeszcze gry do kontynuowania',
+          wlaczona: !!cel,
+          akcja: () => cel?.akcja(),
+        },
+        {
+          napis: 'Zapisane gry',
+          podpis: zapisow ? `zapisów: ${zapisow}` : 'Nie ma jeszcze zapisanych gier',
+          wlaczona: zapisow > 0,
+          akcja: () => this.otworzZapisy(),
+        },
+        {
+          napis: 'Kampania',
+          podpis: !postep ? 'Kampania jeszcze nie zaczęta' : m ? `misja ${m.nr}: ${m.tytul}` : 'ukończona!',
+          wlaczona: !!postep,
+          akcja: () => this.idz('kampania'),
+        },
         { napis: 'Wróć', wlaczona: true, akcja: () => this.pokazPoziom('glowne') },
       ];
     }
-    const cos = !!kampania || !!mapa;
+    const cos = !!cel || zapisow > 0 || !!postep;
     return [
       { napis: 'Nowa gra', wlaczona: true, akcja: () => this.pokazPoziom('nowa') },
       {
-        napis: 'Wczytaj',
-        podpis: cos ? (kampania && mapa ? 'kampania albo mapa' : (kampania ?? `mapa, dzień ${mapa!.dzien}`)) : 'Nic jeszcze nie zapisano — najpierw zagraj!',
+        napis: 'Wczytaj grę',
+        podpis: cos
+          ? (cel?.podpis ?? 'zapisane gry')
+          : profil
+            ? 'Nic jeszcze nie zapisano — najpierw zagraj!'
+            : 'Najpierw powiedz, kto gra — tabliczka w rogu',
         wlaczona: cos,
-        akcja: () => {
-          // Jedna rzecz do wczytania — od razu. Dwie — deski pytają, którą.
-          if (kampania && mapa) this.pokazPoziom('wczytaj');
-          else if (kampania) this.idz('kampania');
-          else this.wczytajMape();
-        },
+        akcja: () => this.pokazPoziom('wczytaj'),
       },
       { napis: 'Rekordy', wlaczona: true, akcja: () => this.otworzOkno('rekordy') },
       { napis: 'Autorzy', wlaczona: true, akcja: () => this.otworzOkno('autorzy') },
     ];
   }
 
-  /** Opis kampanii w toku („misja 2: Klucze do przełęczy") albo `null`. */
-  private kampaniaWToku(): string | null {
+  /**
+   * Co zrobi „Kontynuuj": najświeższy zapis gracza (autozapis albo slot),
+   * a bez zapisu — ekran kampanii w toku. Zapisy misji kampanii liczą się
+   * tylko dla misji, która się teraz toczy: zapis z misji już wygranej albo
+   * z kampanii zaczętej od nowa nie jest „ciągiem dalszym".
+   */
+  private celKontynuacji(): { podpis: string; akcja: () => void } | null {
     const p = wczytajPostep();
-    if (!p || kampaniaUkonczona(p)) return null;
-    const m = biezacaMisja(p);
-    // Postęp bez żadnej ukończonej misji i bez wybranego bonusu to tylko
-    // wybrane imię — jeszcze nie ma czego „wczytywać".
-    if (!m || (p.ukonczone.length === 0 && p.bonus === undefined)) return null;
-    return `misja ${m.nr}: ${m.tytul}`;
+    const biezaca = p ? biezacaMisja(p) : undefined;
+    const z = najnowszyZapis((o) => !o.misja || o.misja === biezaca?.id);
+    if (z) return { podpis: `${z.nazwa}, dzień ${z.dzien}`, akcja: () => this.wczytajZapis(z.slot) };
+    if (p && biezaca) return { podpis: `kampania, misja ${biezaca.nr}: ${biezaca.tytul}`, akcja: () => this.idz('kampania') };
+    return null;
   }
 
   /**
@@ -604,6 +641,10 @@ export class MenuScene extends Phaser.Scene {
     // WebGL Phasera 4 rozsypywał wierzchołki sąsiadów — deska rysowała się
     // jako poszarpane trójkąty, a litery sąsiednich desek znikały.
     d.podpis.setText(poz.podpis ?? ' ').setVisible(zPodpisem);
+    // Podpis też ma się zmieścić — „1. Pierwsze kroki, dzień 12" bywa długi.
+    let rozmiarP = 15;
+    d.podpis.setFontSize(rozmiarP);
+    while (d.podpis.width > miejsce && rozmiarP > 11) d.podpis.setFontSize(--rozmiarP);
     d.napis.setY(zPodpisem ? -8 : 1);
     d.podpis.setY(cfg.h / 2 - 17);
     this.pomalujDeske(d, false);
@@ -748,14 +789,104 @@ export class MenuScene extends Phaser.Scene {
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(scena));
   }
 
-  private wczytajMape() {
-    const stan = wczytajGre();
+  private wczytajZapis(slot: Slot) {
+    const stan = wczytajGre(slot);
     if (!stan) {
-      this.pokazPoziom('glowne');
+      this.pokazPoziom(this.poziom);
       return;
     }
     this.registry.set('stan-mapy', stan);
     this.idz('adventure');
+  }
+
+  /**
+   * „Nowa gra → Kampania" ZAWSZE zaczyna nową kampanię. Jeśli gracz ma
+   * kampanię w toku, najpierw pyta — i daje „Kontynuuj" dla tych, którzy
+   * kliknęli tu z przyzwyczajenia, szukając swojej gry.
+   */
+  private nowaKampania() {
+    this.zProfilem(() => {
+      const p = wczytajPostep();
+      if (!kampaniaWToku(p)) {
+        this.zacznijKampanieOdNowa();
+        return;
+      }
+      const m = biezacaMisja(p);
+      const kto = aktywnyProfil()?.imie;
+      this.ustawWybor(-1, false);
+      this.okno = pytanie(this, {
+        glebia: Z.okno,
+        dzwiek: () => this.graj('krok', 0.6),
+        tytul: 'Zacząć od nowa?',
+        tekst:
+          `${kto ? `${kto} ma` : 'Masz'} rozpoczętą kampanię${m ? ` (misja ${m.nr}: ${m.tytul})` : ''}.\n` +
+          'Nowa kampania zacznie się od pierwszej misji,\na obecny postęp przepadnie.',
+        opcje: [
+          { tekst: 'Od nowa', akcja: () => this.zacznijKampanieOdNowa() },
+          { tekst: 'Kontynuuj', glowny: true, akcja: () => this.kontynuujKampanie() },
+          { tekst: 'Anuluj' },
+        ],
+        poZamknieciu: () => {
+          this.okno = undefined;
+        },
+      });
+    });
+  }
+
+  private zacznijKampanieOdNowa() {
+    usunPostep();
+    // Autozapis to „bieżąca gra" — po nowym starcie nie może nią zostać
+    // misja ze starej kampanii. Zapisy w slotach zostają: to wybór gracza.
+    if (listaZapisow()[0]?.misja) usunZapis('auto');
+    this.registry.remove('kampania-widziane');
+    this.idz('kampania');
+  }
+
+  /** Kampania w toku: najświeższy zapis toczącej się misji, a bez niego ekran kampanii. */
+  private kontynuujKampanie() {
+    const p = wczytajPostep();
+    const biezaca = p ? biezacaMisja(p) : undefined;
+    const z = biezaca ? najnowszyZapis((o) => o.misja === biezaca.id) : null;
+    if (z) this.wczytajZapis(z.slot);
+    else this.idz('kampania');
+  }
+
+  /** Akcja, która coś zapisze — najpierw musi być wiadomo, czyja to gra. */
+  private zProfilem(akcja: () => void) {
+    if (aktywnyProfil()) akcja();
+    else this.otworzProfile({ potem: akcja, nowy: !listaProfili().length });
+  }
+
+  private otworzProfile(o: { potem?: () => void; nowy?: boolean } = {}) {
+    this.ustawWybor(-1, false);
+    this.ukryjDymek();
+    this.okno = pokazProfile(this, {
+      depth: Z.okno,
+      nowy: o.nowy,
+      dzwiek: () => this.graj('krok', 0.6),
+      poZamknieciu: (wybrany) => {
+        this.okno = undefined;
+        this.odswiezTabliczke();
+        if (wybrany && o.potem) o.potem();
+        // Deski zależą od gracza (zapisy, kampania) — obracamy je na nowo.
+        else this.pokazPoziom(this.poziom);
+      },
+    });
+  }
+
+  private otworzZapisy() {
+    this.ustawWybor(-1, false);
+    this.okno = pokazWczytanie(this, {
+      glebia: Z.okno,
+      dzwiek: () => this.graj('krok', 0.6),
+      poZamknieciu: () => {
+        this.okno = undefined;
+      },
+      poWczytaniu: (stan) => {
+        this.registry.set('stan-mapy', stan);
+        this.idz('adventure');
+      },
+    });
   }
 
   private otworzOkno(ktore: 'rekordy' | 'autorzy') {
@@ -896,6 +1027,64 @@ export class MenuScene extends Phaser.Scene {
     });
   }
 
+  /** Tabliczka z imieniem gracza w lewym górnym rogu — klik otwiera „Kto gra?". */
+  private tabliczkaGracza() {
+    const y = GRACZ.sznurek + 20;
+    const sznurek = this.add.graphics();
+    for (const [grubosc, barwa] of [
+      [3, 0x1e1208],
+      [1.2, 0x9a7a4a],
+    ] as const) {
+      sznurek.lineStyle(grubosc, barwa, 1);
+      sznurek.lineBetween(-78, -6, -70, y - 14);
+      sznurek.lineBetween(78, -6, 70, y - 14);
+    }
+    // Deseczka o 1/5 większa niż „Zamknij" w oknach — ma być widać z daleka, czyja to gra.
+    const SKALA = 1.2;
+    const cienT = this.add.image(4, y + 5, 'menu-deseczka').setTint(0x000000).setAlpha(0.35).setScale(SKALA);
+    const zwykla = this.add.image(0, y, 'menu-deseczka').setScale(SKALA);
+    const jasna = this.add.image(0, y, 'menu-deseczka-jasna').setVisible(false).setScale(SKALA);
+    const napis = this.add
+      .text(0, y + 1, '', { fontFamily: KROJ.szyld, fontSize: '18px', fontStyle: '900', color: '#2a1204' })
+      .setOrigin(0.5)
+      .setShadow(0, 1, 'rgba(255,226,170,0.7)', 0, false, true);
+    const strefa = this.add.zone(0, y, 212, 50).setInteractive({ useHandCursor: true });
+    const k = this.add.container(GRACZ.x, 0, [sznurek, cienT, zwykla, jasna, napis, strefa]).setDepth(Z.dzwiek);
+    this.tweens.add({ targets: k, angle: { from: -1.2, to: 1.2 }, duration: 3100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const opis = () => {
+      const p = aktywnyProfil();
+      return p ? `Grasz jako ${p.imie} — kliknij, żeby zmienić gracza` : 'Kliknij i powiedz, kto gra';
+    };
+    strefa.on('pointerover', () => {
+      jasna.setVisible(true);
+      zwykla.setVisible(false);
+      this.pokazDymek(GRACZ.x + 116, y, opis());
+    });
+    strefa.on('pointerout', () => {
+      jasna.setVisible(false);
+      zwykla.setVisible(true);
+      this.ukryjDymek();
+    });
+    strefa.on('pointerdown', () => {
+      if (this.okno?.otwarty || this.zajety) return;
+      this.graj('wejscie', 0.4);
+      this.tweens.add({ targets: napis, scale: { from: 0.9, to: 1 }, duration: 200, ease: 'Back.easeOut' });
+      this.otworzProfile();
+    });
+    this.napisGracza = napis;
+    this.odswiezTabliczke();
+  }
+
+  private odswiezTabliczke() {
+    const t = this.napisGracza;
+    if (!t) return;
+    const p = aktywnyProfil();
+    t.setText(p ? `Gracz: ${p.imie}` : 'Kto gra?');
+    let r = 18;
+    t.setFontSize(r);
+    while (t.width > 180 && r > 11) t.setFontSize(--r);
+  }
+
   /**
    * Dymek z podpowiedzią — kartka pergaminu z pełnym zdaniem dużą czcionką.
    * Zamiast drobnych podpisów na deskach, których krytyk nie umiał odczytać:
@@ -977,6 +1166,8 @@ export class MenuScene extends Phaser.Scene {
           if (i === this.deski.length - 1) {
             this.zajety = false;
             this.gotowe = true;
+            // Pierwsze uruchomienie: zanim ktokolwiek zagra, pytamy, kto gra.
+            if (!listaProfili().length) this.otworzProfile({ nowy: true });
           }
         },
       });

@@ -355,7 +355,20 @@ export interface Obiekt {
   artefakt?: string;
   /** dla potwora: która frakcja go wystawia i co konkretnie stoi na drodze */
   frakcja?: string;
+  /**
+   * Potwór: kto stoi na drodze. Zamek: STRAŻ MIEJSKA z planszy (dla zamku
+   * wroga to cała jego załoga, razem z werbunkiem obrońcy). Gracz nią nie
+   * rozporządza — to linia obrony, którą plansza dała zamkowi na start.
+   */
   oddzialy?: Oddzial[];
+  /**
+   * Zamek: GARNIZON gracza, jak w Heroes 3 — rząd siedmiu slotów, którymi
+   * gracz rozporządza na ekranie miasta (werbunek bez bohatera, oddziały
+   * zostawione przez bohatera). Broni zamku razem ze strażą
+   * (`obroncyZamku`). Brak pola — pusty garnizon (także w zapisach sprzed
+   * tej zmiany).
+   */
+  garnizon?: Armia;
   /**
    * Potwór: ilu ich było na początku gry. Z tego liczy się sufit przyrostu —
    * stado rośnie co tydzień, ale nie w nieskończoność.
@@ -1036,6 +1049,85 @@ export function trasa(s: StanMapy, doX: number, doY: number): Krok[] | null {
   return kroki.reverse();
 }
 
+/**
+ * Kto zagradza drogę do celu, do którego `trasa` nie znalazła przejścia.
+ *
+ * Tak robi Heroes 3: klik w miejsce za strażnikiem nie milczy, tylko prowadzi
+ * do strażnika — bitwa otwiera przejście. Szukamy trasy „na próbę", w której
+ * strefy potworów i same potwory są zwykłym terenem (po wygranej tak właśnie
+ * będzie), i idziemy nią od bohatera: pierwszy potwór, w którego strefę ta
+ * trasa wchodzi, jest tym, kto blokuje. Zwraca go razem z prawdziwą trasą do
+ * niego (wejście w niego = bitwa). `null`, gdy celu nie da się osiągnąć nawet
+ * po pokonaniu wszystkich potworów (woda, mur, zamknięta brama) albo gdy do
+ * blokującego potwora też nie ma drogi.
+ *
+ * `widoczny` pozwala scenie pominąć potwory spod mgły — podpowiedź nie może
+ * zdradzać, kto stoi w nieodkrytym terenie.
+ */
+export function zagradzaDroge(
+  s: StanMapy,
+  doX: number,
+  doY: number,
+  widoczny: (o: Obiekt) => boolean = () => true
+): { straz: Obiekt; kroki: Krok[] } | null {
+  // Zamknięta brama, jak w `trasa`: mur, ale wolno ją wskazać jako cel.
+  const bramaNaCelu = wGranicach(s, doX, doY) && !!zamknietaBrama(s, doX, doY);
+  if (!wGranicach(s, doX, doY) || (kosztPola(s, doX, doY) === null && !bramaNaCelu)) return null;
+  const start = `${s.bohater.x},${s.bohater.y}`;
+  const cel = `${doX},${doY}`;
+  const koszty = new Map<string, number>([[start, 0]]);
+  const skad = new Map<string, string>();
+  const kolejka: Array<{ x: number; y: number; k: number }> = [
+    { x: s.bohater.x, y: s.bohater.y, k: 0 },
+  ];
+  while (kolejka.length > 0) {
+    kolejka.sort((a, b) => a.k - b.k);
+    const cur = kolejka.shift()!;
+    if (cur.x === doX && cur.y === doY) break;
+    if (cur.k > (koszty.get(`${cur.x},${cur.y}`) ?? Infinity)) continue;
+    for (const [dx, dy, mnoznik] of KIERUNKI) {
+      const nx = cur.x + dx;
+      const ny = cur.y + dy;
+      const bazowy =
+        bramaNaCelu && nx === doX && ny === doY
+          ? TEREN_INFO[s.teren[ny][nx]].koszt ?? 100
+          : kosztPola(s, nx, ny);
+      if (bazowy === null) continue;
+      // Przez inne obiekty dalej się nie przechodzi — przez potwora tak,
+      // bo po bitwie jego pole jest wolne.
+      const o = obiektNa(s, nx, ny);
+      if (o && o.rodzaj !== 'potwor' && !(nx === doX && ny === doY)) continue;
+      const klucz = `${nx},${ny}`;
+      const nowy = cur.k + bazowy * mnoznik;
+      if (nowy < (koszty.get(klucz) ?? Infinity)) {
+        koszty.set(klucz, nowy);
+        skad.set(klucz, `${cur.x},${cur.y}`);
+        kolejka.push({ x: nx, y: ny, k: nowy });
+      }
+    }
+  }
+  if (!koszty.has(cel)) return null;
+
+  const droga: Pole[] = [];
+  for (let b = cel; b !== start; b = skad.get(b)!) {
+    const [x, y] = b.split(',').map(Number);
+    droga.push({ x, y });
+  }
+  droga.reverse();
+  // Pierwszy napotkany potwór to ten, którego trzeba pokonać najpierw.
+  // Gdyby do niego nie było trasy (siedzi za kolejnym), próbujemy następnych.
+  const sprawdzone = new Set<number>();
+  for (const p of droga) {
+    const straz = strzezoneProzez(s, p.x, p.y);
+    if (!straz || sprawdzone.has(straz.id)) continue;
+    sprawdzone.add(straz.id);
+    if (!widoczny(straz)) return null;
+    const kroki = trasa(s, straz.x, straz.y);
+    if (kroki && kroki.length > 0) return { straz, kroki };
+  }
+  return null;
+}
+
 /** Ile pierwszych kroków trasy bohater pokona jeszcze w tej turze. */
 export function zasiegNaTure(bohater: Bohater, kroki: Krok[]): number {
   let zostalo = bohater.ruch;
@@ -1436,7 +1528,7 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
     // zakończenia. Dziecko dochodziło przez pół planszy do celu i dostawało
     // komunikat, że celu nie ma.
     if (o.wlasciciel !== kto) {
-      if (o.oddzialy?.length) return { opis: `${o.nazwa}\nBroni się!`, bitwaZ: o };
+      if (obroncyZamku(o).length) return { opis: `${o.nazwa}\nBroni się!`, bitwaZ: o };
       o.wlasciciel = kto;
       return { opis: `${o.nazwa} jest twoja!`, zamek: o, zajete: o };
     }
@@ -1444,6 +1536,48 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
   }
 
   return { opis: o.nazwa };
+}
+
+/**
+ * Kto broni zamku: straż z planszy i garnizon, połączone po gatunku (bitwa
+ * ma sześć rzędów startowych, więc dwa stosy tego samego stworka stają jako
+ * jeden). Ta sama lista idzie do bitwy gracza i do bitew rozstrzyganych
+ * w turze przeciwnika.
+ */
+export function obroncyZamku(o: Obiekt): Oddzial[] {
+  const wynik: Oddzial[] = [];
+  const zrodla = [...(o.oddzialy ?? []), ...(o.garnizon ?? [])];
+  for (const od of zrodla) {
+    if (!od || od.ile <= 0) continue;
+    const ten = wynik.find((x) => x.sprite === od.sprite);
+    if (ten) ten.ile += od.ile;
+    else wynik.push({ ...od });
+  }
+  return wynik;
+}
+
+/**
+ * Straty obrońców zamku po bitwie: `ocalali` (po gatunku) rozkłada się z
+ * powrotem na straż i garnizon. Pierwsza pada straż na murach, dopiero potem
+ * garnizon gracza — to jego własne, kupione oddziały i niech zostają
+ * najdłużej. Pusty wynik (wszyscy polegli) czyści obie listy.
+ */
+export function rozdzielStratyZamku(o: Obiekt, ocalali: Oddzial[]) {
+  const zostalo = new Map<string, number>();
+  for (const od of ocalali) zostalo.set(od.sprite, (zostalo.get(od.sprite) ?? 0) + od.ile);
+  const przed = obroncyZamku(o);
+  const straty = new Map<string, number>();
+  for (const od of przed) straty.set(od.sprite, Math.max(0, od.ile - (zostalo.get(od.sprite) ?? 0)));
+  const odejmij = (od: Oddzial) => {
+    const s = straty.get(od.sprite) ?? 0;
+    const ile = Math.min(s, od.ile);
+    od.ile -= ile;
+    straty.set(od.sprite, s - ile);
+  };
+  for (const od of o.oddzialy ?? []) odejmij(od);
+  for (const od of o.garnizon ?? []) if (od) odejmij(od);
+  o.oddzialy = (o.oddzialy ?? []).filter((od) => od.ile > 0);
+  if (o.garnizon) o.garnizon = o.garnizon.map((od) => (od && od.ile > 0 ? od : null));
 }
 
 /**

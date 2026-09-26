@@ -298,11 +298,11 @@ sprawdz(
   await page.evaluate(() => window.__game.scene.isActive('zamek'))
 );
 
-// Werbunek bez bohatera musi być zablokowany: inaczej oddziały kupione zdalnie
-// pojawiałyby się przy bohaterze na drugim końcu mapy. W Heroes 3 idą wtedy do
-// garnizonu, a garnizonu nie mamy.
+// Miasto otwarte z mapy, bez bohatera w zamku: werbunek idzie wtedy do
+// garnizonu (jak w Heroes 3), a nie do bohatera na drugim końcu mapy —
+// sprawdza to `tools/probe-armia.mjs`. Tu tylko: scena wie, że bohatera nie ma.
 sprawdz(
-  'w mieście bez bohatera nie da się werbować',
+  'miasto otwarte z mapy wie, że bohatera nie ma w zamku',
   await page.evaluate(() => {
     const t = window.__game.scene.getScene('zamek');
     return t.bohaterObecny === false;
@@ -320,9 +320,10 @@ const przewiniecie = await page.evaluate(() => {
   s.przewin(-500, -500, false);
   return s.przewX;
 });
-// Kursor przy lewej krawędzi ramy mapy — widok ma pojechać w prawo.
-await page.mouse.move(plotno.x + 12, plotno.y + 300);
-await page.waitForTimeout(700);
+// Kursor przy samym lewym brzegu płótna (pas 8 px, jak w HoMM3 — nie przy
+// ramie mapy) i po zwłoce ~300 ms widok ma pojechać.
+await page.mouse.move(plotno.x + 3, plotno.y + 300);
+await page.waitForTimeout(1000);
 const poPrzewinieciu = await page.evaluate(
   () => window.__game.scene.getScene('adventure').przewX
 );

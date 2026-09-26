@@ -105,7 +105,7 @@ await page.evaluate((k) => {
   localStorage.setItem(
     k,
     JSON.stringify([
-      { imie: 'Ola', punkty: 3420, dni: 58, data: d(3) },
+      { imie: 'Ela', punkty: 3420, dni: 58, data: d(3) },
       { imie: 'Tata', punkty: 2610, dni: 88, data: d(10) },
       { imie: 'Kuba', punkty: 1980, dni: 112, data: d(20) },
       { imie: 'Babcia Ela', punkty: 1240, dni: 150, data: d(40) },

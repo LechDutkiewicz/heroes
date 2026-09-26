@@ -511,6 +511,12 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
     wrogOdkryte: TEREN.map(() => new Array(TEREN[0].length).fill(false)),
   };
   odslon(stan);
+  // Jak w Heroes: własny zamek widzi okolicę tak samo jak bohater. Bohater
+  // startuje kilka pól od murów, więc bez tego zamek stał na brzegu mgły.
+  for (const o of stan.obiekty) {
+    if (o.rodzaj === 'zamek' && o.wlasciciel === 'gracz') odslon(stan, undefined, { x: o.x, y: o.y });
+  }
+  // Z planszy tylko to, czego wymaga cel misji (np. Wyspa Księżyca) — małe.
   for (const m of ust.odkryte ?? []) odslon(stan, m.promien, { x: m.x, y: m.y });
   odslon(stan, undefined, undefined, 'wrog');
   for (const m of ust.wrogOdkryte ?? []) odslon(stan, m.promien, { x: m.x, y: m.y }, 'wrog');

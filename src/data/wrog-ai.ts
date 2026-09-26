@@ -47,8 +47,10 @@ import {
   obiektNa,
   odkryteOf,
   odpowiedzNaPytanie,
+  obroncyZamku,
   odslon,
   odwiedz,
+  rozdzielStratyZamku,
   skarbiecOf,
   strzezoneProzez,
   trasa,
@@ -137,6 +139,20 @@ function zastosujOcalalych(
   for (const o of ocalali) dolacz(bohater.armia, o);
 }
 
+/** Ocalali obrońcy (strona `enemy` symulacji) jako oddziały mapy. */
+function ocalaliObroncy(przed: Oddzial[], bitwa: ReturnType<typeof createBattle>): Oddzial[] {
+  const wynik: Oddzial[] = [];
+  for (const u of bitwa.units) {
+    if (u.side === 'player' || u.count <= 0) continue;
+    const tier = u.def.tier - 1;
+    const oryginal = przed.find((o) => o.tier === tier && o.sprite === u.def.sprite) ?? przed[0];
+    const juz = wynik.find((o) => o.sprite === u.def.sprite);
+    if (juz) juz.ile += u.count;
+    else wynik.push({ sprite: u.def.sprite, nazwa: u.def.name, ile: u.count, frakcja: oryginal?.frakcja ?? 'bor', tier });
+  }
+  return wynik;
+}
+
 /**
  * Rozstrzyga starcie `kto` z konkretnym obrońcą.
  *
@@ -149,12 +165,8 @@ function rozstrzygnijBitwe(s: StanMapy, kto: Wlasciciel, obrona: Obiekt, ziarno:
   const bohater = bohaterOf(s, kto);
   const przed = zywe(bohater.armia);
   const rng = makeRng(ziarno + s.dzien * 7919 + obrona.id * 104729 + 1);
-  const bitwa = createBattle(
-    { units: jednostki(przed) },
-    { units: jednostki(obrona.oddzialy ?? []) },
-    [],
-    rng
-  );
+  const obroncy = obrona.rodzaj === 'zamek' ? obroncyZamku(obrona) : (obrona.oddzialy ?? []);
+  const bitwa = createBattle({ units: jednostki(przed) }, { units: jednostki(obroncy) }, [], rng);
   const { outcome } = runBattle(bitwa);
   zastosujOcalalych(bohater, przed, bitwa);
 
@@ -162,12 +174,19 @@ function rozstrzygnijBitwe(s: StanMapy, kto: Wlasciciel, obrona: Obiekt, ziarno:
     if (obrona.rodzaj === 'zamek') {
       obrona.wlasciciel = kto;
       obrona.oddzialy = [];
+      obrona.garnizon = undefined;
     } else {
       obrona.zebrany = true;
       if (obrona.oddzialy) obrona.oddzialy = [];
     }
     return;
   }
+  // Obrońcy zamku GRACZA (straż i garnizon) zostają z tym, co przeżyło
+  // bitwę — garnizon to oddziały, które gracz kupił i ułożył, więc ich straty
+  // mają być prawdziwe. Potwory i zamki wroga zostają przy starym zachowaniu
+  // (tak samo jak po przegranej gracza w `AdventureScene`) — to osobna decyzja
+  // balansu, dostrojona w `tools/symulacja-misji.ts`.
+  if (obrona.rodzaj === 'zamek' && obrona.wlasciciel === 'gracz') rozdzielStratyZamku(obrona, ocalaliObroncy(obroncy, bitwa));
   // Przegrana: bohater wraca do własnego zamku i traci resztę dnia — tak
   // samo jak graczowi w AdventureScene.
   const domowyZamek = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === kto);
@@ -335,8 +354,9 @@ function znajdzCel(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefine
     // (AdventureScene.dalej): jeśli pole wejścia leży w strefie kontroli
     // potwora, to ten potwór broni dostępu, nie obiekt sam w sobie.
     const straz = strzezoneProzez(widok, o.x, o.y);
-    const obronca = straz ?? (o.oddzialy?.length ? o : undefined);
-    if (obronca && !wygramy(zywe(bohater.armia), obronca.oddzialy ?? [], ziarno)) continue;
+    const obronca = straz ?? (o.oddzialy?.length || o.garnizon?.some(Boolean) ? o : undefined);
+    const sklad = obronca?.rodzaj === 'zamek' ? obroncyZamku(obronca) : (obronca?.oddzialy ?? []);
+    if (obronca && !wygramy(zywe(bohater.armia), sklad, ziarno)) continue;
 
     const koszt = kroki.reduce((a, k) => a + k.koszt, 0);
     const ocena = wartoscKandydata(o, s, kto) / (koszt + 1);
@@ -505,7 +525,7 @@ function celMisji(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefined
     }
     const straz = strzezoneProzez(widok, o.x, o.y);
     if (straz && !wygramy(armia, straz.oddzialy ?? [], ziarno)) continue;
-    if (o.rodzaj === 'zamek' && !wygramy(armia, o.oddzialy ?? [], ziarno)) continue;
+    if (o.rodzaj === 'zamek' && !wygramy(armia, obroncyZamku(o), ziarno)) continue;
     return { kroki };
   }
   return undefined;
@@ -533,7 +553,7 @@ function celNatarcia(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefi
     if (!kroki || kroki.length === 0) continue;
     const straz = strzezoneProzez(widok, z.x, z.y);
     if (straz && !wygramy(armia, straz.oddzialy ?? [], ziarno)) continue;
-    if (!wygramy(armia, z.oddzialy ?? [], ziarno)) continue;
+    if (!wygramy(armia, obroncyZamku(z), ziarno)) continue;
     return { kroki };
   }
   return undefined;

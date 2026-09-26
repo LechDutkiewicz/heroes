@@ -11,18 +11,18 @@ misji, ścieżka, przyciski i karty nagród.
 
 Droga do gry: `python3 tools/generuj_grafiki.py <plik>` zapisuje do
 `tools/wsad/`, stamtąd plik trafia do `public/kampania/` pod nazwę, którą czyta
-scena (`mapa.jpg`, `zwoj.png`, `janek.png`, `ola.png`).
+scena (`mapa.jpg`, `zwoj.png`, `janek.png`, `ela.png`).
 
 **Stan na 2026-09-25: wszystkie sześć grafik jest wygenerowanych (OpenAI)**
 i leży w `tools/wsad/kampania-*.png`. Do gry wpina je
 `python3 tools/kampania_ilustracje.py`: przycina wstęp i zakończenie do
 proporcji ekranu (`wstep.jpg`, `koniec.jpg`), portrety do kart
-(`portret-janek.jpg`, `portret-ola.jpg`), mapę do okna 4:3 (`mapa.jpg`,
+(`portret-janek.jpg`, `portret-ela.jpg`), mapę do okna 4:3 (`mapa.jpg`,
 połysk wody `woda-a/b.png`, droga `mapa.json`) i wycina magentę ze zwoju
 (`zwoj.png`). Punkty misji zostały przepisane pod ilustrację: skrypt trzyma je
 w pikselach obrazka i pilnuje, żeby `naMapie` w `src/data/kampania.ts` się
 z nimi zgadzało i żeby pod znacznikiem i tabliczką było spokojne tło.
-Figurki trenerów (`janek.png`, `ola.png`) zostają — stoją na mapie przy
+Figurki trenerów (`janek.png`, `ela.png`) zostają — stoją na mapie przy
 bieżącej misji i w scenie wyniku.
 
 ## Zasady wspólne
@@ -112,7 +112,7 @@ golden light and gentle bokeh. Painted character art, big expressive eyes,
 same storybook style as a children's adventure game.
 ```
 
-<!-- plik: kampania-ola.png | styl: kampania | proporcje: 3:4 -->
+<!-- plik: kampania-ela.png | styl: kampania | proporcje: 3:4 -->
 ```
 Portrait from the waist up of a brave 10-year-old girl, a young creature
 trainer, facing the viewer at a slight three-quarter angle, determined warm
@@ -170,4 +170,108 @@ perfectly upright, centred, filling most of the frame height.
 Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge,
 with no gradient, no shadow and no checkerboard pattern. Nothing in the scroll
 may be magenta or pink.
+```
+
+## 5. Ikony celów i nagród
+
+Zwój misji ma wiersze celów („Cel misji", „Uważaj", „Czas", „… zabiera ze
+sobą"), a pod mapą trzy karty nagród. Ikony wierszy były naklejkami
+rysowanymi w kodzie (`src/visual/icons.ts`: gwiazda, czaszka, klepsydra,
+zakładka), a miecz, tarcza z łusek i rower w nagrodach — gradientami w PIL
+(`kampania_postacie.py`). Obok malowanych jagód, kryształów i butów wyglądały
+jak z innej gry. Teraz wszystkie są malowane tą samą ręką co ikony surowców.
+
+Styl `obiekt` (z `PROMPTY-MAPA-2.md`) daje prawdziwą alfę; prompt ikony
+dopowiada, że to ikona interfejsu, a nie obiekt mapy. Do gry wpina je
+`python3 tools/kampania_ikony.py` (ten sam ciemny obrys i kadr 128 px co
+reszta ikon, `gotowa()` z `kampania_postacie.py`). Na ekranie mają 22–50 px,
+więc liczy się gruba, prosta sylwetka, nie szczegół.
+
+| Plik wsadu | W grze | Gdzie |
+|---|---|---|
+| `ikona-gwiazda.png` | `public/kampania/ikona-gwiazda.png` | „Cel misji", „Wynik", gwiazdki kroniki |
+| `ikona-czaszka.png` | `…/ikona-czaszka.png` | „Uważaj" (utrata zamków) |
+| `ikona-klepsydra.png` | `…/ikona-klepsydra.png` | „Czas", dni w drodze na belce |
+| `ikona-sakwa.png` | `…/ikona-sakwa.png` | „… zabiera ze sobą" (artefakty z poprzedniej misji) |
+| `ikona-miecz.png` | `…/ikona-miecz.png` | nagroda „Silniejszy atak" |
+| `ikona-tarcza.png` | `…/ikona-tarcza.png` | nagroda „Mocniejsza obrona", Tarcza z Łusek |
+| `ikona-rower.png` | `…/ikona-rower.png` | Rower Terenowy |
+
+<!-- plik: ikona-gwiazda.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object and not a building: the ONLY thing in the image
+is one plump five-pointed star shape (like a reward star in a mobile game), with
+softly rounded tips, seen straight from the front, centered and filling the
+square frame. No tower, no house, no scenery. Glossy polished gold, warm yellow on top shading to deep orange-amber at
+the bottom edges, a soft bevel along each arm and one small white highlight in
+the upper left. Chunky, bold, simple silhouette that stays readable at 20
+pixels, painted in the same soft storybook way as glossy red berries and
+purple crystals. No face, no sparkles around it, no rays.
+```
+
+<!-- plik: ikona-czaszka.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object: a single cartoon skull for a children's game,
+seen from the front, centered and filling the square frame. Rounded, friendly
+rather than scary: big round dark-brown eye sockets, a small upside-down heart
+shaped nose hole, a short row of square teeth, one tiny crack on the forehead.
+Warm ivory bone colour with soft beige-grey shading and a creamy highlight on
+the top of the dome. Chunky, bold, simple silhouette that stays readable at 20
+pixels. No crossbones, no blood, no fire, no glow.
+```
+
+<!-- plik: ikona-klepsydra.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object: a single hourglass standing upright, seen from
+the front, centered and filling the square frame. Chunky frame of warm brown
+turned wood with round golden caps on top and bottom and two thick wooden
+posts at the sides. Two plump glass bulbs with a light blue glassy sheen, a
+little golden sand left in the upper bulb, a thin stream falling and a larger
+golden heap in the lower bulb. Bold, simple silhouette that stays readable at
+20 pixels, painted soft storybook style with glossy highlights.
+```
+
+<!-- plik: ikona-sakwa.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object: a single adventurer's leather satchel, seen
+from the front at a slight angle, centered and filling the square frame. Plump
+rounded bag of warm brown leather with a big front flap, one shiny golden
+buckle, visible stitching and a short strap loop on top, slightly bulging as if
+full of treasures. Chunky, bold, simple silhouette that stays readable at 20
+pixels, painted soft storybook style with glossy highlights. Nothing sticking
+out of the bag.
+```
+
+<!-- plik: ikona-miecz.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object: a single short broad sword lying diagonally,
+point to the upper right, pommel to the lower left, centered and filling the
+square frame. Wide polished steel blade with a bright bevel line and a cool
+blue-white shine, a thick curved golden crossguard, a grip wrapped in brown
+leather and a round golden pommel with a small red gem. Chunky, bold, simple
+silhouette that stays readable at 24 pixels, painted soft storybook style with
+glossy highlights. No sparkles, no motion lines. The sword floats alone: no
+background tile, no square card, no parchment, no frame behind it.
+```
+
+<!-- plik: ikona-tarcza.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object: a single heater shield seen from the front,
+centered and filling the square frame. The face of the shield is covered with
+overlapping rounded teal-green dragon scales, each scale with a light rim and a
+darker base, framed by a thick polished golden rim with a few round rivets and
+a small golden boss in the upper middle. Chunky, bold, simple silhouette that
+stays readable at 24 pixels, painted soft storybook style with glossy
+highlights. No emblem, no letters.
+```
+
+<!-- plik: ikona-rower.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object: a single sturdy children's mountain bike seen
+exactly from the side, facing right, centered and filling the square frame.
+Thick knobbly dark tyres, bright red chunky frame with a golden stripe, a brown
+leather saddle, black handlebars with brown grips, a small silver bell and a
+simple chain ring. Wheels big and round with only a few thick spokes. Chunky,
+bold, simple silhouette that stays readable at 24 pixels, painted soft
+storybook style with glossy highlights. No rider, no ground.
 ```
