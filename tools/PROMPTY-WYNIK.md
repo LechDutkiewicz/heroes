@@ -27,7 +27,7 @@ Wszystkie trzy są w kadrze 3:2 (1536 × 1024) z `gpt-image-1.5`, jakość
 - **Filtr treści:** „starzec zakłada chłopcu medal na szyję" zostało
   zablokowane na wyjściu (`moderation_blocked`). Chłopiec trzyma medal sam,
   strażnik stoi obok — bez dotyku.
-- **Tylko Janek.** Ilustracje pokazują chłopca; gdy kampanię prowadzi Ola,
+- **Tylko Janek.** Ilustracje pokazują chłopca; gdy kampanię prowadzi Ela,
   scena jest ta sama (portret w karcie zakończenia jest już jej).
 
 ## Trzy zasady, które decydują o tym, czy obrazek w ogóle da się użyć

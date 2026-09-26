@@ -12,7 +12,7 @@
  */
 
 import Phaser from 'phaser';
-import { KAMPANIA, wczytajPostep } from '../data/kampania';
+import { KAMPANIA, imieTrenera, wczytajPostep } from '../data/kampania';
 import { ILE_REKORDOW, wczytajRekordy, type Rekord } from '../data/rekordy';
 
 /** Kroje menu — rejestruje je MenuScene (`wczytajKroje`). */
@@ -220,7 +220,7 @@ export function deseczka(
  */
 export const LEGENDY: Omit<Rekord, 'data'>[] = [
   { imie: 'Stary Strażnik', punkty: 3100, dni: 64 },
-  { imie: 'Leśna Ola', punkty: 2590, dni: 98 },
+  { imie: 'Leśna Ela', punkty: 2590, dni: 98 },
   { imie: 'Kapitan Tomek', punkty: 2200, dni: 124 },
   { imie: 'Zosia z Polany', punkty: 1750, dni: 154 },
   { imie: 'Wędrowny Bartek', punkty: 1300, dni: 184 },
@@ -288,7 +288,7 @@ export function pokazRekordy(
         );
         const barwa = r.legenda ? ATRAMENT.blady : ATRAMENT.tekst;
         const imie = scene.add
-          .text(kol.imie, y + 1, r.imie, { fontFamily: KROJ.tekst, fontSize: '18px', color: barwa })
+          .text(kol.imie, y + 1, imieTrenera(r.imie), { fontFamily: KROJ.tekst, fontSize: '18px', color: barwa })
           .setOrigin(0, 0);
         k.add(imie);
         if (r.legenda) {

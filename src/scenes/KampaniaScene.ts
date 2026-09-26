@@ -34,7 +34,7 @@ import {
   wczytajZestaw,
   wstazka,
 } from '../visual/zestaw';
-import { ICON, buildIcons, type IconKey } from '../visual/icons';
+import { buildIcons } from '../visual/icons';
 import { buildArtefakty, kluczArtefaktu } from '../visual/artefakty';
 import { wersjonujZasoby } from '../visual/zasoby';
 import { MUZYKA_MAPA, initSfx, sfx, startMusic, toggleSfx } from '../audio/mapSfx';
@@ -113,7 +113,7 @@ const ATRAMENT_CZERWONY = BARWA.atramentCzerwony;
 const BRAZ = BARWA.braz;
 
 /** Barwa chorągiewki trenera: ta sama, co jego czapka. */
-const BARWA_TRENERA: Record<string, number> = { Janek: 0xe4413c, Ola: 0x3fae5a };
+const BARWA_TRENERA: Record<string, number> = { Janek: 0xe4413c, Ela: 0x3fae5a };
 
 interface Trener {
   imie: string;
@@ -127,7 +127,7 @@ interface Trener {
 
 const TRENERZY: Trener[] = [
   { imie: 'Janek', figurka: 'k-janek', glowa: 'k-glowa-janek', portret: 'k-portret-janek', opis: 'Odważny i szybki. Zawsze pierwszy do przygody!' },
-  { imie: 'Ola', figurka: 'k-ola', glowa: 'k-glowa-ola', portret: 'k-portret-ola', opis: 'Sprytna i uważna. Żaden ślad jej nie umknie!' },
+  { imie: 'Ela', figurka: 'k-ela', glowa: 'k-glowa-ela', portret: 'k-portret-ela', opis: 'Sprytna i uważna. Żaden ślad jej nie umknie!' },
 ];
 
 /** Karta portretu na ekranie wyboru — proporcje pliku `portret-*.jpg` (620 × 892). */
@@ -195,6 +195,18 @@ const NAZWY_FABULARNE: Record<string, string> = { 'ksiezycowy-kamien': 'Księży
  * Malowane ikony artefaktów z nagród (`tools/kampania_postacie.py`). Reszta
  * artefaktów ma naklejki z `artefakty.ts` — w nagrodach kampanii ich nie ma.
  */
+/**
+ * Malowane ikony zwoju misji (`tools/kampania_ikony.py`, prompty w
+ * `PROMPTY-KAMPANIA.md`, rozdz. 5). Naklejki z `icons.ts` obok malowanych
+ * nagród i mapy wyglądały jak z innej gry.
+ */
+const IKONA = {
+  gwiazda: 'k-ikona-gwiazda',
+  czaszka: 'k-ikona-czaszka',
+  klepsydra: 'k-ikona-klepsydra',
+  sakwa: 'k-ikona-sakwa',
+} as const;
+
 const IKONA_ARTEFAKTU: Record<string, string> = { buty: 'buty', rower: 'rower', tarcza: 'tarcza' };
 const IKONA_SUROWCA: Record<string, string> = { pokeball: 'pokeball', jagoda: 'jagody', kamien: 'kamien', odlamek: 'odlamki' };
 
@@ -214,12 +226,12 @@ function celMisji(m: Misja): string {
 }
 
 /** Warunki porażki — każdy osobno, z liczbą tygodni, bo dziecko liczy w tygodniach gry. */
-function porazkiMisji(m: Misja): { ikona: IconKey; tekst: string }[] {
+function porazkiMisji(m: Misja): { ikona: string; tekst: string }[] {
   return m.porazka.map((w) =>
     w.typ === 'utrata'
-      ? { ikona: ICON.skull, tekst: 'Przegrasz, jeśli stracisz wszystkie zamki.' }
+      ? { ikona: IKONA.czaszka, tekst: 'Przegrasz, jeśli stracisz wszystkie zamki.' }
       : {
-          ikona: ICON.hourglass,
+          ikona: IKONA.klepsydra,
           tekst:
             w.dni % 7 === 0
               ? `Masz na to ${w.dni / 7} tygodni (${w.dni} dni).`
@@ -306,14 +318,14 @@ export class KampaniaScene extends Phaser.Scene {
     const b = import.meta.env.BASE_URL;
     wczytajZestaw(this);
     this.load.image('k-mapa', `${b}kampania/mapa.jpg`);
-    for (const n of ['woda-a', 'woda-b', 'zwoj', 'janek', 'ola', 'glowa-janek', 'glowa-ola'])
+    for (const n of ['woda-a', 'woda-b', 'zwoj', 'janek', 'ela', 'glowa-janek', 'glowa-ela'])
       this.load.image(`k-${n}`, `${b}kampania/${n}.png`);
     this.load.json('k-mapa-json', `${b}kampania/mapa.json`);
     // Malowane ilustracje: wstęp, zakończenie i portrety trenerów
     // (`tools/kampania_ilustracje.py`, wsad z `tools/PROMPTY-KAMPANIA.md`).
-    for (const n of ['wstep', 'koniec', 'portret-janek', 'portret-ola']) this.load.image(`k-${n}`, `${b}kampania/${n}.jpg`);
+    for (const n of ['wstep', 'koniec', 'portret-janek', 'portret-ela']) this.load.image(`k-${n}`, `${b}kampania/${n}.jpg`);
     // Ikony nagród (`tools/kampania_postacie.py`) i ognisko obozu z mapy przygody.
-    for (const i of ['buty', 'rower', 'tarcza', 'miecz', 'pokeball', 'jagody', 'kamien', 'odlamki'])
+    for (const i of ['buty', 'rower', 'tarcza', 'miecz', 'pokeball', 'jagody', 'kamien', 'odlamki', ...Object.keys(IKONA)])
       this.load.image(`k-ikona-${i}`, `${b}kampania/ikona-${i}.png`);
     this.load.image('k-ognisko', `${b}mapa/ognisko.png`);
     this.load.image('k-deseczka', `${b}menu/deseczka.png`);
@@ -791,7 +803,7 @@ export class KampaniaScene extends Phaser.Scene {
     wstep.ustaw(true);
 
     const dniTekst = this.napisNaDrewnie(prawy - 110, BELKA_Y, `Dni w drodze: ${dni}`, 16).setOrigin(1, 0.5);
-    this.add.image(dniTekst.x - dniTekst.width - 12, BELKA_Y, ICON.hourglass).setDisplaySize(22, 22);
+    this.add.image(dniTekst.x - dniTekst.width - 12, BELKA_Y, IKONA.klepsydra).setDisplaySize(24, 24);
 
     const imie = this.napisNaDrewnie(dniTekst.x - dniTekst.width - 34, BELKA_Y, p.trener, 18).setOrigin(1, 0.5);
     const mx = imie.x - imie.width - 22;
@@ -1407,7 +1419,7 @@ export class KampaniaScene extends Phaser.Scene {
       this.winieta(k, srodek, y, szer, wysWiniety, m);
       y += wysWiniety + 10;
     };
-    const wiersz = (ikona: IconKey, etykieta: string, tekst: string) => {
+    const wiersz = (ikona: string, etykieta: string, tekst: string) => {
       const ik = this.add.image(lewy + 12, y + 10, ikona).setDisplaySize(24, 24);
       const e = this.add.text(lewy + 30, y, etykieta, { fontFamily: SERIF, fontSize: '14px', color: ATRAMENT_CZERWONY });
       k.add([ik, e]);
@@ -1431,8 +1443,8 @@ export class KampaniaScene extends Phaser.Scene {
       kreska();
       const dni = Object.values(p.wyniki).reduce((s, w) => s + w.dni, 0);
       const pkt = Object.values(p.wyniki).reduce((s, w) => s + w.punkty, 0);
-      wiersz(ICON.hourglass, 'Cała wyprawa', `${dni} ${odmianaDni(dni)} w drodze`);
-      wiersz(ICON.star, 'Wynik', `${pkt} punktów`);
+      wiersz(IKONA.klepsydra, 'Cała wyprawa', `${dni} ${odmianaDni(dni)} w drodze`);
+      wiersz(IKONA.gwiazda, 'Wynik', `${pkt} punktów`);
       this.pieczec(k, ZWOJ.x + ZWOJ.w - 100, ZWOJ.y + PAPIER.dol - 44, 'BRAWO!');
       return y;
     }
@@ -1483,8 +1495,8 @@ export class KampaniaScene extends Phaser.Scene {
       akapit(m.epilog, { kursywa: true });
       y += 12;
       if (w) {
-        wiersz(ICON.hourglass, 'Czas', `${w.dni} ${odmianaDni(w.dni)}`);
-        wiersz(ICON.star, 'Wynik', `${w.punkty} punktów`);
+        wiersz(IKONA.klepsydra, 'Czas', `${w.dni} ${odmianaDni(w.dni)}`);
+        wiersz(IKONA.gwiazda, 'Wynik', `${w.punkty} punktów`);
         this.gwiazdkiRzad(k, lewy + 30, y + 4, gwiazdki(w.punkty), 13);
         y += 26;
       }
@@ -1503,10 +1515,10 @@ export class KampaniaScene extends Phaser.Scene {
       y += 8;
     }
     kreska();
-    wiersz(ICON.star, 'Cel misji', celMisji(m));
-    for (const w of porazkiMisji(m)) wiersz(w.ikona, w.ikona === ICON.skull ? 'Uważaj' : 'Czas', w.tekst);
+    wiersz(IKONA.gwiazda, 'Cel misji', celMisji(m));
+    for (const w of porazkiMisji(m)) wiersz(w.ikona, w.ikona === IKONA.czaszka ? 'Uważaj' : 'Czas', w.tekst);
     const plecak = p.bohater?.artefakty ?? [];
-    if (plecak.length) wiersz(ICON.banner, `${p.trener} zabiera ze sobą`, plecak.map(nazwaArtefaktu).join(', ') + '.');
+    if (plecak.length) wiersz(IKONA.sakwa, `${p.trener} zabiera ze sobą`, plecak.map(nazwaArtefaktu).join(', ') + '.');
     return y;
   }
 
@@ -1576,7 +1588,7 @@ export class KampaniaScene extends Phaser.Scene {
 
   private gwiazdkiRzad(k: Phaser.GameObjects.Container, x: number, y: number, ile: number, r: number) {
     for (let i = 0; i < 3; i++) {
-      const s = this.add.image(x + r + i * (r * 2 + 4), y + r, ICON.star).setDisplaySize(r * 2.2, r * 2.2);
+      const s = this.add.image(x + r + i * (r * 2 + 4), y + r, IKONA.gwiazda).setDisplaySize(r * 2.2, r * 2.2);
       if (i >= ile) s.setTint(0x6b5a48).setAlpha(0.45);
       k.add(s);
     }
@@ -1843,7 +1855,7 @@ export class KampaniaScene extends Phaser.Scene {
           color: ATRAMENT_MIEKKI,
         });
         for (let s = 0; s < 3; s++) {
-          const im = this.add.image(x + 22 + s * 24, y + 76, ICON.star).setDisplaySize(22, 22);
+          const im = this.add.image(x + 22 + s * 24, y + 76, IKONA.gwiazda).setDisplaySize(22, 22);
           if (s >= gwiazdki(w.punkty)) im.setTint(0x6b5a48).setAlpha(0.45);
         }
       }

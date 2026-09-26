@@ -135,7 +135,7 @@ async function zrzut(page, nazwa) {
   );
   await zrzut(page, 'kampania-wstep.png');
   const zapisany = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), KLUCZ);
-  if (zapisany?.trener !== 'Ola') bledy.push(`wybór trenera nie zapisał postępu: ${JSON.stringify(zapisany)}`);
+  if (zapisany?.trener !== 'Ela') bledy.push(`wybór trenera nie zapisał postępu: ${JSON.stringify(zapisany)}`);
   await page.close();
 }
 
@@ -173,7 +173,7 @@ async function zrzut(page, nazwa) {
 
 // 3. Misje 1–2 zrobione, bieżąca 3, nagroda wybrana.
 {
-  const page = await otworz(postep('Ola', 2));
+  const page = await otworz(postep('Ela', 2));
   await klik(page, KARTA_NAGRODY(1));
   await page.waitForTimeout(500);
   await zrzut(page, 'kampania-m3.png');

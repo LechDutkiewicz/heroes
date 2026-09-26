@@ -201,12 +201,23 @@ export function nowyPostep(trener: string): PostepKampanii {
   return { kampania: KAMPANIA.id, trener, ukonczone: [], wyniki: {} };
 }
 
+/**
+ * Imię trenera po zmianach w grze. Bohaterka nazywała się kiedyś Ola —
+ * zapisy i rekordy sprzed zmiany mają to imię, a obrazki i barwy są już
+ * pod „Ela". Stare imię czytamy jako nowe, zamiast gubić postęp.
+ */
+const DAWNE_IMIONA: Record<string, string> = { Ola: 'Ela' };
+export const imieTrenera = (imie: string) => DAWNE_IMIONA[imie] ?? imie;
+
 export function wczytajPostep(): PostepKampanii | null {
   try {
     const s = localStorage.getItem(KLUCZ_POSTEPU);
     if (!s) return null;
     const p = JSON.parse(s) as PostepKampanii;
-    return p.kampania === KAMPANIA.id ? p : null;
+    if (p.kampania !== KAMPANIA.id) return null;
+    p.trener = imieTrenera(p.trener);
+    if (p.bohater) p.bohater.imie = imieTrenera(p.bohater.imie);
+    return p;
   } catch {
     return null;
   }

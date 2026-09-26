@@ -10,6 +10,7 @@ import {
   nowyPostep,
   punkty,
   wczytajPostep,
+  imieTrenera,
   zapiszPostep,
 } from '../data/kampania';
 import { rozpocznijMisje, zaliczMisje } from '../data/kampania-start';
@@ -95,6 +96,14 @@ const NA_OBRAZIE = {
   bohaterKoniec: { x: 470, y: 380 },
 };
 
+/** Malowane ikony ekranu kampanii, wczytane w `preload` pod `w-ikona-*`. */
+const IKONA = {
+  gwiazda: 'w-ikona-gwiazda',
+  klepsydra: 'w-ikona-klepsydra',
+  miecz: 'w-ikona-miecz',
+  tarcza: 'w-ikona-tarcza',
+} as const;
+
 export class WynikScene extends Phaser.Scene {
   private dane!: DaneWyniku;
   private postep!: PostepKampanii;
@@ -120,9 +129,12 @@ export class WynikScene extends Phaser.Scene {
     const b = import.meta.env.BASE_URL;
     for (const n of ['tlo-zwyciestwo', 'tlo-porazka', 'tlo-koniec'])
       this.load.image(`w-${n}`, `${b}wynik/${n}.jpg`);
-    // Portret do karty zakończenia kampanii — Janka albo Oli.
+    // Portret do karty zakończenia kampanii — Janka albo Eli.
     this.load.image('w-bohater', `${b}wynik/bohater.png`);
-    this.load.image('w-ola', `${b}kampania/ola.png`);
+    this.load.image('w-ela', `${b}kampania/ela.png`);
+    // Malowane ikony z ekranu kampanii (`tools/kampania_ikony.py`) — te same
+    // gwiazda, klepsydra, miecz i tarcza, co w zwoju misji i nagrodach.
+    for (const n of Object.keys(IKONA)) this.load.image(`w-ikona-${n}`, `${b}kampania/ikona-${n}.png`);
     // Mapa kampanii — z niej miniatura następnej misji.
     this.load.image('w-kampania', `${b}kampania/mapa.jpg`);
     // Stworki-znaki tytułów („Twój tytuł", Sala sław).
@@ -133,8 +145,8 @@ export class WynikScene extends Phaser.Scene {
 
   /** Portret trenera, który prowadzi kampanię — do karty zakończenia. */
   private bohaterKlucz(): string {
-    const trener = this.postep?.trener ?? this.dane.stan.bohater.imie;
-    if (trener === 'Ola' && this.textures.exists('w-ola')) return 'w-ola';
+    const trener = this.postep?.trener ?? imieTrenera(this.dane.stan.bohater.imie);
+    if (trener === 'Ela' && this.textures.exists('w-ela')) return 'w-ela';
     return 'w-bohater';
   }
 
@@ -156,7 +168,7 @@ export class WynikScene extends Phaser.Scene {
     // Skończona gra nie może wrócić przy następnym wejściu na mapę: dalej
     // prowadzi już tylko ten ekran (nowa misja, powtórka albo menu).
     this.registry.remove('stan-mapy');
-    this.postep = wczytajPostep() ?? nowyPostep(this.dane.stan.bohater.imie);
+    this.postep = wczytajPostep() ?? nowyPostep(imieTrenera(this.dane.stan.bohater.imie));
 
     this.input.keyboard?.on('keydown-M', () => {
       this.sound.mute = !this.sound.mute;
@@ -390,7 +402,9 @@ export class WynikScene extends Phaser.Scene {
     const g = this.add.graphics().setDepth(45);
     this.pasmo(g, x, y - 15, w, 30, i);
     const md = medalion(this, x + 16, y, 12, BARWA.papierCiemny).setDepth(45.5);
-    const ik = this.obraz(x + 16, y, ikona, 15).setDepth(46);
+    // Malowana ikona wypełnia swój kadr aż po obrys — 15 px to było za mało,
+    // klepsydra ginęła; medalion ma 24 px średnicy.
+    const ik = this.obraz(x + 16, y, ikona, ikona.startsWith('w-ikona-') ? 19 : 15).setDepth(46);
     const e = this.add.text(x + 36, y, etykieta, stylAtramentu(15, 'miekki')).setOrigin(0, 0.5).setDepth(46);
     const v = this.add
       .text(x + w - 12, y, wartosc, stylEtykiety(19, BARWA.atrament))
@@ -641,7 +655,7 @@ export class WynikScene extends Phaser.Scene {
       );
     } else {
       tresc.push(
-        this.obraz(kx + 46, dy, ICON.star, 30).setDepth(45),
+        this.obraz(kx + 46, dy, IKONA.gwiazda, 30).setDepth(45),
         this.add
           .text(
             kx + 72,
@@ -660,8 +674,8 @@ export class WynikScene extends Phaser.Scene {
     const lw = 214;
     const b = s.bohater;
     const pkt = punkty(s.dzien);
-    const w1 = this.wiersz(lx, ky + 34, lw, ICON.hourglass, 'Dni wyprawy', String(s.dzien), 0);
-    const w2 = this.wiersz(lx, ky + 70, lw, ICON.star, 'Punkty', '0', 1);
+    const w1 = this.wiersz(lx, ky + 34, lw, IKONA.klepsydra, 'Dni wyprawy', String(s.dzien), 0);
+    const w2 = this.wiersz(lx, ky + 70, lw, IKONA.gwiazda, 'Punkty', '0', 1);
     const w3 = this.wiersz(lx, ky + 106, lw, ICON.banner, 'Poziom bohatera', String(poziom(b.doswiadczenie)), 0);
     const st = statystyki(b);
     // Atak i obrona osobno, każde z własną ikoną — „6 / 2" bez podpisu
@@ -674,7 +688,7 @@ export class WynikScene extends Phaser.Scene {
       const et = this.add.text(x + 32, ky + 142, nazwa, stylAtramentu(15, 'miekki')).setOrigin(0, 0.5).setDepth(46);
       return [
         medalion(this, x + 16, ky + 142, 12, BARWA.papierCiemny).setDepth(45.5),
-        this.obraz(x + 16, ky + 142, ikona, 15).setDepth(46),
+        this.obraz(x + 16, ky + 142, ikona, 19).setDepth(46),
         et,
         this.add
           .text(et.x + et.width + 7, ky + 142, String(ile), stylEtykiety(19, BARWA.atrament))
@@ -687,8 +701,8 @@ export class WynikScene extends Phaser.Scene {
       ...w2.czesci,
       ...w3.czesci,
       g4,
-      ...polowa(lx, ICON.sword, 'Atak', st.atak),
-      ...polowa(lx + lw / 2, ICON.shield, 'Obrona', st.obrona)
+      ...polowa(lx, IKONA.miecz, 'Atak', st.atak),
+      ...polowa(lx + lw / 2, IKONA.tarcza, 'Obrona', st.obrona)
     );
     this.nabijaj(w2.wartosc, pkt, 1100);
 
@@ -733,7 +747,7 @@ export class WynikScene extends Phaser.Scene {
       if (!wpisy.length) {
         tresc.push(
           this.add
-            .text(px + 4, ky + 50, `${b.imie} i całe doświadczenie\nz tej misji.`, stylAtramentu(13))
+            .text(px + 4, ky + 50, `${imieTrenera(b.imie)} i całe doświadczenie\nz tej misji.`, stylAtramentu(13))
             .setOrigin(0, 0.5)
             .setDepth(46)
         );
@@ -877,7 +891,7 @@ export class WynikScene extends Phaser.Scene {
     g.strokeRoundedRect(rx, ky + 18, rw, kh - 36, 10);
     tresc.push(
       g,
-      this.obraz(rx + 22, ky + 40, ICON.star, 22).setDepth(45),
+      this.obraz(rx + 22, ky + 40, IKONA.gwiazda, 22).setDepth(45),
       this.add.text(rx + 40, ky + 40, 'Rada', stylEtykiety(16)).setOrigin(0, 0.5).setDepth(45),
       this.add
         .text(rx + 14, ky + 58, rada(przyczyna), { ...stylAtramentu(14), lineSpacing: 2 })
@@ -992,7 +1006,7 @@ export class WynikScene extends Phaser.Scene {
       ramka,
       portret,
       this.add
-        .text(kx + 88, hy - 12, `${b.imie}, poziom ${poziom(b.doswiadczenie)}`, stylEtykiety(16, BARWA.atrament))
+        .text(kx + 88, hy - 12, `${imieTrenera(b.imie)}, poziom ${poziom(b.doswiadczenie)}`, stylEtykiety(16, BARWA.atrament))
         .setOrigin(0, 0.5)
         .setDepth(45),
       this.add
@@ -1129,7 +1143,7 @@ export class WynikScene extends Phaser.Scene {
       if (medal !== undefined) tresc.push(medalion(this, kol.miejsce, y, 15, medal).setDepth(45));
       const t = tytulZaWynik(r.punkty);
       const imie = this.add
-        .text(kol.imie, y, r.imie, stylAtramentu(18, miekki ? 'miekki' : 'zwykly'))
+        .text(kol.imie, y, imieTrenera(r.imie), stylAtramentu(18, miekki ? 'miekki' : 'zwykly'))
         .setOrigin(0, 0.5)
         .setDepth(45);
       const znak = this.obraz(kol.tytul + 18, y, `p-${t.sprite}`, 36).setDepth(46);
@@ -1169,7 +1183,7 @@ export class WynikScene extends Phaser.Scene {
           edgeW: 1.5,
           drop: 1,
         });
-        const gw = this.obraz(nx + napis.width + 36, y, ICON.star, 22);
+        const gw = this.obraz(nx + napis.width + 36, y, IKONA.gwiazda, 22);
         this.tweens.add({ targets: gw, angle: 360, duration: 4000, repeat: -1 });
         kaps.setDepth(46.5);
         napis.setDepth(47);
