@@ -143,6 +143,24 @@
      "gap": "Nieczytelne plamy przy tej wielkości, licznik zasłania dolną trzecią, chłodne szare tła przy ciepłym pergaminie.",
      "blind": "tools/postep-obrazy/portrety-hud-r2.jpg",
      "note": "Runda 2, HUD. 0/3."
+    },
+    {
+     "win": false,
+     "gap": "Niespójna odległość kamery (sama twarz / cała głowa / ucięty tułów), jasne łąki za stworami kłócą się z ciemnym mahoniem panelu.",
+     "blind": "tools/postep-obrazy/portrety-bohater-r3.jpg",
+     "note": "Runda 3 (pierwsza z klauzulą: klimat nieoceniany), bohater."
+    },
+    {
+     "win": false,
+     "gap": "Stwory płasko cieniowane na teksturowanym tle; pasek ~30 px, plakietki zasłaniają twarze.",
+     "blind": "tools/postep-obrazy/portrety-miasto-r3.jpg",
+     "note": "Runda 3, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Twarze nieczytelne przy ~20 px, każde tło w innym głośnym kolorze, pusty slot jak płaski beżowy prostokąt.",
+     "blind": "tools/postep-obrazy/portrety-hud-r3.jpg",
+     "note": "Runda 3, HUD. 0/3. Błąd pomiaru: wzorzec ×2, nasze ×1 — od rundy 4 oba ×2."
     }
    ]
   }
