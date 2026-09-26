@@ -1,11 +1,11 @@
 {
- "updated": "Stwory na mapie: 9 rund. Kontrola 2: oryginalne HoMM3 też przegrywa test dopasowania 0/3 — test nie rozróżnia. Decyzja gracza w toku.",
+ "updated": "Mapa i portrety zamknięte decyzją gracza (test dopasowania oblewa też HoMM3). Następne: stwory w bitwie i animacje.",
  "pieces": [
   {
    "name": "Stwory na mapie przygody (malowane rysunki, stos na mapie)",
-   "status": "critic",
+   "status": "done",
    "bar": "Od 2026-09-26 (decyzja gracza): poprzeczką jest NASZA mapa, nie HotA. Krytyk dostaje sam nasz kadr, wskazuje element, który najmniej pasuje, i ocenia, czy stwory pasują do naszej mapy. Wygrana: w 2 z 3 kadrów najgorszym elementem nie jest stwór i werdykt brzmi PASUJĄ.",
-   "note": "Wszystkie 18 stworów przemalowane w stylu mapy; stos neutralny na mapie: skala, cień, osadzenie w terenie.",
+   "note": "Wszystkie 18 stworów przemalowane w stylu mapy; stos neutralny na mapie: skala, cień, osadzenie w terenie. ZAMKNIĘTE decyzją gracza po 9 rundach: kontrola pokazała, że test „co nie pasuje” oblewa też oryginalne HoMM3 (0/3), więc nie rozstrzyga. Stan końcowy: obrys i cień jak u skrzyni, barwy w zakresie obiektów planszy, 1–1,1 pola, bez chorągiewek.",
    "rounds": [
     {
      "win": false,
@@ -212,9 +212,9 @@
   },
   {
    "name": "Portrety i ikony stworów (sloty armii, kolejka tury, bohater, miasto)",
-   "status": "critic",
+   "status": "done",
    "bar": "Od 2026-09-26 (decyzja gracza): poprzeczką jest NASZ interfejs, nie HotA. Krytyk dostaje sam nasz ekran (×2), wskazuje element, który najmniej pasuje, i ocenia, czy portrety pasują. Wygrana: w 2 z 3 ekranów najgorszym elementem nie jest portret i werdykt PASUJĄ.",
-   "note": "Małe portrety w interfejsie z tego samego malowanego rysunku.",
+   "note": "Małe portrety w interfejsie z tego samego malowanego rysunku. ZAMKNIĘTE decyzją gracza po 8 rundach: wersja B — cała postać w kadrze, ciepłe tło, liczby na tabliczkach, puste gniazdo z gwiazdą.",
    "rounds": [
     {
      "win": false,
