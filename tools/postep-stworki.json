@@ -4,7 +4,7 @@
   {
    "name": "Stwory na mapie przygody (malowane rysunki, stos na mapie)",
    "status": "critic",
-   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3.",
+   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3. Od 2026-09-26 (decyzja gracza): storki zostają urocze — krytyk nie ocenia klimatu (uroczy vs ponury), tylko spójność stworów z ich własnym światem i UI.",
    "note": "Wszystkie 18 stworów przemalowane w stylu mapy; stos neutralny na mapie: skala, cień, osadzenie w terenie.",
    "rounds": [
     {
@@ -84,28 +84,28 @@
   {
    "name": "Najechanie na stos (mapa przygody)",
    "status": "todo",
-   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3.",
+   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3. Od 2026-09-26 (decyzja gracza): storki zostają urocze — krytyk nie ocenia klimatu (uroczy vs ponury), tylko spójność stworów z ich własnym światem i UI.",
    "note": "Drobna animacja stosu po najechaniu kursorem, jak w HotA.",
    "rounds": []
   },
   {
    "name": "Stwory na polu bitwy",
    "status": "todo",
-   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3.",
+   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3. Od 2026-09-26 (decyzja gracza): storki zostają urocze — krytyk nie ocenia klimatu (uroczy vs ponury), tylko spójność stworów z ich własnym światem i UI.",
    "note": "Wygląd oddziału w bitwie: rysunek, skala, cień, licznik.",
    "rounds": []
   },
   {
    "name": "Animacje w bitwie: ruch, lot, atak, obrona, strzał",
    "status": "todo",
-   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3.",
+   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3. Od 2026-09-26 (decyzja gracza): storki zostają urocze — krytyk nie ocenia klimatu (uroczy vs ponury), tylko spójność stworów z ich własnym światem i UI.",
    "note": "Klatki póz zamiast samego przesuwania obrazka.",
    "rounds": []
   },
   {
    "name": "Portrety i ikony stworów (sloty armii, kolejka tury, bohater, miasto)",
    "status": "critic",
-   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3.",
+   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3. Od 2026-09-26 (decyzja gracza): storki zostają urocze — krytyk nie ocenia klimatu (uroczy vs ponury), tylko spójność stworów z ich własnym światem i UI.",
    "note": "Małe portrety w interfejsie z tego samego malowanego rysunku.",
    "rounds": [
     {
