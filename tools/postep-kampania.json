@@ -2,6 +2,66 @@
  "updated": "Wszystko wygrywa ślepo: plansze Polana, Bagna, Twierdza przeciw mapom kampanii HoMM3/HotA; ekran kampanii (3/3) i sceny wyniku (2/3) z nowymi ilustracjami OpenAI przeciw prawdziwym ekranom HoMM2/HotA.",
  "pieces": [
   {
+   "name": "HUD bohatera spójny z grą (ikony umiejętności i artefaktów)",
+   "status": "done",
+   "bar": "Ekran bohatera w stylu mapy i miasta, malowane ikony 8 umiejętności i 9 artefaktów; ślepy krytyk vs ekran bohatera HoMM3.",
+   "rounds": [
+    {
+     "win": false,
+     "label": "Runda 1 (ekran bohatera HoMM3/VCMI, 1/2)",
+     "blinds": [
+      "tools/postep-obrazy/bohater-r1-w1.jpg",
+      "tools/postep-obrazy/bohater-r1-w2.jpg"
+     ],
+     "build": "HeroScene w stylu mapy i miasta: medalion z poziomem i paskiem doświadczenia, atak/obrona/ruch jako malowane ikony, siatka umiejętności z ikonami OpenAI i kropkami poziomu, portret w złotej ramie z 8 gniazdami artefaktów, wspólny pasek armii, dymki z opisem.",
+     "gap": "Stałe teksty pomocy zamiast treści gry; portret powtórzony w panelu artefaktów zamiast lalki (paper doll); pasek armii mały, wciśnięty w róg.",
+     "note": "Krytyk 1: nasze — czytelna hierarchia, ikony w jednym stylu, dopracowany portret. Krytyk 2: HoMM3 — gęsta treść, lalka z gniazdami na postaci, pasek armii na całą szerokość."
+    },
+    {
+     "win": true,
+     "label": "Runda 2 (ekran bohatera HoMM3/VCMI, 3/3)",
+     "blinds": [
+      "tools/postep-obrazy/bohater-r2-w1.jpg",
+      "tools/postep-obrazy/bohater-r2-w2.jpg",
+      "tools/postep-obrazy/bohater-r2-w3.jpg"
+     ],
+     "build": "Stałe teksty pomocy przeniesione do dymków; pełna postać Janka/Eli (OpenAI, $0.13) z gniazdami artefaktów na ciele; pasek armii na całą szerokość w tej samej ramie co w mieście.",
+     "gap": "Słabości zwycięzcy: puste gniazda artefaktów jako półprzezroczyste ramki na postaci wyglądają jak nakładka; układ gniazd na postaci mało czytelny.",
+     "note": "Wszyscy trzej: nasze — wyraźna hierarchia (poziom → statystyki → umiejętności → armia), ikony w jednym stylu, czytelne liczebności. HoMM3: ekran pustych slotów bez hierarchii."
+    }
+   ]
+  },
+  {
+   "name": "Armia jak w HotA: zarządzanie, garnizon, okno stworka",
+   "status": "done",
+   "bar": "Wspólny pasek armii (zamiana, łączenie, dzielenie), garnizon miasta, okno stworka po kliknięciu, miniatura bohatera w mieście → ekran bohatera.",
+   "rounds": [
+    {
+     "win": false,
+     "label": "Runda 1 (miasto HotA/VCMI, 0/2)",
+     "blinds": [
+      "tools/postep-obrazy/miasto-armia-r1-w1.jpg",
+      "tools/postep-obrazy/miasto-armia-r1-w2.jpg"
+     ],
+     "build": "Wspólny panelArmii.ts (zamiana, łączenie, podział Shift+klik/„Podziel”, przeciąganie), okno stworka (prawy klik), garnizon zamku (werbunek bez bohatera, obrona zamku, zapis z migracją), portret bohatera → ekran bohatera.",
+     "gap": "Paski armii za małe i za blade (~12% wysokości): sloty jak beżowe placeholdery bez ramek, stworki małe, liczebności nieczytelne; brak ramy/herbu i panelu przyrostu jak w HotA.",
+     "note": "Obaj: HotA — dwa pełne rzędy po 7 dużych slotów w ciężkiej ramie, od razu widać zarządzanie armią. Słabość HotA: drobny tekst, przeładowana ilustracja."
+    },
+    {
+     "win": true,
+     "label": "Runda 2 (miasto HotA/VCMI, 2/3)",
+     "blinds": [
+      "tools/postep-obrazy/miasto-armia-r2-w1.jpg",
+      "tools/postep-obrazy/miasto-armia-r2-w2.jpg",
+      "tools/postep-obrazy/miasto-armia-r2-w3.jpg"
+     ],
+     "build": "Sloty 68 px: puste jak skórzane wnęki, zajęte ze światłem, złote ramki, liczebność na ciemnej plakietce; blok armii ~29% wysokości w ciężkiej ramie z herbem garnizonu i portretem bohatera; panel „Przyrost na tydzień”.",
+     "gap": "Słabości zwycięzcy: puste sloty dominują przy małej armii; garnizon i bohater oddzielone tylko cienką listwą; drobny tekst podpowiedzi.",
+     "note": "Dwaj krytycy: nasze — czytelne liczebności, jasne podpisy garnizonu i bohatera, panel przyrostu. Jeden: HotA — więcej informacji, nasza ilustracja dominuje nad HUD."
+    }
+   ]
+  },
+  {
    "name": "Uwagi gracza: profile graczy i wiele zapisów",
    "status": "done",
    "bar": "Profile Ela / Janek / Tata z osobnymi kampaniami, kilka slotów zapisu jak w HoMM3, Nowa gra zaczyna od zera, migracja starego zapisu.",

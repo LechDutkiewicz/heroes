@@ -1,36 +1,33 @@
 /**
  * Ekran bohatera — to, co w Heroes 3 otwiera kliknięcie w bohatera na mapie
- * przygody.
+ * przygody (albo w portret bohatera w mieście).
  *
- * Cztery rzeczy naraz, bo tak działa oryginał i bo rozdzielenie ich na cztery
- * okna zamieniłoby jedno spojrzenie w cztery kliknięcia:
+ * Układ jest z HoMM3, materiał z naszego zestawu (`visual/zestaw.ts`) — ten
+ * sam, co mapa przygody i miasto: drewno z belką (imię bohatera tam, gdzie
+ * miasto ma swoją nazwę), pergaminowe pola w cienkich złotych ramach,
+ * tabliczki przycisków i na dole ten sam pasek armii co w mieście.
  *
- *  1. statystyki — z rozbiciem na to, co bohater ma sam, i to, co daje sprzęt;
- *  2. armia — rząd siedmiu slotów, którym da się ZARZĄDZAĆ, a nie tylko go
- *     oglądać;
- *  3. artefakty — co jest założone i co to daje;
- *  4. umiejętności — puste, przygotowane pole (patrz niżej).
+ *  - lewe pole: kim jest bohater (poziom, doświadczenie), trzy umiejętności
+ *    pierwszorzędne jako malowane ikony z liczbą (atak, obrona, ruch)
+ *    i siatka gniazd umiejętności drugorzędnych z malowanymi ikonami;
+ *  - prawe pole: lalka jak w HoMM3 — bohater w całej postaci na ciemnym
+ *    suknie w grubej złotej ramie, a gniazda artefaktów leżą NA nim: głowa,
+ *    szyja, tułów, ręce, pas, stopy, plecy. Każdy artefakt ma swoje stałe
+ *    gniazdo (opaska na głowie, pazur w ręce, buty na stopie…); brakujący to
+ *    cień w półprzezroczystym gnieździe — zbieranie ma widoczny koniec,
+ *    a postać prześwituje;
+ *  - dół: blok armii na całą szerokość (ta sama ciężka rama i te same sloty
+ *    co w mieście — `PanelArmii`: klik-klik, przeciąganie, Shift = okno
+ *    podziału, Ctrl = jeden stworek, drugi klik / prawy klik = okno
+ *    stworka), obok linia statusu, „Podziel" i wyjście.
  *
- * **Dlaczego zarządzanie armią jest tu najważniejsze.** Reszta ekranu tylko
- * pokazuje liczby, które i tak widać w panelu na mapie. Przekładanie oddziałów
- * jest jedyną rzeczą, której nie da się zrobić nigdzie indziej, a w Heroes 3
- * robi się to co turę: łączy się resztki dwóch stosów po bitwie, odkłada
- * jednego stworka na osobny slot, żeby przyjął pierwszy cios, albo dzieli
- * strzelców na dwa stosy. Dlatego sloty są tu duże, a nie takie jak w panelu,
- * i dlatego cała arytmetyka podziału siedzi w `data/armia.ts` — sprawdza ją
- * sonda bez przeglądarki, na przypadkach, których myszą nie da się wyklikać.
+ * Stałych napisów-samouczków nie ma (runda 2 ślepego porównania: „wygląda
+ * jak samouczek w formularzu"). Podpowiedź jest w dymku po najechaniu i w
+ * linii statusu.
  *
- * **Skróty są z HotA i to nie jest ozdoba.** Shift przy upuszczeniu dzieli
- * stos na pół, Ctrl odkłada jednego stworka. Bez nich każdy podział przechodzi
- * przez okno z suwakiem, a odłożenie jednego chochlika na przynętę to czynność,
- * którą się robi kilka razy na turę.
- *
- * **Umiejętności są pustym polem i to jest świadome.** Gry jeszcze ich nie
- * mają. Rysujemy więc gniazda z podpisem „miejsce na umiejętność", żeby
- * ekran miał docelowy układ od pierwszego dnia — dorobienie umiejętności
- * później nie będzie przesuwaniem wszystkiego, tylko wypełnieniem gniazd.
- * Puste pole udające, że czegoś brakuje, jest uczciwsze niż ekran, który po
- * dodaniu mechaniki trzeba przeprojektować.
+ * Najechanie na umiejętność, artefakt, statystykę albo doświadczenie
+ * pokazuje dymek z opisem (pergamin w złotej ramie); klik albo prawy klik
+ * przypina go — na tablecie nie ma najechania.
  */
 
 import Phaser from 'phaser';
@@ -38,27 +35,16 @@ import {
   ARTEFAKTY,
   ARTEFAKTY_LOSOWE,
   artefaktPoId,
+  bonusPoziomu,
+  data,
   poziom,
   postepPoziomu,
-  bonusPoziomu,
   ruchNaDzis,
   statystyki,
   type Artefakt,
-  type Oddzial,
   type StanMapy,
 } from '../data/mapa';
-import {
-  SLOTY_ARMII,
-  lacznie,
-  maksPodzialu,
-  podziel,
-  przenies,
-  zamiar,
-  ileNaSkrot,
-  znormalizuj,
-  zywe,
-  type Skrot,
-} from '../data/armia';
+import { lacznie, znormalizuj, zywe } from '../data/armia';
 import { planszaPrzygody } from '../data/plansza';
 import {
   ATAK_BOHATERA_MAKS,
@@ -66,98 +52,156 @@ import {
   OBRONA_BOHATERA_MAKS,
   OBRONA_BOHATERA_ZA_PUNKT,
 } from '../data/battle';
+import { STAJNIA_BONUS } from '../data/zasady-h3';
 import {
   MAKS_UMIEJETNOSCI,
   POZIOMY,
+  efekt,
   opisWartosci,
   posiadane,
+  type PoziomUmiejetnosci,
+  type Umiejetnosc,
 } from '../data/umiejetnosci';
-import { C, E, H, T, Z, body, display } from '../visual/theme';
-import { makeHudButton, mix, plate } from '../visual/hud';
-import { ICON, buildIcons, icon } from '../visual/icons';
-import { BARWA_KLASY, OBRYS_KLASY, buildArtefakty, kluczArtefaktu } from '../visual/artefakty';
-import { cienPod, faktura, listwa, naroznik, pierscien, wneka, zabkowanie } from '../visual/rama';
+import { C, Z } from '../visual/theme';
+import { PanelArmii, blokArmii, wnekaHerbu } from '../visual/panelArmii';
+import { GORA, MARGINES, OKNO_H, OKNO_W } from '../visual/uklad';
+import { wersjonujZasoby } from '../visual/zasoby';
+import {
+  BARWA,
+  KROJ,
+  Przycisk,
+  krojeZestawu,
+  medalion,
+  napisNaDrewnie,
+  ozdobnik,
+  panelPergaminu,
+  ramaZlota,
+  stylAtramentu,
+  stylEtykiety,
+  tloDrewna,
+  wczytajZestaw,
+} from '../visual/zestaw';
 import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
 
 const KLUCZ_STANU = 'stan-mapy';
+/** Skąd przyszliśmy: 'zamek' (portret w mieście) albo brak — mapa przygody. */
+const KLUCZ_POWROTU = 'powrot-z-bohatera';
 
-/** Okno gry. Ekran bohatera zajmuje je w całości — to jest osobny widok. */
-const EKRAN_W = 960;
-const EKRAN_H = 694;
+/*
+ * Geometria. Podział na kolumny jest ten sam co w mieście: lewa kończy się
+ * na x = 568, prawa zaczyna na 586. Dół to blok armii w ciężkiej ramie —
+ * te same sloty 68 px co w mieście.
+ */
+const POLA_Y = GORA + 12;
+const SLOT = 68;
+const SLOT_ODSTEP = 6;
+const BLOK_PAD = 9;
+const BLOK_X = MARGINES;
+const BLOK_W = OKNO_W - MARGINES * 2;
+const BLOK_H = BLOK_PAD * 2 + SLOT;
+const BLOK_Y = OKNO_H - 8 - 13 - BLOK_H;
+const POLA_H = BLOK_Y - 13 - 12 - POLA_Y;
+const LEWA = { x: MARGINES + 5, w: 568 - (MARGINES + 5) };
+const PRAWA = { x: 586, w: OKNO_W - MARGINES - 5 - 586 };
+/** Herb (figurka z mapy) i siedem slotów; po prawej status, „Podziel", wyjście. */
+const HERB_X = BLOK_X + BLOK_PAD;
+const RZAD_X = HERB_X + SLOT + 10;
+const RZAD_Y = BLOK_Y + BLOK_PAD;
+const STATUS_X = RZAD_X + 7 * SLOT + 6 * SLOT_ODSTEP + 16;
+const STATUS_W = BLOK_X + BLOK_W - 10 - STATUS_X;
+const STATUS_Y = BLOK_Y + 5;
+const STATUS_H = 38;
+const PRZYCISKI_Y = BLOK_Y + BLOK_H - 6 - 16;
 
-/** Rama okna. Marginesy zostawiają widoczny skrawek mapy pod spodem. */
-const RAMA = { x: 18, y: 12, w: EKRAN_W - 36, h: EKRAN_H - 24 };
-const NAGLOWEK_H = 52;
+/**
+ * Lalka: wnętrze grubej ramy w prawej kolumnie, postać w całej sylwetce
+ * (`public/bohater/postac-<kto>.png`, 600 px wysokości) i gniazda na niej.
+ */
+const LALKA = { x: PRAWA.x + 13, y: POLA_Y + 13, w: PRAWA.w - 26, h: POLA_H - 26 };
+const POSTAC_H = 404;
+const POSTAC_Y = LALKA.y + 10;
+const POSTAC_CX = LALKA.x + LALKA.w / 2;
+const ART_BOK = 46;
 
-/** Kolumna z portretem i statystykami. */
-const LEWA = { x: RAMA.x + 18, w: 244 };
-/** Dwa pola po prawej: artefakty i umiejętności. */
-const ARTE = { x: LEWA.x + LEWA.w + 16, w: 300 };
-const UMIEJ = { x: ARTE.x + 300 + 16, w: RAMA.x + RAMA.w - 18 - (ARTE.x + 300 + 16) };
-const TRESC_Y = RAMA.y + NAGLOWEK_H + 12;
-const TRESC_H = 388;
+/**
+ * Gniazda lalki: część ciała, artefakt, który tam siedzi, i punkt na
+ * postaci (ułamki szerokości i wysokości rysunku). Punkty zmierzone na
+ * obu postaciach (Janek i Ela stoją w tej samej pozie; Ela ma pas wyżej). Szyja jest na
+ * amulet — cel misji (Księżycowy Kamień), gdy bohater go niesie.
+ */
+const GNIAZDA_LALKI: Array<{ czesc: string; id: string | null; fx: number; fy: number; ela?: { fx: number; fy: number } }> = [
+  { czesc: 'głowa', id: 'opaska', fx: 0.14, fy: 0.07 },
+  { czesc: 'plecy', id: 'skrzydla', fx: 0.9, fy: 0.13 },
+  { czesc: 'szyja', id: null, fx: 0.5, fy: 0.385 },
+  { czesc: 'tułów', id: 'kamizelka', fx: 0.22, fy: 0.47 },
+  { czesc: 'pas', id: 'mistrz', fx: 0.5, fy: 0.585, ela: { fx: 0.5, fy: 0.515 } },
+  { czesc: 'prawa ręka', id: 'pazur', fx: 0.04, fy: 0.665 },
+  { czesc: 'lewa ręka', id: 'tarcza', fx: 0.96, fy: 0.665 },
+  { czesc: 'stopy', id: 'buty', fx: 0.24, fy: 0.925 },
+  { czesc: 'pojazd', id: 'rower', fx: 0.86, fy: 0.925 },
+];
 
-/** Pas armii na dole — siedem slotów w jednym rzędzie, jak u bohatera w H3. */
-const SLOT_BOK = 92;
-const SLOT_ODSTEP = 12;
-const ARMIA_Y = TRESC_Y + TRESC_H + 32;
+/** Gniazdo umiejętności drugorzędnej. */
+const UM_BOK = 56;
 
-/** Kolejność klas — karta pokazuje domyślnie najmocniejszy noszony artefakt. */
-const WAGA_KLASY = { drobny: 1, znaczny: 2, relikt: 3, misja: 4 } as const;
+const BARWA_GNIAZDA = 0x2a1a0c;
 
-interface WidokSlotu {
-  indeks: number;
-  kontener: Phaser.GameObjects.Container;
-  tlo: Phaser.GameObjects.Graphics;
-  ramka: Phaser.GameObjects.Graphics;
-  rysunek: Phaser.GameObjects.Image;
-  licznik: Phaser.GameObjects.Text;
-  nazwa: Phaser.GameObjects.Text;
-  pusty: Phaser.GameObjects.Text;
+interface Opis {
+  klucz: string;
+  tytul: string;
+  podtytul?: string;
+  tresc: string;
+  ikona?: string;
+}
+
+interface Obszar {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
 export class HeroScene extends Phaser.Scene {
   private stan!: StanMapy;
-  private sloty: WidokSlotu[] = [];
-  private artefaktIkony: Phaser.GameObjects.Container[] = [];
-  private statTeksty: Phaser.GameObjects.Text[] = [];
-  private statDodatki: Phaser.GameObjects.Text[] = [];
-  private poziomTekst!: Phaser.GameObjects.Text;
-  private doswTekst!: Phaser.GameObjects.Text;
-  private doswPasek!: Phaser.GameObjects.Graphics;
-  private modyfikatory!: Phaser.GameObjects.Text;
-  private armiaPodsumowanie!: Phaser.GameObjects.Text;
-  private podpowiedz!: Phaser.GameObjects.Text;
-  private kartaIkona!: Phaser.GameObjects.Image;
-  private kartaNazwa!: Phaser.GameObjects.Text;
-  private kartaKlasa!: Phaser.GameObjects.Text;
-  private kartaOpis!: Phaser.GameObjects.Text;
-  private wplywNaBitwe!: Phaser.GameObjects.Text;
-
-  /** Slot, z którego trwa przeciąganie, i lecąca za kursorem sylwetka. */
-  private ciagniety: number | null = null;
-  private duch: Phaser.GameObjects.Container | null = null;
-  /** Slot wskazany klikiem — droga bez przeciągania, dla małej ręki i tabletu. */
-  private wybrany: number | null = null;
-  /** Czy okno podziału jest otwarte; wtedy sloty nie przyjmują kliknięć. */
-  private oknoOtwarte = false;
+  panel!: PanelArmii;
+  private komunikat!: Phaser.GameObjects.Text;
+  private dymek: Phaser.GameObjects.Container | null = null;
+  /** Klucz opisu w dymku i czy jest przypięty (klik / tablet). */
+  dymekKlucz = '';
+  private dymekPrzypiety = false;
+  private strefyOpisu = new Set<Phaser.GameObjects.GameObject>();
+  /** Dla sond: ekran zbudowany (po wczytaniu krojów). */
+  gotowy = false;
+  private budowa = 0;
 
   constructor() {
     super('bohater');
   }
 
   preload() {
+    wersjonujZasoby(this);
+    wczytajZestaw(this);
     const b = import.meta.env.BASE_URL;
-    this.load.spritesheet('bohater', `${b}mapa/bohater.png`, {
-      frameWidth: 64,
-      frameHeight: 64,
-    });
-    // Sprite'y ładujemy z armii, którą naprawdę mamy — nie z całej listy
-    // frakcji. Ekran bohatera potrafi być pierwszą sceną po wczytaniu strony
-    // (przeładowanie z otwartym ekranem), więc nie wolno zakładać, że tekstury
+    this.load.spritesheet('bohater', `${b}mapa/bohater.png`, { frameWidth: 64, frameHeight: 64 });
+    if (!this.textures.exists('bohaterka')) {
+      this.load.spritesheet('bohaterka', `${b}mapa/bohaterka.png`, { frameWidth: 64, frameHeight: 64 });
+    }
+    // Sprite'y z armii, którą naprawdę mamy. Ekran bohatera potrafi być
+    // pierwszą sceną po wczytaniu strony, więc nie zakładamy, że tekstury
     // wgrała już mapa.
     for (const o of zywe(this.wczytajStan().bohater.armia)) {
       this.load.image(`p-${o.sprite}`, `${b}sprites/${o.sprite}.png`);
+    }
+    const kto = this.kto;
+    // Te same klucze, co w ekranie kampanii — jeśli tam już są, nie idą drugi raz.
+    this.load.image(`bh-postac-${kto}`, `${b}bohater/postac-${kto}.png`);
+    if (!this.textures.exists(`k-glowa-${kto}`)) this.load.image(`k-glowa-${kto}`, `${b}kampania/glowa-${kto}.png`);
+    for (const n of ['miecz', 'tarcza', 'buty', 'gwiazda']) {
+      if (!this.textures.exists(`k-ikona-${n}`)) this.load.image(`k-ikona-${n}`, `${b}kampania/ikona-${n}.png`);
+    }
+    for (const a of ARTEFAKTY) this.load.image(`bh-artefakt-${a.id}`, `${b}bohater/artefakt-${a.id}.png`);
+    for (const id of ['zwiad', 'tropiciel', 'napastnik', 'lucznictwo', 'pancerz', 'gospodarnosc', 'nauka', 'uzdrowiciel']) {
+      this.load.image(`bh-umiejetnosc-${id}`, `${b}bohater/umiejetnosc-${id}.png`);
     }
   }
 
@@ -172,1321 +216,724 @@ export class HeroScene extends Phaser.Scene {
     return nowy;
   }
 
+  /** Janek albo Ela — od tego zależy portret. Inne imiona dostają Janka. */
+  private get kto(): 'janek' | 'ela' {
+    const imie = (this.registry.get(KLUCZ_STANU) as StanMapy | undefined)?.bohater.imie ?? '';
+    return /^el/i.test(imie.trim()) ? 'ela' : 'janek';
+  }
+
+  get oknoOtwarte() {
+    return !!this.panel?.oknoOtwarte;
+  }
+
   create() {
     this.stan = this.wczytajStan();
-    this.sloty = [];
-    this.artefaktIkony = [];
-    this.statTeksty = [];
-    this.statDodatki = [];
-    this.ciagniety = null;
-    this.duch = null;
-    this.wybrany = null;
-    this.oknoOtwarte = false;
+    this.dymek = null;
+    this.dymekKlucz = '';
+    this.dymekPrzypiety = false;
+    this.strefyOpisu = new Set();
+    this.gotowy = false;
+    const numer = ++this.budowa;
 
-    buildIcons(this);
-    buildArtefakty(this);
     sledzScene(this);
     migawkaStanu('bohater', () => ({
       armia: this.stan.bohater.armia.map((o) => (o ? `${o.sprite}×${o.ile}` : '—')),
       artefakty: this.stan.bohater.artefakty,
+      umiejetnosci: this.stan.bohater.umiejetnosci,
     }));
 
-    this.rysujTlo();
-    this.rysujRame();
-    this.rysujKolumneStatystyk();
-    this.rysujArtefakty();
-    this.rysujUmiejetnosci();
-    this.rysujArmie();
-    this.rysujStopke();
+    tloDrewna(this).setDepth(Z.sky);
     this.podepnijSterowanie();
-    this.odswiez();
+    // Napisy zestawu mierzą się krojem — budujemy ekran, gdy kroje są
+    // (zwykle od razu: wczytała je już mapa albo miasto).
+    void krojeZestawu().then(() => {
+      if (numer !== this.budowa || !this.sys.isActive()) return;
+      this.rysujBelke();
+      this.rysujLewePole();
+      this.rysujPrawePole();
+      this.rysujDol();
+      this.gotowy = true;
+    });
   }
 
-  // ---------- tło i rama ----------
+  // ————————————————————————————————————————— belka
 
   /**
-   * Za oknem leży przygaszony ekran, a nie czarne tło. Bez tego ekran bohatera
-   * wygląda jak osobna aplikacja, a nie jak karta otwarta NAD mapą — i po
-   * zamknięciu nie wiadomo, dokąd się wraca.
+   * Belka jak w mieście: imię tam, gdzie miasto ma nazwę, obok kursywą
+   * charakter bohatera (w mieście motto), po prawej data.
    */
-  private rysujTlo() {
-    const g = this.add.graphics().setDepth(Z.sky);
-    g.fillStyle(0x0b1b2a, 1);
-    g.fillRect(0, 0, EKRAN_W, EKRAN_H);
-    // Delikatna poświata w środku ekranu — kadr sam prowadzi wzrok do okna.
-    for (let i = 6; i > 0; i--) {
-      g.fillStyle(0x1d5f80, 0.06);
-      g.fillEllipse(EKRAN_W / 2, EKRAN_H / 2, 300 + i * 120, 220 + i * 90);
-    }
-  }
-
-  private rysujRame() {
-    const g = this.add.graphics().setDepth(Z.hud);
-    cienPod(g, RAMA.x, RAMA.y, RAMA.w, RAMA.h, 18, 0.55);
-    plate(g, RAMA.x, RAMA.y, RAMA.w, RAMA.h, 18, C.panel, C.panelDeep, {
-      light: 0.2,
-      dark: 0.2,
-      gloss: 0.14,
-      drop: 0,
-      edgeW: 4,
-    });
-    faktura(g, RAMA.x + 4, RAMA.y + 4, RAMA.w - 8, RAMA.h - 8, 0.04);
-    // Wewnętrzna listwa złota: druga krawędź w głębi ramy. Rama z jednym
-    // obrysem czyta się jako obwódka wokół pola koloru — dopiero druga,
-    // wpuszczona linia robi z niej profil.
-    g.lineStyle(2, C.gold, 0.45);
-    g.strokeRoundedRect(RAMA.x + 7, RAMA.y + 7, RAMA.w - 14, RAMA.h - 14, 13);
-    g.lineStyle(1.5, C.white, 0.3);
-    g.beginPath();
-    g.moveTo(RAMA.x + 22, RAMA.y + 3.5);
-    g.lineTo(RAMA.x + RAMA.w - 22, RAMA.y + 3.5);
-    g.strokePath();
-
-    // Belka nagłówka — wypukła listwa z profilem, z własnym cieniem rzuconym
-    // na treść pod spodem. Bez cienia belka i panele leżą na jednej
-    // płaszczyźnie i okno wygląda jak tabela.
-    const nx = RAMA.x + 10;
-    const ny = RAMA.y + 10;
-    const nw = RAMA.w - 20;
-    g.fillStyle(C.shadow, 0.22);
-    g.fillRoundedRect(nx + 6, ny + NAGLOWEK_H - 2, nw - 12, 10, 6);
-    g.fillStyle(C.shadow, 0.12);
-    g.fillRoundedRect(nx + 12, ny + NAGLOWEK_H + 4, nw - 24, 8, 5);
-    listwa(g, nx, ny, nw, NAGLOWEK_H, 12, C.panelDeep, C.gold);
-    faktura(g, nx + 3, ny + 3, nw - 6, NAGLOWEK_H - 6, 0.045);
-    // Gzyms: warga wystająca spod belki plus rząd ząbków. To ten jeden detal,
-    // który odróżnia gzyms od paska farby — belka bez niego kończy się
-    // kreską i cała rama czyta się jako obrys, a nie jako konstrukcja.
-    g.fillStyle(C.goldDeep, 1);
-    g.fillRoundedRect(nx - 4, ny + NAGLOWEK_H - 5, nw + 8, 9, 3);
-    g.fillStyle(C.gold, 1);
-    g.fillRoundedRect(nx - 4, ny + NAGLOWEK_H - 5, nw + 8, 5, 3);
-    g.fillStyle(C.goldLight, 0.6);
-    g.fillRect(nx - 2, ny + NAGLOWEK_H - 4, nw + 4, 2);
-    zabkowanie(g, nx + 24, ny + NAGLOWEK_H - 16, nw - 48, C.goldDeep, 9);
-
-    // Cztery okucia w rogach ramy.
-    naroznik(g, RAMA.x + 13, RAMA.y + 13, 1, 1, 52);
-    naroznik(g, RAMA.x + RAMA.w - 13, RAMA.y + 13, -1, 1, 52);
-    naroznik(g, RAMA.x + 13, RAMA.y + RAMA.h - 13, 1, -1, 52);
-    naroznik(g, RAMA.x + RAMA.w - 13, RAMA.y + RAMA.h - 13, -1, -1, 52);
-
-    // Klamra w osi belki: medalion, który spina nagłówek z ramą. We wzorcu
-    // to samo miejsce trzyma godło — u nas gwiazdka, ta sama, którą gra
-    // znaczy nagrody.
-    const kx = EKRAN_W / 2;
-    const ky = RAMA.y + 10;
-    g.fillStyle(C.shadow, 0.45);
-    g.fillCircle(kx, ky + 3, 20);
-    g.fillStyle(C.goldDeep, 1);
-    g.fillCircle(kx, ky, 19);
-    g.fillStyle(C.gold, 1);
-    g.fillCircle(kx, ky, 15.5);
-    g.fillStyle(C.goldLight, 0.6);
-    g.fillCircle(kx, ky - 3, 11);
-    icon(this, ICON.star, kx, ky, 18).setDepth(Z.hud + 3);
-
+  private rysujBelke() {
     const b = this.stan.bohater;
+    const imie = napisNaDrewnie(this, MARGINES + 6, 20, b.imie, 19).setOrigin(0, 0.5).setDepth(Z.hud + 1);
+    const motto =
+      this.kto === 'ela' ? 'Sprytna i uważna. Żaden ślad jej nie umknie!' : 'Odważny i szybki. Zawsze pierwszy do przygody!';
     this.add
-      .text(EKRAN_W / 2, RAMA.y + 10 + NAGLOWEK_H / 2, b.imie.toUpperCase(), {
-        ...display(23, H.goldLight),
-        letterSpacing: 2,
-      })
-      .setOrigin(0.5)
-      .setDepth(Z.hud + 2);
-
-    // Zamknięcie: krzyżyk w kółku po prawej stronie belki. Klawisz Escape
-    // robi to samo, ale dziecko szuka krzyżyka, nie klawisza.
-    const zx = RAMA.x + RAMA.w - 34;
-    const zy = RAMA.y + 10 + NAGLOWEK_H / 2;
-    const kolo = this.add.graphics().setDepth(Z.hud + 2);
-    plate(kolo, zx - 15, zy - 15, 30, 30, 15, C.foe, C.foeDeep, {
-      light: 0.3,
-      dark: 0.25,
-      gloss: 0.28,
-      drop: 2,
-    });
-    const krzyz = this.add.graphics().setDepth(Z.hud + 3);
-    krzyz.lineStyle(3.5, C.white, 1);
-    krzyz.beginPath();
-    krzyz.moveTo(zx - 7, zy - 7);
-    krzyz.lineTo(zx + 7, zy + 7);
-    krzyz.moveTo(zx + 7, zy - 7);
-    krzyz.lineTo(zx - 7, zy + 7);
-    krzyz.strokePath();
-    this.add
-      .zone(zx, zy, 40, 40)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(Z.hud + 4)
-      .on('pointerdown', () => this.zamknij());
-  }
-
-  /** Tabliczka pola: wspólny kształt dla trzech pól treści. */
-  private pole(x: number, y: number, w: number, h: number, tytul: string) {
-    const g = this.add.graphics().setDepth(Z.hud + 1);
-    // Pole jest WNĘKĄ w ramie, nie kartą na niej. To była największa różnica
-    // wobec wzorca w pierwszej rundzie: u nas wszystko było wypukłe, więc nic
-    // nie wyglądało na pojemnik.
-    plate(g, x, y, w, h, 12, mix(C.panel, C.panelDeep, 0.14), C.panelDeep, {
-      light: 0.16,
-      dark: 0.18,
-      gloss: 0.1,
-      drop: 3,
-      edgeW: 2,
-    });
-    g.fillStyle(C.shadow, 0.16);
-    g.fillRoundedRect(x + 4, y + 28, w - 8, 7, 4);
-    faktura(g, x + 3, y + 30, w - 6, h - 34, 0.03);
-
-    // Podpis pola siedzi na listwie z profilem, wpuszczonej w górną krawędź.
-    listwa(g, x + 6, y + 4, w - 12, 26, 8, C.panelDeep, C.goldDeep);
-    this.add
-      .text(x + w / 2, y + 17, tytul, {
-        ...body(12, H.goldLight),
-        fontStyle: 'bold',
-        letterSpacing: 1.5,
-      })
-      .setOrigin(0.5)
-      .setDepth(Z.hud + 2);
-    return g;
-  }
-
-  // ---------- kolumna statystyk ----------
-
-  private rysujKolumneStatystyk() {
-    this.pole(LEWA.x, TRESC_Y, LEWA.w, TRESC_H, 'BOHATER');
-
-    // Portret w złotym medalionie, z pierścieniem poziomu — jak portrety
-    // wieszczów we wzorcu, gdzie liczba poziomu siedzi w oczku obręczy.
-    const px = LEWA.x + LEWA.w / 2;
-    const py = TRESC_Y + 84;
-    const obrecz = this.add.graphics().setDepth(Z.hud + 2);
-    pierscien(obrecz, px, py, 48, 9);
-    const portret = this.add.image(px, py, 'bohater', 0).setDepth(Z.hud + 3);
-    portret.setScale(72 / portret.height);
-    const maska = this.add.graphics().setVisible(false);
-    maska.fillCircle(px, py, 39);
-    portret.setMask(maska.createGeometryMask());
-
-    const oczko = this.add.graphics().setDepth(Z.hud + 4);
-    oczko.fillStyle(C.panelDeep, 1);
-    oczko.fillCircle(px, py + 42, 16);
-    oczko.lineStyle(3, C.gold, 1);
-    oczko.strokeCircle(px, py + 42, 16);
-    this.poziomTekst = this.add
-      .text(px, py + 42, '', display(15, H.goldLight))
-      .setOrigin(0.5)
-      .setDepth(Z.hud + 5);
-
-    // Doświadczenie: pasek z podpisem. Sama liczba nie mówi, jak blisko jest
-    // awans, a to jedyna rzecz, na którą gracz w tej kolumnie czeka.
-    const dx = LEWA.x + 16;
-    const dw = LEWA.w - 32;
-    const dy = TRESC_Y + 146;
-    const rowek = this.add.graphics().setDepth(Z.hud + 2);
-    plate(rowek, dx, dy, dw, 14, 7, C.hpTrack, C.shadow, {
-      light: 0,
-      dark: 0.3,
-      gloss: 0,
-      drop: 0,
-      edgeW: 2,
-    });
-    this.doswPasek = this.add.graphics().setDepth(Z.hud + 3);
-    this.doswTekst = this.add
-      .text(LEWA.x + LEWA.w / 2, dy + 25, '', body(10, H.inkSoft))
-      .setOrigin(0.5)
-      .setDepth(Z.hud + 3);
-
-    // Trzy statystyki. Każda w swoim wierszu: ikona, nazwa, wartość i — jeśli
-    // coś ją podbija — dodatek na zielono. Rozbicie „ile z siebie, ile ze
-    // sprzętu" jest tu całym sensem ekranu: bez niego nie widać, po co się
-    // zbiera artefakty.
-    // Trzy statystyki w JEDNEJ tabliczce z grawerowanymi przegrodami, a nie
-    // w trzech osobnych kapsułkach.
-    //
-    // Dwaj krytycy niezależnie napisali to samo: „ten sam preset obsługuje
-    // pięć różnych ról, więc oko nie ma gdzie usiąść". Kolumna ma teraz trzy
-    // RÓŻNE materiały: obręcz portretu to metal, statystyki to ciemny kamień
-    // z rytem, a lista sprzętu niżej — jasny pergamin. Rola poznaje się po
-    // materiale, zanim przeczyta się choć jedno słowo.
-    const wiersze: Array<[string, string]> = [
-      [ICON.sword, 'Atak'],
-      [ICON.shield, 'Obrona'],
-      [ICON.boot, 'Ruch'],
-    ];
-    const tabY = TRESC_Y + 176;
-    const wiersz = 34;
-    const tab = this.add.graphics().setDepth(Z.hud + 2);
-    // Tabliczka ma miejsce na trzy wiersze PLUS stopkę z tym, co atak
-    // i obrona robią w bitwie — bez niej ta informacja nie miała się gdzie
-    // podziać i wychodziła poza kolumnę.
-    wneka(tab, dx, tabY, dw, wiersz * 3 + 30, 8, mix(C.panelDeep, C.shadow, 0.34), 1);
-
-    wiersze.forEach(([ikona, nazwa], i) => {
-      const wy = tabY + 21 + i * wiersz;
-      // Przegroda to RYT: ciemna kreska z jasną tuż pod nią. Pojedyncza linia
-      // wygląda jak obramowanie tabeli, dwie — jak rowek wycięty w materiale.
-      if (i > 0) {
-        tab.lineStyle(1, C.shadow, 0.55);
-        tab.beginPath();
-        tab.moveTo(dx + 10, wy - wiersz / 2);
-        tab.lineTo(dx + dw - 10, wy - wiersz / 2);
-        tab.strokePath();
-        tab.lineStyle(1, C.white, 0.12);
-        tab.beginPath();
-        tab.moveTo(dx + 10, wy - wiersz / 2 + 1.5);
-        tab.lineTo(dx + dw - 10, wy - wiersz / 2 + 1.5);
-        tab.strokePath();
-      }
-      // Ikona w oczku z metalu — ten sam materiał co obręcz portretu, więc
-      // kolumna ma dwa nawroty złota zamiast złota wszędzie.
-      tab.fillStyle(C.shadow, 0.6);
-      tab.fillCircle(dx + 21, wy + 1.5, 12.5);
-      tab.fillStyle(C.goldDeep, 1);
-      tab.fillCircle(dx + 21, wy, 12);
-      tab.fillStyle(mix(C.panelDeep, C.shadow, 0.2), 1);
-      tab.fillCircle(dx + 21, wy, 9.5);
-      icon(this, ikona as never, dx + 21, wy, 15).setDepth(Z.hud + 3);
-      this.add
-        .text(dx + 40, wy, nazwa.toUpperCase(), {
-          ...body(10, '#9dc3d6'),
-          fontStyle: 'bold',
-          letterSpacing: 1.2,
-        })
-        .setOrigin(0, 0.5)
-        .setDepth(Z.hud + 3);
-      this.statDodatki[i] = this.add
-        .text(dx + dw - 14, wy, '', { ...body(10.5, '#7ce89a'), fontStyle: 'bold' })
-        .setOrigin(1, 0.5)
-        .setDepth(Z.hud + 3);
-      this.statTeksty[i] = this.add
-        .text(dx + dw - 14, wy, '', display(20, H.goldLight))
-        .setOrigin(1, 0.5)
-        .setDepth(Z.hud + 3);
-    });
-
-    // Co atak i obrona bohatera robią W BITWIE — wprost, liczbą.
-    //
-    // Obie liczby rosły w panelu, arena je podnosiła, artefakty je podnosiły,
-    // a nigdzie nie było napisane, po co. Bez tego wiersza gracz musiałby
-    // zgadywać, czy „+1 do ataku" cokolwiek znaczy.
-    tab.lineStyle(1, C.shadow, 0.55);
-    tab.beginPath();
-    tab.moveTo(dx + 10, tabY + wiersz * 3 + 9);
-    tab.lineTo(dx + dw - 10, tabY + wiersz * 3 + 9);
-    tab.strokePath();
-    this.wplywNaBitwe = this.add
-      .text(dx + dw / 2, tabY + wiersz * 3 + 20, '', {
-        ...body(9, '#7ce89a'),
-        align: 'center',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5)
-      .setDepth(Z.hud + 3);
-
-    // Trzeci materiał: pergamin. Jasny, ciepły, bez połysku — celowo najdalej
-    // od metalu obręczy i od kamienia tabliczki statystyk.
-    const my = TRESC_Y + 308;
-    const mh = TRESC_H - 320;
-    const mg = this.add.graphics().setDepth(Z.hud + 2);
-    const pergamin = mix(C.panel, C.gold, 0.14);
-    mg.fillStyle(C.shadow, 0.35);
-    mg.fillRoundedRect(dx - 1, my + 3, dw + 2, mh, 6);
-    mg.fillStyle(mix(pergamin, C.goldDeep, 0.25), 1);
-    mg.fillRoundedRect(dx - 2, my - 2, dw + 4, mh + 4, 7);
-    mg.fillStyle(pergamin, 1);
-    mg.fillRoundedRect(dx, my, dw, mh, 5);
-    // Plamy starego papieru zamiast gradientu — pergamin ma być nierówny.
-    for (let i = 0; i < 7; i++) {
-      mg.fillStyle(C.goldDeep, 0.05);
-      mg.fillEllipse(dx + 18 + ((i * 37) % (dw - 30)), my + 12 + ((i * 23) % (mh - 16)), 34, 18);
-    }
-    // Nagłówek wpisany W pergamin, oddzielony rytą kreską — nie osobna belka.
-    this.add
-      .text(dx + 10, my + 11, 'CO DAJE SPRZĘT', {
-        ...body(10, '#8a6a2a'),
-        fontStyle: 'bold',
-        letterSpacing: 1.2,
+      .text(imie.x + imie.width + 14, 21, `„${motto}"`, {
+        fontFamily: KROJ.kursywa,
+        fontSize: '14px',
+        color: BARWA.krem,
+        stroke: BARWA.braz,
+        strokeThickness: 3,
       })
       .setOrigin(0, 0.5)
-      .setDepth(Z.hud + 3);
-    mg.lineStyle(1, C.goldDeep, 0.45);
-    mg.beginPath();
-    mg.moveTo(dx + 10, my + 21);
-    mg.lineTo(dx + dw - 10, my + 21);
-    mg.strokePath();
-
-    this.modyfikatory = this.add
-      .text(dx + 10, my + 28, '', { ...body(10.5, '#3d3016'), lineSpacing: 3 })
-      .setOrigin(0, 0)
-      .setDepth(Z.hud + 3)
-      .setWordWrapWidth(dw - 20);
+      .setAlpha(0.82)
+      .setDepth(Z.hud + 1);
+    const d = data(this.stan.dzien);
+    napisNaDrewnie(this, OKNO_W - MARGINES - 6, 20, `Tydzień ${d.tydzien}, dzień ${d.dzienTygodnia}`, 15)
+      .setOrigin(1, 0.5)
+      .setDepth(Z.hud + 1);
   }
 
-  // ---------- artefakty ----------
+  // ————————————————————————————————————————— lewe pole
 
-  /**
-   * Gniazda artefaktów: osiem, po jednym na każdy artefakt w grze.
-   *
-   * Nie robimy z tego sylwetki z miejscami na hełm, buty i pierścień, choć
-   * wzorzec tak ma. U nas artefakt nie ma slotu — daje dodatek samym
-   * posiadaniem — więc paper doll obiecywałby zasadę, której nie ma, i pierwsza
-   * próba włożenia buta w gniazdo hełmu skończyłaby się pytaniem „dlaczego
-   * nie wchodzi". Siatka mówi prawdę: to jest sakwa, a nie zbroja.
-   */
-  private rysujArtefakty() {
-    this.pole(ARTE.x, TRESC_Y, ARTE.w, TRESC_H, 'ARTEFAKTY');
-
-    const kol = 4;
-    const bok = 62;
-    const odstep = 8;
-    const siatkaW = kol * bok + (kol - 1) * odstep;
-    const startX = ARTE.x + (ARTE.w - siatkaW) / 2;
-    const startY = TRESC_Y + 46;
-
-    ARTEFAKTY_LOSOWE.forEach((a, i) => {
-      const gx = startX + (i % kol) * (bok + odstep);
-      const gy = startY + Math.floor(i / kol) * (bok + odstep + 14);
-      const g = this.add.graphics().setDepth(Z.hud + 2);
-      const ikona = this.add
-        .image(bok / 2, bok / 2, kluczArtefaktu(a.id, a.klasa))
-        .setDisplaySize(bok - 14, bok - 14);
-      const podpis = this.add
-        .text(bok / 2, bok + 8, a.nazwa.split(' ')[0], body(9, H.inkSoft))
-        .setOrigin(0.5, 0);
-      const kont = this.add
-        .container(gx, gy, [g, ikona, podpis])
-        .setDepth(Z.hud + 2)
-        .setSize(bok, bok);
-      kont.setData('artefakt', a).setData('tlo', g).setData('ikona', ikona).setData('podpis', podpis);
-      this.artefaktIkony.push(kont);
-
-      this.add
-        .zone(gx, gy, bok, bok + 20)
-        .setOrigin(0, 0)
-        .setDepth(Z.hud + 4)
-        .setInteractive()
-        .on('pointerover', () => {
-          this.powiedz(this.opisArtefaktu(a));
-          this.pokazArtefakt(a);
-        })
-        .on('pointerout', () => {
-          this.powiedz();
-          this.pokazArtefakt();
-        });
-    });
-
-    // Podsumowanie pod siatką: ile z ośmiu. Bez tego nie widać, że zbieranie
-    // ma koniec, a to jest cel sam w sobie — w Heroes 3 komplet artefaktów
-    // składa się w zestaw.
-    this.add
-      .text(ARTE.x + ARTE.w / 2, TRESC_Y + 222, '', { ...body(11, H.inkSoft), fontStyle: 'bold' })
-      .setOrigin(0.5)
-      .setDepth(Z.hud + 3)
-      .setName('licznik-artefaktow');
-
-    this.rysujKarteArtefaktu();
-  }
-
-  /**
-   * Karta pod siatką: powiększony artefakt, jego klasa i co dokładnie daje.
-   *
-   * Bez niej dolna połowa kolumny stała pusta, a siatka musiałaby zmieścić
-   * nazwę I działanie w kwadracie 62 px — czyli w czcionce, której ośmiolatek
-   * nie przeczyta. Karta pokazuje jeden artefakt naraz: ten, na który gracz
-   * właśnie patrzy, a zanim najedzie na cokolwiek — najmocniejszy z noszonych.
-   */
-  private rysujKarteArtefaktu() {
-    const kx = ARTE.x + 12;
-    const kw = ARTE.w - 24;
-    const ky = TRESC_Y + 238;
-    const kh = TRESC_Y + TRESC_H - 14 - ky;
-    const g = this.add.graphics().setDepth(Z.hud + 2).setName('karta-artefaktu-tlo');
-    plate(g, kx, ky, kw, kh, 10, mix(C.panel, C.panelDeep, 0.28), C.panelDeep, {
-      light: 0.14,
-      dark: 0.16,
-      gloss: 0.08,
-      drop: 2,
-      edgeW: 2,
-    });
-
-    this.kartaIkona = this.add
-      .image(kx + 46, ky + 46, 'art-klasa-drobny')
-      .setDisplaySize(64, 64)
-      .setDepth(Z.hud + 3);
-    this.kartaNazwa = this.add
-      .text(kx + 88, ky + 24, '', display(14))
-      .setOrigin(0, 0.5)
-      .setDepth(Z.hud + 3)
-      .setWordWrapWidth(kw - 100);
-    this.kartaKlasa = this.add
-      .text(kx + 88, ky + 46, '', { ...body(10, H.goldLight), fontStyle: 'bold' })
-      .setOrigin(0, 0.5)
-      .setDepth(Z.hud + 3);
-    this.kartaOpis = this.add
-      .text(kx + 12, ky + 88, '', body(11, H.ink))
-      .setOrigin(0, 0)
-      .setDepth(Z.hud + 3)
-      .setWordWrapWidth(kw - 24);
-  }
-
-  /** Wypełnia kartę artefaktu; `undefined` znaczy „wróć do domyślnego". */
-  private pokazArtefakt(a?: Artefakt) {
+  private rysujLewePole() {
+    const { x, w } = LEWA;
+    const y = POLA_Y;
+    panelPergaminu(this, x, y, w, POLA_H).forEach((c) => c.setDepth(Z.hud));
     const b = this.stan.bohater;
-    const wybor =
-      a ??
-      ARTEFAKTY.filter((x) => b.artefakty.includes(x.id)).sort(
-        (p, q) => WAGA_KLASY[q.klasa] - WAGA_KLASY[p.klasa]
-      )[0];
-    if (!wybor) {
-      this.kartaIkona.setTexture('art-klasa-drobny').setAlpha(0.25);
-      this.kartaNazwa.setText('Brak artefaktów');
-      this.kartaKlasa.setText('');
-      this.kartaOpis.setText(
-        'Artefakty leżą na mapie i wypadają ze skrzyń. Każdy dodaje coś na stałe — najedź na gniazdo, żeby zobaczyć co.'
-      );
-      return;
-    }
-    const ma = b.artefakty.includes(wybor.id);
-    this.kartaIkona.setTexture(kluczArtefaktu(wybor.id, wybor.klasa)).setAlpha(ma ? 1 : 0.3);
-    this.kartaNazwa.setText(wybor.nazwa);
-    this.kartaKlasa.setText(`${wybor.klasa.toUpperCase()}  ·  ${ma ? 'noszony' : 'jeszcze nie masz'}`);
-    const cz = [
-      wybor.atak ? `+${wybor.atak} do ataku` : '',
-      wybor.obrona ? `+${wybor.obrona} do obrony` : '',
-      wybor.ruch ? `+${wybor.ruch} punktów ruchu` : '',
-    ].filter(Boolean);
-    this.kartaOpis.setText(cz.join('\n'));
-  }
-
-  private opisArtefaktu(a: Artefakt) {
-    const ma = this.stan.bohater.artefakty.includes(a.id);
-    const co = [
-      a.atak ? `+${a.atak} atak` : '',
-      a.obrona ? `+${a.obrona} obrona` : '',
-      a.ruch ? `+${a.ruch} ruchu` : '',
-    ]
-      .filter(Boolean)
-      .join(', ');
-    return ma
-      ? `${a.nazwa} (${a.klasa}) — ${co}. Nosisz go.`
-      : `${a.nazwa} (${a.klasa}) — ${co}. Jeszcze go nie masz.`;
-  }
-
-  // ---------- umiejętności ----------
-
-  private rysujUmiejetnosci() {
-    this.pole(UMIEJ.x, TRESC_Y, UMIEJ.w, TRESC_H, 'UMIEJĘTNOŚCI');
-
-    const mam = posiadane(this.stan.bohater);
-    const bok = (UMIEJ.w - 3 * 14) / 2;
-    for (let i = 0; i < MAKS_UMIEJETNOSCI; i++) {
-      const gx = UMIEJ.x + 14 + (i % 2) * (bok + 14);
-      const gy = TRESC_Y + 46 + Math.floor(i / 2) * (bok + 16);
-      const wpis = mam[i];
-      const g = this.add.graphics().setDepth(Z.hud + 2);
-      // Gniazdo jest tym samym kształtem zajęte i puste — zmienia się tylko
-      // to, co w nim stoi. Inaczej zdobycie umiejętności wyglądałoby jak
-      // podmiana całej karty, a nie jak wypełnienie przygotowanego miejsca.
-      wneka(g, gx, gy, bok, bok, 10);
-      faktura(g, gx + 4, gy + 4, bok - 8, bok - 8, 0.03);
-      const cx = gx + bok / 2;
-      const cy = gy + bok / 2 - 8;
-
-      const med = this.add.graphics().setDepth(Z.hud + 2).setAlpha(wpis ? 1 : 0.5);
-      pierscien(med, cx, cy, 25, 6);
-      // Romb fazowany: cztery ściany, każda z własną jasnością zgodną z jednym
-      // źródłem światła z góry-lewej. Poziom umiejętności czyta się z liczby
-      // ścian w pełnym złocie — mistrzowska świeci cała.
-      const rr = 14;
-      const jasnosc = wpis ? wpis.poziom : 0;
-      const sciana = (
-        x1: number,
-        y1: number,
-        x2: number,
-        y2: number,
-        barwa: number,
-        a: number
-      ) => {
-        med.fillStyle(barwa, a);
-        med.beginPath();
-        med.moveTo(cx, cy);
-        med.lineTo(x1, y1);
-        med.lineTo(x2, y2);
-        med.closePath();
-        med.fillPath();
-      };
-      sciana(cx, cy - rr, cx - rr, cy, C.goldLight, 0.95);
-      sciana(cx, cy - rr, cx + rr, cy, jasnosc >= 2 ? C.goldLight : C.gold, 0.85);
-      sciana(cx, cy + rr, cx - rr, cy, jasnosc >= 3 ? C.gold : C.goldDeep, 0.85);
-      sciana(cx, cy + rr, cx + rr, cy, jasnosc >= 3 ? C.goldDeep : C.shadow, 0.5);
-      med.lineStyle(1.5, C.shadow, 0.6);
-      med.beginPath();
-      med.moveTo(cx, cy - rr);
-      med.lineTo(cx + rr, cy);
-      med.lineTo(cx, cy + rr);
-      med.lineTo(cx - rr, cy);
-      med.closePath();
-      med.strokePath();
-
-      const ozdoby = this.add.graphics().setDepth(Z.hud + 2).setAlpha(wpis ? 0.85 : 0.55);
-      naroznik(ozdoby, gx + 4, gy + 4, 1, 1, 13);
-      naroznik(ozdoby, gx + bok - 4, gy + 4, -1, 1, 13);
-      naroznik(ozdoby, gx + 4, gy + bok - 4, 1, -1, 13);
-      naroznik(ozdoby, gx + bok - 4, gy + bok - 4, -1, -1, 13);
-
-      const sy2 = gy + bok - 46;
-      g.lineStyle(1.5, C.shadow, 0.5);
-      g.beginPath();
-      g.moveTo(gx + 20, sy2);
-      g.lineTo(gx + bok - 20, sy2);
-      g.strokePath();
-      g.lineStyle(1.5, C.gold, 0.3);
-      g.beginPath();
-      g.moveTo(gx + 20, sy2 + 1.5);
-      g.lineTo(gx + bok - 20, sy2 + 1.5);
-      g.strokePath();
-      g.fillStyle(mix(C.panelDeep, C.shadow, 0.45), 1);
-      g.fillCircle(cx, sy2, 11);
-      g.lineStyle(2, C.goldDeep, 0.9);
-      g.strokeCircle(cx, sy2, 11);
-      this.add
-        .text(cx, sy2, wpis ? String(wpis.poziom) : String(i + 1), {
-          ...body(11, H.goldLight),
-          fontStyle: 'bold',
-        })
-        .setOrigin(0.5)
-        .setDepth(Z.hud + 3)
-        .setAlpha(wpis ? 1 : 0.8);
-
-      if (wpis) {
-        this.add
-          .text(cx, gy + bok - 36, wpis.u.nazwa.toUpperCase(), {
-            ...body(10, H.goldLight),
-            fontStyle: 'bold',
-            letterSpacing: 1,
-          })
-          .setOrigin(0.5)
-          .setDepth(Z.hud + 3);
-        this.add
-          .text(cx, gy + bok - 20, `${POZIOMY[wpis.poziom - 1]}   ${opisWartosci(wpis.u, wpis.poziom)}`, {
-            ...body(9, '#cfe6f2'),
-            align: 'center',
-          })
-          .setOrigin(0.5)
-          .setDepth(Z.hud + 3)
-          .setWordWrapWidth(bok - 20);
-        this.add
-          .zone(gx, gy, bok, bok)
-          .setOrigin(0, 0)
-          .setDepth(Z.hud + 4)
-          .setInteractive()
-          .on('pointerover', () =>
-            this.powiedz(`${wpis.u.nazwa} (${POZIOMY[wpis.poziom - 1]}) — ${wpis.u.opis}`)
-          )
-          .on('pointerout', () => this.powiedz());
-      } else {
-        this.add
-          .text(cx, gy + bok - 26, 'MIEJSCE NA UMIEJĘTNOŚĆ', {
-            ...body(8.5, H.goldLight),
-            align: 'center',
-            fontStyle: 'bold',
-          })
-          .setOrigin(0.5)
-          .setDepth(Z.hud + 3)
-          .setAlpha(0.75);
-      }
-    }
-
-    this.add
-      .text(
-        UMIEJ.x + UMIEJ.w / 2,
-        TRESC_Y + TRESC_H - 34,
-        mam.length
-          ? `${mam.length} z ${MAKS_UMIEJETNOSCI} gniazd — kolejne wybierasz przy awansie.`
-          : 'Umiejętność wybiera się przy awansie na nowy poziom.\nMiejsce na cztery jest już przygotowane.',
-        { ...body(11, '#cfe6f2'), align: 'center' }
-      )
-      .setOrigin(0.5)
-      .setDepth(Z.hud + 3);
-  }
-
-  // ---------- armia ----------
-
-  private slotX(i: number) {
-    const razem = SLOTY_ARMII * SLOT_BOK + (SLOTY_ARMII - 1) * SLOT_ODSTEP;
-    return (EKRAN_W - razem) / 2 + i * (SLOT_BOK + SLOT_ODSTEP);
-  }
-
-  private rysujArmie() {
-    const pasX = RAMA.x + 12;
-    const pasW = RAMA.w - 24;
-    const g = this.add.graphics().setDepth(Z.hud + 1);
-    plate(g, pasX, ARMIA_Y - 26, pasW, SLOT_BOK + 62, 12, C.panelDeep, C.shadow, {
-      light: 0.1,
-      dark: 0.18,
-      gloss: 0.06,
-      drop: 3,
-      edgeW: 2,
-    });
-    this.add
-      .text(pasX + 14, ARMIA_Y - 16, 'ARMIA', { ...body(12, H.goldLight), fontStyle: 'bold' })
-      .setOrigin(0, 0)
-      .setDepth(Z.hud + 2);
-    this.armiaPodsumowanie = this.add
-      .text(pasX + pasW - 14, ARMIA_Y - 16, '', body(12, H.goldLight))
-      .setOrigin(1, 0)
-      .setDepth(Z.hud + 2);
-
-    for (let i = 0; i < SLOTY_ARMII; i++) {
-      const x = this.slotX(i);
-      const y = ARMIA_Y + 6;
-      const tlo = this.add.graphics();
-      const ramka = this.add.graphics();
-      const rysunek = this.add.image(SLOT_BOK / 2, SLOT_BOK / 2 - 8, 'bohater').setVisible(false);
-      const nazwa = this.add
-        .text(SLOT_BOK / 2, SLOT_BOK - 26, '', { ...display(10), strokeThickness: 3 })
-        .setOrigin(0.5)
-        .setVisible(false);
-      // Tabliczka z liczebnością siedzi NA dolnej krawędzi slotu, zachodząc
-      // na nią — tak samo jak liczba oddziału we wzorcu. Wpisana w środek
-      // gniazda zlewałaby się z sylwetką, a pod gniazdem odkleiłaby się od
-      // niego i zaczęła wyglądać jak podpis.
-      const plakietka = this.add.graphics().setVisible(false);
-      plate(plakietka, SLOT_BOK / 2 - 24, SLOT_BOK - 14, 48, 24, 12, C.gold, C.goldDeep, {
-        light: 0.26,
-        dark: 0.24,
-        gloss: 0.3,
-        drop: 2,
-        edgeW: 2,
-      });
-      const licznik = this.add
-        .text(SLOT_BOK / 2, SLOT_BOK - 2, '', display(15, H.shadow, C.goldLight))
-        .setOrigin(0.5)
-        .setVisible(false);
-      const pusty = this.add
-        .text(SLOT_BOK / 2, SLOT_BOK / 2, String(i + 1), display(22, H.inkSoft))
-        .setOrigin(0.5)
-        .setAlpha(0.4);
-      const kontener = this.add
-        .container(x, y, [tlo, ramka, rysunek, nazwa, plakietka, licznik, pusty])
-        .setDepth(Z.hud + 2)
-        .setSize(SLOT_BOK, SLOT_BOK);
-      kontener.setData('plakietka', plakietka);
-      this.sloty.push({ indeks: i, kontener, tlo, ramka, rysunek, licznik, nazwa, pusty });
-
-      this.add
-        .zone(x, y, SLOT_BOK, SLOT_BOK)
-        .setOrigin(0, 0)
-        .setDepth(Z.hud + 6)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerdown', (p: Phaser.Input.Pointer) => this.chwyc(i, p))
-        .on('pointerover', () => this.najechano(i))
-        .on('pointerout', () => this.powiedz());
-    }
-  }
-
-  private rysujStopke() {
-    this.podpowiedz = this.add
-      .text(RAMA.x + 26, RAMA.y + RAMA.h - 30, '', { ...body(11.5, H.ink), align: 'left' })
-      .setOrigin(0, 0.5)
-      .setDepth(Z.hud + 3)
-      .setWordWrapWidth(RAMA.w - 220);
-
-    const przycisk = makeHudButton(this, {
-      x: RAMA.x + RAMA.w - 92,
-      y: RAMA.y + RAMA.h - 30,
-      w: 150,
-      h: 34,
-      icon: ICON.banner,
-      tone: C.ally,
-      toneDeep: C.allyDeep,
-      onClick: () => this.zamknij(),
-    });
-    przycisk.setLabel('Na mapę');
-  }
-
-  // ---------- sterowanie ----------
-
-  private podepnijSterowanie() {
-    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
-      if (this.duch) this.duch.setPosition(p.x, p.y);
-    });
-    this.input.on('pointerup', (p: Phaser.Input.Pointer) => this.puszczono(p));
-    this.input.keyboard?.on('keydown-ESC', () => this.zamknij());
-  }
-
-  private skrotZWejscia(p: Phaser.Input.Pointer): Skrot {
-    const e = p.event as MouseEvent | undefined;
-    if (e?.shiftKey) return 'polowa';
-    if (e?.ctrlKey || e?.metaKey) return 'jeden';
-    if (e?.altKey) return 'okno';
-    return 'brak';
-  }
-
-  /**
-   * Wciśnięcie na slocie. Dwie drogi naraz, bo obie są w Heroes 3 i obie się
-   * przydają: przeciągnięcie (szybkie, myszą) i klik-klik (bez trzymania
-   * przycisku, co przy panelu dotykowym jest jedyną, która działa).
-   */
-  private chwyc(i: number, p: Phaser.Input.Pointer) {
-    if (this.oknoOtwarte) return;
-    const armia = this.stan.bohater.armia;
-
-    // Drugi klik: wskazany wcześniej slot jest źródłem, ten — celem.
-    if (this.wybrany !== null && this.wybrany !== i) {
-      this.wykonaj(this.wybrany, i, this.skrotZWejscia(p));
-      this.odznacz();
-      return;
-    }
-    if (this.wybrany === i) {
-      this.odznacz();
-      return;
-    }
-    if (!armia[i]) {
-      this.powiedz('Ten slot jest pusty — nie ma czego stąd wziąć.');
-      return;
-    }
-
-    this.wybrany = i;
-    this.ciagniety = i;
-    this.zbudujDucha(i, p);
-    this.odswiezSloty();
-  }
-
-  private zbudujDucha(i: number, p: Phaser.Input.Pointer) {
-    const o = this.stan.bohater.armia[i];
-    if (!o) return;
-    const im = this.add.image(0, 0, `p-${o.sprite}`);
-    im.setScale(Math.min(1, (SLOT_BOK - 26) / im.height));
-    const licznik = this.add.text(0, SLOT_BOK / 2 - 14, String(o.ile), display(15)).setOrigin(0.5);
-    this.duch = this.add
-      .container(p.x, p.y, [im, licznik])
-      .setDepth(Z.overlay + 5)
-      .setAlpha(0.85)
-      .setScale(0.92);
-  }
-
-  private puszczono(p: Phaser.Input.Pointer) {
-    if (this.ciagniety === null) return;
-    const z = this.ciagniety;
-    this.ciagniety = null;
-    this.duch?.destroy();
-    this.duch = null;
-
-    const cel = this.slotPod(p.x, p.y);
-    // Upuszczenie na tym samym slocie (albo obok pasa) nie jest pomyłką —
-    // to jest po prostu „wziąłem i odłożyłem". Zaznaczenie zostaje, więc
-    // dalej działa droga klik-klik.
-    if (cel === null || cel === z) return;
-    this.wykonaj(z, cel, this.skrotZWejscia(p));
-    this.odznacz();
-  }
-
-  private slotPod(x: number, y: number): number | null {
-    const y0 = ARMIA_Y + 6;
-    if (y < y0 || y > y0 + SLOT_BOK) return null;
-    for (let i = 0; i < SLOTY_ARMII; i++) {
-      const sx = this.slotX(i);
-      if (x >= sx && x <= sx + SLOT_BOK) return i;
-    }
-    return null;
-  }
-
-  private odznacz() {
-    this.wybrany = null;
-    this.odswiezSloty();
-  }
-
-  /**
-   * Wykonanie ruchu. Cała decyzja „co to właściwie ma zrobić" należy do
-   * `zamiar` w warstwie danych — scena tylko odgrywa wynik i mówi o nim
-   * graczowi.
-   */
-  private wykonaj(z: number, doc: number, skrot: Skrot) {
-    const armia = this.stan.bohater.armia;
-    const co = zamiar(armia, z, doc, skrot);
-
-    if (co.rodzaj === 'nic') {
-      this.powiedz('Tego się tak nie da.');
-      this.drgnij(doc);
-      return;
-    }
-    if (co.rodzaj === 'okno') {
-      this.oknoPodzialu(z, doc);
-      return;
-    }
-
-    const wynik =
-      co.rodzaj === 'podziel'
-        ? podziel(armia, z, doc, co.ile ?? 1)
-        : przenies(armia, z, doc);
-
-    if (!wynik.ok) {
-      this.powiedz(wynik.powod);
-      this.drgnij(doc);
-      return;
-    }
-    zapisz('armia', `${co.rodzaj} ${z}→${doc}: ${wynik.opis}`);
-    this.powiedz(wynik.opis);
-    this.blysk(doc);
-    this.odswiez();
-  }
-
-  /**
-   * Okno podziału — odpowiednik suwaka z Heroes 3.
-   *
-   * Suwak zastąpiony parą strzałek i przyciskami „połowa / jeden / wszystko":
-   * przeciąganie uchwytu o szerokości kilku pikseli jest dla ośmiolatka
-   * zadaniem zręcznościowym, a wynik i tak zawsze jest jedną z tych trzech
-   * liczb albo czymś bardzo blisko.
-   */
-  private oknoPodzialu(z: number, doc: number) {
-    const armia = this.stan.bohater.armia;
-    const zrodlo = armia[z];
-    if (!zrodlo) return;
-    const maks = maksPodzialu(armia, z, doc);
-    if (maks < 1) {
-      this.powiedz('Nie ma jak podzielić tego stosu.');
-      return;
-    }
-    this.oknoOtwarte = true;
-    let ile = Math.max(1, Math.floor(zrodlo.ile / 2));
-
-    const ow = 380;
-    const oh = 230;
-    const ox = (EKRAN_W - ow) / 2;
-    const oy = (EKRAN_H - oh) / 2;
-
-    // Przyciemnienie musi być mocne: przy 0,55 tło prześwitywało ostro tuż
-    // przy krawędzi okna i okno czytało się jak arkusz naklejony na zrzut,
-    // a nie jak coś, co się nad ekranem uniosło.
-    const zaslona = this.add
-      .rectangle(0, 0, EKRAN_W, EKRAN_H, 0x04101a, 0.78)
-      .setOrigin(0, 0)
-      .setDepth(Z.overlay)
-      .setInteractive();
-    // Okno jest z INNEGO materiału niż ekran pod spodem: ciemny kamień
-    // zamiast jasnego panelu. Jasne okno na jasnym ekranie różniło się od tła
-    // tylko obrysem i krytyk słusznie napisał, że „pływa na niczym" — przy
-    // zamianie wartości okno odcina się samo, jeszcze zanim zadziała cień.
-    const korpus = mix(C.panelDeep, C.shadow, 0.45);
-    const g = this.add.graphics().setDepth(Z.overlay + 1);
-    cienPod(g, ox, oy, ow, oh, 14, 1);
-    plate(g, ox, oy, ow, oh, 14, korpus, C.goldDeep, {
-      light: 0.1,
-      dark: 0.16,
-      gloss: 0.05,
-      drop: 0,
-      edgeW: 3,
-    });
-    faktura(g, ox + 4, oy + 4, ow - 8, oh - 8, 0.05);
-    g.lineStyle(2, C.gold, 0.5);
-    g.strokeRoundedRect(ox + 7, oy + 7, ow - 14, oh - 14, 10);
-    g.fillStyle(C.shadow, 0.35);
-    g.fillRoundedRect(ox + 10, oy + 36, ow - 20, 10, 5);
-    listwa(g, ox + 6, oy + 6, ow - 12, 34, 10, mix(C.panelDeep, C.shadow, 0.2), C.gold);
-    // Gzyms i ząbkowanie jak przy ramie ekranu — okno ma być z tej samej
-    // stolarki co reszta, a nie z innej gry.
-    g.fillStyle(C.goldDeep, 1);
-    g.fillRoundedRect(ox + 2, oy + 36, ow - 4, 7, 3);
-    g.fillStyle(C.gold, 1);
-    g.fillRoundedRect(ox + 2, oy + 36, ow - 4, 4, 3);
-    zabkowanie(g, ox + 30, oy + 44, ow - 60, C.goldDeep, 6);
-    naroznik(g, ox + 14, oy + 14, 1, 1, 22);
-    naroznik(g, ox + ow - 14, oy + 14, -1, 1, 22);
-    naroznik(g, ox + 14, oy + oh - 14, 1, -1, 22);
-    naroznik(g, ox + ow - 14, oy + oh - 14, -1, -1, 22);
-
-    const czesci: Phaser.GameObjects.GameObject[] = [zaslona, g];
-    const dodaj = <X extends Phaser.GameObjects.GameObject>(o: X) => {
-      czesci.push(o);
-      return o;
-    };
-
-    dodaj(
-      this.add
-        .text(ox + ow / 2, oy + 21, `PODZIEL: ${zrodlo.nazwa}`, {
-          ...body(13, H.goldLight),
-          fontStyle: 'bold',
-        })
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2)
-    );
-
-    // Dwie liczby obok siebie: ile zostaje, ile odchodzi. To jest cała treść
-    // okna — suwak z jedną liczbą kazałby dziecku odejmować w pamięci.
-    const wg = this.add.graphics().setDepth(Z.overlay + 1);
-    for (const cx of [ox + ow * 0.28, ox + ow * 0.72]) {
-      wneka(wg, cx - 58, oy + 74, 116, 48, 9, mix(C.panelDeep, C.shadow, 0.3), 0.9);
-    }
-    dodaj(wg);
-    const lewy = dodaj(
-      this.add
-        .text(ox + ow * 0.28, oy + 98, '', display(30, H.white))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2)
-    ) as Phaser.GameObjects.Text;
-    const prawy = dodaj(
-      this.add
-        .text(ox + ow * 0.72, oy + 98, '', display(30, H.gold))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2)
-    ) as Phaser.GameObjects.Text;
-    dodaj(
-      this.add
-        .text(ox + ow * 0.28, oy + 130, `zostaje w slocie ${z + 1}`, body(10, '#9dc3d6'))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2)
-    );
-    dodaj(
-      this.add
-        .text(ox + ow * 0.72, oy + 130, `idzie do slotu ${doc + 1}`, body(10, '#9dc3d6'))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2)
-    );
-    dodaj(this.add.text(ox + ow / 2, oy + 98, '→', display(24, H.goldLight)).setOrigin(0.5).setDepth(Z.overlay + 2));
-
-    const odswiezOkno = () => {
-      lewy.setText(String(zrodlo.ile - ile));
-      prawy.setText(String(ile));
-    };
-
-    const strzalka = (x: number, kier: number, etykieta: string) =>
-      dodaj(
-        this.add
-          .text(x, oy + 62, etykieta, display(18, H.goldLight))
-          .setOrigin(0.5)
-          .setDepth(Z.overlay + 3)
-          .setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => {
-            ile = Phaser.Math.Clamp(ile + kier, 1, maks);
-            odswiezOkno();
-          })
-      );
-    strzalka(ox + ow * 0.28, -1, '◀');
-    strzalka(ox + ow * 0.72, +1, '▶');
-
-    const przyciski: ReturnType<typeof makeHudButton>[] = [];
-    const skroty: Array<[string, number]> = [
-      ['Jeden', 1],
-      ['Połowa', Math.max(1, Math.floor(zrodlo.ile / 2))],
-      ['Wszystko', maks],
-    ];
-    skroty.forEach(([etykieta, wartosc], i) => {
-      const b = makeHudButton(this, {
-        x: ox + 62 + i * 128,
-        y: oy + 152,
-        w: 118,
-        h: 30,
-        tone: mix(C.panel, C.panelDeep, 0.32),
-        toneDeep: C.goldDeep,
-        depth: Z.overlay + 3,
-        onClick: () => {
-          ile = Phaser.Math.Clamp(wartosc, 1, maks);
-          odswiezOkno();
-        },
-      });
-      b.setLabel(etykieta);
-      przyciski.push(b);
-    });
-
-    const zamknijOkno = () => {
-      czesci.forEach((o) => o.destroy());
-      przyciski.forEach((b) => b.destroy());
-      this.oknoOtwarte = false;
-      this.odznacz();
-    };
-
-    const potwierdz = makeHudButton(this, {
-      x: ox + ow * 0.68,
-      y: oy + 196,
-      w: 168,
-      h: 36,
-      icon: ICON.star,
-      tone: C.gold,
-      toneDeep: C.goldDeep,
-      depth: Z.overlay + 3,
-      onClick: () => {
-        const w = podziel(this.stan.bohater.armia, z, doc, ile);
-        zamknijOkno();
-        if (!w.ok) return this.powiedz(w.powod);
-        this.powiedz(w.opis);
-        this.blysk(doc);
-        this.odswiez();
-      },
-    });
-    potwierdz.setLabel('Podziel');
-    przyciski.push(potwierdz);
-
-    const anuluj = makeHudButton(this, {
-      x: ox + ow * 0.26,
-      y: oy + 196,
-      w: 140,
-      h: 36,
-      tone: mix(C.panel, C.panelDeep, 0.45),
-      toneDeep: C.goldDeep,
-      depth: Z.overlay + 3,
-      onClick: zamknijOkno,
-    });
-    anuluj.setLabel('Anuluj');
-    przyciski.push(anuluj);
-
-    odswiezOkno();
-  }
-
-  // ---------- podpowiedzi i odświeżanie ----------
-
-  private najechano(i: number) {
-    const armia = this.stan.bohater.armia;
-    const o = armia[i];
-    if (this.wybrany !== null && this.wybrany !== i) {
-      const co = zamiar(armia, this.wybrany, i, 'brak');
-      const opis: Record<string, string> = {
-        przenies: `Przenieś tu ${armia[this.wybrany]?.nazwa}.`,
-        scal: `Połącz oba stosy ${o?.nazwa}.`,
-        zamien: `Zamień miejscami z ${o?.nazwa}.`,
-        okno: 'Puść tutaj, żeby podzielić stos.',
-        podziel: 'Puść tutaj, żeby podzielić stos.',
-        nic: 'Tego się tak nie da.',
-      };
-      const polowa = ileNaSkrot(armia, this.wybrany, i, 'polowa');
-      this.powiedz(
-        opis[co.rodzaj] + (polowa > 0 ? `   Shift = ${polowa} sztuk, Ctrl = 1 sztuka.` : '')
-      );
-      return;
-    }
-    if (!o) {
-      this.powiedz(`Slot ${i + 1} — pusty. Przeciągnij tu oddział, żeby go przenieść.`);
-      return;
-    }
-    this.powiedz(`${o.ile} × ${o.nazwa}   ·   poziom ${o.tier + 1}`);
-  }
-
-  private powiedz(tekst?: string) {
-    this.podpowiedz?.setText(
-      tekst ??
-        'Przeciągnij oddział na inny slot: puste miejsce przenosi, ten sam gatunek łączy, ' +
-          'obcy zamienia. Podział: Shift = połowa, Ctrl = jeden, Alt = okno z liczbą.'
-    );
-  }
-
-  /** Odmowa musi być widoczna — sam brak zmiany wygląda jak zacięcie gry. */
-  private drgnij(i: number) {
-    const s = this.sloty[i];
-    if (!s) return;
-    const x = this.slotX(i);
-    this.tweens.add({
-      targets: s.kontener,
-      x: { from: x - 5, to: x },
-      duration: 220,
-      ease: 'Elastic.easeOut',
-    });
-  }
-
-  private blysk(i: number) {
-    const s = this.sloty[i];
-    if (!s) return;
-    this.tweens.add({
-      targets: s.kontener,
-      scale: { from: 1.12, to: 1 },
-      duration: T.pop,
-      ease: E.out,
-    });
-  }
-
-  private odswiez() {
-    const b = this.stan.bohater;
-    const s = statystyki(b);
     const p = postepPoziomu(b.doswiadczenie);
-    const bonus = bonusPoziomu(poziom(b.doswiadczenie));
 
-    this.poziomTekst.setText(String(p.poziom));
-    this.doswTekst.setText(`${b.doswiadczenie} dośw.  ·  ${p.wPoziomie}/${p.doAwansu} do awansu`);
-    const dx = LEWA.x + 16;
-    const dw = LEWA.w - 32;
-    const dy = TRESC_Y + 146;
-    this.doswPasek.clear();
+    // --- nagłówek: głowa w medalionie, poziom, doświadczenie ---
+    const r = 40;
+    const mx = x + 18 + r;
+    const my = y + 18 + r;
+    medalion(this, mx, my, r, BARWA.papierCiemny).setDepth(Z.hud + 1);
+    const glowa = this.add.image(mx, my, `k-glowa-${this.kto}`).setDepth(Z.hud + 2);
+    glowa.setScale((r * 2 - 14) / Math.max(glowa.width, glowa.height));
+    // Oczko z numerem poziomu na obręczy medalionu.
+    const ox = mx + r * 0.72;
+    const oy = my + r * 0.72;
+    medalion(this, ox, oy, 15, 0x5a2a12).setDepth(Z.hud + 3);
+    this.add
+      .text(ox, oy, String(p.poziom), stylEtykiety(15, BARWA.krem))
+      .setOrigin(0.5)
+      .setDepth(Z.hud + 4);
+    this.strefaOpisu({ x: mx - r, y: my - r, w: r * 2, h: r * 2 }, () => this.opisBohatera());
+
+    const tx = mx + r + 20;
+    this.add
+      .text(tx, y + 20, `Poziom ${p.poziom} · ${this.kto === 'ela' ? 'trenerka' : 'trener'}`, stylEtykiety(22, BARWA.atrament))
+      .setDepth(Z.hud + 1);
+    // Pasek doświadczenia z gwiazdą — ta sama gwiazda, którą kampania znaczy
+    // doświadczenie w nagrodach.
+    const pasX = tx + 20;
+    const pasW = x + w - 22 - pasX;
+    const pasY = y + 62;
+    const gw = this.add.image(tx + 4, pasY + 5, 'k-ikona-gwiazda').setDepth(Z.hud + 2);
+    gw.setScale(28 / gw.width);
+    const g = this.add.graphics().setDepth(Z.hud + 1);
+    g.fillStyle(0x3a2410, 1);
+    g.fillRoundedRect(pasX, pasY, pasW, 11, 5);
     const ulamek = Phaser.Math.Clamp(p.wPoziomie / p.doAwansu, 0, 1);
     if (ulamek > 0.01) {
-      this.doswPasek.fillStyle(C.gold, 1);
-      this.doswPasek.fillRoundedRect(dx + 2, dy + 2, Math.max(6, (dw - 4) * ulamek), 10, 5);
-      this.doswPasek.fillStyle(C.white, 0.35);
-      this.doswPasek.fillRoundedRect(dx + 2, dy + 3, Math.max(6, (dw - 4) * ulamek), 4, 2);
+      g.fillStyle(C.gold, 1);
+      g.fillRoundedRect(pasX + 1.5, pasY + 1.5, Math.max(8, (pasW - 3) * ulamek), 8, 4);
+      g.fillStyle(0xffffff, 0.35);
+      g.fillRoundedRect(pasX + 3, pasY + 2.5, Math.max(4, (pasW - 6) * ulamek), 3, 1.5);
     }
+    g.lineStyle(1.5, BARWA.kreska, 0.9);
+    g.strokeRoundedRect(pasX, pasY, pasW, 11, 5);
+    this.add
+      .text(pasX, pasY + 17, `Doświadczenie ${b.doswiadczenie}`, stylAtramentu(13))
+      .setDepth(Z.hud + 1);
+    this.add
+      .text(pasX + pasW, pasY + 17, `do awansu ${p.doAwansu - p.wPoziomie}`, stylAtramentu(13, 'miekki'))
+      .setOrigin(1, 0)
+      .setDepth(Z.hud + 1);
+    this.strefaOpisu({ x: tx - 12, y: pasY - 10, w: x + w - tx, h: 44 }, () => this.opisDoswiadczenia());
 
-    // Wartość i dodatek stoją w tym samym wierszu, więc dodatek musi się
-    // odsunąć o zmierzoną szerokość liczby — inaczej przy trzycyfrowym ruchu
-    // napisy wchodzą na siebie.
-    const wartosci = [s.atak, s.obrona, ruchNaDzis(this.stan)];
-    const dodatki = [
-      s.atak - b.atak,
-      s.obrona - b.obrona,
-      s.ruchMax - b.ruchMax + (ruchNaDzis(this.stan) - s.ruchMax),
+    ozdobnik(this, x + 20, y + 112, w - 40).setDepth(Z.hud + 1);
+
+    // --- umiejętności pierwszorzędne ---
+    const s = statystyki(b);
+    const bonus = bonusPoziomu(poziom(b.doswiadczenie));
+    const ruch = ruchNaDzis(this.stan);
+    const staty: Array<{ klucz: string; nazwa: string; ikona: string; wartosc: number; dodatek: number }> = [
+      { klucz: 'atak', nazwa: 'Atak', ikona: 'k-ikona-miecz', wartosc: s.atak, dodatek: s.atak - b.atak },
+      { klucz: 'obrona', nazwa: 'Obrona', ikona: 'k-ikona-tarcza', wartosc: s.obrona, dodatek: s.obrona - b.obrona },
+      { klucz: 'ruch', nazwa: 'Ruch', ikona: 'k-ikona-buty', wartosc: ruch, dodatek: ruch - b.ruchMax },
     ];
-    wartosci.forEach((w, i) => {
-      const t = this.statTeksty[i];
-      t.setText(String(w));
-      const d = this.statDodatki[i];
-      d.setText(dodatki[i] > 0 ? `+${dodatki[i]}` : '');
-      d.setX(t.x - t.width - 16);
+    const kol = (w - 40) / 3;
+    const sy = y + 124;
+    const sBok = 60;
+    staty.forEach((st, i) => {
+      const cx = x + 20 + kol * (i + 0.5);
+      this.add.text(cx, sy, st.nazwa, stylEtykiety(15)).setOrigin(0.5, 0).setDepth(Z.hud + 1);
+      this.gniazdo(cx - sBok / 2, sy + 24, sBok, true);
+      const im = this.add.image(cx, sy + 24 + sBok / 2, st.ikona).setDepth(Z.hud + 3);
+      im.setScale((sBok - 10) / Math.max(im.width, im.height));
+      const t = this.add
+        .text(cx, sy + 24 + sBok + 8, String(st.wartosc), stylEtykiety(22, BARWA.atrament))
+        .setOrigin(0.5, 0)
+        .setDepth(Z.hud + 1);
+      if (st.dodatek > 0) {
+        this.add
+          .text(t.x + t.width / 2 + 5, t.y + 7, `+${st.dodatek}`, { ...stylAtramentu(13, 'zielony'), fontStyle: 'bold' })
+          .setDepth(Z.hud + 1);
+      }
+      this.strefaOpisu({ x: cx - kol / 2 + 6, y: sy, w: kol - 12, h: sBok + 60 }, () => this.opisStatystyki(st.klucz, bonus));
     });
 
-    // Lista modyfikatorów: co konkretnie daje sprzęt i awanse. Wiersz na
-    // źródło, żeby dało się przeczytać „skąd to mam", a nie tylko „ile mam".
-    // Wpisy muszą mieścić się w JEDNYM wierszu każdy: zawijanie w kolumnie
-    // szerokiej na 200 px zjadało po dwa wiersze na wpis i lista wychodziła
-    // poza panel na pas armii. Stąd skróty zamiast pełnych nazw statystyk.
-    const skrotem = (a: number | undefined, o: number | undefined, r: number | undefined) =>
-      [a ? `+${a} at.` : '', o ? `+${o} obr.` : '', r ? `+${r} ruch` : ''].filter(Boolean).join(' ');
-    const skroc = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
+    // Co atak i obrona robią W BITWIE — wprost, liczbą (ten sam wzór co `battle.ts`).
+    const zysk = Math.round(Math.min(ATAK_BOHATERA_MAKS, ATAK_BOHATERA_ZA_PUNKT * Math.max(0, s.atak)) * 100);
+    const oslona = Math.round(Math.min(OBRONA_BOHATERA_MAKS, OBRONA_BOHATERA_ZA_PUNKT * Math.max(0, s.obrona)) * 100);
+    this.add
+      .text(x + w / 2, sy + 24 + sBok + 40, `W bitwie: +${zysk}% obrażeń, −${oslona}% otrzymywanych`, {
+        ...stylAtramentu(13, 'zielony'),
+        fontStyle: 'italic',
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(Z.hud + 1);
 
-    const linie: string[] = [];
-    if (bonus.atak || bonus.obrona || bonus.ruch) {
-      linie.push(`Awanse   ${skrotem(bonus.atak, bonus.obrona, bonus.ruch)}`);
+    ozdobnik(this, x + 20, y + 276, w - 40).setDepth(Z.hud + 1);
+
+    // --- umiejętności drugorzędne: 2 × 2 gniazda ---
+    const mam = posiadane(b);
+    const uy = y + 286;
+    this.add.text(x + 22, uy, 'Umiejętności', stylEtykiety(15)).setDepth(Z.hud + 1);
+    this.add
+      .text(x + w - 22, uy + 2, `${mam.length} z ${MAKS_UMIEJETNOSCI} miejsc`, stylAtramentu(13, 'miekki'))
+      .setOrigin(1, 0)
+      .setDepth(Z.hud + 1);
+    const komW = (w - 44 - 16) / 2;
+    const komH = UM_BOK + 20;
+    for (let i = 0; i < MAKS_UMIEJETNOSCI; i++) {
+      const kx = x + 22 + (i % 2) * (komW + 16);
+      const ky = uy + 30 + Math.floor(i / 2) * (komH + 8);
+      this.rysujUmiejetnosc(kx, ky, komW, komH, mam[i]);
     }
+  }
+
+  /** Jedna komórka siatki umiejętności: gniazdo z ikoną, poziom, nazwa, wartość. */
+  private rysujUmiejetnosc(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    wpis: { u: Umiejetnosc; poziom: PoziomUmiejetnosci } | undefined
+  ) {
+    // Tło komórki: ciemniejszy papier z kreską — jak slot armii.
+    const g = this.add.graphics().setDepth(Z.hud + 1);
+    g.fillStyle(0x8a5a2a, wpis ? 0.14 : 0.07);
+    g.fillRoundedRect(x, y, w, h, 5);
+    g.lineStyle(1.2, BARWA.kreska, wpis ? 0.55 : 0.35);
+    g.strokeRoundedRect(x, y, w, h, 5);
+    const gx = x + 10;
+    const gy = y + (h - UM_BOK) / 2;
+    this.gniazdo(gx, gy, UM_BOK, !!wpis);
+    const tx = gx + UM_BOK + 14;
+    if (wpis) {
+      const im = this.add.image(gx + UM_BOK / 2, gy + UM_BOK / 2, `bh-umiejetnosc-${wpis.u.id}`).setDepth(Z.hud + 3);
+      im.setScale((UM_BOK - 6) / Math.max(im.width, im.height));
+      const nazwaPoziomu = POZIOMY[wpis.poziom - 1];
+      this.add
+        .text(tx, y + 11, nazwaPoziomu[0].toUpperCase() + nazwaPoziomu.slice(1), stylAtramentu(13, 'miekki'))
+        .setDepth(Z.hud + 1);
+      this.add.text(tx, y + 29, wpis.u.nazwa, stylEtykiety(16, BARWA.atrament)).setDepth(Z.hud + 1);
+      this.add
+        .text(tx, y + 51, opisWartosci(wpis.u, wpis.poziom), { ...stylAtramentu(13, 'zielony'), fontStyle: 'bold' })
+        .setDepth(Z.hud + 1);
+      // Trzy kropki poziomu — ile z trzech, bez czytania.
+      const kg = this.add.graphics().setDepth(Z.hud + 1);
+      for (let k = 0; k < 3; k++) {
+        const kx = x + w - 16 - (2 - k) * 14;
+        const ky = y + 18;
+        kg.fillStyle(k < wpis.poziom ? C.gold : 0x8a5a2a, k < wpis.poziom ? 1 : 0.25);
+        kg.fillCircle(kx, ky, 4.5);
+        kg.lineStyle(1.2, k < wpis.poziom ? C.goldDeep : BARWA.kreska, 0.9);
+        kg.strokeCircle(kx, ky, 4.5);
+      }
+    } else {
+      this.add
+        .text(tx, y + h / 2, 'Wolne miejsce', stylEtykiety(14, BARWA.atramentMiekki))
+        .setOrigin(0, 0.5)
+        .setAlpha(0.8)
+        .setDepth(Z.hud + 1);
+    }
+    this.strefaOpisu({ x, y, w, h }, () => this.opisUmiejetnosci(wpis));
+  }
+
+  // ————————————————————————————————————————— prawe pole: lalka z artefaktami
+
+  private rysujPrawePole() {
+    const L = LALKA;
+    blokArmii(this, L.x, L.y, L.w, L.h).forEach((c) => c.setDepth(Z.hud));
+    const b = this.stan.bohater;
+
+    // Światło za postacią i cień pod stopami — postać stoi na suknie, nie wisi.
+    const g = this.add.graphics().setDepth(Z.hud + 1);
+    for (let i = 7; i >= 1; i--) {
+      g.fillStyle(0xffdc9a, 0.035);
+      g.fillEllipse(POSTAC_CX, POSTAC_Y + POSTAC_H * 0.45, 60 * i, 78 * i);
+    }
+    g.fillStyle(0x000000, 0.35);
+    g.fillEllipse(POSTAC_CX, POSTAC_Y + POSTAC_H - 6, 190, 26);
+
+    const postac = this.add.image(POSTAC_CX, POSTAC_Y, `bh-postac-${this.kto}`).setOrigin(0.5, 0).setDepth(Z.hud + 2);
+    postac.setScale(POSTAC_H / postac.height);
+    const pw = postac.displayWidth;
+    const px = POSTAC_CX - pw / 2;
+    this.strefaOpisu({ x: px + pw * 0.3, y: POSTAC_Y + POSTAC_H * 0.12, w: pw * 0.4, h: POSTAC_H * 0.16 }, () => this.opisBohatera());
+
+    // Gniazda na postaci.
+    const misja = ARTEFAKTY.find((a) => a.klasa === 'misja' && b.artefakty.includes(a.id));
+    for (const gn of GNIAZDA_LALKI) {
+      const { fx, fy } = (this.kto === 'ela' && gn.ela) || gn;
+      const cx = Phaser.Math.Clamp(px + pw * fx, L.x + ART_BOK / 2 + 8, L.x + L.w - ART_BOK / 2 - 8);
+      const cy = POSTAC_Y + POSTAC_H * fy;
+      const a = gn.id ? artefaktPoId(gn.id) : misja;
+      this.rysujArtefakt(cx - ART_BOK / 2, cy - ART_BOK / 2, ART_BOK, a ?? null, !!a && b.artefakty.includes(a.id), gn.czesc);
+    }
+
+    // Pod stopami: ile zebrano i co to razem daje — jedna linijka na suknie.
+    const zebrane = b.artefakty.filter((id) => ARTEFAKTY_LOSOWE.some((a) => a.id === id));
+    const suma = { atak: 0, obrona: 0, ruch: 0 };
     for (const id of b.artefakty) {
       const a = artefaktPoId(id);
       if (!a) continue;
-      linie.push(`${skroc(a.nazwa, 17)}   ${skrotem(a.atak, a.obrona, a.ruch)}`);
+      suma.atak += a.atak ?? 0;
+      suma.obrona += a.obrona ?? 0;
+      suma.ruch += a.ruch ?? 0;
     }
-    // Lista ma ograniczoną wysokość: piąty wiersz wyszedłby poza kolumnę
-    // i położył się na pasie armii. Nadmiar zbieramy w jedną linijkę.
-    const widoczne = linie.length > 3 ? [...linie.slice(0, 2), `…i jeszcze ${linie.length - 2}`] : linie;
-    // Ten sam wzór co w `battle.ts` — gdyby rozjechał się z tamtym, panel
-    // obiecywałby co innego, niż liczy bitwa.
-    const zysk = Math.round(
-      Math.min(ATAK_BOHATERA_MAKS, ATAK_BOHATERA_ZA_PUNKT * Math.max(0, s.atak)) * 100
-    );
-    const oslona = Math.round(
-      Math.min(OBRONA_BOHATERA_MAKS, OBRONA_BOHATERA_ZA_PUNKT * Math.max(0, s.obrona)) * 100
-    );
-    this.wplywNaBitwe.setText(`w bitwie:  +${zysk}% obrażeń  ·  −${oslona}% otrzymywanych`);
-
-    this.modyfikatory.setText(
-      widoczne.length ? widoczne.join('\n') : 'Nic — na razie liczysz na siebie.'
-    );
-
-    // Artefakty: posiadane świecą pełną barwą klasy, brakujące są przygaszone.
-    // Widok „czego jeszcze nie mam" jest tu równie ważny jak „co mam" — to on
-    // robi ze zbierania cel.
-    for (const kont of this.artefaktIkony) {
-      const a = kont.getData('artefakt') as Artefakt;
-      const g = kont.getData('tlo') as Phaser.GameObjects.Graphics;
-      const ikona = kont.getData('ikona') as Phaser.GameObjects.Image;
-      const podpis = kont.getData('podpis') as Phaser.GameObjects.Text;
-      const ma = b.artefakty.includes(a.id);
-      const bok = 62;
-      g.clear();
-      // Gniazdo jest WNĘKĄ — zawsze, także dla artefaktu, którego nie mamy.
-      // Przedmiot dopiero w niej siedzi, na własnej płytce w barwie klasy.
-      // Poprzednia wersja malowała cały kafelek na kolor klasy i przez to
-      // rzadkość czytała się jako „inny kafelek", a nie jako „inna rzecz".
-      wneka(g, 0, 0, bok, bok, 9);
-      if (ma) {
-        // Rzadkość siedzi na KRAWĘDZI GNIAZDA, a poświata jest zamknięta w
-        // jego wnętrzu. Poprzednia wersja malowała halo dolepione pod ikoną,
-        // rozlewające się poza obrys — czytało się jak podklejona poświata,
-        // a nie jak oprawa gniazda. Teraz kolor mówi „to gniazdo trzyma
-        // relikt", a nie „ta ikona świeci".
-        const cx = bok / 2;
-        const cy = bok / 2;
-        const moc = a.klasa === 'relikt' ? 0.5 : a.klasa === 'znaczny' ? 0.32 : 0.18;
-        // Poświata wewnątrz wnęki: pierścienie wpisane w prostokąt gniazda,
-        // więc nic nie wychodzi poza jego krawędź.
-        for (let i = 5; i >= 1; i--) {
-          const wc = 5 + i * 3;
-          g.fillStyle(BARWA_KLASY[a.klasa], (moc / 5) * (6 - i) * 0.34);
-          g.fillRoundedRect(wc, wc, bok - wc * 2, bok - wc * 2, 8);
-        }
-        // Przedmiot: okrągły medalion w metalowej oprawie. Krągłość kontra
-        // kwadratowe gniazdo — kontrast kształtów zamiast kontrastu koloru.
-        const r = bok / 2 - 13;
-        g.fillStyle(C.shadow, 0.5);
-        g.fillCircle(cx + 1, cy + 3, r);
-        g.fillStyle(OBRYS_KLASY[a.klasa], 1);
-        g.fillCircle(cx, cy, r);
-        g.fillStyle(mix(BARWA_KLASY[a.klasa], C.panel, 0.35), 1);
-        g.fillCircle(cx, cy, r - 3);
-        g.fillStyle(C.white, 0.3);
-        g.fillCircle(cx, cy - r * 0.3, r * 0.62);
-        // Obrys gniazda w barwie klasy — dwie kreski, bo jedna czyta się jak
-        // obwódka tabeli, a dwie jak oprawa.
-        g.lineStyle(2.5, OBRYS_KLASY[a.klasa], 0.95);
-        g.strokeRoundedRect(1, 1, bok - 2, bok - 2, 8);
-        g.lineStyle(1.5, BARWA_KLASY[a.klasa], 0.7);
-        g.strokeRoundedRect(4, 4, bok - 8, bok - 8, 6);
-      }
-      ikona.setAlpha(ma ? 1 : 0.16);
-      ikona.setDisplaySize(ma ? bok - 34 : bok - 20, ma ? bok - 34 : bok - 20);
-      podpis.setAlpha(ma ? 1 : 0.4);
+    const co = [
+      suma.atak ? `+${suma.atak} ataku` : '',
+      suma.obrona ? `+${suma.obrona} obrony` : '',
+      suma.ruch ? `+${suma.ruch} ruchu` : '',
+    ].filter(Boolean);
+    const dy = L.y + L.h - (co.length ? 40 : 28);
+    this.add
+      .text(L.x + L.w / 2, dy, `Artefakty ${zebrane.length} z ${ARTEFAKTY_LOSOWE.length}`, {
+        fontFamily: KROJ.tytul,
+        fontSize: '15px',
+        color: BARWA.krem,
+        stroke: BARWA.braz,
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 0.5)
+      .setDepth(Z.hud + 3);
+    if (co.length) {
+      this.add
+        .text(L.x + L.w / 2, dy + 20, co.join(' · '), {
+          fontFamily: KROJ.tekst,
+          fontSize: '13px',
+          fontStyle: 'bold',
+          color: '#b8f0a0',
+          stroke: BARWA.braz,
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5, 0.5)
+        .setDepth(Z.hud + 3);
     }
-    const licznikArt = this.children.getByName('licznik-artefaktow') as Phaser.GameObjects.Text;
-    // Siatka i licznik obejmują artefakty do zbierania. Cel misji (Księżycowy
-    // Kamień) nie ma gniazda w siatce — pokazuje go karta pod nią, jako
-    // najważniejszą rzecz, którą bohater niesie.
-    const zebrane = b.artefakty.filter((id) => ARTEFAKTY_LOSOWE.some((a) => a.id === id)).length;
-    licznikArt?.setText(`ZEBRANE: ${zebrane} z ${ARTEFAKTY_LOSOWE.length}`);
-    this.pokazArtefakt();
+  }
 
-    this.armiaPodsumowanie.setText(`${lacznie(b.armia)} stworków w ${zywe(b.armia).length} stosach`);
-    this.odswiezSloty();
+  /**
+   * Gniazdo lalki. Noszony artefakt: ciemne gniazdo w złotej ramce z ikoną.
+   * Brakujący: półprzezroczysta wnęka z cieniem ikony — widać, co jeszcze
+   * jest do zebrania, a postać pod spodem prześwituje.
+   */
+  private rysujArtefakt(x: number, y: number, bok: number, a: Artefakt | null, ma: boolean, czesc?: string) {
+    const g = this.add.graphics().setDepth(Z.hud + 3);
+    g.fillStyle(BARWA.cien, ma ? 0.45 : 0.3);
+    g.fillRoundedRect(x + 1, y + 3, bok, bok, 3);
+    g.fillStyle(BARWA_GNIAZDA, ma ? 0.92 : 0.5);
+    g.fillRoundedRect(x, y, bok, bok, 3);
+    g.fillStyle(0x000000, ma ? 0.3 : 0.15);
+    g.fillRect(x + 2, y + 2, bok - 4, 4);
+    if (ma) ramaZlota(this, x + 1, y + 1, bok - 2, bok - 2, false).setDepth(Z.hud + 4);
+    else {
+      g.lineStyle(1.5, C.goldDeep, 0.75);
+      g.strokeRoundedRect(x, y, bok, bok, 3);
+    }
+    if (a) {
+      const im = this.add.image(x + bok / 2, y + bok / 2, `bh-artefakt-${a.id}`).setDepth(Z.hud + 5);
+      im.setScale((bok - (ma ? 6 : 14)) / Math.max(im.width, im.height));
+      if (!ma) im.setTint(0xb89a70).setAlpha(0.3);
+    }
+    this.strefaOpisu({ x, y, w: bok, h: bok }, () => (a ? this.opisArtefaktu(a, ma, czesc) : this.opisWolnegoGniazda(czesc)));
+  }
+
+  /**
+   * Gniazdo na ikonę: ciemne, wpuszczone w pergamin pole. Zajęte dostaje
+   * cienką złotą ramę (jak ikony nagród w kampanii), puste zostaje samą
+   * wnęką — puste miejsce ma być widoczne, ale ciche.
+   */
+  private gniazdo(x: number, y: number, bok: number, pelne: boolean) {
+    const g = this.add.graphics().setDepth(Z.hud + 1);
+    g.fillStyle(BARWA_GNIAZDA, pelne ? 0.9 : 0.22);
+    g.fillRoundedRect(x, y, bok, bok, 3);
+    g.fillStyle(0x000000, pelne ? 0.28 : 0.1);
+    g.fillRect(x + 2, y + 2, bok - 4, 4);
+    g.lineStyle(1.2, BARWA.kreska, pelne ? 0.9 : 0.55);
+    g.strokeRoundedRect(x, y, bok, bok, 3);
+    if (pelne) ramaZlota(this, x, y, bok, bok, false).setDepth(Z.hud + 2);
+    return g;
+  }
+
+  // ————————————————————————————————————————— dół: armia, status, wyjście
+
+  private rysujDol() {
+    this.panel = new PanelArmii(this, {
+      glebia: Z.hud + 1,
+      powiedz: (t) => this.powiedz(t),
+      poZmianie: (opis) => {
+        zapisz('armia', `bohater: ${opis}`);
+        this.registry.set(KLUCZ_STANU, this.stan);
+        this.odswiezArmie();
+      },
+    });
+
+    // --- blok armii: ciężka rama, figurka z mapy w pierwszej wnęce, 7 slotów ---
+    blokArmii(this, BLOK_X, BLOK_Y, BLOK_W, BLOK_H).forEach((c) => c.setDepth(Z.hud));
+    wnekaHerbu(this, HERB_X, RZAD_Y, SLOT, SLOT, Z.hud + 1);
+    const figurka = this.kto === 'ela' && this.textures.exists('bohaterka') ? 'bohaterka' : 'bohater';
+    if (this.textures.exists(figurka)) {
+      const f = this.add.image(HERB_X + SLOT / 2, RZAD_Y + SLOT / 2 - 1, figurka, 0).setDepth(Z.hud + 3);
+      f.setScale((SLOT - 6) / f.height);
+    }
+    this.strefaOpisu({ x: HERB_X, y: RZAD_Y, w: SLOT, h: SLOT }, () => this.opisArmii());
+    this.panel.dodajPasek({
+      x: RZAD_X,
+      y: RZAD_Y,
+      slotW: SLOT,
+      slotH: SLOT,
+      odstep: SLOT_ODSTEP,
+      armia: () => this.stan.bohater.armia,
+      chroniona: true,
+      gdzie: 'u bohatera',
+      dokad: 'do bohatera',
+    });
+
+    // --- linia statusu (pergamin w bloku) ---
+    panelPergaminu(this, STATUS_X, STATUS_Y + 3, STATUS_W, STATUS_H).forEach((c) => c.setDepth(Z.hud + 1));
+    this.komunikat = this.add
+      .text(STATUS_X + 9, STATUS_Y + 3 + STATUS_H / 2, '', { ...stylAtramentu(13), lineSpacing: 0 })
+      .setOrigin(0, 0.5)
+      .setDepth(Z.hud + 2)
+      .setWordWrapWidth(STATUS_W - 18);
+
+    // --- „Podziel" i wyjście (złota tabliczka — jedyny „następny krok") ---
+    const podzielW = 96;
+    new Przycisk(this, {
+      x: STATUS_X + podzielW / 2,
+      y: PRZYCISKI_Y,
+      w: podzielW,
+      h: 32,
+      tekst: 'Podziel',
+      rozmiar: 13,
+      glebia: Z.hud + 2,
+      akcja: () => this.panel.podziel(),
+    });
+    const doMiasta = this.registry.get(KLUCZ_POWROTU) === 'zamek';
+    const wyjscieW = STATUS_W - podzielW - 8;
+    new Przycisk(this, {
+      x: STATUS_X + STATUS_W - wyjscieW / 2,
+      y: PRZYCISKI_Y,
+      w: wyjscieW,
+      h: 32,
+      tekst: doMiasta ? 'Do miasta' : 'Na mapę',
+      glowny: true,
+      rozmiar: 16,
+      glebia: Z.hud + 2,
+      akcja: () => this.zamknij(),
+    });
+
+    this.odswiezArmie();
     this.powiedz();
   }
 
-  private odswiezSloty() {
-    const armia = this.stan.bohater.armia;
-    for (const s of this.sloty) {
-      const o: Oddzial | null = armia[s.indeks];
-      const wybrany = this.wybrany === s.indeks;
+  private odswiezArmie() {
+    this.panel.odswiez();
+    if (!this.dymekPrzypiety) this.powiedz();
+  }
 
-      s.tlo.clear();
-      plate(
-        s.tlo,
-        0,
-        0,
-        SLOT_BOK,
-        SLOT_BOK,
-        10,
-        o ? mix(C.panel, C.panelDeep, 0.22) : mix(C.panelDeep, C.shadow, 0.35),
-        o ? C.panelDeep : C.shadow,
-        { light: o ? 0.18 : 0.06, dark: 0.2, gloss: o ? 0.14 : 0.04, drop: 0, edgeW: 2 }
-      );
-      // Pusty slot dostaje wpuszczone dno: ma wyglądać jak wolne MIEJSCE,
-      // a nie jak wyłączona karta.
-      if (!o) {
-        s.tlo.fillStyle(C.shadow, 0.22);
-        s.tlo.fillRoundedRect(6, 6, SLOT_BOK - 12, SLOT_BOK - 12, 7);
-      }
+  /** Stan armii jednym zdaniem — domyślna treść linii statusu. */
+  private stanArmii() {
+    const a = this.stan.bohater.armia;
+    const ile = lacznie(a);
+    const stosy = zywe(a).length;
+    return `${this.stan.bohater.imie} prowadzi ${ile} ${ile === 1 ? 'stworka' : 'stworków'} w ${stosy} ${stosy === 1 ? 'oddziale' : 'oddziałach'}.`;
+  }
 
-      s.ramka.clear();
-      if (wybrany) {
-        s.ramka.lineStyle(3, C.gold, 1);
-        s.ramka.strokeRoundedRect(-2, -2, SLOT_BOK + 4, SLOT_BOK + 4, 12);
-        s.ramka.lineStyle(6, C.gold, 0.25);
-        s.ramka.strokeRoundedRect(-4, -4, SLOT_BOK + 8, SLOT_BOK + 8, 14);
-      }
-
-      if (o) {
-        s.rysunek.setTexture(`p-${o.sprite}`).setVisible(true);
-        s.rysunek.setScale(Math.min(1, (SLOT_BOK - 26) / s.rysunek.height));
-        s.rysunek.setAlpha(this.ciagniety === s.indeks ? 0.3 : 1);
-        s.nazwa.setText(o.nazwa).setVisible(true);
-        s.licznik.setText(String(o.ile)).setVisible(true);
-        (s.kontener.getData('plakietka') as Phaser.GameObjects.Graphics).setVisible(true);
-        s.pusty.setVisible(false);
-      } else {
-        s.rysunek.setVisible(false);
-        s.nazwa.setVisible(false);
-        s.licznik.setVisible(false);
-        (s.kontener.getData('plakietka') as Phaser.GameObjects.Graphics).setVisible(false);
-        s.pusty.setVisible(true);
-      }
+  /** Linia statusu: najpierw 13 px, a gdy się nie mieści — mniej (jak w mieście). */
+  private powiedz(tekst?: string) {
+    const k = this.komunikat;
+    if (!k) return;
+    k.setFontSize(13);
+    k.setText(tekst ?? this.stanArmii());
+    for (const rozmiar of [12, 11]) {
+      if (k.height <= STATUS_H - 4) break;
+      k.setFontSize(rozmiar);
     }
+  }
+
+  // ————————————————————————————————————————— dymki z opisem
+
+  /**
+   * Strefa z opisem: najechanie pokazuje dymek, klik (lewy albo prawy) go
+   * przypina, drugi klik w to samo — zdejmuje. Na tablecie jest tylko klik.
+   */
+  private strefaOpisu(o: Obszar, opis: () => Opis) {
+    const z = this.add
+      .zone(o.x, o.y, o.w, o.h)
+      .setOrigin(0)
+      .setDepth(Z.hud + 5)
+      .setInteractive({ useHandCursor: true });
+    this.strefyOpisu.add(z);
+    z.on('pointerover', () => {
+      if (this.dymekPrzypiety || this.oknoOtwarte) return;
+      const d = opis();
+      this.pokazDymek(o, d);
+      this.powiedz(`${d.tytul} — kliknij, żeby przypiąć opis.`);
+    });
+    z.on('pointerout', () => {
+      if (this.dymekPrzypiety) return;
+      this.schowajDymek();
+      this.powiedz();
+    });
+    z.on('pointerdown', () => {
+      if (this.oknoOtwarte) return;
+      const d = opis();
+      if (this.dymekPrzypiety && this.dymekKlucz === d.klucz) {
+        this.schowajDymek();
+        return;
+      }
+      this.pokazDymek(o, d);
+      this.dymekPrzypiety = true;
+      this.powiedz(`${d.tytul} — kliknij obok albo Escape, żeby zamknąć opis.`);
+    });
+  }
+
+  private pokazDymek(o: Obszar, d: Opis) {
+    this.schowajDymek();
+    const W = 300;
+    const pad = 14;
+    const k = this.add.container(0, 0).setDepth(Z.overlay);
+    const ikona = d.ikona ? 48 : 0;
+    const tx = pad + (ikona ? ikona + 12 : 0);
+    const tytul = this.add.text(tx, pad - 2, d.tytul, stylEtykiety(17)).setWordWrapWidth(W - tx - pad);
+    let yy = tytul.y + tytul.height + 2;
+    const podtytul = d.podtytul
+      ? this.add.text(tx, yy, d.podtytul, { ...stylAtramentu(13, 'miekki', W - tx - pad), fontFamily: KROJ.kursywa })
+      : null;
+    if (podtytul) yy += podtytul.height;
+    yy = Math.max(yy, pad + ikona) + 8;
+    const linia = ozdobnik(this, pad, yy, W - pad * 2);
+    yy += 10;
+    const tresc = this.add.text(pad, yy, d.tresc, stylAtramentu(13, 'zwykly', W - pad * 2));
+    const H = Math.ceil(yy + tresc.height + pad);
+    k.add(panelPergaminu(this, 0, 0, W, H));
+    if (d.ikona) {
+      const g = this.add.graphics();
+      g.fillStyle(BARWA_GNIAZDA, 0.9);
+      g.fillRoundedRect(pad, pad, ikona, ikona, 3);
+      k.add(g);
+      k.add(ramaZlota(this, pad, pad, ikona, ikona, false));
+      const im = this.add.image(pad + ikona / 2, pad + ikona / 2, d.ikona);
+      im.setScale((ikona - 6) / Math.max(im.width, im.height));
+      k.add(im);
+    }
+    k.add([tytul, ...(podtytul ? [podtytul] : []), linia, tresc]);
+
+    // Dymek staje obok elementu: po prawej, a gdy się nie mieści — po lewej;
+    // w pionie wyrównany do jego góry, przycięty do ekranu.
+    let dx = o.x + o.w + 16;
+    if (dx + W > OKNO_W - 10) dx = o.x - W - 16;
+    if (dx < 10) dx = Phaser.Math.Clamp(o.x + o.w / 2 - W / 2, 10, OKNO_W - W - 10);
+    const dy = Phaser.Math.Clamp(o.y, GORA + 6, OKNO_H - H - 14);
+    k.setPosition(Math.round(dx), Math.round(dy));
+    this.dymek = k;
+    this.dymekKlucz = d.klucz;
+  }
+
+  private schowajDymek() {
+    if (this.dymekPrzypiety) this.powiedz();
+    this.dymek?.destroy();
+    this.dymek = null;
+    this.dymekKlucz = '';
+    this.dymekPrzypiety = false;
+  }
+
+  private opisBohatera(): Opis {
+    const b = this.stan.bohater;
+    const p = postepPoziomu(b.doswiadczenie);
+    const ela = this.kto === 'ela';
+    return {
+      klucz: 'bohater',
+      tytul: b.imie,
+      podtytul: `Poziom ${p.poziom} · ${ela ? 'trenerka' : 'trener'}`,
+      tresc:
+        (ela ? 'Sprytna i uważna. Żaden ślad jej nie umknie!' : 'Odważny i szybki. Zawsze pierwszy do przygody!') +
+        `\n\nProwadzi ${lacznie(b.armia)} stworków. Nosi ${b.artefakty.length} ${b.artefakty.length === 1 ? 'artefakt' : 'artefaktów'} i zna ${posiadane(b).length} ${posiadane(b).length === 1 ? 'umiejętność' : 'umiejętności'}.`,
+    };
+  }
+
+  private opisDoswiadczenia(): Opis {
+    const b = this.stan.bohater;
+    const p = postepPoziomu(b.doswiadczenie);
+    const nauka = efekt(b, 'nauka');
+    return {
+      klucz: 'doswiadczenie',
+      tytul: 'Doświadczenie',
+      podtytul: `${b.doswiadczenie} punktów · poziom ${p.poziom}`,
+      ikona: 'k-ikona-gwiazda',
+      tresc:
+        `Do poziomu ${p.poziom + 1} brakuje ${p.doAwansu - p.wPoziomie} punktów.\n` +
+        'Doświadczenie dają wygrane bitwy, skrzynie i drzewa wiedzy. Awans podnosi atak albo obronę i pozwala wybrać umiejętność.' +
+        (nauka ? `\nNauka: +${Math.round(nauka * 100)}% doświadczenia.` : ''),
+    };
+  }
+
+  private opisStatystyki(klucz: string, bonus: ReturnType<typeof bonusPoziomu>): Opis {
+    const b = this.stan.bohater;
+    const s = statystyki(b);
+    const zArtefaktow = (pole: 'atak' | 'obrona' | 'ruch') =>
+      b.artefakty
+        .map((id) => artefaktPoId(id))
+        .filter((a): a is Artefakt => !!a && !!a[pole])
+        .map((a) => `${a.nazwa} +${a[pole]}`);
+    if (klucz === 'atak' || klucz === 'obrona') {
+      const atak = klucz === 'atak';
+      const wartosc = atak ? s.atak : s.obrona;
+      const proc = atak
+        ? Math.round(Math.min(ATAK_BOHATERA_MAKS, ATAK_BOHATERA_ZA_PUNKT * Math.max(0, wartosc)) * 100)
+        : Math.round(Math.min(OBRONA_BOHATERA_MAKS, OBRONA_BOHATERA_ZA_PUNKT * Math.max(0, wartosc)) * 100);
+      const arts = zArtefaktow(klucz);
+      const lw = [
+        `${b.imie}: ${atak ? b.atak : b.obrona}`,
+        (atak ? bonus.atak : bonus.obrona) ? `awanse: +${atak ? bonus.atak : bonus.obrona}` : '',
+        ...arts,
+      ].filter(Boolean);
+      return {
+        klucz,
+        tytul: atak ? 'Atak' : 'Obrona',
+        podtytul: `razem ${wartosc}`,
+        ikona: atak ? 'k-ikona-miecz' : 'k-ikona-tarcza',
+        tresc:
+          (atak
+            ? `Każdy twój oddział zadaje w bitwie o ${proc}% więcej obrażeń.`
+            : `Każdy twój oddział dostaje w bitwie o ${proc}% mniej obrażeń.`) +
+          `\n\nSkąd to masz:\n${lw.join('\n')}`,
+      };
+    }
+    const dzis = ruchNaDzis(this.stan);
+    const zwiad = efekt(b, 'ruch');
+    const ranczo = b.bonusRuchuDo !== undefined && this.stan.dzien <= b.bonusRuchuDo;
+    const lw = [
+      `${b.imie}: ${b.ruchMax}`,
+      bonus.ruch ? `awanse: +${bonus.ruch}` : '',
+      ...zArtefaktow('ruch'),
+      ranczo ? `ranczo: +${STAJNIA_BONUS}` : '',
+      zwiad ? `Zwiad: +${Math.round(zwiad * 100)}%` : '',
+    ].filter(Boolean);
+    return {
+      klucz,
+      tytul: 'Ruch',
+      podtytul: `${dzis} punktów na dzień`,
+      ikona: 'k-ikona-buty',
+      tresc: `Tyle punktów ruchu bohater dostaje co rano. Dziś zostało ${Math.round(b.ruch)}.\n\nSkąd to masz:\n${lw.join('\n')}`,
+    };
+  }
+
+  private opisUmiejetnosci(wpis: { u: Umiejetnosc; poziom: PoziomUmiejetnosci } | undefined): Opis {
+    if (!wpis) {
+      return {
+        klucz: `umiejetnosc-wolna`,
+        tytul: 'Wolne miejsce',
+        tresc:
+          `Przy awansie na nowy poziom wybierasz jedną z dwóch umiejętności — nowa trafi tutaj. Bohater zna najwyżej ${MAKS_UMIEJETNOSCI} umiejętności, a każdą można podnieść do poziomu mistrzowskiego.`,
+      };
+    }
+    const { u, poziom: p } = wpis;
+    const drabina = POZIOMY.map(
+      (n, i) => `${n}: ${opisWartosci(u, (i + 1) as PoziomUmiejetnosci)}${i + 1 === p ? '  ← masz' : ''}`
+    );
+    return {
+      klucz: `umiejetnosc-${u.id}`,
+      tytul: u.nazwa,
+      podtytul: `${POZIOMY[p - 1]} (poziom ${p} z 3)`,
+      ikona: `bh-umiejetnosc-${u.id}`,
+      tresc:
+        `${u.opis}\nTeraz: ${opisWartosci(u, p)}.\n\n${drabina.join('\n')}` +
+        (p < 3 ? '\n\nKolejny poziom możesz wybrać przy awansie.' : '\n\nTo najwyższy poziom.'),
+    };
+  }
+
+  private opisArmii(): Opis {
+    const b = this.stan.bohater;
+    return {
+      klucz: 'armia',
+      tytul: 'Armia',
+      podtytul: this.stanArmii(),
+      tresc:
+        'Kliknij stworka, potem inny slot — przeniesiesz, zamienisz albo połączysz oddziały. ' +
+        'Możesz też przeciągnąć. Shift: podział z suwakiem, Ctrl: jeden stworek. ' +
+        `Prawy klik albo drugi klik: opis stworka.\n\n${b.imie} nie może zostać bez ani jednego oddziału.`,
+    };
+  }
+
+  private opisWolnegoGniazda(czesc?: string): Opis {
+    return {
+      klucz: `gniazdo-${czesc ?? ''}`,
+      tytul: czesc ? czesc[0].toUpperCase() + czesc.slice(1) : 'Wolne gniazdo',
+      podtytul: 'wolne gniazdo',
+      tresc:
+        czesc === 'szyja'
+          ? 'Tu bohater nosi amulet — na przykład Księżycowy Kamień, gdy misja każe go odnaleźć i zanieść.'
+          : 'Artefakty leżą na mapie i wypadają ze skrzyń.',
+    };
+  }
+
+  private opisArtefaktu(a: Artefakt, ma: boolean, czesc?: string): Opis {
+    const co = [
+      a.atak ? `+${a.atak} do ataku` : '',
+      a.obrona ? `+${a.obrona} do obrony` : '',
+      a.ruch ? `+${a.ruch} punktów ruchu na dzień` : '',
+    ].filter(Boolean);
+    const klasa = { drobny: 'artefakt drobny', znaczny: 'artefakt znaczny', relikt: 'relikt', misja: 'cel misji' }[a.klasa];
+    return {
+      klucz: `artefakt-${a.id}`,
+      tytul: a.nazwa,
+      podtytul: `${klasa}${czesc ? ` · ${czesc}` : ''} · ${ma ? 'noszony' : 'jeszcze go nie masz'}`,
+      ikona: `bh-artefakt-${a.id}`,
+      tresc: (
+        co.join('\n') +
+        (a.klasa === 'misja'
+          ? '\n\nCel misji — zanieś go tam, dokąd każe misja.'
+          : ma
+            ? '\n\nDziała, dopóki bohater go nosi.'
+            : '\n\nSzukaj go na mapie i w skrzyniach — zacznie działać, gdy tylko go podniesiesz.')
+      ).trim(),
+    };
+  }
+
+  // ————————————————————————————————————————— sterowanie i wyjście
+
+  private podepnijSterowanie() {
+    // Klik w puste miejsce zdejmuje przypięty dymek.
+    this.input.on('pointerdown', (_p: Phaser.Input.Pointer, nad: Phaser.GameObjects.GameObject[]) => {
+      if (!this.dymek) return;
+      if (nad.some((o) => this.strefyOpisu.has(o))) return;
+      this.schowajDymek();
+    });
+    // 'keydown', a nie 'keydown-ESC': ten słuchacz jest zapisany PRZED
+    // słuchaczami okien panelu (stworek, podział), więc widzi, że okno jest
+    // otwarte, i nie zamyka ekranu razem z oknem.
+    this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || !this.gotowy || this.oknoOtwarte) return;
+      if (this.dymek) {
+        this.schowajDymek();
+        this.powiedz();
+        return;
+      }
+      this.zamknij();
+    });
   }
 
   private zamknij() {
     this.registry.set(KLUCZ_STANU, this.stan);
-    this.scene.start('adventure');
+    // Z miasta (klik w portret bohatera odwiedzającego) wraca się do miasta.
+    const powrot = (this.registry.get(KLUCZ_POWROTU) as string | undefined) ?? 'adventure';
+    this.registry.remove(KLUCZ_POWROTU);
+    this.scene.start(powrot);
   }
 }
