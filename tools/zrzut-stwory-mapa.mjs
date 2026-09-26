@@ -9,9 +9,10 @@
 // powiększony ×2 najbliższym sąsiadem — ta sama obróbka co wycinki wzorców,
 // żeby porównanie szło piksel do piksela, a nie rozmazanie do rozmazania.
 //
-// Który stos: najciaśniejsza para stosów mieszcząca się razem w kadrze (do
-// 4 pól w poziomie, 2 w pionie; remis — bliższa bohatera), a bez pary stos
-// najbliższy bohatera. Wybór zależy tylko od danych planszy,
+// Który stos: para stosów mieszcząca się razem w kadrze (do 4 pól w poziomie,
+// 2 w pionie), najlepiej dwa różne stworki, których nie było w kadrach
+// poprzednich plansz; potem najciaśniejsza, potem bliższa bohatera. Bez
+// pary — stos najbliższy bohatera. Wybór zależy tylko od danych planszy,
 // więc zrzut jest powtarzalny między rundami.
 //
 // Wynik: `tools/shots/stwory-mapa-<id>.png` (512 × 384).
@@ -52,6 +53,8 @@ const gotowa = () =>
 
 await mkdir(OUT, { recursive: true });
 
+/** Stworki z kadrów poprzednich plansz — patrz `ocena`. */
+const pokazane = [];
 for (const mapa of MAPY) {
   await page.goto(`${BASE}/?ekran=mapa&mapa=${mapa}`, { waitUntil: 'domcontentloaded' });
   await gotowa();
@@ -64,7 +67,7 @@ for (const mapa of MAPY) {
   });
   await page.waitForTimeout(300);
   await gotowa();
-  const cel = await page.evaluate(() => {
+  const cel = await page.evaluate((pokazane) => {
     const scena = window.__game.scene.getScene('adventure');
     const stan = window.__game.registry.get('stan-mapy');
     // Stosy przy brzegu planszy odpadają: kamera nie przewinie się dalej niż
@@ -82,12 +85,22 @@ for (const mapa of MAPY) {
     // najbliższy bohatera.
     const odl = (p, o) => Math.max(Math.abs(p.x - o.x), Math.abs(p.y - o.y));
     const doBoh = (p) => Math.hypot(p.x - b.x, p.y - b.y);
+    // Różnorodność: para dwóch RÓŻNYCH stworków i takich, których nie było
+    // w kadrach poprzednich plansz, wygrywa z ciaśniejszą parą bliźniaków —
+    // krytyk ma zobaczyć kilka stworków, a nie ciągle tego samego.
+    const sp = (p) => p.oddzialy[0].sprite;
+    const ocena = (p, q) =>
+      odl(p, q) * 1000 +
+      doBoh(p) +
+      (sp(p) === sp(q) ? 6000 : 0) +
+      (pokazane.includes(sp(p)) ? 4000 : 0) +
+      (pokazane.includes(sp(q)) ? 4000 : 0);
     let o = null;
     let s = null;
     for (const p of stosy)
       for (const q of stosy) {
         if (p === q || Math.abs(p.x - q.x) > 4 || Math.abs(p.y - q.y) > 2) continue;
-        if (!o || odl(p, q) * 1000 + doBoh(p) < odl(o, s) * 1000 + doBoh(o)) [o, s] = [p, q];
+        if (!o || ocena(p, q) < ocena(o, s)) [o, s] = [p, q];
       }
     if (!o) o = [...stosy].sort((p, q) => doBoh(p) - doBoh(q))[0];
     const cx = s ? (o.x + s.x) / 2 : o.x;
@@ -97,8 +110,10 @@ for (const mapa of MAPY) {
       cx,
       cy,
       stosy: [o, s].filter(Boolean).map((p) => `${p.nazwa ?? '?'} (${p.oddzialy[0].sprite}) @${p.x},${p.y}`),
+      sprite: [o, s].filter(Boolean).map((p) => p.oddzialy[0].sprite),
     };
-  });
+  }, pokazane);
+  pokazane.push(...cel.sprite);
   // Kafelki, przeszkody i tekstury stworów doczytują się po starcie sceny.
   await page.waitForTimeout(1500);
   // Położenie na ekranie liczone PO odczekaniu: scena potrafi jeszcze dosunąć

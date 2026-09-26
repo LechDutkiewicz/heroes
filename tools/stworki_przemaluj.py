@@ -130,7 +130,10 @@ STWORKI: dict[str, tuple[str, str]] = {
 
 #: Która surowa wersja idzie do gry (numer z `<id>-<n>.png`). Brak wpisu —
 #: najnowsza. Wpisy dopisuje człowiek po obejrzeniu wersji.
-WYBOR: dict[str, int] = {}
+WYBOR: dict[str, int] = {
+    # Runda 3 (pod mapę): 00246-3 i 00095-2 wyszły z podstawką gruntu.
+    '00095': 1,
+}
 
 #: Surowe wersje namalowane przodem w lewo — odbijane w poziomie przy
 #: kadrowaniu (klucz: `<id>-<n>`). Taniej niż generować jeszcze raz.
@@ -167,6 +170,43 @@ PROMPT = (
     'ground patch, no dirt, no sand, no grass tuft, no base, no pedestal, no '
     'cast shadow, no glow, no aura, no frame, no text.'
 )
+
+#: Trzecie przejście — przemalowanie MISTRZA pod obiekty naszej mapy.
+#: Runda 1 i 2 wzorca „stwory na mapie" przegrały 0/3: krytycy widzieli
+#: „maskotkę z kreskówki wklejoną na mapę" — czyste, gładkie renderowanie,
+#: cukierkowy fiolet i błękit, za mały zakres jasności (bladymiętowy
+#: Glacyn obok chaty i wierzby). Obróbka w grze tego nie naprawi, więc
+#: malujemy od nowa: wejściem jest gotowy mistrz (tożsamość, poza, przodem
+#: w prawo), a wzorem stylu arkusz obiektów NASZEJ mapy w ich własnej
+#: rozdzielczości (`ARKUSZ_MAPY`: chata, wierzba, wieża, wóz, drzewo,
+#: kopalnie, skrzynia, sad) — ten sam pędzel, ten sam brzeg. Barwy: „stonuj,
+#: ale zostaw odcień" — prośba o „ziemistą paletę" zrobiła z fioletowej
+#: korony Sporexa rdzawą.
+PROMPT_MAPA = (
+    'Repaint the creature from the FIRST image as if it were painted by the '
+    'same illustrator who painted the adventure-map objects in the SECOND '
+    'image (hut, willow, watchtower, wagon, oak, mines, chest, orchard). '
+    'Match their rendering exactly: storybook painterly brushwork with '
+    'visible textured strokes, a full value range — deep dark core shadows '
+    'on the lower-right and underside, bright warm highlights from the upper '
+    'left — and the same edge treatment: a dark edge in a deeper shade of '
+    'the local colour, not a black cartoon line. Natural, slightly muted '
+    'palette: keep the HUE of every colour zone of the creature (purple '
+    'stays purple, blue stays blue, pink stays pink) and only lower its '
+    'saturation a little and deepen its shadows — dusky violet instead of '
+    'candy magenta, slate blue instead of pastel cyan. Less of a cute '
+    'mascot, more a wild creature that lives in this world: calmer, '
+    'natural expression, but the same character. Keep its identity exactly: '
+    '{opis}. Same silhouette, same pose, same colour zones and markings, '
+    'same anatomy and number of limbs. Full body, three-quarter view facing '
+    'the RIGHT side of the image. Only the creature, cut out on a fully '
+    'transparent background with nothing under its feet. Do NOT copy the '
+    'grassy or rocky bases the objects in the second image stand on: the '
+    'creature has no base at all — no ground patch, no dirt, no grass, no '
+    'pebbles, no shadow, no glow, no frame, no text. Its feet are the '
+    'lowest painted pixels.'
+)
+ARKUSZ_MAPY = WSAD / '_styl-mapa.png'
 
 #: Drugie przejście — sprzątanie gotowego rysunku. Mimo „nothing under its
 #: feet" model w pierwszym przejściu podkładał prawie każdemu stworkowi
@@ -245,11 +285,12 @@ def _zwolnij() -> None:
         _w_locie -= 1
 
 
-def generuj(sid: str, czysc: bool = False) -> Path | None:
+def generuj(sid: str, czysc: bool | str = False) -> Path | None:
     """Jedno zapytanie `images/edits`. Zwraca ścieżkę nowej surowej wersji.
 
     `czysc`: zamiast przemalowywać oryginał, bierze wybraną surową wersję
-    i zdejmuje z niej namalowany grunt (`PROMPT_CZYSC`)."""
+    i zdejmuje z niej namalowany grunt (`PROMPT_CZYSC`). `czysc='mapa'`:
+    przemalowuje mistrza pod obiekty naszej mapy (`PROMPT_MAPA`)."""
     _rezerwuj()
     try:
         return _generuj(sid, czysc)
@@ -257,8 +298,17 @@ def generuj(sid: str, czysc: bool = False) -> Path | None:
         _zwolnij()
 
 
-def _generuj(sid: str, czysc: bool) -> Path | None:
-    if czysc:
+def _generuj(sid: str, czysc: bool | str) -> Path | None:
+    if czysc == 'mapa':
+        # Wejście: mistrz 256 px powiększony do 512 (model gubi szczegóły
+        # na małym obrazku), drugi obrazek — arkusz obiektów naszej mapy.
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as t:
+            Image.open(MISTRZE / f'{sid}.png').convert('RGBA').resize((512, 512), Image.LANCZOS).save(t.name)
+            wejscie = t.name
+        obrazy = ['-F', f'image[]=@{wejscie}', '-F', f'image[]=@{ARKUSZ_MAPY}']
+        prompt = PROMPT_MAPA.format(opis=STWORKI[sid][1])
+        print(f'  {sid}: maluję pod mapę z mistrza', flush=True)
+    elif czysc:
         zrodlo = wybrana(sid)
         if not zrodlo:
             print(f'  {sid}: nie ma czego czyścić')
@@ -466,6 +516,7 @@ def main() -> None:
     ap.add_argument('--generuj', action='store_true', help='nowa wersja przez OpenAI (kosztuje)')
     ap.add_argument('--brakujace', action='store_true', help='z --generuj: tylko stworki bez żadnej wersji')
     ap.add_argument('--czysc', action='store_true', help='zdejmij namalowany grunt z wybranej wersji (kosztuje)')
+    ap.add_argument('--mapowy', action='store_true', help='przemaluj mistrza pod obiekty naszej mapy (kosztuje)')
     ap.add_argument('--rownolegle', type=int, default=3, help='ile zapytań naraz (limit ~5/min)')
     ap.add_argument('--kadruj', action='store_true', help='wybrane wersje → assets/stworki + public/sprites')
     ap.add_argument('--bok', type=int, default=128, help='bok pliku w public/sprites')
@@ -494,6 +545,12 @@ def main() -> None:
         print(f'czyszczę {len(ids)}: model {MODEL}, jakość {JAKOSC}')
         with ThreadPoolExecutor(max_workers=max(1, args.rownolegle)) as pula:
             list(pula.map(lambda s: generuj(s, czysc=True), ids))
+    if args.mapowy:
+        if not args.stworki:
+            raise SystemExit('--mapowy wymaga listy id (świadomie: każde to zapytanie płatne)')
+        print(f'maluję pod mapę {len(ids)}: model {MODEL}, jakość {JAKOSC}')
+        with ThreadPoolExecutor(max_workers=max(1, args.rownolegle)) as pula:
+            list(pula.map(lambda s: generuj(s, czysc='mapa'), ids))
     if args.kadruj:
         kadruj(args.bok)
     if args.arkusz:

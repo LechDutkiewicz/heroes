@@ -165,12 +165,12 @@ const MINIATURA = 'plansza-mini';
 const KRYCIE_CIENIA = 0.48;
 const KRYCIE_CIENIA_BRYLY = 0.38;
 /** Stworek na mapie (`stworekNaMape`): ile nasycenia zostaje z malowanego rysunku. */
-const STWOREK_NASYCENIE = 0.6;
+const STWOREK_NASYCENIE = 0.9;
 /** …jak mocno odcień idzie za średnią barwą okolicy (0 — wcale, 1 — w pełni). */
-const STWOREK_ODCIEN = 0.45;
+const STWOREK_ODCIEN = 0.15;
 /** …siła lokalnego kontrastu (faktura) i amplituda ziarna pędzla. */
-const STWOREK_DETAL = 0.9;
-const STWOREK_ZIARNO = 0.1;
+const STWOREK_DETAL = 0.5;
+const STWOREK_ZIARNO = 0.05;
 /** Gotowe stworki na mapę: klucz tekstury → rysunek i cień (tekstury są globalne). */
 /** Krycie cienia rzuconego stworka. */
 const STWOREK_CIEN = 0.68;
@@ -784,7 +784,7 @@ export class AdventureScene extends Phaser.Scene {
           // Krawędź: po stronie światła (lewa-góra) jaśniej, w cieniu ciemniej.
           const dl = Math.hypot(kx, ky) || 1;
           const odSwiatla = (kx + ky) / dl / Math.SQRT2;
-          mnoz *= 0.66 - 0.16 * odSwiatla;
+          mnoz *= 0.74 - 0.14 * odSwiatla;
         }
         for (let c = 0; c < 3; c++) wynik[i + c] = Phaser.Math.Clamp((d[i + c] + detal) * mnoz, 0, 255);
       }
