@@ -554,6 +554,8 @@ USTAWIENIA = {
     # …i ciemny obrys pod wszystkim, co da się podnieść albo odwiedzić —
     # drzewa, krzaki i naklejki łąki go nie mają.
     'obrysObiektow': 0.35,
+    # Stwory na mapie, runda 7: strażnik „odrobinę za mały przy moście".
+    'skalaStrazy': 1.1,
     # Runda 6 (HotA): „zamek, młyn i most zajmują po kilka kafli". Budowle
     # odwiedzane stoją na jednym polu, więc mniejszy rysunek niczego nie psuje.
     'skalaBudowli': 0.8,

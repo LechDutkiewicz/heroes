@@ -190,6 +190,7 @@ export const USTAWIENIA = {
   "zestaw": "polana",
   "znajdzki": 0.68,
   "obrysObiektow": 0.35,
+  "skalaStrazy": 1.1,
   "skalaBudowli": 0.8,
   "kepySkal": {
     "0,23": 1,

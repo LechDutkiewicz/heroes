@@ -190,9 +190,21 @@ const STWOREK_WYGLADZENIE = 0.3;
  */
 const STWOREK_PROG_CIEMNY = 105;
 const STWOREK_KRAWEDZ_SWIATLA = 0.35;
-/** Krycie cienia rzuconego (kształt stworka) i plamy styku pod stopami. */
-const STWOREK_CIEN = 0.45;
-const STWOREK_STYK = 0.42;
+/**
+ * Cień stworka. Runda 7: plama 0,42 w barwie przyciemnionego gruntu na
+ * ciemnej trawie Bagien była niewidoczna — czwarta runda z rzędu „brak
+ * cienia kontaktowego". Teraz jak pod obiektami (`cienKontaktowy`): ta sama
+ * miękka tekstura, ciemny rdzeń (tekstura ma rdzeń 0,92, więc przy
+ * `STWOREK_STYK` ok. 0,6 w środku), szerokość ~0,9 sylwetki, przesunięta
+ * w prawo-dół od światła. Barwa: ciepła czerń jak pod skrzynią; na śniegu
+ * szaroniebieska (`STWOREK_STYK_SNIEG`), nie nasycony błękit.
+ */
+const STWOREK_STYK = 0.66;
+const STWOREK_STYK_SNIEG = 0x3e4a5e;
+/** Krycie cienia rzuconego w kształcie stworka (nad plamą styku). */
+const STWOREK_CIEN = 0.35;
+/** Chłodna barwa strony cienia na śniegu (`STWOREK_SNIEG`). */
+const STWOREK_CHLOD = [96, 112, 140];
 /**
  * Obrys stworka na planszach, które obrysowują obiekty (`obrysObiektow`).
  * Runda 6: prawie czarny pierścień 0x1c1408 czytał się jak naklejka, a brzegi
@@ -217,7 +229,31 @@ const STWOREK_BRYLA = 0.16;
  */
 const OBIEKTY_WZORCOWE = ['m-chatka', 'm-skrzynia', 'm-woz', 'm-wieza-obserwacyjna', 'm-kopalnia'];
 /** Zakres barw obiektów planszy — patrz `barwyObiektow`. Klucz: id planszy. */
-const BARWY_OBIEKTOW = new Map<string, { nas: number; jas: number; roz: number }>();
+const BARWY_OBIEKTOW = new Map<string, { nas: number; sufit: number; jas: number; roz: number }>();
+/**
+ * Piksel [r, g, b] z odcieniem różu/magenty (320–360°) przesunięty ku
+ * ciepłej czerwieni (ok. 8°) — o 70% drogi, im bliżej różu, tym mocniej.
+ * Fiolet (Sporex, ok. 280°) i czerwień zostają nietknięte.
+ */
+function bezRozu(rgb: number[]): number[] {
+  const [r, g, b] = rgb;
+  const mx = Math.max(r, g, b);
+  const mn = Math.min(r, g, b);
+  if (mx - mn < 12 || mx !== r) return rgb;
+  let hue = (60 * (g - b)) / (mx - mn);
+  if (hue >= 0) return rgb;
+  hue += 360;
+  if (hue < 320) return rgb;
+  const nowy = hue + (368 - hue) * 0.7;
+  // Z powrotem do RGB przy tej samej jasności (mx) i nasyceniu (mx − mn).
+  const h = (nowy % 360) / 60;
+  const C = mx - mn;
+  const x = C * (1 - Math.abs((h % 2) - 1));
+  // Tylko dwa sektory koła barw są tu możliwe: 300–360° i 0–60°.
+  const [a, bb, c] = h < 1 ? [C, x, 0] : [C, 0, x];
+  return [a + mn, bb + mn, c + mn];
+}
+
 type StworekNaMape = {
   rysunek: string;
   /** Ile pikseli tekstury nad sylwetką i po bokach to margines na obrys. */
@@ -678,10 +714,10 @@ export class AdventureScene extends Phaser.Scene {
 
   /**
    * Zakres barw obiektów tej planszy (`OBIEKTY_WZORCOWE`, te, które są):
-   * 85. percentyl nasycenia, średnia i odchylenie jasności pikseli
-   * nieprzezroczystych. Liczone raz na planszę.
+   * 85. i 95. percentyl chromy (`nas`, `sufit`), średnia i odchylenie
+   * jasności pikseli nieprzezroczystych. Liczone raz na planszę.
    */
-  private barwyObiektow(): { nas: number; jas: number; roz: number } | null {
+  private barwyObiektow(): { nas: number; sufit: number; jas: number; roz: number } | null {
     const znane = BARWY_OBIEKTOW.get(this.stan.mapa ?? '');
     if (znane) return znane;
     const nas: number[] = [];
@@ -702,9 +738,9 @@ export class AdventureScene extends Phaser.Scene {
       const d = ctx.getImageData(0, 0, c.width, c.height).data;
       for (let i = 0; i < d.length; i += 4) {
         if (d[i + 3] < 220) continue;
-        const mx = Math.max(d[i], d[i + 1], d[i + 2]);
-        const mn = Math.min(d[i], d[i + 1], d[i + 2]);
-        nas.push(mx ? (mx - mn) / mx : 0);
+        // Chroma (max − min, 0–255), a nie nasycenie HSV: w HSV ciemne
+        // drewno ma „nasycenie" jak cukierek i sufit nic nie ścinał.
+        nas.push(Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]));
         const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
         suma += L;
         suma2 += L * L;
@@ -714,7 +750,12 @@ export class AdventureScene extends Phaser.Scene {
     if (!n) return null;
     nas.sort((a, b) => a - b);
     const jas = suma / n;
-    const wynik = { nas: nas[Math.floor(nas.length * 0.85)], jas, roz: Math.sqrt(Math.max(0, suma2 / n - jas * jas)) };
+    const wynik = {
+      nas: nas[Math.floor(nas.length * 0.85)],
+      sufit: nas[Math.floor(nas.length * 0.95)],
+      jas,
+      roz: Math.sqrt(Math.max(0, suma2 / n - jas * jas)),
+    };
     BARWY_OBIEKTOW.set(this.stan.mapa ?? '', wynik);
     return wynik;
   }
@@ -799,8 +840,7 @@ export class AdventureScene extends Phaser.Scene {
         y1 = Math.max(y1, y);
         if (d[i + 3] > 200) {
           const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-          const mx = Math.max(d[i], d[i + 1], d[i + 2]);
-          nasS.push(mx ? (mx - Math.min(d[i], d[i + 1], d[i + 2])) / mx : 0);
+          nasS.push(Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]));
           sumaL += L;
           suma2 += L * L;
           ileL++;
@@ -810,7 +850,7 @@ export class AdventureScene extends Phaser.Scene {
     const srL = ileL > 0 ? sumaL / ileL : 128;
     const rozL = ileL > 0 ? Math.sqrt(Math.max(0, suma2 / ileL - srL * srL)) : 40;
     nasS.sort((a, b) => a - b);
-    const nas85 = nasS.length ? nasS[Math.floor(nasS.length * 0.85)] : 0.5;
+    const nas85 = nasS.length ? nasS[Math.floor(nasS.length * 0.85)] : 100;
     const ciemny = srL < STWOREK_PROG_CIEMNY;
     const ph = Math.max(1, y1 - y0);
     const sx = (x0 + x1) / 2;
@@ -859,13 +899,37 @@ export class AdventureScene extends Phaser.Scene {
         const src = [0, 1, 2].map((c) =>
           ile ? d[i + c] * (1 - STWOREK_WYGLADZENIE) + (rozmyte[c] / ile) * STWOREK_WYGLADZENIE : d[i + c]
         );
-        const L = 0.299 * src[0] + 0.587 * src[1] + 0.114 * src[2];
+        // Róż i magenta (odcień 320–360°) ciągniemy ku ciepłej czerwieni:
+        // odbarwiona czerwień Cindra czytała się na Bagnach jak cukierkowy
+        // róż, a róż nie istnieje w palecie żadnej planszy.
+        const barwa = bezRozu(src);
+        const L = 0.299 * barwa[0] + 0.587 * barwa[1] + 0.114 * barwa[2];
+        // Odbarwianie ku CIEPŁEJ szarości — ku zwykłej czerwień bladła w róż.
+        const szary = [L * 1.06, L, L * 0.88];
         for (let c = 0; c < 3; c++) {
-          let v = L + (src[c] - L) * nasycenie;
+          let v = szary[c] + (barwa[c] - szary[c]) * nasycenie;
           v = srL + (v - srL) * kontrast;
           v *= jasnosc;
           v *= 1 - odcien + (odcien * [tr, tg, tb][c]) / sr;
           v *= bryla;
+          wynik[i + c] = v;
+        }
+        // Sufit chromy piksela: nie jaskrawiej niż najjaskrawsze 5% pikseli
+        // obiektów planszy (fioletowa korona Sporexa, róż Cindra).
+        const sufit = obiekty?.sufit ?? 255;
+        const mxP = Math.max(wynik[i], wynik[i + 1], wynik[i + 2]);
+        const mnP = Math.min(wynik[i], wynik[i + 1], wynik[i + 2]);
+        if (mxP - mnP > sufit) {
+          const Lp = 0.299 * wynik[i] + 0.587 * wynik[i + 1] + 0.114 * wynik[i + 2];
+          const k = sufit / (mxP - mnP);
+          for (let c = 0; c < 3; c++) wynik[i + c] = Lp + (wynik[i + c] - Lp) * k;
+        }
+        for (let c = 0; c < 3; c++) {
+          let v = wynik[i + c];
+          // Na śniegu strona cienia chłodnieje, a cały brzeg mięknie ku
+          // barwie okolicy — obiekty Twierdzy nie mają ciemnej linii.
+          if (snieg && bryla < 1) v += (STWOREK_CHLOD[c] - v) * Math.min(0.5, (1 - bryla) * 2.5);
+          if (snieg && ile < 9) v += ([tr, tg, tb][c] - v) * 0.25;
           if (krawedz && swiatlo) v += (barwaKrawedzi[c] - v) * krawedz;
           wynik[i + c] = v;
         }
@@ -983,11 +1047,16 @@ export class AdventureScene extends Phaser.Scene {
       const sk = im.scaleY;
       const yStop = im.y - naMape.cien.stopy * sk;
       const szer = (im.width - 2 * naMape.margines) * sk * (this.podstawaRysunku(klucz).widocznaSzer ?? 0.8);
+      const snieg = !!planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienNaSniegu;
+      const szerC = Math.max(KAFEL * 0.5, szer * 0.9);
+      const wysC = szerC * 0.34;
       obrazy.push(
+        // Rdzeń zachodzi na stopy (środek plamy o 0,15 jej wysokości NAD
+        // linią stóp), reszta wychodzi w prawo-dół.
         this.add
-          .image(KAFEL * 0.03, yStop - KAFEL * 0.02, CIEN_KONTAKTOWY)
-          .setDisplaySize(Math.max(KAFEL * 0.45, szer * 0.85), Math.max(KAFEL * 0.14, szer * 0.24))
-          .setTint(naMape.cien.barwa)
+          .image(szerC * 0.12, yStop + wysC * 0.1, CIEN_KONTAKTOWY)
+          .setDisplaySize(szerC, wysC)
+          .setTint(snieg ? STWOREK_STYK_SNIEG : 0x0e0904)
           .setTintMode(Phaser.TintModes.FILL)
           .setAlpha(STWOREK_STYK),
         this.add

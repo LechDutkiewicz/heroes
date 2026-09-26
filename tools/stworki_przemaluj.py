@@ -135,8 +135,10 @@ WYBOR: dict[str, int] = {
     # zostają wersje pod mapę z rundy 3.
     '00263': 3, '00041': 3,
     # Runda 5 (sędzią nasze obiekty): matowy 00002-6 wyszedł szarofioletowo-
-    # oliwkowym mułem obok nasyconej skrzyni i wieży — wraca wersja pod mapę.
-    '00002': 4,
+    # oliwkowym mułem obok nasyconej skrzyni i wieży; runda 8: oliwkowe ciało
+    # 00002-4 dalej mętne — 00002-7 (`--poprawka`: wiosenna zieleń, blik
+    # z lewej-góry). Nasycenie korony ścina w grze `barwyObiektow`.
+    '00002': 7,
 }
 
 #: Surowe wersje namalowane przodem w lewo — odbijane w poziomie przy
@@ -213,6 +215,18 @@ PROMPT_MAPA = (
     'lowest painted pixels.'
 )
 ARKUSZ_MAPY = WSAD / '_styl-mapa.png'
+
+#: Poprawka jednego mistrza (`--poprawka "…"`): ten sam rysunek, jedna
+#: wskazana zmiana. Wejście: bieżący mistrz + arkusz obiektów mapy.
+PROMPT_POPRAWKA = (
+    'Repaint the creature from the FIRST image keeping it exactly the same '
+    'design, pose, silhouette, proportions and painterly style (matching the '
+    'map objects in the SECOND image), with only this change: {zmiana} '
+    'Keep its identity: {opis}. Full body, facing the RIGHT side of the '
+    'image. Only the creature, cut out on a fully transparent background, '
+    'nothing under its feet: no ground, no shadow, no base, no glow, no '
+    'frame, no text.'
+)
 
 #: Czwarte przejście — tylko dla najbardziej „chibi" i błyszczących (runda 3
 #: wzorca: „glossy mobile-game sticker", wielkie głowy, lśniące bliki,
@@ -328,15 +342,18 @@ def generuj(sid: str, czysc: bool | str = False) -> Path | None:
 
 
 def _generuj(sid: str, czysc: bool | str) -> Path | None:
-    if czysc in ('mapa', 'matowy'):
+    if czysc in ('mapa', 'matowy') or (isinstance(czysc, str) and czysc.startswith('poprawka:')):
         # Wejście: mistrz 256 px powiększony do 512 (model gubi szczegóły
         # na małym obrazku), drugi obrazek — arkusz obiektów naszej mapy.
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as t:
             Image.open(MISTRZE / f'{sid}.png').convert('RGBA').resize((512, 512), Image.LANCZOS).save(t.name)
             wejscie = t.name
         obrazy = ['-F', f'image[]=@{wejscie}', '-F', f'image[]=@{ARKUSZ_MAPY}']
-        prompt = (PROMPT_MATOWY if czysc == 'matowy' else PROMPT_MAPA).format(opis=STWORKI[sid][1])
-        print(f'  {sid}: maluję z mistrza ({czysc})', flush=True)
+        if czysc.startswith('poprawka:'):
+            prompt = PROMPT_POPRAWKA.format(zmiana=czysc[len('poprawka:'):], opis=STWORKI[sid][1])
+        else:
+            prompt = (PROMPT_MATOWY if czysc == 'matowy' else PROMPT_MAPA).format(opis=STWORKI[sid][1])
+        print(f'  {sid}: maluję z mistrza ({czysc[:40]})', flush=True)
     elif czysc:
         zrodlo = wybrana(sid)
         if not zrodlo:
@@ -547,6 +564,7 @@ def main() -> None:
     ap.add_argument('--czysc', action='store_true', help='zdejmij namalowany grunt z wybranej wersji (kosztuje)')
     ap.add_argument('--mapowy', action='store_true', help='przemaluj mistrza pod obiekty naszej mapy (kosztuje)')
     ap.add_argument('--matowy', action='store_true', help='z --mapowy: mniej „chibi", matowo (PROMPT_MATOWY)')
+    ap.add_argument('--poprawka', help='z --mapowy: jedna zmiana w mistrzu, opisana po angielsku (PROMPT_POPRAWKA)')
     ap.add_argument('--rownolegle', type=int, default=3, help='ile zapytań naraz (limit ~5/min)')
     ap.add_argument('--kadruj', action='store_true', help='wybrane wersje → assets/stworki + public/sprites')
     ap.add_argument('--bok', type=int, default=128, help='bok pliku w public/sprites')
@@ -580,7 +598,8 @@ def main() -> None:
             raise SystemExit('--mapowy wymaga listy id (świadomie: każde to zapytanie płatne)')
         print(f'maluję pod mapę {len(ids)}: model {MODEL}, jakość {JAKOSC}')
         with ThreadPoolExecutor(max_workers=max(1, args.rownolegle)) as pula:
-            list(pula.map(lambda s: generuj(s, czysc='matowy' if args.matowy else 'mapa'), ids))
+            tryb = f'poprawka:{args.poprawka}' if args.poprawka else 'matowy' if args.matowy else 'mapa'
+            list(pula.map(lambda s: generuj(s, czysc=tryb), ids))
     if args.kadruj:
         kadruj(args.bok)
     if args.arkusz:
