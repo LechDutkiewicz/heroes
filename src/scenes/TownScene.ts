@@ -22,10 +22,12 @@ import {
 } from '../data/zamki';
 import { MNOZNIK_FORTU } from '../data/zasady-h3';
 import { FACTIONS, factionById } from '../data/factions';
-import { SLOTY_ARMII, dolacz } from '../data/armia';
+import { type Armia, dolacz, znormalizuj, zywe } from '../data/armia';
+import { PanelArmii } from '../visual/panelArmii';
+import { zapisz } from '../dev/dziennik';
 import { C, T, Z } from '../visual/theme';
 import { mix } from '../visual/hud';
-import { GORA as BELKA_DOL, MARGINES, OKNO_H, OKNO_W, PASEK_H, RAMA_MAPY_H } from '../visual/uklad';
+import { GORA as BELKA_DOL, MARGINES, OKNO_H, OKNO_W } from '../visual/uklad';
 import {
   BARWA,
   KROJ,
@@ -141,13 +143,25 @@ const MGLA_DALI = 0xc9dcea;
 const OKNO_X = MARGINES;
 const OKNO_Y = BELKA_DOL;
 const OKNO_SZ = OKNO_W - MARGINES * 2;
-const OKNO_WYS = 492;
-/** Pasek surowców, tabliczki „Buduj" i „Wyjdź" — na linii paska surowców mapy. */
-const PASEK_Y = BELKA_DOL + RAMA_MAPY_H + 14;
-/** Pas armii między ramą panoramy a paskiem surowców. */
-const ARMIA_Y = OKNO_Y + OKNO_WYS + 24;
-const ARMIA_H = PASEK_Y - 16 - ARMIA_Y;
-/** Lewa kolumna dołu (armia, surowce); po prawej komunikat i tabliczki. */
+/**
+ * Wysokość okna panoramy. Było 492, ale pod panoramą muszą się zmieścić DWA
+ * rzędy armii (garnizon i bohater odwiedzający, jak w HotA) — więc okno
+ * obcina 22 px przedplanu z dołu. Budynek stojący najbliżej (y = 1) ma
+ * podstawę na 502 px, więc dalej stoi cały w oknie.
+ */
+const OKNO_WYS = 470;
+/** Dwa rzędy armii pod panoramą: garnizon (górny) i bohater (dolny). */
+const RZAD_H = 64;
+const GARNIZON_Y = OKNO_Y + OKNO_WYS + 22;
+const BOHATER_Y = GARNIZON_Y + RZAD_H + 6;
+const SLOT_W = 52;
+const SLOT_ODSTEP = 4;
+/** Prawa kolumna: komunikat, pod nim surowce, na dole tabliczki „Buduj" i „Wyjdź". */
+const KOMUNIKAT_H = 54;
+const SUROWCE_Y = GARNIZON_Y + KOMUNIKAT_H + 6;
+const SUROWCE_H = 32;
+const PRZYCISKI_Y = BOHATER_Y + RZAD_H - 17;
+/** Lewa kolumna dołu (dwa rzędy armii); po prawej komunikat, surowce i tabliczki. */
 const LEWA_SZ = 568;
 const PRAWA_X = LEWA_SZ + 18;
 const PRAWA_SZ = OKNO_W - MARGINES - PRAWA_X;
@@ -155,7 +169,10 @@ const PRAWA_SZ = OKNO_W - MARGINES - PRAWA_X;
 const KARTA_X = OKNO_X + 14;
 const KARTA_W = 320;
 const KARTA_DOL = OKNO_Y + OKNO_WYS - 14;
-const DOMYSLNY_KOMUNIKAT = 'Kliknij budynek, żeby zwerbować stworki.\n„Buduj" pokazuje, co jeszcze może tu stanąć.';
+const DOMYSLNY_KOMUNIKAT =
+  'Kliknij budynek, żeby werbować. Kliknij stworka, potem inny slot — przestawisz armię. Prawy klik: opis.';
+/** Skąd ekran bohatera ma wrócić — czyta go `HeroScene.zamknij`. */
+const KLUCZ_POWROTU = 'powrot-z-bohatera';
 
 interface Kafel {
   budynek: Budynek;
@@ -169,7 +186,12 @@ export class TownScene extends Phaser.Scene {
   private kafle: Kafel[] = [];
   private podpisy: Partial<Record<Surowiec, Phaser.GameObjects.Text>> = {};
   private dochody: Partial<Record<Surowiec, Phaser.GameObjects.Text>> = {};
-  private slotyArmii: Phaser.GameObjects.Container[] = [];
+  /**
+   * Garnizon zamku — ta sama tablica co `zamek.garnizon` (siedem slotów
+   * z dziurami), więc każda zmiana od razu jest w stanie gry i w zapisie.
+   */
+  private garnizon: Armia = [];
+  private panel!: PanelArmii;
   private karta!: Phaser.GameObjects.Container;
   private kartaTlo: Phaser.GameObjects.GameObject[] = [];
   private kartaTytul!: Phaser.GameObjects.Text;
@@ -183,6 +205,7 @@ export class TownScene extends Phaser.Scene {
   private komunikat!: Phaser.GameObjects.Text;
   private dataTekst!: Phaser.GameObjects.Text;
   private bohaterStan!: Phaser.GameObjects.Text;
+  private garnizonStan!: Phaser.GameObjects.Text;
 
   constructor() {
     super('zamek');
@@ -213,7 +236,6 @@ export class TownScene extends Phaser.Scene {
     this.podpisy = {};
     this.dochody = {};
     this.kartaTlo = [];
-    this.slotyArmii = [];
     this.zachety = [];
     this.wybrany = undefined;
 
@@ -221,6 +243,7 @@ export class TownScene extends Phaser.Scene {
     const id = this.registry.get(KLUCZ_ZAMKU) as number;
     this.zamek = this.stan.obiekty.find((o) => o.id === id)!;
     this.zamek.postawione ??= [];
+    this.garnizon = this.zamek.garnizon = znormalizuj(this.zamek.garnizon);
 
     this.zbudujCien();
     this.rysujRame();
@@ -256,11 +279,9 @@ export class TownScene extends Phaser.Scene {
    * Czy bohater stoi w tym zamku.
    *
    * Do miasta da się wejść z panelu na mapie, nie ruszając bohatera — i tak
-   * jest w Heroes 3. Ale werbunek dokłada stworki do armii BOHATERA, więc
-   * werbowanie zdalnie oznaczałoby, że oddziały pojawiają się przy nim
-   * na drugim końcu mapy. W Heroes 3 idą wtedy do garnizonu zamku; garnizonu
-   * nie mamy, więc zamiast wymyślać nowy mechanizm, po prostu nie pozwalamy
-   * werbować bez bohatera. Budować można — to nic nie przenosi.
+   * jest w Heroes 3. Werbunek idzie wtedy do GARNIZONU zamku (jak w Heroes 3),
+   * a z bohaterem w zamku — do jego armii (a gdy ta jest pełna, do garnizonu).
+   * Dolny rząd armii (bohater odwiedzający) jest aktywny tylko z bohaterem.
    *
    * Liczone z położenia, a nie z flagi przekazanej przy wejściu: flaga
    * zdążyłaby się zestarzeć, a te dwie liczby są zawsze prawdziwe.
@@ -394,6 +415,12 @@ export class TownScene extends Phaser.Scene {
       .setOrigin(0, 0)
       // Ponad wszystkimi bryłami, ale pod paskami i kartą.
       .setDepth(Z.hud - 1);
+    // Przy niższym oknie (dwa rzędy armii) pas przedplanu może leżeć całkiem
+    // pod ramą — wtedy nie ma czego dokładać.
+    if (OKNO_Y + OKNO_WYS - gora <= 0) {
+      im.destroy();
+      return;
+    }
     im.setCrop(OKNO_X, gora - GORA, OKNO_SZ, OKNO_Y + OKNO_WYS - gora);
   }
 
@@ -657,70 +684,99 @@ export class TownScene extends Phaser.Scene {
   }
 
   /**
-   * Pas armii pod panoramą: medalion z bohaterem, jego imię i czy stoi
-   * w zamku, a obok siedem slotów — tych samych, co na karcie bohatera na
-   * mapie (papier z kreską atramentu, licznik kremem). Armia musi być
-   * widoczna cały czas, bo każda decyzja na tym ekranie — zwerbować czy
-   * budować — jest decyzją o niej.
+   * Dwa rzędy armii pod panoramą — jak w HotA: górny to GARNIZON zamku (z
+   * herbem miasta w medalionie), dolny to bohater odwiedzający (z portretem;
+   * klik w portret otwiera ekran bohatera). Oba rzędy prowadzi jeden
+   * `PanelArmii`, więc zaznaczenie jest wspólne i oddział przechodzi między
+   * nimi tym samym gestem, którym przestawia się go w rzędzie.
    *
-   * Po prawej pergamin z komunikatem, jak pole podpowiedzi na mapie.
+   * Po prawej pergamin z komunikatem i tabliczką „Podziel", jak pole
+   * podpowiedzi na mapie.
    */
   private rysujPasekArmii() {
-    const y = ARMIA_Y;
-    const h = ARMIA_H;
-    panelPergaminu(this, 0, y, LEWA_SZ, h).forEach((c) => c.setDepth(Z.hud));
+    this.panel = new PanelArmii(this, {
+      glebia: Z.hud + 1,
+      powiedz: (t) => this.komunikat.setText(t),
+      poZmianie: (opis) => {
+        zapisz('armia', `miasto: ${opis}`);
+        this.odswiez();
+      },
+    });
+    const rzadX = LEWA_SZ - 10 - (7 * SLOT_W + 6 * SLOT_ODSTEP);
 
-    const r = h / 2 - 5;
-    const mx = 12 + r;
-    const my = y + h / 2;
-    medalion(this, mx, my, r, BARWA.papierCiemny).setDepth(Z.hud + 1);
-    if (this.textures.exists('bohater')) {
+    // --- garnizon ---
+    this.rzadArmii(GARNIZON_Y, 'Garnizon', (mx, my, r) => {
+      const postawione = this.zamek.postawione ?? [];
+      const ratusz = ['ratusz3', 'ratusz2', 'ratusz1'].find((x) => postawione.includes(x)) ?? 'ratusz1';
+      const herb = this.add.image(mx, my, `t-${this.profil.frakcja}-${ratusz}`).setDepth(Z.hud + 2);
+      herb.setScale(Math.min((r * 2 - 10) / herb.width, (r * 2 - 10) / herb.height));
+    });
+    this.garnizonStan = this.add
+      .text(74, GARNIZON_Y + 30, '', { ...stylAtramentu(11, 'miekki'), wordWrap: { width: rzadX - 80 } })
+      .setDepth(Z.hud + 1);
+    this.panel.dodajPasek({
+      x: rzadX,
+      y: GARNIZON_Y + 6,
+      slotW: SLOT_W,
+      slotH: RZAD_H - 12,
+      odstep: SLOT_ODSTEP,
+      armia: () => this.garnizon,
+      aktywny: () => this.zamek.wlasciciel === 'gracz',
+      powodNieaktywny: 'To nie jest twój zamek.',
+      gdzie: 'w garnizonie',
+      dokad: 'do garnizonu',
+    });
+
+    // --- bohater odwiedzający ---
+    const obecny = this.bohaterObecny;
+    this.rzadArmii(BOHATER_Y, obecny ? this.stan.bohater.imie : 'Bohater', (mx, my, r) => {
+      if (!obecny || !this.textures.exists('bohater')) return;
       const portret = this.add.image(mx, my - 1, 'bohater', 0).setDepth(Z.hud + 2);
       portret.setScale((r * 2 - 8) / portret.height);
-    }
-    const tx = mx + r + 10;
-    this.add
-      .text(tx, y + 8, this.stan.bohater.imie, stylEtykiety(15, BARWA.atrament))
-      .setOrigin(0, 0)
-      .setDepth(Z.hud + 1);
-    this.bohaterStan = this.add
-      .text(tx, y + 28, '', stylAtramentu(12, 'miekki'))
-      .setOrigin(0, 0)
-      .setDepth(Z.hud + 1);
-
-    const slotW = 52;
-    const slotH = h - 12;
-    const odstep = 4;
-    const rzadX = LEWA_SZ - 10 - (SLOTY_ARMII * slotW + (SLOTY_ARMII - 1) * odstep);
-    for (let i = 0; i < SLOTY_ARMII; i++) {
-      const g = this.add.graphics();
-      g.fillStyle(0x8a5a2a, 0.16);
-      g.fillRoundedRect(0, 0, slotW, slotH, 4);
-      g.lineStyle(1.2, BARWA.kreska, 0.6);
-      g.strokeRoundedRect(0, 0, slotW, slotH, 4);
-      const im = this.add.image(slotW / 2, slotH / 2 - 2, 'p-00193').setVisible(false);
-      const licznik = this.add
-        .text(slotW - 4, slotH - 1, '', {
-          fontFamily: KROJ.tytul,
-          fontSize: '13px',
-          color: BARWA.krem,
-          stroke: BARWA.braz,
-          strokeThickness: 3,
+      // Klik w portret — ekran bohatera, jak w HotA. Wraca się stamtąd tutaj.
+      const blask = this.add.circle(mx, my, r, 0xfff3c8, 0).setDepth(Z.hud + 3);
+      this.add
+        .zone(mx - r, my - r, r * 2, r * 2)
+        .setOrigin(0, 0)
+        .setDepth(Z.hud + 4)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerover', () => {
+          blask.setFillStyle(0xfff3c8, 0.22);
+          this.komunikat.setText(`${this.stan.bohater.imie} — kliknij portret, żeby otworzyć ekran bohatera.`);
         })
-        .setOrigin(1, 1);
-      const slot = this.add
-        .container(rzadX + i * (slotW + odstep), y + 6, [g, im, licznik])
-        .setDepth(Z.hud + 1);
-      slot.setData('rysunek', im).setData('licznik', licznik).setData('bok', slotH);
-      this.slotyArmii[i] = slot;
-    }
+        .on('pointerout', () => blask.setFillStyle(0xfff3c8, 0))
+        .on('pointerdown', (p: Phaser.Input.Pointer) => {
+          if (p.rightButtonDown() || this.panel.oknoOtwarte) return;
+          this.otworzBohatera();
+        });
+    });
+    this.bohaterStan = this.add
+      .text(74, BOHATER_Y + 30, '', { ...stylAtramentu(11, 'miekki'), wordWrap: { width: rzadX - 80 } })
+      .setDepth(Z.hud + 1);
+    this.panel.dodajPasek({
+      x: rzadX,
+      y: BOHATER_Y + 6,
+      slotW: SLOT_W,
+      slotH: RZAD_H - 12,
+      odstep: SLOT_ODSTEP,
+      armia: () => this.stan.bohater.armia,
+      chroniona: true,
+      aktywny: () => this.bohaterObecny,
+      powodNieaktywny: 'Bohater jest poza zamkiem. Przyprowadź go, żeby wymieniać oddziały z garnizonem.',
+      gdzie: 'u bohatera',
+      dokad: 'do bohatera',
+    });
 
+    // --- komunikat z tabliczką „Podziel" ---
+    const y = GARNIZON_Y;
+    const h = KOMUNIKAT_H;
+    const podzielW = 92;
     panelPergaminu(this, PRAWA_X, y, PRAWA_SZ, h).forEach((c) => c.setDepth(Z.hud));
     this.komunikat = this.add
       .text(PRAWA_X + 10, y + h / 2, '', { ...stylAtramentu(13), lineSpacing: 1 })
       .setOrigin(0, 0.5)
       .setDepth(Z.hud + 1)
-      .setWordWrapWidth(PRAWA_SZ - 20);
+      .setWordWrapWidth(PRAWA_SZ - podzielW - 26);
     // Jak podpowiedź na mapie: najpierw 13 px, a gdy się nie mieści — mniej.
     const k = this.komunikat;
     const zwykly = k.setText.bind(k);
@@ -728,55 +784,81 @@ export class TownScene extends Phaser.Scene {
       k.setFontSize(13);
       zwykly(t);
       for (const rozmiar of [12, 11]) {
-        if (k.height <= h - 8) break;
+        if (k.height <= h - 6) break;
         k.setFontSize(rozmiar);
       }
       return k;
     }) as typeof k.setText;
     k.setText(DOMYSLNY_KOMUNIKAT);
+    new Przycisk(this, {
+      x: PRAWA_X + PRAWA_SZ - podzielW / 2 - 8,
+      y: y + h / 2,
+      w: podzielW,
+      h: 34,
+      tekst: 'Podziel',
+      rozmiar: 13,
+      glebia: Z.hud + 2,
+      akcja: () => this.panel.podziel(),
+    });
+  }
+
+  /** Jeden rząd armii: pergamin, medalion z obrazkiem i podpis (bez slotów). */
+  private rzadArmii(y: number, tytul: string, obrazek: (mx: number, my: number, r: number) => void) {
+    panelPergaminu(this, 0, y, LEWA_SZ, RZAD_H).forEach((c) => c.setDepth(Z.hud));
+    const r = RZAD_H / 2 - 5;
+    const mx = 12 + r;
+    const my = y + RZAD_H / 2;
+    medalion(this, mx, my, r, BARWA.papierCiemny).setDepth(Z.hud + 1);
+    obrazek(mx, my, r);
+    this.add
+      .text(74, y + 9, tytul, stylEtykiety(14, BARWA.atrament))
+      .setOrigin(0, 0)
+      .setDepth(Z.hud + 1);
+  }
+
+  /** Ekran bohatera z miasta — i powrót tutaj (`HeroScene.zamknij`). */
+  private otworzBohatera() {
+    stopMusic(this);
+    this.registry.set(KLUCZ_STANU, this.stan);
+    this.registry.set(KLUCZ_POWROTU, 'zamek');
+    this.scene.start('bohater');
   }
 
   /**
-   * Dolny pasek: surowce jak rachunek na pergaminie (ten sam co na mapie
-   * i w tej samej kolejności — dziecko szuka pokeballi tam, gdzie zawsze
-   * były), a obok dwie tabliczki: złota „Buduj" (jedyny „następny krok"
-   * miasta) i drewniane wyjście.
+   * Surowce jak rachunek na pergaminie (ten sam co na mapie i w tej samej
+   * kolejności — dziecko szuka pokeballi tam, gdzie zawsze były), a pod nimi
+   * dwie tabliczki: złota „Buduj" (jedyny „następny krok" miasta)
+   * i drewniane wyjście.
    */
   private rysujPasekDolny() {
-    const y = PASEK_Y;
-    panelPergaminu(this, 0, y, LEWA_SZ, PASEK_H).forEach((c) => c.setDepth(Z.hud));
-    const krok = (LEWA_SZ - 24) / SUROWCE.length;
+    const y = SUROWCE_Y;
+    panelPergaminu(this, PRAWA_X, y, PRAWA_SZ, SUROWCE_H).forEach((c) => c.setDepth(Z.hud));
+    const krok = (PRAWA_SZ - 12) / SUROWCE.length;
     SUROWCE.forEach((s, i) => {
-      const sx = 20 + i * krok;
-      const sy = y + PASEK_H / 2;
+      const sx = PRAWA_X + 18 + i * krok;
+      const sy = y + SUROWCE_H / 2;
       const im = this.add.image(sx, sy, `m-${SUROWIEC_INFO[s].ikona}`).setDepth(Z.hud + 1);
-      im.setScale(Math.min(1, (PASEK_H - 10) / im.height));
+      im.setScale(Math.min(1, (SUROWCE_H - 8) / im.height));
       this.podpisy[s] = this.add
-        .text(sx + 17, sy, '0', stylEtykiety(17, BARWA.atrament))
+        .text(sx + 15, sy, '0', stylEtykiety(15, BARWA.atrament))
         .setOrigin(0, 0.5)
         .setDepth(Z.hud + 1);
       this.dochody[s] = this.add
-        .text(sx + 17, sy + 1, '', { ...stylAtramentu(12, 'zielony'), fontStyle: 'bold' })
+        .text(sx + 15, sy + 1, '', { ...stylAtramentu(11, 'zielony'), fontStyle: 'bold' })
         .setOrigin(0, 0.5)
         .setDepth(Z.hud + 1);
     });
 
-    // Budowa ma własny przycisk, zawsze w tym samym miejscu.
-    //
-    // Wcześniej stawiało się budynki, klikając w blade zarysy rozstawione po
-    // panoramie. Wyglądało to jak plac budowy w każdym wolnym miejscu — miasto
-    // pierwszego dnia było pełne rusztowań zamiast puste. W Heroes 3 miasto
-    // wypełnia się w miarę rozbudowy, a listę budowy otwiera ratusz; tak jest
-    // i tutaj, tylko lista dostaje jeszcze własny przycisk, żeby nie trzeba
-    // było zgadywać, że ratusz jest klikalny. (Środek w x = 664 — tam klika
-    // `tools/probe-miasto.mjs`.)
+    // Budowa ma własny przycisk, zawsze w tym samym miejscu (lista budowy,
+    // jak w ratuszu Heroes 3). Środek w x = 664, y ≈ 653 — tam klika
+    // `tools/probe-miasto.mjs`.
     const budujW = 156;
     const wyjdzW = PRAWA_SZ - budujW - 10;
     new Przycisk(this, {
       x: PRAWA_X + budujW / 2,
-      y: y + PASEK_H / 2,
+      y: PRZYCISKI_Y,
       w: budujW,
-      h: 38,
+      h: 36,
       tekst: 'Buduj',
       glowny: true,
       rozmiar: 17,
@@ -785,9 +867,9 @@ export class TownScene extends Phaser.Scene {
     });
     new Przycisk(this, {
       x: OKNO_W - MARGINES - wyjdzW / 2,
-      y: y + PASEK_H / 2,
+      y: PRZYCISKI_Y,
       w: wyjdzW,
-      h: 38,
+      h: 36,
       tekst: 'Wyjdź na mapę',
       rozmiar: 14,
       glebia: Z.hud + 2,
@@ -889,17 +971,16 @@ export class TownScene extends Phaser.Scene {
         PRZYROST_ODDZIALU
       )[b.poziom];
       this.kartaOpis.setText(
-        `${u.name}\nczeka: ${ile} · przybywa ${dziennie} dziennie\natak ${u.atk} · życie ${u.hp}`
+        `${u.name}\nczeka: ${ile} · przybywa ${dziennie} dziennie\natak ${u.atk} · życie ${u.hp}\n` +
+          `trafią: ${this.bohaterObecny ? 'do bohatera' : 'do garnizonu'}`
       );
       this.kartaStworek.setTexture(`p-${u.sprite}`).setVisible(true);
       this.kartaStworek.setScale(Math.min(1, 58 / this.kartaStworek.height));
       this.kartaMedalion.setVisible(true);
       this.pokazKoszt({ pokeball: KOSZT_ODDZIALU[b.poziom] }, 'za sztukę');
       const stac = this.stan.skarbiec.pokeball >= KOSZT_ODDZIALU[b.poziom];
-      this.kartaPrzycisk.setLabel(
-        !this.bohaterObecny ? 'Brak bohatera' : ile > 0 ? `Zwerbuj (${ile})` : 'Nikt nie czeka'
-      );
-      this.kartaPrzycisk.ustaw(this.bohaterObecny && ile > 0 && stac);
+      this.kartaPrzycisk.setLabel(ile > 0 ? `Zwerbuj (${ile})` : 'Nikt nie czeka');
+      this.kartaPrzycisk.ustaw(ile > 0 && stac && this.zamek.wlasciciel === 'gracz');
       this.ulozKarte();
       return;
     }
@@ -1260,12 +1341,11 @@ export class TownScene extends Phaser.Scene {
    * Werbunek. Oddział tego samego gatunku dokleja się do istniejącego slotu,
    * a nie zakłada nowego — inaczej cztery zakupy po jednym Pyroko dałyby
    * cztery osobne oddziały po jednym stworku, czyli armię bez sensu.
+   *
+   * Dokąd idą, jak w Heroes 3: z bohaterem w zamku — do niego (a gdy jego
+   * siedem slotów jest zajętych, do garnizonu), bez bohatera — do garnizonu.
    */
   private kup(tier: number) {
-    if (!this.bohaterObecny) {
-      this.komunikat.setText('Nie ma tu komu ich oddać.\nPrzyprowadź bohatera do zamku.');
-      return;
-    }
     const dostepne = this.zamek.dostepne ?? [];
     const koszt = KOSZT_ODDZIALU[tier];
     if ((dostepne[tier] ?? 0) <= 0) {
@@ -1293,13 +1373,20 @@ export class TownScene extends Phaser.Scene {
       frakcja: this.frakcja.id,
       tier,
     };
-    if (!dolacz(this.stan.bohater.armia, nowy)) {
-      this.komunikat.setText('Wszystkie sloty armii zajęte — nie ma gdzie ich postawić.');
+    let dokad: string;
+    if (this.bohaterObecny && dolacz(this.stan.bohater.armia, nowy)) dokad = 'do armii bohatera';
+    else if (dolacz(this.garnizon, nowy)) dokad = 'do garnizonu';
+    else {
+      this.komunikat.setText(
+        this.bohaterObecny
+          ? 'Wszystkie sloty bohatera i garnizonu zajęte — nie ma gdzie ich postawić.'
+          : 'Wszystkie sloty garnizonu zajęte — nie ma gdzie ich postawić.'
+      );
       return;
     }
     dostepne[tier] -= ile;
     this.stan.skarbiec.pokeball -= ile * koszt;
-    this.komunikat.setText(`Zwerbowano ${ile} × ${u.name}.`);
+    this.komunikat.setText(`Zwerbowano ${ile} × ${u.name} — ${dokad}.`);
     this.odswiez();
   }
 
@@ -1316,23 +1403,16 @@ export class TownScene extends Phaser.Scene {
     }
     const d = data(this.stan.dzien);
     this.dataTekst.setText(`Tydzień ${d.tydzien}, dzień ${d.dzienTygodnia}`);
-    this.bohaterStan.setText(this.bohaterObecny ? 'jest w zamku' : 'poza zamkiem');
-    this.bohaterStan.setStyle(stylAtramentu(12, this.bohaterObecny ? 'zielony' : 'czerwony'));
-
-    for (let i = 0; i < SLOTY_ARMII; i++) {
-      const a = this.stan.bohater.armia[i];
-      const kont = this.slotyArmii[i];
-      const im = kont.getData('rysunek') as Phaser.GameObjects.Image;
-      const t = kont.getData('licznik') as Phaser.GameObjects.Text;
-      if (a) {
-        im.setTexture(`p-${a.sprite}`).setVisible(true);
-        im.setScale(Math.min(1, (kont.getData('bok') - 6) / im.height));
-        t.setText(String(a.ile));
-      } else {
-        im.setVisible(false);
-        t.setText('');
-      }
-    }
+    this.bohaterStan.setText(this.bohaterObecny ? 'w zamku' : 'poza zamkiem');
+    this.bohaterStan.setColor(this.bohaterObecny ? BARWA.atramentZielony : BARWA.atramentCzerwony);
+    // Straż miejska z planszy (`zamek.oddzialy`) broni razem z garnizonem,
+    // ale gracz nią nie rozporządza — pokazujemy ją jedną liczbą.
+    const straz = (this.zamek.oddzialy ?? []).reduce((a, o) => a + o.ile, 0);
+    const wGarnizonie = zywe(this.garnizon).reduce((a, o) => a + o.ile, 0);
+    this.garnizonStan.setText(
+      [wGarnizonie ? `${wGarnizonie} w slotach` : 'sloty puste', straz ? `+ straż ${straz}` : ''].filter(Boolean).join('\n')
+    );
+    this.panel.odswiez();
 
     for (const k of this.kafle) this.przywrocWyglad(k.budynek);
     this.rysujZachety();

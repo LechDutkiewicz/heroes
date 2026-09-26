@@ -14,6 +14,7 @@ import {
   kosztPola,
   nowaTura,
   obiektNa,
+  obroncyZamku,
   odslon,
   odwiedz,
   odpowiedzNaPytanie,
@@ -4047,7 +4048,8 @@ export class AdventureScene extends Phaser.Scene {
         gracz: this.stan.bohater.armia
           .map((o, i) => (o && o.ile > 0 ? { ...o, slot: i } : null))
           .filter((o): o is NonNullable<typeof o> => !!o),
-        wrog: o.oddzialy ?? [],
+        // Zamku bronią straż i garnizon naraz (`obroncyZamku`).
+        wrog: o.rodzaj === 'zamek' ? obroncyZamku(o) : (o.oddzialy ?? []),
         oObiekt: o.id,
         powrot: 'adventure',
         // Drugorzędne umiejętności wchodzą do walki jako trzy liczby, a nie
@@ -4537,6 +4539,7 @@ export class AdventureScene extends Phaser.Scene {
       if (o?.rodzaj === 'zamek') {
         o.wlasciciel = 'gracz';
         o.oddzialy = [];
+        o.garnizon = undefined;
       } else if (o) {
         o.zebrany = true;
       }
@@ -4666,7 +4669,19 @@ export class AdventureScene extends Phaser.Scene {
       // AI rusza się między turą gracza a początkiem następnej. Idzie POD
       // zasłoną, bo ze wszystkiego, co dzieje się na koniec tury, to on liczy
       // najdłużej: szuka celów i wytycza trasy po planszy 72 × 72.
+      // Zamki gracza przed turą przeciwnika — żeby po niej powiedzieć, czy
+      // ktoś szturmował mury i jak skończyła się obrona (bitwy AI rozstrzygają
+      // się w symulacji, gracz widzi tylko skutek).
+      const zamkiPrzed = this.stan.obiekty
+        .filter((z) => z.rodzaj === 'zamek' && z.wlasciciel === 'gracz')
+        .map((z) => ({ z, obroncy: obroncyZamku(z).reduce((a, od) => a + od.ile, 0) }));
       turaWroga(this.stan);
+      const oblezenia: string[] = [];
+      for (const { z, obroncy } of zamkiPrzed) {
+        if (z.wlasciciel !== 'gracz') oblezenia.push(`Wróg zdobył: ${z.nazwa}!`);
+        else if (obroncyZamku(z).reduce((a, od) => a + od.ile, 0) < obroncy)
+          oblezenia.push(`${z.nazwa} odparła szturm!`);
+      }
       this.warstwaTrasy.clear();
       // Trasa niedokończona wczoraj wraca od razu jako zaznaczona — jak
       // w Heroes 3 — pod warunkiem, że cel wciąż da się osiągnąć (np. nie
@@ -4685,7 +4700,7 @@ export class AdventureScene extends Phaser.Scene {
       zaslona.destroy();
       napis.destroy();
       this.zajety = false;
-      this.napisUlotny(['Nowy dzień', ...wpisy].join('\n'));
+      this.napisUlotny(['Nowy dzień', ...oblezenia, ...wpisy].join('\n'));
       this.odswiezWszystko();
       // Autozapis na początku dnia, jak w Heroes — ale nie gry, która
       // właśnie się skończyła.

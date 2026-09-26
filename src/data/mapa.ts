@@ -355,7 +355,20 @@ export interface Obiekt {
   artefakt?: string;
   /** dla potwora: która frakcja go wystawia i co konkretnie stoi na drodze */
   frakcja?: string;
+  /**
+   * Potwór: kto stoi na drodze. Zamek: STRAŻ MIEJSKA z planszy (dla zamku
+   * wroga to cała jego załoga, razem z werbunkiem obrońcy). Gracz nią nie
+   * rozporządza — to linia obrony, którą plansza dała zamkowi na start.
+   */
   oddzialy?: Oddzial[];
+  /**
+   * Zamek: GARNIZON gracza, jak w Heroes 3 — rząd siedmiu slotów, którymi
+   * gracz rozporządza na ekranie miasta (werbunek bez bohatera, oddziały
+   * zostawione przez bohatera). Broni zamku razem ze strażą
+   * (`obroncyZamku`). Brak pola — pusty garnizon (także w zapisach sprzed
+   * tej zmiany).
+   */
+  garnizon?: Armia;
   /**
    * Potwór: ilu ich było na początku gry. Z tego liczy się sufit przyrostu —
    * stado rośnie co tydzień, ale nie w nieskończoność.
@@ -1515,7 +1528,7 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
     // zakończenia. Dziecko dochodziło przez pół planszy do celu i dostawało
     // komunikat, że celu nie ma.
     if (o.wlasciciel !== kto) {
-      if (o.oddzialy?.length) return { opis: `${o.nazwa}\nBroni się!`, bitwaZ: o };
+      if (obroncyZamku(o).length) return { opis: `${o.nazwa}\nBroni się!`, bitwaZ: o };
       o.wlasciciel = kto;
       return { opis: `${o.nazwa} jest twoja!`, zamek: o, zajete: o };
     }
@@ -1523,6 +1536,48 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
   }
 
   return { opis: o.nazwa };
+}
+
+/**
+ * Kto broni zamku: straż z planszy i garnizon, połączone po gatunku (bitwa
+ * ma sześć rzędów startowych, więc dwa stosy tego samego stworka stają jako
+ * jeden). Ta sama lista idzie do bitwy gracza i do bitew rozstrzyganych
+ * w turze przeciwnika.
+ */
+export function obroncyZamku(o: Obiekt): Oddzial[] {
+  const wynik: Oddzial[] = [];
+  const zrodla = [...(o.oddzialy ?? []), ...(o.garnizon ?? [])];
+  for (const od of zrodla) {
+    if (!od || od.ile <= 0) continue;
+    const ten = wynik.find((x) => x.sprite === od.sprite);
+    if (ten) ten.ile += od.ile;
+    else wynik.push({ ...od });
+  }
+  return wynik;
+}
+
+/**
+ * Straty obrońców zamku po bitwie: `ocalali` (po gatunku) rozkłada się z
+ * powrotem na straż i garnizon. Pierwsza pada straż na murach, dopiero potem
+ * garnizon gracza — to jego własne, kupione oddziały i niech zostają
+ * najdłużej. Pusty wynik (wszyscy polegli) czyści obie listy.
+ */
+export function rozdzielStratyZamku(o: Obiekt, ocalali: Oddzial[]) {
+  const zostalo = new Map<string, number>();
+  for (const od of ocalali) zostalo.set(od.sprite, (zostalo.get(od.sprite) ?? 0) + od.ile);
+  const przed = obroncyZamku(o);
+  const straty = new Map<string, number>();
+  for (const od of przed) straty.set(od.sprite, Math.max(0, od.ile - (zostalo.get(od.sprite) ?? 0)));
+  const odejmij = (od: Oddzial) => {
+    const s = straty.get(od.sprite) ?? 0;
+    const ile = Math.min(s, od.ile);
+    od.ile -= ile;
+    straty.set(od.sprite, s - ile);
+  };
+  for (const od of o.oddzialy ?? []) odejmij(od);
+  for (const od of o.garnizon ?? []) if (od) odejmij(od);
+  o.oddzialy = (o.oddzialy ?? []).filter((od) => od.ile > 0);
+  if (o.garnizon) o.garnizon = o.garnizon.map((od) => (od && od.ile > 0 ? od : null));
 }
 
 /**

@@ -1,5 +1,6 @@
 import type { StanMapy } from './mapa';
 import { misjaPoId } from './kampania';
+import { znormalizuj } from './armia';
 import { MAPY } from './mapy';
 import { aktywnyProfil, czytajKlucz, imieTrenera, kluczProfilu, piszKlucz, usunKlucz, wymusProfil } from './profile';
 
@@ -12,6 +13,9 @@ import { aktywnyProfil, czytajKlucz, imieTrenera, kluczProfilu, piszKlucz, usunK
  * Plik w slocie: `{ v: 2, zapisano, stan }`. Opis na liście (misja, dzień,
  * trener) liczymy ze stanu przy odczycie, więc nie może się rozjechać z tym,
  * co naprawdę jest w zapisie.
+ *
+ * Garnizon zamku to `garnizon` obiektu zamku (patrz `Obiekt` w mapa.ts);
+ * zapisuje się razem ze stanem, a zapis bez tego pola to pusty garnizon.
  *
  * `bryly` to pamięć podręczna (Set), której JSON nie zna i której zapis
  * i tak nie potrzebuje: `brylyNa` w mapa.ts liczy ją od nowa, kiedy jej nie
@@ -70,6 +74,13 @@ function czytajPlik(profil: string, slot: Slot): PlikZapisu | null {
     if (!plik || !plik.stan?.bohater || !Array.isArray(plik.stan.obiekty)) return null;
     // Bohaterka zwała się kiedyś Ola — zapisy sprzed zmiany czytamy jako Elę.
     plik.stan.bohater.imie = imieTrenera(plik.stan.bohater.imie);
+    // Garnizon zamku (`garnizon`) przyszedł z ekranem miasta. Zapis sprzed
+    // zmiany nie ma pola — to pusty garnizon; zapisany doprowadzamy do
+    // siedmiu slotów, jak armię bohatera.
+    for (const o of plik.stan.obiekty) {
+      if (o.rodzaj !== 'zamek') continue;
+      o.garnizon = Array.isArray(o.garnizon) ? znormalizuj(o.garnizon) : undefined;
+    }
     return plik;
   } catch {
     return null;

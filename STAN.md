@@ -1,6 +1,75 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-09-26 (profile graczy i sloty zapisu; wcześniej plansze kampanii i silnik generatora).
+Ostatnia aktualizacja: 2026-09-26 (garnizon miasta i wspólny pasek armii; profile graczy i sloty zapisu; wcześniej plansze kampanii i silnik generatora).
+
+## Garnizon miasta i wspólny pasek armii (2026-09-26)
+
+Zgłoszenie: w HotA miasto i ekran bohatera mają ten sam pasek armii z
+zarządzaniem, okno stworka i miniaturę bohatera w mieście; u nas miasto
+pokazywało tylko podgląd armii.
+
+**Co działa.**
+- `src/visual/panelArmii.ts` — `PanelArmii` prowadzi dowolną liczbę rzędów
+  slotów naraz (jedno zaznaczenie na ekran): klik zaznacza, klik w inny slot
+  przenosi / zamienia / łączy (także między rzędami), przeciągnięcie robi to
+  samo, Shift+klik albo Shift przy upuszczeniu albo tabliczka „Podziel" →
+  okno podziału (dwie liczby, suwak, ±, strzałki, Enter/Escape). Drugi klik
+  w zaznaczony oddział, prawy klik albo przytrzymanie (520 ms, tablet) →
+  okno stworka. Rząd może być `chroniona` (bohater — nie oddaje ostatniego
+  stosu) i `aktywny: () => bool` (bohater poza zamkiem — tylko podgląd).
+  Uchwyt dla sond: `panel.podzial` (otwarte okno podziału), `panel.okno`.
+- `src/visual/oknoStworka.ts` — `pokazOknoStworka(scena, { oddzial, glebia,
+  zwolnij?, gdzie? })`: portret w medalionie, poziom, żywioł, atak/życie
+  (sztuka i oddział), szybkość, strzały, mocny/słaby, umiejętność, etap
+  ewolucji (informacyjnie), „Zwolnij" z pytaniem i „Zamknij". Obrony ani
+  licznika strzał nie ma, bo model walki ich nie ma — okno pokazuje to, co
+  działa. Nie wczytany portret dociąga w locie.
+- Arytmetyka dwóch armii w `src/data/armia.ts`: `przeniesMiedzy`,
+  `maksPodzialuMiedzy`, `podzielMiedzy`, `zwolnij` (dla tej samej tablicy
+  oddają sprawę starym `przenies`/`podziel`).
+- **Garnizon zamku to nowe pole `Obiekt.garnizon?: Armia`** (7 slotów z
+  dziurami). `oddzialy` zamku gracza zostało tym, czym było: STRAŻĄ MIEJSKĄ
+  z planszy (`garnizonGracza` w USTAWIENIACH, np. 105 Pyroko + 70 + 70 na
+  Dwóch Dolinach). Decyzja: straży NIE pokazujemy w slotach i nie da się jej
+  zabrać — inaczej pierwszego dnia bohater dostawałby za darmo kilkaset
+  stworków i balans kampanii by się rozsypał. Miasto pisze ją jedną linijką
+  pod „Garnizon" („+ straż 245").
+- Broni zamku straż + garnizon naraz: `obroncyZamku(o)` w mapa.ts (łączy po
+  gatunku — bitwa ma sześć rzędów startowych). Używają go `odwiedz`,
+  AI (ocena „czy wygram" i `rozstrzygnijBitwe`) i `AdventureScene` (bitwa
+  gracza o zamek). Po odpartym szturmie AI na zamek gracza straty rozkłada
+  `rozdzielStratyZamku` (najpierw straż, potem garnizon); po zdobyciu zamku
+  oba znikają. Na nowy dzień mapa mówi „X odparła szturm!" / „Wróg zdobył X!".
+- Miasto: panorama niższa (okno 470 px zamiast 492, obcięty tylko przedplan),
+  pod nią dwa rzędy: garnizon (herb-ratusz w medalionie) i bohater
+  odwiedzający (portret; klik → `HeroScene`, „Do miasta" / Escape wraca do
+  miasta przez klucz rejestru `powrot-z-bohatera`). Po prawej komunikat
+  z tabliczką „Podziel", surowce i „Buduj"/„Wyjdź" (Buduj dalej w x = 664).
+- Werbunek: bez bohatera → garnizon (zdjęta dawna blokada „nie werbujesz bez
+  bohatera"); z bohaterem → do niego, a przy pełnych slotach do garnizonu.
+- Zapis: `garnizon` jedzie w stanie; `czytajPlik` normalizuje go do siedmiu
+  slotów, brak pola = pusty garnizon.
+
+**Sondy.** `node tools/probe-armia.mjs --url … [--zrzuty]` (gesty myszą,
+okno stworka, portret → bohater → miasto, zapis/odczyt i stary zapis),
+`npx tsx tools/probe-garnizon.ts` (dwie armie: przypadki i 40 tys. losowych
+ruchów; obrońcy zamku; AI pod bramą: przytłaczająca armia bierze zamek
+i płaci stratami, ta sama armia, która bierze zamek z samą strażą, przy
+garnizonie nie rusza). Zrzuty: `tools/blind/miasto-armia.png`,
+`okno-stworka.png`, `miasto-podziel.png`.
+
+**Co zostało.**
+- Ekran bohatera dalej ma własny pas armii — podpięcie `PanelArmii`
+  i `pokazOknoStworka` tam to zadanie innego wątku (wejście/powrót z miasta
+  już jest).
+- Obrona zamku przed AI jest rozstrzygana symulacją w turze przeciwnika (jak
+  każda bitwa AI), a nie bitwą, którą gracz prowadzi na ekranie. Prawdziwa
+  obrona wymagałaby przerwania tury AI w pół i wznowienia po `BattleScene`.
+- Bohater stojący w zamku nie broni go razem z garnizonem (HotA tak ma).
+- Nie było ślepego porównania z HotA (brak krytyka w tej sesji).
+- Bitwa ma sześć rzędów startowych, a armia/garnizon siedem slotów — siódmy
+  stos w bitwie AI dostaje rząd `undefined` (stary problem `createBattle`,
+  nie ruszany).
 
 ## Malowane stworki i linie ewolucyjne (2026-09-26)
 
@@ -977,6 +1046,8 @@ Obie były trzymane równo — po każdym etapie ta sama praca szła na obie.
 | `node tools/probe-profile.mjs` | profile graczy, sloty zapisu, autozapis, „Nowa gra" od zera, migracja starego zapisu |
 | `node tools/probe-klik.mjs` | czy KLIKNIĘCIE prowadzi bohatera tam, gdzie się kliknęło |
 | `npx tsx tools/probe-armia.ts` | arytmetyka slotów armii: 40 tys. losowych ruchów z niezmiennikami |
+| `npx tsx tools/probe-garnizon.ts` | dwie armie (garnizon ↔ bohater) i czy garnizon broni zamku w turze AI |
+| `node tools/probe-armia.mjs` | pasek armii w mieście myszą: zamiana, łączenie, podział, okno stworka, portret → bohater, zapis garnizonu |
 | `npx tsx tools/probe-umiejetnosci.ts` | czy każda z ośmiu umiejętności NAPRAWDĘ zmienia zasady gry |
 | `node tools/probe-bohater.mjs` | ekran bohatera prawdziwą myszą: przenieś, zamień, scal, podziel |
 | `node tools/probe-awans.mjs` | czy wygrana z awansem pokazuje okno wyboru i czy wybór działa |

@@ -903,7 +903,7 @@ export class HeroScene extends Phaser.Scene {
       toneDeep: C.allyDeep,
       onClick: () => this.zamknij(),
     });
-    przycisk.setLabel('Na mapę');
+    przycisk.setLabel(this.registry.get('powrot-z-bohatera') === 'zamek' ? 'Do miasta' : 'Na mapę');
   }
 
   // ---------- sterowanie ----------
@@ -1487,6 +1487,9 @@ export class HeroScene extends Phaser.Scene {
 
   private zamknij() {
     this.registry.set(KLUCZ_STANU, this.stan);
-    this.scene.start('adventure');
+    // Z miasta (klik w portret bohatera odwiedzającego) wraca się do miasta.
+    const powrot = (this.registry.get('powrot-z-bohatera') as string | undefined) ?? 'adventure';
+    this.registry.remove('powrot-z-bohatera');
+    this.scene.start(powrot);
   }
 }
