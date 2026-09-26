@@ -575,12 +575,10 @@ USTAWIENIA = {
         '18,28': 3, '21,28': 1,
         '22,30': -2, '22,32': 4, '22,34': -1,
     },
-    'odkryte': [
-        {'x': 4, 'y': 19, 'promien': 3},
-        {'x': 23, 'y': 20, 'promien': 4},
-        {'x': 24, 'y': 34, 'promien': 2},
-        {'x': 3, 'y': 35, 'promien': 2},
-    ],
+    # Runda 11 (gracz): cztery odsłonięte rogi kadru z rundy 6 wyglądały na
+    # starcie jak pięć wysp w różnych miejscach mapy. Jak w Heroes: na starcie
+    # widać tylko okolicę bohatera i własnego zamku (`nowaGra` w `plansza.ts`),
+    # fort wroga jest do odszukania — opis misji mówi, że leży na wschodzie.
 }
 
 #: Runda 6: ziemia pod skarpami to ubita brązowa ziemia z kamykami

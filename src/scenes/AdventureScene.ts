@@ -129,6 +129,20 @@ import {
  */
 const PREDKOSC_PRZEWIJANIA = 560;
 
+/**
+ * Pas przy brzegu CAŁEGO płótna gry (w pikselach ekranu), w którym kursor
+ * przewija mapę — jak w Heroes 3: kilka pikseli od krawędzi okna, a nie przy
+ * wewnętrznej ramie mapy. Dawniej pas leżał po obu stronach ramy mapy i każda
+ * droga myszy na prawy panel zahaczała o niego, więc mapa odjeżdżała.
+ */
+const PAS_PRZEWIJANIA = 8;
+
+/**
+ * Tyle milisekund kursor musi postać w pasie przy brzegu, zanim mapa ruszy.
+ * Przelot myszy przez brzeg (np. w stronę paska przeglądarki) nic nie robi.
+ */
+const ZWLOKA_PRZEWIJANIA = 300;
+
 /** Arkusz bohatera: 4 kierunki (wiersze) × 4 klatki chodu (kolumny). */
 const BOHATER_KLATKA = 96;
 const KIERUNEK_WIERSZ = { dol: 0, lewo: 1, prawo: 2, gora: 3 } as const;
@@ -261,6 +275,8 @@ export class AdventureScene extends Phaser.Scene {
   private celPoPrzerwaniu: { x: number; y: number } | null = null;
   /** Ostatnie położenie kursora — do przewijania przy krawędzi. */
   private kursor: { x: number; y: number } | null = null;
+  /** Czas (zegar sceny), od kiedy kursor stoi w pasie przy brzegu; `null` — poza pasem. */
+  private krawedzOd: number | null = null;
   private przewX = 0;
   private przewY = 0;
 
@@ -732,6 +748,9 @@ export class AdventureScene extends Phaser.Scene {
         onUpdate: () => this.rysujRamkeWidoku(),
       });
     } else {
+      // Rozpoczęty płynny przejazd (klik w minimapę, strzałka) nadpisałby
+      // natychmiastowe ustawienie w następnej klatce.
+      this.tweens.killTweensOf(this.kamera);
       this.kamera.setScroll(-this.przewX, -this.przewY);
     }
     this.rysujRamkeWidoku();
@@ -764,44 +783,49 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   /**
-   * Przewijanie kursorem przy krawędzi ramy — jak w Heroes 3.
+   * Przewijanie kursorem przy krawędzi okna gry — jak w Heroes 3.
    *
    * Strzałki i minimapa już były, ale obie wymagają oderwania się od tego,
    * co się właśnie ogląda. Przy planszy 36 × 36, z której widać ledwie część,
    * zerknięcie „co jest kawałek dalej" to najczęstszy ruch w całej grze.
    *
+   * Pas leży przy brzegu CAŁEGO płótna (`PAS_PRZEWIJANIA`), także nad prawym
+   * panelem — nie przy ramie mapy, bo przez nią mysz przejeżdża w drodze do
+   * panelu. Mapa rusza dopiero po `ZWLOKA_PRZEWIJANIA` postoju w pasie, a po
+   * wyjściu kursora z płótna (`gameout`) staje.
+   *
    * Prędkość jest liczona z czasu klatki, a nie stała na klatkę: gra chodzi
    * raz po 60, raz po 20 klatek na sekundę i bez tego mapa jechałaby trzy razy
    * wolniej dokładnie wtedy, gdy jest najwięcej do narysowania.
    */
-  update(_czas: number, delta: number) {
+  update(czas: number, delta: number) {
     // Marsz, bitwa czy okno: złota elipsa wejścia nie zostaje pod kursorem,
     // choćby mysz się nie ruszyła — wróci przy następnym jej ruchu.
     if (this.zajety && this.znakWejscia) this.podswietlWejscie(undefined);
-    if (!this.kursor || this.zajety) return;
+    if (!this.kursor || this.zajety) {
+      this.krawedzOd = null;
+      return;
+    }
     const { x, y } = this.kursor;
-    // Pas jest liczony od ramy mapy, nie od okna: po prawej stronie leży panel
-    // i przewijanie miało się włączać nad mapą, a nie nad portretem bohatera.
-    // Pas ma 36 px EKRANU — to odległość dla ręki, a nie ułamek pola, więc
-    // nie maleje razem z oddaleniem kamery.
-    const pas = 36;
-    const lewo = this.mapaX;
-    const gora = this.mapaY;
-    const prawo = this.mapaX + this.oknoW;
-    const dol = this.mapaY + this.oknoH;
-    if (x < lewo - pas || x > prawo + pas || y < gora - pas || y > dol + pas) return;
+    const w = this.scale.width;
+    const h = this.scale.height;
+    let kx = 0;
+    let ky = 0;
+    if (x < PAS_PRZEWIJANIA) kx = 1;
+    else if (x >= w - PAS_PRZEWIJANIA) kx = -1;
+    if (y < PAS_PRZEWIJANIA) ky = 1;
+    else if (y >= h - PAS_PRZEWIJANIA) ky = -1;
+    if (kx === 0 && ky === 0) {
+      this.krawedzOd = null;
+      return;
+    }
+    if (this.krawedzOd === null) this.krawedzOd = czas;
+    if (czas - this.krawedzOd < ZWLOKA_PRZEWIJANIA) return;
 
     const krok = (PREDKOSC_PRZEWIJANIA * delta) / 1000;
-    let dx = 0;
-    let dy = 0;
-    if (x < lewo + pas) dx = krok;
-    else if (x > prawo - pas) dx = -krok;
-    if (y < gora + pas) dy = krok;
-    else if (y > dol - pas) dy = -krok;
-    if (dx === 0 && dy === 0) return;
     // Bez wygładzania: to ma być natychmiastowe i ciągłe. Tween co klatkę
     // nakładałby się sam na siebie i mapa szarpałaby się zamiast płynąć.
-    this.przewin(this.przewX + dx, this.przewY + dy, false);
+    this.przewin(this.przewX + kx * krok, this.przewY + ky * krok, false);
   }
 
   private klawisz(e: KeyboardEvent) {
@@ -1949,6 +1973,15 @@ export class AdventureScene extends Phaser.Scene {
         this.wysrodkujNa(
           Math.floor(((p.x - mmX) / mmBok) * this.stan.szer),
           Math.floor(((p.y - mmY) / mmBok) * this.stan.wys)
+        );
+      })
+      // Przeciąganie z wciśniętym przyciskiem wodzi widokiem jak w Heroes 3.
+      .on('pointermove', (p: Phaser.Input.Pointer) => {
+        if (!p.isDown || this.zajety) return;
+        this.wysrodkujNa(
+          Phaser.Math.Clamp(Math.floor(((p.x - mmX) / mmBok) * this.stan.szer), 0, this.stan.szer - 1),
+          Phaser.Math.Clamp(Math.floor(((p.y - mmY) / mmBok) * this.stan.wys), 0, this.stan.wys - 1),
+          false
         );
       });
 

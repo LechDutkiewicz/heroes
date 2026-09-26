@@ -263,42 +263,7 @@ export const USTAWIENIA = {
     {
       "x": 46,
       "y": 8,
-      "promien": 7
-    },
-    {
-      "x": 25,
-      "y": 35,
-      "promien": 3
-    },
-    {
-      "x": 25,
-      "y": 53,
-      "promien": 3
-    },
-    {
-      "x": 22,
-      "y": 38,
-      "promien": 3
-    },
-    {
-      "x": 4,
-      "y": 37,
-      "promien": 3
-    },
-    {
-      "x": 2,
-      "y": 52,
-      "promien": 3
-    },
-    {
-      "x": 2,
-      "y": 40,
-      "promien": 4
-    },
-    {
-      "x": 26,
-      "y": 44,
-      "promien": 4
+      "promien": 2
     }
   ],
   "znajdzki": 0.44,
