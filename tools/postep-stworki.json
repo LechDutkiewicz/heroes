@@ -233,6 +233,24 @@
      "gap": "Najmniej pasuje: portret bohatera w złotym kole. Portrety: NIE — kadry bez wspólnego szablonu, ciemne tło połyka ciemne stwory.",
      "blind": "tools/postep-obrazy/dopasowanie-portrety-hud-r4.jpg",
      "note": "Runda 4, HUD. Portret nigdzie nie jest najgorszym elementem, ale werdykt 0/3 przez niespójny kadr."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: tła portretów — zimna szaro-oliwkowa łąka w ciepłych złotych ramkach. Linia oczu skacze 35–60% wysokości; Pyroko to czerwona plama z twarzą przy krawędzi.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-bohater-r5.jpg",
+     "note": "Runda 5 (ręcznie mierzona ramka głowy), bohater."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: ikona pokeballa. Portrety: NIE — Flamir na karcie to skrajne zbliżenie dzioba, grzebień ucięty; tło karty mętne oliwkowo-brązowe.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-miasto-r5.jpg",
+     "note": "Runda 5, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: portret bohatera. Portrety: NIE — miękkie, lekko rozmyte przy ostrych ramkach; blade stwory giną na bladoszarym tle.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-hud-r5.jpg",
+     "note": "Runda 5, HUD. 0/3 — kadr od ramki głowy zawodzi przy nietypowej budowie; następnie kadr od oczu."
     }
    ]
   }
