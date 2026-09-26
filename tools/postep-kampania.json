@@ -3,12 +3,18 @@
  "pieces": [
   {
    "name": "Uwagi gracza: HUD miasta spójny z mapą",
-   "status": "build",
+   "status": "done",
    "bar": "Porównanie zrzutu miasta z nową mapą przygody (jedna gra), potem ślepy krytyk.",
-   "live": {
-    "round": 1,
-    "stage": "builder pracuje"
-   }
+   "note": "Builder: miasto dostało tę samą ramę co mapa (belka z nazwą i datą, złota rama panoramy, pergaminowy pas armii z 7 slotami, pasek surowców, tabliczki Buduj / Wyjdź na mapę); karta budynku i lista budowy w stylu okien mapy. Bez nowych grafik.",
+   "rounds": [
+    {
+     "win": true,
+     "label": "Runda 1 (vs zamek HoMM2, 1/1)",
+     "blind": "tools/postep-obrazy/miasto-r1-w1.jpg",
+     "gap": "Słabość zwycięzcy: budynki zlewają się z zielenią, nie widać co klikalne bez najechania.",
+     "note": "Krytyk: nasze — rama i HUD spójne z ilustracją, czytelny tekst, wyraźna hierarchia przycisków; wzorzec ma mikroskopijny tekst."
+    }
+   ]
   },
   {
    "name": "Uwagi gracza: przewijanie przy krawędzi i mgła na starcie",
