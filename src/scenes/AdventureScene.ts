@@ -1870,13 +1870,9 @@ export class AdventureScene extends Phaser.Scene {
         });
       }
 
-      if (o.rodzaj === 'potwor') {
-        // Chorągiewka NAD głową strażnika: stopka masztu wchodzi na czubek
-        // sylwetki o 0,1 pola, proporczyk jest cały nad nim. Liczone od
-        // widocznego spodu i wysokości sylwetki, więc idzie za skalą stworka.
-        const glowa = spod - (this.podstawaRysunku(klucz).widocznaWys ?? 1) * wys;
-        kont.add(this.chorag(C.foe).setY(glowa + KAFEL * 0.38));
-      }
+      // Strażnicy nie mają chorągiewki: to oddziały neutralne, nie należą do
+      // żadnego gracza — jak stwory na mapie Heroes 3. Wroga poznaje się po
+      // tym, że stoi na drodze, a siłę pokazuje podpowiedź po najechaniu.
       const doZajecia =
         o.rodzaj === 'kopalnia' ||
         o.rodzaj === 'zamek' ||

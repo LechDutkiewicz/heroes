@@ -1,5 +1,5 @@
 {
- "updated": "Stwory na mapie, runda 2: 0/3 — winny sam rysunek (maskotkowe twarze, fiolet/magenta, gładki render). Runda 3: przemalowanie wzorców pędzlem mapy.",
+ "updated": "Stwory na mapie, runda 3: 0/3 — skala za duża, proporcje chibi, twarde pikselowe krawędzie. Chorągiewki zdjęte (strażnicy neutralni). Runda 4 w toku.",
  "pieces": [
   {
    "name": "Stwory na mapie przygody (malowane rysunki, stos na mapie)",
@@ -42,6 +42,24 @@
      "gap": "Rysunek maskotkowy: czyste kreskówkowe twarze, fiolet i magenta na zimowej mapie; szare placki cienia.",
      "blind": "tools/postep-obrazy/stwory-mapa-twierdza-r2.jpg",
      "note": "Runda 2, Twierdza. 0/3 — obróbka w grze nie wystarcza, trzeba przemalować wzorce."
+    },
+    {
+     "win": false,
+     "gap": "Stwór wygląda jak mały, chrupki, pikselowy sprite na miękko malowanej mapie; wchodzi na barierkę mostu, brak cienia kontaktowego.",
+     "blind": "tools/postep-obrazy/stwory-mapa-polana-r3.jpg",
+     "note": "Runda 3 (wzorce przemalowane pędzlem mapy), Polana."
+    },
+    {
+     "win": false,
+     "gap": "Proporcje chibi (duże głowy), jaskrawe obrzeża, chorągiewki jak znaczniki UI; stwory za duże względem mostu i chaty.",
+     "blind": "tools/postep-obrazy/stwory-mapa-bagna-r3.jpg",
+     "note": "Runda 3, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Błyszczące naklejki z gry mobilnej na miękkiej akwareli; smoki wielkości gór; twarde obrysy.",
+     "blind": "tools/postep-obrazy/stwory-mapa-twierdza-r3.jpg",
+     "note": "Runda 3, Twierdza. 0/3. Gracz: bez chorągiewek — strażnicy są neutralni (zdjęte)."
     }
    ]
   },
