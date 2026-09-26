@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { GniazdoPortretu, wczytajPortrety } from '../visual/portrety';
+import { BARWA, panelPergaminu, stylAtramentu, stylEtykiety, wczytajZestaw } from '../visual/zestaw';
 import {
   KOSZT_ODDZIALU,
   PRZYROST_ODDZIALU,
@@ -24,7 +26,7 @@ import { MNOZNIK_FORTU } from '../data/zasady-h3';
 import { FACTIONS, factionById } from '../data/factions';
 import { dolacz } from '../data/armia';
 import { C, H, T, Z, body, display } from '../visual/theme';
-import { drawPanelBody, makeHudButton, mix, plate } from '../visual/hud';
+import { makeHudButton, mix, plate } from '../visual/hud';
 import { ICON, buildIcons } from '../visual/icons';
 import { OKNO_H, OKNO_W } from '../visual/uklad';
 import { wersjonujZasoby } from '../visual/zasoby';
@@ -123,13 +125,13 @@ export class TownScene extends Phaser.Scene {
   private zamek!: Obiekt;
   private kafle: Kafel[] = [];
   private podpisy: Partial<Record<Surowiec, Phaser.GameObjects.Text>> = {};
-  private slotyArmii: Phaser.GameObjects.Container[] = [];
+  private slotyArmii: GniazdoPortretu[] = [];
   private karta!: Phaser.GameObjects.Container;
   private kartaTytul!: Phaser.GameObjects.Text;
   private kartaOpis!: Phaser.GameObjects.Text;
   private kartaKoszt!: Phaser.GameObjects.Container;
   private kartaPrzycisk!: ReturnType<typeof makeHudButton>;
-  private kartaStworek!: Phaser.GameObjects.Image;
+  private kartaStworek!: GniazdoPortretu;
   private zachety: Phaser.GameObjects.Image[] = [];
   private przyciskBudowy!: ReturnType<typeof makeHudButton>;
   private wybrany?: Budynek;
@@ -145,7 +147,10 @@ export class TownScene extends Phaser.Scene {
     loadSfx(this, MUZYKA_MIASTO);
     const b = import.meta.env.BASE_URL;
     for (const s of SUROWCE) this.load.image(`m-${SUROWIEC_INFO[s].ikona}`, `${b}mapa/${SUROWIEC_INFO[s].ikona}.png`);
-    for (const f of FACTIONS) for (const u of f.units) this.load.image(`p-${u.sprite}`, `${b}sprites/${u.sprite}.png`);
+    // Portrety zamiast całych stworków: duży na kartę werbunku, mały do załogi.
+    wczytajPortrety(this);
+    // Gniazda, pergamin karty i drewno paska załogi są z zestawu.
+    wczytajZestaw(this);
     for (const f of ['bor', 'grota', 'zbocze']) {
       this.load.image(`t-tlo-${f}`, `${b}miasto/tlo-${f}.png`);
       this.load.image(`t-znak-${f}`, `${b}miasto/znak-${f}.png`);
@@ -584,27 +589,41 @@ export class TownScene extends Phaser.Scene {
    * w poprzek ekranu.
    */
   private rysujPasekDolny() {
-    const y = GORA + PAN_H;
+    const y = PASEK_Y;
     const h = OKNO_H - y;
+    // Pasek załogi z zestawu: drewno ze złotą listwą u góry, a w nim gniazda
+    // portretów — te same co na ekranie bohatera. Wcześniej: niebieska belka
+    // i sześć mlecznych tabliczek z portretem 32 px, nieczytelnym z daleka.
+    this.add
+      .tileSprite(0, y, OKNO_W, h, 'z-drewno')
+      .setOrigin(0)
+      .setTileScale(0.5)
+      // Z pominięciem belki nagłówka namalowanej u góry `drewno.jpg`.
+      .setTilePosition(0, 420)
+      .setTint(0xb8a890)
+      .setDepth(Z.hud);
     const g = this.add.graphics().setDepth(Z.hud);
-    plate(g, 0, y, OKNO_W, h, 0, C.panelDeep, C.shadow, { light: 0.12, dark: 0.2, gloss: 0.1 });
-    g.fillStyle(this.profil.barwa, 1);
+    g.fillStyle(0x7a4f14, 1);
     g.fillRect(0, y, OKNO_W, 3);
+    g.fillStyle(0xe0a53a, 1);
+    g.fillRect(0, y, OKNO_W, 2);
+    g.fillStyle(this.profil.barwa, 0.8);
+    g.fillRect(0, y + 3, OKNO_W, 1);
 
+    // Portret 50 px — ciasny kadr na twarz (mały portret). Pasek jest wyższy
+    // niż panorama zostawiała (72 px, wchodzi 18 px na krzaki pierwszego
+    // planu), bo przy 42 px twarzy nie było widać z odległości ekranu.
+    // Liczba na tabliczce z prawej strony ramy — pod ramą nie ma miejsca,
+    // a na obrazie zasłaniałaby stwora.
+    const bok = 50;
     for (let i = 0; i < 6; i++) {
-      const sx = 12 + i * 96;
-      const kont = this.add.container(sx, y + h / 2).setDepth(Z.hud + 1);
-      const tlo = this.add.graphics();
-      plate(tlo, 0, -20, 88, 40, 8, mix(C.panel, C.panelDeep, 0.35), C.panelDeep, {
-        light: 0.14,
-        dark: 0.16,
-        gloss: 0.1,
-        edgeW: 2,
+      const gniazdo = new GniazdoPortretu(this, 14 + i * 96, y + 7, bok, {
+        maly: true,
+        odznaka: 'bok',
+        rozmiarLiczby: 13,
       });
-      const im = this.add.image(24, 0, 'p-00193').setVisible(false);
-      const t = this.add.text(48, 0, '—', body(12, H.inkSoft)).setOrigin(0, 0.5);
-      kont.add([tlo, im, t]);
-      this.slotyArmii[i] = kont;
+      gniazdo.kontener.setDepth(Z.hud + 1);
+      this.slotyArmii[i] = gniazdo;
     }
 
     this.komunikat = this.add
@@ -660,20 +679,25 @@ export class TownScene extends Phaser.Scene {
    * budynek, zobacz cenę, potwierdź.
    */
   private rysujKarte() {
-    const w = 300;
+    const w = 336;
     const h = 196;
     const x = 14;
-    const y = GORA + PAN_H - h - 14;
+    const y = PASEK_Y - h - 12;
     this.karta = this.add.container(x, y).setDepth(Z.hud + 4).setVisible(false);
-    const tlo = drawPanelBody(this, 0, 0, w, h, 8, this.karta);
-    tlo.setDepth(0);
+    // Karta na pergaminie z zestawu, w cienkiej złotej ramie — jak okna na
+    // mapie przygody. Mleczny panel z zaokrąglonymi rogami był z innej gry.
+    this.karta.add(panelPergaminu(this, 0, 0, w, h));
 
-    this.kartaStworek = this.add.image(w - 54, 62, 'p-00193').setVisible(false);
-    this.kartaTytul = this.add.text(18, 16, '', display(16)).setOrigin(0, 0);
+    // Portret stwora w prawym górnym rogu karty — popiersie na tle jego
+    // miasta w gnieździe z zestawu, jak na karcie siedliska w Heroes. Cały
+    // stworek zmniejszony do 72 px był figurką na mlecznym papierze.
+    this.kartaStworek = new GniazdoPortretu(this, w - 18 - PORTRET_NA_KARCIE, 18, PORTRET_NA_KARCIE);
+    this.kartaStworek.kontener.setVisible(false);
+    this.kartaTytul = this.add.text(18, 16, '', stylEtykiety(17)).setOrigin(0, 0);
     this.kartaOpis = this.add
-      .text(18, 42, '', body(12, H.inkSoft))
+      .text(18, 44, '', stylAtramentu(12.5, 'miekki'))
       .setOrigin(0, 0)
-      .setWordWrapWidth(w - 90);
+      .setWordWrapWidth(w - 48 - PORTRET_NA_KARCIE);
     this.kartaKoszt = this.add.container(18, 112);
     this.kartaPrzycisk = makeHudButton(this, {
       x: x + w / 2,
@@ -686,7 +710,7 @@ export class TownScene extends Phaser.Scene {
       onClick: () => this.dzialaj(),
       depth: Z.hud + 6,
     });
-    this.karta.add([this.kartaStworek, this.kartaTytul, this.kartaOpis, this.kartaKoszt]);
+    this.karta.add([this.kartaStworek.kontener, this.kartaTytul, this.kartaOpis, this.kartaKoszt]);
     // Przycisk zostaje osobnym obiektem sceny — `makeHudButton` sam wiesza go
     // na scenie i wciągnięcie go do kontenera rozjeżdża jego strefę kliknięcia.
     // Widoczność prowadzimy więc razem z kartą, ręcznie.
@@ -731,8 +755,8 @@ export class TownScene extends Phaser.Scene {
       this.kartaOpis.setText(
         `${u.name}\nczeka: ${ile} · przybywa ${dziennie} dziennie\natak ${u.atk} · życie ${u.hp}`
       );
-      this.kartaStworek.setTexture(`p-${u.sprite}`).setVisible(true);
-      this.kartaStworek.setScale(Math.min(1, 72 / this.kartaStworek.height));
+      this.kartaStworek.ustaw(u.sprite);
+      this.kartaStworek.kontener.setVisible(true);
       this.pokazKoszt({ pokeball: KOSZT_ODDZIALU[b.poziom] }, ' za sztukę');
       const stac = this.stan.skarbiec.pokeball >= KOSZT_ODDZIALU[b.poziom];
       this.kartaPrzycisk.setLabel(
@@ -742,7 +766,7 @@ export class TownScene extends Phaser.Scene {
       return;
     }
 
-    this.kartaStworek.setVisible(false);
+    this.kartaStworek.kontener.setVisible(false);
     if (stoi) {
       this.kartaOpis.setText(`${this.dzialanie(b, true)}\n\nJuż stoi.`);
       this.pokazKoszt({});
@@ -1029,14 +1053,14 @@ export class TownScene extends Phaser.Scene {
       im.setScale(Math.min(1, 24 / im.height));
       const brak = this.stan.skarbiec[s] < ile;
       const t = this.add
-        .text(x + 17, 0, String(ile), display(14, brak ? H.foe : H.ink))
+        .text(x + 17, 0, String(ile), stylEtykiety(16, brak ? BARWA.atramentCzerwony : BARWA.atrament))
         .setOrigin(0, 0.5);
       this.kartaKoszt.add([im, t]);
       x += 34 + t.width;
     }
     if (przyrostek) {
       this.kartaKoszt.add(
-        this.add.text(x + 2, 0, przyrostek, body(11, H.inkSoft)).setOrigin(0, 0.5)
+        this.add.text(x + 2, 0, przyrostek, stylAtramentu(11.5, 'miekki')).setOrigin(0, 0.5)
       );
     }
   }
@@ -1141,17 +1165,7 @@ export class TownScene extends Phaser.Scene {
 
     for (let i = 0; i < 6; i++) {
       const a = this.stan.bohater.armia[i];
-      const kont = this.slotyArmii[i];
-      const im = kont.list[1] as Phaser.GameObjects.Image;
-      const t = kont.list[2] as Phaser.GameObjects.Text;
-      if (a) {
-        im.setTexture(`p-${a.sprite}`).setVisible(true);
-        im.setScale(Math.min(1, 32 / im.height));
-        t.setText(String(a.ile)).setStyle(display(14, H.ink));
-      } else {
-        im.setVisible(false);
-        t.setText('—').setStyle(body(12, H.inkSoft));
-      }
+      this.slotyArmii[i].ustaw(a ? a.sprite : null, a?.ile);
     }
 
     for (const k of this.kafle) this.przywrocWyglad(k.budynek);
@@ -1159,6 +1173,12 @@ export class TownScene extends Phaser.Scene {
     if (this.wybrany) this.odswiezKarte();
   }
 }
+
+/** Bok portretu stwora na karcie siedliska. */
+const PORTRET_NA_KARCIE = 100;
+
+/** Górna krawędź dolnego paska (załoga, przyciski); pasek ma 72 px. */
+const PASEK_Y = OKNO_H - 72;
 
 /** Identyfikatory budynków — kolejność wczytywania grafik. */
 const BUDYNKI_ID = [

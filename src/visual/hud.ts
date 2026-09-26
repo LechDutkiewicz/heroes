@@ -21,6 +21,7 @@
 import Phaser from 'phaser';
 import { C, FONT, H, T, body, display } from './theme';
 import { icon, miniIcon, type IconKey, type MiniKey } from './icons';
+import { kluczPortretuOkraglego, wczytajPortrety } from './portrety';
 
 // ---------- barwy ----------
 
@@ -278,13 +279,32 @@ export function createTurnQueue(scene: Phaser.Scene, right: number, y: number): 
       active ? C.goldDeep : e.deep,
       { light: 0.34, dark: 0.3, gloss: 0.34, drop: active ? 3 : 2, edgeW: active ? 3 : 2 }
     );
-    const face = scene.add.image(cx, y, e.spriteKey).setDisplaySize(d * 0.82, d * 0.82);
-    if (!active) face.setAlpha(0.72);
+    // Okrągły portret (popiersie na tle miasta), dopóki się nie wczyta —
+    // cały stworek jak dawniej. Portret wypełnia wnętrze pierścienia, bo
+    // twarz ma być czytelna przy 23 px; figurka tej wielkości była plamką.
+    const portret = kluczPortretuOkraglego(e.spriteKey);
+    const face = scene.textures.exists(portret)
+      ? scene.add.image(cx, y, portret).setDisplaySize(d - 5, d - 5)
+      : scene.add.image(cx, y, e.spriteKey).setDisplaySize(d * 0.82, d * 0.82);
+    if (!active) face.setAlpha(0.8);
     holder.add([g, face]);
   };
 
-  return {
+  // Portrety kolejki doczytujemy tutaj, a nie w `preload` bitwy: pasek
+  // kolejki jest jedynym miejscem bitwy, które ich używa. Po wczytaniu pasek
+  // rysuje się jeszcze raz z ostatnimi danymi.
+  let ostatnio: [QueueEntry[], number] | undefined;
+  wczytajPortrety(scene, { okragle: true });
+  if (scene.load.list.size > 0) {
+    scene.load.once(Phaser.Loader.Events.COMPLETE, () => {
+      if (ostatnio && track.active) kolejka.update(...ostatnio);
+    });
+    scene.load.start();
+  }
+
+  const kolejka: TurnQueue = {
     update(entries, round) {
+      ostatnio = [entries, round];
       holder.removeAll(true);
       track.clear();
       roundChip?.destroy();
@@ -319,6 +339,7 @@ export function createTurnQueue(scene: Phaser.Scene, right: number, y: number): 
       roundChip = chip.container;
     },
   };
+  return kolejka;
 }
 
 // ---------- tabela statystyk ----------

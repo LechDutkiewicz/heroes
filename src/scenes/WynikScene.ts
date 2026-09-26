@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { kluczPortretuOkraglego, wczytajPortrety } from '../visual/portrety';
 import { sledzScene, zapisz } from '../dev/dziennik';
 import { artefaktPoId, poziom, statystyki, type StanMapy } from '../data/mapa';
 import {
@@ -125,8 +126,8 @@ export class WynikScene extends Phaser.Scene {
     this.load.image('w-ola', `${b}kampania/ola.png`);
     // Mapa kampanii — z niej miniatura następnej misji.
     this.load.image('w-kampania', `${b}kampania/mapa.jpg`);
-    // Stworki-znaki tytułów („Twój tytuł", Sala sław).
-    for (const s of SPRITE_TYTULOW) this.load.image(`p-${s}`, `${b}sprites/${s}.png`);
+    // Stworki-znaki tytułów („Twój tytuł", Sala sław) — okrągłe portrety.
+    wczytajPortrety(this, { okragle: true }, SPRITE_TYTULOW);
     for (const n of ['wynik-zwyciestwo', 'wynik-porazka', 'wynik-koniec'])
       this.load.audio(n, `${b}audio/${n}.wav`);
   }
@@ -270,6 +271,19 @@ export class WynikScene extends Phaser.Scene {
     const im = this.add.image(x, y, k);
     if (k === klucz) im.setScale(wys / im.height);
     return im;
+  }
+
+  /**
+   * Znak tytułu: portret stworka w złotym medalionie z zestawu. Cały
+   * stworek zmniejszony do 36 px stał na pergaminie jak naklejka; portret
+   * w medalionie to ten sam klocek co pieczęć miejsca w Sali sław obok.
+   */
+  private znakTytulu(x: number, y: number, sprite: string, bok: number) {
+    const r = bok / 2;
+    const d = Math.round(r * 1.54);
+    const g = medalion(this, 0, 0, r);
+    const im = this.add.image(0, 0, this.gladka(kluczPortretuOkraglego(sprite), d)).setDisplaySize(d, d);
+    return this.add.container(x, y, [g, im]);
   }
 
   // ————————————————————————————————————————————————— wspólne klocki
@@ -1048,7 +1062,7 @@ export class WynikScene extends Phaser.Scene {
 
     // Tytuł za wynik ze stworkiem — „Twój wynik to Smok" z Heroes 2.
     const ty = ky + kh - 32;
-    const znak = this.obraz(tx + 30, ty, `p-${tytul.sprite}`, 42).setDepth(46);
+    const znak = this.znakTytulu(tx + 30, ty, tytul.sprite, 44).setDepth(46);
     tresc.push(
       znak,
       this.add.text(tx + 60, ty - 10, 'Twój tytuł', stylAtramentu(12, 'miekki')).setOrigin(0, 0.5).setDepth(45),
@@ -1132,7 +1146,7 @@ export class WynikScene extends Phaser.Scene {
         .text(kol.imie, y, r.imie, stylAtramentu(18, miekki ? 'miekki' : 'zwykly'))
         .setOrigin(0, 0.5)
         .setDepth(45);
-      const znak = this.obraz(kol.tytul + 18, y, `p-${t.sprite}`, 36).setDepth(46);
+      const znak = this.znakTytulu(kol.tytul + 18, y, t.sprite, 34).setDepth(46);
       if (r.legenda) znak.setAlpha(0.75);
       tresc.push(
         this.add

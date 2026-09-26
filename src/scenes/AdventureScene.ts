@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { dnoGniazda, kluczPortretuPanelu, oprawPortret, wczytajPortrety } from '../visual/portrety';
 import { ZESTAWY_KLIMATU } from '../data/zestawy-klimatu';
 import {
   BUDOWLE,
@@ -448,6 +449,8 @@ export class AdventureScene extends Phaser.Scene {
     for (const o of zywe(stan.bohater.armia)) potrzebne.add(o.sprite);
     for (const ob of stan.obiekty) for (const o of ob.oddzialy ?? []) potrzebne.add(o.sprite);
     for (const s of potrzebne) this.load.image(`p-${s}`, `${b}sprites/${s}.png`);
+    // Sloty armii w panelu pokazują małe portrety (`src/visual/portrety.ts`).
+    wczytajPortrety(this, { panel: true });
   }
 
   /**
@@ -2522,30 +2525,48 @@ export class AdventureScene extends Phaser.Scene {
     // Rysunek i licznik powstają ZAWSZE, także dla pustego slotu, i są tylko
     // chowane: ekran bohatera przekłada oddziały między slotami, więc panel
     // musi umieć pokazać każdą zawartość każdego slotu bez przebudowy.
-    const slotBok = 28;
-    const odstep = 3;
+    // 30 px i odstęp 1: siedem gniazd wypełnia szerokość karty (218 px).
+    const slotBok = 30;
+    const odstep = 1;
     const rzadX = wnetrzeX + (wnetrzeW - (SLOTY_ARMII * slotBok + (SLOTY_ARMII - 1) * odstep)) / 2;
     const rzadY = kartaY + 86;
     for (let i = 0; i < SLOTY_ARMII; i++) {
       const sx = rzadX + i * (slotBok + odstep);
-      // Gniazdo: ciemniejszy papier z kreską atramentu, jak kratka w księdze.
+      // Gniazdo: ciemne drewno wpuszczone w pergamin — puste miejsce ma być
+      // DZIURĄ, w którą wchodzi portret, a nie beżowym prostokątem.
       const g = this.add.graphics();
-      g.fillStyle(0x8a5a2a, 0.16);
-      g.fillRoundedRect(0, 0, slotBok, slotBok + 12, 4);
-      g.lineStyle(1.2, BARWA.kreska, 0.6);
-      g.strokeRoundedRect(0, 0, slotBok, slotBok + 12, 4);
-      const im = this.add.image(slotBok / 2, slotBok / 2 - 1, 'bohater').setVisible(false);
+      g.fillStyle(0x6b4a26, 0.5);
+      g.fillRect(0, 0, slotBok, slotBok);
+      dnoGniazda(g, 1, 1, slotBok - 2);
+      // Portret, nie figurka: przy 28 px cały stworek był plamką z nóżkami,
+      // a ciasny kadr twarzy (mały portret, jak w Heroes) czyta się od razu.
+      // Oprawa rysowana osobno, bo pusty slot ma zostać samą kratką.
+      //
+      // Liczba stoi na OSOBNEJ tabliczce pod ramą, nie na portrecie — na
+      // dolnej trzeciej zasłaniała pierś i brodę stwora (runda 2 portretów).
+      const oprawa = this.add.graphics().setVisible(false);
+      oprawPortret(oprawa, 1, 1, slotBok - 2, 1);
+      oprawa.fillStyle(0x1a0e04, 0.95);
+      oprawa.fillRoundedRect(1, slotBok + 1, slotBok - 2, 11, 3);
+      oprawa.fillStyle(0x3a2410, 1);
+      oprawa.fillRoundedRect(2, slotBok + 2, slotBok - 4, 9, 2.5);
+      oprawa.fillStyle(0xe0a53a, 0.9);
+      oprawa.fillRect(4, slotBok + 2, slotBok - 8, 1);
+      const im = this.add
+        .image(slotBok / 2, slotBok / 2, 'bohater')
+        .setDisplaySize(slotBok - 2, slotBok - 2)
+        .setVisible(false);
       const licznik = this.add
-        .text(slotBok / 2, slotBok + 4, '', {
+        .text(slotBok / 2, slotBok + 6.5, '', {
           fontFamily: KROJ.tytul,
-          fontSize: '11px',
+          fontSize: '10px',
           color: BARWA.krem,
           stroke: BARWA.braz,
-          strokeThickness: 3,
+          strokeThickness: 2,
         })
         .setOrigin(0.5);
-      const slot = this.add.container(sx, rzadY, [g, im, licznik]).setDepth(Z.hud + 1);
-      slot.setData('licznik', licznik).setData('rysunek', im);
+      const slot = this.add.container(sx, rzadY, [g, oprawa, im, licznik]).setDepth(Z.hud + 1);
+      slot.setData('licznik', licznik).setData('rysunek', im).setData('oprawa', oprawa);
       this.slotyArmii.push(slot);
     }
 
@@ -2773,11 +2794,13 @@ export class AdventureScene extends Phaser.Scene {
       const im = slot.getData('rysunek') as Phaser.GameObjects.Image;
       const licznik = slot.getData('licznik') as Phaser.GameObjects.Text;
       if (od) {
-        im.setTexture(`p-${od.sprite}`).setVisible(true);
-        im.setScale(24 / im.height);
+        im.setTexture(kluczPortretuPanelu(od.sprite)).setVisible(true);
+        im.setDisplaySize(28, 28);
+        (slot.getData('oprawa') as Phaser.GameObjects.Graphics).setVisible(true);
         licznik.setText(String(od.ile));
       } else {
         im.setVisible(false);
+        (slot.getData('oprawa') as Phaser.GameObjects.Graphics).setVisible(false);
         licznik.setText('');
       }
     }
