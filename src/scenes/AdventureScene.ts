@@ -165,13 +165,18 @@ const MINIATURA = 'plansza-mini';
 /** Krycie cienia kontaktowego: pod znajdźką, stworkiem i bohaterem / pod dużą bryłą. */
 const KRYCIE_CIENIA = 0.48;
 const KRYCIE_CIENIA_BRYLY = 0.38;
-/** Stworek na mapie (`stworekNaMape`): ile nasycenia zostaje z malowanego rysunku. */
-const STWOREK_NASYCENIE = 0.9;
+/**
+ * Stworek na mapie (`stworekNaMape`): ile nasycenia zostaje z malowanego rysunku.
+ * Runda 3: mistrzowie są już przemalowani pod obiekty mapy (stonowane barwy,
+ * własne cienie rdzeniowe), więc obróbka w grze jest lekka — mocniejsza
+ * (nasycenie 0,6, odcień 0,45, bryła ±26%) robiła z nich szarobury muł.
+ */
+const STWOREK_NASYCENIE = 1;
 /** …jak mocno odcień idzie za średnią barwą okolicy (0 — wcale, 1 — w pełni). */
-const STWOREK_ODCIEN = 0.15;
+const STWOREK_ODCIEN = 0.1;
 /** …siła lokalnego kontrastu (faktura) i amplituda ziarna pędzla. */
-const STWOREK_DETAL = 0.5;
-const STWOREK_ZIARNO = 0.05;
+const STWOREK_DETAL = 0.35;
+const STWOREK_ZIARNO = 0.04;
 /** Gotowe stworki na mapę: klucz tekstury → rysunek i cień (tekstury są globalne). */
 /** Krycie cienia rzuconego stworka. */
 const STWOREK_CIEN = 0.68;
@@ -742,7 +747,7 @@ export class AdventureScene extends Phaser.Scene {
         b *= 1 - k + k * amb[2];
         const nx = (x - sx) / pw;
         const ny = (y - y0) / ph;
-        const bryla = 1 - 0.13 * nx - 0.26 * (ny - 0.4);
+        const bryla = 1 - 0.05 * nx - 0.08 * (ny - 0.5);
         r *= bryla;
         g *= bryla;
         b *= bryla;
@@ -787,7 +792,7 @@ export class AdventureScene extends Phaser.Scene {
           // Krawędź: po stronie światła (lewa-góra) jaśniej, w cieniu ciemniej.
           const dl = Math.hypot(kx, ky) || 1;
           const odSwiatla = (kx + ky) / dl / Math.SQRT2;
-          mnoz *= 0.74 - 0.14 * odSwiatla;
+          mnoz *= 0.8 - 0.12 * odSwiatla;
         }
         for (let c = 0; c < 3; c++) wynik[i + c] = Phaser.Math.Clamp((d[i + c] + detal) * mnoz, 0, 255);
       }
@@ -1868,13 +1873,9 @@ export class AdventureScene extends Phaser.Scene {
         });
       }
 
-      if (o.rodzaj === 'potwor') {
-        // Chorągiewka NAD głową strażnika: stopka masztu wchodzi na czubek
-        // sylwetki o 0,1 pola, proporczyk jest cały nad nim. Liczone od
-        // widocznego spodu i wysokości sylwetki, więc idzie za skalą stworka.
-        const glowa = spod - (this.podstawaRysunku(klucz).widocznaWys ?? 1) * wys;
-        kont.add(this.chorag(C.foe).setY(glowa + KAFEL * 0.38));
-      }
+      // Strażnicy nie mają chorągiewki: to oddziały neutralne, nie należą do
+      // żadnego gracza — jak stwory na mapie Heroes 3. Wroga poznaje się po
+      // tym, że stoi na drodze, a siłę pokazuje podpowiedź po najechaniu.
       const doZajecia =
         o.rodzaj === 'kopalnia' ||
         o.rodzaj === 'zamek' ||

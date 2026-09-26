@@ -130,15 +130,14 @@ STWORKI: dict[str, tuple[str, str]] = {
 
 #: Która surowa wersja idzie do gry (numer z `<id>-<n>.png`). Brak wpisu —
 #: najnowsza. Wpisy dopisuje człowiek po obejrzeniu wersji.
-WYBOR: dict[str, int] = {
-    # Runda 3 (pod mapę): 00246-3 i 00095-2 wyszły z podstawką gruntu.
-    '00095': 1,
-}
+WYBOR: dict[str, int] = {}
 
 #: Surowe wersje namalowane przodem w lewo — odbijane w poziomie przy
 #: kadrowaniu (klucz: `<id>-<n>`). Taniej niż generować jeszcze raz.
 ODBIJ: set[str] = {
     '00020-3', '00218-3', '00030-3', '00096-2', '00220-2', '00074-2', '00023-2',
+    # Runda 3 (pod mapę): mimo mistrza przodem w prawo model odwrócił tych trzech.
+    '00020-4', '00218-4', '00193-3',
 }
 
 #: Barwy z innej surowej wersji (klucz → wzór). Sprzątanie gruntu
