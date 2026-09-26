@@ -8,33 +8,37 @@ import { BARWA, KROJ, krojeZestawu, ramaZlota } from './zestaw';
  *
  * Wcześniej w każdym z tych miejsc stał CAŁY stworek zmniejszony do slotu:
  * przy 28 px kolorowa plamka z nóżkami, bez twarzy, zawieszona w pustym
- * gnieździe. W Heroes 3 portret stwora to osobny obrazek — popiersie na
- * malowanym tle jego miasta, w ciemnej ramce — i dopiero dzięki temu rząd
- * armii czyta się przy 32 px. Nasze portrety liczy
- * `tools/stworki_portrety.py` z mistrzów (`assets/stworki/`) i z panoram
- * miast (`public/miasto/`), więc po przemalowaniu stworka wystarczy puścić
- * skrypt jeszcze raz.
+ * gnieździe. W Heroes 3 portret stwora to osobny obrazek — popiersie
+ * w ramce — i dopiero dzięki temu rząd armii czyta się przy 32 px. Nasze
+ * portrety liczy `tools/stworki_portrety.py` z mistrzów (`assets/stworki/`):
+ * kadr zakotwiczony w oczach (ta sama linia oczu i wielkość twarzy
+ * u wszystkich), jedno ciepłe tło pergaminu i jedno światło. Po
+ * przemalowaniu stworka wystarczy puścić skrypt jeszcze raz.
  *
- * Trzy kadry, bo mały nie jest zmniejszonym dużym:
- *  - duży (`pd-<id>`, 128 px): głowa z tułowiem — ekran bohatera, karta
- *    werbunku, ekran kampanii;
- *  - mały (`pm-<id>`, 48 px): ciasno na twarz, ciemniejsze tło — panel
- *    armii na mapie, załoga w mieście, tytuły wyniku;
- *  - okrągły (`po-<id>`, 56 px): kadr małego wycięty w koło — do okrągłych
- *    medalionów (kolejka tur w bitwie, karta nagrody w kampanii). Koło jest
- *    w pliku, a nie maską: maska geometryczna liczy się we współrzędnych
- *    świata i nie jedzie razem z kontenerem, który się rusza.
- * Phaser zmniejsza bez mipmap, więc do slotu 28 px idzie plik 48 px, a nie
- * 128 px — z tego drugiego próbkowałby co piąty piksel i twarz by się
- * szarpała.
+ * Cztery pliki na stwora, każdy w wielkości, w jakiej gra go pokazuje:
+ *  - duży (`pd-<id>`, 96 px) — ekran bohatera, karta werbunku;
+ *  - mały (`pm-<id>`, 50 px, ciaśniej na twarz) — załoga w mieście;
+ *  - panel (`pp-<id>`, 28 px) — panel armii na mapie;
+ *  - okrągły (`po-<id>`, 56 px) — medaliony (kolejka tur w bitwie, karta
+ *    nagrody w kampanii, wynik). Koło jest w pliku, a nie maską: maska
+ *    geometryczna liczy się we współrzędnych świata i nie jedzie razem
+ *    z kontenerem, który się rusza.
  */
 
-export const PORTRET_DUZY = 128;
-export const PORTRET_MALY = 48;
+// Wielkości plików = wielkości, w jakich gra je pokazuje (ostrość: Phaser
+// zmniejsza bez mipmap, każde zmniejszenie w grze zmiękcza obraz).
+export const PORTRET_DUZY = 96;
+export const PORTRET_MALY = 50;
+export const PORTRET_PANELU = 28;
 
 /** Klucz tekstury portretu. */
 export function kluczPortretu(sprite: string, maly = false) {
   return `${maly ? 'pm' : 'pd'}-${sprite}`;
+}
+
+/** Klucz najmniejszego portretu — panel armii na mapie (28 px). */
+export function kluczPortretuPanelu(sprite: string) {
+  return `pp-${sprite}`;
 }
 
 /** Klucz okrągłego portretu (medalion). */
@@ -50,7 +54,7 @@ export function kluczPortretuOkraglego(sprite: string) {
  */
 export function wczytajPortrety(
   scena: Phaser.Scene,
-  rozmiary: { duze?: boolean; male?: boolean; okragle?: boolean } = { duze: true, male: true },
+  rozmiary: { duze?: boolean; male?: boolean; panel?: boolean; okragle?: boolean } = { duze: true, male: true },
   sprite: Iterable<string> = FACTIONS.flatMap((f) => f.units.map((u) => u.sprite))
 ) {
   const b = import.meta.env.BASE_URL;
@@ -60,6 +64,9 @@ export function wczytajPortrety(
     }
     if (rozmiary.male && !scena.textures.exists(kluczPortretu(s, true))) {
       scena.load.image(kluczPortretu(s, true), `${b}portrety/${s}-m.png`);
+    }
+    if (rozmiary.panel && !scena.textures.exists(kluczPortretuPanelu(s))) {
+      scena.load.image(kluczPortretuPanelu(s), `${b}portrety/${s}-p.png`);
     }
     if (rozmiary.okragle && !scena.textures.exists(kluczPortretuOkraglego(s))) {
       scena.load.image(kluczPortretuOkraglego(s), `${b}portrety/${s}-o.png`);

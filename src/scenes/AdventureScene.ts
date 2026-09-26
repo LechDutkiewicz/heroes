@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { dnoGniazda, kluczPortretu, oprawPortret, wczytajPortrety } from '../visual/portrety';
+import { dnoGniazda, kluczPortretuPanelu, oprawPortret, wczytajPortrety } from '../visual/portrety';
 import { ZESTAWY_KLIMATU } from '../data/zestawy-klimatu';
 import {
   BUDOWLE,
@@ -381,7 +381,7 @@ export class AdventureScene extends Phaser.Scene {
     for (const ob of stan.obiekty) for (const o of ob.oddzialy ?? []) potrzebne.add(o.sprite);
     for (const s of potrzebne) this.load.image(`p-${s}`, `${b}sprites/${s}.png`);
     // Sloty armii w panelu pokazują małe portrety (`src/visual/portrety.ts`).
-    wczytajPortrety(this, { male: true });
+    wczytajPortrety(this, { panel: true });
   }
 
   /**
@@ -2552,7 +2552,7 @@ export class AdventureScene extends Phaser.Scene {
       const im = slot.getData('rysunek') as Phaser.GameObjects.Image;
       const licznik = slot.getData('licznik') as Phaser.GameObjects.Text;
       if (od) {
-        im.setTexture(kluczPortretu(od.sprite, true)).setVisible(true);
+        im.setTexture(kluczPortretuPanelu(od.sprite)).setVisible(true);
         im.setDisplaySize(28, 28);
         (slot.getData('oprawa') as Phaser.GameObjects.Graphics).setVisible(true);
         licznik.setText(String(od.ile));
