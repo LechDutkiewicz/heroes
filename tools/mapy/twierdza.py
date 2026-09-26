@@ -572,10 +572,11 @@ USTAWIENIA = {
     # osadzenia w podłożu, w innej skali niż szczegółowy zamek". Nowe stosy
     # (PROMPTY-PLANSZE §24: kryształy, skrzynka, kosz wciśnięte w zaspę)
     # trochę większe, spód grzęźnie w śniegu (`osadzZnajdzki`), strażnicy
-    # o jedną piątą wyżsi — prawie jak bohater (1,5 pola).
+    # o jedną piątą wyżsi — prawie jak bohater (1,5 pola). Stwory na mapie,
+    # runda 3: strażnicy byli za duzi (smok jak góra) — `skalaStrazy` zdjęta,
+    # Twierdza ma strażników w skali wspólnej dla wszystkich plansz (1 pole).
     'znajdzki': 0.72,
     'osadzZnajdzki': 0.2,
-    'skalaStrazy': 1.2,
     # Runda 10: łąka to tundra — bez białych zasp sceny na co trzecim polu.
     'bezOzdobTrawy': True,
     # Runda 9 (HotA): „zamek ledwie większy od chaty i młyna — powiększyć

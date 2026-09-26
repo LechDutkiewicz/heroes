@@ -130,7 +130,11 @@ STWORKI: dict[str, tuple[str, str]] = {
 
 #: Która surowa wersja idzie do gry (numer z `<id>-<n>.png`). Brak wpisu —
 #: najnowsza. Wpisy dopisuje człowiek po obejrzeniu wersji.
-WYBOR: dict[str, int] = {}
+WYBOR: dict[str, int] = {
+    # Runda 4 (matowo, mniej „chibi"): 00263-4 i 00041-4 wyszły brązowe —
+    # zostają wersje pod mapę z rundy 3.
+    '00263': 3, '00041': 3,
+}
 
 #: Surowe wersje namalowane przodem w lewo — odbijane w poziomie przy
 #: kadrowaniu (klucz: `<id>-<n>`). Taniej niż generować jeszcze raz.
@@ -206,6 +210,29 @@ PROMPT_MAPA = (
     'lowest painted pixels.'
 )
 ARKUSZ_MAPY = WSAD / '_styl-mapa.png'
+
+#: Czwarte przejście — tylko dla najbardziej „chibi" i błyszczących (runda 3
+#: wzorca: „glossy mobile-game sticker", wielkie głowy, lśniące bliki,
+#: jaskrawe obwódki światła). Wejście: bieżący mistrz (już pędzlem mapy).
+#: Pierwsza wersja promptu („matowo jak zwietrzałe drewno, kamień i mech")
+#: zrobiła z Cyndera brązowego ankylozaura, a ze Sporexa szary grzyb — stąd
+#: wprost: barwy zostają, łącznie z nasyceniem.
+PROMPT_MATOWY = (
+    'Repaint the creature from the FIRST image in the same painterly style as '
+    'the adventure-map objects in the SECOND image, but make it less chibi and '
+    'less glossy: more natural creature proportions (a smaller head relative '
+    'to the body, sturdier body and limbs), a matte painted surface — no shiny specular '
+    'highlights, no glossy plastic look, no bright rim light around the '
+    'edges; soft diffuse warm light from the upper left and deep dark core '
+    'shadows on the lower right. Calm, wild expression, not a cute mascot '
+    'grin. Keep the EXACT colours of the first image — every colour zone '
+    'keeps its hue and its saturation (do not turn it brown, grey or '
+    'earthy). Keep its identity: {opis}. Same colour zones and markings, same '
+    'anatomy and number of limbs, same overall silhouette type. Full body, '
+    'three-quarter view facing the RIGHT side of the image. Only the '
+    'creature, cut out on a fully transparent background, nothing under its '
+    'feet: no ground, no grass, no shadow, no base, no glow, no frame, no text.'
+)
 
 #: Drugie przejście — sprzątanie gotowego rysunku. Mimo „nothing under its
 #: feet" model w pierwszym przejściu podkładał prawie każdemu stworkowi
@@ -298,15 +325,15 @@ def generuj(sid: str, czysc: bool | str = False) -> Path | None:
 
 
 def _generuj(sid: str, czysc: bool | str) -> Path | None:
-    if czysc == 'mapa':
+    if czysc in ('mapa', 'matowy'):
         # Wejście: mistrz 256 px powiększony do 512 (model gubi szczegóły
         # na małym obrazku), drugi obrazek — arkusz obiektów naszej mapy.
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as t:
             Image.open(MISTRZE / f'{sid}.png').convert('RGBA').resize((512, 512), Image.LANCZOS).save(t.name)
             wejscie = t.name
         obrazy = ['-F', f'image[]=@{wejscie}', '-F', f'image[]=@{ARKUSZ_MAPY}']
-        prompt = PROMPT_MAPA.format(opis=STWORKI[sid][1])
-        print(f'  {sid}: maluję pod mapę z mistrza', flush=True)
+        prompt = (PROMPT_MATOWY if czysc == 'matowy' else PROMPT_MAPA).format(opis=STWORKI[sid][1])
+        print(f'  {sid}: maluję z mistrza ({czysc})', flush=True)
     elif czysc:
         zrodlo = wybrana(sid)
         if not zrodlo:
@@ -516,6 +543,7 @@ def main() -> None:
     ap.add_argument('--brakujace', action='store_true', help='z --generuj: tylko stworki bez żadnej wersji')
     ap.add_argument('--czysc', action='store_true', help='zdejmij namalowany grunt z wybranej wersji (kosztuje)')
     ap.add_argument('--mapowy', action='store_true', help='przemaluj mistrza pod obiekty naszej mapy (kosztuje)')
+    ap.add_argument('--matowy', action='store_true', help='z --mapowy: mniej „chibi", matowo (PROMPT_MATOWY)')
     ap.add_argument('--rownolegle', type=int, default=3, help='ile zapytań naraz (limit ~5/min)')
     ap.add_argument('--kadruj', action='store_true', help='wybrane wersje → assets/stworki + public/sprites')
     ap.add_argument('--bok', type=int, default=128, help='bok pliku w public/sprites')
@@ -549,7 +577,7 @@ def main() -> None:
             raise SystemExit('--mapowy wymaga listy id (świadomie: każde to zapytanie płatne)')
         print(f'maluję pod mapę {len(ids)}: model {MODEL}, jakość {JAKOSC}')
         with ThreadPoolExecutor(max_workers=max(1, args.rownolegle)) as pula:
-            list(pula.map(lambda s: generuj(s, czysc='mapa'), ids))
+            list(pula.map(lambda s: generuj(s, czysc='matowy' if args.matowy else 'mapa'), ids))
     if args.kadruj:
         kadruj(args.bok)
     if args.arkusz:
