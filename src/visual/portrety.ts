@@ -132,26 +132,31 @@ export function dnoGniazda(g: Phaser.GameObjects.Graphics, x: number, y: number,
   g.fillStyle(0xf8e6b8, 0.12);
   g.fillRect(x + 2, y + bok - 2, bok - 3, 1.5);
   g.fillRect(x + bok - 2, y + 2, 1.5, bok - 3);
-  // Rytowany znak w dnie — koło z przepaską jak na pokeballu: gniazdo jest
-  // zaprojektowanym miejscem na stworka, nie brakiem obrazka. Ryt = ciemna
-  // kreska i jasna tuż pod nią (światło z góry).
+  // Rytowany znak w dnie — pięcioramienna gwiazda, ta sama co na złotych
+  // przyciskach zestawu: gniazdo jest zaprojektowanym miejscem na stworka,
+  // nie brakiem obrazka. Ryt = ciemna kreska i jasna tuż pod nią (światło
+  // z góry). Żadnych znaków z bajki — tylko motywy z naszego zestawu.
   if (bok >= 40) {
     const cx = x + bok / 2;
-    const cy = y + bok / 2;
-    const r = bok * 0.2;
+    const cy = y + bok / 2 + bok * 0.02;
+    const R = bok * 0.2;
+    const r = R * 0.45;
+    const punkty: Phaser.Math.Vector2[] = [];
+    for (let i = 0; i < 10; i++) {
+      const kat = -Math.PI / 2 + (i * Math.PI) / 5;
+      const d = i % 2 === 0 ? R : r;
+      punkty.push(new Phaser.Math.Vector2(cx + Math.cos(kat) * d, cy + Math.sin(kat) * d));
+    }
     for (const [dy, barwa, alfa] of [
       [1, 0xf8e6b8, 0.16],
       [0, 0x120a04, 0.55],
     ] as const) {
       g.lineStyle(Math.max(1.5, bok / 40), barwa, alfa);
-      g.strokeCircle(cx, cy + dy, r);
-      g.beginPath();
-      g.moveTo(cx - r, cy + dy);
-      g.lineTo(cx - r * 0.34, cy + dy);
-      g.moveTo(cx + r * 0.34, cy + dy);
-      g.lineTo(cx + r, cy + dy);
-      g.strokePath();
-      g.strokeCircle(cx, cy + dy, r * 0.3);
+      g.strokePoints(
+        punkty.map((p) => new Phaser.Math.Vector2(p.x, p.y + dy)),
+        true,
+        true
+      );
     }
   }
 }
