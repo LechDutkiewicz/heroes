@@ -125,12 +125,14 @@ import {
   floatLabel,
   impactBurst,
   launchProjectile,
+  muzzleFlash,
   setLabelObstacles,
   showOutcomeScreen,
   slashArc,
 } from '../visual/effects';
 import {
   beginUnitMove,
+  muzzleOf,
   playHitPose,
   playShootPose,
   poseKey,
@@ -1586,7 +1588,7 @@ export class BattleScene extends Phaser.Scene {
    * Cios wręcz: zamach, natarcie, uderzenie z przytrzymaniem i powrót.
    * Kontener niesie dojście do celu, a sylwetka w tym czasie zmienia pozy
    * (unitView.ts): odchylenie w zamachu, poza ciosu w natarciu, trzymana
-   * przez uderzenie. Przytrzymanie na trafieniu (60 ms) to ta klatka
+   * przez uderzenie. Przytrzymanie na trafieniu (110 ms) to ta klatka
    * z Heroes 3, w której broń jest w celu — bez niej cios przelatywał.
    */
   private meleeLunge(attacker: Unit, target: Unit, onDone: () => void) {
@@ -1594,10 +1596,12 @@ export class BattleScene extends Phaser.Scene {
     const to = this.cellToXY(target.col, target.row);
     const dx = to.x - start.x;
     const dy = to.y - start.y;
-    const ZAMACH = 90;
-    const NATARCIE = 100;
-    const TRZYMA = 60;
-    const POWROT = 160;
+    // Runda 2 porównania z Heroes 3: przytrzymanie wydłużone z 60 do 110 ms,
+    // bo przy 60 rozbłysk trafienia wypadał już na cofającym się stworku.
+    const ZAMACH = 110;
+    const NATARCIE = 90;
+    const TRZYMA = 110;
+    const POWROT = 150;
 
     poseWindup(this, attacker.view, ZAMACH);
     // Dwa osobne ruchy zamiast yoyo: yoyo zgłasza się raz na animowaną
@@ -1653,11 +1657,14 @@ export class BattleScene extends Phaser.Scene {
 
   private releaseProjectile(attacker: Unit, target: Unit, broken: boolean, onDone: () => void) {
     sfx(this, 'strzal');
+    const wylot = muzzleOf(attacker.view);
+    muzzleFlash(this, this.effectLayer, wylot.x, wylot.y, TYPE_INFO[attacker.def.type].color);
     launchProjectile(
       this,
       this.effectLayer,
       {
-        from: this.cellToXY(attacker.col, attacker.row),
+        // Z pyska / przodu sylwetki, w klatce wypuszczenia — nie ze środka heksa.
+        from: wylot,
         to: this.cellToXY(target.col, target.row),
         color: TYPE_INFO[attacker.def.type].color,
         element: attacker.def.type,

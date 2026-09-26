@@ -66,8 +66,8 @@ function nagraj({ akcja, stwor }) {
   const scene = game.scene.getScene('battle');
   const DT = 1000 / 60;
   // Kadr w pikselach sceny wokół stóp stworka (środek heksa), ×2 na wyjściu.
-  const KW = 110;
-  const KH = 84;
+  const KW = 140;
+  const KH = 96;
   const ZOOM = 2;
 
   const sub = scene.units.find((u) => u.side === 'player' && u.def.sprite === stwor);
@@ -99,7 +99,7 @@ function nagraj({ akcja, stwor }) {
   let krok = 0;
   let sledz = false;
   const baza = { x: sub.container.x, y: sub.container.y };
-  let srodekX = baza.x + 15;
+  let srodekX = baza.x + 25;
 
   const spokoj = (v) => v.pose === null && !v.poseTween;
 
@@ -134,7 +134,7 @@ function nagraj({ akcja, stwor }) {
     koniecAkcji = () => trafiony && spokoj(sub.view);
   } else if (akcja === 'strzal') {
     postaw(wrog, 8, row);
-    srodekX = baza.x + 10;
+    srodekX = baza.x + 20;
     let wypuscil = false;
     const rel = scene.releaseProjectile.bind(scene);
     scene.releaseProjectile = (...a) => {
@@ -174,7 +174,7 @@ function nagraj({ akcja, stwor }) {
   const klatki = [];
   const zapisz = () => {
     const cx = sledz ? sub.container.x : srodekX;
-    cam.centerOn(cx, baza.y - KH / 2 + 24);
+    cam.centerOn(cx, baza.y - KH / 2 + 26);
     // Render bieżącego stanu z nowym położeniem kamery, bez kroku czasu.
     game.renderer.preRender();
     game.scene.render(game.renderer);

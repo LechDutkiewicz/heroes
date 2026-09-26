@@ -176,8 +176,15 @@ export interface UnitView {
   pose: PoseName | null;
   /** Tween ruchu pozy (odrzut, wypad) — jeden na raz, jak tweeny ruchu. */
   poseTween?: Phaser.Tweens.Tween;
-  /** Zegar przebierania kroku / trzepotu w czasie przejścia. */
-  gait?: Phaser.Time.TimerEvent;
+  /** Zaplanowane zmiany klatek kroku w bieżącym polu trasy. */
+  gait: Phaser.Time.TimerEvent[];
+  /** Licznik kroków przejścia — co drugi krok stawia drugą nogę i kołysze w drugą stronę. */
+  gaitStep: number;
+  /** Pochylenie w stronę marszu z ostatniego pola (ruch pionowy go nie zmienia). */
+  walkLean: number;
+  /** Wymiary widocznej sylwetki na ekranie — do wylotu pocisku. */
+  silW: number;
+  silH: number;
 }
 
 // ---------- barwy pomocnicze ----------
@@ -660,6 +667,11 @@ export function buildUnitView(scene: Phaser.Scene, spec: UnitViewSpec): UnitView
     seed: spec.seed,
     restKey: spec.spriteKey,
     pose: null,
+    gait: [],
+    gaitStep: 0,
+    walkLean: 0,
+    silW: sil ? sil.w * sprite.scaleY : 30,
+    silH: sil ? sil.h * sprite.scaleY : 40,
   };
 
   startBreathing(scene, view, spec.seed);
@@ -891,20 +903,27 @@ export function setUnitActive(scene: Phaser.Scene, view: UnitView, active: boole
 // (środek dołu), a odbicie wroga (`flipX`) działa bez przeliczeń. Brak pliku
 // pozy nie jest błędem — stworek zostaje wtedy przy obrazku „stoi".
 
-export type PoseName = 'zamach' | 'atak' | 'trafiony' | 'krok';
-export const POSES: PoseName[] = ['zamach', 'atak', 'trafiony', 'krok'];
+export type PoseName = 'zamach' | 'atak' | 'trafiony' | 'krok' | 'krok2' | 'lot' | 'lot2';
+export const POSES: PoseName[] = ['zamach', 'atak', 'trafiony', 'krok', 'krok2', 'lot', 'lot2'];
 export const poseKey = (sprite: string, pose: PoseName) => `poza-${sprite}-${pose}`;
 
 /** Strona, w którą stworek patrzy: gracz w prawo, wróg (odbity) w lewo. */
 const facing = (view: UnitView) => (view.sprite.flipX ? -1 : 1);
 
-/** Podmiana klatki. `null` — powrót do obrazka „stoi". */
+/**
+ * Podmiana klatki. `null` — powrót do obrazka „stoi". Brak pliku pozy: dla
+ * drugiego kroku i drugiej fazy lotu próbujemy pierwszej, a dopiero potem
+ * obrazka „stoi".
+ */
 export function setPose(view: UnitView, pose: PoseName | null) {
   if (!alive(view)) return;
-  const key = pose ? poseKey(view.restKey, pose) : view.restKey;
-  const use = pose && view.sprite.scene.textures.exists(key) ? key : view.restKey;
-  view.pose = use === view.restKey ? null : pose;
-  if (view.sprite.texture.key !== use) view.sprite.setTexture(use);
+  const has = (p: PoseName) => view.sprite.scene.textures.exists(poseKey(view.restKey, p));
+  let use: PoseName | null = pose;
+  if (use && !has(use)) use = use === 'krok2' ? 'krok' : use === 'lot2' ? 'lot' : use === 'lot' ? 'krok' : null;
+  if (use && !has(use)) use = null;
+  view.pose = use;
+  const key = use ? poseKey(view.restKey, use) : view.restKey;
+  if (view.sprite.texture.key !== key) view.sprite.setTexture(key);
 }
 
 /**
@@ -939,29 +958,33 @@ function poseMotion(
 /**
  * Cios wręcz, faza po fazie. Scena prowadzi kontener (dojście do celu), a tu
  * pracuje sama sylwetka. Czasy muszą się zgadzać z `meleeLunge` w scenie:
- *   zamach  — odchylenie i przysiad (wyczekanie),
- *   cios    — poza ciosu z wyciągnięciem, w chwili ruszenia do przodu,
- *   powrót  — trzyma pozę przez uderzenie, wraca do „stoi" w drodze powrotnej.
+ *   zamach  — przysiad i odchylenie (zwinięcie sprężyny),
+ *   cios    — poza ciosu i mocne wyciągnięcie WZDŁUŻ linii ataku,
+ *   powrót  — trzyma wyciągnięcie przez uderzenie, potem szybko wraca.
+ *
+ * Runda 1 przegrała ślepe porównanie z Heroes 3: „jeden sztywny rysunek
+ * przechylony i przesunięty po heksie". Stąd mocniejsze skale — zamach
+ * wyraźnie niższy i szerszy, cios wyraźnie dłuższy w poziomie niż wyższy.
  */
 export function poseWindup(scene: Phaser.Scene, view: UnitView, duration: number) {
   setPose(view, 'zamach');
-  poseMotion(scene, view, { sx: 1.07, sy: 0.9, dx: -3, duration, ease: 'Sine.easeOut' });
+  poseMotion(scene, view, { sx: 1.13, sy: 0.82, dx: -6, duration, ease: 'Sine.easeOut' });
 }
 
 export function poseStrike(scene: Phaser.Scene, view: UnitView, duration: number) {
   setPose(view, 'atak');
-  poseMotion(scene, view, { sx: 1.08, sy: 1.02, dx: 5, duration, ease: 'Quad.easeOut' });
+  poseMotion(scene, view, { sx: 1.24, sy: 0.92, dx: 9, duration, ease: 'Quad.easeOut' });
 }
 
 export function poseRecover(scene: Phaser.Scene, view: UnitView, hold: number, duration: number) {
   if (!alive(view)) return;
-  // Uderzenie trzyma pozę ciosu przez chwilę (zatrzymanie na trafieniu);
-  // dopiero potem wraca, z krótkim dociśnięciem, zanim stanie prosto.
+  // Przytrzymanie NA kontakcie: poza ciosu stoi wyciągnięta, a rozbłysk
+  // trafienia pali się właśnie na niej. Potem szybki powrót z dobiciem.
   view.poseTween?.remove();
   view.poseTween = scene.tweens.add({
     targets: view.sprite,
-    scaleX: view.baseScaleX * 1.1,
-    scaleY: view.baseScaleY * 0.96,
+    scaleX: view.baseScaleX * 1.26,
+    scaleY: view.baseScaleY * 0.9,
     duration: hold,
     ease: 'Sine.easeOut',
     onComplete: () => {
@@ -972,31 +995,52 @@ export function poseRecover(scene: Phaser.Scene, view: UnitView, hold: number, d
 }
 
 /**
- * Strzał: zamach (naciągnięcie) → poza ciosu z odrzutem w tył w chwili
- * wypuszczenia pocisku → powrót. `onRelease` pada dokładnie na zmianę pozy,
- * więc pocisk wylatuje z otwartej paszczy, a nie ze stojącego stworka.
+ * Miejsce wylotu pocisku: przód sylwetki na wysokości pyska, w układzie
+ * sceny. Pocisk ze środka heksa „pojawiał się znikąd" obok stworka.
+ */
+export function muzzleOf(view: UnitView) {
+  return {
+    x: view.container.x + facing(view) * view.silW * 0.42,
+    y: view.container.y + FEET_Y - view.silH * 0.62,
+  };
+}
+
+/**
+ * Strzał: zamach od celu (przysiad, głowa w tył) → w klatce wypuszczenia
+ * trzask do przodu z wyciągnięciem w stronę celu → jedna klatka odrzutu
+ * w tył → powrót z dobiciem. `onRelease` pada dokładnie na zmianę pozy.
  */
 export function playShootPose(scene: Phaser.Scene, view: UnitView, onRelease: () => void) {
-  const DRAW = 130;
+  const DRAW = 150;
   setPose(view, 'zamach');
   poseMotion(scene, view, {
-    sx: 1.06,
-    sy: 0.9,
-    dx: -3,
+    sx: 1.12,
+    sy: 0.82,
+    dx: -6,
     duration: DRAW,
     ease: 'Sine.easeOut',
     onComplete: () => {
       setPose(view, 'atak');
-      onRelease();
-      // Odrzut: sylwetka wystrzeliwuje do przodu kształtem, ale ciałem
-      // cofa się o włos — to czyta się jako siła wystrzału.
       poseMotion(scene, view, {
-        sx: 1.1,
-        sy: 1.03,
-        dx: 2,
-        duration: 70,
-        onComplete: () => poseRecover(scene, view, 150, 170),
+        sx: 1.24,
+        sy: 0.92,
+        dx: 6,
+        duration: 45,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          // Odrzut: po wystrzale ciało cofa się o kilka pikseli, poza strzału
+          // zostaje — to czyta się jako siła wystrzału.
+          poseMotion(scene, view, {
+            sx: 1.12,
+            sy: 0.96,
+            dx: -2,
+            duration: 70,
+            ease: 'Quad.easeOut',
+            onComplete: () => poseRecover(scene, view, 60, 180),
+          });
+        },
       });
+      onRelease();
     },
   });
 }
@@ -1036,40 +1080,46 @@ export function playHitPose(scene: Phaser.Scene, view: UnitView, fromDirX: numbe
   });
 }
 
-/** Przebieranie klatek w czasie lotu: „skrzydła" w górę i w dół. */
-const FLAP_MS = 120;
-
 // ---------- przemieszczanie ----------
 //
-// Sprite'y stworków to pojedyncze statyczne PNG — nie ma klatek chodu, więc
-// cała różnica między marszem a lotem musi wyjść z przekształceń jednego
-// obrazka: położenia, dwóch skal, obrotu oraz z pracy cienia.
+// Chodzący STOI NA ZIEMI. Runda 1 miała podskok 12 px na każde pole i krytyk
+// czytał to jako skakanie — obie nogi w powietrzu. Teraz stopy zostają przy
+// podeście (unoszenie 2 px, najniżej tuż po zetknięciu), a chód niesie
+// KOŁYSANIE na boki wokół stóp (±6°, co krok w drugą stronę), ugięcie przy
+// każdym zetknięciu, pochylenie w stronę marszu i dwie klatki kroku na
+// zmianę (lewa / prawa noga w przód).
 //
-// Chodzący ma być PRZYWIĄZANY DO ZIEMI: podskok na każde pole, ugięcie przy
-// zetknięciu, wyciągnięcie w locie i cień w PRZECIWFAZIE (mniejszy i jaśniejszy
-// u szczytu). Bez przeciwfazy cienia podskok czyta się jak drganie obrazka.
-//
-// Latacz ma być ODERWANY OD ZIEMI: unosi się na starcie, płynie po sinusie bez
-// jednego zetknięcia, przechyla w stronę lotu i opada przy lądowaniu; jego cień
-// zostaje na ziemi, maleje i blednie, więc odległość od sylwetki niesie wysokość.
+// Latacz jest ODERWANY OD ZIEMI: wyraźnie odrywa się od podestu, który blednie
+// razem z cieniem, leci wyciągnięty w poziomie i pochylony w stronę lotu,
+// po łuku góra–dół z wyciągnięciem na górze i ugięciem na dole. Skrzydło
+// (dwie klatki lotu) bije w dół, gdy stwór się wznosi.
 //
 // Wszystkie tweeny są trzymane za uchwyt i usuwane przed założeniem nowego na
 // TĘ SAMĄ właściwość — dwa tweeny na jedno pole Phaser rozstrzyga po swojemu
 // i animacja zapada się po szczycie.
 
-/** Podskok piechoty: tyle pikseli nad linią stóp na szczycie kroku. */
-const STEP_HOP = 12;
-/** Ugięcie i wyciągnięcie sylwetki; objętość zachowana, bo X idzie odwrotnie. */
-const SQUASH = 0.17;
-/** Pochylenie w stronę marszu. */
-const WALK_LEAN = 8;
-/** Latacz: wysokość przelotu nad linią stóp i amplituda sinusa. */
-const FLY_RISE = 13;
+/** Chód: uniesienie w połowie kroku (px), kołysanie na boki (°), pochylenie (°). */
+const STEP_LIFT = 2;
+const WADDLE = 5;
+const WALK_LEAN = 4;
+/** Ugięcie przy zetknięciu. */
+const STEP_SQUASH = 0.08;
+/** Latacz: wysokość przelotu nad linią stóp, amplituda łuku, przechył, pół okresu łuku. */
+const FLY_RISE = 22;
 const FLY_BOB = 3.5;
-const FLY_TILT = 11;
+const FLY_TILT = 10;
+const FLY_HALF = 120;
+/** Wyciągnięcie latacza w poziomie na czas lotu. */
+const FLY_SX = 1.1;
+const FLY_SY = 0.94;
 
 /** Czy obiekt wciąż żyje — ruch bywa przerywany śmiercią albo końcem bitwy. */
 const alive = (view: UnitView) => view.container.active && view.sprite.active;
+
+function clearGait(view: UnitView) {
+  for (const t of view.gait) t.remove();
+  view.gait = [];
+}
 
 /**
  * Zdejmuje wszystko, co ruch założył, i przywraca stan spoczynkowy: sylwetka
@@ -1083,8 +1133,7 @@ function resetMoveTweens(view: UnitView) {
   view.moveLean?.remove();
   view.moveShadow?.remove();
   view.moveHop = view.moveSquash = view.moveLean = view.moveShadow = undefined;
-  view.gait?.remove();
-  view.gait = undefined;
+  clearGait(view);
 }
 
 /** Przygotowanie do przejścia: gasimy oddech, żeby nie walczył o `y` sylwetki. */
@@ -1095,63 +1144,69 @@ export function beginUnitMove(scene: Phaser.Scene, view: UnitView, flying: boole
   resetMoveTweens(view);
   view.sprite.setPosition(0, FEET_Y).setAngle(0).setScale(view.baseScaleX, view.baseScaleY);
   view.shadow.setPosition(0, SHADOW_Y).setScale(1).setAlpha(SHADOW_REST);
+  view.gaitStep = 0;
+  view.walkLean = 0;
 
   if (!flying) return;
 
-  // Trzepot: dwie klatki na zmianę w stałym rytmie, niezależnym od pól
-  // trasy — jak skrzydła, które nie wiedzą o heksach.
-  let gora = true;
-  setPose(view, 'krok');
-  view.gait = scene.time.addEvent({
-    delay: FLAP_MS,
-    loop: true,
-    callback: () => {
-      gora = !gora;
-      setPose(view, gora ? 'krok' : 'zamach');
-    },
-  });
-
-  // Latacz: wznosi się RAZ, przed pierwszym polem, i dopiero na górze zaczyna
-  // sinus. Wznoszenie i sinus to dwa tweeny na to samo `y`, więc drugi startuje
-  // dopiero z zakończenia pierwszego, nigdy równolegle.
+  // Oderwanie: przysiad na starcie (klatka zamachu), potem wybicie w górę
+  // z wyciągnięciem w poziomie i klatką skrzydła w dole.
+  setPose(view, 'lot2');
   const rise = scene.tweens.add({
     targets: view.sprite,
     y: FEET_Y - FLY_RISE,
-    duration: 140,
-    ease: 'Sine.easeOut',
+    duration: 170,
+    ease: 'Quad.easeOut',
     onComplete: () => {
       if (!alive(view) || view.moveHop !== rise) return;
+      // Łuk góra–dół. Klatka skrzydła zmienia się na obu krańcach: na górze
+      // skrzydła idą w górę (wyciągnięty), na dole biją w dół — i to bicie
+      // unosi stwora w następnej połowie.
+      setPose(view, 'lot');
       view.moveHop = scene.tweens.add({
         targets: view.sprite,
-        y: { from: FEET_Y - FLY_RISE + FLY_BOB, to: FEET_Y - FLY_RISE - FLY_BOB },
-        duration: 420,
+        y: { from: FEET_Y - FLY_RISE - FLY_BOB, to: FEET_Y - FLY_RISE + FLY_BOB },
+        scaleX: { from: view.baseScaleX * FLY_SX * 0.96, to: view.baseScaleX * FLY_SX * 1.05 },
+        scaleY: { from: view.baseScaleY * FLY_SY * 1.06, to: view.baseScaleY * FLY_SY * 0.95 },
+        duration: FLY_HALF,
         ease: E.soft,
         yoyo: true,
         repeat: -1,
+        onYoyo: () => setPose(view, 'lot2'),
+        onRepeat: () => setPose(view, 'lot'),
       });
     },
   });
   view.moveHop = rise;
+  view.moveSquash = scene.tweens.add({
+    targets: view.sprite,
+    scaleX: { from: view.baseScaleX * 1.1, to: view.baseScaleX * FLY_SX },
+    scaleY: { from: view.baseScaleY * 0.86, to: view.baseScaleY * FLY_SY * 1.06 },
+    duration: 170,
+    ease: 'Quad.easeOut',
+  });
 
-  // Cień zostaje na ziemi: odsuwa się od sylwetki, maleje i blednie.
+  // Cień zostaje na ziemi: maleje i blednie; podest (znacznik strony) blednie
+  // razem z nim — stwór ma się od niego oderwać, a nie lecieć na talerzu.
   view.moveShadow = scene.tweens.add({
     targets: view.shadow,
-    y: SHADOW_Y + 3,
-    scaleX: 0.6,
-    scaleY: 0.55,
-    alpha: 0.3,
-    duration: 140,
+    y: SHADOW_Y + 2,
+    scaleX: 0.5,
+    scaleY: 0.45,
+    alpha: 0.28,
+    duration: 170,
     ease: 'Sine.easeOut',
   });
+  scene.tweens.add({ targets: view.platform, alpha: 0.35, duration: 170, ease: 'Sine.easeOut' });
 }
 
 /**
- * Jedno pole trasy. Dla piechoty to pełny cykl kroku — stąd synchronizacja
- * podskoków z heksami. Dla latacza tylko przechył, bo jego unoszenie jest
- * ciągłe i nie ma prawa wiedzieć o granicach pól.
+ * Jedno pole trasy. Dla piechoty to pełny krok — zetknięcie na granicy pola,
+ * klatka kroku w środku. Dla latacza tylko przechył, bo jego łuk jest
+ * ciągły i nie ma prawa wiedzieć o granicach pól.
  *
  * `dirX` to znak przemieszczenia; pochylenie idzie w stronę marszu, nie zawsze
- * w prawo. Przy ruchu czysto pionowym zostaje ostatni przechył.
+ * w prawo. Przy ruchu czysto pionowym zostaje ostatnie pochylenie.
  */
 export function stepUnitMove(
   scene: Phaser.Scene,
@@ -1160,55 +1215,73 @@ export function stepUnitMove(
 ) {
   if (!alive(view)) return;
   const { dirX, duration, flying } = opts;
-  const lean = (flying ? FLY_TILT : WALK_LEAN) * (dirX >= 0 ? 1 : -1);
 
-  if (dirX !== 0 && Math.round(view.sprite.angle) !== Math.round(lean)) {
-    view.moveLean?.remove();
-    view.moveLean = scene.tweens.add({
-      targets: view.sprite,
-      angle: lean,
-      duration: Math.min(220, duration),
-      ease: E.snap,
-    });
+  if (flying) {
+    const lean = FLY_TILT * (dirX >= 0 ? 1 : -1);
+    if (dirX !== 0 && Math.round(view.sprite.angle) !== Math.round(lean)) {
+      view.moveLean?.remove();
+      view.moveLean = scene.tweens.add({
+        targets: view.sprite,
+        angle: lean,
+        duration: Math.min(220, duration),
+        ease: E.snap,
+      });
+    }
+    return;
   }
 
-  if (flying) return;
+  if (dirX !== 0) view.walkLean = WALK_LEAN * Math.sign(dirX);
+  const strona = view.gaitStep % 2 === 0 ? 1 : -1;
+  view.gaitStep++;
 
-  // Krok: odbicie z ziemi, wyciągnięcie w locie, ugięcie przy lądowaniu.
-  // `yoyo` domyka cykl dokładnie na granicy pola, więc następny krok zaczyna
-  // się z tego samego stanu, w którym poprzedni skończył.
+  // Granica pola to klatka „stoi" (nogi razem — faza przejścia), a przez
+  // większość pola klatka kroku: raz bliższa noga w przód, raz dalsza.
+  // Razem cztery klatki na dwa pola, jak cykl chodu w Heroes 3.
+  clearGait(view);
+  setPose(view, null);
+  view.gait.push(
+    scene.time.delayedCall(duration * 0.12, () => setPose(view, strona > 0 ? 'krok' : 'krok2')),
+    scene.time.delayedCall(duration * 0.88, () => setPose(view, null))
+  );
+
+  // Kołysanie wokół stóp (punkt zaczepienia sprite'a jest u stóp): w każdym
+  // polu przechył przechodzi na drugą stronę, dookoła pochylenia marszu.
+  view.moveLean?.remove();
+  view.moveLean = scene.tweens.add({
+    targets: view.sprite,
+    angle: view.walkLean + WADDLE * strona,
+    duration,
+    ease: 'Sine.easeInOut',
+  });
+
+  // Najniżej tuż po zetknięciu, lekkie uniesienie w środku kroku.
   const half = duration / 2;
-  // Klatka kroku w fazie oderwania, klatka „stoi" przy zetknięciu —
-  // dwie klatki na pole dają rytm chodu zamiast sunięcia naklejki.
-  setPose(view, 'krok');
   view.moveHop?.remove();
   view.moveHop = scene.tweens.add({
     targets: view.sprite,
-    y: { from: FEET_Y, to: FEET_Y - STEP_HOP },
+    y: { from: FEET_Y, to: FEET_Y - STEP_LIFT },
     duration: half,
-    ease: 'Sine.easeOut',
+    ease: 'Sine.easeInOut',
     yoyo: true,
-    onYoyo: () => setPose(view, null),
   });
 
   view.moveSquash?.remove();
   view.moveSquash = scene.tweens.add({
     targets: view.sprite,
-    scaleX: { from: view.baseScaleX * (1 + SQUASH), to: view.baseScaleX * (1 - SQUASH * 0.7) },
-    scaleY: { from: view.baseScaleY * (1 - SQUASH), to: view.baseScaleY * (1 + SQUASH * 0.9) },
+    scaleX: { from: view.baseScaleX * (1 + STEP_SQUASH), to: view.baseScaleX * (1 - STEP_SQUASH * 0.3) },
+    scaleY: { from: view.baseScaleY * (1 - STEP_SQUASH), to: view.baseScaleY * (1 + STEP_SQUASH * 0.4) },
     duration: half,
     ease: 'Sine.easeOut',
     yoyo: true,
   });
 
-  // Cień w PRZECIWFAZIE: u szczytu mniejszy i jaśniejszy, przy zetknięciu
-  // szerszy i ciemniejszy. To ono robi z podskoku oderwanie się od ziemi.
+  // Cień oddycha razem z krokiem, ale słabo — stopy nie odrywają się od ziemi.
   view.moveShadow?.remove();
   view.moveShadow = scene.tweens.add({
     targets: view.shadow,
-    scaleX: { from: 1.22, to: 0.55 },
-    scaleY: { from: 1.22, to: 0.55 },
-    alpha: { from: 1, to: 0.34 },
+    scaleX: { from: 1.08, to: 0.95 },
+    scaleY: { from: 1.08, to: 0.95 },
+    alpha: { from: 0.9, to: 0.7 },
     duration: half,
     ease: 'Sine.easeOut',
     yoyo: true,
@@ -1216,8 +1289,9 @@ export function stepUnitMove(
 }
 
 /**
- * Koniec przejścia. Latacz opada na linię stóp, piechota już na niej stoi;
- * w obu wypadkach przechył jest wychodzony, a oddech wraca.
+ * Koniec przejścia. Latacz opada na linię stóp (z ugięciem przy zetknięciu),
+ * piechota już na niej stoi; w obu wypadkach przechył jest wychodzony,
+ * a oddech wraca.
  */
 export function endUnitMove(scene: Phaser.Scene, view: UnitView, flying: boolean) {
   if (!alive(view)) {
@@ -1225,9 +1299,24 @@ export function endUnitMove(scene: Phaser.Scene, view: UnitView, flying: boolean
     return;
   }
   resetMoveTweens(view);
-  setPose(view, null);
+  setPose(view, flying ? 'lot' : null);
+  if (flying) {
+    // Skrzydła biją aż do zetknięcia z ziemią — opadanie ze skrzydłami
+    // zamarłymi w górze wyglądało jak spadający kamień.
+    let gora = true;
+    view.gait.push(
+      scene.time.addEvent({
+        delay: 80,
+        loop: true,
+        callback: () => {
+          gora = !gora;
+          setPose(view, gora ? 'lot' : 'lot2');
+        },
+      })
+    );
+  }
 
-  const land = flying ? 260 : 140;
+  const land = flying ? 240 : 140;
   view.moveHop = scene.tweens.add({
     targets: view.sprite,
     y: FEET_Y,
@@ -1235,6 +1324,8 @@ export function endUnitMove(scene: Phaser.Scene, view: UnitView, flying: boolean
     ease: flying ? 'Sine.easeIn' : E.snap,
     onComplete: () => {
       if (!alive(view)) return;
+      clearGait(view);
+      setPose(view, null);
       // Cios potrafi ruszyć tuż po lądowaniu — wtedy skalą i położeniem
       // w poziomie rządzi już poza, a my prostujemy tylko resztę.
       if (view.poseTween) view.sprite.setY(FEET_Y).setAngle(0);
@@ -1265,6 +1356,7 @@ export function endUnitMove(scene: Phaser.Scene, view: UnitView, flying: boolean
     duration: land,
     ease: E.snap,
   });
+  if (flying) scene.tweens.add({ targets: view.platform, alpha: 1, duration: land, ease: E.snap });
 }
 
 // ---------- śmierć ----------

@@ -577,10 +577,17 @@ MISTRZE_POZ = MISTRZE / 'pozy'
 GRA_POZ = GRA / 'pozy'
 
 #: Ile ta część (pozy) może wydać łącznie — osobno od limitu całego projektu.
-LIMIT_POZ_USD = float(os.environ.get('POZY_LIMIT_USD', '3.00'))
+LIMIT_POZ_USD = float(os.environ.get('POZY_LIMIT_USD', '3.50'))
 
-#: Opis pozy dla modelu. `{akcja}` — ruch właściwy dla stworka (niżej).
+#: Opis pozy dla modelu. `{akcja}` — cios właściwy dla stworka (AKCJE),
+#: `{nogi}` — jak chodzi (NOGI), `{lot}` — czym bije w locie (LOTY).
 POZY: dict[str, str] = {
+    'zamach': (
+        'WIND-UP right before an attack — it coils back like a spring: crouched '
+        'low, body and head pulled back toward the LEFT, weight on the back, '
+        'front limbs drawn in, eyes fixed on the right, about to spring '
+        'forward toward the right. Feet stay on the ground.'
+    ),
     'atak': (
         'ATTACK — the creature strikes hard toward the RIGHT: {akcja}. Body '
         'and head thrust forward to the right, weight on the front, fierce '
@@ -594,10 +601,62 @@ POZY: dict[str, str] = {
         'front limbs (or its front side) drawn up protectively, weight on the '
         'back. Still facing the right side of the image.'
     ),
+    # Dwie klatki chodu na zmianę: bliższa noga w przód / dalsza noga w przód.
+    # Obie stopy (albo cała para) na ziemi — runda 1 wyglądała jak skakanie.
     'krok': (
-        'MOVING — {krok}. A clear mid-motion silhouette, different from the '
-        'standing pose.'
+        'WALKING to the right, side view, mid-stride: {nogi} Its NEAR-side '
+        '(viewer-side, lit) leg is clearly stepping FORWARD to the right and its '
+        'far-side leg (in shadow, darker) is pushed BACK behind the body; feet touch the ground '
+        'line, no jumping. Body level, walking calmly.'
     ),
+    'krok2': (
+        'WALKING to the right, side view, mid-stride — the OPPOSITE step: {nogi} '
+        'Its FAR-side leg (in shadow, darker) is clearly stepping FORWARD to the right and its '
+        'near-side (viewer-side, lit) leg is pushed BACK behind the body; feet touch '
+        'the ground line, no jumping. Body level, walking calmly.'
+    ),
+    # Lot, dwie fazy skrzydła. Ciało wyciągnięte w poziomie, nogi podkulone.
+    'lot': (
+        'FLYING to the right, WINGS-UP phase: {lot_gora} Body stretched out '
+        'horizontally and tilted forward toward the right, legs tucked up under '
+        'the body, nothing touching the ground — clearly airborne.'
+    ),
+    'lot2': (
+        'FLYING to the right, WINGS-DOWN power-stroke phase: {lot_dol} Body '
+        'stretched out horizontally toward the right, legs tucked up under the '
+        'body, nothing touching the ground — clearly airborne.'
+    ),
+}
+
+#: Jak stworek chodzi — model bez tego dokładał dwunożnym łapy albo
+#: kulom nogi, których nie mają.
+NOGI: dict[str, str] = {
+    '00193': 'it waddles on its tiny stubby feet under the round body.',
+    '00020': 'a bird-like biped walking on its two thin dark legs, wings folded.',
+    '00218': 'it waddles on its round stubby bulb-feet.',
+    '00096': 'it toddles on its two tiny feet.',
+    '00227': 'an upright biped walking gracefully on two thin legs, arms swinging.',
+    '00246': 'an upright biped lizard walking on its two hind legs, tail out behind.',
+    '00002': 'it waddles on its two short legs, tentacles swaying.',
+    '00263': 'an upright biped walking on its two legs, arms swinging.',
+    '00220': 'a four-legged beast: one diagonal pair of legs forward, the other pair back.',
+    '00196': 'a heavy biped stomping on its two short legs, arms swinging.',
+    '00074': 'a four-legged beast: one diagonal pair of legs forward, the other pair back.',
+    '00058': 'a four-legged hoofed creature: one diagonal pair of legs forward, the other pair back.',
+    '00095': 'it waddles on its two round lavender feet.',
+    '00077': 'it walks on its six long jointed legs, alternating tripods.',
+    '00041': 'a biped bird walking on its two feathered feet, arms swinging.',
+}
+
+#: Czym latacz bije w locie. Torrenar i Sporina nie mają skrzydeł — dostają
+#: ruch tułowia / liścia zamiast skrzydła.
+LOTY: dict[str, tuple[str, str]] = {
+    '00023': ('its teal cape-like wing flap spread open as a real wing and raised HIGH above its back.',
+              'its teal cape-like wing flap spread open as a real wing and swept DOWN below its belly.'),
+    '00030': ('its armoured body arched upward, head raised, tail and back plates lifted.',
+              'its armoured body curled slightly, head forward, tail swept down like a stroke.'),
+    '00250': ('its leaf-shaped pod body flared wide open like a wing, the white orb above.',
+              'its leaf-shaped pod body folded narrow and swept down, the white orb above.'),
 }
 
 #: Cios właściwy dla stworka — bez tego model dawał każdemu ten sam
@@ -623,36 +682,18 @@ AKCJE: dict[str, str] = {
     '00041': 'pecking forward hard with its beak, arms flung back, one clawed foot kicking forward',
 }
 
-#: Krok albo lot — tylko dla tych, którym druga klatka ruchu coś daje.
-#: Kulki i wazy (Pyroko, Aquino, Obsydian, Sporex) podskakują tweenem.
-KROKI: dict[str, str] = {
-    '00020': 'walking mid-stride: one thin leg lifted and stepping forward, the other pushing off behind, wings slightly lifted',
-    '00030': 'flying leap: all four legs tucked under the body, armoured body stretched forward and slightly raised, as if soaring through the air',
-    '00096': 'walking mid-stride: one little foot lifted forward, body bobbing forward, leaf sprout swaying back',
-    '00227': 'walking mid-stride: one leg stepping forward, arms swinging, the leaf cape flowing behind',
-    '00246': 'walking mid-stride: one hind leg lifted and stepping forward, body leaning forward, tail swinging',
-    '00263': 'walking mid-stride: one leg lifted and stepping forward, arms swinging, tail curled',
-    '00250': 'floating in flight: the pod tilted forward, leaf edges flared out like wings, the white orb trailing slightly behind',
-    '00220': 'walking mid-stride: one front leg and the opposite hind leg lifted, body shifted forward',
-    '00196': 'stomping forward mid-stride: one foot lifted, arms swinging, heavy body leaning forward',
-    '00074': 'walking mid-stride: one front leg and the opposite hind leg lifted, mane swaying',
-    '00058': 'trotting mid-stride: one front hoof and the opposite hind hoof lifted, cloud head bobbing',
-    '00023': 'flying: the teal wing flap spread wide and raised high like a wing, legs tucked under the body, tail streaming behind',
-    '00077': 'walking mid-stride: the long jointed legs in the opposite phase, two lifted and reaching forward',
-    '00041': 'walking mid-stride: one feathered foot lifted and stepping forward, arms swinging',
-}
-
 PROMPT_POZA = (
     'This is a finished hand-painted creature sprite for a fantasy strategy '
     'game battle screen. Redraw the SAME creature — identical design, '
     'identical colours and markings, identical painterly storybook rendering, '
-    'the same edge and the same warm light from the upper left — in a new '
+    'the same dark warm edge line, the same visible brush texture, the same '
+    'eye shape and eye colour, and the same warm light from the upper left — in a new '
     'battle animation pose: {poza} Keep its identity exactly: {opis}. Same '
     'anatomy and number of limbs, same proportions, same size as in the '
     'input image; do not add weapons, effects or new body parts. Side / '
     'three-quarter view facing the RIGHT side of the image, exactly like the '
     'input. The whole creature fully visible, not cropped. Only the creature, '
-    'cut out on a fully transparent background: no ground, no shadow, no '
+    'cut out on a fully transparent background: no ground, no dust patch, no shadow, no '
     'motion lines, no dust, no sparks, no fire, no glow, no frame, no text.'
 )
 
@@ -679,7 +720,8 @@ def generujPoze(sid: str, poza: str) -> Path | None:
             return None
     _rezerwuj()
     try:
-        opis = POZY[poza].format(akcja=AKCJE[sid], krok=KROKI.get(sid, 'walking mid-stride'))
+        gora, dol = LOTY.get(sid, ('', ''))
+        opis = POZY[poza].format(akcja=AKCJE[sid], nogi=NOGI.get(sid, ''), lot_gora=gora, lot_dol=dol)
         prompt = PROMPT_POZA.format(poza=opis, opis=STWORKI[sid][1])
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as t:
             Image.open(MISTRZE / f'{sid}.png').convert('RGBA').resize((1024, 1024), Image.LANCZOS).save(t.name)
@@ -732,8 +774,23 @@ WYBOR_POZ: dict[str, int] = {}
 ODBIJ_POZ: set[str] = set()
 
 
+#: Malowane pozy odrzucone po obejrzeniu (klucz `<id>-<poza>-<n>`) — gra
+#: bierze wtedy poprzednią malowaną albo pozę wygiętą z mistrza.
+ODRZUC_POZ: set[str] = {
+    # Kula Pyroko wyciągnięta w morsa; Aquino dostał ludzkie nogi i rękę;
+    # Obsydian — oko i ręce na wazie; Lawina z sześciu odnóży zrobiła dwunoga;
+    # Vulkaron w pierwszym kroku zmienił się w goryla z paszczą na brzuchu.
+    '00193-krok-1', '00193-krok2-1', '00218-krok-1', '00218-krok2-1',
+    '00095-krok-1', '00095-krok2-1', '00077-krok-1', '00077-krok2-1',
+    '00196-krok-1',
+    # Druga próba Vulkarona lepsza, ale obok wygiętego krok2 wyglądała jak
+    # inny stwór — przy chodzie na zmianę bije to w oczy bardziej niż brak nóg.
+    '00196-krok-2',
+}
+
+
 def wybranaPoza(sid: str, poza: str) -> Path | None:
-    w = wersjePozy(sid, poza)
+    w = [n for n in wersjePozy(sid, poza) if f'{sid}-{poza}-{n}' not in ODRZUC_POZ]
     if not w:
         return None
     return WSAD_POZ / f'{sid}-{poza}-{WYBOR_POZ.get(f"{sid}-{poza}", w[-1])}.png'
@@ -756,6 +813,7 @@ def kadrPozy(sylwetka: Image.Image, wzor: Image.Image) -> Image.Image:
     tej samej wielkości — inaczej przy podmianie klatki w bitwie „puchłby"
     na czas ciosu. Stopy na linii mistrza, środek masy w poziomie tam, gdzie
     u mistrza (przesunięcie robi tween, nie rysunek)."""
+    sylwetka = _bezPylu(sylwetka)
     aw = np.array(wzor.getchannel('A')) > 128
     ap_ = np.array(sylwetka.getchannel('A')) > 128
     s = (aw.sum() / max(1, ap_.sum())) ** 0.5
@@ -795,11 +853,22 @@ WYGIECIA: dict[str, dict[str, float]] = {
     # Cios: wyrzucenie korpusu w przód z wyciągnięciem, lekko nisko.
     # Pierwsze wartości (0.26) były za nieśmiałe: na pasku w bitwie
     # (sylwetka ~50 px) cios nie różnił się od stania.
-    'atak': dict(bend=0.34, p=1.6, sy=0.93, sx=0.18, stopy=-0.04),
+    # Runda 2: krytyk widział „jeden sztywny rysunek przechylony i przesunięty"
+    # — cios dostał mocniejsze wyciągnięcie góry wzdłuż linii ataku (sx).
+    'atak': dict(bend=0.36, p=1.5, sy=0.9, sx=0.30, stopy=-0.05),
     # Trafienie: zgięcie do tyłu w pasie, wciśnięcie w ziemię.
     'trafiony': dict(bend=-0.30, p=2.0, sy=0.84, sx=0.08, stopy=0.04),
     # Krok: faza „przejścia" — wyprostowany, lekko w przód, stopy w tył.
     'krok': dict(bend=0.08, p=1.2, sy=1.07, sx=-0.05, stopy=-0.08),
+    # Drugi krok: stopy w przód, korpus lekko w tył — na zmianę z pierwszym
+    # dolna część sylwetki „przestępuje" z nogi na nogę.
+    'krok2': dict(bend=0.02, p=1.2, sy=1.03, sx=-0.02, stopy=0.08),
+    # Lot, dwie fazy skrzydła. Nogi (dolna ćwiartka) zostają W TYLE, a korpus
+    # wyciąga się w przód — stwór czyta się jak lecący, a nie jak siedzący
+    # w powietrzu. `lot` — skrzydła w górze (wyciągnięty), `lot2` — pchnięcie
+    # w dół (spłaszczony, najmocniej wyciągnięty w poziomie).
+    'lot': dict(bend=0.12, p=1.3, sy=1.05, sx=0.10, stopy=-0.12),
+    'lot2': dict(bend=0.04, p=1.3, sy=0.88, sx=0.22, stopy=-0.16),
 }
 
 
@@ -874,6 +943,28 @@ def pozyZMistrza(bok: int, ids: list[str], nadpisz: bool = False) -> None:
         print(f'  {sid}: {" ".join(WYGIECIA)} (wygięte z mistrza)')
 
 
+def _bezPylu(im: Image.Image) -> Image.Image:
+    """Zdejmuje namalowany „kurz" spod stóp: mimo zakazu model podkładał
+    zamachom i ciosom bladą elipsę albo smugi. W dolnych 9% sylwetki
+    wycinamy piksele jasne i mało nasycone (beż, biel, szarość pyłu) —
+    stopy stworków są tam ciemniejsze albo barwne."""
+    t = np.array(im).astype(np.float32)
+    a = t[..., 3]
+    ys = np.nonzero((a > 128).any(1))[0]
+    if len(ys) == 0:
+        return im
+    y0 = int(ys.max() - (ys.max() - ys.min()) * 0.09)
+    rgb = t[..., :3]
+    mx, mn = rgb.max(-1), rgb.min(-1)
+    sat = (mx - mn) / np.maximum(mx, 1)
+    pyl = (mx > 150) & (sat < 0.3)
+    pyl[:y0] = False
+    t[..., 3] = np.where(pyl, 0, a)
+    wynik = Image.fromarray(t.clip(0, 255).astype(np.uint8), 'RGBA')
+    bb = wynik.getchannel('A').point(lambda v: 255 if v > 8 else 0).getbbox()
+    return wynik.crop(bb) if bb else im
+
+
 def _dopasujDoMistrza(im: Image.Image, wzor: Image.Image, sila: float) -> Image.Image:
     maska_i = np.array(im.getchannel('A')) > 200
     maska_w = np.array(wzor.getchannel('A')) > 200
@@ -903,11 +994,11 @@ def kadrujPozy(bok: int, ids: list[str]) -> None:
 
 
 def arkuszPoz(wyjscie: Path, wszystkie: bool) -> None:
-    """Mistrz | zamach | atak | trafiony | krok — każdy stworek w jednym
+    """Mistrz | zamach | atak | trafiony | krok | krok2 | lot | lot2 — każdy stworek w jednym
     rzędzie, na łące z linią stóp i pionową kreską środka mistrza (widać, jak
     daleko poza wychodzi w przód i w tył). `--wszystkie-wersje`: dodatkowo
     każda surowa wersja malowana."""
-    kolumny = ['zamach', 'atak', 'trafiony', 'krok']
+    kolumny = list(WYGIECIA)
     H = 150
     W = H * SZER_POZY // BOK_MISTRZA
     rzedy: list[list[tuple[str, Image.Image | None]]] = []
@@ -997,8 +1088,14 @@ def main() -> None:
             tryb = f'poprawka:{args.poprawka}' if args.poprawka else 'matowy' if args.matowy else 'mapa'
             list(pula.map(lambda s: generuj(s, czysc=tryb), ids))
     if args.pozy:
-        # Krok tylko dla tych z wpisem w KROKI — reszta podskakuje tweenem.
-        cele = [(s, p) for p in args.pozy for s in ids if p != 'krok' or s in KROKI]
+        # Kroki tylko dla chodzących (NOGI), fazy lotu tylko dla lataczy (LOTY).
+        def pasuje(s: str, p: str) -> bool:
+            if p in ('krok', 'krok2'):
+                return s in NOGI
+            if p in ('lot', 'lot2'):
+                return s in LOTY
+            return True
+        cele = [(s, p) for p in args.pozy for s in ids if pasuje(s, p)]
         print(f'pozy {len(cele)}: model {MODEL}, jakość {JAKOSC}, wydane na pozy ${wydaneNaPozy():.2f} z ${LIMIT_POZ_USD:.2f}')
         with ThreadPoolExecutor(max_workers=max(1, args.rownolegle)) as pula:
             list(pula.map(lambda c: generujPoze(*c), cele))

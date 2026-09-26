@@ -1385,6 +1385,35 @@ export interface ShotOpts {
 }
 
 /**
+ * Błysk wylotu: krótki rozbłysk w barwie żywiołu przy pysku strzelca,
+ * w klatce wypuszczenia. Bez niego pocisk „pojawiał się znikąd" obok
+ * stworka — oko nie łączyło go z tym, kto strzelił.
+ */
+export function muzzleFlash(
+  scene: Phaser.Scene,
+  layer: Phaser.GameObjects.Container,
+  x: number,
+  y: number,
+  color: number
+) {
+  const g = scene.add
+    .image(x, y, FX.glow)
+    .setTint(shade(color, 0.85))
+    .setBlendMode(Phaser.BlendModes.ADD)
+    .setScale(0.12)
+    .setAlpha(1);
+  layer.add(g);
+  scene.tweens.add({
+    targets: g,
+    scale: 0.42,
+    alpha: 0,
+    duration: 150,
+    ease: E.snap,
+    onComplete: () => g.destroy(),
+  });
+}
+
+/**
  * Pocisk strzelca. Wcześniej był to dosłownie prostokąt plus trójkąt — jedna
  * strzała dla ognia, wody i trawy. Tutaj pocisk NIESIE ŻYWIOŁ: leci ikona
  * żywiołu w aureoli jego barwy, a za nią zostaje smużący ślad z iskier.
