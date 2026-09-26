@@ -38,6 +38,8 @@ import {
   type WyborSkrzyni,
 } from '../data/mapa';
 import { planszaPrzygody } from '../data/plansza';
+import { ALL_SPRITES } from '../data/factions';
+import type { PoseName } from '../visual/unitView';
 import { planszaPoId } from '../data/mapy';
 import { turaWroga } from '../data/wrog-ai';
 import { SLOTY_ARMII, dolacz, pustaArmia, zywe } from '../data/armia';
@@ -251,8 +253,128 @@ type StworekNaMape = {
   /** Ile pikseli tekstury nad sylwetką i po bokach to margines na obrys. */
   margines: number;
   cien?: { klucz: string; ox: number; oy: number; stopy: number; barwa: number };
+  /**
+   * Strojenie barw i bryły policzone z obrazka „stoi". Klatki najechania
+   * (`NAJECHANIE_POZY`) biorą je stąd, a nie liczą od nowa: poza ma inną
+   * sylwetkę i inne statystyki barw, więc własne strojenie migałoby barwą
+   * i światłem przy każdej podmianie klatki.
+   */
+  strojenie?: Strojenie;
+};
+type Strojenie = {
+  srL: number;
+  nasycenie: number;
+  kontrast: number;
+  jasnosc: number;
+  krawedz: number;
+  /** Bryła: środek sylwetki względem środka tekstury, połowa szerokości, góra i wysokość. */
+  sxOdSrodka: number;
+  pw: number;
+  y0: number;
+  ph: number;
 };
 const STWORKI_MAPY = new Map<string, StworekNaMape>();
+
+/**
+ * Najechanie na stos (`ozywStraznika`) — jak stwory na mapie HotA
+ * (`tools/reference/homm3/ref-anim-mapa-hota-*-pasek.png`): kursor nad
+ * strażnikiem budzi pętlę JEDNEGO wyraźnego gestu, jak pirat HotA (unosi
+ * pistolet, celuje, opuszcza). Pętla (`NAJECHANIE_OKRES`): oddech → gest
+ * (wejście, przytrzymanie w skrajnym położeniu, powrót) → wydech i spokój;
+ * koniec pętli to dokładnie klatka „stoi", więc powtórka nie skacze.
+ *
+ * Runda 1 (krytyk, 1 na 3 wzorce): dwie pozy przełączane „na pstryk", bez
+ * klatek pośrednich; „krok" czytał się jak dreptanie w miejscu; góra
+ * sylwetki sztywna, szarpana razem z nogami. Stąd:
+ * - przejście to przenikanie dwóch gotowych klatek (`NAJECHANIE_WEJSCIE_GESTU`
+ *   i `NAJECHANIE_POWROT`), z łagodnym startem i końcem;
+ * - stopy stoją w miejscu: klatka pozy jest dosunięta tak, żeby środek jej
+ *   stóp wypadł tam, gdzie środek stóp „stoi" (`stopyRysunku`);
+ * - sylwetka dociąga za gestem: wyciągnięcie w górę od stóp idzie za celem
+ *   sprężyną (`NAJECHANIE_SPREZYNA`) — z opóźnieniem i małym przerzutem,
+ *   a po powrocie przysiada o włos i siada na miejsce;
+ * - poza wybrana PER STWOREK (`NAJECHANIE_POZY`) — ta, która czyta się
+ *   jak gest w stronę bohatera, a nie chód, przysiad na płasko czy efekt.
+ *
+ * Klatka pozy idzie tą samą drogą co obrazek „stoi" (`stworekNaMape`: barwy,
+ * bryła, obrys, cień rzucony), pieczona RAZ na strażnika przy pierwszym
+ * najechaniu — co klatkę zmieniają się już tylko krycie, skala i obrót.
+ */
+const NAJECHANIE_POZY: Record<string, PoseName> = {
+  // Pozy „zamach" przejrzane na arkuszu: zwinięcie, pochylenie, łeb w dół
+  // — wyczekanie przed ciosem, czyli groźba. Wyjątki niżej.
+  //
+  // Zamach płasko przy ziemi (Silvena leży, Glacyn przypada do skoku, Cindro
+  // i kogut kucają) albo ze smugą kurzu w pliku (Glacyn, Bazalt, Ashko):
+  // na mapie to podmiana stworka, a nie gest. Zamiast niego:
+  '00023': 'krok', // Cynder staje wyżej i unosi łeb
+  '00041': 'trafiony', // kogut rozkłada skrzydła
+  '00058': 'trafiony', // Ashko odchyla się z uniesioną łapą
+  '00074': 'trafiony', // Bazalt odwraca łeb, bez kurzu
+  '00227': 'atak', // Silvena wskazuje ręką — bez żadnego efektu
+  '00246': 'atak', // Glacyn wyciąga szyję z rykiem
+  '00263': 'trafiony', // Cindro unosi łapę
+};
+const najechaniePoza = (sprite: string): PoseName => NAJECHANIE_POZY[sprite] ?? 'zamach';
+/** Długość jednej pętli (ms). */
+const NAJECHANIE_OKRES = 1600;
+/** Gest w pętli (ms): start, wejście, przytrzymanie w skrajnym położeniu, powrót. */
+const NAJECHANIE_GEST_OD = 380;
+const NAJECHANIE_WEJSCIE_GESTU = 200;
+const NAJECHANIE_PRZYTRZYMANIE = 250;
+const NAJECHANIE_POWROT = 250;
+const NAJECHANIE_GEST_DO =
+  NAJECHANIE_GEST_OD + NAJECHANIE_WEJSCIE_GESTU + NAJECHANIE_PRZYTRZYMANIE + NAJECHANIE_POWROT;
+/** Oddech: o ile rośnie wysokość sylwetki (i chudnie szerokość — o 40% tego). */
+const NAJECHANIE_ODDECH = 0.035;
+/**
+ * Wyciągnięcie sylwetki w pełnym geście (ułamek wysokości; szerokość chudnie
+ * o połowę tego). Nie pochylenie obrotem: Phaser 4.2.1 w zamaskowanym
+ * świecie (`budujSwiat`) ucinał obróconemu obrazkowi lewą część
+ * — wychodziły ciemne prostokąty z obrysu.
+ */
+const NAJECHANIE_WYCIAGNIECIE = 0.05;
+/**
+ * Sprężyna wyciągnięcia: częstość własna (rad/s) i tłumienie (ułamek
+ * krytycznego). 20 rad/s i 0,35 — ruch spóźnia się o 1–2 klatki za gestem
+ * i przerzuca o ok. 1/3, zanim siądzie.
+ */
+const NAJECHANIE_SPREZYNA = { w: 20, zeta: 0.35 };
+/** Narastanie i gaśnięcie oddechu (ms). */
+const NAJECHANIE_WEJSCIE = 140;
+const NAJECHANIE_WYJSCIE = 240;
+/** Obrazki jednej klatki w ruchu: sylwetka, jej obrys, cień rzucony. */
+type KlatkaRuchu = {
+  wpis: StworekNaMape;
+  rysunek: Phaser.GameObjects.Image;
+  obrys: Phaser.GameObjects.Image[];
+  cien?: Phaser.GameObjects.Image;
+  /** Przesunięcie całej klatki (świat), które stawia jej stopy na stopach „stoi". */
+  dx: number;
+  dy: number;
+};
+/** Ruch jednego strażnika po najechaniu — patrz `obrazyStworka`, `ozywStraznika`. */
+type OzywienieStraznika = {
+  klucz: string;
+  wys: number;
+  tlo: [number, number, number];
+  /** Obrazek „stoi" — ten sam, który trafia kliknięciem; w ruchu ukryty. */
+  im: Phaser.GameObjects.Image;
+  obrys: Phaser.GameObjects.Image[];
+  /** Krycie obrysu planszy (`USTAWIENIA.obrysObiektow`), 0 — bez obrysu. */
+  krycieObrysu: number;
+  cien?: Phaser.GameObjects.Image;
+  /** Klatki [stoi, poza] w ruchu — budowane przy pierwszym najechaniu. */
+  klatki?: KlatkaRuchu[];
+  /** Czas w pętli (ms, 0 … `NAJECHANIE_OKRES`). */
+  czas: number;
+  /** Siła oddechu 0–1. */
+  sila: number;
+  aktywne: boolean;
+  /** Wyciągnięcie i jego prędkość — sprężyna `NAJECHANIE_SPREZYNA`. */
+  ugiecie: number;
+  predkosc: number;
+};
 
 
 const DOMYSLNA_PODPOWIEDZ =
@@ -299,6 +421,10 @@ export class AdventureScene extends Phaser.Scene {
   private ikonyObiektow: Record<number, Phaser.GameObjects.Container> = {};
   /** Rysunki obiektów wraz z ich obiektami — do samodzielnego trafiania kliknięciem. */
   private trafienia: Array<{ o: Obiekt; im: Phaser.GameObjects.Image }> = [];
+  /** Strażnicy, którzy umieją się ruszyć po najechaniu (`ozywStraznika`), po id obiektu. */
+  private ozywienia = new Map<number, OzywienieStraznika>();
+  /** Strażnik pod kursorem albo jeszcze dogrywający pętlę — tylko te liczymy co klatkę. */
+  private ruchomeStraze = new Set<OzywienieStraznika>();
   private ruchTekst!: Phaser.GameObjects.Text;
   private statTeksty: Phaser.GameObjects.Text[] = [];
   private poziomTekst!: Phaser.GameObjects.Text;
@@ -449,6 +575,16 @@ export class AdventureScene extends Phaser.Scene {
     for (const o of zywe(stan.bohater.armia)) potrzebne.add(o.sprite);
     for (const ob of stan.obiekty) for (const o of ob.oddzialy ?? []) potrzebne.add(o.sprite);
     for (const s of potrzebne) this.load.image(`p-${s}`, `${b}sprites/${s}.png`);
+    // Klatka pozy strażników do najechania (`NAJECHANIE_POZY`). Pozy ma każdy
+    // stworek zamków (`ALL_SPRITES`, `tools/stworki_przemaluj.py`) — spoza tej
+    // listy nie prosimy, żeby nie sypać 404; taki strażnik tylko oddycha.
+    const zPozami = new Set(ALL_SPRITES);
+    for (const ob of stan.obiekty)
+      if (ob.rodzaj === 'potwor' && ob.oddzialy?.[0] && zPozami.has(ob.oddzialy[0].sprite)) {
+        const s = ob.oddzialy[0].sprite;
+        const poza = najechaniePoza(s);
+        this.load.image(`p-${s}-${poza}`, `${b}sprites/pozy/${s}-${poza}.png`);
+      }
     // Sloty armii w panelu pokazują małe portrety (`src/visual/portrety.ts`).
     wczytajPortrety(this, { panel: true });
   }
@@ -500,6 +636,8 @@ export class AdventureScene extends Phaser.Scene {
     this.dochody = {};
     this.ikonyObiektow = {};
     this.trafienia = [];
+    this.ozywienia.clear();
+    this.ruchomeStraze.clear();
     this.marginesy.clear();
     this.alfy.clear();
     this.podstawy.clear();
@@ -577,6 +715,7 @@ export class AdventureScene extends Phaser.Scene {
       // wyjeżdżała za okno gry — a systemowy kursor jest tam wyłączony.
       this.kursorZnak.setVisible(false);
       this.podswietlWejscie(undefined);
+      this.ozywStraznika(undefined);
       this.input.setDefaultCursor('default');
     });
     // Strzałki przesuwają widok. Na planszy 36 × 36 samo podążanie za bohaterem
@@ -782,8 +921,19 @@ export class AdventureScene extends Phaser.Scene {
    *
    * Proporcje pliku zostają; skalę liczy `obrazyStworka` z wysokości BEZ
    * marginesu. Pomiary podstawy i marginesu dolnego idą z oryginału.
+   *
+   * `wzor` — obrazek „stoi" tego samego stworka, gdy pieczemy klatkę pozy
+   * (`NAJECHANIE_POZY`): barwy i bryła idą wtedy z niego (`Strojenie`).
+   * Plik pozy jest szerszy (192 × 128), ale ma tę samą wysokość i kwadrat
+   * „stoi" dokładnie pośrodku — przy tej samej wysokości tekstury wychodzi
+   * ta sama skala i ten sam środek dołu, więc klatki leżą jedna na drugiej.
    */
-  private stworekNaMape(klucz: string, wys: number, tlo: [number, number, number]): StworekNaMape {
+  private stworekNaMape(
+    klucz: string,
+    wys: number,
+    tlo: [number, number, number],
+    wzor?: StworekNaMape
+  ): StworekNaMape {
     const h = Math.max(8, Math.round(wys * ZOOM_MAPY * STWOREK_NADPROBKA));
     // Barwa okolicy zaokrąglona, żeby stworki na podobnym gruncie dzieliły teksturę.
     const [tr, tg, tb] = tlo.map((v) => Math.round(v / 8) * 8);
@@ -849,9 +999,11 @@ export class AdventureScene extends Phaser.Scene {
     nasS.sort((a, b) => a - b);
     const nas50 = nasS.length ? nasS[Math.floor(nasS.length * 0.5)] : 70;
     const ciemny = srL < STWOREK_PROG_CIEMNY;
-    const ph = Math.max(1, y1 - y0);
-    const sx = (x0 + x1) / 2;
-    const pw = Math.max(1, (x1 - x0) / 2);
+    const st = wzor?.strojenie;
+    const ph = st ? st.ph : Math.max(1, y1 - y0);
+    const sx = st ? w / 2 + st.sxOdSrodka : (x0 + x1) / 2;
+    const pw = st ? st.pw : Math.max(1, (x1 - x0) / 2);
+    const gora = st ? st.y0 : y0;
 
     // 2. Zakres barw obiektów planszy + klimat śnieżny.
     const snieg = !!ust?.cienNaSniegu;
@@ -859,7 +1011,9 @@ export class AdventureScene extends Phaser.Scene {
     let nasycenie = snieg ? STWOREK_SNIEG.nasycenie : 1;
     let kontrast = snieg ? STWOREK_SNIEG.kontrast : 1;
     let jasnosc = 1;
-    if (obiekty) {
+    if (st) {
+      ({ nasycenie, kontrast, jasnosc } = st);
+    } else if (obiekty) {
       // Mediana chromy stworka najwyżej 1,15 × mediany obiektów. Runda 8
       // mierzyła 85. percentyl — a przy nim neonowy Sporex (cały jaskrawy,
       // bez ciemnych partii) mieścił się „w normie" drewnianego wozu.
@@ -869,7 +1023,8 @@ export class AdventureScene extends Phaser.Scene {
     }
     const odcien = snieg ? STWOREK_SNIEG.odcien : 0;
     const sr = (tr + tg + tb) / 3 || 1;
-    const krawedz = snieg ? STWOREK_SNIEG.krawedz : ciemny ? STWOREK_KRAWEDZ_SWIATLA : 0;
+    const krawedz = st ? st.krawedz : snieg ? STWOREK_SNIEG.krawedz : ciemny ? STWOREK_KRAWEDZ_SWIATLA : 0;
+    const srodekL = st ? st.srL : srL;
     const barwaKrawedzi = snieg
       ? [tr, tg, tb].map((v) => Math.min(255, (v * 255) / Math.max(tr, tg, tb, 1)))
       : [255, 255, 255];
@@ -895,7 +1050,7 @@ export class AdventureScene extends Phaser.Scene {
               ile++;
             } else if (dx + dy < 0) swiatlo = true;
           }
-        const bryla = 1 + STWOREK_BRYLA * (-(x - sx) / pw - ((y - y0) / ph - 0.5) * 2) * 0.5;
+        const bryla = 1 + STWOREK_BRYLA * (-(x - sx) / pw - ((y - gora) / ph - 0.5) * 2) * 0.5;
         const src = [0, 1, 2].map((c) =>
           ile ? d[i + c] * (1 - STWOREK_WYGLADZENIE) + (rozmyte[c] / ile) * STWOREK_WYGLADZENIE : d[i + c]
         );
@@ -908,7 +1063,7 @@ export class AdventureScene extends Phaser.Scene {
         const szary = [L * 1.06, L, L * 0.88];
         for (let c = 0; c < 3; c++) {
           let v = szary[c] + (barwa[c] - szary[c]) * nasycenie;
-          v = srL + (v - srL) * kontrast;
+          v = srodekL + (v - srodekL) * kontrast;
           v *= jasnosc;
           v *= 1 - odcien + (odcien * [tr, tg, tb][c]) / sr;
           v *= bryla;
@@ -972,6 +1127,17 @@ export class AdventureScene extends Phaser.Scene {
         stopy: hh - stopy,
         barwa: (barwaCienia[0] << 16) | (barwaCienia[1] << 8) | barwaCienia[2],
       },
+      strojenie: st ?? {
+        srL,
+        nasycenie,
+        kontrast,
+        jasnosc,
+        krawedz,
+        sxOdSrodka: sx - w / 2,
+        pw,
+        y0,
+        ph,
+      },
     };
     STWORKI_MAPY.set(cel, wpis);
     return wpis;
@@ -995,11 +1161,12 @@ export class AdventureScene extends Phaser.Scene {
     klucz: string,
     wys: number,
     tlo: [number, number, number]
-  ): { obrazy: Phaser.GameObjects.Image[]; im: Phaser.GameObjects.Image } {
+  ): { obrazy: Phaser.GameObjects.Image[]; im: Phaser.GameObjects.Image; ozywienie: OzywienieStraznika } {
     const naMape = this.stworekNaMape(klucz, wys, tlo);
     const im = this.add.image(0, KAFEL * 0.46, naMape.rysunek).setOrigin(0.5, 1);
     im.setScale(wys / (im.height - naMape.margines));
     const obrazy: Phaser.GameObjects.Image[] = [];
+    let cien: Phaser.GameObjects.Image | undefined;
     if (naMape.cien) {
       const sk = im.scaleY;
       const yStop = im.y - naMape.cien.stopy * sk;
@@ -1016,18 +1183,32 @@ export class AdventureScene extends Phaser.Scene {
           .setTint(snieg ? STWOREK_STYK_SNIEG : 0x0e0904)
           .setTintMode(Phaser.TintModes.FILL)
           .setAlpha(STWOREK_STYK),
-        this.add
+        (cien = this.add
           .image(0, yStop, naMape.cien.klucz)
           .setOrigin(naMape.cien.ox, naMape.cien.oy)
           .setScale(sk)
-          .setAlpha(STWOREK_CIEN)
+          .setAlpha(STWOREK_CIEN))
       );
     }
     // Obrys planszy — ten sam co pod skrzynią (grubość, barwa, krycie).
-    const obrys = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.obrysObiektow;
-    if (obrys) obrazy.push(...this.obrysRysunku(im, obrys));
-    obrazy.push(im);
-    return { obrazy, im };
+    const krycieObrysu = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.obrysObiektow;
+    const obrys = krycieObrysu ? this.obrysRysunku(im, krycieObrysu) : [];
+    obrazy.push(...obrys, im);
+    const ozywienie: OzywienieStraznika = {
+      klucz,
+      wys,
+      tlo,
+      im,
+      obrys,
+      krycieObrysu: krycieObrysu ?? 0,
+      cien,
+      czas: 0,
+      sila: 0,
+      aktywne: false,
+      ugiecie: 0,
+      predkosc: 0,
+    };
+    return { obrazy, im, ozywienie };
   }
 
   /**
@@ -1251,6 +1432,9 @@ export class AdventureScene extends Phaser.Scene {
     // Marsz, bitwa czy okno: złota elipsa wejścia nie zostaje pod kursorem,
     // choćby mysz się nie ruszyła — wróci przy następnym jej ruchu.
     if (this.zajety && this.znakWejscia) this.podswietlWejscie(undefined);
+    // Tak samo najechany stos: w marszu i w oknie dogrywa pętlę i staje.
+    if (this.zajety && this.ruchomeStraze.size) this.ozywStraznika(undefined);
+    if (this.ruchomeStraze.size) this.krokOzywienia(delta);
     if (!this.kursor || this.zajety) return;
     const { x, y } = this.kursor;
     // Pas jest liczony od ramy mapy, nie od okna: po prawej stronie leży panel
@@ -1275,6 +1459,8 @@ export class AdventureScene extends Phaser.Scene {
     // Bez wygładzania: to ma być natychmiastowe i ciągłe. Tween co klatkę
     // nakładałby się sam na siebie i mapa szarpałaby się zamiast płynąć.
     this.przewin(this.przewX + dx, this.przewY + dy, false);
+    // Mapa jedzie pod nieruchomym kursorem — stos pod nim może się zmienić.
+    this.ozywStraznika(this.straznikPodKursorem(this.kursor));
   }
 
   private klawisz(e: KeyboardEvent) {
@@ -2043,6 +2229,7 @@ export class AdventureScene extends Phaser.Scene {
       if (stworek) {
         kont.add(stworek.obrazy);
         im = stworek.im;
+        this.ozywienia.set(o.id, stworek.ozywienie);
       } else {
         im = this.add.image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, klucz).setOrigin(0.5, 1);
         im.setScale(wys / im.height);
@@ -2985,8 +3172,213 @@ export class AdventureScene extends Phaser.Scene {
     this.znakWejscia = znak?.active ? znak.setVisible(true) : undefined;
   }
 
+  /**
+   * Strażnik do ożywienia (`ozywStraznika`): ten, którego rysunek albo pole
+   * jest pod kursorem — to samo, nad czym podpowiedź pokazuje jego armię.
+   * Pod mgłą i w czasie marszu nikt się nie rusza.
+   */
+  private straznikPodKursorem(p: { x: number; y: number }): OzywienieStraznika | undefined {
+    if (this.zajety || !this.wRamie(p.x, p.y)) return undefined;
+    const { x, y } = this.zEkranu(p.x, p.y);
+    if (!this.wGranicach(x, y) || !this.stan.odkryte[y][x]) return undefined;
+    const o = this.obiektPodKursorem(p as Phaser.Input.Pointer) ?? obiektNa(this.stan, x, y);
+    if (o?.rodzaj !== 'potwor' || o.zebrany || !this.stan.odkryte[o.y][o.x]) return undefined;
+    return this.ozywienia.get(o.id);
+  }
+
+  /**
+   * Najechanie na stos — patrz `NAJECHANIE_POZY`. Budzi `z` (albo nikogo),
+   * a pozostałych puszcza, żeby dograli gest i zgaśli (`krokOzywienia`).
+   */
+  private ozywStraznika(z: OzywienieStraznika | undefined) {
+    for (const r of this.ruchomeStraze) if (r !== z) r.aktywne = false;
+    if (!z || z.aktywne || !z.im.active) return;
+    z.aktywne = true;
+    // Powrót kursora na stos, który jeszcze gaśnie, ciągnie pętlę dalej —
+    // od zera zaczyna tylko ten, który stał.
+    if (!this.ruchomeStraze.has(z)) z.czas = 0;
+    this.ruchomeStraze.add(z);
+    if (!z.klatki) z.klatki = this.klatkiRuchu(z);
+  }
+
+  /**
+   * Pierwsze najechanie: dwie klatki w ruchu — „stoi" i poza — każda z własną
+   * sylwetką, obrysem i cieniem rzuconym, żeby dało się je przenikać.
+   * Osobne obrazki, a nie `im`: `im` zostaje przy „stoi" i przy trafianiu
+   * kliknięciem — szersza poza, oddech i pochylenie nie mogą przesuwać granic
+   * rysunku, bo kursor na brzegu sylwetki gubiłby stos i łapał go z powrotem.
+   * Cień i obrys „stoi" to te same obrazki co w spoczynku.
+   */
+  private klatkiRuchu(z: OzywienieStraznika): KlatkaRuchu[] {
+    const kont = z.im.parentContainer;
+    const wstawZa = (ref: Phaser.GameObjects.GameObject, ...obiekty: Phaser.GameObjects.GameObject[]) => {
+      if (kont) kont.addAt(obiekty, kont.getIndex(ref) + 1);
+    };
+    const sylwetka = (wpis: StworekNaMape, dx: number, dy: number) =>
+      this.add
+        .image(z.im.x + dx, z.im.y + dy, wpis.rysunek)
+        .setOrigin(0.5, 1)
+        .setScale(z.im.scaleX, z.im.scaleY)
+        .setVisible(false);
+    const stoi = this.stworekNaMape(z.klucz, z.wys, z.tlo);
+    const a: KlatkaRuchu = { wpis: stoi, rysunek: sylwetka(stoi, 0, 0), obrys: z.obrys, cien: z.cien, dx: 0, dy: 0 };
+    wstawZa(z.im, a.rysunek);
+    const sprite = z.klucz.replace(/^p-/, '');
+    const kluczPozy = `${z.klucz}-${najechaniePoza(sprite)}`;
+    if (!this.textures.exists(kluczPozy)) return [a];
+    const wpis = this.stworekNaMape(kluczPozy, z.wys, z.tlo, stoi);
+    if (wpis.rysunek === kluczPozy) return [a];
+    // Stopy pozy na stopach „stoi": bez tego krok czy wypad przesuwał
+    // całą sylwetkę w bok i gest czytał się jak chód.
+    const sk = z.im.scaleY;
+    const sA = this.stopyRysunku(stoi.rysunek);
+    const sB = this.stopyRysunku(wpis.rysunek);
+    const dx = (sA.x - sB.x) * sk;
+    const dy = (sB.dol - sA.dol) * sk;
+    const b: KlatkaRuchu = { wpis, rysunek: sylwetka(wpis, dx, dy), obrys: [], dx, dy };
+    wstawZa(a.rysunek, b.rysunek);
+    if (z.krycieObrysu && z.obrys.length) {
+      b.obrys = this.obrysRysunku(b.rysunek, z.krycieObrysu).map((o) => o.setVisible(false));
+      wstawZa(z.obrys[z.obrys.length - 1], ...b.obrys);
+    }
+    if (z.cien && wpis.cien) {
+      b.cien = this.add
+        .image(z.im.x + dx, z.im.y + dy - wpis.cien.stopy * sk, wpis.cien.klucz)
+        .setOrigin(wpis.cien.ox, wpis.cien.oy)
+        .setScale(sk)
+        .setVisible(false);
+      wstawZa(z.cien, b.cien);
+    }
+    return [a, b];
+  }
+
+  /**
+   * Środek stóp rysunku: średnie x widocznych pikseli w dolnym pasie sylwetki
+   * (6% jej wysokości), względem środka tekstury, i odstęp najniższego
+   * widocznego wiersza od dołu tekstury — oba w pikselach tekstury.
+   */
+  private stopyRysunku(klucz: string): { x: number; dol: number } {
+    const a = this.alfa(klucz);
+    if (!a) return { x: 0, dol: 0 };
+    let dol = -1;
+    let gora = a.h;
+    for (let y = 0; y < a.h; y++)
+      for (let x = 0; x < a.w; x++)
+        if (a.dane[y * a.w + x] > 100) {
+          dol = Math.max(dol, y);
+          gora = Math.min(gora, y);
+        }
+    if (dol < 0) return { x: 0, dol: 0 };
+    const pas = Math.max(2, Math.round((dol - gora + 1) * 0.06));
+    let suma = 0;
+    let ile = 0;
+    for (let y = dol - pas + 1; y <= dol; y++)
+      for (let x = 0; x < a.w; x++)
+        if (a.dane[y * a.w + x] > 100) {
+          suma += x;
+          ile++;
+        }
+    return { x: (ile ? suma / ile : a.w / 2) - a.w / 2, dol: a.h - 1 - dol };
+  }
+
+  /**
+   * Jedna klatka ruchu strażników z `ruchomeStraze` (z `update`).
+   *
+   * - Gest `g` (0 — stoi, 1 — poza) z osi pętli: łagodne wejście, przytrzymanie,
+   *   łagodny powrót. Sylwetki się przenikają: „stoi" gaśnie w drugiej
+   *   połowie przejścia, poza rozjaśnia się w pierwszej — w połowie obie są
+   *   pełne, więc przez sylwetkę nie prześwituje trawa.
+   * - Oddech przed gestem i krótszy wydech po nim, razy siła (narasta
+   *   w `NAJECHANIE_WEJSCIE`, gaśnie w `NAJECHANIE_WYJSCIE`). Na końcu pętli
+   *   zero — powtórka zaczyna się od tej samej klatki.
+   * - Wyciągnięcie za gestem, na sprężynie.
+   *
+   * Gest zaczyna się tylko pod kursorem, a zaczęty trwa do końca — zjechanie
+   * kursorem nie ucina go w połowie.
+   */
+  private krokOzywienia(delta: number) {
+    const { w, zeta } = NAJECHANIE_SPREZYNA;
+    const gladko = (x: number) => 0.5 - 0.5 * Math.cos(Math.PI * Phaser.Math.Clamp(x, 0, 1));
+    for (const z of this.ruchomeStraze) {
+      const klatki = z.klatki;
+      if (!z.im.active || !klatki?.[0].rysunek.active) {
+        this.ruchomeStraze.delete(z);
+        continue;
+      }
+      z.sila = z.aktywne
+        ? Math.min(1, z.sila + delta / NAJECHANIE_WEJSCIE)
+        : Math.max(0, z.sila - delta / NAJECHANIE_WYJSCIE);
+      const przed = z.czas;
+      z.czas += delta;
+      // Gest zaczęty pod kursorem dogrywa się do końca; bez kursora nowy nie rusza.
+      if (!z.aktywne && przed < NAJECHANIE_GEST_OD && z.czas >= NAJECHANIE_GEST_OD) z.czas = NAJECHANIE_GEST_DO;
+      if (z.czas >= NAJECHANIE_OKRES) z.czas %= NAJECHANIE_OKRES;
+      const t = z.czas;
+      const g =
+        klatki.length < 2 || t < NAJECHANIE_GEST_OD || t >= NAJECHANIE_GEST_DO
+          ? 0
+          : t < NAJECHANIE_GEST_OD + NAJECHANIE_WEJSCIE_GESTU
+            ? gladko((t - NAJECHANIE_GEST_OD) / NAJECHANIE_WEJSCIE_GESTU)
+            : t < NAJECHANIE_GEST_DO - NAJECHANIE_POWROT
+              ? 1
+              : 1 - gladko((t - (NAJECHANIE_GEST_DO - NAJECHANIE_POWROT)) / NAJECHANIE_POWROT);
+      // Sprężyna wyciągnięcia, w krokach nie dłuższych niż 1/120 s.
+      const cel = NAJECHANIE_WYCIAGNIECIE * g;
+      for (let reszta = delta / 1000; reszta > 1e-6; ) {
+        const dt = Math.min(reszta, 1 / 120);
+        z.predkosc += (w * w * (cel - z.ugiecie) - 2 * zeta * w * z.predkosc) * dt;
+        z.ugiecie += z.predkosc * dt;
+        reszta -= dt;
+      }
+      const koniec =
+        !z.aktywne && z.sila === 0 && g === 0 && Math.abs(z.ugiecie) < 0.001 && Math.abs(z.predkosc) < 0.01;
+      if (koniec) {
+        z.ugiecie = 0;
+        z.predkosc = 0;
+      }
+      const oddech =
+        t < NAJECHANIE_GEST_OD
+          ? Math.sin((Math.PI * t) / NAJECHANIE_GEST_OD)
+          : t >= NAJECHANIE_GEST_DO
+            ? 0.5 * Math.sin((Math.PI * (t - NAJECHANIE_GEST_DO)) / (NAJECHANIE_OKRES - NAJECHANIE_GEST_DO))
+            : 0;
+      const b = koniec ? 0 : oddech * (z.sila * z.sila * (3 - 2 * z.sila));
+      const u = koniec ? 0 : z.ugiecie;
+      const sy = (1 + NAJECHANIE_ODDECH * b) * (1 + u);
+      const sx = (1 - NAJECHANIE_ODDECH * 0.4 * b) * (1 - u * 0.5);
+      const sk = z.im.scaleY;
+      klatki.forEach((k, i) => {
+        const udzial = koniec ? 0 : i === 0 ? Math.min(1, 2 * (1 - g)) : Math.min(1, 2 * g);
+        for (const obraz of [k.rysunek, ...k.obrys]) {
+          obraz.setScale(sk * sx, sk * sy);
+          if (obraz === k.rysunek) continue;
+          // Obrys gaśnie szybciej niż sylwetka (kwadrat udziału): osiem
+          // ciemnych warstw przy półprzezroczystej sylwetce sumowało się
+          // w szarą smugę po gaszonej klatce.
+          const pelny = koniec && i === 0;
+          obraz.setAlpha(z.krycieObrysu * (pelny ? 1 : udzial * udzial)).setVisible(pelny || udzial > 0);
+        }
+        k.rysunek.setAlpha(udzial).setVisible(udzial > 0);
+        // Cień idzie za sylwetką: te same stopy i skala (jego długość
+        // w prawo-dół rośnie z wysokością, więc w poziomie pół oddechu);
+        // przenikanie liniowe, żeby dwa cienie nie ciemniały na zakładce.
+        if (k.cien && k.wpis.cien) {
+          const c = i === 0 ? 1 - g : g;
+          k.cien
+            .setY(z.im.y + k.dy - k.wpis.cien.stopy * sk * sy)
+            .setScale(sk * (1 + (sy - 1) * 0.5 + (sx - 1) * 0.5), sk * sy)
+            .setAlpha(STWOREK_CIEN * c)
+            .setVisible(c > 0);
+        }
+      });
+      z.im.setVisible(koniec);
+      if (koniec) this.ruchomeStraze.delete(z);
+    }
+  }
+
   private ruchMyszy(p: Phaser.Input.Pointer) {
     this.podswietlWejscie(this.wejscieDoPodswietlenia(p));
+    this.ozywStraznika(this.straznikPodKursorem(p));
     if (this.zajety) {
       this.kursorZnak.setVisible(false);
       return;
