@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { FACTIONS } from '../data/factions';
+import { BARWA, KROJ, krojeZestawu, ramaZlota } from './zestaw';
 
 /**
  * Portrety stworów — to, co stoi w slotach armii, na karcie werbunku,
@@ -98,4 +99,152 @@ export function oprawPortret(
   g.fillStyle(jasne, 1);
   g.fillRect(x - z, y - z, bok + 2 * z - 1, 1);
   g.fillRect(x - z, y - z, 1, bok + 2 * z - 1);
+}
+
+/**
+ * Dno pustego gniazda: ciemne drewno wpuszczone w materiał — cień od góry,
+ * odbicie przy dolnej krawędzi (światło z góry, jak w `rama.ts`).
+ */
+export function dnoGniazda(g: Phaser.GameObjects.Graphics, x: number, y: number, bok: number) {
+  g.fillStyle(0x24160a, 1);
+  g.fillRect(x, y, bok, bok);
+  const gleb = Math.max(3, bok * 0.16);
+  for (let i = 0; i < 5; i++) {
+    g.fillStyle(0x000000, 0.28 * (1 - i / 5));
+    g.fillRect(x, y + (i * gleb) / 5, bok, gleb / 5 + 0.5);
+  }
+  g.fillStyle(0xf8e6b8, 0.08);
+  g.fillRect(x + 2, y + bok - 3, bok - 4, 2);
+}
+
+export interface OpcjeGniazda {
+  /** Mały portret (`pm-`) zamiast dużego — do slotów poniżej ~56 px. */
+  maly?: boolean;
+  /** Numer slotu na dnie pustego gniazda. */
+  numer?: string;
+  /** Wielkość liczby na odznace; domyślnie z boku gniazda. */
+  rozmiarLiczby?: number;
+  /**
+   * Gdzie przypiąć odznakę: `dol` — na dolnej krawędzi ramy w prawym rogu
+   * (domyślnie); `bok` — na prawej krawędzi ramy przy dole, gdy pod
+   * gniazdem nie ma miejsca (pasek załogi w mieście).
+   */
+  odznaka?: 'dol' | 'bok';
+}
+
+/**
+ * Gniazdo portretu z zestawu: ciemne drewniane dno, portret, cienka złota
+ * rama (`z-rama-cienka`, ta sama co na pergaminowych panelach) i liczebność
+ * na OSOBNEJ odznace przypiętej do prawego dolnego rogu ramy.
+ *
+ * Po rundzie 1 portretów krytyk wytknął dwie rzeczy, które to naprawia:
+ * płaskie jasnoniebieskie „kafelki z aplikacji" wokół portretów oraz
+ * tabliczkę z liczbą leżącą na dolnej trzeciej portretu — zasłaniała pierś
+ * stwora i myliła się z nim. Odznaka siedzi teraz na krawędzi ramy
+ * i zachodzi na portret tylko narożnikiem, jak liczba w Heroes.
+ *
+ * Kontener zaczepiony w lewym górnym rogu PORTRETU (rama wystaje o 5 px).
+ * Wymaga `wczytajZestaw` w `preload` sceny.
+ */
+export class GniazdoPortretu {
+  readonly kontener: Phaser.GameObjects.Container;
+  private readonly dno: Phaser.GameObjects.Graphics;
+  private readonly obraz: Phaser.GameObjects.Image;
+  private readonly rama: Phaser.GameObjects.GameObject & { setAlpha(a: number): unknown };
+  private readonly poswiata: Phaser.GameObjects.Graphics;
+  private readonly odznaka: Phaser.GameObjects.Graphics;
+  private readonly liczba: Phaser.GameObjects.Text;
+  private readonly numer?: Phaser.GameObjects.Text;
+
+  readonly bok: number;
+  private readonly opcje: OpcjeGniazda;
+
+  constructor(scena: Phaser.Scene, x: number, y: number, bok: number, opcje: OpcjeGniazda = {}) {
+    this.bok = bok;
+    this.opcje = opcje;
+    this.poswiata = scena.add.graphics().setVisible(false);
+    for (let i = 4; i >= 1; i--) {
+      this.poswiata.fillStyle(0xffc93c, 0.12);
+      this.poswiata.fillRoundedRect(-5 - i * 3, -5 - i * 3, bok + 10 + i * 6, bok + 10 + i * 6, 4 + i * 2);
+    }
+    this.dno = scena.add.graphics();
+    dnoGniazda(this.dno, 0, 0, bok);
+    this.obraz = scena.add.image(bok / 2, bok / 2, '__DEFAULT').setDisplaySize(bok, bok).setVisible(false);
+    this.rama = ramaZlota(scena, 0, 0, bok, bok, false);
+    const czesci: Phaser.GameObjects.GameObject[] = [this.poswiata, this.dno, this.obraz, this.rama];
+    if (opcje.numer) {
+      this.numer = scena.add
+        .text(bok / 2, bok / 2, opcje.numer, {
+          fontFamily: KROJ.tytul,
+          fontSize: `${Math.round(bok * 0.26)}px`,
+          color: '#6b4a26',
+        })
+        .setOrigin(0.5)
+        .setAlpha(0.7);
+      czesci.push(this.numer);
+    }
+    this.odznaka = scena.add.graphics();
+    this.liczba = scena.add
+      .text(0, 0, '', {
+        fontFamily: KROJ.tytul,
+        fontSize: `${opcje.rozmiarLiczby ?? Math.max(11, Math.round(bok * 0.16))}px`,
+        color: BARWA.krem,
+        stroke: BARWA.braz,
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5);
+    czesci.push(this.odznaka, this.liczba);
+    this.kontener = scena.add.container(x, y, czesci);
+    // Cinzel może dojść po pierwszym rysunku napisu — wtedy przerysować.
+    void krojeZestawu().then(() => {
+      if (this.liczba.active) this.liczba.setText(this.liczba.text);
+      if (this.numer?.active) this.numer.setText(this.numer.text);
+    });
+  }
+
+  /** Stwór i liczebność; `null` — puste gniazdo. */
+  ustaw(sprite: string | null, ile?: number) {
+    const jest = sprite !== null;
+    if (jest) {
+      this.obraz
+        .setTexture(kluczPortretu(sprite, this.opcje.maly))
+        .setDisplaySize(this.bok, this.bok)
+        .setVisible(true);
+    } else {
+      this.obraz.setVisible(false);
+    }
+    this.rama.setAlpha(jest ? 1 : 0.55);
+    this.numer?.setVisible(!jest);
+    this.odznaka.clear();
+    const napis = jest && ile !== undefined ? String(ile) : '';
+    this.liczba.setText(napis).setVisible(napis !== '');
+    if (!napis) return;
+    // Odznaka: drewniana tabliczka ze złotym obrzeżem, dosunięta do prawego
+    // dolnego rogu ramy — środkiem na dolnej krawędzi ramy.
+    const h = Math.round(this.liczba.height * 0.9) + 2;
+    const w = Math.max(h + 2, this.liczba.width + 10);
+    const zBoku = this.opcje.odznaka === 'bok';
+    const x = zBoku ? this.bok + 3 - w / 2 : this.bok + 3 - w;
+    const y = zBoku ? this.bok - h + 1 : this.bok + 3 - h / 2;
+    this.odznaka.fillStyle(0x000000, 0.35);
+    this.odznaka.fillRoundedRect(x + 1, y + 2, w, h, h / 2.4);
+    this.odznaka.fillStyle(0x7a4f14, 1);
+    this.odznaka.fillRoundedRect(x - 1, y - 1, w + 2, h + 2, h / 2.2);
+    this.odznaka.fillStyle(0xe0a53a, 1);
+    this.odznaka.fillRoundedRect(x - 1, y - 1, w + 1, h + 1, h / 2.2);
+    this.odznaka.fillStyle(0x3a2410, 1);
+    this.odznaka.fillRoundedRect(x + 0.5, y + 0.5, w - 1, h - 1, h / 2.6);
+    this.odznaka.fillStyle(0xf8e6b8, 0.12);
+    this.odznaka.fillRoundedRect(x + 2, y + 1.5, w - 4, h * 0.35, h / 4);
+    this.liczba.setPosition(x + w / 2, y + h / 2);
+  }
+
+  zaznacz(tak: boolean) {
+    this.poswiata.setVisible(tak);
+  }
+
+  /** Przyciemnienie portretu (np. gdy stos jest właśnie przenoszony). */
+  przygas(alfa: number) {
+    this.obraz.setAlpha(alfa);
+  }
 }

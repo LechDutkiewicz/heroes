@@ -76,7 +76,8 @@ import { C, E, H, T, Z, body, display } from '../visual/theme';
 import { makeHudButton, mix, plate } from '../visual/hud';
 import { ICON, buildIcons, icon } from '../visual/icons';
 import { BARWA_KLASY, OBRYS_KLASY, buildArtefakty, kluczArtefaktu } from '../visual/artefakty';
-import { oprawPortret, kluczPortretu, wczytajPortrety } from '../visual/portrety';
+import { GniazdoPortretu, kluczPortretu, wczytajPortrety } from '../visual/portrety';
+import { BARWA, napisNaDrewnie, ramaZlota, stylAtramentu, wczytajZestaw } from '../visual/zestaw';
 import { cienPod, faktura, listwa, naroznik, pierscien, wneka, zabkowanie } from '../visual/rama';
 import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
 
@@ -102,7 +103,7 @@ const TRESC_H = 388;
 const SLOT_BOK = 92;
 const SLOT_ODSTEP = 12;
 /** Bok portretu w slocie armii: gniazdo minus wąski margines na złotą oprawę. */
-const PORTRET_W_SLOCIE = SLOT_BOK - 10;
+const PORTRET_W_SLOCIE = SLOT_BOK - 12;
 const ARMIA_Y = TRESC_Y + TRESC_H + 32;
 
 /** Kolejność klas — karta pokazuje domyślnie najmocniejszy noszony artefakt. */
@@ -110,13 +111,7 @@ const WAGA_KLASY = { drobny: 1, znaczny: 2, relikt: 3, misja: 4 } as const;
 
 interface WidokSlotu {
   indeks: number;
-  kontener: Phaser.GameObjects.Container;
-  tlo: Phaser.GameObjects.Graphics;
-  ramka: Phaser.GameObjects.Graphics;
-  rysunek: Phaser.GameObjects.Image;
-  licznik: Phaser.GameObjects.Text;
-  nazwa: Phaser.GameObjects.Text;
-  pusty: Phaser.GameObjects.Text;
+  gniazdo: GniazdoPortretu;
 }
 
 export class HeroScene extends Phaser.Scene {
@@ -159,6 +154,8 @@ export class HeroScene extends Phaser.Scene {
     // potrafi być pierwszą sceną po wczytaniu strony (przeładowanie
     // z otwartym ekranem).
     wczytajPortrety(this, { duze: true });
+    // Gniazda armii są z zestawu (drewno, cienka złota rama, kroje).
+    wczytajZestaw(this);
   }
 
   private wczytajStan(): StanMapy {
@@ -821,61 +818,43 @@ export class HeroScene extends Phaser.Scene {
   private rysujArmie() {
     const pasX = RAMA.x + 12;
     const pasW = RAMA.w - 24;
-    const g = this.add.graphics().setDepth(Z.hud + 1);
-    plate(g, pasX, ARMIA_Y - 26, pasW, SLOT_BOK + 62, 12, C.panelDeep, C.shadow, {
-      light: 0.1,
-      dark: 0.18,
-      gloss: 0.06,
-      drop: 3,
-      edgeW: 2,
-    });
+    const pasY = ARMIA_Y - 26;
+    const pasH = SLOT_BOK + 62;
+    // Pas armii z zestawu: ciemne drewno w cienkiej złotej ramie — ten sam
+    // materiał co panel bohatera na mapie. Wcześniej był tu płaski niebieski
+    // prostokąt z zaokrąglonymi rogami, a w nim siedem mlecznych kafelków —
+    // krytyk nazwał to wprost „pudełkami z aplikacji internetowej".
     this.add
-      .text(pasX + 14, ARMIA_Y - 16, 'ARMIA', { ...body(12, H.goldLight), fontStyle: 'bold' })
+      .tileSprite(pasX, pasY, pasW, pasH, 'z-drewno')
+      .setOrigin(0)
+      .setTileScale(0.5)
+      // Z pominięciem belki nagłówka namalowanej u góry `drewno.jpg`.
+      .setTilePosition(0, 420)
+      .setTint(0xb8a890)
+      .setDepth(Z.hud + 1);
+    ramaZlota(this, pasX, pasY, pasW, pasH, false).setDepth(Z.hud + 1);
+    napisNaDrewnie(this, pasX + 14, ARMIA_Y - 18, 'Armia', 14)
       .setOrigin(0, 0)
       .setDepth(Z.hud + 2);
     this.armiaPodsumowanie = this.add
-      .text(pasX + pasW - 14, ARMIA_Y - 16, '', body(12, H.goldLight))
+      .text(pasX + pasW - 14, ARMIA_Y - 16, '', stylAtramentu(13, 'zwykly'))
+      .setColor(BARWA.krem)
       .setOrigin(1, 0)
       .setDepth(Z.hud + 2);
 
     for (let i = 0; i < SLOTY_ARMII; i++) {
       const x = this.slotX(i);
       const y = ARMIA_Y + 6;
-      const tlo = this.add.graphics();
-      const ramka = this.add.graphics();
       // Portret wypełnia gniazdo prawie do krawędzi, jak w Heroes: slot armii
-      // to ramka na obrazek, a nie półka, na której stoi figurka.
-      const rysunek = this.add.image(SLOT_BOK / 2, SLOT_BOK / 2, 'bohater').setVisible(false);
-      const nazwa = this.add
-        .text(SLOT_BOK / 2, SLOT_BOK - 26, '', { ...display(10), strokeThickness: 3 })
-        .setOrigin(0.5)
-        .setVisible(false);
-      // Tabliczka z liczebnością siedzi NA dolnej krawędzi slotu, zachodząc
-      // na nią — tak samo jak liczba oddziału we wzorcu. Wpisana w środek
-      // gniazda zlewałaby się z sylwetką, a pod gniazdem odkleiłaby się od
-      // niego i zaczęła wyglądać jak podpis.
-      const plakietka = this.add.graphics().setVisible(false);
-      plate(plakietka, SLOT_BOK / 2 - 24, SLOT_BOK - 14, 48, 24, 12, C.gold, C.goldDeep, {
-        light: 0.26,
-        dark: 0.24,
-        gloss: 0.3,
-        drop: 2,
-        edgeW: 2,
+      // to ramka na obrazek, a nie półka, na której stoi figurka. Liczba
+      // siedzi na odznace w rogu ramy, nie na portrecie.
+      const m = (SLOT_BOK - PORTRET_W_SLOCIE) / 2;
+      const gniazdo = new GniazdoPortretu(this, x + m, y + m, PORTRET_W_SLOCIE, {
+        numer: String(i + 1),
+        rozmiarLiczby: 15,
       });
-      const licznik = this.add
-        .text(SLOT_BOK / 2, SLOT_BOK - 2, '', display(15, H.shadow, C.goldLight))
-        .setOrigin(0.5)
-        .setVisible(false);
-      const pusty = this.add
-        .text(SLOT_BOK / 2, SLOT_BOK / 2, String(i + 1), display(22, H.inkSoft))
-        .setOrigin(0.5)
-        .setAlpha(0.4);
-      const kontener = this.add
-        .container(x, y, [tlo, ramka, rysunek, nazwa, plakietka, licznik, pusty])
-        .setDepth(Z.hud + 2)
-        .setSize(SLOT_BOK, SLOT_BOK);
-      kontener.setData('plakietka', plakietka);
-      this.sloty.push({ indeks: i, kontener, tlo, ramka, rysunek, licznik, nazwa, pusty });
+      gniazdo.kontener.setDepth(Z.hud + 2);
+      this.sloty.push({ indeks: i, gniazdo });
 
       this.add
         .zone(x, y, SLOT_BOK, SLOT_BOK)
@@ -1277,9 +1256,9 @@ export class HeroScene extends Phaser.Scene {
   private drgnij(i: number) {
     const s = this.sloty[i];
     if (!s) return;
-    const x = this.slotX(i);
+    const x = this.slotX(i) + (SLOT_BOK - PORTRET_W_SLOCIE) / 2;
     this.tweens.add({
-      targets: s.kontener,
+      targets: s.gniazdo.kontener,
       x: { from: x - 5, to: x },
       duration: 220,
       ease: 'Elastic.easeOut',
@@ -1290,7 +1269,7 @@ export class HeroScene extends Phaser.Scene {
     const s = this.sloty[i];
     if (!s) return;
     this.tweens.add({
-      targets: s.kontener,
+      targets: s.gniazdo.kontener,
       scale: { from: 1.12, to: 1 },
       duration: T.pop,
       ease: E.out,
@@ -1440,55 +1419,11 @@ export class HeroScene extends Phaser.Scene {
     const armia = this.stan.bohater.armia;
     for (const s of this.sloty) {
       const o: Oddzial | null = armia[s.indeks];
-      const wybrany = this.wybrany === s.indeks;
-
-      s.tlo.clear();
-      plate(
-        s.tlo,
-        0,
-        0,
-        SLOT_BOK,
-        SLOT_BOK,
-        10,
-        o ? mix(C.panel, C.panelDeep, 0.22) : mix(C.panelDeep, C.shadow, 0.35),
-        o ? C.panelDeep : C.shadow,
-        { light: o ? 0.18 : 0.06, dark: 0.2, gloss: o ? 0.14 : 0.04, drop: 0, edgeW: 2 }
-      );
-      // Pusty slot dostaje wpuszczone dno: ma wyglądać jak wolne MIEJSCE,
-      // a nie jak wyłączona karta.
-      if (!o) {
-        s.tlo.fillStyle(C.shadow, 0.22);
-        s.tlo.fillRoundedRect(6, 6, SLOT_BOK - 12, SLOT_BOK - 12, 7);
-      } else {
-        const m = (SLOT_BOK - PORTRET_W_SLOCIE) / 2;
-        oprawPortret(s.tlo, m, m, PORTRET_W_SLOCIE, 2, wybrany);
-      }
-
-      s.ramka.clear();
-      if (wybrany) {
-        s.ramka.lineStyle(3, C.gold, 1);
-        s.ramka.strokeRoundedRect(-2, -2, SLOT_BOK + 4, SLOT_BOK + 4, 12);
-        s.ramka.lineStyle(6, C.gold, 0.25);
-        s.ramka.strokeRoundedRect(-4, -4, SLOT_BOK + 8, SLOT_BOK + 8, 14);
-      }
-
-      if (o) {
-        s.rysunek.setTexture(kluczPortretu(o.sprite)).setVisible(true);
-        s.rysunek.setDisplaySize(PORTRET_W_SLOCIE, PORTRET_W_SLOCIE);
-        s.rysunek.setAlpha(this.ciagniety === s.indeks ? 0.3 : 1);
-        // Nazwa nie idzie na portret: zasłaniałaby pierś stwora tuż nad
-        // plakietką z liczbą. Mówi ją podpowiedź po najechaniu, jak w Heroes.
-        s.nazwa.setText(o.nazwa).setVisible(false);
-        s.licznik.setText(String(o.ile)).setVisible(true);
-        (s.kontener.getData('plakietka') as Phaser.GameObjects.Graphics).setVisible(true);
-        s.pusty.setVisible(false);
-      } else {
-        s.rysunek.setVisible(false);
-        s.nazwa.setVisible(false);
-        s.licznik.setVisible(false);
-        (s.kontener.getData('plakietka') as Phaser.GameObjects.Graphics).setVisible(false);
-        s.pusty.setVisible(true);
-      }
+      // Nazwy nie ma na portrecie: zasłaniałaby stwora. Mówi ją podpowiedź
+      // po najechaniu, jak w Heroes.
+      s.gniazdo.ustaw(o ? o.sprite : null, o?.ile);
+      s.gniazdo.zaznacz(this.wybrany === s.indeks);
+      s.gniazdo.przygas(this.ciagniety === s.indeks ? 0.3 : 1);
     }
   }
 
