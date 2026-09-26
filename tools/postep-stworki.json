@@ -1,5 +1,5 @@
 {
- "updated": "Stwory na mapie, runda 3: 0/3 — skala za duża, proporcje chibi, twarde pikselowe krawędzie. Chorągiewki zdjęte (strażnicy neutralni). Runda 4 w toku.",
+ "updated": "Stwory na mapie, runda 4: 0/3 — tym razem za miękkie i zamulone. Runda 5: renderować stwory jak chatę i most z naszej mapy (ostra kreska, cel, pełna rozdzielczość).",
  "pieces": [
   {
    "name": "Stwory na mapie przygody (malowane rysunki, stos na mapie)",
@@ -60,6 +60,24 @@
      "gap": "Błyszczące naklejki z gry mobilnej na miękkiej akwareli; smoki wielkości gór; twarde obrysy.",
      "blind": "tools/postep-obrazy/stwory-mapa-twierdza-r3.jpg",
      "note": "Runda 3, Twierdza. 0/3. Gracz: bez chorągiewek — strażnicy są neutralni (zdjęte)."
+    },
+    {
+     "win": false,
+     "gap": "Stwór mały, ciemny i zamulony, schowany za końcem mostu; brak czytelnego kontaktu z ziemią.",
+     "blind": "tools/postep-obrazy/stwory-mapa-polana-r4.jpg",
+     "note": "Runda 4 (1 pole, miękkie krawędzie), Polana."
+    },
+    {
+     "win": false,
+     "gap": "Stwory rozmyte i w niższej rozdzielczości niż chata, most i trzcina, które mają ostrą ciemną kreskę i cieniowanie cel.",
+     "blind": "tools/postep-obrazy/stwory-mapa-bagna-r4.jpg",
+     "note": "Runda 4, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Fioletowe smoki bez uziemienia i bez chłodnego światła śniegu, smok na szczycie góry.",
+     "blind": "tools/postep-obrazy/stwory-mapa-twierdza-r4.jpg",
+     "note": "Runda 4, Twierdza. 0/3 — przestrzelone w miękkość; wzorcem ma być rysunek chaty i mostu z naszej mapy."
     }
    ]
   },
