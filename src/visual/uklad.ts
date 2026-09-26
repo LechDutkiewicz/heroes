@@ -63,14 +63,20 @@ export const KAFEL_EKRAN = KAFEL * ZOOM_MAPY;
  * bohater (1,8) > strażnik (1,45, do 1,8 wszerz) > znajdźka (0,62,
  * `ZNAJDZKI_NA_MAPIE.wys`) — każdy stopień wyraźnie mniejszy od
  * poprzedniego, na wszystkich planszach te same liczby.
+ *
+ * Stworki, runda 6 (r5 1/3: „drobne grudki bez sylwetki postaci"): strażnik
+ * to teraz JEDNA malowana figura z pozą (`public/sprites/mapa-<numer>.png`),
+ * nie grupka — 1,5 pola wysokości, nadal niżej od bohatera; figura z ogonem
+ * albo rozłożonymi ramionami jest szersza, stąd 1,8 wszerz (przy 1,65
+ * ściskało ją do ~1,3 pola).
  */
 export const WYS_BOHATERA = 1.9;
-export const WYS_STRAZNIKA = 1.4;
+export const WYS_STRAZNIKA = 1.5;
 /**
  * Szerokie stworki (węże, płaszczki) przy pełnej wysokości rozlewałyby się
  * na trzy pola i zasłaniały sąsiadów — ich sylwetkę ograniczamy szerokością.
  */
-export const SZER_STRAZNIKA_MAX = 1.65;
+export const SZER_STRAZNIKA_MAX = 1.8;
 
 /**
  * Proporzec bohatera w kolorze gracza (runda 3: „bez flagi, podstawki ani
@@ -108,14 +114,31 @@ export const STWORKI_NA_MAPIE = {
 
 /**
  * Malowany strażnik NA MAPĘ (`public/sprites/mapa-<numer>.png`, stworki
- * runda 5): grupka stworków malowana jak budowle plansz, ze światłem
+ * runda 5–6): figura stworka malowana jak budowle plansz, ze światłem
  * z lewej-góry już w rysunku. Nadpisuje `STWORKI_NA_MAPIE` łagodniej —
  * bez zdejmowania nasycenia i z lekkim światłem/brzegiem; barwa gruntu
  * i podstawka zostają. `podGrupe` — o tyle widocznej wysokości cień
- * rzucany i podstawka wchodzą pod grupę (widzianą z góry stopy tylnych
- * stworków stoją wyżej niż dolna krawędź rysunku).
+ * rzucany i podstawka wchodzą pod rysunek. Przy grupce z rundy 5 było 0,1
+ * (stopy tylnych stworków stały wyżej niż dolna krawędź); pojedyncza
+ * figura z rundy 6 stoi stopami na dolnej krawędzi, więc tylko 0,03 —
+ * przy 0,1 podstawka chowała się za figurą.
+ * `podstawka` — krycie ciemnej plamy pod stopami (nadpisuje
+ * `STWORKI_NA_MAPIE.podstawka`), `szerPodstawki` — jej szerokość względem
+ * rozstawu stóp, `podstawkaWyzej` — o tyle jej wysokości środek plamy stoi
+ * NAD linią stóp: figurę widać lekko z góry, więc grunt za stopami (między
+ * nogami) leży w rysunku wyżej niż one; plama z górną krawędzią na linii
+ * stóp wyglądała na śniegu jak cień pod unoszącą się naklejką.
  */
-export const STRAZNIK_MALOWANY = { nasycenie: 1, swiatlo: 0.08, podcien: 0.16, krawedz: 0.12, podGrupe: 0.1 };
+export const STRAZNIK_MALOWANY = {
+  nasycenie: 1,
+  swiatlo: 0.08,
+  podcien: 0.16,
+  krawedz: 0.12,
+  podGrupe: 0.03,
+  podstawka: 0.55,
+  szerPodstawki: 1.25,
+  podstawkaWyzej: 0.3,
+};
 
 /**
  * Bohater w świetle planszy (runda 4: „narysowany płasko, jak postać z innej
@@ -141,13 +164,15 @@ export const BOHATER_NA_MAPIE = { nasycenie: 1, swiatlo: 0.16, podcien: 0.2, kra
  *   jedno nie zlewało się z drugim.
  */
 export const ZNAJDZKI_NA_MAPIE = {
-  wys: 0.62,
-  szerMax: 0.95,
+  // Stworki runda 6: 0,62 → 0,58 i przygaszanie przy strażniku z 3 do 4,5
+  // pola („stwory kolorem i kształtem prawie jak kryształy obok").
+  wys: 0.58,
+  szerMax: 0.9,
   nasycenie: 0.55,
   kontrast: 0.82,
   jasnosc: 0.94,
   obrys: 0.35,
-  przyStrazniku: { pola: 3, roznica: 42, nasycenie: 0.3, jasnosc: 0.88 },
+  przyStrazniku: { pola: 4.5, roznica: 42, nasycenie: 0.25, jasnosc: 0.86 },
 };
 
 export const PANEL_W = 250;

@@ -136,6 +136,33 @@ gpt-image-1 w stylu `obiekt`, razem z dwoma nowymi etapami ewolucji każdego
   w ślepym: stworki dalej mają „dziecięce" twarze (to projekt gry) —
   zarzut stylu powinien zejść, zarzut „maskotek" może zostać; Sporex to
   sporo fioletowych płatków, na łące czyta się trochę jak krzak kwiatów.
+- **Mapa, runda 6** (ślepe z HotA r5 1/3: „drobne niebieskie i fioletowe
+  grudki bez sylwetki postaci, kolorem i kształtem jak kryształy obok",
+  „brak cienia kontaktowego — naklejki nad ziemią"). Strażnik to teraz
+  JEDNA malowana figura z pozą zamiast grupki (te same pliki
+  `public/sprites/mapa-<numer>.png`, 7 gatunków, gpt-image-1.5 z tymi samymi
+  dwoma wzorami; prompty w `PROMPTY-STWORKI.md`, sekcja „Strażnicy na mapie
+  przygody", akapit rundy 6). Pilot na Glacynie/Sporeksie/Cindrze na
+  zrzutach czytał się jak postacie, więc zrobiłem resztę tak samo; dwóch
+  figur nie próbowałem (mniejsza miałaby wielkość znajdźki). `uklad.ts`:
+  `WYS_STRAZNIKA` 1,4 → 1,5, `SZER_STRAZNIKA_MAX` 1,65 → 1,8 (figura
+  z ogonem/rozłożonymi ramionami nie jest ściskana); `STRAZNIK_MALOWANY`:
+  `podGrupe` 0,1 → 0,03 (przy 0,1 podstawka chowała się za pojedynczą
+  figurą — to była przyczyna „braku podstawki"), własna `podstawka` 0,55,
+  `szerPodstawki` 1,25 rozstawu stóp, `podstawkaWyzej` 0,3 (środek plamy
+  nad linią stóp — grunt między nogami widać lekko z góry). Na śniegu cień
+  rzucany i podstawka rysują się (sprawdzone zrzutem z ukrytą figurą), są
+  w barwie `cienNaSniegu`. Znajdźki: `ZNAJDZKI_NA_MAPIE.wys` 0,62 → 0,58,
+  `szerMax` 0,95 → 0,9, przygaszanie przy strażniku 3 → 4,5 pola
+  (nasycenie 0,25, jasność 0,86). `strazniki_wczytaj.py` zdejmuje też
+  beżowo-piaskowy placek (S ≤ 0,55, odcień 15–50°, tylko dolne 22%
+  sylwetki) — Cindro, Obsydian i Sadzin go miały. OpenAI $0.37 (8 obrazków,
+  7 w grze; Sporex: filtr odrzucił 5 z 6 zapytań, darmowo — w grze jest
+  wersja w dużym kroku z jedną stopą w górze). Zrzuty
+  `tools/blind/stworki-mapa-r6*.png`. Do sprawdzenia w ślepym: figury
+  patrzą prawie z boku (jak potwory HoMM3), nie z góry; Sporex na trawie
+  Polany jest zielony na zielonym (niesie go fioletowy kapelusz i poza);
+  Obsydian dalej jest kulą (to projekt stworka), ale ma nogi i krok.
 
 ## Plansze kampanii: Polana, Bagna, Twierdza (2026-09-24)
 

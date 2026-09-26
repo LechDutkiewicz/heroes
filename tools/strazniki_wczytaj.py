@@ -3,8 +3,9 @@
 
 Prompty: `tools/PROMPTY-STWORKI.md`, sekcja „Strażnicy na mapie przygody".
 Każdy plik idzie do `public/sprites/mapa-<numer>.png` — osobno od sprite'a
-bitwy `<numer>.png`, bo to inny rysunek: mała grupka stworków w rzucie 3/4
-z góry, malowana jak budowle plansz. Na koniec skrypt przepisuje
+bitwy `<numer>.png`, bo to inny rysunek: jedna figura stworka z pozą (runda 6;
+w rundzie 5 grupka 2–3 osobników) w rzucie 3/4 z góry, malowana jak budowle
+plansz. Na koniec skrypt przepisuje
 `src/data/strazniki-mapa.ts` — listę numerów, które mają wersję mapową;
 scena mapy wczytuje tylko je (brak pliku = 404 w konsoli), reszta zostaje
 przy sprite'ach bitwy.
@@ -74,6 +75,15 @@ def zdejmijPodloze(a: np.ndarray) -> tuple[np.ndarray, int]:
     podloze = (alfa > 0) & (sat <= 0.28) & (mx >= 0.5)
     # Półprzezroczysty rąbek placka bywa ciemniejszy i cieplejszy.
     podloze |= (alfa > 0) & (alfa < 200) & (sat <= 0.45)
+    # Runda 6 (jedna figura): placek bywa też beżowo-piaskowy (S 0,3–0,5,
+    # odcień 15–50°) — łapiemy go tylko w najniższych 22% sylwetki, gdzie są
+    # już tylko stopy (nasycone), a nie kremowy brzuch.
+    r_, g_, b_ = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    delta = np.maximum(mx - mn, 1e-6)
+    odcien = np.where(mx == r_, ((g_ - b_) / delta) % 6, np.where(mx == g_, (b_ - r_) / delta + 2, (r_ - g_) / delta + 4)) * 60
+    piasek = (alfa > 0) & (sat <= 0.55) & (mx >= 0.6) & (odcien >= 15) & (odcien <= 50)
+    piasek[: int(dol - (dol - gora + 1) * 0.22)] = False
+    podloze |= piasek
     podloze[:pas] = False
 
     h, w = alfa.shape
