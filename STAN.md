@@ -52,6 +52,31 @@ gpt-image-1 w stylu `obiekt`, razem z dwoma nowymi etapami ewolucji każdego
   (nie idzie za krokiem). Poświaty dla ciemnych stworków nie dałem — nasze
   stworki są jasne, a jasna obwódka to właśnie ta „naklejka", którą
   `stworki_wczytaj.py` zdejmuje. Zrzuty `tools/blind/stworki-mapa-r2*.png`.
+- **Mapa, runda 3** (ślepe z HotA r2 0/3: „hierarchia odwrócona — strażnicy
+  więksi od bohatera, wielkości chat; Janek bez flagi, podstawki i obrysu",
+  „strażnik ma tę samą wagę co kryształy", „stworki płaskie, wklejone z innej
+  gry"). Skala (`uklad.ts`): `WYS_BOHATERA` 1,9 → 2,2, `WYS_STRAZNIKA` 1,6 →
+  1,3, `SZER_STRAZNIKA_MAX` 2,1 → 1,6. Bohater (`rysujBohatera`): proporzec
+  gracza rysowany w kodzie (`zbudujProporzec`, wymiary `PROPORZEC`) — drzewce
+  ze złotą gałką przy prawym boku, płat w pogłębionym `C.ally` z wcięciem,
+  fałdami od światła, złotą lamówką i białym pokeballem, faluje w 4 klatkach
+  (`ozywBohatera` z `update`); pierścień w barwie gracza pod stopami
+  (`t-podstawa-bohatera`); ciemny obrys z 4 kopii bieżącej klatki. Stary mały
+  `chorag` przy głowie zdjęty. Strażnik na mapie ma własną teksturę
+  `pm-<mapa>-p-<numer>-<barwa gruntu>` (`teksturaStworkaNaMape`): erozja alfy
+  o 1 px (zdejmuje obwódkę z `stworki_wczytaj.py`), nasycenie ×0,9, chroma
+  gruntu spod stworka (`barwaGruntu` z `plansza-0`), gradient światła z
+  lewej-góry, podcień dołu, ciemny brzeg od strony cienia, jasny brzeg od
+  światła — parametry `STWORKI_NA_MAPIE` (`uklad.ts`), per plansza
+  `USTAWIENIA.stworkiNaMapie` (`mapy.ts`). Znajdźki: ×0,88 wielkości
+  i nasycenie ×0,8 (tekstura `pz-…`, `ZNAJDZKI_NA_MAPIE`, per plansza
+  `znajdzkiNaMapie`). Pliki `public/sprites/` bez zmian — bitwa, miasto, HUD
+  biorą oryginały. OpenAI $0. Zrzuty `tools/blind/stworki-mapa-r3*.png`.
+  Do sprawdzenia w ślepym: zielone/niebieskie stworki w trawie Bagien po
+  zejściu z nasycenia czytają się słabiej (został im cień rzucany
+  i chorągiewka); bohater to nadal chudy chłopiec, nie jeździec — jeśli
+  krytyk dalej chce „figury jak na koniu", następny krok to szerszy arkusz
+  bohatera (OpenAI).
 
 ## Plansze kampanii: Polana, Bagna, Twierdza (2026-09-24)
 

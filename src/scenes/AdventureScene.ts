@@ -81,11 +81,14 @@ import {
   MARGINES,
   PANEL_W,
   PASEK_H,
+  PROPORZEC,
   RAMA_MAPY_H,
   RAMA_MAPY_W,
+  STWORKI_NA_MAPIE,
   SZER_STRAZNIKA_MAX,
   WYS_BOHATERA,
   WYS_STRAZNIKA,
+  ZNAJDZKI_NA_MAPIE,
   ZOOM_MAPY,
 } from '../visual/uklad';
 import { dodajWode } from '../visual/woda';
@@ -144,6 +147,9 @@ const PAS_PRZEWIJANIA = 8;
  * Przelot myszy przez brzeg (np. w stronę paska przeglądarki) nic nie robi.
  */
 const ZWLOKA_PRZEWIJANIA = 300;
+
+/** Klatki falowania proporca bohatera (`zbudujProporzec`). */
+const KLATKI_PROPORCA = 4;
 
 /** Arkusz bohatera: 4 kierunki (wiersze) × 4 klatki chodu (kolumny). */
 const BOHATER_KLATKA = 96;
@@ -262,6 +268,12 @@ export class AdventureScene extends Phaser.Scene {
   private podstawy = new Map<string, PodstawaRysunku>();
   /** Zmierzona raz sylwetka bohatera — patrz `sylwetkaBohatera`. */
   private sylwetka?: SylwetkaBohatera;
+  /** Proporzec gracza nad bohaterem i jego klatka falowania — `rysujBohatera`. */
+  private proporzec?: Phaser.GameObjects.Image;
+  private klatkaProporca = 0;
+  private proporzecOrigin = { x: 0, y: 1 };
+  /** Kopie klatki bohatera jako ciemny obrys — `rysujBohatera`. */
+  private obrysBohatera: Phaser.GameObjects.Sprite[] = [];
 
   private trasaBiezaca: Krok[] | null = null;
   /**
@@ -697,6 +709,167 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   /**
+   * Średnia barwa namalowanego gruntu wokół punktu świata (0–255) — z tła
+   * planszy, prostokąt ok. 1,6 × 1 pola. Stąd stworek bierze paletę miejsca,
+   * w którym stoi (`teksturaStworkaNaMape`).
+   */
+  private barwaGruntu(x: number, y: number): [number, number, number] {
+    const zrodlo = this.textures.exists('plansza-0')
+      ? (this.textures.get('plansza-0').getSourceImage() as HTMLImageElement | HTMLCanvasElement)
+      : null;
+    const p = document.createElement('canvas');
+    p.width = 8;
+    p.height = 5;
+    const ctx = p.getContext('2d', { willReadFrequently: true });
+    if (!zrodlo?.width || !ctx) return [110, 120, 80];
+    const w = KAFEL * 1.6;
+    const h = KAFEL;
+    const x0 = Phaser.Math.Clamp(x - w / 2, 0, Math.max(0, zrodlo.width - w));
+    const y0 = Phaser.Math.Clamp(y - h * 0.6, 0, Math.max(0, zrodlo.height - h));
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(zrodlo, x0, y0, w, h, 0, 0, p.width, p.height);
+    const d = ctx.getImageData(0, 0, p.width, p.height).data;
+    const s = [0, 0, 0];
+    for (let i = 0; i < d.length; i += 4) for (let k = 0; k < 3; k++) s[k] += d[i + k];
+    const n = d.length / 4;
+    return [s[0] / n, s[1] / n, s[2] / n];
+  }
+
+  /**
+   * Tekstura stworka-strażnika NA MAPĘ — z pliku bitwy (`p-<numer>`), ale
+   * w świetle planszy (stworki runda 3: „cieniowane płasko/kreskówkowo,
+   * wklejone z innej gry; w HotA stwór ma to samo światło z lewej-góry,
+   * paletę i gęstość detalu co teren"). Parametry: `STWORKI_NA_MAPIE`
+   * (`uklad.ts`), nadpisywane per plansza (`USTAWIENIA.stworkiNaMapie`).
+   *
+   * 1. Zdjęta ciemna obwódka 1 px, którą `stworki_wczytaj.py` dokłada pod
+   *    bitwę (erozja alfy o piksel) — na mapie to ona robi „naklejkę".
+   * 2. Nasycenie w dół (plik ma +12% pod bitwę).
+   * 3. Barwa gruntu spod stworka: mnożnik chromy i odrobina samego gruntu.
+   * 4. Światło: jaśniej ku lewej-górze sylwetki, ciemniej ku prawemu-dołowi,
+   *    podcień przy ziemi i ciemniejszy brzeg od strony cienia — bryła
+   *    zamiast płaskiej plamy koloru. Jasnego obrysu (poświaty) nie ma.
+   *
+   * Tekstura jest wspólna dla stworków tego samego rodzaju na podobnym
+   * gruncie (klucz z barwy zaokrąglonej do 12), więc płótno liczy się raz;
+   * wymiary te same co plik, więc skala, cienie i trafienia się nie zmieniają.
+   */
+  private teksturaStworkaNaMape(klucz: string, x: number, y: number): string {
+    const zrodlo = this.textures.get(klucz)?.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
+    if (!zrodlo?.width) return klucz;
+    const ust = { ...STWORKI_NA_MAPIE, ...planszaPoId(this.stan.mapa).modul.USTAWIENIA?.stworkiNaMapie };
+    const grunt = this.barwaGruntu(x, y).map((v) => Math.round(v / 12) * 12) as [number, number, number];
+    const nowy = `pm-${this.stan.mapa ?? ''}-${klucz}-${grunt.join('-')}`;
+    if (this.textures.exists(nowy)) return nowy;
+    const W = zrodlo.width;
+    const H = zrodlo.height;
+    const plotno = document.createElement('canvas');
+    plotno.width = W;
+    plotno.height = H;
+    const ctx = plotno.getContext('2d', { willReadFrequently: true });
+    const t = this.textures.createCanvas(nowy, W, H);
+    if (!ctx || !t) return klucz;
+    ctx.drawImage(zrodlo, 0, 0);
+    const obraz = ctx.getImageData(0, 0, W, H);
+    const d = obraz.data;
+    const a0 = new Uint8Array(W * H);
+    for (let i = 0; i < a0.length; i++) a0[i] = d[i * 4 + 3];
+    const alfa = (x: number, y: number) => (x < 0 || y < 0 || x >= W || y >= H ? 0 : a0[y * W + x]);
+    // Ramka widocznej sylwetki — do gradientu światła.
+    let minX = W;
+    let maxX = -1;
+    let minY = H;
+    let maxY = -1;
+    for (let yy = 0; yy < H; yy++)
+      for (let xx = 0; xx < W; xx++)
+        if (a0[yy * W + xx] > 40) {
+          if (xx < minX) minX = xx;
+          if (xx > maxX) maxX = xx;
+          if (yy < minY) minY = yy;
+          if (yy > maxY) maxY = yy;
+        }
+    if (maxX < 0) return klucz;
+    const bw = Math.max(1, maxX - minX);
+    const bh = Math.max(1, maxY - minY);
+    // Chroma gruntu (barwa podzielona przez jasność), przycięta — na śniegu
+    // stworek sinieje, w trawie zielenieje, ale nie zmienia gatunku.
+    const [gr, gg, gb] = grunt;
+    const gl = Math.max(1, 0.299 * gr + 0.587 * gg + 0.114 * gb);
+    const chroma = [gr, gg, gb].map((v) => 1 + (Phaser.Math.Clamp(v / gl, 0.6, 1.45) - 1) * ust.paleta);
+    const kr = Math.max(2, Math.round((W / 128) * 3));
+    for (let yy = 0; yy < H; yy++)
+      for (let xx = 0; xx < W; xx++) {
+        const i = yy * W + xx;
+        const a = a0[i];
+        if (!a) continue;
+        // 1. Erozja o piksel: brzeg obwódki znika, sylwetka zostaje.
+        const ae = Math.min(a, alfa(xx - 1, yy), alfa(xx + 1, yy), alfa(xx, yy - 1), alfa(xx, yy + 1));
+        d[i * 4 + 3] = ae;
+        if (!ae) continue;
+        let r = d[i * 4];
+        let g = d[i * 4 + 1];
+        let b = d[i * 4 + 2];
+        // 2. Nasycenie.
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        r = lum + (r - lum) * ust.nasycenie;
+        g = lum + (g - lum) * ust.nasycenie;
+        b = lum + (b - lum) * ust.nasycenie;
+        // 3. Barwa gruntu.
+        r *= chroma[0];
+        g *= chroma[1];
+        b *= chroma[2];
+        // 4. Światło z lewej-góry i podcień przy ziemi.
+        const u = (xx - minX) / bw;
+        const v = (yy - minY) / bh;
+        let f = 1 + ust.swiatlo * (1 - 2 * (0.45 * u + 0.55 * v));
+        const p = Phaser.Math.Clamp((v - 0.62) / 0.38, 0, 1);
+        f *= 1 - ust.podcien * p * p;
+        if (alfa(xx + kr, yy + kr) < 60) f *= 1 - ust.krawedz;
+        else if (alfa(xx + 2 * kr, yy + 2 * kr) < 60) f *= 1 - ust.krawedz * 0.45;
+        else if (alfa(xx - kr, yy - kr) < 60) f *= 1 + ust.krawedz * 0.3;
+        r *= f;
+        g *= f;
+        b *= f;
+        const o = ust.otoczenie;
+        d[i * 4] = Phaser.Math.Clamp(r * (1 - o) + gr * o, 0, 255);
+        d[i * 4 + 1] = Phaser.Math.Clamp(g * (1 - o) + gg * o, 0, 255);
+        d[i * 4 + 2] = Phaser.Math.Clamp(b * (1 - o) + gb * o, 0, 255);
+      }
+    t.getContext().putImageData(obraz, 0, 0);
+    t.refresh();
+    return nowy;
+  }
+
+  /**
+   * Znajdźka (stos, skrzynia, artefakt) w przygaszonych barwach
+   * (`ZNAJDZKI_NA_MAPIE.nasycenie`) — stworki runda 3: „niebieski smoczek
+   * przy niebieskich kryształach ma tę samą wagę". Tekstura osobna, bo te
+   * same pliki idą na pasek surowców i do okien.
+   */
+  private teksturaZnajdzkiNaMape(klucz: string): string {
+    const nas = { ...ZNAJDZKI_NA_MAPIE, ...planszaPoId(this.stan.mapa).modul.USTAWIENIA?.znajdzkiNaMapie }.nasycenie;
+    if (nas >= 1) return klucz;
+    const nowy = `pz-${klucz}-${nas}`;
+    if (this.textures.exists(nowy)) return nowy;
+    const zrodlo = this.textures.get(klucz)?.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
+    if (!zrodlo?.width) return klucz;
+    const t = this.textures.createCanvas(nowy, zrodlo.width, zrodlo.height);
+    if (!t) return klucz;
+    const ctx = t.getContext();
+    ctx.drawImage(zrodlo, 0, 0);
+    const obraz = ctx.getImageData(0, 0, zrodlo.width, zrodlo.height);
+    const d = obraz.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (!d[i + 3]) continue;
+      const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      for (let k = 0; k < 3; k++) d[i + k] = lum + (d[i + k] - lum) * nas;
+    }
+    ctx.putImageData(obraz, 0, 0);
+    t.refresh();
+    return nowy;
+  }
+
+  /**
    * Gdzie w poziomie leży spód rysunku — lewa i prawa krawędź widocznych
    * pikseli w najniższym pasie rysunku (ułamki szerokości pliku) oraz
    * szerokość całej sylwetki. Liczone z alfy i zapamiętane, jak margines.
@@ -897,6 +1070,7 @@ export class AdventureScene extends Phaser.Scene {
    * wolniej dokładnie wtedy, gdy jest najwięcej do narysowania.
    */
   update(czas: number, delta: number) {
+    this.ozywBohatera(czas);
     // Marsz, bitwa czy okno: złota elipsa wejścia nie zostaje pod kursorem,
     // choćby mysz się nie ruszyła — wróci przy następnym jej ruchu.
     if (this.zajety && this.znakWejscia) this.podswietlWejscie(undefined);
@@ -1557,9 +1731,12 @@ export class AdventureScene extends Phaser.Scene {
     if (o.rodzaj === 'jasnowidz') return { klucz: 'm-chata-jasnowidza', wys: KAFEL * 1.35 };
     // Znajdźki per plansza (`USTAWIENIA.znajdzki`): mniejsze, a stos surowca
     // z zestawu klimatu (`m-stos-<ikona>`) zamiast ikony z paska surowców.
+    // Stworki runda 3: znajdźka o `ZNAJDZKI_NA_MAPIE.skala` mniejsza — obok
+    // strażnika ma być drobiazgiem, nie drugą figurą.
+    const zs = { ...ZNAJDZKI_NA_MAPIE, ...planszaPoId(this.stan.mapa).modul.USTAWIENIA?.znajdzkiNaMapie }.skala;
     const znajdzki = this.znajdzki();
-    if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: KAFEL * (znajdzki ? znajdzki * 1.1 : 0.78) };
-    if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: KAFEL * (znajdzki ?? 0.72) };
+    if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: KAFEL * zs * (znajdzki ? znajdzki * 1.1 : 0.78) };
+    if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: KAFEL * zs * (znajdzki ?? 0.72) };
     if (o.rodzaj === 'potwor') {
       // Strażnik ma mieć `WYS_STRAZNIKA` pola WIDOCZNEJ sylwetki, nie pliku:
       // stworki mają różny przezroczysty margines, a przy jednej wysokości
@@ -1581,8 +1758,8 @@ export class AdventureScene extends Phaser.Scene {
     }
     const ikona = SUROWIEC_INFO[o.surowiec ?? 'pokeball'].ikona;
     if (znajdzki && this.textures.exists(`m-stos-${ikona}`))
-      return { klucz: `m-stos-${ikona}`, wys: KAFEL * znajdzki };
-    return { klucz: `m-${ikona}`, wys: KAFEL * (znajdzki ?? 0.7) };
+      return { klucz: `m-stos-${ikona}`, wys: KAFEL * zs * znajdzki };
+    return { klucz: `m-${ikona}`, wys: KAFEL * zs * (znajdzki ?? 0.7) };
   }
 
   /** `USTAWIENIA.znajdzki` bieżącej planszy (patrz `UstawieniaPlanszy`). */
@@ -1678,8 +1855,18 @@ export class AdventureScene extends Phaser.Scene {
       // Budowle z bryłą stoją ZA polem wejścia, a nie na nim: podstawa siada na
       // górnej krawędzi tego pola, więc brama zostaje odsłonięta i widać, że
       // jest po niej gdzie chodzić. Reszta obiektów stoi na swoim polu.
+      // Rysunek na mapę: strażnik w świetle i barwie gruntu, znajdźka
+      // przygaszona (stworki runda 3). Cienie i spód liczą się dalej z pliku
+      // (`klucz`) — wymiary są te same.
+      const znajdzka = o.rodzaj === 'surowiec' || o.rodzaj === 'skrzynia' || o.rodzaj === 'artefakt';
+      const kluczRys =
+        o.rodzaj === 'potwor'
+          ? this.teksturaStworkaNaMape(klucz, kont.x, kont.y + spod)
+          : znajdzka
+            ? this.teksturaZnajdzkiNaMape(klucz)
+            : klucz;
       const im = this.add
-        .image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, klucz)
+        .image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, kluczRys)
         .setOrigin(0.5, 1);
       im.setScale(wys / im.height);
       // Obrys obiektów gry (`USTAWIENIA.obrysObiektow`, per plansza): ciemna
@@ -1692,7 +1879,7 @@ export class AdventureScene extends Phaser.Scene {
         const d = 2.5;
         for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]]) {
           const cien = this.add
-            .image(im.x + ox * d, im.y + oy * d, klucz)
+            .image(im.x + ox * d, im.y + oy * d, kluczRys)
             .setOrigin(0.5, 1)
             .setScale(im.scaleX, im.scaleY)
             .setTint(0x1c1408)
@@ -1885,13 +2072,19 @@ export class AdventureScene extends Phaser.Scene {
   private rysujBohatera() {
     const { x, y } = this.naEkran(this.stan.bohater.x, this.stan.bohater.y);
     this.bohaterObj = this.add.container(x, y).setDepth(this.stan.bohater.y + 0.8);
+    const s = this.sylwetkaBohatera();
+    this.zbudujProporzec(s);
+
+    // Podstawa w kolorze gracza (stworki runda 3: „Janek ginie przy zamku —
+    // bez flagi, podstawki ani obrysu"): pierścień na gruncie pod stopami,
+    // pod cieniami, więc wygląda na leżący na ziemi, a nie na naklejony.
+    this.bohaterObj.add(this.add.image(0, s.stopy, 't-podstawa-bohatera').setScale(0.5));
 
     // Ten sam miękki cień co pod obiektami (`cienKontaktowy`), tylko z ręki:
     // rysunek bohatera to arkusz klatek, więc `cienKontaktowy` zmierzyłby cały
     // plik zamiast jednej klatki. Wymiary idą za sylwetką (`sylwetkaBohatera`):
     // plama 1,35 szerokości postaci, spłaszczona jak pod obiektami, wychodzi
     // w prawo-dół, od światła.
-    const s = this.sylwetkaBohatera();
     const szerC = s.polSzer * 2 * 1.35;
     const wysC = szerC * 0.37;
     const cien = this.naSniegu(
@@ -1911,16 +2104,244 @@ export class AdventureScene extends Phaser.Scene {
     });
     if (rzut) this.bohaterObj.add(rzut);
 
+    // Proporzec gracza: drzewce przy prawym boku, płat nad głową — ZA
+    // postacią, więc chłopiec trzyma drzewce przed sobą, a nie nadziewa się
+    // na nie. Faluje (`update`, cztery klatki), jak flagi bohaterów HoMM3.
+    this.proporzec = this.add
+      .image(s.polSzer * 0.72, s.stopy - KAFEL * 0.02, 't-proporzec-0')
+      .setOrigin(this.proporzecOrigin.x, this.proporzecOrigin.y)
+      .setScale(0.5);
+    this.bohaterObj.add(this.proporzec);
+
+    // Ciemny obrys: cztery kopie bieżącej klatki przesunięte o piksel świata
+    // (tak jak `obrysObiektow` przy budowlach) — sylwetka odcina się od
+    // zamku i drogi. Klatkę kopiują za postacią (`update`).
+    this.obrysBohatera = [
+      [-1.5, 0],
+      [1.5, 0],
+      [0, -1.5],
+      [0, 1.5],
+    ].map(([ox, oy]) =>
+      this.add
+        .sprite(ox, s.kotwica + oy, 'bohater', 0)
+        .setOrigin(0.5, 1)
+        .setScale(s.skala)
+        .setTint(0x1c1408)
+        .setTintMode(Phaser.TintModes.FILL)
+        .setAlpha(0.6)
+    );
+    for (const o of this.obrysBohatera) this.bohaterObj.add(o);
+
     // Punkt zaczepienia to dół KLATKI, a stopy stoją nad nim o przezroczysty
     // margines — schodzimy o niego, żeby na `stopy` stały same stopy.
     this.bohaterSprite = this.add.sprite(0, s.kotwica, 'bohater', 0).setOrigin(0.5, 1).setScale(s.skala);
     this.bohaterObj.add(this.bohaterSprite);
-    // Chorągiewka OBOK głowy, nie na niej: maszt stoi tuż za prawym brzegiem
-    // sylwetki, proporczyk na wysokości czubka głowy, stopka przy uchu.
-    // Domyślne położenie `chorag` wypadało na twarzy i bohater wyglądał, jakby
-    // miał wetknięty maszt w oko; wyżej flaga wisiała w powietrzu.
-    this.bohaterObj.add(this.chorag(C.ally).setPosition(s.polSzer + KAFEL * 0.04, s.glowa + KAFEL * 0.5));
     this.swiat.add(this.bohaterObj);
+  }
+
+  /** Klatka arkusza i falowanie proporca — co klatkę gry, z `update`. */
+  private ozywBohatera(czas: number) {
+    if (!this.bohaterSprite?.active) return;
+    const klatka = this.bohaterSprite.frame.name;
+    for (const o of this.obrysBohatera) if (o.frame.name !== klatka) o.setFrame(klatka);
+    const f = Math.floor(czas / 150) % KLATKI_PROPORCA;
+    if (this.proporzec && this.klatkaProporca !== f) {
+      this.klatkaProporca = f;
+      this.proporzec.setTexture(`t-proporzec-${f}`);
+    }
+  }
+
+  /**
+   * Tekstury proporca gracza (`t-proporzec-0…3`, klatki falowania) i podstawy
+   * pod bohaterem (`t-podstawa-bohatera`) — rysowane w kodzie, w dwukrotnej
+   * rozdzielczości świata (obrazki stoją w skali 0,5), barwa `C.ally`.
+   * Wymiary z `PROPORZEC` (`uklad.ts`) i sylwetki bohatera.
+   *
+   * Płat jak chorągiew bohatera w HoMM3: prosty płat z wcięciem na końcu,
+   * falujący od drzewca ku końcowi, z fałdami jaśniejszymi od światła (lewa-
+   * góra) i ciemniejszymi w dolinach fali; na płacie biały znak pokeballa —
+   * herb gracza. Drzewce drewniane ze złotą gałką.
+   */
+  private zbudujProporzec(s: SylwetkaBohatera) {
+    const R = 2;
+    const pad = 6;
+    const L = PROPORZEC.dlugosc * KAFEL;
+    const Hc = PROPORZEC.wysokosc * KAFEL;
+    const drzewce = s.stopy - s.glowa + PROPORZEC.ponadGlowe * KAFEL;
+    const Ww = pad + L + pad;
+    const Hw = pad + drzewce + pad;
+    this.proporzecOrigin = { x: pad / Ww, y: (pad + drzewce) / Hw };
+    const hex = (v: number, k: number) => {
+      const r = Math.min(255, Math.round(((v >> 16) & 255) * k));
+      const g = Math.min(255, Math.round(((v >> 8) & 255) * k));
+      const b = Math.min(255, Math.round((v & 255) * k));
+      return `rgb(${r},${g},${b})`;
+    };
+    const klucz = `t-proporzec-${KLATKI_PROPORCA - 1}`;
+    const juzJest =
+      this.textures.exists(klucz) &&
+      this.textures.get(klucz).getSourceImage().height === Math.ceil(Hw * R);
+    for (let f = 0; f < KLATKI_PROPORCA && !juzJest; f++) {
+      const kl = `t-proporzec-${f}`;
+      if (this.textures.exists(kl)) this.textures.remove(kl);
+      const t = this.textures.createCanvas(kl, Math.ceil(Ww * R), Math.ceil(Hw * R));
+      if (!t) return;
+      const ctx = t.getContext();
+      ctx.scale(R, R);
+      const faza = (f / KLATKI_PROPORCA) * Math.PI * 2;
+      const x0 = pad + 1;
+      const y0 = pad + 2;
+      const N = 28;
+      const fala = (u: number) => Hc * 0.16 * Math.pow(u, 0.8) * Math.sin(Math.PI * 2 * 1.1 * u - faza);
+      const dl = L * (1 - 0.035 * (1 + Math.sin(faza)));
+      const gora: Array<[number, number]> = [];
+      const dol: Array<[number, number]> = [];
+      for (let i = 0; i <= N; i++) {
+        const u = i / N;
+        const xx = x0 + u * dl;
+        gora.push([xx, y0 + fala(u)]);
+        dol.push([xx, y0 + Hc * (1 - 0.1 * u) + fala(u) * 1.1]);
+      }
+      const platSciezka = () => {
+        ctx.beginPath();
+        ctx.moveTo(gora[0][0], gora[0][1]);
+        for (const [px, py] of gora) ctx.lineTo(px, py);
+        // Wcięcie na końcu płata (jaskółczy ogon).
+        const kon = N;
+        ctx.lineTo(x0 + dl * 0.8, (gora[kon][1] + dol[kon][1]) / 2);
+        for (let i = N; i >= 0; i--) ctx.lineTo(dol[i][0], dol[i][1]);
+        ctx.closePath();
+      };
+      // Drzewce: ciemny obrys, drewno, blik od lewej.
+      const xd = pad;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(20,12,6,0.9)';
+      ctx.lineWidth = 3.2;
+      ctx.beginPath();
+      ctx.moveTo(xd, pad);
+      ctx.lineTo(xd, pad + drzewce);
+      ctx.stroke();
+      ctx.strokeStyle = '#7a4e26';
+      ctx.lineWidth = 1.9;
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(236,196,140,0.75)';
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(xd - 0.5, pad + 1);
+      ctx.lineTo(xd - 0.5, pad + drzewce - 1);
+      ctx.stroke();
+      // Płat: kolor gracza, fałdy, światło z góry, obrys.
+      // Barwa gracza pogłębiona (mniej czerwieni i zieleni): jasny błękit
+      // `C.ally` ginął przy rzece i na śniegu.
+      const ra = (C.ally >> 16) & 255;
+      const ga = (C.ally >> 8) & 255;
+      const ba = C.ally & 255;
+      platSciezka();
+      ctx.fillStyle = `rgb(${Math.round(ra * 0.55)},${Math.round(ga * 0.62)},${Math.round(ba * 0.95)})`;
+      ctx.fill();
+      ctx.save();
+      platSciezka();
+      ctx.clip();
+      for (let i = 0; i < N; i++) {
+        const u = (i + 0.5) / N;
+        const sw = Math.cos(Math.PI * 2 * 1.1 * u - faza) * Math.pow(u, 0.5);
+        ctx.fillStyle = sw > 0 ? `rgba(255,255,255,${(sw * 0.3).toFixed(3)})` : `rgba(8,16,40,${(-sw * 0.42).toFixed(3)})`;
+        ctx.fillRect(gora[i][0], 0, gora[i + 1][0] - gora[i][0] + 0.5, Hw);
+      }
+      const gr = ctx.createLinearGradient(0, y0, 0, y0 + Hc * 1.1);
+      gr.addColorStop(0, 'rgba(255,255,255,0.22)');
+      gr.addColorStop(0.45, 'rgba(255,255,255,0)');
+      gr.addColorStop(1, 'rgba(6,12,32,0.35)');
+      ctx.fillStyle = gr;
+      ctx.fillRect(0, 0, Ww, Hw);
+      // Herb: biały pokeball na płacie, idzie za falą.
+      const uh = 0.36;
+      const hx = x0 + uh * dl;
+      const hy = y0 + Hc * (1 - 0.1 * uh) * 0.5 + fala(uh) * 1.05;
+      const hr = Hc * 0.22;
+      ctx.fillStyle = 'rgba(250,244,228,0.95)';
+      ctx.beginPath();
+      ctx.ellipse(hx, hy, hr * 0.92, hr, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = hex(C.foe, 0.95);
+      ctx.beginPath();
+      ctx.ellipse(hx, hy, hr * 0.92, hr, 0, Math.PI, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(24,16,10,0.9)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.ellipse(hx, hy, hr * 0.92, hr, 0, 0, Math.PI * 2);
+      ctx.moveTo(hx - hr * 0.92, hy);
+      ctx.lineTo(hx + hr * 0.92, hy);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(250,244,228,1)';
+      ctx.beginPath();
+      ctx.arc(hx, hy, hr * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+      platSciezka();
+      ctx.strokeStyle = 'rgba(16,12,20,0.92)';
+      ctx.lineWidth = 1.8;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      // Złota lamówka wewnątrz obrysu — płat czyta się na każdym tle.
+      ctx.strokeStyle = 'rgba(232,184,82,0.95)';
+      ctx.lineWidth = 0.7;
+      ctx.stroke();
+      // Złota gałka na czubku drzewca.
+      const gg = ctx.createRadialGradient(xd - 0.8, pad - 0.8, 0.2, xd, pad, 2.6);
+      gg.addColorStop(0, '#fff2b0');
+      gg.addColorStop(0.5, '#e0a93a');
+      gg.addColorStop(1, '#7a5212');
+      ctx.fillStyle = gg;
+      ctx.strokeStyle = 'rgba(30,18,6,0.9)';
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.arc(xd, pad, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      t.refresh();
+    }
+
+    if (!this.textures.exists('t-podstawa-bohatera')) {
+      const w = KAFEL * 1.3;
+      const h = KAFEL * 0.5;
+      const t = this.textures.createCanvas('t-podstawa-bohatera', Math.ceil((w + 6) * R), Math.ceil((h + 6) * R));
+      if (!t) return;
+      const ctx = t.getContext();
+      ctx.scale(R, R);
+      const cx = w / 2 + 3;
+      const cy = h / 2 + 3;
+      // Przyciemniony grunt wewnątrz pierścienia — figura stoi „na czymś".
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(1, h / w);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, w / 2);
+      g.addColorStop(0, 'rgba(10,14,24,0.34)');
+      g.addColorStop(0.8, 'rgba(10,14,24,0.22)');
+      g.addColorStop(1, 'rgba(10,14,24,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, w / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      // Pierścień: ciemny spód dla kontrastu, na nim barwa gracza jaśniejsza
+      // od lewej-góry (światło), ciemniejsza z prawej-dołu.
+      ctx.strokeStyle = 'rgba(12,16,28,0.75)';
+      ctx.lineWidth = 3.6;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, w / 2 - 2, h / 2 - 1.5, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      const pg = ctx.createLinearGradient(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2);
+      pg.addColorStop(0, hex(C.ally, 1.25));
+      pg.addColorStop(0.5, hex(C.ally, 1));
+      pg.addColorStop(1, hex(C.ally, 0.6));
+      ctx.strokeStyle = pg;
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+      t.refresh();
+    }
   }
 
   /**

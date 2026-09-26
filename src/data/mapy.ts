@@ -84,6 +84,25 @@ export interface UstawieniaPlanszy {
    */
   skalaStrazy?: number;
   /**
+   * Stworki-strażnicy w oświetleniu planszy — nadpisuje pola
+   * `STWORKI_NA_MAPIE` z `src/visual/uklad.ts` (nasycenie, światło z lewej-
+   * góry, podcień, ciemny brzeg, barwa gruntu). Stworki runda 3: „cieniowane
+   * płasko, wklejone z innej gry". Brak = wartości z `uklad.ts`.
+   */
+  stworkiNaMapie?: {
+    nasycenie?: number;
+    swiatlo?: number;
+    podcien?: number;
+    krawedz?: number;
+    paleta?: number;
+    otoczenie?: number;
+  };
+  /**
+   * Znajdźki (stosy, skrzynie, artefakty): mnożnik wielkości i nasycenia —
+   * nadpisuje `ZNAJDZKI_NA_MAPIE` z `uklad.ts`. Brak = wartości z `uklad.ts`.
+   */
+  znajdzkiNaMapie?: { skala?: number; nasycenie?: number };
+  /**
    * Osadzenie drobnych rzeczy w gruncie: stosy, skrzynie, artefakty
    * i strażnicy dostają nierówną krawędź tła na spodzie rysunku i drobne
    * zaspy (`zaroslaPrzyPodstawie` w skali tej liczby, budowle mają 1).

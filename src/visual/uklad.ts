@@ -40,24 +40,68 @@ export const KAFEL_EKRAN = KAFEL * ZOOM_MAPY;
  *
  * Wysokości to WIDOCZNA sylwetka (od stóp do czubka głowy, bez przezroczystego
  * marginesu pliku), w polach. Hierarchia jak w Heroes 3: bohater jest
- * największą ruchomą rzeczą na mapie (~1,9 pola), strażnik ~1,6 pola — zawsze
+ * największą ruchomą rzeczą na mapie (~2,2 pola), strażnik ~1,3 pola — zawsze
  * wyraźnie większy od kupki surowca (0,45–0,8 pola, `USTAWIENIA.znajdzki`
  * planszy), a mniejszy od budowli. Wcześniej bohater miał 0,9 pola, czyli
  * mniej niż kryształ przy drodze, a strażnik 1,0 — oba ginęły między
  * znajdźkami. Znajdźek i budowli te liczby nie dotyczą.
  *
  * Stworki, runda 2 (ślepe porównanie z HotA, 0/2): „strażnika nie da się
- * odróżnić od znajdźki", „Janek jest wielkości kryształu". Jak w HoMM3 stack
- * zajmuje wizualnie półtora pola, a bohater ok. dwóch — stąd 1,6 i 1,9;
- * do tego obaj rzucają na grunt własny cień (`cienRzucany` w scenie mapy).
+ * odróżnić od znajdźki", „Janek jest wielkości kryształu" — stąd 1,6 i 1,9
+ * i cień rzucany (`cienRzucany` w scenie mapy).
+ *
+ * Stworki, runda 3 (0/3): „hierarchia odwrócona — strażnicy więksi od
+ * bohatera, wielkości chat i wieży; Janek ginie przy zamku". Bohater jest
+ * chudy (chłopiec, nie jeździec na koniu), więc przy 1,9 pola strażnik
+ * szeroki na dwa pola i tak zajmował więcej ekranu. Teraz bohater 2,2 pola
+ * i proporzec gracza nad nim (`PROPORZEC`), strażnik 1,3 pola, najwyżej
+ * 1,6 wszerz — dwa razy więcej niż kupka surowca, dużo mniej niż budowla.
  */
-export const WYS_BOHATERA = 1.9;
-export const WYS_STRAZNIKA = 1.6;
+export const WYS_BOHATERA = 2.2;
+export const WYS_STRAZNIKA = 1.3;
 /**
  * Szerokie stworki (węże, płaszczki) przy pełnej wysokości rozlewałyby się
  * na trzy pola i zasłaniały sąsiadów — ich sylwetkę ograniczamy szerokością.
  */
-export const SZER_STRAZNIKA_MAX = 2.1;
+export const SZER_STRAZNIKA_MAX = 1.6;
+
+/**
+ * Proporzec bohatera w kolorze gracza (runda 3: „bez flagi, podstawki ani
+ * obrysu"), w polach: drzewce od stóp do `ponadGlowe` nad czubkiem głowy,
+ * płat `dlugosc` × `wysokosc`. W HoMM3 bohatera znajduje się wzrokiem po
+ * flagi nad koniem — tu po proporcu nad głową.
+ */
+export const PROPORZEC = { ponadGlowe: 0.6, dlugosc: 1.1, wysokosc: 0.6 };
+
+/**
+ * Jak stworki-strażnicy siadają w oświetleniu planszy (runda 3: „cieniowane
+ * płasko, wklejone z innej gry"). Pliki `public/sprites/` mają +12%
+ * nasycenia i ciemną obwódkę 1 px pod bitwę (`tools/stworki_wczytaj.py`);
+ * mapa robi z nich własną teksturę (`teksturaStworkaNaMape` w scenie):
+ * - `nasycenie` — mnożnik nasycenia (0,9 zdejmuje te +12%),
+ * - `swiatlo` — jaśniej od lewej-góry, ciemniej ku prawemu-dołowi (±),
+ * - `podcien` — przyciemnienie dołu sylwetki przy ziemi (dolne ~35%),
+ * - `krawedz` — ciemniejszy brzeg po stronie cienia (prawy-dolny),
+ * - `paleta` — ile barwy gruntu spod strażnika wchodzi w barwę stworka,
+ * - `otoczenie` — ile samego gruntu przebija przez stworka (powietrze).
+ * Bitwa, miasto i HUD dalej biorą oryginalne pliki.
+ */
+export const STWORKI_NA_MAPIE = {
+  nasycenie: 0.9,
+  swiatlo: 0.18,
+  podcien: 0.22,
+  krawedz: 0.2,
+  paleta: 0.15,
+  otoczenie: 0.04,
+};
+
+/**
+ * Znajdźki (stosy, skrzynie, artefakty) — runda 3: „strażnicy mają tę samą
+ * wagę i nasycenie co kryształy i jagody". Znajdźka jest o `skala` mniejsza
+ * niż `USTAWIENIA.znajdzki` planszy i ma `nasycenie` barw — tło dla
+ * strażnika, a nie konkurent.
+ */
+export const ZNAJDZKI_NA_MAPIE = { skala: 0.88, nasycenie: 0.8 };
 
 export const PANEL_W = 250;
 export const PASEK_H = 34;
