@@ -15,9 +15,22 @@
    "status": "build",
    "bar": "Wspólny pasek armii (zamiana, łączenie, dzielenie), garnizon miasta, okno stworka po kliknięciu, miniatura bohatera w mieście → ekran bohatera.",
    "live": {
-    "round": 1,
-    "stage": "builder pracuje"
-   }
+    "round": 2,
+    "stage": "czeka na ekran bohatera (wspólny panel), potem większe sloty w ramach"
+   },
+   "rounds": [
+    {
+     "win": false,
+     "label": "Runda 1 (miasto HotA/VCMI, 0/2)",
+     "blinds": [
+      "tools/postep-obrazy/miasto-armia-r1-w1.jpg",
+      "tools/postep-obrazy/miasto-armia-r1-w2.jpg"
+     ],
+     "build": "Wspólny panelArmii.ts (zamiana, łączenie, podział Shift+klik/„Podziel”, przeciąganie), okno stworka (prawy klik), garnizon zamku (werbunek bez bohatera, obrona zamku, zapis z migracją), portret bohatera → ekran bohatera.",
+     "gap": "Paski armii za małe i za blade (~12% wysokości): sloty jak beżowe placeholdery bez ramek, stworki małe, liczebności nieczytelne; brak ramy/herbu i panelu przyrostu jak w HotA.",
+     "note": "Obaj: HotA — dwa pełne rzędy po 7 dużych slotów w ciężkiej ramie, od razu widać zarządzanie armią. Słabość HotA: drobny tekst, przeładowana ilustracja."
+    }
+   ]
   },
   {
    "name": "Uwagi gracza: profile graczy i wiele zapisów",
