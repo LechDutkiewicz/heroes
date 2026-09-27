@@ -15,6 +15,7 @@ import {
   kosztPola,
   nowaTura,
   obiektNa,
+  naPoluPrzeciw,
   obroncyZamku,
   odslon,
   odwiedz,
@@ -4954,6 +4955,8 @@ export class AdventureScene extends Phaser.Scene {
         // Zamku bronią straż i garnizon naraz (`obroncyZamku`).
         wrog: o.rodzaj === 'zamek' ? obroncyZamku(o) : (o.oddzialy ?? []),
         oObiekt: o.id,
+        // Dzikie: jeden na jednego; rywal, sale i miasta: dwa na dwa.
+        naPolu: naPoluPrzeciw(o),
         powrot: 'adventure',
         // Drugorzędne umiejętności wchodzą do walki jako trzy liczby, a nie
         // jako bohater: symulacja bitwy nie zna postaci i nie powinna, żeby

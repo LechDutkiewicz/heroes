@@ -1,10 +1,10 @@
 /**
- * Okno „Kto walczy?" przed bitwą (etap 5).
+ * Okno „Kto zaczyna?" przed bitwą.
  *
- * Na polu mieszczą się cztery stworki, a drużyna bywa większa. Zamiast
- * „idą cztery pierwsze sloty" trener wybiera czwórkę tuż przed walką —
- * widząc, z kim się bije. Domyślnie zaznaczone są cztery pierwsze, więc
- * „Do boju!" od razu działa tak jak dotąd.
+ * Na polu stoi jeden stworek (dzikie) albo dwa (trenerzy), a reszta drużyny
+ * czeka w pokeballach i wchodzi po zemdlonych. Trener wybiera, kogo wysyła
+ * na początek — widząc, z kim się bije. Domyślnie zaznaczeni są pierwsi
+ * z drużyny, więc „Do boju!" od razu działa.
  */
 import Phaser from 'phaser';
 import { drawPanelBody, makeHudButton, mix, plate } from './hud';
@@ -46,7 +46,7 @@ export function pokazWyborSkladu(
   const y = obszar.y + (obszar.h - h) / 2;
   drawPanelBody(scene, x, y, w, h, 6, warstwa);
 
-  warstwa.add(scene.add.text(x + w / 2, y + 26, 'Kto walczy?', display(22)).setOrigin(0.5));
+  warstwa.add(scene.add.text(x + w / 2, y + 26, 'Kto zaczyna?', display(22)).setOrigin(0.5));
   const podpis = scene.add.text(x + w / 2, y + 54, '', body(14, H.inkSoft)).setOrigin(0.5);
   warstwa.add(podpis);
 
@@ -69,6 +69,11 @@ export function pokazWyborSkladu(
     strefa.on('pointerdown', () => {
       if (wybrane.has(k.skad)) wybrane.delete(k.skad);
       else if (wybrane.size < maks) wybrane.add(k.skad);
+      else if (maks === 1) {
+        // Jeden na jednego: klik w innego stworka po prostu go wybiera.
+        wybrane.clear();
+        wybrane.add(k.skad);
+      }
       odswiez();
     });
     warstwa.add([g, obraz, nazwa, poz, znak, strefa]);
@@ -103,7 +108,11 @@ export function pokazWyborSkladu(
 
   function odswiez() {
     karty.forEach((k) => k.rysuj());
-    podpis.setText(`Kliknij stworka, żeby go dodać albo zdjąć — ${wybrane.size} z ${maks}`);
+    podpis.setText(
+      maks === 1
+        ? 'Kliknij stworka, który wychodzi pierwszy — reszta czeka w pokeballach'
+        : `Kliknij dwa stworki na początek (${wybrane.size} z ${maks}) — reszta czeka w pokeballach`
+    );
     przycisk.setEnabled(wybrane.size > 0);
   }
   odswiez();
@@ -117,7 +126,8 @@ export function pokazWyborSkladu(
     scene.input.keyboard?.off('keydown-ENTER', enter);
     przycisk.destroy();
     warstwa.destroy();
-    // Kolejność na polu = kolejność w drużynie, nie kolejność klikania.
+    // Kolejność na polu = kolejność w drużynie, nie kolejność klikania;
+    // po nich wchodzą pozostali, też w kolejności drużyny.
     gotowe(kandydaci.filter((k) => wybrane.has(k.skad)).map((k) => k.skad));
   }
   return { zatwierdz };

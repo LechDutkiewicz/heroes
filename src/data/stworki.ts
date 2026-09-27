@@ -90,14 +90,19 @@ export function defStworka(o: Pick<Oddzial, 'frakcja' | 'tier' | 'sprite' | 'naz
   };
 }
 
-/** Najwięcej stworków po jednej stronie pola bitwy (`NA_POLU` w `battle.ts`). */
-export const MAKS_W_BITWIE = NA_POLU;
+/**
+ * Najwięcej stworków po jednej stronie bitwy — na polu (`NA_POLU`) i w
+ * pokeballach razem. Drużyna ma siedem slotów; do walki idą wszyscy sprawni,
+ * po kolei (zmiennicy wchodzą po zemdlonych).
+ */
+export const MAKS_W_BITWIE = 7;
+/** Największe stado dzikich — tylu stworków najwyżej staje w kolejce do walki z trenerem. */
+export const MAKS_STADA = 4;
 
 /**
  * Oddziały z mapy → jednostki bitwy. Stado rozpada się na osobne stworki,
- * zemdlone zostają poza polem, a do walki idą pierwsi `MAKS_W_BITWIE` —
- * w drużynie trenera to cztery pierwsze sprawne sloty, więc skład na bitwę
- * wybiera się kolejnością w drużynie. Wynik ma przy każdej jednostce indeks wpisu,
+ * zemdlone zostają poza bitwą, a reszta idzie w kolejności slotów: pierwsi
+ * `NA_POLU` na pole, dalsi czekają w pokeballach jako zmiennicy. Wynik ma przy każdej jednostce indeks wpisu,
  * z którego pochodzi — po bitwie trzeba wiedzieć, KTÓRY stworek zemdlał.
  */
 export function jednostkiBitwy(oddzialy: readonly (Oddzial | null | undefined)[]): { def: UnitDef; skad: number }[] {
@@ -158,7 +163,7 @@ export const STARY_STOS = [20, 14, 10, 7, 5, 3] as const;
  * słabe stado to jeden stworek z niskim poziomem, a potężne — kilka
  * stworków na dwudziestym, a nie jeden na pięćdziesiątym.
  */
-export function stadoZLiczebnosci(tier: number, ile: number, maks = MAKS_W_BITWIE): { ile: number; poziom: number } {
+export function stadoZLiczebnosci(tier: number, ile: number, maks = MAKS_STADA): { ile: number; poziom: number } {
   const r = Math.max(0.05, ile / (STARY_STOS[tier] ?? 10));
   const naturalny = POZIOM_MLODEGO + 6 * Math.log(1 + r);
   const n = Math.max(1, Math.min(maks, Math.round(r / skalaPoziomu(naturalny))));
@@ -281,7 +286,8 @@ export function rozegrajBitwe(
   atak: readonly (Oddzial | null | undefined)[],
   obrona: readonly (Oddzial | null | undefined)[],
   rng: () => number,
-  bonusGracza?: Battle['bonusGracza']
+  bonusGracza?: Battle['bonusGracza'],
+  naPolu: number = NA_POLU
 ): {
   outcome: Outcome;
   ocalaliAtak: number[];
@@ -291,10 +297,15 @@ export function rozegrajBitwe(
 } {
   const lewa = jednostkiBitwy(atak);
   const prawa = jednostkiBitwy(obrona);
-  const bitwa = createBattle({ units: lewa.map((j) => j.def) }, { units: prawa.map((j) => j.def) }, [], rng);
+  const bitwa = createBattle({ units: lewa.map((j) => j.def) }, { units: prawa.map((j) => j.def) }, [], rng, naPolu);
   bitwa.bonusGracza = bonusGracza;
   const { outcome } = runBattle(bitwa);
-  const zywi = new Set(bitwa.units.filter((u) => u.count > 0).map((u) => u.id));
+  // Na nogach: kto stoi na polu i kto nie zdążył wyjść z pokeballa.
+  const zywi = new Set(
+    [...bitwa.units, ...(bitwa.rezerwa?.player ?? []), ...(bitwa.rezerwa?.enemy ?? [])]
+      .filter((u) => u.count > 0)
+      .map((u) => u.id)
+  );
   const policz = (lista: typeof lewa, zrodlo: readonly (Oddzial | null | undefined)[], offset: number) => {
     // Kto nie stanął do walki (zemdlony, ponad siedmiu na pole), zostaje,
     // jaki był — odejmujemy tylko tych, którzy padli na polu.

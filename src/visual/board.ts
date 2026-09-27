@@ -12,24 +12,25 @@
  */
 
 import Phaser from 'phaser';
+import { COLS, ROWS } from '../data/battle';
 import { C, E, T, Z } from './theme';
 
 // ---------- geometria (nie ruszać — reszta gry na niej stoi) ----------
 // Układ „odd-r": hexy stoją wierzchołkiem do góry, a nieparzyste rzędy są
 // przesunięte o pół hexa w prawo.
 
-export const COLS = 10;
-export const ROWS = 7;
-/** promień hexa: od środka do wierzchołka */
-export const HEX_R = 46;
+// Wymiary planszy są zasadą walki, więc pochodzą z `data/battle.ts`.
+export { COLS, ROWS };
+/** promień hexa: od środka do wierzchołka (pole z bajki: 8 × 5, większe heksy) */
+export const HEX_R = 54;
 export const HEX_W = Math.sqrt(3) * HEX_R;
 export const HEX_H = 2 * HEX_R;
 /** pionowy odstęp między rzędami — hexy zazębiają się, stąd 3/4 wysokości */
 export const ROW_STEP = HEX_R * 1.5;
 
-export const BOARD_X = 62;
-export const BOARD_Y = 100;
 export const BOARD_W = HEX_W * (COLS + 0.5);
+export const BOARD_X = Math.round((960 - BOARD_W) / 2);
+export const BOARD_Y = 100;
 export const BOARD_H = ROW_STEP * (ROWS - 1) + HEX_H;
 
 /** Nic w bajce nie ma ostrego rogu — plansza też nie. */
@@ -277,8 +278,15 @@ function drawTerrain(scene: Phaser.Scene, terrainKey: string) {
   const cy = BOARD_Y + BOARD_H / 2;
 
   const img = scene.add.image(cx, cy, terrainKey).setDepth(Z.board);
-  img.setScale(Math.max(BOARD_W / img.width, BOARD_H / img.height));
+  const k = Math.max(BOARD_W / img.width, BOARD_H / img.height);
+  img.setScale(k);
   img.setMask(boardMask(scene));
+  // Maska geometryczna w Phaserze 4 nie przycina obrazka — a obraz terenu
+  // ma proporcje dawnej planszy (10 × 7) i wystawał nad i pod niższą planszę
+  // z bajki (8 × 5). Przycinamy go więc wprost do prostokąta planszy.
+  const cw = BOARD_W / k;
+  const ch = BOARD_H / k;
+  img.setCrop((img.width - cw) / 2, (img.height - ch) / 2, cw, ch);
 
   // Warstwa detalu: rozmyte plamy światła i cienia rozbijają gładź terenu,
   // która po przeskalowaniu robi się podejrzanie równa.

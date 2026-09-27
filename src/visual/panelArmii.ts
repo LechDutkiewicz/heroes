@@ -32,6 +32,7 @@ import {
   SLOTY_ARMII,
 } from '../data/armia';
 import { jednostkiBitwy, napisPoziomu } from '../data/stworki';
+import { NA_POLU } from '../data/battle';
 import { pokazOknoStworka, type OknoStworka } from './oknoStworka';
 import { kluczPortretu, kluczPortretuOkraglego } from './portrety';
 import { C } from './theme';
@@ -314,9 +315,10 @@ export class PanelArmii {
     for (const pasek of this.paski) {
       const armia = pasek.armia();
       const aktywny = pasek.aktywny?.() ?? true;
-      // Drużyna trenera: które sloty pójdą do bitwy (cztery pierwsze sprawne).
+      // Drużyna trenera: kto wychodzi pierwszy (dwa pierwsze sprawne sloty —
+      // z dzikimi walczy tylko pierwszy, reszta czeka w pokeballach).
       const doBitwy = new Set(
-        pasek.chroniona ? jednostkiBitwy(armia).map((j) => j.skad) : []
+        pasek.chroniona ? jednostkiBitwy(armia).slice(0, NA_POLU).map((j) => j.skad) : []
       );
       pasek.sloty.forEach((s, i) => {
         const o = armia[i];
@@ -359,7 +361,7 @@ export class PanelArmii {
           s.plakietka.lineStyle(1, C.goldDeep, 0.9);
           s.plakietka.strokeRoundedRect(px, py, pw, ph, 3);
           s.licznik.setPosition(pasek.slotW - 4 - pw / 2 + s.licznik.width / 2, pasek.slotH - 3);
-          // Złoty róg w lewym górnym rogu: ten stworek idzie do bitwy.
+          // Złoty róg w lewym górnym rogu: ten stworek zaczyna walkę.
           if (doBitwy.has(i)) {
             s.plakietka.fillStyle(0x1a0c03, 0.85);
             s.plakietka.fillTriangle(3, 3, 19, 3, 3, 19);

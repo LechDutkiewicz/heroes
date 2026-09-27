@@ -25,7 +25,17 @@
 
 import Phaser from 'phaser';
 import { C, E, H, T, display } from './theme';
-import { HEX_H, HEX_R, HEX_W, hexPoints } from './board';
+import { HEX_R, hexPoints } from './board';
+
+/**
+ * Cały wygląd stworka jest rysowany w geometrii dawnego pola (promień 46 px)
+ * i skalowany kontenerem do bieżącego. Pole z bajki (1 na 1, 2 na 2) ma
+ * większe heksy — stworki rosną razem z nimi, a stałe układu niżej zostają.
+ */
+const R0 = 46;
+const W0 = Math.sqrt(3) * R0;
+const H0 = 2 * R0;
+export const SKALA_POLA = HEX_R / R0;
 import { ICON, TYPE_ICON, icon } from './icons';
 
 // ---------- geometria etykiet ----------
@@ -562,13 +572,13 @@ export function buildUnitView(scene: Phaser.Scene, spec: UnitViewSpec): UnitView
   const activeRing = scene.add.graphics();
   const pts = (r: number) => hexPoints(0, 0, r);
   activeRing.lineStyle(14, C.gold, 0.18);
-  activeRing.strokePoints(pts(HEX_R - 6), true);
+  activeRing.strokePoints(pts(R0 - 6), true);
   activeRing.lineStyle(7, C.shadow, 0.45);
-  activeRing.strokePoints(pts(HEX_R - 3), true);
+  activeRing.strokePoints(pts(R0 - 3), true);
   activeRing.lineStyle(4.5, C.goldDeep, 1);
-  activeRing.strokePoints(pts(HEX_R - 3), true);
+  activeRing.strokePoints(pts(R0 - 3), true);
   activeRing.lineStyle(2, C.goldLight, 1);
-  activeRing.strokePoints(pts(HEX_R - 4), true);
+  activeRing.strokePoints(pts(R0 - 4), true);
   activeRing.setVisible(false);
 
   const shadow = scene.add.graphics({ x: 0, y: SHADOW_Y });
@@ -641,8 +651,8 @@ export function buildUnitView(scene: Phaser.Scene, spec: UnitViewSpec): UnitView
   const hpBar = scene.add.graphics();
 
   const hit = scene.add
-    .zone(0, 0, HEX_W, HEX_H)
-    .setInteractive(new Phaser.Geom.Polygon(hexPoints(HEX_W / 2, HEX_H / 2)), Phaser.Geom.Polygon.Contains);
+    .zone(0, 0, W0, H0)
+    .setInteractive(new Phaser.Geom.Polygon(hexPoints(W0 / 2, H0 / 2, R0)), Phaser.Geom.Polygon.Contains);
 
   const container = scene.add.container(spec.x, spec.y, [
     activeRing,
@@ -660,6 +670,7 @@ export function buildUnitView(scene: Phaser.Scene, spec: UnitViewSpec): UnitView
     countLabel,
     hit,
   ]);
+  container.setScale(SKALA_POLA);
 
   const view: UnitView = {
     container,
@@ -1484,8 +1495,8 @@ export function playUnitDeath(scene: Phaser.Scene, view: UnitView, onDone: () =>
 
   scene.tweens.add({
     targets: view.container,
-    scaleX: 1.14,
-    scaleY: 0.86,
+    scaleX: 1.14 * SKALA_POLA,
+    scaleY: 0.86 * SKALA_POLA,
     duration: 90,
     ease: E.snap,
     yoyo: true,
@@ -1493,7 +1504,7 @@ export function playUnitDeath(scene: Phaser.Scene, view: UnitView, onDone: () =>
   scene.tweens.add({
     targets: view.container,
     alpha: 0,
-    scale: 0.2,
+    scale: 0.2 * SKALA_POLA,
     angle: view.side === 'player' ? -14 : 14,
     delay: 200,
     duration: T.fade + 420,
