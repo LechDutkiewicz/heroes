@@ -458,7 +458,7 @@ export class PanelArmii {
     if (im.texture.key === portret) im.setDisplaySize(w.m.pasek.slotW - 4, w.m.pasek.slotH - 4);
     else im.setScale(Math.min(1, (w.m.pasek.slotH - 4) / im.height));
     const licznik = this.scena.add
-      .text(0, w.m.pasek.slotH / 2 - 8, String(oddzial.ile), {
+      .text(0, w.m.pasek.slotH / 2 - 8, oddzial.ile > 1 ? String(oddzial.ile) : napisPoziomu(oddzial.poziom), {
         fontFamily: KROJ.tytul,
         fontSize: '14px',
         color: BARWA.krem,
@@ -550,7 +550,7 @@ export class PanelArmii {
     this.wybor = m;
     this.trybPodzialu = false;
     this.o.powiedz(
-      `Wybrano: ${o.ile} × ${o.nazwa}. Kliknij inny slot — przeniesiesz, zamienisz albo połączysz. ` +
+      `Wybrano: ${o.nazwa}, ${napisPoziomu(o.poziom)}. Kliknij inny slot — przeniesiesz albo zamienisz. ` +
         'Drugi klik: opis stworka.'
     );
     this.odswiez();

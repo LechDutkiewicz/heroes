@@ -17,9 +17,8 @@
  *    cień w półprzezroczystym gnieździe — zbieranie ma widoczny koniec,
  *    a postać prześwituje;
  *  - dół: blok armii na całą szerokość (ta sama ciężka rama i te same sloty
- *    co w mieście — `PanelArmii`: klik-klik, przeciąganie, Shift = okno
- *    podziału, Ctrl = jeden stworek, drugi klik / prawy klik = okno
- *    stworka), obok linia statusu, „Podziel" i wyjście.
+ *    co w mieście — `PanelArmii`: klik-klik, przeciąganie, drugi klik /
+ *    prawy klik = okno stworka), obok linia statusu i wyjście.
  *
  * Stałych napisów-samouczków nie ma (runda 2 ślepego porównania: „wygląda
  * jak samouczek w formularzu"). Podpowiedź jest w dymku po najechaniu i w
@@ -104,7 +103,7 @@ const BLOK_Y = OKNO_H - 8 - 13 - BLOK_H;
 const POLA_H = BLOK_Y - 13 - 12 - POLA_Y;
 const LEWA = { x: MARGINES + 5, w: 568 - (MARGINES + 5) };
 const PRAWA = { x: 586, w: OKNO_W - MARGINES - 5 - 586 };
-/** Herb (figurka z mapy) i siedem slotów; po prawej status, „Podziel", wyjście. */
+/** Herb (figurka z mapy) i siedem slotów; po prawej status i wyjście. */
 const HERB_X = BLOK_X + BLOK_PAD;
 const RZAD_X = HERB_X + SLOT + 10;
 const RZAD_Y = BLOK_Y + BLOK_PAD;
