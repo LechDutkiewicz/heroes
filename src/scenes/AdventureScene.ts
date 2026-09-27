@@ -4217,9 +4217,9 @@ export class AdventureScene extends Phaser.Scene {
         ? `${teren.nazwa} — nie do przejścia`
         : `${teren.nazwa} — koszt ${teren.koszt}`
     );
-    // Nie do przejścia dostaje czaszkę — jedyny wypadek, gdzie kursor
+    // Nie do przejścia dostaje znak zakazu — jedyny wypadek, gdzie kursor
     // ostrzega, zamiast tylko milczeć jak nad zwykłą, przejezdną trawą.
-    this.pokazZnakKursora(teren.koszt === null ? ICON.skull : null);
+    this.pokazZnakKursora(teren.koszt === null ? ICON.zakaz : null);
   }
 
   private opisObiektu(o: Obiekt) {

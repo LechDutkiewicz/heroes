@@ -34,6 +34,8 @@ export const ICON = {
   retaliate: 'ic_odwet',
   hourglass: 'ic_klepsydra',
   skull: 'ic_omdlenie',
+  /** Nie da się tam wejść — kursor nad nieprzejezdnym terenem mapy. */
+  zakaz: 'ic_zakaz',
   star: 'ic_gwiazda',
   flame: 'ic_ogien',
   drop: 'ic_woda',
@@ -243,6 +245,15 @@ const DRAW: Record<string, (g: Pen) => void> = {
     gwiazdka(g, 12, 36, 5, 10, C.gold);
     gwiazdka(g, 32, 20, 5, 12, C.gold);
     gwiazdka(g, 52, 36, 5, 10, C.gold);
+  },
+
+  // Zakaz: czerwone koło z ukośną kreską — jak znak drogowy.
+  [ICON.zakaz]: (g) => {
+    sticker(g, 0xd9412f, (p) => poly(p, ring(32, 32, 26, 17, 0, 359.5, 40)));
+    g.fillStyle(C.shadow, 1);
+    bar(g, 17, 47, 47, 17, 11);
+    g.fillStyle(0xd9412f, 1);
+    bar(g, 18, 46, 46, 18, 8);
   },
 
   [ICON.star]: (g) => {
