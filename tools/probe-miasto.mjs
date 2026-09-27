@@ -109,9 +109,13 @@ console.log('\n=== panorama ===');
 const start = await stanZamku();
 sprawdz(
   'na panoramie stoi tyle brył, ile budynków postawiono',
-  start.kafle === start.postawione.filter((x) => !x.startsWith('ratusz')).length + 1,
+  // +1 za ratusz (jedna bryła na trzy stopnie), +2 za Centrum Pokemon i Salę
+  // treningową, które stoją zawsze (etap 6).
+  start.kafle === start.postawione.filter((x) => !x.startsWith('ratusz')).length + 1 + 2,
   `${start.kafle} brył, postawione: ${start.postawione.join(', ')}`
 );
+sprawdz('Centrum Pokemon stoi od początku', (await gdzieBudynek('centrum'))?.stoi === true);
+sprawdz('Sala treningowa stoi od początku', (await gdzieBudynek('sala'))?.stoi === true);
 sprawdz(
   'niepostawiony budynek NIE jest rysowany',
   (await gdzieBudynek('fort')) === null,

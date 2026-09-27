@@ -54,6 +54,16 @@ const postep = (trener, ile) => {
     ukonczone: misje,
     wyniki: Object.fromEntries(misje.map((m) => [m, WYNIKI[m]])),
     ...(ile ? { bohater: { ...BOHATER, imie: trener } } : {}),
+    // Etap 6: drużyna przechodzi z misji do misji, odznaki zbierają się w belce.
+    ...(ile
+      ? {
+          druzyna: [
+            { sprite: '00193', nazwa: 'Pyroko', ile: 1, frakcja: 'bor', tier: 0, poziom: 9 + ile * 3 },
+            { sprite: '00218', nazwa: 'Aquino', ile: 1, frakcja: 'bor', tier: 2, poziom: 8 + ile * 3 },
+          ],
+          odznaki: ['fort', 'grota', 'grobla', 'lod'].slice(0, ile),
+        }
+      : {}),
   };
 };
 

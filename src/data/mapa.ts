@@ -1958,6 +1958,61 @@ const ODZNAKI: Record<string, string> = {
 export const ODZNAKI_PLIKI = ['fort', 'grota', 'grobla', 'lod', 'srebro'] as const;
 export const odznakaSali = (nazwa: string) => ODZNAKI[nazwa] ?? 'grota';
 
+/**
+ * Liderzy sal (etap 6) — każda sala ma swojego lidera, jak w serialu:
+ * wita trenera przed walką i wręcza odznakę po przegranej. Klucz to
+ * identyfikator odznaki (`odznakaSali`), portret `public/bohater/lider-<id>.png`.
+ * Kwestie bez rodzaju gramatycznego gracza — gra Ela albo Janek.
+ */
+export interface Lider {
+  imie: string;
+  /** „liderka Księżycowej Groty" — do podpisu pod imieniem */
+  kim: string;
+  odznaka: string;
+  powitanie: string;
+  pozegnanie: string;
+}
+
+export const LIDERZY: Record<string, Lider> = {
+  fort: {
+    imie: 'Bazyl',
+    kim: 'lider Starego Fortu',
+    odznaka: 'Odznaka Skały',
+    powitanie: 'Moje stworki są twarde jak skała. Spróbuj je ruszyć!',
+    pozegnanie: 'Ale charakter! Ta Odznaka Skały należy do ciebie.',
+  },
+  grota: {
+    imie: 'Luna',
+    kim: 'liderka Księżycowej Groty',
+    odznaka: 'Odznaka Księżyca',
+    powitanie: 'Księżyc widzi każdy twój ruch…',
+    pozegnanie: 'Świecisz jaśniej niż księżyc. Weź Odznakę Księżyca.',
+  },
+  grobla: {
+    imie: 'Marina',
+    kim: 'liderka Warowni na Grobli',
+    odznaka: 'Odznaka Fali',
+    powitanie: 'Na grobli woda zawsze wygrywa! Gotowe stworki na kąpiel?',
+    pozegnanie: 'Ale fala! Odznaka Fali jest twoja.',
+  },
+  lod: {
+    imie: 'Szron',
+    kim: 'lider Lodowej Twierdzy',
+    odznaka: 'Odznaka Szronu',
+    powitanie: 'Brr… W mojej sali zamarza każdy atak.',
+    pozegnanie: 'Mój lód stopniał. Odznaka Szronu należy do ciebie.',
+  },
+  srebro: {
+    imie: 'Argent',
+    kim: 'wódz Srebrnych Płaszczy',
+    odznaka: 'Odznaka Srebra',
+    powitanie: 'Ostatniej sali Srebrnych Płaszczy nikt nie zdobędzie!',
+    pozegnanie: 'Niemożliwe… Srebrne Płaszcze się poddają. Bierz Odznakę Srebra.',
+  },
+};
+
+export const liderSali = (nazwa: string): Lider => LIDERZY[odznakaSali(nazwa)] ?? LIDERZY.grota;
+
 /** Sale planszy: zamki spoza frakcji gracza (dziś Bór) — każda ma odznakę. */
 export const saleMapy = (s: StanMapy) =>
   s.obiekty.filter((o) => o.rodzaj === 'zamek' && o.frakcjaZamku !== 'bor');

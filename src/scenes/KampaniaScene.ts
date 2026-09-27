@@ -16,7 +16,7 @@ import {
 import { rozpocznijMisje } from '../data/kampania-start';
 import { aktywnyProfil } from '../data/profile';
 import { autozapis, listaZapisow, usunZapis } from '../data/zapis';
-import { SUROWIEC_INFO, artefaktPoId } from '../data/mapa';
+import { ODZNAKI_PLIKI, SUROWIEC_INFO, artefaktPoId } from '../data/mapa';
 import { FACTIONS, factionById } from '../data/factions';
 import { C } from '../visual/theme';
 import { mix } from '../visual/hud';
@@ -214,6 +214,7 @@ const IKONA = {
   czaszka: 'k-ikona-czaszka',
   klepsydra: 'k-ikona-klepsydra',
   sakwa: 'k-ikona-sakwa',
+  pokeball: 'k-ikona-pokeball',
 } as const;
 
 const IKONA_ARTEFAKTU: Record<string, string> = { buty: 'buty', rower: 'rower', tarcza: 'tarcza' };
@@ -334,9 +335,10 @@ export class KampaniaScene extends Phaser.Scene {
     // (`tools/kampania_ilustracje.py`, wsad z `tools/PROMPTY-KAMPANIA.md`).
     for (const n of ['wstep', 'koniec', 'portret-janek', 'portret-ela']) this.load.image(`k-${n}`, `${b}kampania/${n}.jpg`);
     // Ikony nagród (`tools/kampania_postacie.py`) i ognisko obozu z mapy przygody.
-    for (const i of ['buty', 'rower', 'tarcza', 'miecz', 'pokeball', 'jagody', 'kamien', 'odlamki', ...Object.keys(IKONA)])
+    for (const i of new Set(['buty', 'rower', 'tarcza', 'miecz', 'pokeball', 'jagody', 'kamien', 'odlamki', ...Object.keys(IKONA)]))
       this.load.image(`k-ikona-${i}`, `${b}kampania/ikona-${i}.png`);
     this.load.image('k-ognisko', `${b}mapa/ognisko.png`);
+    for (const id of ODZNAKI_PLIKI) this.load.image(`k-odznaka-${id}`, `${b}bohater/odznaka-${id}.png`);
     // Miniatury misji na zwoju: kadr celu misji z planszy wyrenderowanej przez
     // grę, osobny plik na każdą wysokość winiety (`tools/kampania_miniatury.py`).
     for (const m of KAMPANIA.misje)
@@ -791,28 +793,34 @@ export class KampaniaScene extends Phaser.Scene {
     const p = this.postep!;
     const tytul = napisTytulowy(this, 22, BELKA_Y, KAMPANIA.tytul, 24, 0);
 
-    // Postęp w klejnotach osadzonych w belce: pełne za zrobione. Za tytułem
-    // mierzonym, nie w stałym miejscu — Cinzel jest szerszy od kroju zapasowego.
+    // Kampania to droga po odznaki (etap 6): w belce pięć odznak sal —
+    // zdobyte w kolorze, reszta jako ciemne wgłębienia do zapełnienia. Za
+    // tytułem mierzonym, nie w stałym miejscu — Cinzel jest szerszy od kroju
+    // zapasowego.
     const ile = KAMPANIA.misje.length;
     const zrobione = p.ukonczone.length;
-    const kx = tytul.x + tytul.width + 24;
+    const kx = tytul.x + tytul.width + 26;
+    const mam = new Set(p.odznaki ?? []);
+    const KROK = 27;
     const g = this.add.graphics();
-    for (let i = 0; i < ile; i++) {
-      const cx = kx + i * 24;
-      const zrob = i < zrobione;
-      const biez = i === zrobione;
-      g.fillStyle(0x0a0602, 0.6);
-      g.fillCircle(cx, BELKA_Y + 1.5, 10);
-      g.fillStyle(C.goldDeep, 1);
-      g.fillCircle(cx, BELKA_Y, 9.5);
-      g.fillStyle(C.gold, 1);
-      g.fillCircle(cx, BELKA_Y - 0.5, 8);
-      g.fillStyle(zrob ? 0x3fae5a : biez ? 0x2d8fe0 : 0x3a2a1c, 1);
-      g.fillCircle(cx, BELKA_Y, 6);
-      g.fillStyle(0xffffff, zrob || biez ? 0.55 : 0.12);
-      g.fillCircle(cx - 2, BELKA_Y - 2.5, 2.4);
-    }
-    this.napisNaDrewnie(kx + ile * 24 - 4, BELKA_Y, kampaniaUkonczona(p) ? 'Ukończona!' : `Misja ${zrobione + 1} z ${ile}`, 17).setOrigin(0, 0.5);
+    ODZNAKI_PLIKI.forEach((id, i) => {
+      const cx = kx + i * KROK;
+      g.fillStyle(0x0a0602, 0.55);
+      g.fillCircle(cx, BELKA_Y + 1, 12);
+      g.fillStyle(0x2a1a0c, 1);
+      g.fillCircle(cx, BELKA_Y, 11);
+      const o = this.add.image(cx, BELKA_Y, `k-odznaka-${id}`);
+      o.setScale(20 / Math.max(o.width, o.height));
+      if (!mam.has(id)) {
+        o.setTint(0x5a4630).setTintMode(Phaser.TintModes.FILL).setAlpha(0.55);
+      }
+    });
+    this.napisNaDrewnie(
+      kx + ODZNAKI_PLIKI.length * KROK - 6,
+      BELKA_Y,
+      kampaniaUkonczona(p) ? 'Ukończona!' : `Misja ${zrobione + 1} z ${ile}`,
+      17
+    ).setOrigin(0, 0.5);
 
     // Prawa strona: trener, dni w drodze, wstęp.
     const dni = Object.values(p.wyniki).reduce((s, w) => s + w.dni, 0);
@@ -1539,7 +1547,14 @@ export class KampaniaScene extends Phaser.Scene {
     wiersz(IKONA.gwiazda, 'Cel misji', celMisji(m));
     for (const w of porazkiMisji(m)) wiersz(w.ikona, w.ikona === IKONA.czaszka ? 'Uważaj' : 'Czas', w.tekst);
     const plecak = p.bohater?.artefakty ?? [];
-    if (plecak.length) wiersz(IKONA.sakwa, `${p.trener} zabiera ze sobą`, plecak.map(nazwaArtefaktu).join(', ') + '.');
+    // Drużyna idzie z trenerem dalej — te same stworki (etap 6). Jednym
+    // zdaniem przy plecaku: osobny wiersz nie mieścił się na zwoju.
+    const druzyna = p.druzyna?.length
+      ? `drużyna: ${p.druzyna.length} ${p.druzyna.length === 1 ? 'stworek' : p.druzyna.length < 5 ? 'stworki' : 'stworków'} ` +
+        `(do poz. ${Math.max(...p.druzyna.map((o) => o.poziom))})`
+      : '';
+    const zabiera = [plecak.map(nazwaArtefaktu).join(', '), druzyna].filter(Boolean).join(' · ');
+    if (zabiera) wiersz(plecak.length ? IKONA.sakwa : IKONA.pokeball, `${p.trener} zabiera ze sobą`, zabiera + '.');
     return y;
   }
 

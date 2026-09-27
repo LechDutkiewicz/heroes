@@ -354,3 +354,68 @@ its neck with a string. Warm glossy reflections on the glass. Chunky, bold,
 simple silhouette readable at 24 pixels, painted soft storybook style with
 glossy highlights. No text, no letters, no hand, no background.
 ```
+
+## 6. Liderzy sal (etap 6)
+
+Każda sala (zamek przeciwnika) ma lidera — jak w serialu. Portret do
+medalionu: głowa z ramionami, przezroczyste tło, ta sama miękka kreska co
+figurki Janka i Eli. Postacie autorskie, nie z serialu.
+Wczytanie: `python3 tools/rywal_wczytaj.py` (128 px).
+
+<!-- plik: lider-fort.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI portrait, not a map object: head and shoulders of a friendly
+sturdy young man, a rock-type gym leader, seen from the front, centered and
+filling the square frame. Spiky dark brown hair, squinting cheerful eyes,
+big confident grin, tanned skin, a brown sleeveless vest over an olive
+green shirt, a small grey stone pendant on a cord. Chunky, bold, simple
+shapes readable at 48 pixels, painted soft storybook style with glossy
+highlights, warm light. No text, no background, no hands.
+```
+
+<!-- plik: lider-grota.png | styl: obiekt | proporcje: 1:1 -->
+```
+Character bust portrait of a PERSON — not a building, not a house, not a
+castle, not a tower. Head and shoulders of a calm mysterious young woman,
+seen from the front, centered and
+filling the square frame. Long straight silver-lavender hair with a small
+crescent moon hair clip, gentle smile, dark violet cloak with a high collar
+and a silver trim. Chunky, bold, simple shapes readable at 48 pixels,
+painted soft storybook style with glossy highlights, soft cool light. No
+text, no background, no hands.
+```
+
+<!-- plik: lider-grobla.png | styl: obiekt | proporcje: 1:1 -->
+```
+Character bust portrait of a PERSON — not a building, not a house, not a
+castle, not a tower. Head and shoulders of a sporty cheerful teenage girl
+who loves swimming, seen from the front, centered and filling
+the square frame. Short orange hair in a small side ponytail, bright blue
+eyes, wide smile, a light blue sleeveless swim top with a white wave
+pattern and a whistle on a cord. Chunky, bold, simple shapes readable at 48
+pixels, painted soft storybook style with glossy highlights, warm light. No
+text, no background, no hands.
+```
+
+<!-- plik: lider-lod.png | styl: obiekt | proporcje: 1:1 -->
+```
+Character bust portrait of a PERSON — not a building, not a house, not a
+castle, not a tower. Head and shoulders of a tall serious young man who
+loves winter, seen from the front, centered and filling the
+square frame. Neat pale blue hair, a small confident smile, a thick white
+fur-trimmed winter coat with an icy blue scarf, a tiny snowflake brooch.
+Chunky, bold, simple shapes readable at 48 pixels, painted soft storybook
+style with glossy highlights, cool light. No text, no background, no hands.
+```
+
+<!-- plik: lider-srebro.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI portrait, not a map object: head and shoulders of the proud leader
+of a band of mischievous trainers in silver cloaks, seen from the front,
+centered and filling the square frame. A middle-aged man with slicked back
+grey hair, a neat small moustache, a sly but not scary smirk, a long silver
+cloak with a tall collar over a dark purple uniform, a silver star badge on
+the chest. Cartoonish and funny rather than menacing, suitable for young
+children. Chunky, bold, simple shapes readable at 48 pixels, painted soft
+storybook style with glossy highlights. No text, no background, no hands.
+```

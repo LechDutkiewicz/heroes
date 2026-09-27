@@ -1,8 +1,9 @@
 import { planszaPrzygody } from './plansza';
 import { dolacz } from './armia';
-import { nowyStworek } from './stworki';
+import { doswDoPoziomu, ewoluujOdPoziomu, nowyStworek } from './stworki';
 import { FACTIONS, factionById } from './factions';
-import type { StanMapy } from './mapa';
+import { odznakaSali, type Oddzial, type StanMapy } from './mapa';
+import { SLOTY_ARMII, znormalizuj } from './armia';
 import {
   type BohaterPrzenoszony,
   type Misja,
@@ -21,8 +22,11 @@ export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): Sta
   s.misja = m.id;
   s.bohater.imie = p.trener;
 
-  // Bohater z poprzedniej misji: wszystko, co zdobył, oprócz armii i miejsca.
+  // Bohater z poprzedniej misji: wszystko, co zdobył, oprócz miejsca.
   if (p.bohater) Object.assign(s.bohater, structuredClone(p.bohater), { imie: p.trener });
+  // Drużyna z poprzedniej misji zastępuje startową planszy — ci sami
+  // stworki, wyspani (nowa misja to nowy dzień w Centrum Pokemon).
+  if (p.druzyna?.length) s.bohater.armia = znormalizuj(structuredClone(p.druzyna).slice(0, SLOTY_ARMII));
 
   const b = m.bonusy[bonus] ?? m.bonusy[0];
   if (b.typ === 'surowiec') s.skarbiec[b.surowiec] += b.ile;
@@ -39,7 +43,40 @@ export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): Sta
     const nowy = nowyStworek(f.id, b.tier, b.poziom);
     if (nowy) dolacz(s.bohater.armia, nowy);
   }
+
+  // Strojenie misji pod drużynę, która przychodzi z poprzedniej (etap 6).
+  if (m.poziomDruzyny) for (const o of s.bohater.armia) if (o) podciagnij(o, m.poziomDruzyny);
+  if (m.wrogPoziomy) {
+    const wrog = [
+      ...s.wrogBohater.armia,
+      ...s.obiekty.filter((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'wrog').flatMap((o) => [
+        ...(o.oddzialy ?? []),
+        ...(o.garnizon ?? []),
+      ]),
+    ];
+    for (const o of wrog) if (o) podciagnij(o, o.poziom + m.wrogPoziomy);
+  }
   return s;
+}
+
+/** Stworek co najmniej na poziomie `poziom` — z doświadczeniem i ewolucją, jak po treningu. */
+function podciagnij(o: Oddzial, poziom: number) {
+  if (o.poziom >= poziom) return;
+  o.poziom = poziom;
+  o.dosw = doswDoPoziomu(poziom);
+  ewoluujOdPoziomu(o);
+}
+
+/**
+ * Drużyna w postaci, która przechodzi do następnej misji: sami stworki
+ * z drużyny bohatera (garnizony zostają na planszy), wszyscy obudzeni.
+ */
+export function druzynaDoPrzeniesienia(s: StanMapy): Oddzial[] {
+  return structuredClone(
+    s.bohater.armia
+      .filter((o): o is Oddzial => !!o && o.ile > 0)
+      .map((o) => ({ ...o, ile: 1, omdlaly: undefined }))
+  );
 }
 
 /** Bohater w postaci, która przechodzi do następnej misji. */
@@ -69,6 +106,8 @@ export function zaliczMisje(p: PostepKampanii, s: StanMapy): PostepKampanii {
     ukonczone: p.ukonczone.includes(m.id) ? p.ukonczone : [...p.ukonczone, m.id],
     wyniki: { ...p.wyniki, [m.id]: { dni: s.dzien, punkty: punkty(s.dzien) } },
     bohater: bohaterDoPrzeniesienia(s),
+    druzyna: druzynaDoPrzeniesienia(s),
+    odznaki: [...new Set([...(p.odznaki ?? []), ...(s.odznaki ?? []).map(odznakaSali)])],
     bonus: undefined,
   };
 }

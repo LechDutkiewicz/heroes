@@ -25,7 +25,7 @@ import {
   type Budynek,
 } from '../data/zamki';
 import { MNOZNIK_FORTU } from '../data/zasady-h3';
-import { POZIOM_MLODEGO, napisPoziomu, nowyStworek } from '../data/stworki';
+import { POZIOM_MLODEGO, napisPoziomu, nowyStworek, obudz } from '../data/stworki';
 import { FACTIONS, factionById } from '../data/factions';
 import { type Armia, dolacz, znormalizuj, zywe } from '../data/armia';
 import { PanelArmii, blokArmii, listwaArmii, wnekaHerbu } from '../visual/panelArmii';
@@ -405,13 +405,15 @@ export class TownScene extends Phaser.Scene {
       (b) => !b.id.startsWith('ratusz') || b.id === najlepszyRatusz
     );
 
-    for (const b of [...widoczne].sort((a, c) => a.y - c.y)) {
+    // Centrum Pokemon i Sala treningowa stoją zawsze — nie buduje się ich.
+    const stale = this.profil.stale;
+    for (const b of [...widoczne, ...stale].sort((a, c) => a.y - c.y)) {
       // Rysujemy WYŁĄCZNIE to, co stoi. Wcześniej w każdym wolnym miejscu
       // sterczał blady zarys placu budowy i miasto pierwszego dnia było pełne
       // rusztowań zamiast puste. W Heroes 3 miasto wypełnia się w miarę
       // rozbudowy — i to jest połowa satysfakcji z budowania. Czego jeszcze
       // brakuje, mówi lista budowy (przycisk „Buduj").
-      if (!postawione.includes(b.id)) continue;
+      if (!postawione.includes(b.id) && !stale.includes(b)) continue;
       const stoi = true;
       const klucz = `t-${this.profil.frakcja}-${b.id}`;
       const skala = this.skalaBudynku(b);
@@ -1160,6 +1162,32 @@ export class TownScene extends Phaser.Scene {
     const stoi = postawione.includes(b.id);
     this.kartaTytul.setText(b.nazwa);
 
+    if (b.rodzaj === 'centrum' || b.rodzaj === 'sala') {
+      this.kartaStworek.setVisible(false);
+      this.kartaMedalion.setVisible(false);
+      this.pokazKoszt({});
+      const nasz = this.zamek.wlasciciel === 'gracz';
+      if (b.rodzaj === 'centrum') {
+        // Zemdleni w garnizonie (i w drużynie, gdy trener jest w mieście).
+        const zemdleni = [...(this.bohaterObecny ? this.stan.bohater.armia : []), ...(this.zamek.garnizon ?? [])].filter(
+          (o) => o?.omdlaly
+        ).length;
+        this.kartaOpis.setText(`${b.opis}\n\n${zemdleni ? `Zemdlonych: ${zemdleni}.` : 'Wszyscy są w formie.'}`);
+        this.kartaPrzycisk.setLabel(zemdleni ? 'Obudź' : 'Wszyscy zdrowi');
+        this.kartaPrzycisk.ustaw(nasz && zemdleni > 0);
+      } else {
+        const o = this.panel.wybranyStworek;
+        this.kartaOpis.setText(
+          `${b.opis}\n\nZostało treningów w tym tygodniu: ${treningiZamku(this.zamek)}.` +
+            (o ? `\n${o.nazwa}: ${napisPoziomu(o.poziom)} → ${o.poziom + 1} za ${kosztTreningu(o)} pokeballi.` : '\nNajpierw zaznacz stworka.')
+        );
+        this.kartaPrzycisk.setLabel('Trenuj');
+        this.kartaPrzycisk.ustaw(nasz && !!o && treningiZamku(this.zamek) > 0);
+      }
+      this.ulozKarte();
+      return;
+    }
+
     if (stoi && b.rodzaj === 'siedlisko' && b.poziom !== undefined) {
       // Postawione siedlisko to sklep ze stworkami — karta pokazuje, kto
       // w nim czeka i za ile.
@@ -1512,6 +1540,17 @@ export class TownScene extends Phaser.Scene {
     const b = this.wybrany;
     if (!b) return;
     const stoi = (this.zamek.postawione ?? []).includes(b.id);
+    if (b.rodzaj === 'sala') {
+      this.trenujWybranego();
+      this.odswiezKarte();
+      return;
+    }
+    if (b.rodzaj === 'centrum') {
+      const ile = (this.bohaterObecny ? obudz(this.stan.bohater.armia) : 0) + obudz(this.zamek.garnizon ?? []);
+      this.komunikat.setText(ile ? `Centrum Pokemon: ${ile} × znów w formie!` : 'Centrum Pokemon: wszyscy są w formie.');
+      this.odswiez();
+      return;
+    }
     if (stoi && b.rodzaj === 'siedlisko' && b.poziom !== undefined) this.kup(b.poziom);
     else this.buduj(b);
   }
@@ -1646,6 +1685,9 @@ const BUDYNKI_ID = [
   'siedlisko5',
   'siedlisko6',
   'specjalny',
+  // Etap 6: stoją od początku (`ProfilZamku.stale`).
+  'centrum',
+  'sala',
 ];
 
 /** Szerokość ekranu zamku bierzemy z tej samej geometrii co mapa. */

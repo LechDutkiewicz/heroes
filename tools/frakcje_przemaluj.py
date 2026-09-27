@@ -41,6 +41,8 @@ BUDYNKI = [
     'ratusz1', 'ratusz2', 'ratusz3', 'fort',
     'siedlisko1', 'siedlisko2', 'siedlisko3', 'siedlisko4',
     'siedlisko5', 'siedlisko6', 'specjalny',
+    # Etap 6: stoją w każdym mieście od początku (`tools/PROMPTY-MIASTO.md`).
+    'centrum', 'sala',
 ]
 
 #: Rampa: barwa cienia, półtonu i światła. Dobrane pod niebo panoramy —

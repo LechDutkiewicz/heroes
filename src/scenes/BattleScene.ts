@@ -65,6 +65,8 @@ interface DaneZPrzygody {
    * takie wolno łapać).
    */
   trener?: { kto: 'janek' | 'ela'; pokeballe: number; wolneSloty: number; dzikie: boolean };
+  /** Lider sali po drugiej stronie pola (etap 6): imię i portret (ścieżka w `public/`). */
+  przeciwnik?: { imie: string; portret: string };
 }
 // Wszystkie zasady walki biorą się STĄD i tylko stąd. Scena ma je odgrywać,
 // nie powtarzać — druga kopia reguł rozjechałaby się z symulatorem balansu.
@@ -480,6 +482,8 @@ export class BattleScene extends Phaser.Scene {
     this.load.image('przedmiot-mikstura', `${import.meta.env.BASE_URL}bohater/przedmiot-mikstura.png`);
     this.load.image('przedmiot-eliksir', `${import.meta.env.BASE_URL}bohater/przedmiot-eliksir.png`);
     this.load.image('przedmiot-pokeball', `${import.meta.env.BASE_URL}kampania/ikona-pokeball.png`);
+    const p = this.zPrzygody?.przeciwnik;
+    if (p) this.load.image(`przeciwnik-${p.portret}`, `${import.meta.env.BASE_URL}${p.portret}`);
     loadSfx(this);
   }
 
@@ -782,6 +786,15 @@ export class BattleScene extends Phaser.Scene {
     glowa.setScale(40 / Math.max(glowa.width, glowa.height));
     glowa.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.otworzPlecak());
     drawTitle(this, TYTUL_X, 0, 'POKÉMON HEROES', 24);
+    // Lider sali stoi po drugiej stronie — medalion w prawym rogu, lustrzanie
+    // do trenera gracza.
+    const przeciwnik = this.zPrzygody?.przeciwnik;
+    if (przeciwnik && this.textures.exists(`przeciwnik-${przeciwnik.portret}`)) {
+      const px = this.scale.width - this.trenerXY.x + 8;
+      medalion(this, px, this.trenerXY.y + 26, 24, C.foeDeep).setDepth(61);
+      const twarz = this.add.image(px, this.trenerXY.y + 25, `przeciwnik-${przeciwnik.portret}`).setDepth(62);
+      twarz.setScale(36 / Math.max(twarz.width, twarz.height));
+    }
     this.plecakButton = makeHudButton(this, {
       x: TYTUL_X + 316,
       y: 17,
@@ -1128,7 +1141,9 @@ export class BattleScene extends Phaser.Scene {
     this.turnText.setText(
       unit.side === 'player'
         ? `Twoja tura: ${unit.def.name} — kliknij pole, by podejść, albo wroga, by zaatakować`
-        : `Tura przeciwnika: ${unit.def.name}`
+        : this.zPrzygody?.przeciwnik
+          ? `${this.zPrzygody.przeciwnik.imie}: ${unit.def.name}, naprzód!`
+          : `Tura przeciwnika: ${unit.def.name}`
     );
 
     this.buildQueueIcons();
