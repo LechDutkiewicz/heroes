@@ -595,6 +595,8 @@ export function createStatTable(
 export interface Forecast {
   show(text: string, deadly: boolean): void;
   hide(): void;
+  /** Chowa całą kapsułkę — w jej miejscu stoi wtedy pasek ataków. */
+  setVisible?(visible: boolean): void;
 }
 
 /**
@@ -689,6 +691,11 @@ export function createForecast(
       fit();
     },
     hide: rest,
+    setVisible(visible) {
+      g.setVisible(visible);
+      mark.setVisible(visible);
+      text.setVisible(visible);
+    },
   };
 }
 

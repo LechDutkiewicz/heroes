@@ -127,6 +127,11 @@ export interface UnitViewSpec {
 
 export interface UnitViewState {
   count: number;
+  /**
+   * Poziom stworka. Gdy jest, plakietka pokazuje poziom zamiast liczebności
+   * — stworek jest jeden, więc liczba „1" nic by nie mówiła.
+   */
+  poziom?: number;
   hp: number;
   maxHp: number;
   /** Zostawione w umowie dla sceny, ale świadomie nie pokazywane na planszy. */
@@ -708,7 +713,7 @@ function startBreathing(scene: Phaser.Scene, view: UnitView, seed: number) {
 export function refreshUnitView(view: UnitView, s: UnitViewState) {
   const ratio = Phaser.Math.Clamp(s.hp / Math.max(1, s.maxHp), 0, 1);
 
-  view.countLabel.setText(`${s.count}`);
+  view.countLabel.setText(s.poziom !== undefined && s.count <= 1 ? `${s.poziom}` : `${s.count}`);
   gradientText(view.countLabel, H.white, H.panelEdge);
   view.shieldIcon.setVisible(s.defending);
   view.shieldBg.setVisible(s.defending);

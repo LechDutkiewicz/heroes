@@ -74,24 +74,27 @@ export const lacznie = (a: Armia): number => zywe(a).reduce((s, o) => s + o.ile,
 export const pierwszyWolny = (a: Armia): number => a.findIndex((o) => !o);
 
 /**
- * Dokłada oddział do armii: do istniejącego stosu tego samego gatunku, a jak
- * takiego nie ma — do pierwszej dziury. Tak działa werbunek w zamku i wykluta
- * banda z gniazda.
+ * Dokłada stworka do armii, do pierwszej dziury. Stworki się nie łączą:
+ * dwa Pyroko to dwie osobne postacie, każda ze swoim poziomem.
  *
  * Zwraca `false`, gdy nie było gdzie postawić — wołający ma wtedy powiedzieć
  * o tym graczowi, a nie po cichu zgubić zakup.
  */
 export function dolacz(a: Armia, o: Oddzial): boolean {
-  const ten = a.findIndex((s) => s && s.sprite === o.sprite);
-  if (ten !== -1) {
-    a[ten]!.ile += o.ile;
-    return true;
-  }
   const wolny = pierwszyWolny(a);
   if (wolny === -1) return false;
   a[wolny] = { ...o };
   return true;
 }
+
+/**
+ * Czy dwa sloty to „ten sam stos", który można scalić albo dolać.
+ * W dawnym modelu wystarczał ten sam gatunek; od przebudowy „trener zamiast
+ * armii" (`PROJEKT-TRENERZY.md`) każdy slot to osobny stworek, więc nigdy.
+ * Zostaje jako jedna funkcja, bo w tym pliku to pytanie pada w siedmiu
+ * miejscach — gdyby kiedyś wróciły stada w armii, zmienia się tylko tu.
+ */
+const scalaSie = (_a: Oddzial, _b: Oddzial) => false;
 
 /**
  * Czy wolno ruszyć zawartość slotu.
@@ -147,7 +150,7 @@ export function przenies(a: Armia, z: number, doc: number): Wynik {
     a[z] = null;
     return { ok: true, opis: `${zrodlo.nazwa} przeszedł do slotu ${doc + 1}.` };
   }
-  if (cel.sprite === zrodlo.sprite) {
+  if (scalaSie(cel, zrodlo)) {
     cel.ile += zrodlo.ile;
     a[z] = null;
     return { ok: true, opis: `${cel.nazwa} — stosy scalone, razem ${cel.ile}.` };
@@ -174,7 +177,7 @@ export function maksPodzialu(a: Armia, z: number, doc: number): number {
   const zrodlo = a[z];
   if (!zrodlo) return 0;
   const cel = a[doc];
-  if (cel && cel.sprite !== zrodlo.sprite) return 0;
+  if (cel && !scalaSie(cel, zrodlo)) return 0;
   return cel ? zrodlo.ile : zrodlo.ile - 1;
 }
 
@@ -191,7 +194,7 @@ export function podziel(a: Armia, z: number, doc: number, ile: number): Wynik {
   const zrodlo = a[z];
   if (!zrodlo) return zle('Pusty slot — nie ma czego dzielić.');
   const cel = a[doc];
-  if (cel && cel.sprite !== zrodlo.sprite) return zle('W tym slocie stoi ktoś inny.');
+  if (cel && !scalaSie(cel, zrodlo)) return zle('W tym slocie stoi ktoś inny.');
   if (!Number.isInteger(ile) || ile < 1) return zle('Trzeba oddać co najmniej jednego.');
   const maks = maksPodzialu(a, z, doc);
   if (ile > maks) return zle(`Najwięcej ${maks}.`);
@@ -259,7 +262,7 @@ export function zamiar(
   // zmieniać. Podział ma trzy własne drogi (Shift, Ctrl, Alt), więc nic nie
   // znika — zmienia się tylko to, co jest pod ręką bez klawisza.
   if (!cel) return { rodzaj: 'przenies' };
-  return cel.sprite === zrodlo.sprite ? { rodzaj: 'scal' } : { rodzaj: 'zamien' };
+  return scalaSie(cel, zrodlo) ? { rodzaj: 'scal' } : { rodzaj: 'zamien' };
 }
 
 /*
@@ -277,7 +280,7 @@ export function zamiar(
  * załogi to zwykły stan w Heroes 3, bohater bez armii nie istnieje.
  */
 
-const BEZ_ARMII = 'Bohater nie może zostać bez ani jednego stworka.';
+const BEZ_ARMII = 'Trener nie może zostać bez ani jednego stworka.';
 
 /** Przełożenie całego stosu z `za[z]` do `doA[doc]`: przenieś, scal albo zamień. */
 export function przeniesMiedzy(za: Armia, z: number, doA: Armia, doc: number, chronionaZ = false): Wynik {
@@ -288,7 +291,7 @@ export function przeniesMiedzy(za: Armia, z: number, doA: Armia, doc: number, ch
   const cel = doA[doc];
   // Zamiana nie zmniejsza liczby stosów po żadnej stronie, więc wolno ją
   // zawsze; przeniesienie i scalenie zabierają stos ze źródła.
-  const zabiera = !cel || cel.sprite === zrodlo.sprite;
+  const zabiera = !cel || scalaSie(cel, zrodlo);
   if (zabiera && chronionaZ && ostatniStos(za)) return zle(BEZ_ARMII);
 
   if (!cel) {
@@ -296,7 +299,7 @@ export function przeniesMiedzy(za: Armia, z: number, doA: Armia, doc: number, ch
     za[z] = null;
     return { ok: true, opis: `${zrodlo.nazwa} przeszedł na drugą stronę.` };
   }
-  if (cel.sprite === zrodlo.sprite) {
+  if (scalaSie(cel, zrodlo)) {
     cel.ile += zrodlo.ile;
     za[z] = null;
     return { ok: true, opis: `${cel.nazwa} — stosy scalone, razem ${cel.ile}.` };
@@ -317,7 +320,7 @@ export function maksPodzialuMiedzy(za: Armia, z: number, doA: Armia, doc: number
   const zrodlo = za[z];
   if (!zrodlo) return 0;
   const cel = doA[doc];
-  if (cel && cel.sprite !== zrodlo.sprite) return 0;
+  if (cel && !scalaSie(cel, zrodlo)) return 0;
   return chronionaZ && ostatniStos(za) ? zrodlo.ile - 1 : zrodlo.ile;
 }
 
@@ -335,7 +338,7 @@ export function podzielMiedzy(
   const zrodlo = za[z];
   if (!zrodlo) return zle('Pusty slot — nie ma czego dzielić.');
   const cel = doA[doc];
-  if (cel && cel.sprite !== zrodlo.sprite) return zle('W tym slocie stoi ktoś inny.');
+  if (cel && !scalaSie(cel, zrodlo)) return zle('W tym slocie stoi ktoś inny.');
   if (!Number.isInteger(ile) || ile < 1) return zle('Trzeba oddać co najmniej jednego.');
   const maks = maksPodzialuMiedzy(za, z, doA, doc, chronionaZ);
   if (maks < 1) return zle(BEZ_ARMII);
@@ -358,5 +361,5 @@ export function zwolnij(a: Armia, i: number, chroniona = false): Wynik {
   if (!o) return zle('Pusty slot — nie ma kogo zwolnić.');
   if (chroniona && ostatniStos(a)) return zle(BEZ_ARMII);
   a[i] = null;
-  return { ok: true, opis: `${o.ile} × ${o.nazwa} odchodzi do lasu.` };
+  return { ok: true, opis: `${o.nazwa} wraca na wolność.` };
 }

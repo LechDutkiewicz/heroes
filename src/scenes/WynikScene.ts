@@ -629,7 +629,7 @@ export class WynikScene extends Phaser.Scene {
     const tresc: Phaser.GameObjects.GameObject[] = [];
 
     const epilog =
-      m?.epilog ?? 'Wszystkie zamki na mapie należą do ciebie. Stworki z całej krainy świętują razem z tobą!';
+      m?.epilog ?? 'Masz odznaki wszystkich sal. Stworki z całej krainy świętują razem z tobą!';
     tresc.push(
       this.add.text(kx + 24, ky + 16, 'Misja wykonana', stylEtykiety(19)).setDepth(45),
       this.add

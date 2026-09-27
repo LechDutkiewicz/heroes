@@ -31,6 +31,7 @@ import {
   zwolnij,
   SLOTY_ARMII,
 } from '../data/armia';
+import { jednostkiBitwy, napisPoziomu } from '../data/stworki';
 import { pokazOknoStworka, type OknoStworka } from './oknoStworka';
 import { kluczPortretu, kluczPortretuOkraglego } from './portrety';
 import { C } from './theme';
@@ -256,6 +257,12 @@ export class PanelArmii {
     return this.wybor !== null;
   }
 
+  /** Zaznaczony stworek — dla tabliczki „Trenuj" w mieście. */
+  get wybranyStworek() {
+    if (!this.wybor) return null;
+    return this.wybor.pasek.armia()[this.wybor.slot] ?? null;
+  }
+
   dodajPasek(opcje: OpcjePaska) {
     const pasek: Pasek = { odstep: 6, ...opcje, sloty: [] };
     const { slotW, slotH } = pasek;
@@ -307,6 +314,10 @@ export class PanelArmii {
     for (const pasek of this.paski) {
       const armia = pasek.armia();
       const aktywny = pasek.aktywny?.() ?? true;
+      // Drużyna trenera: które sloty pójdą do bitwy (cztery pierwsze sprawne).
+      const doBitwy = new Set(
+        pasek.chroniona ? jednostkiBitwy(armia).map((j) => j.skad) : []
+      );
       pasek.sloty.forEach((s, i) => {
         const o = armia[i];
         const wybrany = this.wybor?.pasek === pasek && this.wybor.slot === i;
@@ -332,7 +343,12 @@ export class PanelArmii {
             s.rysunek.setTexture(klucz).setPosition(pasek.slotW / 2, pasek.slotH / 2 - 3).setVisible(true);
             s.rysunek.setScale(Math.min((pasek.slotH + 2) / s.rysunek.height, (pasek.slotW + 2) / s.rysunek.width));
           } else s.rysunek.setVisible(false);
-          s.licznik.setText(String(o.ile));
+          // Plakietka mówi POZIOM stworka — stworek jest jeden, a liczba
+          // „1" przy każdym slocie nic by nie mówiła. Stado (ile > 1)
+          // zostaje przy liczebności, jak dawniej.
+          s.licznik.setText(o.ile > 1 ? String(o.ile) : napisPoziomu(o.poziom));
+          if (o.omdlaly) s.rysunek.setTint(0x6a6a6a).setAlpha(0.7);
+          else s.rysunek.clearTint().setAlpha(1);
           // Ciemna plakietka pod liczbą — czytelna na każdym stworku.
           const pw = Math.max(20, s.licznik.width + 6);
           const ph = s.licznik.height - 4;
@@ -343,6 +359,13 @@ export class PanelArmii {
           s.plakietka.lineStyle(1, C.goldDeep, 0.9);
           s.plakietka.strokeRoundedRect(px, py, pw, ph, 3);
           s.licznik.setPosition(pasek.slotW - 4 - pw / 2 + s.licznik.width / 2, pasek.slotH - 3);
+          // Złoty róg w lewym górnym rogu: ten stworek idzie do bitwy.
+          if (doBitwy.has(i)) {
+            s.plakietka.fillStyle(0x1a0c03, 0.85);
+            s.plakietka.fillTriangle(3, 3, 19, 3, 3, 19);
+            s.plakietka.fillStyle(C.gold, 1);
+            s.plakietka.fillTriangle(4, 4, 16, 4, 4, 16);
+          }
         } else {
           s.rysunek.setVisible(false);
           s.licznik.setText('');
@@ -435,7 +458,7 @@ export class PanelArmii {
     if (im.texture.key === portret) im.setDisplaySize(w.m.pasek.slotW - 4, w.m.pasek.slotH - 4);
     else im.setScale(Math.min(1, (w.m.pasek.slotH - 4) / im.height));
     const licznik = this.scena.add
-      .text(0, w.m.pasek.slotH / 2 - 8, String(oddzial.ile), {
+      .text(0, w.m.pasek.slotH / 2 - 8, oddzial.ile > 1 ? String(oddzial.ile) : napisPoziomu(oddzial.poziom), {
         fontFamily: KROJ.tytul,
         fontSize: '14px',
         color: BARWA.krem,
@@ -521,13 +544,13 @@ export class PanelArmii {
     }
     const o = armia[m.slot];
     if (!o) {
-      this.o.powiedz('Pusty slot. Najpierw kliknij oddział, potem to miejsce.');
+      this.o.powiedz('Pusty slot. Najpierw kliknij stworka, potem to miejsce.');
       return;
     }
     this.wybor = m;
     this.trybPodzialu = false;
     this.o.powiedz(
-      `Wybrano: ${o.ile} × ${o.nazwa}. Kliknij inny slot — przeniesiesz, zamienisz albo połączysz. ` +
+      `Wybrano: ${o.nazwa}, ${napisPoziomu(o.poziom)}. Kliknij inny slot — przeniesiesz albo zamienisz. ` +
         'Drugi klik: opis stworka.'
     );
     this.odswiez();
@@ -581,10 +604,18 @@ export class PanelArmii {
       oddzial: o,
       glebia: this.o.glebia + 100,
       gdzie: m.pasek.gdzie,
+      przelaczEwolucje: aktywny
+        ? () => {
+            o.bezEwolucji = !o.bezEwolucji || undefined;
+            this.o.poZmianie(
+              o.bezEwolucji ? `${o.nazwa} nie będzie ewoluować.` : `${o.nazwa} może znów ewoluować.`
+            );
+          }
+        : undefined,
       zwolnij: aktywny
         ? {
             mozna: !ostatni,
-            powod: ostatni ? 'Ostatniego oddziału bohatera nie można zwolnić.' : undefined,
+            powod: ostatni ? 'Ostatniego stworka trenera nie można wypuścić.' : undefined,
             akcja: () => {
               const w = zwolnij(m.pasek.armia(), m.slot, !!m.pasek.chroniona);
               this.wybor = null;

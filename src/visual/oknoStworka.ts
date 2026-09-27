@@ -18,9 +18,10 @@
 
 import Phaser from 'phaser';
 import type { Oddzial } from '../data/mapa';
-import { factionById } from '../data/factions';
+import { defStworka, napisPoziomu, postepStworka } from '../data/stworki';
+import { opisAtakow } from '../data/ataki';
 import { ABILITIES, TYPE_INFO, typeMatchup, type UnitDef } from '../data/units';
-import { etapStworka, liniaStworka, nastepnyEtap } from '../data/ewolucje';
+import { etapStworka, liniaStworka, nastepnyEtap, progEwolucji } from '../data/ewolucje';
 import { MINI, MINI_TYPE, buildIcons, miniIcon, type MiniKey } from './icons';
 import { pytanie } from './oknoZapisu';
 import {
@@ -42,6 +43,11 @@ export interface OpcjeOknaStworka {
    * przeciwnika). `mozna: false` pokazuje wyłączoną tabliczkę i powód.
    */
   zwolnij?: { mozna: boolean; powod?: string; akcja: () => void };
+  /**
+   * Przełącznik „Nie ewoluuj" (flaga `bezEwolucji`). Brak pola — okno nie
+   * pokazuje przycisku (stworek przeciwnika albo nieaktywny pasek).
+   */
+  przelaczEwolucje?: () => void;
   /** Podpis nad liczebnością, np. „w garnizonie" / „u bohatera". */
   gdzie?: string;
   poZamknieciu?: () => void;
@@ -54,9 +60,12 @@ export interface OknoStworka {
   readonly otwarty: boolean;
 }
 
-/** Definicja jednostki dla oddziału z mapy — ta sama droga co w `BattleScene`. */
+/**
+ * Definicja stworka z mapy — ta sama droga co w `BattleScene`: gatunek
+ * przeskalowany poziomem i etapem ewolucji (`defStworka`).
+ */
 export function definicjaOddzialu(o: Oddzial): UnitDef | undefined {
-  return factionById(o.frakcja)?.units[o.tier];
+  return defStworka(o);
 }
 
 const SZER = 560;
@@ -80,11 +89,15 @@ export function pokazOknoStworka(scena: Phaser.Scene, o: OpcjeOknaStworka): Okno
 
   // Nagłówek: nazwa i poziom, pod nimi ozdobnik — jak tytuł karty w księdze.
   k.add(scena.add.text(x + SZER / 2, y + 28, od.nazwa, stylEtykiety(24)).setOrigin(0.5));
-  const poziom = def?.tier ?? od.tier + 1;
   const zywiol = def ? TYPE_INFO[def.type] : undefined;
   k.add(
     scena.add
-      .text(x + SZER / 2, y + 54, `Poziom ${poziom}${zywiol ? ` · żywioł: ${zywiol.label}` : ''}`, stylAtramentu(14, 'miekki'))
+      .text(
+        x + SZER / 2,
+        y + 54,
+        `Poziom ${od.poziom}${zywiol ? ` · żywioł: ${zywiol.label}` : ''}${od.omdlaly ? ' · zemdlony' : ''}`,
+        stylAtramentu(14, 'miekki')
+      )
       .setOrigin(0.5)
   );
   k.add(ozdobnik(scena, x + 60, y + 74, SZER - 120));
@@ -116,7 +129,7 @@ export function pokazOknoStworka(scena: Phaser.Scene, o: OpcjeOknaStworka): Okno
     y: py + r + 22,
     w: 110,
     h: 34,
-    tekst: `× ${od.ile}`,
+    tekst: od.ile > 1 ? `× ${od.ile}` : napisPoziomu(od.poziom),
     glowny: true,
     rozmiar: 17,
     akcja: () => {},
@@ -138,8 +151,14 @@ export function pokazOknoStworka(scena: Phaser.Scene, o: OpcjeOknaStworka): Okno
   };
   if (def) {
     const mecz = typeMatchup(def.type);
-    wiersz(MINI.attack, 'Atak', `${def.atk} (oddział: ${def.atk * od.ile})`);
-    wiersz(MINI.life, 'Życie', `${def.hp} (oddział: ${def.hp * od.ile})`);
+    wiersz(MINI.attack, 'Atak', od.ile > 1 ? `${def.atk} (stado: ${def.atk * od.ile})` : String(def.atk));
+    wiersz(MINI.life, 'Życie', od.ile > 1 ? `${def.hp} (stado: ${def.hp * od.ile})` : String(def.hp));
+    const post = postepStworka(od);
+    wiersz(
+      MINI.forecast,
+      'Doświadczenie',
+      post.doNastepnego ? `${post.wPoziomie} / ${post.doNastepnego} do poziomu ${od.poziom + 1}` : 'najwyższy poziom'
+    );
     wiersz(def.flying ? MINI.fly : MINI.move, 'Szybkość', def.flying ? `${def.move} — lata` : String(def.move));
     wiersz(
       MINI.reach,
@@ -149,21 +168,28 @@ export function pokazOknoStworka(scena: Phaser.Scene, o: OpcjeOknaStworka): Okno
     wiersz(MINI_TYPE[def.type], 'Żywioł', TYPE_INFO[def.type].label, TYPE_INFO[def.type].color);
     wiersz(MINI.strong, 'Mocny przeciw', TYPE_INFO[mecz.strong].dative);
     wiersz(MINI.weak, 'Słaby wobec', TYPE_INFO[mecz.weak].genitive);
-    wiersz(
-      MINI.ability,
-      'Umiejętność',
-      def.ability ? `${ABILITIES[def.ability].name} — ${ABILITIES[def.ability].desc}` : 'brak'
-    );
+    wiersz(MINI.ability, 'Ataki', opisAtakow(def));
+    if (def.ability === 'guardian') {
+      wiersz(MINI.retaliate, 'Cecha', `${ABILITIES.guardian.name} — ${ABILITIES.guardian.desc}`);
+    }
   } else {
     wiersz(MINI.ability, 'Opis', 'Nieznany stworek.');
   }
 
-  // Ewolucja — tylko informacyjnie: mechaniki jeszcze nie ma (ewolucje.ts).
+  // Ewolucja — linia stworka (`ewolucje.ts`); ewoluuje w Ośrodku Ewolucji.
   const linia = liniaStworka(od.sprite);
   if (linia) {
     const etap = etapStworka(od.sprite);
     const dalej = nastepnyEtap(od.sprite);
-    const tekst = `Ewolucja: etap ${etap + 1} z ${linia.etapy.length}` + (dalej ? `, kiedyś ${dalej.nazwa}` : ', forma ostateczna');
+    const prog = progEwolucji(od.sprite);
+    const kiedy = !dalej
+      ? ', forma ostateczna'
+      : od.bezEwolucji
+        ? `. Trener nie pozwala mu ewoluować w: ${dalej.nazwa}`
+        : prog !== undefined
+          ? `. Na poziomie ${prog} ewoluuje w: ${dalej.nazwa}`
+          : `. W ${dalej.nazwa} ewoluuje tylko od kamienia (Ośrodek Ewolucji)`;
+    const tekst = `Ewolucja: etap ${etap + 1} z ${linia.etapy.length}${kiedy}`;
     k.add(
       scena.add
         .text(px, py + r + (o.gdzie ? 70 : 52), tekst, {
@@ -177,27 +203,48 @@ export function pokazOknoStworka(scena: Phaser.Scene, o: OpcjeOknaStworka): Okno
     );
   }
 
-  // Tabliczki: „Zwolnij" (drewno, z pytaniem) i „Zamknij" (złoto).
+  // Tabliczki: „Wypuść" (drewno, z pytaniem), „Nie ewoluuj" (drewno,
+  // przełącznik — tylko gdy stworek ma dokąd ewoluować) i „Zamknij" (złoto).
   const dolY = y + WYS - 38;
+  const przelacznik = o.przelaczEwolucje && nastepnyEtap(od.sprite) ? o.przelaczEwolucje : undefined;
+  // Trzy tabliczki dzielą dół okna na trzy, dwie — na dwie.
+  const krok = przelacznik ? 180 : 95;
+  const szer = przelacznik ? 150 : 160;
+  if (przelacznik) {
+    const napis = () => (od.bezEwolucji ? 'Pozwól ewoluować' : 'Nie ewoluuj');
+    const p = new Przycisk(scena, {
+      x: x + SZER / 2,
+      y: dolY,
+      w: szer,
+      h: 42,
+      tekst: napis(),
+      rozmiar: 14,
+      akcja: () => {
+        przelacznik();
+        p.setLabel(napis(), { rozmiar: 14 });
+      },
+    });
+    k.add(p.kontener);
+  }
   let pytanieOkno: { readonly otwarty: boolean } | undefined;
   if (o.zwolnij) {
     const zw = o.zwolnij;
     const przyciskZwolnij = new Przycisk(scena, {
-      x: x + SZER / 2 - 95,
+      x: x + SZER / 2 - krok,
       y: dolY,
-      w: 160,
+      w: szer,
       h: 42,
-      tekst: 'Zwolnij',
+      tekst: 'Wypuść',
       rozmiar: 16,
       akcja: () => {
         pytanieOkno = pytanie(scena, {
           glebia: o.glebia + 20,
           naWierzchu: o.naWierzchu,
-          tytul: 'Zwolnić oddział?',
-          tekst: `${od.ile} × ${od.nazwa} odejdzie na zawsze.`,
+          tytul: 'Wypuścić stworka?',
+          tekst: `${od.nazwa} (${napisPoziomu(od.poziom)}) wróci na wolność i już nie wróci.`,
           opcje: [
             {
-              tekst: 'Zwolnij',
+              tekst: 'Wypuść',
               akcja: () => {
                 zamknij();
                 zw.akcja();
@@ -218,9 +265,9 @@ export function pokazOknoStworka(scena: Phaser.Scene, o: OpcjeOknaStworka): Okno
     }
   }
   const przyciskZamknij = new Przycisk(scena, {
-    x: o.zwolnij ? x + SZER / 2 + 95 : x + SZER / 2,
+    x: o.zwolnij || przelacznik ? x + SZER / 2 + krok : x + SZER / 2,
     y: dolY,
-    w: 160,
+    w: szer,
     h: 42,
     tekst: 'Zamknij',
     glowny: true,

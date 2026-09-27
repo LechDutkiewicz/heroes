@@ -53,7 +53,7 @@ export function przyczynaPorazki(s: StanMapy): WarunekPorazki {
  * („ksiezycowy-kamien"); tu idzie jego nazwa, a surowiec — po polsku.
  */
 export function celSlowami(w: WarunekZwyciestwa): string {
-  if (w.typ === 'zamki') return 'Zdobądź wszystkie zamki przeciwnika.';
+  if (w.typ === 'zamki') return 'Zdobądź odznaki wszystkich sal przeciwnika — wygraj w każdym jego zamku.';
   if (w.typ === 'artefakt') return `Odnajdź ${artefaktPoId(w.artefakt)?.nazwa ?? nazwaZId(w.artefakt)}.`;
   if (w.typ === 'zbierz') return `Zbierz ${w.ile} ${SUROWIEC_INFO[w.surowiec].dopelniacz}.`;
   return `Pokonaj: ${w.nazwa}.`;
@@ -88,7 +88,7 @@ export function coSieStalo(p: WarunekPorazki): string {
  */
 export function rada(p: WarunekPorazki): string {
   return p.typ === 'utrata'
-    ? 'Zostaw w zamku kilka stworków na straży i buduj siedliska od pierwszego dnia. Co tydzień werbuj nowe stworki.'
+    ? 'Zostaw w zamku kilka stworków na straży i buduj rezerwaty od pierwszego dnia. Trenuj drużynę w mieście, a zemdlone stworki prowadź do Centrum Pokemon.'
     : 'Nie zbieraj wszystkiego po drodze — idź prosto do celu, a surowce bierz te, które leżą blisko.';
 }
 

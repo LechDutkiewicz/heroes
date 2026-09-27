@@ -55,6 +55,13 @@ import {
   strzezoneProzez,
   trasa,
   zasiegNaTure,
+  kosztTreningu,
+  rozliczPojedynek,
+  rywalNa,
+  trenerWGrze,
+  wypedzZSali,
+  treningiZamku,
+  trenuj,
   zbuduj,
   KOSZT_ODDZIALU,
   type Bohater,
@@ -64,26 +71,15 @@ import {
   type StanMapy,
   type Wlasciciel,
 } from './mapa';
-import { dolacz, zywe } from './armia';
-import { createBattle, makeRng, runBattle } from './battle';
+import { SLOTY_ARMII, dolacz, zywe } from './armia';
+import { makeRng } from './battle';
 import { factionById } from './factions';
+import { jednostkiBitwy, najsilniejsiNaPrzod, nowyStworek, rozegrajBitwe, rozliczDruzyne } from './stworki';
 import { moznaBudowac, profilZamku } from './zamki';
-import type { UnitDef } from './units';
 
 /** Widok mapy z perspektywy `kto`: to samo `s`, inny bohater na czele. */
 function widokStrony(s: StanMapy, kto: Wlasciciel): StanMapy {
   return { ...s, bohater: bohaterOf(s, kto) };
-}
-
-/** Oddziały mapowe → definicje jednostek, dokładnie jak w `BattleScene`. */
-function jednostki(oddzialy: Oddzial[]): UnitDef[] {
-  const wynik: UnitDef[] = [];
-  for (const o of oddzialy) {
-    const f = factionById(o.frakcja);
-    const def = f?.units[o.tier];
-    if (def) wynik.push({ ...def, count: o.ile });
-  }
-  return wynik;
 }
 
 /**
@@ -93,15 +89,14 @@ function jednostki(oddzialy: Oddzial[]): UnitDef[] {
  * nie powinna zależeć od jednego rzutu.
  */
 function wygramy(atak: Oddzial[], obrona: Oddzial[], ziarno: number): boolean {
-  const lewa = jednostki(atak);
+  const lewa = jednostkiBitwy(atak);
   if (lewa.length === 0) return false;
-  const prawa = jednostki(obrona);
+  const prawa = jednostkiBitwy(obrona);
   if (prawa.length === 0) return true;
   let wygrane = 0;
   for (let proba = 0; proba < 3; proba++) {
     const rng = makeRng(ziarno + proba * 104729 + lewa.length * 13 + prawa.length * 7);
-    const bitwa = createBattle({ units: lewa }, { units: prawa }, [], rng);
-    if (runBattle(bitwa).outcome === 'player') wygrane++;
+    if (rozegrajBitwe(atak, obrona, rng).outcome === 'player') wygrane++;
   }
   // Wszystkie trzy próby muszą wygrać, nie większość: to samo tempo dla obu
   // stron, ale ostrożniejsze — atak dopiero, gdy przewaga jest niepodważalna,
@@ -109,48 +104,6 @@ function wygramy(atak: Oddzial[], obrona: Oddzial[], ziarno: number): boolean {
   // strona zaczyna wygrywać starcia o cudzą krainę, więc przesuwa oba progi
   // (dzień 40 i dzień 25) w tę samą stronę, nie faworyzuje żadnej strony.
   return wygrane === 3;
-}
-
-/** Ilu stworków bohatera przeżyło bitwę — z tej samej `Battle`, żadnej drugiej księgi. */
-function zastosujOcalalych(
-  bohater: Bohater,
-  sprzedBitwa: Oddzial[],
-  bitwa: ReturnType<typeof createBattle>
-) {
-  const ocalali: Oddzial[] = [];
-  for (const u of bitwa.units) {
-    if (u.side !== 'player' || u.count <= 0) continue;
-    // `def.tier` liczy się od JEDYNKI (tabela `TIERS` w factions.ts), a `tier`
-    // oddziału na mapie od zera — to indeks w `units` frakcji. Przepisanie
-    // wprost awansowało każdy ocalały stos o poziom po KAŻDEJ bitwie AI:
-    // po kilku starciach bohater wroga miał smoki narysowane jako drobnica,
-    // a stos z najwyższego poziomu wypadał z armii (indeks poza tablicą).
-    const tier = u.def.tier - 1;
-    const oryginal = sprzedBitwa.find((o) => o.tier === tier && o.sprite === u.def.sprite) ?? sprzedBitwa[0];
-    ocalali.push({
-      sprite: u.def.sprite,
-      nazwa: u.def.name,
-      ile: u.count,
-      frakcja: oryginal?.frakcja ?? 'grota',
-      tier,
-    });
-  }
-  bohater.armia = bohater.armia.map(() => null);
-  for (const o of ocalali) dolacz(bohater.armia, o);
-}
-
-/** Ocalali obrońcy (strona `enemy` symulacji) jako oddziały mapy. */
-function ocalaliObroncy(przed: Oddzial[], bitwa: ReturnType<typeof createBattle>): Oddzial[] {
-  const wynik: Oddzial[] = [];
-  for (const u of bitwa.units) {
-    if (u.side === 'player' || u.count <= 0) continue;
-    const tier = u.def.tier - 1;
-    const oryginal = przed.find((o) => o.tier === tier && o.sprite === u.def.sprite) ?? przed[0];
-    const juz = wynik.find((o) => o.sprite === u.def.sprite);
-    if (juz) juz.ile += u.count;
-    else wynik.push({ sprite: u.def.sprite, nazwa: u.def.name, ile: u.count, frakcja: oryginal?.frakcja ?? 'bor', tier });
-  }
-  return wynik;
 }
 
 /**
@@ -163,16 +116,20 @@ function ocalaliObroncy(przed: Oddzial[], bitwa: ReturnType<typeof createBattle>
  */
 function rozstrzygnijBitwe(s: StanMapy, kto: Wlasciciel, obrona: Obiekt, ziarno: number) {
   const bohater = bohaterOf(s, kto);
-  const przed = zywe(bohater.armia);
   const rng = makeRng(ziarno + s.dzien * 7919 + obrona.id * 104729 + 1);
   const obroncy = obrona.rodzaj === 'zamek' ? obroncyZamku(obrona) : (obrona.oddzialy ?? []);
-  const bitwa = createBattle({ units: jednostki(przed) }, { units: jednostki(obroncy) }, [], rng);
-  const { outcome } = runBattle(bitwa);
-  zastosujOcalalych(bohater, przed, bitwa);
+  const wynik = rozegrajBitwe(bohater.armia, obroncy, rng);
+  const outcome = wynik.outcome;
+  // Ten sam rachunek co u gracza: kto nie przetrwał, mdleje, a po wygranej
+  // drużyna AI też zbiera doświadczenie — inaczej przeciwnik stałby w miejscu,
+  // kiedy stworki gracza rosną.
+  rozliczDruzyne(bohater.armia, wynik.ocalaliAtak, outcome === 'player', wynik.pokonaniObrona);
 
   if (outcome === 'player') {
     if (obrona.rodzaj === 'zamek') {
+      const dawny = obrona.wlasciciel;
       obrona.wlasciciel = kto;
+      if (dawny) wypedzZSali(s, obrona, dawny);
       obrona.oddzialy = [];
       obrona.garnizon = undefined;
     } else {
@@ -186,7 +143,10 @@ function rozstrzygnijBitwe(s: StanMapy, kto: Wlasciciel, obrona: Obiekt, ziarno:
   // mają być prawdziwe. Potwory i zamki wroga zostają przy starym zachowaniu
   // (tak samo jak po przegranej gracza w `AdventureScene`) — to osobna decyzja
   // balansu, dostrojona w `tools/symulacja-misji.ts`.
-  if (obrona.rodzaj === 'zamek' && obrona.wlasciciel === 'gracz') rozdzielStratyZamku(obrona, ocalaliObroncy(obroncy, bitwa));
+  if (obrona.rodzaj === 'zamek' && obrona.wlasciciel === 'gracz') rozdzielStratyZamku(
+      obrona,
+      obroncy.map((o, i) => ({ ...o, ile: wynik.ocalaliObrona[i] ?? 0 }))
+    );
   // Przegrana: bohater wraca do własnego zamku i traci resztę dnia — tak
   // samo jak graczowi w AdventureScene.
   const domowyZamek = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === kto);
@@ -204,7 +164,27 @@ function rozstrzygnijBitwe(s: StanMapy, kto: Wlasciciel, obrona: Obiekt, ziarno:
  * czy `kto` stać na zapłatę. Reszta idzie przez `wartoscObiektu`, która o
  * stanie gracza nic nie wie.
  */
+/**
+ * Ile wart jest powrót do własnego zamku na trening. Drużyna rośnie teraz
+ * poziomami, nie werbunkiem, a Sala treningowa działa tylko w mieście —
+ * AI, które nigdy nie wraca, zbierało ponad tysiąc pokeballi i stało na
+ * jednym poziomie przez pół misji (`tools/symulacja-misji.ts`). Wartość
+ * rośnie z liczbą treningów, na które stać skarbiec; zero, gdy bohater już
+ * stoi w zamku albo nie ma za co trenować.
+ */
+function wartoscTreningu(zamek: Obiekt, s: StanMapy, kto: Wlasciciel): number {
+  const bohater = bohaterOf(s, kto);
+  if (bohater.x === zamek.x && bohater.y === zamek.y) return 0;
+  const druzyna = zywe(bohater.armia);
+  if (!druzyna.length) return 0;
+  const sredniKoszt = druzyna.reduce((a, o) => a + kosztTreningu(o), 0) / druzyna.length;
+  const stac = Math.floor(skarbiecOf(s, kto).pokeball / Math.max(1, sredniKoszt));
+  const mozna = Math.min(stac, treningiZamku(zamek));
+  return mozna >= 3 ? 40 * mozna : 0;
+}
+
 function wartoscKandydata(o: Obiekt, s: StanMapy, kto: Wlasciciel): number {
+  if (o.rodzaj === 'zamek' && o.wlasciciel === kto) return wartoscTreningu(o, s, kto);
   if (o.rodzaj === 'namiot') {
     // Klucz jest jedynym sposobem, żeby AI w ogóle ruszyło się dalej niż
     // pierwszy grzbiet — bez wysokiej wartości eksploracja (30) czasem by
@@ -302,7 +282,9 @@ function znajdzCel(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefine
   for (const o of s.obiekty) {
     if (o.zebrany) continue;
     if (!mgla[o.y]?.[o.x]) continue;
-    if (o.wlasciciel === kto) continue; // już nasze
+    // Już nasze — z jednym wyjątkiem: własny zamek jest celem, kiedy czeka
+    // w nim trening, a skarbiec na niego stać (`wartoscTreningu`).
+    if (o.wlasciciel === kto && !(o.rodzaj === 'zamek' && wartoscTreningu(o, s, kto) > 0)) continue;
 
     // Przeciwnik potrzebuje czasu, żeby w ogóle zebrać wyprawę na stolicę —
     // to samo tempo, które w Heroes 3 daje przewagę pierwszym dniom: nikt
@@ -373,6 +355,21 @@ function znajdzCel(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefine
   // daleki (patrz `znajdzFrontowe`), więc dzielenie przez koszt zawsze
   // przegrywałoby z byle bliską drobnicą i z powrotem zamieniałoby AI w
   // maszynę do skubania okolicy zamiast w odkrywcę.
+  // Rywal jako cel: pojedynek trenerów (`pojedynek`). Tylko gdy widać go
+  // we własnej mgle i symulacja wróży wygraną — i, dla AI przeciwnika, od
+  // dnia natarcia, jak zamek gracza: pierwsze tygodnie należą do dziecka.
+  const drugi: Wlasciciel = kto === 'gracz' ? 'wrog' : 'gracz';
+  const rywal = bohaterOf(s, drugi);
+  const wolno = kto === 'gracz' || s.dzien >= (s.dzienNatarcia ?? DZIEN_PIERWSZEGO_NATARCIA);
+  if (wolno && trenerWGrze(s, drugi) && mgla[rywal.y]?.[rywal.x]) {
+    const kroki = trasa(widok, rywal.x, rywal.y);
+    if (kroki?.length && wygramy(zywe(bohater.armia), zywe(rywal.armia), ziarno)) {
+      const koszt = kroki.reduce((a, k) => a + k.koszt, 0);
+      const ocena = WARTOSC_POJEDYNKU / (koszt + 1);
+      if (!najlepszy || ocena > najlepszy.ocena) najlepszy = { kroki, ocena };
+    }
+  }
+
   const front = znajdzFrontowe(s, kto);
   if (front && (!najlepszy || WARTOSC_EKSPLORACJI > najlepszy.ocena)) {
     najlepszy = { kroki: front.kroki, ocena: WARTOSC_EKSPLORACJI };
@@ -597,6 +594,12 @@ function ruszSie(s: StanMapy, kto: Wlasciciel, ziarno: number) {
 
     for (let i = 0; i < ile; i++) {
       const k = cel.kroki[i];
+      // Rywal na następnym polu — pojedynek z sąsiedniego pola, koniec marszu.
+      if (rywalNa(s, k.x, k.y, kto)) {
+        pojedynek(s, kto, ziarno);
+        lepkiCel.delete(bohater);
+        return;
+      }
       bohater.ruch -= k.koszt;
       bohater.x = k.x;
       bohater.y = k.y;
@@ -621,6 +624,29 @@ function ruszSie(s: StanMapy, kto: Wlasciciel, ziarno: number) {
   }
 }
 
+/** Ile wart jest pojedynek z rywalem — tyle co otwarcie bramy kluczem. */
+const WARTOSC_POJEDYNKU = 250;
+
+/**
+ * Pojedynek trenerów rozegrany bez sceny: drużyna `kto` na drużynę rywala.
+ * Obie strony mdleją i zbierają doświadczenie jak w każdej bitwie, a skutki
+ * pojedynku (nagroda, powrót przegranego do Centrum) liczy `rozliczPojedynek`
+ * — ta sama reguła, której używa scena, gdy wyzywa gracz. Wynik trafia do
+ * `s.pojedynki`, żeby scena mogła powiedzieć o nim graczowi.
+ */
+function pojedynek(s: StanMapy, kto: Wlasciciel, ziarno: number) {
+  const drugi: Wlasciciel = kto === 'gracz' ? 'wrog' : 'gracz';
+  const a = bohaterOf(s, kto);
+  const b = bohaterOf(s, drugi);
+  const w = rozegrajBitwe(a.armia, b.armia, makeRng(ziarno + s.dzien * 7919 + 31337));
+  const zwyciezca: Wlasciciel | null = w.outcome === 'player' ? kto : w.outcome === 'enemy' ? drugi : null;
+  rozliczDruzyne(a.armia, w.ocalaliAtak, zwyciezca === kto, w.pokonaniObrona);
+  rozliczDruzyne(b.armia, w.ocalaliObrona, zwyciezca === drugi, w.pokonaniAtak);
+  const nagroda = zwyciezca ? rozliczPojedynek(s, zwyciezca) : 0;
+  a.ruch = 0;
+  (s.pojedynki ??= []).push({ wyzywajacy: kto, zwyciezca, nagroda });
+}
+
 /** Kolejność, w jakiej AI stawia budynki: przyrost i dochód przed dekoracją. */
 function priorytetBudowy(id: string): number {
   if (id.startsWith('siedlisko')) return 0;
@@ -630,14 +656,13 @@ function priorytetBudowy(id: string): number {
 }
 
 /**
- * Werbunek do ZAŁOGI zamku zamiast do armii bohatera — tryb `obronca`.
- * Załoga to zwykła lista oddziałów (bez pustych slotów), więc ten sam gatunek
- * dokleja się do istniejącego stosu, a nowy staje na końcu, najwyżej siedem.
+ * Werbunek do ZAŁOGI zamku zamiast do drużyny bohatera — tryb `obronca`.
+ * Załoga to zwykła lista stworków (bez pustych slotów), najwyżej siedem.
  */
-function doZalogi(zaloga: Oddzial[], o: Oddzial) {
-  const ten = zaloga.find((z) => z.sprite === o.sprite);
-  if (ten) ten.ile += o.ile;
-  else if (zaloga.length < 7) zaloga.push({ ...o });
+function doZalogi(zaloga: Oddzial[], o: Oddzial): boolean {
+  if (zaloga.length >= SLOTY_ARMII) return false;
+  zaloga.push({ ...o });
+  return true;
 }
 
 /** Rozbudowa zamku i werbunek dla `kto` — te same `zbuduj`/`moznaBudowac` co gracz. */
@@ -667,19 +692,42 @@ function rozbudujIWerbuj(s: StanMapy, kto: Wlasciciel) {
   if (!f) return;
   const bohater = bohaterOf(s, kto);
   for (let tier = zamek.dostepne.length - 1; tier >= 0; tier--) {
-    const def = f.units[tier];
-    if (!def) continue;
     const koszt = KOSZT_ODDZIALU[tier];
-    const ile = Math.min(zamek.dostepne[tier], Math.floor(skarbiec.pokeball / koszt));
-    if (ile <= 0) continue;
-    skarbiec.pokeball -= ile * koszt;
-    zamek.dostepne[tier] -= ile;
-    const oddzial = { sprite: def.sprite, nazwa: def.name, ile, frakcja, tier };
-    // Obrońca werbuje do załogi: zamek „umacnia się" z dnia na dzień, a jego
-    // bohater nigdzie nie wychodzi. Tak gra fort na Polanie — misja uczy
-    // pętli „zbierz, zbuduj, zdobądź", a nie obrony przed najazdem.
-    if (kto === 'wrog' && s.wrogTryb === 'obronca') doZalogi((zamek.oddzialy ??= []), oddzial);
-    else dolacz(bohater.armia, oddzial);
+    while (zamek.dostepne[tier] >= 1 && skarbiec.pokeball >= koszt) {
+      const nowy = nowyStworek(f.id, tier);
+      if (!nowy) break;
+      // Obrońca werbuje do załogi: zamek „umacnia się" z dnia na dzień, a jego
+      // bohater nigdzie nie wychodzi. Tak gra fort na Polanie — misja uczy
+      // pętli „zbierz, zbuduj, zdobądź", a nie obrony przed najazdem.
+      const wszedl =
+        kto === 'wrog' && s.wrogTryb === 'obronca'
+          ? doZalogi((zamek.oddzialy ??= []), nowy)
+          : dolacz(bohater.armia, nowy);
+      if (!wszedl) break;
+      skarbiec.pokeball -= koszt;
+      zamek.dostepne[tier] -= 1;
+    }
+  }
+  trenujDruzyne(s, kto, zamek);
+}
+
+/**
+ * Trening AI: tą samą funkcją co gracz, najsłabszy stworek pierwszy, tylko
+ * z bohaterem w zamku (obrońca trenuje załogę). Po trening AI wraca samo
+ * (`wartoscTreningu`). Wcześniej była tu też reguła „pod nieobecność
+ * bohatera trenuj straż zamku" — przez 84 dni misji oblężenia straż
+ * rosła szybciej niż drużyna gracza i drugiego zamku nie dało się zdobyć.
+ */
+function trenujDruzyne(s: StanMapy, kto: Wlasciciel, zamek: Obiekt) {
+  const bohater = bohaterOf(s, kto);
+  const wZamku = bohater.x === zamek.x && bohater.y === zamek.y;
+  const druzyna =
+    kto === 'wrog' && s.wrogTryb === 'obronca' ? (zamek.oddzialy ?? []) : wZamku ? bohater.armia : [];
+  for (let proba = 0; proba < 20; proba++) {
+    const najslabszy = druzyna
+      .filter((o): o is Oddzial => !!o)
+      .sort((a, b) => a.poziom - b.poziom)[0];
+    if (!najslabszy || !trenuj(s, zamek, najslabszy, kto).ok) break;
   }
 }
 
@@ -696,9 +744,18 @@ export function turaAI(s: StanMapy, kto: Wlasciciel, ziarno = 0): void {
   const maZamek = s.obiekty.some((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'wrog');
   if (kto === 'wrog' && !maZamek) return;
   rozbudujIWerbuj(s, kto);
+  // Do bitwy idą cztery pierwsze sprawne sloty — AI stawia na przedzie
+  // najsilniejszych, tak jak zrobiłby to rozsądny gracz.
+  najsilniejsiNaPrzod(bohaterOf(s, kto).armia);
   // Obrońca nie wychodzi z zamku — patrz `wrogTryb` w `StanMapy`.
   if (kto === 'wrog' && s.wrogTryb === 'obronca') return;
   ruszSie(s, kto, ziarno);
+  // Dzień skończony w którymś z własnych zamków — Sala treningowa od razu.
+  const bohater = bohaterOf(s, kto);
+  const tu = s.obiekty.find(
+    (o) => o.rodzaj === 'zamek' && o.wlasciciel === kto && o.x === bohater.x && o.y === bohater.y
+  );
+  if (tu) trenujDruzyne(s, kto, tu);
 }
 
 /** Wygodny alias na potrzeby gry: tura przeciwnika gracza. */

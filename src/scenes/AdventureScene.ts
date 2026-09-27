@@ -32,6 +32,14 @@ import {
   zamknietaBrama,
   zasiegNaTure,
   dniNaTrase,
+  RYWAL_ID,
+  rozliczPojedynek,
+  ODZNAKI_PLIKI,
+  odznakaSali,
+  rywalNa,
+  saleMapy,
+  wypedzZSali,
+  zdobadzOdznake,
   type Krok,
   type Obiekt,
   type Oddzial,
@@ -45,7 +53,8 @@ import { STRAZNICY_MAPOWI } from '../data/strazniki-mapa';
 import type { PoseName } from '../visual/unitView';
 import { planszaPoId } from '../data/mapy';
 import { turaWroga } from '../data/wrog-ai';
-import { SLOTY_ARMII, dolacz, pustaArmia, zywe } from '../data/armia';
+import { SLOTY_ARMII, zywe } from '../data/armia';
+import { ktosNaNogach, napisPoziomu, obudz, rozdajDosw } from '../data/stworki';
 import { autozapis, nazwaSlotu } from '../data/zapis';
 import { pokazWczytanie, pokazZapis } from '../visual/oknoZapisu';
 import { KAMPANIA, misjaPoId, wczytajPostep } from '../data/kampania';
@@ -449,6 +458,8 @@ export class AdventureScene extends Phaser.Scene {
   private obrazMgly: ImageData | null = null;
   private warstwaTrasy!: Phaser.GameObjects.Graphics;
   private bohaterObj!: Phaser.GameObjects.Container;
+  /** Rywal (bohater przeciwnika) na mapie — widać go tylko poza mgłą. */
+  private rywalObj: Phaser.GameObjects.Container | null = null;
   private bohaterSprite!: Phaser.GameObjects.Sprite;
   private kierunek: Kierunek = 'dol';
 
@@ -566,6 +577,9 @@ export class AdventureScene extends Phaser.Scene {
     this.load.image('plansza-0', `${tlo}plansza-0.jpg`);
     this.load.image('woda-maska', `${tlo}woda-maska.png`);
     this.load.image('woda-zmarszczki', `${b}mapa/woda-zmarszczki.png`);
+    // Rywal na mapie i odznaki sal (`tools/rywal_wczytaj.py`).
+    this.load.image('rywal', `${b}mapa/rywal.png`);
+    for (const id of ODZNAKI_PLIKI) this.load.image(`odznaka-${id}`, `${b}bohater/odznaka-${id}.png`);
     this.load.spritesheet('bohater', `${b}mapa/bohater.png`, {
       frameWidth: BOHATER_KLATKA,
       frameHeight: BOHATER_KLATKA,
@@ -673,6 +687,9 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   create() {
+    // Instancja sceny przeżywa `scene.start` — widok rywala z poprzedniego
+    // wejścia jest już zniszczony razem z tamtą sceną.
+    this.rywalObj = null;
     sledzScene(this);
     // Phaser używa TEJ SAMEJ instancji sceny przy każdym `scene.start`, więc
     // pola klasy przeżywają przejście do bitwy i z powrotem. `zajety` zostawało
@@ -712,7 +729,7 @@ export class AdventureScene extends Phaser.Scene {
         ? {
             pole: `${this.stan.bohater.x},${this.stan.bohater.y}`,
             ruch: this.stan.bohater.ruch,
-            armia: zywe(this.stan.bohater.armia).map((o) => `${o.sprite}×${o.ile}`),
+            armia: zywe(this.stan.bohater.armia).map((o) => `${o.sprite}×${o.ile}@${o.poziom}${o.omdlaly ? "z" : ""}`),
             skarbiec: this.stan.skarbiec,
             zajety: this.zajety,
             trasa: this.trasaBiezaca?.length ?? 0,
@@ -1959,6 +1976,7 @@ export class AdventureScene extends Phaser.Scene {
     this.swiat.add(this.warstwaTrasy);
     this.rysujObiekty();
     this.rysujBohatera();
+    this.odswiezRywala();
     this.rysujMgle();
 
     // Kamera oddalona do 32 px na pole, z originem (0, 0): wtedy `scrollX/Y`
@@ -2932,6 +2950,44 @@ export class AdventureScene extends Phaser.Scene {
     this.swiat.add(this.bohaterObj);
   }
 
+  /** Czy rywala widać: jest w grze i stoi na odsłoniętym polu. */
+  private rywalWidoczny(): boolean {
+    const r = this.stan.wrogBohater;
+    // W swojej sali rywal jest w środku — widać salę, nie jego (`rywalNa`).
+    return rywalNa(this.stan, r.x, r.y, 'gracz') && !!this.stan.odkryte[r.y]?.[r.x];
+  }
+
+  /**
+   * Rywal na mapie. W Heroes 3 bohater przeciwnika stoi na mapie jak nasz;
+   * tu do tej pory był tylko w danych. Oskar ze Srebrnych Płaszczy
+   * (`PROMPTY-BOHATER.md`, rozdział 4) na pierścieniu w barwie wroga.
+   */
+  private odswiezRywala() {
+    if (!this.swiat) return;
+    const widac = this.rywalWidoczny();
+    if (!widac) {
+      this.rywalObj?.setVisible(false);
+      return;
+    }
+    const r = this.stan.wrogBohater;
+    const s = this.sylwetkaBohatera();
+    if (!this.rywalObj) {
+      const g = this.add.graphics();
+      g.lineStyle(4, C.foe, 0.9);
+      g.strokeEllipse(0, s.stopy, s.polSzer * 2.4, s.polSzer * 0.9);
+      g.fillStyle(C.foe, 0.18);
+      g.fillEllipse(0, s.stopy, s.polSzer * 2.4, s.polSzer * 0.9);
+      // Własny rysunek (`public/mapa/rywal.png`, sylwetka przycięta do
+      // stóp) — tej samej wysokości co Janek (`WYS_BOHATERA`).
+      const postac = this.add.image(0, s.stopy, 'rywal').setOrigin(0.5, 1);
+      postac.setScale((WYS_BOHATERA * KAFEL) / postac.height);
+      this.rywalObj = this.add.container(0, 0, [g, postac]);
+      this.swiat.add(this.rywalObj);
+    }
+    const { x, y } = this.naEkran(r.x, r.y);
+    this.rywalObj.setPosition(x, y).setDepth(r.y + 0.75).setVisible(true);
+  }
+
   /** Klatka arkusza i falowanie proporca — co klatkę gry, z `update`. */
   private ozywBohatera(czas: number) {
     if (!this.bohaterSprite?.active) return;
@@ -3610,6 +3666,7 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   private odswiezWszystko() {
+    this.odswiezRywala();
     const b = this.stan.bohater;
     const st = statystyki(b);
     this.statTeksty[0].setText(String(st.atak));
@@ -3650,7 +3707,12 @@ export class AdventureScene extends Phaser.Scene {
         im.setTexture(kluczPortretuPanelu(od.sprite)).setVisible(true);
         im.setDisplaySize(28, 28);
         (slot.getData('oprawa') as Phaser.GameObjects.Graphics).setVisible(true);
-        licznik.setText(String(od.ile));
+        // Tabliczka pod portretem mówi POZIOM stworka (dawniej liczebność
+        // stosu). Zemdlony stworek jest wyszarzony, tak jak w grach
+        // o pokemonach ikona w drużynie — widać od razu, kto nie walczy.
+        licznik.setText(String(od.poziom));
+        if (od.omdlaly) im.setTint(0x6a6a6a).setAlpha(0.7);
+        else im.clearTint().setAlpha(1);
       } else {
         im.setVisible(false);
         (slot.getData('oprawa') as Phaser.GameObjects.Graphics).setVisible(false);
@@ -4101,6 +4163,16 @@ export class AdventureScene extends Phaser.Scene {
       this.pokazZnakKursora(ICON.star);
       return;
     }
+    if (this.rywalWidoczny() && rywalNa(this.stan, x, y, 'gracz')) {
+      const r = this.stan.wrogBohater;
+      const druzyna = r.armia.filter((o): o is Oddzial => !!o && o.ile > 0);
+      const sr = druzyna.length ? Math.round(druzyna.reduce((a, o) => a + o.poziom, 0) / druzyna.length) : 0;
+      this.podpowiedz.setText(
+        `Rywal: ${r.imie} — ${druzyna.length} stworków, średnio ${napisPoziomu(sr)}.\nPodejdź, żeby wyzwać na pojedynek.`
+      );
+      this.pokazZnakKursora(ICON.sword);
+      return;
+    }
     const o = this.obiektPodKursorem(p) ?? obiektNa(this.stan, x, y);
     const straz = strzezoneProzez(this.stan, x, y);
     // Miecz nad wszystkim, co skończy się bitwą — potwór wprost albo
@@ -4133,7 +4205,9 @@ export class AdventureScene extends Phaser.Scene {
 
   private opisObiektu(o: Obiekt) {
     if (o.rodzaj === 'potwor') {
-      const armia = (o.oddzialy ?? []).map((s) => `${s.ile} × ${s.nazwa}`).join(', ');
+      const armia = (o.oddzialy ?? [])
+        .map((s) => `${s.ile > 1 ? `${s.ile} × ` : ''}${s.nazwa}, ${napisPoziomu(s.poziom)}`)
+        .join('\n');
       return `${o.nazwa}\n${armia}\nWejdź, żeby stoczyć bitwę.`;
     }
     if (o.rodzaj === 'kopalnia') {
@@ -4380,6 +4454,19 @@ export class AdventureScene extends Phaser.Scene {
           // którą przyszliśmy, i dopiero teraz sięgamy.
           this.wejdzNa(zObok);
         }
+        this.odswiezWszystko();
+        return;
+      }
+      // Rywal na następnym polu: marsz się kończy, a trener wyzywa go na
+      // pojedynek z sąsiedniego pola — jak potwora w Heroes 3.
+      if (rywalNa(this.stan, kroki[i].x, kroki[i].y, 'gracz')) {
+        this.wRuchu = false;
+        this.trasaBiezaca = null;
+        this.stan.bohater.celDlugiejTrasy = undefined;
+        this.bohaterSprite.stop();
+        this.bohaterSprite.setFrame(KIERUNEK_WIERSZ[this.kierunek] * 4);
+        this.zajety = false;
+        this.wyzwijRywala();
         this.odswiezWszystko();
         return;
       }
@@ -4665,34 +4752,23 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   /**
-   * Uzdrowiciel: część poległych wraca po wygranej bitwie.
-   *
-   * Liczymy ze SKŁADU SPRZED BITWY, bo wynik bitwy zna wyłącznie ocalałych —
-   * a „ilu zginęło" to jedyna liczba, z której ta umiejętność może korzystać.
-   * Wracają tylko do stosów, które PRZEŻYŁY: wskrzeszanie wybitego do zera
-   * oddziału byłoby cofaniem bitwy, a nie leczeniem rannych.
+   * Uzdrowiciel: część stworków zemdlonych w tej bitwie od razu wraca do
+   * siebie po wygranej. Liczymy tylko tych, którzy zemdleli TERAZ — kto
+   * ruszał do boju już zemdlony (wcale nie walczył), czeka na Centrum.
+   * Zaokrąglenie w górę: przy jednym zemdlonym nawet pierwszy stopień
+   * umiejętności coś daje, a nie jest pustym wpisem w karcie bohatera.
    */
   private uzdrowiciel(): number {
     const odsetek = efekt(this.stan.bohater, 'leczenie');
-    const przed = this.registry.get(KLUCZ_PRZED_BITWA) as
-      | Array<{ slot: number; ile: number }>
-      | undefined;
+    const przed = this.registry.get(KLUCZ_PRZED_BITWA) as Array<{ slot: number }> | undefined;
     this.registry.remove(KLUCZ_PRZED_BITWA);
     if (odsetek <= 0 || !przed) return 0;
-
-    // Po SLOCIE, nie po gatunku: dwa sloty tego samego gatunku (rozdzielony
-    // stos) to zwykły układ, a szukanie po `sprite` leczyło pierwszy z brzegu
-    // dwa razy i nie leczyło drugiego.
-    let wrocilo = 0;
-    for (const wpis of przed) {
-      const stos = this.stan.bohater.armia[wpis.slot];
-      if (!stos || stos.ile >= wpis.ile) continue;
-      const straty = wpis.ile - stos.ile;
-      const wraca = Math.floor(straty * odsetek);
-      stos.ile += wraca;
-      wrocilo += wraca;
-    }
-    return wrocilo;
+    const zemdleli = przed
+      .map((w) => this.stan.bohater.armia[w.slot])
+      .filter((o): o is Oddzial => !!o?.omdlaly);
+    const wraca = Math.ceil(zemdleli.length * odsetek);
+    zemdleli.slice(0, wraca).forEach((o) => delete o.omdlaly);
+    return Math.min(wraca, zemdleli.length);
   }
 
   /**
@@ -4824,6 +4900,12 @@ export class AdventureScene extends Phaser.Scene {
    * armii i numer obiektu, o który się bije.
    */
   private zacznijBitwe(o: Obiekt) {
+    // Wszyscy zemdleni: nie ma kim walczyć. Bitwa bez ani jednego stworka
+    // byłaby przegrana, zanim się zaczęła — mówimy wprost, co zrobić.
+    if (!ktosNaNogach(this.stan.bohater.armia)) {
+      this.napisUlotny('Twoje stworki są zemdlone.\nOdpocznijcie w mieście.');
+      return;
+    }
     this.zajety = true;
     stopMusic(this);
     stopAmbient(this);
@@ -4833,7 +4915,7 @@ export class AdventureScene extends Phaser.Scene {
     this.registry.set(
       KLUCZ_PRZED_BITWA,
       this.stan.bohater.armia
-        .map((od, slot) => (od && od.ile > 0 ? { slot, ile: od.ile } : null))
+        .map((od, slot) => (od && od.ile > 0 && !od.omdlaly ? { slot } : null))
         .filter(Boolean)
     );
     this.napisUlotny(`${o.nazwa}\nDo boju!`);
@@ -4844,8 +4926,9 @@ export class AdventureScene extends Phaser.Scene {
         // wraca jako gęsta lista i układ, który gracz ułożył na ekranie
         // bohatera, rozsypuje się po każdej walce — dziury się zasklepiają,
         // a oddziały zjeżdżają w lewo.
+        // Zemdlone stworki zostają poza polem walki.
         gracz: this.stan.bohater.armia
-          .map((o, i) => (o && o.ile > 0 ? { ...o, slot: i } : null))
+          .map((o, i) => (o && o.ile > 0 && !o.omdlaly ? { ...o, slot: i } : null))
           .filter((o): o is NonNullable<typeof o> => !!o),
         // Zamku bronią straż i garnizon naraz (`obroncyZamku`).
         wrog: o.rodzaj === 'zamek' ? obroncyZamku(o) : (o.oddzialy ?? []),
@@ -4941,7 +5024,7 @@ export class AdventureScene extends Phaser.Scene {
       wygrana
         ? this.stan.misja
           ? 'Cel misji wykonany!'
-          : 'Wszystkie zamki należą do ciebie!'
+          : 'Masz odznaki wszystkich sal!'
         : coSieStalo(przyczynaPorazki(this.stan)),
       17
     )
@@ -5044,7 +5127,7 @@ export class AdventureScene extends Phaser.Scene {
         y,
         m
           ? m.opis.join('\n')
-          : 'Dwie doliny, dwa zamki i przeciwnik, który też zbiera armię.\nKto pierwszy zdobędzie zamek rywala, ten wygrywa.',
+          : 'Dwie doliny, dwa zamki i rywal, który też trenuje drużynę.\nKto pierwszy wygra w sali rywala, ten zdobywa odznakę i wygrywa.',
         { ...stylAtramentu(15, 'zwykly', wnetrze), align: 'center', lineSpacing: 4 }
       )
       .setOrigin(0.5, 0);
@@ -5166,12 +5249,34 @@ export class AdventureScene extends Phaser.Scene {
             ? obrazek(ICON.sword, 36)
             : rysowanyZamek(true);
     wierszWarunku(zOdznaka(obrazZwyciestwa, true), 'Zwycięstwo', BARWA.atramentZielony, celSlowami(z));
+    // Odznaki sal: zdobyte w kolorze, brakujące jako ciemna sylwetka — jak
+    // gablota z odznakami w pokemonach. Tylko przy celu „wszystkie sale".
+    const sale = z.typ === 'zamki' ? saleMapy(s) : [];
+    if (sale.length) {
+      const bok = 34;
+      const odstep = 12;
+      const zdobyte = s.odznaki ?? [];
+      const szerRzedu = sale.length * bok + (sale.length - 1) * odstep;
+      sale.forEach((sala, i) => {
+        const ma = zdobyte.includes(sala.nazwa);
+        const im = this.add.image(-szerRzedu / 2 + bok / 2 + i * (bok + odstep), y + 18, `odznaka-${odznakaSali(sala.nazwa)}`);
+        im.setScale(bok / Math.max(im.width, im.height));
+        if (!ma) im.setTint(0x3a2a1c).setAlpha(0.45);
+        k.add(im);
+      });
+      k.add(
+        this.add
+          .text(szerRzedu / 2 + 14, y + 18, `Odznaki: ${sale.filter((x) => zdobyte.includes(x.nazwa)).length} z ${sale.length}`, stylEtykiety(14, BARWA.atrament))
+          .setOrigin(0, 0.5)
+      );
+      y += 42;
+    }
     for (const p of w.porazka) {
       wierszWarunku(
         p.typ === 'termin' ? obrazek(ICON.hourglass, 38) : zOdznaka(rysowanyZamek(false), false),
         'Porażka, jeśli…',
         BARWA.atramentCzerwony,
-        p.typ === 'termin' ? `Minie ${p.dni} dni. Dziś jest dzień ${s.dzien}.` : 'Stracisz wszystkie swoje zamki.'
+        p.typ === 'termin' ? `Minie ${p.dni} dni. Dziś jest dzień ${s.dzien}.` : 'Stracisz swój ostatni zamek.'
       );
     }
 
@@ -5309,36 +5414,59 @@ export class AdventureScene extends Phaser.Scene {
   /** Po powrocie z bitwy: zwycięstwo usuwa strażnika, porażka cofa do zamku. */
   private rozliczBitwe() {
     const wynik = this.registry.get(KLUCZ_WYNIKU) as
-      | { oObiekt: number; wygrana: boolean; armia?: Array<Oddzial & { slot?: number }> }
+      | {
+          oObiekt: number;
+          wygrana: boolean;
+          armia?: Array<Oddzial & { slot?: number }>;
+          pokonani?: Array<{ poziom: number; tier: number }>;
+          wrogOcalali?: number[];
+        }
       | undefined;
     if (!wynik) return;
     this.registry.remove(KLUCZ_WYNIKU);
     const o = this.stan.obiekty.find((x) => x.id === wynik.oObiekt);
 
+    // Stworki wracają do swoich slotów — to te same postacie, więc nie
+    // składamy drużyny od nowa, tylko zaznaczamy, kto zemdlał. Bitwa oddaje
+    // każdy wpis z numerem slotu i liczbą stojących na nogach (0 albo 1).
+    let awanse: { nazwa: string; poziom: number; ewolucja?: { z: string; na: string } }[] = [];
     if (wynik.armia) {
-      // Ocalali wracają NA SWOJE MIEJSCA. Bitwa oddaje listę w tej samej
-      // kolejności, w jakiej ją dostała, a każdy wpis niesie numer slotu —
-      // więc dziury między stosami zostają tam, gdzie gracz je zostawił.
-      // Wcześniej szło to przez `znormalizuj`, która upycha listę od zera,
-      // i armia sama się przesuwała po każdej wygranej.
-      const nowa = pustaArmia();
+      const ocalali = this.stan.bohater.armia.map(() => 1);
+      const walczyli = this.stan.bohater.armia.map(() => false);
       for (const od of wynik.armia) {
-        if (!od || od.ile <= 0) continue;
-        const slot = typeof od.slot === 'number' && od.slot >= 0 && od.slot < SLOTY_ARMII ? od.slot : -1;
-        if (slot >= 0 && !nowa[slot]) nowa[slot] = { ...od };
-        else dolacz(nowa, od);
+        const slot = typeof od.slot === 'number' ? od.slot : -1;
+        if (slot < 0 || slot >= SLOTY_ARMII || !this.stan.bohater.armia[slot]) continue;
+        walczyli[slot] = true;
+        ocalali[slot] = od.ile > 0 ? 1 : 0;
       }
-      this.stan.bohater.armia = nowa;
+      this.stan.bohater.armia.forEach((o, i) => {
+        if (o && walczyli[i] && ocalali[i] <= 0) o.omdlaly = true;
+      });
+      if (wynik.wygrana) {
+        awanse = rozdajDosw(
+          this.stan.bohater.armia.map((o, i) => (walczyli[i] ? o : null)),
+          wynik.pokonani ?? []
+        );
+      }
     }
+
+    // Pojedynek z rywalem: jego drużyna mdleje tak samo jak nasza, a przegrany
+    // płaci nagrodę i wraca do swojego Centrum (`rozliczPojedynek`).
+    if (wynik.oObiekt === RYWAL_ID) return this.rozliczPojedynekGracza(wynik.wygrana, wynik.wrogOcalali ?? [], awanse);
 
     if (wynik.wygrana) {
       // Zamek się nie „zbiera" — zmienia właściciela. Oznaczenie go jako
       // zebranego skasowałoby go z mapy razem z całym miastem, które właśnie
       // się zdobyło.
+      let odznaka: string | undefined;
       if (o?.rodzaj === 'zamek') {
+        if (o.wlasciciel && o.wlasciciel !== 'gracz') wypedzZSali(this.stan, o, o.wlasciciel);
         o.wlasciciel = 'gracz';
         o.oddzialy = [];
         o.garnizon = undefined;
+        // Wygrana w sali: lider uznaje zwycięstwo, sala przechodzi pod
+        // opiekę gracza, a gracz dostaje odznakę (na zawsze).
+        odznaka = zdobadzOdznake(this.stan, o);
       } else if (o) {
         o.zebrany = true;
       }
@@ -5351,8 +5479,18 @@ export class AdventureScene extends Phaser.Scene {
         this.napisUlotny(
           [
             o?.rodzaj === 'zamek' ? `${o.nazwa} jest twoja!` : 'Zwycięstwo!',
+            odznaka ? `Odznaka sali: ${odznaka}` : '',
             `+${nagroda} doświadczenia`,
-            wyleczeni ? `Uzdrowiciel: wraca ${wyleczeni} stworków` : '',
+            wyleczeni ? `Uzdrowiciel: ${wyleczeni} × znów na nogach` : '',
+            // Ewolucje pierwsze — to one są wydarzeniem, awans o poziom mniej.
+            ...awanse.filter((a) => a.ewolucja).map((a) => `${a.ewolucja!.z} ewoluuje w ${a.ewolucja!.na}!`),
+            ...awanse
+              .filter((a) => !a.ewolucja)
+              .slice(0, 3)
+              .map((a) => `${a.nazwa} — ${napisPoziomu(a.poziom)}!`),
+            awanse.filter((a) => !a.ewolucja).length > 3
+              ? `i ${awanse.filter((a) => !a.ewolucja).length - 3} więcej awansów`
+              : '',
           ]
             .filter(Boolean)
             .join('\n')
@@ -5404,8 +5542,79 @@ export class AdventureScene extends Phaser.Scene {
         this.stan.bohater.y = zamek.y;
       }
       this.stan.bohater.ruch = 0;
-      this.time.delayedCall(400, () => this.napisUlotny('Porażka.\nWracasz do zamku.'));
+      // W zamku jest Centrum Pokemon: zemdlone stworki wstają od razu, tak
+      // jak w grach trener budzi się w ostatnim odwiedzonym Centrum.
+      const obudzeni = zamek ? obudz(this.stan.bohater.armia) : 0;
+      this.time.delayedCall(400, () =>
+        this.napisUlotny(obudzeni ? 'Porażka.\nWracasz do Centrum Pokemon.' : 'Porażka.\nWracasz do zamku.')
+      );
     }
+  }
+
+  /**
+   * Koniec pojedynku z rywalem. Kto z drużyny rywala zemdlał, zostaje
+   * zemdlony; przegrany płaci nagrodę i wraca do swojego Centrum
+   * (`rozliczPojedynek` — jedna reguła dla gracza i AI).
+   */
+  private rozliczPojedynekGracza(
+    wygrana: boolean,
+    wrogOcalali: number[],
+    awanse: { nazwa: string; poziom: number; ewolucja?: { z: string; na: string } }[]
+  ) {
+    const r = this.stan.wrogBohater;
+    const walczyli = r.armia.filter((o): o is Oddzial => !!o && !o.omdlaly && o.ile > 0);
+    walczyli.forEach((o, i) => {
+      if ((wrogOcalali[i] ?? o.ile) <= 0) o.omdlaly = true;
+    });
+    const imie = r.imie;
+    if (wygrana) {
+      this.uzdrowiciel();
+      const nagroda = rozliczPojedynek(this.stan, 'gracz');
+      this.time.delayedCall(900, () =>
+        this.napisUlotny(
+          [
+            `Wygrywasz pojedynek z: ${imie}!`,
+            nagroda ? `Nagroda: +${nagroda} pokeballi` : '',
+            ...awanse.filter((a) => a.ewolucja).map((a) => `${a.ewolucja!.z} ewoluuje w ${a.ewolucja!.na}!`),
+            ...awanse.filter((a) => !a.ewolucja).slice(0, 2).map((a) => `${a.nazwa} — ${napisPoziomu(a.poziom)}!`),
+            `${imie} wraca do swojego Centrum.`,
+          ]
+            .filter(Boolean)
+            .join('\n')
+        )
+      );
+    } else {
+      this.registry.remove(KLUCZ_PRZED_BITWA);
+      const nagroda = rozliczPojedynek(this.stan, 'wrog');
+      this.time.delayedCall(400, () =>
+        this.napisUlotny(
+          [`${imie} wygrywa pojedynek.`, nagroda ? `Płacisz nagrodę: ${nagroda} pokeballi` : '', 'Wracasz do Centrum Pokemon.']
+            .filter(Boolean)
+            .join('\n')
+        )
+      );
+    }
+    // Bez `odswiezWszystko`: to się dzieje w `create`, zanim powstanie HUD —
+    // scena odświeża wszystko sama po zbudowaniu.
+  }
+
+  /** Pojedynek z rywalem: jego drużyna jako pseudo-obiekt bitwy (`RYWAL_ID`). */
+  private wyzwijRywala() {
+    const r = this.stan.wrogBohater;
+    if (!ktosNaNogach(r.armia)) {
+      // Wszyscy stworki rywala zemdleni — nie ma kim walczyć, poddaje się.
+      const nagroda = rozliczPojedynek(this.stan, 'gracz');
+      this.napisUlotny(`${r.imie} nie ma kim walczyć i się poddaje.${nagroda ? `\n+${nagroda} pokeballi` : ''}`);
+      return;
+    }
+    this.zacznijBitwe({
+      id: RYWAL_ID,
+      rodzaj: 'potwor',
+      x: r.x,
+      y: r.y,
+      nazwa: `Pojedynek: ${r.imie}`,
+      oddzialy: r.armia.filter((o): o is Oddzial => !!o && !o.omdlaly && o.ile > 0),
+    });
   }
 
   private napisUlotny(tekst: string) {
@@ -5477,9 +5686,28 @@ export class AdventureScene extends Phaser.Scene {
       turaWroga(this.stan);
       const oblezenia: string[] = [];
       for (const { z, obroncy } of zamkiPrzed) {
-        if (z.wlasciciel !== 'gracz') oblezenia.push(`Wróg zdobył: ${z.nazwa}!`);
+        if (z.wlasciciel !== 'gracz') oblezenia.push(`${this.stan.wrogBohater.imie} przejął: ${z.nazwa}!`);
         else if (obroncyZamku(z).reduce((a, od) => a + od.ile, 0) < obroncy)
           oblezenia.push(`${z.nazwa} odparła szturm!`);
+      }
+      // Rywal wyzwał nas w swojej turze — bitwa rozegrana bez sceny, gracz
+      // widzi wynik i, przy porażce, budzi się w Centrum.
+      for (const p of this.stan.pojedynki ?? []) {
+        const imie = this.stan.wrogBohater.imie;
+        if (p.zwyciezca === 'gracz')
+          oblezenia.push(`${imie} wyzwał cię na pojedynek i przegrał!${p.nagroda ? ` +${p.nagroda} pokeballi` : ''}`);
+        else if (p.zwyciezca === 'wrog')
+          oblezenia.push(
+            `${imie} wyzwał cię na pojedynek i wygrał.${p.nagroda ? ` Płacisz ${p.nagroda} pokeballi.` : ''} Wracasz do Centrum.`
+          );
+        else oblezenia.push(`Pojedynek z: ${imie} — remis.`);
+      }
+      if (this.stan.pojedynki?.length) {
+        this.stan.pojedynki = [];
+        // Przegrany gracz stoi już w swoim zamku — widok idzie za nim.
+        const { x, y } = this.naEkran(this.stan.bohater.x, this.stan.bohater.y);
+        this.bohaterObj.setPosition(x, y).setDepth(this.stan.bohater.y + 0.8);
+        this.dosunDoBohatera();
       }
       this.warstwaTrasy.clear();
       // Trasa niedokończona wczoraj wraca od razu jako zaznaczona — jak

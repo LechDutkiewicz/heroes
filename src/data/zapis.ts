@@ -1,6 +1,7 @@
-import type { StanMapy } from './mapa';
+import { MAKS_CZEKA, type Oddzial, type StanMapy } from './mapa';
 import { misjaPoId } from './kampania';
-import { znormalizuj } from './armia';
+import { SLOTY_ARMII, znormalizuj } from './armia';
+import { POZIOM_MLODEGO, nowyStworek, rozbijStado, stadoZLiczebnosci } from './stworki';
 import { MAPY } from './mapy';
 import { aktywnyProfil, czytajKlucz, imieTrenera, kluczProfilu, piszKlucz, usunKlucz, wymusProfil } from './profile';
 
@@ -74,6 +75,8 @@ function czytajPlik(profil: string, slot: Slot): PlikZapisu | null {
     if (!plik || !plik.stan?.bohater || !Array.isArray(plik.stan.obiekty)) return null;
     // Bohaterka zwała się kiedyś Ola — zapisy sprzed zmiany czytamy jako Elę.
     plik.stan.bohater.imie = imieTrenera(plik.stan.bohater.imie);
+    // Rywal nazywał się kiedyś jak frakcja („Grota") — teraz to Oskar.
+    if (plik.stan.wrogBohater?.imie === 'Grota') plik.stan.wrogBohater.imie = 'Oskar';
     // Garnizon zamku (`garnizon`) przyszedł z ekranem miasta. Zapis sprzed
     // zmiany nie ma pola — to pusty garnizon; zapisany doprowadzamy do
     // siedmiu slotów, jak armię bohatera.
@@ -81,9 +84,50 @@ function czytajPlik(profil: string, slot: Slot): PlikZapisu | null {
       if (o.rodzaj !== 'zamek') continue;
       o.garnizon = Array.isArray(o.garnizon) ? znormalizuj(o.garnizon) : undefined;
     }
+    migrujNaStworki(plik.stan);
     return plik;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Zapis sprzed przebudowy „trener zamiast armii" (`PROJEKT-TRENERZY.md`):
+ * oddziały nie mają poziomu, a `ile` to liczebność stosu. Przeliczamy je tą
+ * samą regułą co plansze (`stadoZLiczebnosci`), żeby siła się zgadzała:
+ *  - stos w drużynie bohatera → jeden stworek na odpowiednim poziomie,
+ *  - załoga zamku → osobne stworki, każdy w swoim slocie,
+ *  - straż na mapie → jedno stado,
+ *  - czekający w zamku → po jednym młodym w każdym rezerwacie, który coś miał.
+ */
+export function migrujNaStworki(stan: StanMapy) {
+  const stary = (o: Oddzial | null | undefined) => !!o && typeof o.poziom !== 'number';
+  const naJednego = (o: Oddzial): Oddzial => {
+    // Najmniej poziom młodego stworka: mały stos z zapisu to wciąż stworek,
+    // którego dziecko werbowało — nie chcemy mu go oddać na poziomie 1.
+    const poziom = Math.max(POZIOM_MLODEGO, stadoZLiczebnosci(o.tier, o.ile, 1).poziom);
+    const nowy = nowyStworek(o.frakcja, o.tier, poziom);
+    return nowy ? { ...nowy, sprite: o.sprite, nazwa: o.nazwa } : { ...o, ile: 1, poziom: 5 };
+  };
+  for (const b of [stan.bohater, stan.wrogBohater]) {
+    if (!b?.armia) continue;
+    if (b.armia.some(stary)) b.armia = znormalizuj(b.armia.map((o) => (o && stary(o) ? naJednego(o) : o)));
+  }
+  for (const o of stan.obiekty) {
+    if (o.rodzaj === 'zamek') {
+      if (o.garnizon?.some(stary)) o.garnizon = znormalizuj(o.garnizon.map((x) => (x && stary(x) ? naJednego(x) : x)));
+      if (o.oddzialy?.some(stary)) {
+        o.oddzialy = o.oddzialy
+          .flatMap((x) => (stary(x) ? rozbijStado({ ...x, ...stadoZLiczebnosci(x.tier, x.ile, 2) }) : [x]))
+          .slice(0, SLOTY_ARMII);
+      }
+      if (o.dostepne?.some((v) => v > MAKS_CZEKA)) o.dostepne = o.dostepne.map((v) => (v > 0 ? 1 : 0));
+    } else if (o.oddzialy?.some(stary)) {
+      const razem = o.oddzialy.reduce((a, x) => a + x.ile, 0);
+      const x = o.oddzialy[0];
+      o.oddzialy = [{ ...x, ...stadoZLiczebnosci(x.tier, razem, o.oddzialy.length + 2) }];
+      o.wyjsciowe = undefined;
+    }
   }
 }
 

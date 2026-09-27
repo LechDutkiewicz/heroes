@@ -55,7 +55,7 @@ function rozegraj(b: Battle, lic: Record<Side, Licznik>, maxRounds = 60) {
       const przed = [...b.dealt.values()].reduce((x, y) => x + y, 0);
       if (a.rodzaj === 'atak') {
         lic[unit.side].ataki++;
-        performAttack(b, unit, a.cel, a.from);
+        performAttack(b, unit, a.cel, a.from, a.atak);
       } else if (a.rodzaj === 'obrona') {
         lic[unit.side].obrony++;
         unit.defending = true;

@@ -233,3 +233,91 @@ chest; add a brown belt, dark green trousers and sturdy brown boots. Same painte
 Transparent background: only the character, no ground, no shadow, no scenery,
 no frame.
 ```
+
+## 4. Rywal i odznaki sal
+
+Pojedynki trenerów i odznaki (`PROJEKT-TRENERZY.md`, „Sale i odznaki").
+Rywal — Oskar ze Srebrnych Płaszczy — stoi na mapie przygody jak Janek,
+więc rysujemy go tą samą ręką: wzorem jest poza Janka z mapy
+(`bohater-dol.png`), żeby skala, kąt i wykończenie się zgadzały. Jedna
+poza (bokiem w lewo — zwykle stoi naprzeciw gracza nadchodzącego z lewej);
+chodzi tylko w turze wroga, poza okiem gracza.
+
+Odznaki: po jednej na salę z planszy (`ODZNAKI` w `src/data/mapa.ts`).
+Metalowe przypinki jak odznaki sal w serialu — każda inny kształt i kolor,
+żeby dziecko rozróżniało je po sylwetce w 32 px. Słowa „gym" i „tower"
+w prompcie zamieniały przypinkę w wieżę (styl `obiekt` to obiekty mapy) —
+stąd wprost „płaska przypinka, jak medal, nic nie stoi".
+
+Do gry: `python3 tools/rywal_wczytaj.py` → `public/mapa/rywal.png`
+i `public/bohater/odznaka-<id>.png`.
+
+<!-- plik: rywal-lewo.png | styl: obiekt | proporcje: 1:1 | wzor: bohater-dol.png -->
+```
+A DIFFERENT character drawn in exactly the same style, size, camera angle
+and finish as the boy in the reference image: a rival trainer, a slightly
+older teenage boy with spiky silver-grey hair and a confident smug grin,
+wearing a long silver-grey hooded travelling cloak with a dark violet lining
+over a black shirt, dark trousers and grey boots, one hand holding a red and
+white pokeball at chest height. Seen in profile facing to the LEFT of the
+frame, from about 45 degrees above (adventure-map view), standing still,
+both feet on the ground. Chunky rounded proportions with a slightly large
+head, like the reference. Must stay readable at 48 pixels tall: no thin
+details, no text, no logos. Single character only, no ground, no shadow.
+```
+
+<!-- plik: odznaka-fort.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object: a single shiny gym badge pin seen from the
+front, centered and filling the square frame. A bronze shield-shaped badge
+with a raised golden oak leaf in the middle and a thin polished rim, warm
+metallic highlights. Chunky, bold, simple silhouette that stays readable at
+24 pixels, painted soft storybook style with glossy highlights. No text, no
+ribbon, no background.
+```
+
+<!-- plik: odznaka-grota.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object and not a building: a single small FLAT
+enamel pin, like a medal or a brooch, lying flat and seen straight from the
+front, centered and filling the square frame. The pin is shaped like a
+crescent moon, made of polished silver, with one round violet gemstone set
+in the inner curve. Only this one flat piece of jewellery, nothing standing
+up, no walls, no roof, no flag. Chunky, bold, simple silhouette readable at
+24 pixels, painted soft storybook style with glossy highlights. No text, no
+ribbon, no background.
+```
+
+<!-- plik: odznaka-grobla.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object: a single shiny gym badge pin seen from the
+front, centered and filling the square frame. A teardrop-shaped badge of
+deep green enamel framed in gold, with a small white water-lily flower in
+the middle. Chunky, bold, simple silhouette that stays readable at 24
+pixels, painted soft storybook style with glossy highlights. No text, no
+ribbon, no background.
+```
+
+<!-- plik: odznaka-lod.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object and not a building: a single small FLAT
+enamel pin, like a medal or a brooch, lying flat and seen straight from the
+front, centered and filling the square frame. The pin is shaped like a
+six-pointed snowflake of pale icy-blue crystal enamel with a thin silver
+rim and frosty white highlights on each arm. Only this one flat piece of
+jewellery, nothing standing up, no walls, no roof, no flag. Chunky, bold,
+simple silhouette readable at 24 pixels, painted soft storybook style with
+glossy highlights. No text, no ribbon, no background.
+```
+
+<!-- plik: odznaka-srebro.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object and not a building: a single small FLAT
+enamel pin, like a medal or a brooch, lying flat and seen straight from the
+front, centered and filling the square frame. The pin is a five-pointed
+star of polished silver with a small round red gem in the centre and fine
+engraved rays. Only this one flat piece of jewellery, nothing standing up,
+no walls, no roof, no flag. Chunky, bold, simple silhouette readable at 24
+pixels, painted soft storybook style with glossy highlights. No text, no
+ribbon, no background.
+```

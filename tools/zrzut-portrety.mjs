@@ -22,29 +22,30 @@ const BASE = arg('--url', 'http://localhost:4173');
 const OUT = arg('--out', 'tools/shots');
 
 /**
- * Armia pokazowa: sześć oddziałów Boru z dziurą w środku (slot 4). Jedna
- * frakcja, bo taka armia jest typowa, a pusty slot pokazuje, jak portret
- * odróżnia się od wolnego miejsca.
+ * Drużyna pokazowa: sześć stworków Boru z dziurą w środku (slot 4). Jedna
+ * frakcja, bo taka drużyna jest typowa, a pusty slot pokazuje, jak portret
+ * odróżnia się od wolnego miejsca. Trzecia kolumna to POZIOM stworka (każdy
+ * slot to jeden stworek — „trener zamiast armii").
  */
 const ARMIA = [
-  ['00193', 'Pyroko', 24, 0],
-  ['00020', 'Flamir', 9, 1],
-  ['00218', 'Aquino', 6, 2],
+  ['00193', 'Pyroko', 14, 0],
+  ['00020', 'Flamir', 11, 1],
+  ['00218', 'Aquino', 9, 2],
   null,
-  ['00030', 'Torrenar', 4, 3],
-  ['00096', 'Verdiko', 3, 4],
-  ['00227', 'Silvena', 1, 5],
-].map((o) => (o ? { sprite: o[0], nazwa: o[1], ile: o[2], frakcja: 'bor', tier: o[3] } : null));
+  ['00030', 'Torrenar', 7, 3],
+  ['00096', 'Verdiko', 6, 4],
+  ['00227', 'Silvena', 5, 5],
+].map((o) => (o ? { sprite: o[0], nazwa: o[1], ile: 1, poziom: o[2], dosw: 5 * o[2] * (o[2] - 1), frakcja: 'bor', tier: o[3] } : null));
 const EWOLUCJE = process.argv.includes('--ewolucje');
 const ARMIA_EWOLUCJI = [
-  ['01193', 'Pyrokin', 12, 0],
-  ['02020', 'Flamidor', 5, 1],
-  ['01218', 'Aquilon', 6, 2],
+  ['01193', 'Pyrokin', 22, 0],
+  ['02020', 'Flamidor', 34, 1],
+  ['01218', 'Aquilon', 18, 2],
   null,
-  ['02030', 'Torrendor', 2, 3],
-  ['01096', 'Verdilo', 3, 4],
-  ['02227', 'Silvanora', 1, 5],
-].map((o) => (o ? { sprite: o[0], nazwa: o[1], ile: o[2], frakcja: 'bor', tier: o[3] } : null));
+  ['02030', 'Torrendor', 36, 3],
+  ['01096', 'Verdilo', 20, 4],
+  ['02227', 'Silvanora', 32, 5],
+].map((o) => (o ? { sprite: o[0], nazwa: o[1], ile: 1, poziom: o[2], dosw: 5 * o[2] * (o[2] - 1), frakcja: 'bor', tier: o[3] } : null));
 const PRZYROSTEK = EWOLUCJE ? '-ewolucje' : '';
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
@@ -120,7 +121,7 @@ await page.evaluate(() => {
   const z = s.stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'gracz');
   z.frakcjaZamku = 'bor';
   z.postawione = ['ratusz1', 'ratusz2', 'fort', 'siedlisko1', 'siedlisko2', 'siedlisko3', 'siedlisko5'];
-  z.dostepne = [6, 4, 3, 0, 2, 0];
+  z.dostepne = [2, 2, 1, 0, 1, 0];
   Object.assign(s.stan.skarbiec, { pokeball: 140, jagoda: 22, kamien: 6, odlamek: 24 });
   s.stan.bohater.x = z.x;
   s.stan.bohater.y = z.y - 1;

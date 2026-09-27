@@ -58,6 +58,8 @@ const STANY = {
     dosw: 260,
     sloty: 3,
     umiejetnosci: { uzdrowiciel: 1 },
+    // Po bitwie ktoś leży zemdlony — slot wyszarzony, czeka na Centrum.
+    omdlale: [2],
   },
 };
 
@@ -92,12 +94,15 @@ await page.evaluate((s) => {
   const wzor = b.armia.filter(Boolean);
   const nowa = new Array(7).fill(null);
   const miejsca = [0, 1, 2, 4, 5, 6];
+  // Każdy slot to jeden stworek („trener zamiast armii") — różne poziomy,
+  // żeby tabliczki „poz. N" nie były sześć razy tym samym napisem.
+  const poziomy = [14, 11, 9, 7, 12, 6];
   for (let i = 0; i < Math.min(s.sloty, wzor.length, miejsca.length); i++) {
-    nowa[miejsca[i]] = wzor[i % wzor.length];
+    const p = poziomy[i];
+    nowa[miejsca[i]] = { ...wzor[i % wzor.length], ile: 1, poziom: p, dosw: 5 * p * (p - 1) };
   }
-  // Kopie, nie te same obiekty — inaczej dwa sloty dzielą jeden stos i zmiana
-  // liczebności w jednym zmienia oba.
-  b.armia = nowa.map((o) => (o ? { ...o } : null));
+  for (const i of s.omdlale ?? []) if (nowa[i]) nowa[i].omdlaly = true;
+  b.armia = nowa;
   gra.registry.set('stan-mapy', stan);
   gra.scene.getScene('adventure').scene.start('bohater');
 }, STANY[STAN] ?? STANY.pelny);

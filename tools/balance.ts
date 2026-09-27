@@ -13,10 +13,12 @@ import { FACTIONS, type Faction } from '../src/data/factions';
 import {
   COLS,
   ROWS,
+  NA_POLU,
   cellKey,
   createBattle,
   makeRng,
   runBattle,
+  shuffle,
   type Outcome,
 } from '../src/data/battle';
 
@@ -51,7 +53,11 @@ function starcie(a: Faction, b: Faction, ile: number): Wynik {
   const w: Wynik = { lewa: 0, prawa: 0, remisy: 0, rundy: [], zadane: new Map() };
   for (let i = 0; i < ile; i++) {
     const rng = makeRng(i * 2654435761 + 1);
-    const bitwa = createBattle(a, b, przeszkody(rng), rng);
+    // Na pole wchodzą cztery stworki (`NA_POLU`), a frakcja ma sześć
+    // gatunków — każda bitwa losuje czwórkę, więc mierzymy całą frakcję,
+    // a nie zawsze te same cztery najniższe poziomy.
+    const czworka = (f: Faction) => ({ units: shuffle([...f.units], rng).slice(0, NA_POLU) });
+    const bitwa = createBattle(czworka(a), czworka(b), przeszkody(rng), rng);
     const { outcome, rounds } = runBattle(bitwa);
     if (outcome === 'player') w.lewa++;
     else if (outcome === 'enemy') w.prawa++;

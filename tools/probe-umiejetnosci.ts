@@ -105,15 +105,17 @@ console.log('--- każda umiejętność coś robi ---');
   sprawdz('Nauka mistrzowska daje +25% doświadczenia', nagroda === 100, `${nagroda}`);
 }
 
-// Uzdrowiciel: odsetek strat wraca. Liczymy tym samym wzorem co scena.
+// Uzdrowiciel: część zemdlonych w bitwie wstaje od razu. Liczymy tym samym
+// wzorem co scena (`AdventureScene.uzdrowiciel`): w górę, więc przy jednym
+// zemdlonym działa już pierwszy stopień.
 {
   const z = swiezy();
-  z.bohater.umiejetnosci = { uzdrowiciel: 3 };
-  const straty = 10;
-  const wraca = Math.floor(straty * efekt(z.bohater, 'leczenie'));
-  sprawdz('Uzdrowiciel oddaje część poległych', wraca === 3, `${wraca} z ${straty}`);
+  z.bohater.umiejetnosci = { uzdrowiciel: 1 };
+  const zemdleli = 3;
+  const wraca = Math.ceil(zemdleli * efekt(z.bohater, 'leczenie'));
+  sprawdz('Uzdrowiciel budzi część zemdlonych', wraca === 1, `${wraca} z ${zemdleli}`);
   const bez = swiezy();
-  sprawdz('bez Uzdrowiciela nie wraca nikt', Math.floor(straty * efekt(bez.bohater, 'leczenie')) === 0);
+  sprawdz('bez Uzdrowiciela nie wstaje nikt', Math.ceil(zemdleli * efekt(bez.bohater, 'leczenie')) === 0);
 }
 
 console.log('--- umiejętności bojowe w symulacji bitwy ---');
@@ -219,7 +221,9 @@ console.log('--- atak i obrona bohatera w walce ---');
   // Sufity z Heroes 3: atak nie przekracza +300%, obrona nie schodzi niżej
   // niż −70%. Bez nich sto punktów ataku dawałoby stukrotne obrażenia.
   const ogromnyAtak = nasz(bitwa({ ...zera, atak: 500 }));
-  sprawdz('atak ma sufit', ogromnyAtak <= Math.round(bezStatystyk * 4) + 1, `${ogromnyAtak} przy bazie ${bezStatystyk}`);
+  // Baza jest już zaokrąglona (14 może być 14,4), a gra mnoży niezaokrągloną —
+  // stąd pół punktu zapasu na bazie przed pomnożeniem przez sufit.
+  sprawdz('atak ma sufit', ogromnyAtak <= Math.round((bezStatystyk + 0.5) * 4), `${ogromnyAtak} przy bazie ${bezStatystyk}`);
   const ogromnaObrona = wNas(bitwa({ ...zera, obrona: 500 }));
   sprawdz('obrona ma podłogę', ogromnaObrona >= Math.round(wNasBez * 0.3) - 1, `${ogromnaObrona} przy bazie ${wNasBez}`);
 }

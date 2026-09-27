@@ -40,7 +40,8 @@ export type WarunekPorazki =
 export type Bonus =
   | { typ: 'surowiec'; surowiec: Surowiec; ile: number; opis: string }
   | { typ: 'artefakt'; artefakt: string; opis: string }
-  | { typ: 'oddzial'; tier: number; ile: number; opis: string }
+  /** Nowy stworek do drużyny: gatunek `tier` frakcji bohatera na poziomie `poziom`. */
+  | { typ: 'oddzial'; tier: number; poziom: number; opis: string }
   | { typ: 'statystyka'; atak?: number; obrona?: number; opis: string };
 
 export interface Misja {
@@ -99,7 +100,7 @@ export const KAMPANIA: Kampania = {
       bonusy: [
         { typ: 'surowiec', surowiec: 'pokeball', ile: 30, opis: '30 pokeballi' },
         { typ: 'artefakt', artefakt: 'buty', opis: 'Buty Wędrowca' },
-        { typ: 'oddzial', tier: 1, ile: 6, opis: '6 stworków drugiego poziomu' },
+        { typ: 'oddzial', tier: 1, poziom: 8, opis: 'Nowy stworek: Flamir, poziom 8' },
       ],
       naMapie: { x: 0.2198, y: 0.8643 },
       epilog: 'Fort jest wolny, a stworki z Polany wracają do domu. Ale srebrne płaszcze uciekły za góry.',
@@ -118,7 +119,7 @@ export const KAMPANIA: Kampania = {
       bonusy: [
         { typ: 'surowiec', surowiec: 'jagoda', ile: 10, opis: '10 jagód' },
         { typ: 'statystyka', atak: 1, opis: '+1 do ataku' },
-        { typ: 'oddzial', tier: 2, ile: 4, opis: '4 stworki trzeciego poziomu' },
+        { typ: 'oddzial', tier: 2, poziom: 10, opis: 'Nowy stworek: Aquino, poziom 10' },
       ],
       naMapie: { x: 0.348, y: 0.459 },
       epilog: 'Grota Księżycowa padła. W jej skarbcu była tylko mapa bagien i jedno słowo: Kamień.',
@@ -154,7 +155,7 @@ export const KAMPANIA: Kampania = {
       zwyciestwo: { typ: 'zamki' },
       porazka: [{ typ: 'utrata' }],
       bonusy: [
-        { typ: 'oddzial', tier: 3, ile: 4, opis: '4 stworki czwartego poziomu' },
+        { typ: 'oddzial', tier: 3, poziom: 12, opis: 'Nowy stworek: Torrenar, poziom 12' },
         { typ: 'artefakt', artefakt: 'tarcza', opis: 'Tarcza z Łusek' },
         { typ: 'surowiec', surowiec: 'pokeball', ile: 60, opis: '60 pokeballi' },
       ],
@@ -269,8 +270,15 @@ export function ocenMisje(stan: StanMapy, m: Misja): Rozstrzygniecie {
   }
   const z = m.zwyciestwo;
   if (z.typ === 'zamki') {
-    const cudze = stan.obiekty.some((o) => o.rodzaj === 'zamek' && o.wlasciciel !== 'gracz');
-    return cudze ? null : 'wygrana';
+    // Liczą się odznaki, nie bieżący właściciele: sala, w której gracz już
+    // wygrał, zostaje zaliczona, nawet jeśli rywal ją potem odbił
+    // (`zdobadzOdznake` w mapa.ts). Zamek gracza też „się liczy" — zapisy
+    // sprzed odznak nie mają listy, więc własność dalej wystarcza.
+    const odznaki = stan.odznaki ?? [];
+    const brakuje = stan.obiekty.some(
+      (o) => o.rodzaj === 'zamek' && o.wlasciciel !== 'gracz' && !odznaki.includes(o.nazwa)
+    );
+    return brakuje ? null : 'wygrana';
   }
   if (z.typ === 'artefakt') return stan.bohater.artefakty.includes(z.artefakt) ? 'wygrana' : null;
   if (z.typ === 'zbierz') return stan.skarbiec[z.surowiec] >= z.ile ? 'wygrana' : null;
@@ -284,7 +292,7 @@ export function ocenMisje(stan: StanMapy, m: Misja): Rozstrzygniecie {
 /** Warunki misji słowami — dla okna „Warunki misji" i ekranu kampanii. */
 export function opisZwyciestwa(m: Misja): string {
   const z = m.zwyciestwo;
-  if (z.typ === 'zamki') return 'Zdobądź wszystkie zamki przeciwnika.';
+  if (z.typ === 'zamki') return 'Zdobądź odznaki wszystkich sal przeciwnika — wygraj w każdym jego zamku.';
   if (z.typ === 'artefakt') return `Odnajdź artefakt: ${artefaktPoId(z.artefakt)?.nazwa ?? z.artefakt}.`;
   if (z.typ === 'zbierz') return `Zbierz ${z.ile} × ${z.surowiec}.`;
   return `Pokonaj: ${z.nazwa}.`;
@@ -292,7 +300,7 @@ export function opisZwyciestwa(m: Misja): string {
 
 export function opisPorazki(m: Misja): string {
   return m.porazka
-    .map((w) => (w.typ === 'utrata' ? 'Stracisz wszystkie zamki.' : `Nie zdążysz w ${w.dni} dni.`))
+    .map((w) => (w.typ === 'utrata' ? 'Stracisz swój ostatni zamek.' : `Nie zdążysz w ${w.dni} dni.`))
     .join(' ');
 }
 

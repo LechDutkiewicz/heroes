@@ -1,29 +1,23 @@
 import Phaser from 'phaser';
 import {
   TYPE_INFO,
-  ABILITIES,
+  TYPE_STRONG,
   fullHp,
   stackAtk,
   typeMatchup,
   type UnitDef,
 } from '../data/units';
 import { ALL_SPRITES, FACTIONS, factionById, type Faction } from '../data/factions';
+import { jednostkiBitwy, napisPoziomu } from '../data/stworki';
+import { createPasekAtakow, type PasekAtakow } from '../visual/pasekAtakow';
 import { toEtapEwolucji, wczytajPortrety } from '../visual/portrety';
 import { hexDistance, type Cell } from '../data/hex';
 
 /**
- * Rzędy, w których staje armia z mapy — w kolejności, nie losowo.
- *
- * `START_ROWS` pomija środkowy rząd, żeby przy sześciu oddziałach linia miała
- * prześwit pośrodku, jak w Heroes 3. Siedem stosów już się tam nie mieści,
- * więc dopiero wtedy sięgamy po środek: bez tego siódmy oddział wchodził
- * (przez `i % rzedy.length`) na to samo pole co pierwszy i dwa stosy stały
- * jeden na drugim.
+ * Rzędy, w których staje drużyna z mapy — w kolejności, nie losowo, zawsze
+ * z wolnym polem między stworkami (`rzedyNaPolu`).
  */
-function rzedyDlaSkladu(ile: number): number[] {
-  if (ile > START_ROWS.length) return [0, 1, 2, 3, 4, 5, 6].slice(0, ile);
-  return START_ROWS.slice(0, ile);
-}
+const rzedyDlaSkladu = (ile: number) => rzedyNaPolu(ile);
 
 /** Oddział przekazany z mapy przygody: liczebność plus wskazanie definicji. */
 interface OddzialZMapy {
@@ -38,6 +32,8 @@ interface OddzialZMapy {
   ile: number;
   frakcja: string;
   tier: number;
+  /** poziom stworka (w stadzie — każdego z nich) */
+  poziom: number;
 }
 
 interface DaneZPrzygody {
@@ -54,7 +50,11 @@ import { initSfx, loadSfx, sfx, startMusic, stopMusic, toggleSfx } from '../audi
 import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
 import {
   GUARD_REDUCTION,
+  NA_POLU,
   START_ROWS,
+  rzedyNaPolu,
+  atakDostepny,
+  atakiJednostki,
   attackPlan,
   canShoot,
   cellKey,
@@ -326,10 +326,14 @@ export class BattleScene extends Phaser.Scene {
     };
     this.roster.clear();
     this.slotyZMapy.clear();
+    this.wrogZMapy = [];
     this.nextId = 1;
     this.busy = false;
     this.gameOver = false;
     this.preferredApproach = null;
+    this.wybranyAtak = 0;
+    this.prognozaDla = null;
+    this.pasekAtakow = undefined;
   }
 
   private highlightLayer!: Phaser.GameObjects.Container;
@@ -351,6 +355,12 @@ export class BattleScene extends Phaser.Scene {
   private headIcon!: Phaser.GameObjects.Image;
   private stats!: StatTable;
   private forecast!: Forecast;
+  /** Pasek ataków w miejscu prognozy — widać go, gdy gracz ma turę i nie celuje. */
+  private pasekAtakow?: PasekAtakow;
+  /** Atak wybrany dla stworka, który ma turę (indeks w `ataki.ts`). */
+  private wybranyAtak = 0;
+  /** Na kogo celuje prognoza — żeby klawisz 1–3 mógł ją przeliczyć. */
+  private prognozaDla: { a: Unit; t: Unit } | null = null;
   private waitButton!: HudButton;
   private guardButton!: HudButton;
 
@@ -369,6 +379,8 @@ export class BattleScene extends Phaser.Scene {
   private zPrzygody?: DaneZPrzygody;
   /** Który oddział na planszy odpowiada któremu wpisowi w armii z mapy. */
   private slotyZMapy = new Map<number, number>();
+  /** Stworki przeciwnika z mapy: z którego wpisu pochodzą i jaki mają numer. */
+  private wrogZMapy: { skad: number; id: number }[] = [];
 
   /** Krajobraz tej bitwy — losowany raz, przy tworzeniu sceny. */
   private terrain = TERRAINS[0];
@@ -542,14 +554,22 @@ export class BattleScene extends Phaser.Scene {
       // armię na swoim ekranie i chce ją zobaczyć tak samo na polu walki.
       this.wystawZPrzygody();
     } else {
-      this.playerFaction.units.forEach((def, i) => this.spawnUnit(def, 'player', 0, rzedyGracza[i]));
-      this.enemyFaction.units.forEach((def, i) =>
-        this.spawnUnit(def, 'enemy', COLS - 1, rzedyWroga[i])
+      // Bitwa pokazowa: po czterech losowych stworkach z każdej frakcji,
+      // na poziomie 5 — tyle mieści pole z przerwami między stworkami.
+      const czworka = (f: Faction) => Phaser.Math.RND.shuffle([...f.units]).slice(0, NA_POLU);
+      czworka(this.playerFaction).forEach((def, i) =>
+        this.spawnUnit({ ...def, poziom: 5 }, 'player', 0, rzedyGracza[i])
+      );
+      czworka(this.enemyFaction).forEach((def, i) =>
+        this.spawnUnit({ ...def, poziom: 5 }, 'enemy', COLS - 1, rzedyWroga[i])
       );
     }
 
     this.input.keyboard?.on('keydown-C', () => this.waitTurn());
     this.input.keyboard?.on('keydown-O', () => this.guardTurn());
+    this.input.keyboard?.on('keydown-ONE', () => this.wybierzAtak(0));
+    this.input.keyboard?.on('keydown-TWO', () => this.wybierzAtak(1));
+    this.input.keyboard?.on('keydown-THREE', () => this.wybierzAtak(2));
     // Wyciszenie. Dźwięku nie da się przeczekać wzrokiem jak animacji — kto go
     // nie chce, musi mieć czym wyłączyć od razu, bez wchodzenia w ustawienia.
     this.input.keyboard?.on('keydown-M', () => {
@@ -704,7 +724,7 @@ export class BattleScene extends Phaser.Scene {
   private drawBottomBar() {
     drawPanelBody(this, BAR_X, BAR_Y, BAR_W, BAR_H, BAR_INSET);
 
-    this.forecast = createForecast(
+    const kapsula = createForecast(
       this,
       CONTENT_X,
       FORECAST_Y,
@@ -713,6 +733,24 @@ export class BattleScene extends Phaser.Scene {
       MINI.forecast,
       'Kliknij pole, by podejść, albo wroga, by zaatakować  ·  M wycisza dźwięk'
     );
+    this.pasekAtakow = createPasekAtakow(this, CONTENT_X, BTN_Y, FORECAST_W, BTN_H, (i) => this.wybierzAtak(i));
+    this.pasekAtakow.setVisible(false);
+    // Prognoza i pasek ataków dzielą jedno miejsce: prognoza, gdy celujemy,
+    // pasek, gdy gracz ma turę i jeszcze nie celuje.
+    this.forecast = {
+      show: (text, deadly) => {
+        this.pasekAtakow?.setVisible(false);
+        kapsula.setVisible?.(true);
+        kapsula.show(text, deadly);
+      },
+      hide: () => {
+        this.prognozaDla = null;
+        kapsula.hide();
+        const ataki = this.atakiWidoczne();
+        kapsula.setVisible?.(!ataki);
+        this.pasekAtakow?.setVisible(ataki);
+      },
+    };
 
     const guardX = CONTENT_R - BTN_W / 2;
     const waitX = guardX - BTN_W - BTN_GAP;
@@ -838,18 +876,18 @@ export class BattleScene extends Phaser.Scene {
    */
   private wystawZPrzygody() {
     const wystaw = (sklad: OddzialZMapy[], side: Side, col: number) => {
-      const rzedy = rzedyDlaSkladu(sklad.length);
-      sklad.forEach((o, i) => {
-        const frakcja = factionById(o.frakcja);
-        const def = frakcja?.units[o.tier];
-        if (!def) return;
-        const unit = this.spawnUnit({ ...def, count: o.ile }, side, col, rzedy[i]);
-        // Zapamiętujemy, KTÓRY oddział na planszy odpowiada któremu wpisowi
-        // w armii bohatera. Szukanie go potem po `sprite` wyglądało na
-        // wystarczające i nie było: po podziale stosu dwa sloty mają ten sam
-        // gatunek, więc oba dostawały liczebność TEGO SAMEGO oddziału
-        // z planszy — jeden stos wracał z bitwy podwojony.
-        if (side === 'player') this.slotyZMapy.set(i, unit.id);
+      // Stado dzikich rozpada się na osobne stworki — każdy staje na swoim
+      // polu (`jednostkiBitwy`, najwyżej siedem na stronę). Statystyki liczy
+      // `defStworka` z gatunku, poziomu i etapu ewolucji.
+      const jednostki = jednostkiBitwy(sklad);
+      const rzedy = rzedyDlaSkladu(jednostki.length);
+      jednostki.forEach(({ def, skad }, i) => {
+        const unit = this.spawnUnit(def, side, col, rzedy[i]);
+        // Zapamiętujemy, KTÓRY stworek na planszy odpowiada któremu wpisowi
+        // w drużynie. Szukanie go potem po `sprite` wyglądało na
+        // wystarczające i nie było: dwa sloty mogą mieć ten sam gatunek.
+        if (side === 'player') this.slotyZMapy.set(skad, unit.id);
+        else this.wrogZMapy.push({ skad, id: unit.id });
       });
     };
     wystaw(this.zPrzygody!.gracz, 'player', 0);
@@ -911,6 +949,7 @@ export class BattleScene extends Phaser.Scene {
   private refreshStack(unit: Unit) {
     refreshUnitView(unit.view, {
       count: unit.count,
+      poziom: unit.def.poziom,
       hp: total(unit),
       maxHp: fullHp(unit.def),
       atk: stackAtk(unit.def, unit),
@@ -979,6 +1018,10 @@ export class BattleScene extends Phaser.Scene {
     } else {
       this.setButtonsVisible(true);
       this.updateButtons(unit);
+      // Każda tura zaczyna się od zwykłego ataku — specjalny trzeba wybrać,
+      // żeby nie wystrzelać PP jednym nieuważnym kliknięciem.
+      this.wybranyAtak = 0;
+      this.odswiezAtaki();
       this.showOptions(unit);
     }
   }
@@ -1046,10 +1089,13 @@ export class BattleScene extends Phaser.Scene {
       drop: 2,
     });
     this.headIcon.setTexture(TYPE_ICON[unit.def.type]).setDisplaySize(HEAD_H - 6, HEAD_H - 6);
-    this.headName.setText(`${unit.def.name} ×${unit.count}`);
+    this.headName.setText(unit.count > 1 ? `${unit.def.name} ×${unit.count}` : unit.def.name);
     // W wąskiej karcie nie ma miejsca na „twój oddział / oddział przeciwnika":
     // to samo mówi barwa pasa z nazwą, ta sama co plakietka pod stworkiem.
-    this.headMeta.setText(`poziom ${unit.def.tier}` + (unit.defending ? ' · w obronie' : ''));
+    this.headMeta.setText(
+      (unit.def.poziom !== undefined ? napisPoziomu(unit.def.poziom) : `ranga ${unit.def.tier}`) +
+        (unit.defending ? ' · w obronie' : '')
+    );
 
     // Każdy wiersz ma WŁASNY znak. Wcześniej miecz obsługiwał „Atak", „Zasięg"
     // i prognozę naraz — jeden rysunek na trzy różne pojęcia. Teraz zasięg to
@@ -1072,13 +1118,14 @@ export class BattleScene extends Phaser.Scene {
           ? { label: 'Odwet', value: 'gotowy', icon: MINI.retaliate }
           : { label: 'Odwet', value: 'już oddał', icon: MINI.retaliate, alert: true };
 
-    const ability: StatRow = unit.def.ability
-      ? {
-          label: 'Umiejętność',
-          value: `${ABILITIES[unit.def.ability].name} — ${ABILITIES[unit.def.ability].desc}`,
-          icon: MINI.ability,
-        }
-      : { label: 'Umiejętność', value: 'brak', icon: MINI.ability };
+    // Ataki z pozostałymi PP — u wroga też, bo to mówi, czym jeszcze uderzy.
+    const ability: StatRow = {
+      label: 'Ataki',
+      value: atakiJednostki(unit)
+        .map((a, i) => (a.pp === null ? a.nazwa : `${a.nazwa} ${unit.pp[i] ?? a.pp}/${a.pp}`))
+        .join(' · '),
+      icon: MINI.ability,
+    };
 
     this.stats.update([
       {
@@ -1088,7 +1135,10 @@ export class BattleScene extends Phaser.Scene {
       },
       {
         label: 'Atak',
-        value: `${unit.count} × ${unit.def.atk} = ${stackAtk(unit.def, unit)}`,
+        value:
+          unit.count > 1
+            ? `${unit.count} × ${unit.def.atk} = ${stackAtk(unit.def, unit)}`
+            : `${unit.def.atk}`,
         icon: MINI.attack,
       },
       {
@@ -1102,13 +1152,13 @@ export class BattleScene extends Phaser.Scene {
       { label: 'Żywioł', value: t.label, icon: MINI_TYPE[unit.def.type], mark: t.color },
       {
         label: 'Mocny przeciw',
-        value: `${strongInfo.dative} ×1.5`,
+        value: `${strongInfo.dative} ×${TYPE_STRONG}`,
         icon: MINI.strong,
         mark: strongInfo.color,
       },
       {
         label: 'Słaby wobec',
-        value: `${weakInfo.genitive} ×1.5`,
+        value: `${weakInfo.genitive} ×${TYPE_STRONG}`,
         icon: MINI.weak,
         alert: true,
       },
@@ -1195,29 +1245,46 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private showForecast(attacker: Unit, target: Unit) {
-    const { value, base, typeMult, penalty, pinned, tooFar, guarded, kills } =
-      damageOf(this.battle, attacker, target);
+    const nrAtaku = attacker.side === 'player' && atakDostepny(attacker, this.wybranyAtak) ? this.wybranyAtak : 0;
+    const atak = atakiJednostki(attacker)[nrAtaku];
+    const { value: jeden, base, moc, typeMult, penalty, pinned, tooFar, guarded } =
+      damageOf(this.battle, attacker, target, nrAtaku);
+    // Podwójny cios to dwa trafienia tej samej siły — prognoza mówi o obu.
+    const podwojny = atak?.efekt === 'podwojny';
+    const value = podwojny ? jeden * 2 : jeden;
+    const kills = value >= total(target) ? target.count : 0;
     // Zaczynamy od liczebności razy atak — stąd bierze się siła oddziału.
     // Bez sumy pośredniej: przy braku mnożników wychodziło „= 15 = 15", co
     // wyglądało na błąd rachunku.
     void base;
-    const parts = [`Atak ${attacker.count} × ${attacker.def.atk}`];
+    const parts = [
+      `${atak?.nazwa ?? 'Atak'}:`,
+      attacker.count > 1 ? `Atak ${attacker.count} × ${attacker.def.atk}` : `Atak ${attacker.def.atk}`,
+    ];
+    if (moc !== 1) parts.push(`× ${moc} (siła ataku)`);
+    if (podwojny) parts.push('× 2 (dwa ciosy)');
     if (typeMult !== 1) parts.push(`× ${typeMult} (${typeMult > 1 ? 'przewaga typu' : 'słaby typ'})`);
     if (pinned) parts.push('× 0.5 (zablokowany strzelec bije wręcz)');
     else if (tooFar) parts.push('× 0.5 (za daleko — złamana strzała)');
     if (guarded) parts.push(`× ${GUARD_REDUCTION} (cel w obronie)`);
     void penalty;
 
+    // Stworek nie „traci ludzi" — albo wytrzyma, albo zemdleje. Przy
+    // pojedynczym stworku mówimy więc, ile życia mu zostanie.
+    const zostanie = Math.max(0, total(target) - value);
     const outcome =
       kills >= target.count
-        ? `— cały oddział ${target.def.name} padnie`
-        : kills > 0
+        ? target.count > 1
+          ? `— całe stado ${target.def.name} zemdleje`
+          : `— ${target.def.name} zemdleje`
+        : target.count > 1 && kills > 0
           ? `dla ${target.def.name} — ${fellPhrase(kills)} z ${target.count}`
-          : `dla ${target.def.name} — żaden nie padnie`;
+          : `dla ${target.def.name} — zostanie ${zostanie} życia`;
     this.forecast.show(
       `${parts.join(' ')} = ${value} ${damageWord(value)} ${outcome}`,
       kills >= target.count
     );
+    this.prognozaDla = { a: attacker, t: target };
   }
 
   /**
@@ -1290,7 +1357,7 @@ export class BattleScene extends Phaser.Scene {
         ? this.preferredApproach.cell
         : plan.from;
     this.setCursor(null);
-    this.resolveAttack(attacker, target, chosen);
+    this.resolveAttack(attacker, target, chosen, this.wybranyAtak);
   }
 
   private cursorFor(name: string) {
@@ -1395,6 +1462,28 @@ export class BattleScene extends Phaser.Scene {
 
     this.guardButton.setLabel('Broń się  (O)');
     this.guardButton.setEnabled(true);
+  }
+
+  /** Pasek ataków jest na ekranie tylko w turze gracza, poza animacją. */
+  private atakiWidoczne(): boolean {
+    const a = this.activeUnit();
+    return !!a && a.side === 'player' && !this.busy && !this.gameOver;
+  }
+
+  private odswiezAtaki() {
+    const a = this.activeUnit();
+    if (!a || a.side !== 'player' || !this.pasekAtakow) return;
+    this.pasekAtakow.pokaz(a.def, a.pp, this.wybranyAtak);
+  }
+
+  /** Klik w przycisk ataku albo klawisz 1–3. */
+  private wybierzAtak(i: number) {
+    if (!this.atakiWidoczne()) return;
+    const a = this.activeUnit()!;
+    if (!atakDostepny(a, i)) return;
+    this.wybranyAtak = i;
+    this.odswiezAtaki();
+    if (this.prognozaDla) this.showForecast(this.prognozaDla.a, this.prognozaDla.t);
   }
 
   // ---------- akcje ----------
@@ -1516,11 +1605,11 @@ export class BattleScene extends Phaser.Scene {
    * rozstrzyga `battle.ts` i oddaje dziennik zdarzeń. Scena tylko go odgrywa,
    * więc kolejność zdarzeń istnieje już w jednym egzemplarzu, a nie w dwóch.
    */
-  private resolveAttack(attacker: Unit, target: Unit, from: Cell) {
+  private resolveAttack(attacker: Unit, target: Unit, from: Cell, atak = 0) {
     this.busy = true;
     this.clearHighlights();
 
-    const log = performAttack(this.battle, attacker, target, from);
+    const log = performAttack(this.battle, attacker, target, from, atak);
     this.playLog(log, () => {
       this.checkGameOver();
       if (!this.gameOver) this.time.delayedCall(450, () => this.advanceTurn());
@@ -1582,6 +1671,14 @@ export class BattleScene extends Phaser.Scene {
         this.time.delayedCall(ev.odwet ? 500 : 450, next);
       };
 
+      if (!ev.odwet && !ev.drugi) {
+        // Jak w pokemonach: „Torrenar używa: Fala!" — w górnej belce zawsze,
+        // nad stworkiem tylko przy ataku specjalnym, żeby zwykłe ciosy nie
+        // zasypywały planszy napisami.
+        const nazwa = atakiJednostki(attacker)[ev.atak]?.nazwa;
+        if (nazwa) this.turnText.setText(`${attacker.def.name} używa: ${nazwa}!`);
+        if (nazwa && ev.atak > 0) this.floatText(attacker, `${nazwa}!`, '#ffe08a', -76, ICON.star, 18);
+      }
       if (ev.drugi) this.floatText(attacker, 'Drugi cios!', '#ffd166', -46, ICON.sword, 17);
       if (ev.odwet) this.floatText(attacker, 'Odwet!', '#ffd166', -60, ICON.retaliate, 17);
 
@@ -1741,6 +1838,8 @@ export class BattleScene extends Phaser.Scene {
     // Zaraz po niej liczba poległych — dla gracza ważniejsza niż samo HP.
     if (killed > 0 && target.count > 0) {
       this.floatText(target, `padło ${killed}`, '#ff8a80', -52, ICON.skull);
+    } else if (target.count <= 0) {
+      this.floatText(target, `${target.def.name} mdleje!`, '#ff8a80', -52);
     }
     if (typeMult > 1) this.floatText(target, 'Super skuteczne!', '#a5f5a5', -70, ICON.star, 17);
     else if (typeMult < 1) this.floatText(target, 'Słabo skuteczne...', '#cfd8dc', -70);
@@ -1797,7 +1896,7 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     if (action.rodzaj === 'atak') {
-      this.resolveAttack(unit, action.cel as Unit, action.from);
+      this.resolveAttack(unit, action.cel as Unit, action.from, action.atak);
       return;
     }
     if (action.rodzaj === 'czekanie') {
@@ -1834,10 +1933,26 @@ export class BattleScene extends Phaser.Scene {
       const zywy = id !== undefined ? this.units.find((u) => u.id === id) : undefined;
       return { ...o, ile: zywy ? zywy.count : 0 };
     });
+    // Pokonani przeciwnicy — z nich liczy się doświadczenie drużyny.
+    const pokonani = this.wrogZMapy
+      .filter((w) => !this.units.some((u) => u.id === w.id))
+      .map((w) => {
+        const def = this.roster.get(w.id)?.def;
+        return { poziom: def?.poziom ?? 5, tier: (def?.tier ?? 1) - 1 };
+      });
+    // Ilu stworków przeciwnika z każdego wpisu stoi na nogach — pojedynek
+    // z rywalem musi wiedzieć, kto z JEGO drużyny zemdlał.
+    const wrogOcalali = this.zPrzygody!.wrog.map((o, skad) => {
+      const naPolu = this.wrogZMapy.filter((w) => w.skad === skad);
+      const padli = naPolu.filter((w) => !this.units.some((u) => u.id === w.id)).length;
+      return Math.max(0, o.ile - padli);
+    });
     this.registry.set('wynik-bitwy', {
       oObiekt: this.zPrzygody!.oObiekt,
       wygrana,
       armia: ocalali,
+      pokonani,
+      wrogOcalali,
     });
     // Chwila na przeczytanie ekranu końca, dopiero potem powrót.
     this.time.delayedCall(2600, () => this.scene.start(this.zPrzygody!.powrot ?? 'adventure'));

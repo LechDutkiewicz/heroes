@@ -9,7 +9,14 @@
 //
 //   npx tsx tools/probe-ekonomia.ts
 
-import { KOSZT_ODDZIALU, PRZYROST_ODDZIALU, dochod, type StanMapy } from '../src/data/mapa';
+import {
+  KOSZT_ODDZIALU,
+  PRZYROST_ODDZIALU,
+  dochod,
+  kosztTreningu,
+  treningiNaTydzien,
+  type StanMapy,
+} from '../src/data/mapa';
 import { SKRZYNIE } from '../src/data/zasady-h3';
 import { planszaPrzygody } from '../src/data/plansza';
 import {
@@ -28,12 +35,16 @@ const sprawdz = (co: string, ok: boolean, szczegol = '') => {
   console.log(`  ${ok ? 'OK  ' : 'ŹLE '} ${co}${szczegol ? ` — ${szczegol}` : ''}`);
 };
 
-/** Ile pokeballi dziennie kosztuje wykupienie całego przyrostu miasta. */
+/**
+ * Ile pokeballi dziennie kosztuje wykupienie całego przyrostu miasta:
+ * młode stworki z rezerwatów i pełna tygodniowa pula Sali treningowej.
+ * Trening liczony na poziomie 15 — tyle ma drużyna w połowie misji.
+ */
 const kosztPrzyrostu = (postawione: string[]) =>
   przyrostZamku(postawione, PRZYROST_ODDZIALU).reduce(
     (a, ile, tier) => a + ile * KOSZT_ODDZIALU[tier],
     0
-  );
+  ) + (treningiNaTydzien(postawione) * kosztTreningu({ poziom: 15 })) / 7;
 
 const stan = planszaPrzygody();
 const zamek = stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'gracz')!;
@@ -58,7 +69,7 @@ zamek.postawione = wszystkie;
 const pelny = dochod(stan);
 const upkeep = kosztPrzyrostu(wszystkie);
 
-console.log(`  przyrost całego miasta kosztuje ${upkeep} pokeballi dziennie`);
+console.log(`  przyrost całego miasta (rezerwaty + trening) kosztuje ${upkeep.toFixed(0)} pokeballi dziennie`);
 console.log(`  mapa + startowe miasto: ${tylkoKopalnie.pokeball} pokeballi dziennie`);
 console.log(`  mapa + rozbudowane miasto: ${pelny.pokeball} pokeballi dziennie`);
 

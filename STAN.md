@@ -1,6 +1,104 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-09-27 (storki: rysunki z PR #6 wracają do gry, a pozy, portrety i obróbka mapy z pętli liczą się teraz z nich).
+Ostatnia aktualizacja: 2026-09-27 (trener zamiast armii: stworek = postać z poziomem, 4 na polu bitwy, trening i Centrum Pokemon).
+
+## Trener zamiast armii — etapy 1 i 2 (2026-09-27)
+
+Uwaga z rozgrywki: mechanika 1:1 z Heroes 3 nie pasuje do lore pokemonów
+(„nikt nie ma stu Pikachu"). Plan całej przebudowy (6 etapów) i decyzje:
+**`PROJEKT-TRENERZY.md`** — czytaj go przed każdą zmianą w armii, bitwie,
+mieście albo kampanii.
+
+- **Model**: `src/data/stworki.ts` — jedyne miejsce ze wzorami (skala
+  poziomu, etapu, EXP, `defStworka`, `jednostkiBitwy`, `rozegrajBitwe`
+  dla AI i symulatorów, `stadoZLiczebnosci` dla dawnych liczb z plansz).
+  `Oddzial.poziom` jest wymagany, `dosw` i `omdlaly` opcjonalne. W drużynie
+  i garnizonie `ile` = 1; w straży na mapie `ile` = liczba stworków stada.
+  Silnik bitwy (`battle.ts`) liczy dalej stosy — stworek to stos o liczebności 1.
+- **Pole bitwy: 4 na stronę, z przerwą** (`NA_POLU`, `rzedyNaPolu` w
+  `battle.ts`) — prośba użytkownika („między stackami puste pole, jak
+  w Heroes"). Walczą cztery pierwsze sprawne sloty; AI ustawia
+  najsilniejszych na przód (`najsilniejsiNaPrzod`), obrońcy zamku —
+  czterech najsilniejszych ze straży i garnizonu (`obroncyWKolejnosci`).
+  Przy okazji zniknęła przewaga strony ruszającej się druga: lustrzana
+  bitwa 6 na 6 bez przerw dawała prawej stronie ~95% (tak było też przed
+  przebudową), teraz ~50%.
+- **Znaleziony błąd**: `createBattle` przy 7 oddziałach po stronie dawał
+  siódmemu rząd `undefined` — stał poza planszą, bitwa kończyła się remisem.
+  Teraz nadmiar ponad `NA_POLU` jest odcinany.
+- **Frakcje przestrojone** (`BOR/GROTA/ZBOCZE` w `factions.ts`): stare
+  profile były pod stosy i Grota wygrywała z Borem 99:1. `npm run balans`
+  losuje czwórkę z sześciu gatunków na bitwę; wynik 4,0 pp (norma do 5).
+  `tools/strojenie.ts` przepisany na nowy model.
+- **Miasto**: rezerwaty (ułamkowy przyrost, `MAKS_CZEKA` = 2, zaproszenie
+  jednego młodego stworka na poziomie 5), przycisk „Podziel" zamieniony na
+  „Trenuj" (Sala treningowa, `trenuj`/`treningiZamku` w `mapa.ts`), wejście
+  do zamku = Centrum Pokemon. Ekran bohatera bez „Podziel".
+- **Ośrodek Ewolucji** ewoluuje w linii stworka (`nastepnyEtap`), bez
+  zmiany poziomu; nie zamienia już gatunku na wyższy poziom frakcji.
+- **Kampania**: bonus „oddział" to jeden stworek z poziomem
+  (`{ tier, poziom }`). Drużyna nadal NIE przechodzi między misjami — to
+  etap 6.
+- **Zapisy**: `migrujNaStworki` w `zapis.ts` przelicza stare stosy
+  (drużyna najmniej na poziomie 5).
+- **Sondy**: przepisane `probe-armia.ts`, `probe-garnizon.ts`,
+  `probe-sloty-bitwa.mjs`; poprawione `probe-budowle.ts`, `probe-mapa.ts`
+  (straże rosną poziomem), `probe-ekonomia.ts` (koszt przyrostu = rezerwaty
+  + pełna pula treningów na poz. 15), `probe-umiejetnosci.ts`.
+- **Tempo misji** (`tools/symulacja-misji.ts`, PROB 2–3): misja 1 bez
+  zmian (wygrana 7. dnia), misja 3 bez zmian (5. dnia), misja 2 — autopilot
+  nie wygrywa do 60. dnia (stary model: porażka 47. dnia; próg 0%), misja 4
+  — wygrane 3/3 w dniach 18–63 (stary: 26–34). Żeby to osiągnąć:
+  doświadczenie `DOSW_ZA_POZIOM` = 2 × poziom, mnożnik za silniejszego do
+  1,5; **mury** (`MURY` = 1,5 w `plansza.ts`) — załoga zamku startuje
+  silniejsza, bo przerwy na polu zniosły starą przewagę obrońcy; Sala
+  treningowa: 3 treningi na rezerwat, cena 3 + 1,5 × poziom; **AI wraca do
+  własnego zamku na trening** (`wartoscTreningu` w `wrog-ai.ts`), gdy stać
+  je na ≥ 3 treningi — bez tego autopilot zbierał tysiąc pokeballi i stał
+  na jednym poziomie. Odrzucone: AI trenujące straż zamku pod nieobecność
+  bohatera (drugi zamek w misji 4 robił się nie do zdobycia).
+  `tools/wrog-symulacja.ts` (40 przebiegów) nie mieści się w 25 min —
+  niepuszczony do końca.
+- **Sondy przeglądarkowe** przepisane (subagent): `probe-armia.mjs`,
+  `probe-bohater.mjs`, `probe-miasto.mjs`, `probe-przygoda.mjs` — przechodzą;
+  `zrzut-*` budują stworki z poziomem. Zrzuty: `tools/zrzut-trenerzy.mjs`.
+  Uwaga: serwer na porcie 5200–5229 nie śledzi plików — po zmianie w `src`
+  trzeba go zrestartować, inaczej zrzuty i sondy widzą stary kod.
+- **Znacznik** „do bitwy": złoty róg na czterech pierwszych sprawnych slotach
+  drużyny (`panelArmii.ts`).
+- **Etap 3 — ewolucja** (opis w `PROJEKT-TRENERZY.md`): progi 16 i 32
+  (`PROG_EWOLUCJI`, `progEwolucji` w `ewolucje.ts`), `ewoluujOdPoziomu`
+  wołane z `dodajDosw` (bitwa, trening, AI), linie od kamienia
+  (Flamir, Sporex, Ashko — tylko Ośrodek Ewolucji), flaga `bezEwolucji`
+  z przyciskiem „Nie ewoluuj" w oknie stworka. `spriteDoPortretow` wczytuje
+  też NASTĘPNY etap każdego stworka z drużyny — ewolucja zdarza się
+  w trakcie sceny (po bitwie, po treningu). Sonda `probe-ewolucja.ts`.
+- **Sale i odznaki, pojedynki trenerów** (odpowiedź na „pokonać bohaterów
+  i zamki"): zamek przeciwnika to SALA. Wygrana w niej daje odznakę na stałe
+  (`s.odznaki`, `zdobadzOdznake`, grafiki `public/bohater/odznaka-*.png`),
+  cel „zamki" = komplet odznak (`ocenMisje`). Bohater wroga to rywal Oskar,
+  rysowany na mapie (`public/mapa/rywal.png`). Pojedynek: gracz podchodzi
+  z sąsiedniego pola, AI wyzywa od `dzienNatarcia` i tylko gdy `wygramy`.
+  Przegrany płaci 20% pokeballi (min. 20, nie więcej niż ma) i wraca do
+  swojego Centrum — nikt nie odpada z gry (`rozliczPojedynek`). Rywal stojący
+  we własnym zamku jest jego obrońcą, nie celem pojedynku (`rywalNa`); gdy
+  sala padnie, przenosi się do innego swojego zamku (`wypedzZSali`) — bez
+  tego m1 była nie do wygrania. Sondy: `probe-pojedynki.ts` (dane),
+  `probe-pojedynek.mjs` (przeglądarka). Symulacje: m1 d7, m4 d15–25, m3 d7–9,
+  m2 bez wyniku do d60 jak wcześniej, błędów 0. OpenAI: 9 obrazków, 0,38 USD.
+- **Etap 4 — ataki** (opis w `PROJEKT-TRENERZY.md`): `src/data/ataki.ts`
+  (lista ataków z definicji stworka: żywioł, strzelec, umiejętność, `etap`
+  — nowe pole `UnitDef.etap` z `defStworka`). Silnik: `SimUnit.pp`,
+  `damageOf/resolveHit/performAttack(…, atak)`, zdarzenie `cios.atak`,
+  `AiAction.atak`, `ocenAtaku` w AI. Scena: `visual/pasekAtakow.ts` w miejscu
+  kapsułki prognozy (prognoza dostała `setVisible`), klawisze 1–3, karta
+  oddziału ma wiersz „Ataki" z PP zamiast „Umiejętność" (poprawione też
+  „×1.5" → `TYPE_STRONG`). Okno stworka: wiersz „Ataki" i „Cecha" dla
+  strażnika. Decyzje: PP odnawiają się co bitwę (dzieci), zasięg ataku =
+  rodzaj stworka (bez nowych reguł dojścia), tura zaczyna się od zwykłego
+  ataku (nie marnować PP jednym klikiem). Wzorców HoMM3 w `tools/reference/`
+  brak (jest tylko `homm2`), więc ślepego porównania nie było.
+- **Do zrobienia dalej**: etapy 5–6 w `PROJEKT-TRENERZY.md`.
 
 ## Ela jako nastolatka (2026-09-27)
 

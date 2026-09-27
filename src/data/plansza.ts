@@ -14,7 +14,6 @@ import {
   ARTEFAKTY_LOSOWE,
   BUDOWLE,
   KLUCZE,
-  PRZYROST_ODDZIALU,
   odslon,
   type Obiekt,
   type Oddzial,
@@ -24,7 +23,11 @@ import {
   type Teren,
 } from './mapa';
 import { FACTIONS, factionById } from './factions';
-import { znormalizuj } from './armia';
+import { SLOTY_ARMII, znormalizuj } from './armia';
+import { MAKS_W_BITWIE, STARY_STOS, nowyStworek, rozbijStado, stadoZLiczebnosci } from './stworki';
+
+/** Dawny dzienny przyrost poziomów 1–6 — w nim plansze podają siłę załóg. */
+const STARY_PRZYROST = [3, 2, 2, 1, 1, 1];
 
 /**
  * Plansza przygody — teren z generatora plus obiekty z liczbami z Heroes 3.
@@ -108,55 +111,66 @@ const STRAZE: Record<string, { frakcja: string; tiery: number[]; mnoznik: number
   };
 
 /**
- * Straż na mapie to ZAWSZE jeden gatunek — ewentualnie rozbity na kilka stosów.
+ * Straż na mapie to ZAWSZE jeden gatunek — stado dzikich stworków.
  *
- * Tak jest w Heroes 3: włóczące się oddziały nigdy nie mieszają gatunków,
- * mieszane armie stoją wyłącznie w budynkach. Wcześniej strażnik przełęczy
- * miał dwa różne stworki naraz i wyglądał jak armia bohatera, a nie jak
- * dzikie stado.
+ * Tak jest w Heroes 3 (włóczące się oddziały nie mieszają gatunków) i tak
+ * jest w pokemonach (Onixy chodzą stadem Onixów). Siła straży jest dalej
+ * podana w dawnych liczebnościach (`STRAZE`), a na stado — ilu stworków
+ * i na jakim poziomie — przelicza ją `stadoZLiczebnosci`. Liczba stworków
+ * w stadzie nie przekracza liczby dawnych stosów + 1 ani czterech miejsc na
+ * polu bitwy, żeby słaba straż nie była tłumem.
  */
 function oddzialyStrazy(sila: string, losuj: () => number): Oddzial[] {
   const wzor = STRAZE[sila] ?? STRAZE.slaby;
   const frakcja = factionById(wzor.frakcja) ?? FACTIONS[0];
   const tier = wzor.tiery[Math.floor(losuj() * wzor.tiery.length)];
   const u = frakcja.units[tier];
-  // ±25% liczebności, żeby dwa te same posterunki nie były identyczne.
-  const razem = Math.max(
-    wzor.stosy,
-    Math.round(u.count * wzor.mnoznik * (0.75 + losuj() * 0.5))
-  );
-  // Rozdział na stosy: reszta z dzielenia idzie do pierwszego, żeby suma
-  // zgadzała się co do sztuki.
-  const podstawa = Math.floor(razem / wzor.stosy);
-  return Array.from({ length: wzor.stosy }, (_, i) => ({
-    sprite: u.sprite,
-    nazwa: u.name,
-    ile: podstawa + (i === 0 ? razem - podstawa * wzor.stosy : 0),
-    frakcja: frakcja.id,
-    tier,
-  }));
+  // ±25% siły, żeby dwa te same posterunki nie były identyczne.
+  const razem = STARY_STOS[tier] * wzor.mnoznik * wzor.stosy * (0.75 + losuj() * 0.5);
+  const stado = stadoZLiczebnosci(tier, razem, Math.min(MAKS_W_BITWIE, wzor.stosy + 1));
+  return [{ sprite: u.sprite, nazwa: u.name, frakcja: frakcja.id, tier, ...stado }];
 }
 
 /**
- * Załoga broniąca zamku — po jednym stosie z każdego stojącego w nim gniazda.
+ * Załoga broniąca zamku — stworki z gniazd, które w nim stoją.
  *
- * Liczebność to tygodniowy przyrost tego poziomu, czyli tyle, ile zamek
- * naprawdę zdążyłby wystawić. Dzięki temu skład garnizonu wynika ze stanu
- * miasta, a nie z osobnej tabelki, która rozjechałaby się przy pierwszej
- * zmianie bilansu.
+ * Siła to dawny tygodniowy przyrost tego poziomu razy `tygodnie`; na
+ * stworki przelicza ją `stadoZLiczebnosci`, a załoga dostaje je osobno
+ * (każdy stworek to jeden slot, jak w armii bohatera). Najwyżej siedem.
  */
-function garnizonZamku(frakcja: string, poziomy: number[]): Oddzial[] {
+/**
+ * Mury: załoga zamku liczy się tak, jakby miała tyle razy więcej dawnych
+ * stworków. W starym modelu obrońca (strona ruszająca się druga) wygrywał
+ * ~95% równych bitew — i to on trzymał zamki wroga do 20.–34. dnia misji
+ * oblężenia. Przerwy między stworkami na polu bitwy (`NA_POLU`) zniosły tę
+ * przewagę, więc zamki padały w 5.–10. dniu; mury oddają ją wprost.
+ * Strojone symulacją misji oblężenia: ×1,5 — autopilot wygrywa 3/3
+ * (dni 18–63), ×2 — 1/2 do dnia 84, bez murów — dzień 10.
+ */
+const MURY = 1.5;
+
+function garnizonZamku(frakcja: string, poziomy: number[], tygodnie: number): Oddzial[] {
   const f = factionById(frakcja) ?? FACTIONS[0];
-  return poziomy.map((tier) => {
+  const zaloga: Oddzial[] = [];
+  for (const tier of poziomy) {
     const u = f.units[tier];
-    return {
-      sprite: u.sprite,
-      nazwa: u.name,
-      // Siedem dni: pełny tydzień przyrostu z tego gniazda.
-      ile: PRZYROST_ODDZIALU[tier] * 7,
-      frakcja: f.id,
-      tier,
-    };
+    if (!u) continue;
+    const stado = stadoZLiczebnosci(tier, STARY_PRZYROST[tier] * 7 * tygodnie * MURY, 2);
+    zaloga.push(...rozbijStado({ sprite: u.sprite, nazwa: u.name, frakcja: f.id, tier, ...stado }));
+  }
+  return zaloga.slice(0, SLOTY_ARMII);
+}
+
+/**
+ * Drużyna startowa: po jednym stworku z czterech najniższych poziomów
+ * frakcji, na poziomie 5. Mnożnik planszy (dawniej mnożył liczebności)
+ * podnosi albo obniża poziom tą samą regułą co straże.
+ */
+function druzynaStartowa(frakcja: string, mnoznik: number): Oddzial[] {
+  const f = factionById(frakcja) ?? FACTIONS[0];
+  return f.units.slice(0, 4).map((_, tier) => {
+    const { poziom } = stadoZLiczebnosci(tier, STARY_STOS[tier] * mnoznik, 1);
+    return nowyStworek(f.id, tier, poziom)!;
   });
 }
 
@@ -363,7 +377,8 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
     // Czekają TYLKO te poziomy, dla których miasto ma siedlisko. Wcześniej
     // stało tu [6, 4, 3, 2, 1, 0] — cztery poziomy do kupienia z budynków,
     // których nie ma.
-    dostepne: [6, 4, 0, 0, 0, 0],
+    // Po jednym młodym stworku w każdym stojącym rezerwacie.
+    dostepne: [1, 1, 0, 0, 0, 0],
     // Garnizon domowy. Symetrycznie z zamkiem przeciwnika: bez tego byłby to
     // jedyny zamek na mapie, który pada BEZ WALKI, kiedy tylko ktoś do niego
     // dojdzie, bez względu na to, jak silna jest armia stojąca w polu.
@@ -373,10 +388,7 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
     // tygodniowy przyrost.
     // Plansza może dać mocniejszą załogę: w Twierdzy przeciwnik naciera od
     // trzeciego tygodnia, a bohater gracza jest wtedy daleko na północy.
-    oddzialy: garnizonZamku('bor', ust.garnizonGracza?.poziomy ?? [0, 1]).map((o) => ({
-      ...o,
-      ile: o.ile * (ust.garnizonGracza?.tygodnie ?? 5),
-    })),
+    oddzialy: garnizonZamku('bor', ust.garnizonGracza?.poziomy ?? [0, 1], ust.garnizonGracza?.tygodnie ?? 5),
   });
   // Każdy punkt zaczynający się od „zamek wroga" stawia zamek przeciwnika —
   // plansze kampanii mają ich po kilka. Pierwszy (bez przyrostka) jest stolicą.
@@ -398,7 +410,9 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
     postawione: [
       ...(ust.budynkiWroga ?? ['ratusz1', 'ratusz2', 'fort', 'siedlisko1', 'siedlisko2', 'siedlisko3']),
     ],
-    dostepne: [...(ust.dostepneWroga ?? [6, 4, 3, 0, 0, 0])],
+    // Plansze podają to w dawnych liczebnościach — każdy niezerowy wpis to
+    // jeden czekający młody stworek.
+    dostepne: (ust.dostepneWroga ?? [6, 4, 3, 0, 0, 0]).map((v) => (v > 0 ? 1 : 0)),
     // Garnizon. Bez niego zamek nie miał jak się bronić i gra nie miała
     // zakończenia — dziecko dochodziło przez pół planszy do celu i dostawało
     // komunikat, że celu nie ma.
@@ -407,25 +421,14 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
     // przyroście tygodniowym z każdego. To jest najsilniejsza bitwa w grze
     // i tak ma być: zdobycie miasta ma być końcem wyprawy, a nie kolejnym
     // posterunkiem po drodze. Ile tygodni przyrostu, mówi plansza.
-    oddzialy: garnizonZamku('grota', ust.garnizonWroga?.poziomy ?? [0, 1, 2]).map((o) => ({
-      ...o,
-      ile: Math.max(1, Math.round(o.ile * (ust.garnizonWroga?.tygodnie ?? 1))),
-    })),
+    oddzialy: garnizonZamku('grota', ust.garnizonWroga?.poziomy ?? [0, 1, 2], ust.garnizonWroga?.tygodnie ?? 1),
   }));
 
   // Armia startowa: cztery najniższe oddziały Boru. Punkty ruchu liczymy
   // z szybkości najwolniejszego, dokładnie jak w Heroes 3 — dzięki temu
   // dobór armii naprawdę wpływa na to, jak daleko się dojdzie.
   const bor = factionById('bor') ?? FACTIONS[0];
-  const armia = znormalizuj(
-    bor.units.slice(0, 4).map((u, i) => ({
-      sprite: u.sprite,
-      nazwa: u.name,
-      ile: [20, 9, 6, 4][i],
-      frakcja: bor.id,
-      tier: i,
-    }))
-  );
+  const armia = znormalizuj(druzynaStartowa(bor.id, 1));
   const najwolniejszy = Math.min(...bor.units.slice(0, 4).map((u) => u.move));
   const ruchMax = ruchNaDzien(najwolniejszy);
 
@@ -434,17 +437,9 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
   // wejściu do własnego zamku — dokładnie tak samo naturalny start, jak start
   // gracza kawałek od jego zamku.
   const grota = factionById('grota') ?? FACTIONS[1] ?? bor;
-  const wrogArmia = znormalizuj(
-    grota.units.slice(0, 4).map((u, i) => ({
-      sprite: u.sprite,
-      nazwa: u.name,
-      // Mnożnik z planszy: na Polanie bohater wroga siedzi w forcie i jego
-      // armia nie gra roli, w Twierdzy ma być groźniejszy niż zwykle.
-      ile: Math.max(1, Math.round([20, 9, 6, 4][i] * (ust.armiaWroga ?? 1))),
-      frakcja: grota.id,
-      tier: i,
-    }))
-  );
+  // Mnożnik z planszy: na Polanie bohater wroga siedzi w forcie i jego
+  // drużyna nie gra roli, w Twierdzy ma być groźniejszy niż zwykle.
+  const wrogArmia = znormalizuj(druzynaStartowa(grota.id, ust.armiaWroga ?? 1));
   const wrogNajwolniejszy = Math.min(...grota.units.slice(0, 4).map((u) => u.move));
   const wrogRuchMax = ruchNaDzien(wrogNajwolniejszy);
 
@@ -477,7 +472,7 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
       y: (PUNKTY[zamkiWroga[0]] ?? { y: 0 }).y,
       ruch: wrogRuchMax,
       ruchMax: wrogRuchMax,
-      imie: 'Grota',
+      imie: 'Oskar',
       atak: 2,
       obrona: 1,
       armia: wrogArmia,
