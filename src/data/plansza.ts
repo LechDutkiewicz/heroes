@@ -472,7 +472,7 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
       y: (PUNKTY[zamkiWroga[0]] ?? { y: 0 }).y,
       ruch: wrogRuchMax,
       ruchMax: wrogRuchMax,
-      imie: 'Grota',
+      imie: 'Oskar',
       atak: 2,
       obrona: 1,
       armia: wrogArmia,

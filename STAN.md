@@ -73,6 +73,19 @@ mieście albo kampanii.
   z przyciskiem „Nie ewoluuj" w oknie stworka. `spriteDoPortretow` wczytuje
   też NASTĘPNY etap każdego stworka z drużyny — ewolucja zdarza się
   w trakcie sceny (po bitwie, po treningu). Sonda `probe-ewolucja.ts`.
+- **Sale i odznaki, pojedynki trenerów** (odpowiedź na „pokonać bohaterów
+  i zamki"): zamek przeciwnika to SALA. Wygrana w niej daje odznakę na stałe
+  (`s.odznaki`, `zdobadzOdznake`, grafiki `public/bohater/odznaka-*.png`),
+  cel „zamki" = komplet odznak (`ocenMisje`). Bohater wroga to rywal Oskar,
+  rysowany na mapie (`public/mapa/rywal.png`). Pojedynek: gracz podchodzi
+  z sąsiedniego pola, AI wyzywa od `dzienNatarcia` i tylko gdy `wygramy`.
+  Przegrany płaci 20% pokeballi (min. 20, nie więcej niż ma) i wraca do
+  swojego Centrum — nikt nie odpada z gry (`rozliczPojedynek`). Rywal stojący
+  we własnym zamku jest jego obrońcą, nie celem pojedynku (`rywalNa`); gdy
+  sala padnie, przenosi się do innego swojego zamku (`wypedzZSali`) — bez
+  tego m1 była nie do wygrania. Sondy: `probe-pojedynki.ts` (dane),
+  `probe-pojedynek.mjs` (przeglądarka). Symulacje: m1 d7, m4 d15–25, m3 d7–9,
+  m2 bez wyniku do d60 jak wcześniej, błędów 0. OpenAI: 9 obrazków, 0,38 USD.
 - **Do zrobienia dalej**: etapy 4–6 w `PROJEKT-TRENERZY.md`.
 
 ## Storki w stylu mapy — pętla „gauntlet" (2026-09-26)

@@ -1860,11 +1860,19 @@ export class BattleScene extends Phaser.Scene {
         const def = this.roster.get(w.id)?.def;
         return { poziom: def?.poziom ?? 5, tier: (def?.tier ?? 1) - 1 };
       });
+    // Ilu stworków przeciwnika z każdego wpisu stoi na nogach — pojedynek
+    // z rywalem musi wiedzieć, kto z JEGO drużyny zemdlał.
+    const wrogOcalali = this.zPrzygody!.wrog.map((o, skad) => {
+      const naPolu = this.wrogZMapy.filter((w) => w.skad === skad);
+      const padli = naPolu.filter((w) => !this.units.some((u) => u.id === w.id)).length;
+      return Math.max(0, o.ile - padli);
+    });
     this.registry.set('wynik-bitwy', {
       oObiekt: this.zPrzygody!.oObiekt,
       wygrana,
       armia: ocalali,
       pokonani,
+      wrogOcalali,
     });
     // Chwila na przeczytanie ekranu końca, dopiero potem powrót.
     this.time.delayedCall(2600, () => this.scene.start(this.zPrzygody!.powrot ?? 'adventure'));

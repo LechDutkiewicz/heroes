@@ -739,6 +739,18 @@ export interface StanMapy {
   klucze: Klucz[];
   /** Klucze przeciwnika — osobna pula, symetrycznie z `klucze` gracza. */
   wrogKlucze: Klucz[];
+  /**
+   * Odznaki gracza: nazwy sal (zamków przeciwnika), w których wygrał.
+   * Odznaka zostaje na zawsze, nawet gdy rywal potem salę odbije — tak jak
+   * w pokemonach nikt nie odbiera wygranej odznaki. Warunek misji „zamki"
+   * liczy odznaki, nie bieżących właścicieli (`ocenMisje`).
+   */
+  odznaki?: string[];
+  /**
+   * Pojedynki rozegrane w turze AI (rywal wyzwał gracza albo autopilot
+   * rywala) — scena mapy pokazuje je graczowi i czyści listę.
+   */
+  pojedynki?: { wyzywajacy: Wlasciciel; zwyciezca: Wlasciciel | null; nagroda: number }[];
 }
 
 /**
@@ -1570,9 +1582,16 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
     // komunikat, że celu nie ma.
     if (o.wlasciciel !== kto) {
       if (obroncyZamku(o).length) return { opis: `${o.nazwa}\nBroni się!`, bitwaZ: o };
+      const dawny = o.wlasciciel;
       o.wlasciciel = kto;
+      if (dawny) wypedzZSali(s, o, dawny);
       obudz(bohater.armia);
-      return { opis: `${o.nazwa} jest twoja!`, zamek: o, zajete: o };
+      const odznaka = kto === 'gracz' ? zdobadzOdznake(s, o) : undefined;
+      return {
+        opis: odznaka ? `${o.nazwa} jest twoja!\nOdznaka sali: ${odznaka}` : `${o.nazwa} jest twoja!`,
+        zamek: o,
+        zajete: o,
+      };
     }
     // Centrum Pokemon: we własnym mieście zemdlone stworki od razu wracają
     // do siebie — i te w drużynie, i te w garnizonie.
@@ -1845,6 +1864,113 @@ export function trenuj(s: StanMapy, zamek: Obiekt, o: Oddzial, kto: Wlasciciel =
       ? `${stara} trenuje — ${napisPoziomu(o.poziom)} i ewoluuje w ${o.nazwa}!`
       : `${o.nazwa} trenuje — teraz ${napisPoziomu(o.poziom)}!`,
   };
+}
+
+/*
+ * ————————————————————————————————————————— pojedynki trenerów
+ *
+ * W Heroes 3 bohater przeciwnika to cel: pokonany znika z mapy. W świecie
+ * pokemonów trenerzy się nie „pokonują na śmierć" — spotkanie dwóch trenerów
+ * to pojedynek. Przegrany (wszyscy jego stworki mdleją) wraca do swojego
+ * Centrum Pokemon, traci resztę dnia i płaci zwycięzcy nagrodę w pokeballach,
+ * dokładnie jak w grach o pokemonach. Nikt nie odpada z gry.
+ */
+
+/** Numer pseudo-obiektu bitwy z rywalem (obiekty mapy mają numery ≥ 1). */
+export const RYWAL_ID = -1;
+
+/** Czy trener strony `kto` jest w grze — ma zamek (salę) albo drużynę. */
+export function trenerWGrze(s: StanMapy, kto: Wlasciciel): boolean {
+  if (kto === 'wrog' && !s.obiekty.some((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'wrog')) return false;
+  return bohaterOf(s, kto).armia.some((o) => !!o && o.ile > 0);
+}
+
+/**
+ * Czy na polu (x, y) stoi trener przeciwny do `kto`, gotowy do pojedynku.
+ * Trener we WŁASNEJ sali się nie liczy: jest w środku, a wejście tam to
+ * wyzwanie sali (bitwa z jej załogą), nie pojedynek na drodze. Bez tego
+ * rywal-obrońca, który z sali nie wychodzi, zamykał ją na zawsze — każde
+ * wejście kończyło się pojedynkiem i powrotem przegranego na to samo pole.
+ */
+export function rywalNa(s: StanMapy, x: number, y: number, kto: Wlasciciel): boolean {
+  const drugi: Wlasciciel = kto === 'gracz' ? 'wrog' : 'gracz';
+  const r = bohaterOf(s, drugi);
+  if (r.x !== x || r.y !== y || !trenerWGrze(s, drugi)) return false;
+  return !s.obiekty.some((o) => o.rodzaj === 'zamek' && o.wlasciciel === drugi && o.x === x && o.y === y);
+}
+
+/**
+ * Sala właśnie zmieniła właściciela: trener dawnego właściciela, jeśli stał
+ * w środku, przenosi się do innej swojej sali. Bez żadnej — zostaje, gdzie
+ * był, ale i tak wypada z gry (`trenerWGrze`).
+ */
+export function wypedzZSali(s: StanMapy, sala: Obiekt, dawny: Wlasciciel) {
+  const b = bohaterOf(s, dawny);
+  if (b.x !== sala.x || b.y !== sala.y) return;
+  const inna = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === dawny && o !== sala);
+  if (!inna) return;
+  b.x = inna.x;
+  b.y = inna.y;
+  b.ruch = 0;
+}
+
+/**
+ * Nagroda za wygrany pojedynek: piąta część pokeballi przegranego, co
+ * najmniej 20 (o ile ma), nigdy więcej, niż ma.
+ */
+export function nagrodaZaPojedynek(s: StanMapy, przegrany: Wlasciciel): number {
+  const ma = skarbiecOf(s, przegrany).pokeball;
+  return Math.min(ma, Math.max(20, Math.round(ma * 0.2)));
+}
+
+/**
+ * Skutki pojedynku poza samą bitwą: nagroda przechodzi do zwycięzcy,
+ * przegrany wraca do swojego Centrum (pierwszy własny zamek) z obudzoną
+ * drużyną i bez ruchu na dziś. Zwraca wypłaconą nagrodę.
+ */
+export function rozliczPojedynek(s: StanMapy, zwyciezca: Wlasciciel): number {
+  const przegrany: Wlasciciel = zwyciezca === 'gracz' ? 'wrog' : 'gracz';
+  const nagroda = nagrodaZaPojedynek(s, przegrany);
+  skarbiecOf(s, przegrany).pokeball -= nagroda;
+  skarbiecOf(s, zwyciezca).pokeball += nagroda;
+  const b = bohaterOf(s, przegrany);
+  const dom = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === przegrany);
+  if (dom) {
+    b.x = dom.x;
+    b.y = dom.y;
+    obudz(b.armia);
+  }
+  b.ruch = 0;
+  return nagroda;
+}
+
+/**
+ * Obrazek odznaki sali (`public/bohater/odznaka-<id>.png`) po nazwie sali.
+ * Nazwy sal pochodzą z plansz (`nazwyZamkowWroga`); sala bez wpisu dostaje
+ * odznakę Groty — tak nazywają się zamki przeciwnika bez własnej nazwy.
+ */
+const ODZNAKI: Record<string, string> = {
+  'Stary Fort': 'fort',
+  'Warownia na Grobli': 'grobla',
+  'Lodowa Twierdza': 'lod',
+  'Srebrna Strażnica': 'srebro',
+};
+export const ODZNAKI_PLIKI = ['fort', 'grota', 'grobla', 'lod', 'srebro'] as const;
+export const odznakaSali = (nazwa: string) => ODZNAKI[nazwa] ?? 'grota';
+
+/** Sale planszy: zamki spoza frakcji gracza (dziś Bór) — każda ma odznakę. */
+export const saleMapy = (s: StanMapy) =>
+  s.obiekty.filter((o) => o.rodzaj === 'zamek' && o.frakcjaZamku !== 'bor');
+
+/**
+ * Wygrana w sali (zamku przeciwnika): odznaka dla gracza. Zwraca nazwę
+ * odznaki, gdy to nowa odznaka.
+ */
+export function zdobadzOdznake(s: StanMapy, sala: Obiekt): string | undefined {
+  const odznaki = (s.odznaki ??= []);
+  if (odznaki.includes(sala.nazwa)) return undefined;
+  odznaki.push(sala.nazwa);
+  return sala.nazwa;
 }
 
 /** Data w formacie z Heroes 3: tydzień i dzień tygodnia. */

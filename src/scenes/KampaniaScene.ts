@@ -228,7 +228,7 @@ const nazwaArtefaktu = (id: string) =>
  */
 function celMisji(m: Misja): string {
   const z = m.zwyciestwo;
-  if (z.typ === 'zamki') return 'Zdobądź wszystkie zamki przeciwnika.';
+  if (z.typ === 'zamki') return 'Zdobądź odznaki wszystkich sal przeciwnika — wygraj w każdym jego zamku.';
   if (z.typ === 'artefakt') return `Odnajdź ${nazwaArtefaktu(z.artefakt)}.`;
   if (z.typ === 'zbierz') return `Zbierz ${z.ile} ${SUROWIEC_INFO[z.surowiec].dopelniacz}.`;
   return `Pokonaj: ${z.nazwa}.`;

@@ -98,6 +98,16 @@ Prompty i imiona — etap 6.
   przychodzi z najbliższym doświadczeniem.
 - Sonda: `tools/probe-ewolucja.ts`.
 
+## Sale i pojedynki (między etapami 3 i 4)
+
+- W Heroes wygrywa się, zdobywając zamki i pokonując bohaterów. W pokemonach
+  nikt nie burzy miast — trener wygrywa w SALI i dostaje odznakę. Zamek
+  przeciwnika to więc sala: wygrana w niej daje odznakę, cel misji to
+  komplet odznak.
+- Bohater przeciwnika to rywal-trener (Oskar). Spotkanie na mapie =
+  pojedynek: przegrany płaci pokeballe i wraca do Centrum Pokemon, nikt nie
+  znika z gry.
+
 ## Etap 4 — ataki
 
 - Każdy stworek ma 2 ataki (wręcz i z dystansu albo specjalny), trzeci
@@ -130,6 +140,7 @@ Prompty i imiona — etap 6.
 | 1 fundament | zrobione |
 | 2 trening i Centrum | zrobione |
 | 3 ewolucja | zrobione |
+| sale i pojedynki | zrobione |
 | 4 ataki | — |
 | 5 trener w bitwie | — |
 | 6 frakcje i kampania | — |
