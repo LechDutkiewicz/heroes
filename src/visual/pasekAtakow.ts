@@ -12,7 +12,8 @@
 import Phaser from 'phaser';
 import { atakiStworka, nazwaTrzeciego } from '../data/ataki';
 import type { UnitDef } from '../data/units';
-import { mix, plate } from './hud';
+import { mix, plate, stylNaDrewnie } from './hud';
+import { KROJ } from './zestaw';
 import { C, H, body } from './theme';
 
 export interface PasekAtakow {
@@ -36,9 +37,27 @@ export function createPasekAtakow(
   const cw = (w - ODSTEP * (ILE - 1)) / ILE;
   const y = cy - h / 2;
 
+  // Na zestawie ataki to tabliczki: złota — wybrany, drewniana — gotowy,
+  // wyblakła — bez PP albo przed ewolucją.
+  const zestaw = scene.textures.exists('z-tabliczka-drewno');
   const przyciski = Array.from({ length: ILE }, (_, i) => {
     const px = x + i * (cw + ODSTEP);
     const g = scene.add.graphics();
+    const tabliczka = (klucz: string) =>
+      scene.add
+        .nineslice(px + cw / 2, cy, klucz, undefined, cw * 2, h * 2, 40, 40, 30, 30)
+        .setScale(0.5)
+        .setOrigin(0.5)
+        .setVisible(false);
+    const skory = zestaw
+      ? {
+          wybrany: tabliczka('z-tabliczka-zloto'),
+          gotowy: tabliczka('z-tabliczka-drewno'),
+          // Wyblakła drewniana, nie szara „-wyl" — ciemny łupek odstawał od reszty paska.
+          pusty: tabliczka('z-tabliczka-drewno').setAlpha(0.5),
+        }
+      : undefined;
+    if (skory) kontener.add(Object.values(skory));
     const znak = scene.add.graphics();
     const cyfra = scene.add
       .text(px + 14, cy, String(i + 1), { ...body(13, H.white), fontStyle: 'bold' })
@@ -58,6 +77,28 @@ export function createPasekAtakow(
       rysuj(stan: 'wybrany' | 'gotowy' | 'pusty' | 'zablokowany', tNazwa: string, tPp: string) {
         aktywny = stan === 'gotowy' || stan === 'wybrany';
         strefa.input!.cursor = aktywny ? 'pointer' : 'default';
+        if (skory) {
+          g.clear();
+          znak.clear();
+          skory.wybrany.setVisible(stan === 'wybrany');
+          skory.gotowy.setVisible(stan === 'gotowy');
+          skory.pusty.setVisible(stan === 'pusty' || stan === 'zablokowany');
+          const zloto = stan === 'wybrany';
+          const blady = stan === 'pusty' || stan === 'zablokowany';
+          const styl = zloto
+            ? { fontFamily: KROJ.tytul, fontSize: '14px', color: '#3b1f08', stroke: '#000', strokeThickness: 0 }
+            : stylNaDrewnie(14);
+          cyfra.setStyle({ ...styl, fontSize: '13px' }).setAlpha(blady ? 0.5 : 0.85);
+          nazwa.setStyle(styl).setAlpha(blady ? 0.55 : 1);
+          pp.setStyle({ ...styl, fontSize: '12px' }).setAlpha(blady ? 0.6 : 0.9);
+          if (stan === 'pusty') pp.setColor('#ffb4a0');
+          nazwa.setText(stan === 'zablokowany' ? `${tNazwa}\n${tPp}` : tNazwa).setLineSpacing(-3);
+          pp.setText(stan === 'zablokowany' ? '' : tPp);
+          const miejsce = cw - 28 - pp.width - 14;
+          const skala = Math.min(stan === 'zablokowany' ? 0.78 : 1, miejsce / nazwa.width, (h - 6) / nazwa.height);
+          nazwa.setScale(Math.max(0.55, skala));
+          return;
+        }
         const fill =
           stan === 'wybrany' ? C.gold : stan === 'gotowy' ? mix(C.panel, C.ally, 0.12) : mix(C.panel, C.inkSoft, 0.35);
         const edge = stan === 'wybrany' ? C.goldDeep : stan === 'gotowy' ? C.allyDeep : mix(C.inkSoft, C.shadow, 0.3);

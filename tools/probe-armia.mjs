@@ -357,6 +357,15 @@ const werbunek = await page.evaluate(async () => {
   const m = await import('/src/data/mapa.ts');
   const ilu = (a) => a.filter(Boolean).length;
   t.stan.skarbiec.pokeball = 400;
+  // Jeden stworek danego gatunku: wypuszczamy posiadanego z tego gatunku,
+  // inaczej rezerwat słusznie odmówi.
+  const st = await import('/src/data/stworki.ts');
+  const fr = await import('/src/data/factions.ts');
+  const ten = st.gatunek(fr.factionById(t.profil.frakcja).units[0].sprite);
+  // W miejscu, nie nową tablicą — ekran miasta trzyma referencje do list.
+  const bezNiego = (lista) => lista.forEach((o, i) => { if (o && st.gatunek(o.sprite) === ten) lista[i] = null; });
+  bezNiego(t.stan.bohater.armia);
+  for (const z of t.stan.obiekty) if (z.rodzaj === 'zamek' && z.garnizon) bezNiego(z.garnizon);
   const przed = { g: ilu(t.garnizon), b: ilu(t.stan.bohater.armia), zapas: t.zamek.dostepne[0], kasa: t.stan.skarbiec.pokeball };
   const puste = t.garnizon.map((o) => !o);
   t.kup(0);
@@ -426,7 +435,11 @@ const zapis = await page.evaluate(() => {
   const k = Object.keys(localStorage).find((x) => x.endsWith('-zapis-auto'));
   const d = JSON.parse(localStorage.getItem(k));
   const z = d.stan.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'gracz');
-  return { k, garnizon: (z.garnizon ?? []).map((o) => (o ? `${o.nazwa}@${o.poziom}${o.ile !== 1 ? `×${o.ile}` : ''}` : '—')) };
+  return {
+    k,
+    garnizon: (z.garnizon ?? []).map((o) => (o ? `${o.nazwa}@${o.poziom}${o.ile !== 1 ? `×${o.ile}` : ''}` : '—')),
+    druzyna: d.stan.bohater.armia.filter(Boolean).map((o) => `${o.nazwa}@${o.poziom}`).join(' '),
+  };
 });
 sprawdz('autozapis zawiera garnizon ze slotami', zapis.garnizon[0] !== '—' && zapis.garnizon[1] === '—' && zapis.garnizon[2] !== '—', zapis.garnizon.join(' '));
 
@@ -444,7 +457,11 @@ const wczytaj = async () => {
   });
 };
 let odczyt = await wczytaj();
-sprawdz('odczyt przywraca garnizon co do slotu', JSON.stringify(odczyt) === JSON.stringify(zapis.garnizon), (odczyt ?? []).join(' '));
+// Jeden stworek danego gatunku: przy odczycie duplikaty gatunków z drużyny
+// znikają z garnizonu (zostaje silniejszy — w drużynie). Reszta slotów stoi.
+const wDruzynie = new Set(zapis.druzyna.split(' ').map((x) => x.split('@')[0]));
+const oczekiwany = zapis.garnizon.map((x) => (x !== '—' && wDruzynie.has(x.split('@')[0]) ? '—' : x));
+sprawdz('odczyt przywraca garnizon co do slotu (bez duplikatów gatunków z drużyny)', JSON.stringify(odczyt) === JSON.stringify(oczekiwany), `${(odczyt ?? []).join(' ')} (oczekiwano: ${oczekiwany.join(' ')})`);
 
 // Stary zapis: bez pola `garnizon` — ma się wczytać jako pusty garnizon.
 await page.evaluate((k) => {

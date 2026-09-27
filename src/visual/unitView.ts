@@ -61,8 +61,12 @@ import { ICON, TYPE_ICON, icon } from './icons';
 
 /** Linia, na której stworek stoi — tu leży cień i podest. */
 const FEET_Y = 7;
-const SPRITE_H = 50;
-const NAME_Y = -37;
+/**
+ * Pole z bajki (1 na 1, 2 na 2) stoi luźno, więc stworek może być większy
+ * niż przy siedmiu oddziałach w kolumnie: 60 zamiast 50 px, nazwa wyżej.
+ */
+const SPRITE_H = 60;
+const NAME_Y = -47;
 
 /** Podest: płaski, szeroki znacznik barwy strony tuż pod nogami. */
 const PLATE_W = 46;
@@ -109,7 +113,7 @@ const CNT_OVERLAP = 5;
 const TYPE_X = 25;
 // Na wysokości barków, nie przy czubku głowy — wyżej krążek wchodził
 // w ostatnie litery dłuższych nazw.
-const BADGE_Y = -17;
+const BADGE_Y = -22;
 const SHIELD_X = -25;
 const SIDE_ICON_SIZE = 11;
 const BADGE_D = 16;
@@ -555,10 +559,10 @@ function silhouetteOf(scene: Phaser.Scene, key: string): Silhouette | null {
   return s;
 }
 
-/** Docelowy pierwiastek z pola sylwetki na ekranie: od 26 px (poziom 1) do 36 px (poziom 6). */
-const AREA_BY_TIER = (tier: number) => 26 + 2 * (Phaser.Math.Clamp(tier, 1, 6) - 1);
+/** Docelowy pierwiastek z pola sylwetki na ekranie: od 31 px (poziom 1) do 43 px (poziom 6). */
+const AREA_BY_TIER = (tier: number) => 1.2 * (26 + 2 * (Phaser.Math.Clamp(tier, 1, 6) - 1));
 const MAX_SIL_H = SPRITE_H;
-const MAX_SIL_W = 60;
+const MAX_SIL_W = 70;
 
 // ---------- budowa ----------
 

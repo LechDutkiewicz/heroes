@@ -31,6 +31,10 @@ razem z walkami 1 na 1 / 2 na 2 (mniejsze pole i tak zmienia układ): belki,
 karta stworka, pasek ataków, kolejka tur i przyciski w zestawie
 `visual/zestaw.ts`, ikony z tej fali.
 
+Stan: ekran walki i ikony (rękawica, kula energii, bańka, gwiazdki,
+but sportowy) — zrobione razem z walkami 1 na 1 / 2 na 2. Zostały słowa:
+Zapał i Opieka bohatera, „armia/oddział/zamek" w tekstach.
+
 ## Fala 2 — zamki na mapie (najbardziej widoczne)
 
 | Teraz | Po zmianie | Grafiki |

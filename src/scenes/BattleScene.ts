@@ -25,7 +25,8 @@ import {
 } from '../data/przedmioty';
 import { pokazPlecak, type WierszPlecaka } from '../visual/oknoPlecaka';
 import { pokazWyborSkladu, type WyborSkladu } from '../visual/wyborSkladu';
-import { medalion } from '../visual/zestaw';
+import { BELKA_Y, KROJ, krojeZestawu, latki, medalion, napisTytulowy, wczytajZestaw } from '../visual/zestaw';
+import { kluczPortretuOkraglego } from '../visual/portrety';
 import { toEtapEwolucji, wczytajPortrety } from '../visual/portrety';
 import { hexDistance, type Cell } from '../data/hex';
 
@@ -88,6 +89,7 @@ import {
   GUARD_REDUCTION,
   NA_POLU,
   rzedyNaPolu,
+  sprawnych,
   atakDostepny,
   atakiJednostki,
   attackPlan,
@@ -126,7 +128,7 @@ import {
   paintPreviewCell,
   pulse,
 } from '../visual/board';
-import { C, H, Z, body, display } from '../visual/theme';
+import { C, Z } from '../visual/theme';
 import { wersjonujZasoby } from '../visual/zasoby';
 import { OKNO_H } from '../visual/uklad';
 import {
@@ -144,7 +146,7 @@ import {
   createStatTable,
   createTurnQueue,
   drawPanelBody,
-  drawTitle,
+  stylNaDrewnie,
   makeHudButton,
   plate,
   type Forecast,
@@ -226,11 +228,9 @@ const BAR_H = 62;
 /**
  * Pasek stoi przy dolnej krawędzi okna, nie pod planszą: pole z bajki
  * (8 × 5) jest niższe od dawnego, a okno gry ma stałą wysokość (`OKNO_H`).
- * Między planszą a paskiem leżą pokeballe obu drużyn (`rysujDruzyny`).
+ * Między planszą a paskiem leżą drużyny obu stron (`rysujDruzyny`).
  */
 const BAR_Y = OKNO_H - 14 - BAR_H;
-/** Rząd pokeballi z drużynami — pośrodku pasa między planszą a paskiem. */
-const DRUZYNY_Y = (BOARD_Y + BOARD_H + BAR_Y) / 2 + 2;
 const BAR_INSET = 6;
 const BAR_PAD = 8;
 
@@ -455,7 +455,7 @@ export class BattleScene extends Phaser.Scene {
   private oknoPlecaka?: Phaser.GameObjects.Container;
   private plecakButton?: HudButton;
   /** Skąd leci pokeball — środek medalionu trenera. */
-  private readonly trenerXY = { x: 34, y: 50 };
+  private readonly trenerXY = { x: 32, y: 27 };
   /** Złapane stworki: wpis w składzie wroga i id na polu. */
   private zlapani: { skad: number; id: number }[] = [];
   private wydanePokeballe = 0;
@@ -511,6 +511,10 @@ export class BattleScene extends Phaser.Scene {
     const etapy = [...new Set(zMapy)].filter((s) => !ALL_SPRITES.includes(s));
     for (const key of etapy) this.load.image(key, `${import.meta.env.BASE_URL}sprites/${key}.png`);
     wczytajPortrety(this, { okragle: true }, etapy.filter(toEtapEwolucji));
+    // Okrągłe portrety wszystkich stworków — do kolejki tur i do drużyn pod
+    // planszą, od pierwszej klatki.
+    wczytajPortrety(this, { okragle: true });
+    wczytajZestaw(this);
     for (const t of TERRAINS) {
       this.load.image(t.key, `${import.meta.env.BASE_URL}terrain/${t.key}.png`);
     }
@@ -605,6 +609,15 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create() {
+    // Napisy walki są w krojach zestawu (Cinzel, Lora). Z mapy przychodzą
+    // już wczytane; przy wejściu wprost (sonda, `?ekran=bitwa`) czekamy na
+    // nie i zaczynamy scenę od nowa — Phaser nie przerysuje gotowego napisu,
+    // gdy krój dojdzie później.
+    if (!document.fonts.check('16px ZestawCinzel')) {
+      void krojeZestawu().then(() => {
+        if (document.fonts.check('16px ZestawCinzel')) this.scene.restart(this.zPrzygody);
+      });
+    }
     this.zerujBitwe();
     const wymuszone = Number(new URLSearchParams(window.location.search).get('naPolu'));
     this.naPolu = this.zPrzygody?.naPolu ?? (wymuszone === 1 || wymuszone === 2 ? wymuszone : NA_POLU);
@@ -648,7 +661,7 @@ export class BattleScene extends Phaser.Scene {
     setLabelObstacles(this, () =>
       this.units.map((u) => {
         const p = this.cellToXY(u.col, u.row);
-        return new Phaser.Geom.Rectangle(p.x - 46, p.y - 46, 92, 76);
+        return new Phaser.Geom.Rectangle(p.x - 54, p.y - 66, 108, 98);
       })
     );
 
@@ -824,51 +837,55 @@ export class BattleScene extends Phaser.Scene {
 
   /** Górna belka: tytuł, wstęgi zamków, zdanie o turze i pasek kolejki. */
   private drawTopBar() {
-    // Górna belka ma tylko 100 pikseli do ramy planszy, a rama wystaje jeszcze
-    // kilka pikseli ponad BOARD_Y. Stąd trzy ciasno upakowane wiersze:
-    // tytuł, wstęgi zamków, zdanie o turze.
-    // Trener przy polu bitwy — jak bohater Heroes 3 w rogu pola walki.
-    // Medalion z głową trenera, a obok tytułu przycisk plecaka (etap 5).
+    // Belka z drewna (namalowana w `drewno.jpg`, 0…48 px): trener gracza
+    // w medalionie po lewej, plecak, nazwa walki na środku, kolejka tur
+    // i lider sali po prawej. Pod belką, na drewnie, zdanie o turze.
     const kto = this.zPrzygody?.trener?.kto ?? 'janek';
-    medalion(this, this.trenerXY.x, this.trenerXY.y, 30, C.panelDeep).setDepth(61);
+    medalion(this, this.trenerXY.x, this.trenerXY.y, 27, C.panelDeep).setDepth(61);
     const glowa = this.add.image(this.trenerXY.x, this.trenerXY.y + 1, `tr-glowa-${kto}`).setDepth(62);
-    glowa.setScale(40 / Math.max(glowa.width, glowa.height));
+    glowa.setScale(38 / Math.max(glowa.width, glowa.height));
     glowa.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.otworzPlecak());
-    drawTitle(this, TYTUL_X, 0, 'POKÉMON HEROES', 24);
+    napisTytulowy(this, this.scale.width / 2, BELKA_Y, this.tytulWalki(), 22).setDepth(61);
     // Lider sali stoi po drugiej stronie — medalion w prawym rogu, lustrzanie
     // do trenera gracza.
     const przeciwnik = this.zPrzygody?.przeciwnik;
+    let prawaKrawedz = this.scale.width - 14;
     if (przeciwnik && this.textures.exists(`przeciwnik-${przeciwnik.portret}`)) {
-      const px = this.scale.width - this.trenerXY.x + 8;
-      medalion(this, px, this.trenerXY.y + 26, 24, C.foeDeep).setDepth(61);
-      const twarz = this.add.image(px, this.trenerXY.y + 25, `przeciwnik-${przeciwnik.portret}`).setDepth(62);
-      twarz.setScale(36 / Math.max(twarz.width, twarz.height));
+      const px = this.scale.width - this.trenerXY.x;
+      medalion(this, px, this.trenerXY.y, 27, C.foeDeep).setDepth(61);
+      const twarz = this.add.image(px, this.trenerXY.y + 1, `przeciwnik-${przeciwnik.portret}`).setDepth(62);
+      twarz.setScale(40 / Math.max(twarz.width, twarz.height));
+      prawaKrawedz = px - 40;
     }
     this.plecakButton = makeHudButton(this, {
-      x: TYTUL_X + 316,
-      y: 17,
-      w: 138,
-      h: 28,
+      x: this.trenerXY.x + 34 + 66,
+      y: BELKA_Y,
+      w: 132,
+      h: 32,
       icon: ICON.star,
-      tone: C.gold,
-      toneDeep: C.goldDeep,
+      tone: C.panel,
+      toneDeep: C.panelDeep,
       onClick: () => (this.oknoPlecaka ? this.zamknijPlecak() : this.otworzPlecak()),
     });
-    this.plecakButton.setLabel('Plecak  (P)');
+    this.plecakButton.setLabel('Plecak (P)');
 
-    // Wstęg z nazwami zamków i kaflem terenu tu NIE MA — świadomie.
-    //
-    // Trzy kafle zajmowały cały wiersz górnej belki, żeby powtórzyć rzeczy,
-    // które gracz i tak widzi: strony rozróżnia barwa oddziałów (ta sama, co
-    // na wstędze), a teren widać na planszy, bo się po nim chodzi. Nazwa
-    // zamku nie wpływa na żadną decyzję w bitwie — to podpis pod obrazkiem.
-    // Miejsce po nich idzie na zdanie o turze, które jest instrukcją, a nie
-    // podpisem.
+    // Zdanie o turze: kremowy Cinzel na drewnie, między belką a ramą planszy.
+    this.turnText = this.add
+      .text(BOARD_X + 4, (48 + BOARD_Y - 13) / 2 + 1, '', stylNaDrewnie(15))
+      .setOrigin(0, 0.5)
+      .setShadow(0, 2, '#000000aa', 2, true, true)
+      .setDepth(61);
 
-    // Zdanie o turze z konturem, bo leży wprost na tle, nie na panelu.
-    this.turnText = this.add.text(TYTUL_X, 52, '', display(15)).setOrigin(0, 0.5);
+    this.queue = createTurnQueue(this, prawaKrawedz, BELKA_Y);
+  }
 
-    this.queue = createTurnQueue(this, BOARD_X + BOARD_W, 24);
+  /** Nazwa walki na belce: kto stoi po drugiej stronie. */
+  private tytulWalki() {
+    const z = this.zPrzygody;
+    if (!z) return 'Walka pokazowa';
+    if (z.przeciwnik) return `Sala — ${z.przeciwnik.imie}`;
+    if (z.trener?.dzikie) return 'Dzikie stworki';
+    return this.naPolu >= 2 ? 'Walka trenerów' : 'Walka';
   }
 
   /**
@@ -968,14 +985,11 @@ export class BattleScene extends Phaser.Scene {
       HEAD_H - 6
     ).setDepth(62);
     this.headName = this.add
-      .text(CARD_CONTENT_X + 14 + HEAD_H, HEAD_Y + HEAD_H / 2, '', {
-        ...display(15),
-        strokeThickness: 3.5,
-      })
+      .text(CARD_CONTENT_X + 14 + HEAD_H, HEAD_Y + HEAD_H / 2, '', stylNaDrewnie(15))
       .setOrigin(0, 0.5)
       .setDepth(62);
     this.headMeta = this.add
-      .text(CARD_CONTENT_X + CARD_CONTENT_W - 10, HEAD_Y + HEAD_H / 2, '', body(12, H.white))
+      .text(CARD_CONTENT_X + CARD_CONTENT_W - 10, HEAD_Y + HEAD_H / 2, '', { fontFamily: KROJ.tekst, fontSize: '12px', color: '#fff4dc' })
       .setOrigin(1, 0.5)
       .setDepth(62);
     this.card.add([this.headBand, this.headIcon, this.headName, this.headMeta]);
@@ -1097,25 +1111,51 @@ export class BattleScene extends Phaser.Scene {
     this.druzynyWarstwa?.destroy();
     const w = this.add.container(0, 0).setDepth(20);
     this.druzynyWarstwa = w;
+    const y0 = BOARD_Y + BOARD_H + 13 + 8;
+    const h = BAR_Y - 10 - y0;
+    const D = h - 16;
+    const krok = D + 6;
     const rysuj = (side: Side) => {
       const wszyscy = [...this.roster.values()].filter((u) => u.side === side).sort((a, b) => a.id - b.id);
       if (wszyscy.length === 0) return;
-      const R = 11;
-      const krok = 2 * R + 6;
       const lewa = side === 'player';
-      const x0 = lewa ? BOARD_X + 16 + R : BOARD_X + BOARD_W - 16 - R;
+      const nazwa = lewa
+        ? 'Drużyna'
+        : this.zPrzygody?.przeciwnik?.imie ?? (this.dzikie ? 'Dzikie' : 'Rywal');
       const podpis = this.add
-        .text(lewa ? BOARD_X + 10 : BOARD_X + BOARD_W - 10, DRUZYNY_Y - 22, lewa ? 'Twoja drużyna' : this.zPrzygody?.przeciwnik?.imie ?? (this.dzikie ? 'Dzikie stworki' : 'Przeciwnik'), body(12, H.white))
-        .setOrigin(lewa ? 0 : 1, 0.5)
-        .setShadow(1, 1, '#000', 2, false, true);
+        .text(0, 0, nazwa.toUpperCase(), { fontFamily: KROJ.tytul, fontSize: '12px', color: lewa ? '#2c4f7a' : '#8e2a18' })
+        .setOrigin(0, 0.5);
+      const pw = 18 + podpis.width + 10 + wszyscy.length * krok + 6;
+      const px = lewa ? BOARD_X : BOARD_X + BOARD_W - pw;
+      w.add([
+        latki(this, 'z-cien', px - 12, y0 - 8, pw + 24, h + 26, 60).setAlpha(0.6),
+        latki(this, 'z-pergamin', px, y0, pw, h, 48),
+        latki(this, 'z-rama-cienka', px - 5, y0 - 5, pw + 10, h + 10, 16),
+      ]);
+      podpis.setPosition(px + 14, y0 + h / 2);
       w.add(podpis);
       wszyscy.forEach((u, i) => {
-        const x = lewa ? x0 + i * krok : x0 - i * krok;
+        const cx = px + 14 + podpis.width + 10 + D / 2 + i * krok;
+        const cy = y0 + h / 2;
         const sprawny = this.naNogach(u.id);
-        const kula = this.add.image(x, DRUZYNY_Y + 2, 'przedmiot-pokeball');
-        kula.setScale((2 * R) / Math.max(kula.width, kula.height));
-        if (!sprawny) kula.setTint(0x6d6d6d).setAlpha(0.55);
-        w.add(kula);
+        const naPolu = this.units.includes(u);
+        const g = this.add.graphics();
+        // Na polu: złoty pierścień; w pokeballu: brązowy; zemdlony: szary.
+        g.fillStyle(0x2a1606, 0.35);
+        g.fillCircle(cx + 1, cy + 2, D / 2 + 2);
+        g.fillStyle(naPolu ? C.gold : sprawny ? 0x8a5a2b : 0x8d8d8d, 1);
+        g.fillCircle(cx, cy, D / 2 + 2);
+        g.fillStyle(0xf3e2ba, 1);
+        g.fillCircle(cx, cy, D / 2 - 1);
+        const klucz = kluczPortretuOkraglego(u.def.sprite);
+        const twarz = this.textures.exists(klucz)
+          ? this.add.image(cx, cy, klucz).setDisplaySize(D - 3, D - 3)
+          : this.add.image(cx, cy, u.def.sprite).setDisplaySize(D * 0.8, D * 0.8);
+        w.add([g, twarz]);
+        if (!sprawny) {
+          twarz.setTint(0x777777).setAlpha(0.6);
+          w.add(icon(this, ICON.skull, cx, cy - D / 2 + 2, D * 0.55));
+        }
       });
     };
     rysuj('player');
@@ -2529,9 +2569,20 @@ export class BattleScene extends Phaser.Scene {
     this.checkGameOver();
   }
 
+  /** Zdanie pod napisem końca — po bajkowemu: stworki mdleją, nikt nie „rozbija armii". */
+  private podpisKonca(won: boolean) {
+    const lider = this.zPrzygody?.przeciwnik?.imie;
+    if (won) {
+      if (lider) return `Pokonujesz ${lider.endsWith('a') ? 'liderkę' : 'lidera'} sali: ${lider}!`;
+      return this.dzikie ? 'Dzikie stworki uciekają w zarośla' : 'Drużyna przeciwnika mdleje — wygrana!';
+    }
+    return 'Twoja drużyna mdleje — czas na Centrum Pokemon';
+  }
+
   private checkGameOver() {
-    const playersLeft = this.units.some((u) => u.side === 'player');
-    const enemiesLeft = this.units.some((u) => u.side === 'enemy');
+    // Strona trwa, póki ktoś jej stoi na polu ALBO czeka w pokeballu.
+    const playersLeft = sprawnych(this.battle, 'player') > 0;
+    const enemiesLeft = sprawnych(this.battle, 'enemy') > 0;
     if (playersLeft && enemiesLeft) return;
 
     this.gameOver = true;
@@ -2544,6 +2595,7 @@ export class BattleScene extends Phaser.Scene {
     this.turnText.setText('');
 
     const won = playersLeft;
+    this.rysujDruzyny();
     if (this.zPrzygody) this.wrocDoPrzygody(won);
     // Ekran końca należy do warstwy nakładki, nie efektów — inaczej iskry
     // z ostatniego ciosu potrafią wylądować NAD wstęgą z napisem.
@@ -2557,9 +2609,7 @@ export class BattleScene extends Phaser.Scene {
       won,
       BOARD_X + BOARD_W / 2,
       BOARD_Y + BOARD_H / 2,
-      won
-        ? `${this.playerFaction.name} rozbija armię: ${this.enemyFaction.name}`
-        : `${this.enemyFaction.name} rozbija twoją armię`
+      this.podpisKonca(won)
     );
   }
 }

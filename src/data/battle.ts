@@ -409,18 +409,22 @@ export function wejdzZmiennik(b: Battle, side: Side): SimUnit | undefined {
   return u;
 }
 
-/** Pierwsze wolne pole przy krawędzi strony, od środkowego rzędu na zewnątrz. */
+/**
+ * Wolne pole przy krawędzi strony: najpierw takie, które ma wolne pola nad
+ * i pod sobą (jak przy starcie — z przerwą, żeby nazwy i paski się nie
+ * nakładały), od środkowego rzędu na zewnątrz.
+ */
 function wolnePoleStartowe(b: Battle, side: Side): Cell | undefined {
   const srodek = Math.floor(ROWS / 2);
-  const rzedy = Array.from({ length: ROWS }, (_, i) => i).sort(
-    (x, y) => Math.abs(x - srodek) - Math.abs(y - srodek) || x - y
-  );
+  const zajete = (col: number, row: number) => b.units.some((u) => u.col === col && u.row === row);
   for (let k = 0; k < COLS; k++) {
     const col = side === 'player' ? k : COLS - 1 - k;
+    const ciasno = (row: number) => (zajete(col, row - 1) || zajete(col, row + 1) ? 1 : 0);
+    const rzedy = Array.from({ length: ROWS }, (_, i) => i).sort(
+      (x, y) => ciasno(x) - ciasno(y) || Math.abs(x - srodek) - Math.abs(y - srodek) || x - y
+    );
     for (const row of rzedy) {
-      const key = cellKey(col, row);
-      if (b.obstacles.has(key)) continue;
-      if (b.units.some((u) => u.col === col && u.row === row)) continue;
+      if (b.obstacles.has(cellKey(col, row)) || zajete(col, row)) continue;
       return { col, row };
     }
   }

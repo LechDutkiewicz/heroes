@@ -10,6 +10,7 @@ import Phaser from 'phaser';
 import { drawPanelBody, makeHudButton, mix, plate } from './hud';
 import { C, H, body, display } from './theme';
 import { ICON } from './icons';
+import { BARWA, KROJ } from './zestaw';
 
 export interface Kandydat {
   /** indeks wpisu w składzie z mapy */
@@ -46,8 +47,15 @@ export function pokazWyborSkladu(
   const y = obszar.y + (obszar.h - h) / 2;
   drawPanelBody(scene, x, y, w, h, 6, warstwa);
 
-  warstwa.add(scene.add.text(x + w / 2, y + 26, 'Kto zaczyna?', display(22)).setOrigin(0.5));
-  const podpis = scene.add.text(x + w / 2, y + 54, '', body(14, H.inkSoft)).setOrigin(0.5);
+  const zestaw = scene.textures.exists('z-pergamin');
+  warstwa.add(
+    scene.add
+      .text(x + w / 2, y + 26, 'Kto zaczyna?', zestaw ? { fontFamily: KROJ.tytul, fontSize: '24px', color: BARWA.atramentCzerwony } : display(22))
+      .setOrigin(0.5)
+  );
+  const podpis = scene.add
+    .text(x + w / 2, y + 54, '', zestaw ? { fontFamily: KROJ.kursywa, fontSize: '14px', color: BARWA.atramentMiekki } : body(14, H.inkSoft))
+    .setOrigin(0.5);
   warstwa.add(podpis);
 
   const wybrane = new Set(kandydaci.slice(0, maks).map((k) => k.skad));
@@ -60,10 +68,17 @@ export function pokazWyborSkladu(
     const obraz = scene.add.image(kx + KW / 2, ky + 48, scene.textures.exists(k.sprite) ? k.sprite : '__MISSING');
     obraz.setScale(Math.min(64 / obraz.width, 64 / obraz.height));
     const nazwa = scene.add
-      .text(kx + KW / 2, ky + 86, k.nazwa, { ...body(12, H.ink), fontStyle: 'bold' })
+      .text(
+        kx + KW / 2,
+        ky + 86,
+        k.nazwa,
+        zestaw ? { fontFamily: KROJ.tytul, fontSize: '12px', color: BARWA.atrament } : { ...body(12, H.ink), fontStyle: 'bold' }
+      )
       .setOrigin(0.5);
     if (nazwa.width > KW - 6) nazwa.setScale((KW - 6) / nazwa.width);
-    const poz = scene.add.text(kx + KW / 2, ky + 101, `poz. ${k.poziom}`, body(11, H.inkSoft)).setOrigin(0.5);
+    const poz = scene.add
+      .text(kx + KW / 2, ky + 101, `poz. ${k.poziom}`, zestaw ? { fontFamily: KROJ.tekst, fontSize: '11px', color: BARWA.atramentMiekki } : body(11, H.inkSoft))
+      .setOrigin(0.5);
     const znak = scene.add.text(kx + KW - 12, ky + 12, '✓', display(15)).setOrigin(0.5);
     const strefa = scene.add.zone(kx + KW / 2, ky + KH / 2, KW, KH).setInteractive({ useHandCursor: true });
     strefa.on('pointerdown', () => {
@@ -81,6 +96,15 @@ export function pokazWyborSkladu(
       rysuj() {
         const tak = wybrane.has(k.skad);
         g.clear();
+        if (zestaw && !tak) {
+          g.fillStyle(BARWA.papierCiemny, 0.8);
+          g.fillRoundedRect(kx, ky, KW, KH, 12);
+          g.lineStyle(1.5, BARWA.kreska, 0.6);
+          g.strokeRoundedRect(kx, ky, KW, KH, 12);
+          obraz.setAlpha(0.6);
+          znak.setVisible(false);
+          return;
+        }
         plate(g, kx, ky, KW, KH, 12, tak ? C.gold : mix(C.panel, C.inkSoft, 0.2), tak ? C.goldDeep : C.panelEdge, {
           light: 0.3,
           dark: 0.24,
