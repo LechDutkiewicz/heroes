@@ -267,6 +267,9 @@ await scena('zamek');
 const kupno = await page.evaluate(() => {
   const t = window.__game.scene.getScene('zamek');
   const b = t.profil.budynki.find((x) => x.id === 'siedlisko2');
+  // Jeden stworek danego gatunku: drużyna startowa ma już Flamira, więc
+  // najpierw go wypuszczamy — inaczej rezerwat słusznie odmówi.
+  t.stan.bohater.armia = t.stan.bohater.armia.map((o) => (o && o.tier === 1 ? null : o));
   t.pokazBudynek(b);
   const ilu = (a) => a.filter(Boolean).length;
   const puste = t.stan.bohater.armia.map((o) => !o);
@@ -286,8 +289,20 @@ const kupno = await page.evaluate(() => {
     },
     nowy: nowy && { ile: nowy.ile, poziom: nowy.poziom, tier: nowy.tier, nazwa: nowy.nazwa },
     komunikat: t.komunikat.text,
+    // Drugi Flamir: rezerwat ma jeszcze kogoś, ale gatunek już jest.
+    drugi: (() => {
+      const przedDrugim = ilu(t.stan.bohater.armia);
+      t.zamek.dostepne[1] = 1;
+      t.dzialaj();
+      return { armia: ilu(t.stan.bohater.armia) - przedDrugim, komunikat: t.komunikat.text };
+    })(),
   };
 });
+sprawdz(
+  'drugiego stworka tego samego gatunku rezerwat nie zaprasza',
+  kupno.drugi.armia === 0 && /Masz już/.test(kupno.drugi.komunikat),
+  kupno.drugi.komunikat
+);
 sprawdz(
   'kliknięcie w rezerwat zaprasza JEDNEGO stworka z tego właśnie poziomu',
   kupno.po.armia === kupno.przed.armia + 1 && kupno.nowy?.tier === 1 && kupno.nowy?.ile === 1,

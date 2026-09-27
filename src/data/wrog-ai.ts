@@ -52,6 +52,7 @@ import {
   odwiedz,
   rozdzielStratyZamku,
   skarbiecOf,
+  maGatunek,
   strzezoneProzez,
   trasa,
   zasiegNaTure,
@@ -696,6 +697,8 @@ function rozbudujIWerbuj(s: StanMapy, kto: Wlasciciel) {
     while (zamek.dostepne[tier] >= 1 && skarbiec.pokeball >= koszt) {
       const nowy = nowyStworek(f.id, tier);
       if (!nowy) break;
+      // Autopilot gracza (symulacje) gra jak gracz: jeden stworek danego gatunku.
+      if (kto === 'gracz' && maGatunek(s, nowy.sprite)) break;
       // Obrońca werbuje do załogi: zamek „umacnia się" z dnia na dzień, a jego
       // bohater nigdzie nie wychodzi. Tak gra fort na Polanie — misja uczy
       // pętli „zbierz, zbuduj, zdobądź", a nie obrony przed najazdem.

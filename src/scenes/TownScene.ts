@@ -8,6 +8,7 @@ import {
   data,
   dochod,
   zbuduj,
+  maGatunek,
   kosztTreningu,
   treningiZamku,
   trenuj,
@@ -985,6 +986,8 @@ export class TownScene extends Phaser.Scene {
 
   private opisPrzyrostu(i: number) {
     const u = this.frakcja.units[i];
+    const ma = maGatunek(this.stan, u.sprite);
+    if (ma) return `Masz już ${ma.nazwa} (${napisPoziomu(ma.poziom)}) — każdego stworka ma się jednego.`;
     const b = this.profil.budynki.find((x) => x.rodzaj === 'siedlisko' && x.poziom === i);
     const dziennie = przyrostZamku(this.zamek.postawione ?? [], PRZYROST_ODDZIALU)[i];
     if (!dziennie) return `${u.name}: ${b?.nazwa ?? 'rezerwat'} jeszcze nie stoi — zbudujesz go przyciskiem „Buduj".`;
@@ -998,7 +1001,7 @@ export class TownScene extends Phaser.Scene {
     this.przyrostKomorki.forEach((k, i) => {
       const jest = dzienny[i] > 0;
       const ile = this.zamek.dostepne?.[i] ?? 0;
-      if (jest) czeka += Math.floor(ile);
+      if (jest && !maGatunek(this.stan, this.frakcja.units[i].sprite)) czeka += Math.floor(ile);
       k.g.clear();
       k.g.fillStyle(0x2a1a0c, jest ? 0.85 : 0.25);
       k.g.fillRoundedRect(k.cx - k.bok / 2, k.gy, k.bok, k.bok, 3);
@@ -1009,11 +1012,14 @@ export class TownScene extends Phaser.Scene {
       // Całe stworki czekają, ułamek to „za ile dni następny".
       const cale = Math.floor(ile);
       const zaDni = Math.ceil((1 - (ile - cale)) / Math.max(1e-6, dzienny[i]) - 1e-6);
+      // Jeden stworek danego gatunku: kto go już ma, widzi „masz" zamiast
+      // liczby czekających — zaprosić drugiego się nie da.
+      const ma = !!maGatunek(this.stan, this.frakcja.units[i].sprite);
       k.t
         // Wąska komórka: sama liczba czekających albo dni do następnego.
         // Słowo „czeka" stoi raz, w rogu panelu (`przyrostCzeka`).
-        .setText(!jest ? '—' : cale > 0 ? `${cale}` : `${zaDni} d.`)
-        .setColor(jest && cale > 0 ? BARWA.atramentZielony : BARWA.atramentMiekki);
+        .setText(ma ? 'masz' : !jest ? '—' : cale > 0 ? `${cale}` : `${zaDni} d.`)
+        .setColor(ma ? BARWA.atramentMiekki : jest && cale > 0 ? BARWA.atramentZielony : BARWA.atramentMiekki);
     });
     this.przyrostCzeka.setText(czeka >= 1 ? `czeka ${Math.floor(czeka)}` : '');
   }
@@ -1214,8 +1220,9 @@ export class TownScene extends Phaser.Scene {
       this.kartaMedalion.setVisible(true);
       this.pokazKoszt({ pokeball: KOSZT_ODDZIALU[b.poziom] }, 'za stworka');
       const stac = this.stan.skarbiec.pokeball >= KOSZT_ODDZIALU[b.poziom];
-      this.kartaPrzycisk.setLabel(ile > 0 ? `Zaproś (${ile})` : 'Nikt nie czeka');
-      this.kartaPrzycisk.ustaw(ile > 0 && stac && this.zamek.wlasciciel === 'gracz');
+      const ma = maGatunek(this.stan, u.sprite);
+      this.kartaPrzycisk.setLabel(ma ? `Masz już: ${ma.nazwa}` : ile > 0 ? `Zaproś (${ile})` : 'Nikt nie czeka');
+      this.kartaPrzycisk.ustaw(!ma && ile > 0 && stac && this.zamek.wlasciciel === 'gracz');
       this.ulozKarte();
       return;
     }
@@ -1608,6 +1615,12 @@ export class TownScene extends Phaser.Scene {
     }
     const nowy = nowyStworek(this.frakcja.id, tier);
     if (!nowy) return;
+    // Jeden stworek danego gatunku — jak w bajce.
+    const ma = maGatunek(this.stan, nowy.sprite);
+    if (ma) {
+      this.komunikat.setText(`Masz już ${ma.nazwa} — każdego stworka ma się jednego. Trenuj go w Sali treningowej.`);
+      return;
+    }
     // Odmowa przy siedmiu zajętych slotach musi być WIDOCZNA: cicho zgubiony
     // zakup wygląda jak zniknięte pokeballe.
     let dokad: string;

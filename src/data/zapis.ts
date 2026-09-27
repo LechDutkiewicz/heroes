@@ -1,7 +1,7 @@
-import { MAKS_CZEKA, type Oddzial, type StanMapy } from './mapa';
+import { MAKS_CZEKA, listyStworkowGracza, type Oddzial, type StanMapy } from './mapa';
 import { misjaPoId } from './kampania';
 import { SLOTY_ARMII, znormalizuj } from './armia';
-import { POZIOM_MLODEGO, nowyStworek, rozbijStado, stadoZLiczebnosci } from './stworki';
+import { POZIOM_MLODEGO, nowyStworek, rozbijStado, stadoZLiczebnosci, usunDuplikaty } from './stworki';
 import { MAPY } from './mapy';
 import { aktywnyProfil, czytajKlucz, imieTrenera, kluczProfilu, piszKlucz, usunKlucz, wymusProfil } from './profile';
 
@@ -85,6 +85,8 @@ function czytajPlik(profil: string, slot: Slot): PlikZapisu | null {
       o.garnizon = Array.isArray(o.garnizon) ? znormalizuj(o.garnizon) : undefined;
     }
     migrujNaStworki(plik.stan);
+    // Jeden stworek danego gatunku: stare zapisy mogą mieć dwa Flamiry.
+    usunDuplikaty(listyStworkowGracza(plik.stan));
     return plik;
   } catch {
     return null;

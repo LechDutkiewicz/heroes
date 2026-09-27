@@ -8,7 +8,7 @@ import {
   type UnitDef,
 } from '../data/units';
 import { ALL_SPRITES, FACTIONS, factionById, type Faction } from '../data/factions';
-import { jednostkiBitwy, napisPoziomu } from '../data/stworki';
+import { gatunek, jednostkiBitwy, napisPoziomu } from '../data/stworki';
 import { createPasekAtakow, type PasekAtakow } from '../visual/pasekAtakow';
 import {
   KOSZT_RZUTU,
@@ -64,7 +64,14 @@ interface DaneZPrzygody {
    * ile wolnych miejsc w drużynie i czy przeciwnik to dzikie stworki (tylko
    * takie wolno łapać).
    */
-  trener?: { kto: 'janek' | 'ela'; pokeballe: number; wolneSloty: number; dzikie: boolean };
+  trener?: {
+    kto: 'janek' | 'ela';
+    pokeballe: number;
+    wolneSloty: number;
+    dzikie: boolean;
+    /** Gatunki, które trener już ma (`gatunek`) — drugiego się nie łapie. */
+    posiadane?: string[];
+  };
   /** Lider sali po drugiej stronie pola (etap 6): imię i portret (ścieżka w `public/`). */
   przeciwnik?: { imie: string; portret: string };
 }
@@ -367,6 +374,7 @@ export class BattleScene extends Phaser.Scene {
     this.pokeballe = tr?.pokeballe ?? 50;
     this.wolneSloty = tr?.wolneSloty ?? 1;
     this.dzikie = tr?.dzikie ?? !this.zPrzygody;
+    this.posiadaneGatunki = new Set(tr?.posiadane ?? []);
     this.przedmiotWRundzie = 0;
     this.celowanie = null;
     this.oknoPlecaka = undefined;
@@ -407,6 +415,8 @@ export class BattleScene extends Phaser.Scene {
   private pokeballe = 0;
   private wolneSloty = 0;
   private dzikie = false;
+  /** Gatunki trenera — jeden stworek danego gatunku, więc tych nie łapiemy. */
+  private posiadaneGatunki = new Set<string>();
   /** Runda, w której trener ostatnio sięgnął do plecaka — raz na rundę. */
   private przedmiotWRundzie = 0;
   /** Przedmiot czekający na wskazanie celu. */
@@ -1650,6 +1660,7 @@ export class BattleScene extends Phaser.Scene {
       if (!swoi.some(moznaWzmocnic)) return 'wszyscy już po eliksirze';
     } else {
       if (!this.dzikie) return 'stworków innego trenera nie wolno łapać';
+      if (!this.units.some((u) => this.celPrzedmiotu('pokeball', u))) return 'masz już każdy z tych gatunków';
       if (this.wolneSloty <= 0) return 'drużyna pełna — nie ma miejsca';
       if (this.pokeballe < KOSZT_RZUTU) return `za mało pokeballi (masz ${this.pokeballe})`;
     }
@@ -1658,7 +1669,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** Czy ten stworek może przyjąć wybrany przedmiot. */
   private celPrzedmiotu(co: Przedmiot, u: Unit): boolean {
-    if (co === 'pokeball') return u.side === 'enemy';
+    if (co === 'pokeball') return u.side === 'enemy' && !this.posiadaneGatunki.has(gatunek(u.def.sprite));
     if (u.side !== 'player') return false;
     return co === 'mikstura' ? moznaLeczyc(u) : moznaWzmocnic(u);
   }
@@ -1725,6 +1736,10 @@ export class BattleScene extends Phaser.Scene {
 
   private prognozaPrzedmiotu(u: Unit) {
     const co = this.celowanie;
+    if (co === 'pokeball' && u.side === 'enemy' && this.posiadaneGatunki.has(gatunek(u.def.sprite))) {
+      this.forecast.show(`Masz już ${u.def.name} — każdego stworka ma się jednego`, false);
+      return;
+    }
     if (!co || !this.celPrzedmiotu(co, u)) {
       this.forecast.hide();
       return;
@@ -1805,6 +1820,7 @@ export class BattleScene extends Phaser.Scene {
         zlap(this.battle, cel);
         const skad = this.wrogZMapy.find((w) => w.id === cel.id)?.skad ?? -1;
         this.zlapani.push({ skad, id: cel.id });
+        this.posiadaneGatunki.add(gatunek(cel.def.sprite));
         this.wolneSloty--;
         cel.container.setVisible(false);
         flashTarget(this, kula, C.gold);

@@ -1,6 +1,6 @@
 import type { UnitDef } from './units';
 import { factionById } from './factions';
-import { etapStworka, nastepnyEtap, progEwolucji } from './ewolucje';
+import { etapStworka, liniaStworka, nastepnyEtap, progEwolucji } from './ewolucje';
 import type { Oddzial } from './mapa';
 import { NA_POLU, createBattle, runBattle, type Battle, type Outcome } from './battle';
 
@@ -338,4 +338,53 @@ export function rozliczDruzyne(
     armia.map((o, i) => (walczyli.has(i) ? o : null)),
     pokonani
   );
+}
+
+/**
+ * Jeden stworek danego gatunku (jak w bajce: trener ma JEDNEGO Flamira).
+ * Gatunek to cała linia ewolucji — Flamir i jego ewolucje to ten sam
+ * stworek. Klucz linii to sprite pierwszego etapu; stworek bez linii to
+ * własny gatunek.
+ */
+export function gatunek(sprite: string): string {
+  return liniaStworka(sprite)?.etapy[0].sprite ?? sprite;
+}
+
+/**
+ * Usuwa duplikaty gatunku z list (drużyna, garnizony) — w podanej kolejności
+ * list, zostaje najsilniejszy (poziom, potem doświadczenie). Połowa
+ * doświadczenia usuniętego przechodzi na tego, który zostaje, żeby nic nie
+ * przepadło bez śladu. Zwraca nazwy usuniętych.
+ */
+export function usunDuplikaty(listy: (Oddzial | null | undefined)[][]): string[] {
+  type Miejsce = { l: number; i: number; o: Oddzial };
+  const grupy = new Map<string, Miejsce[]>();
+  listy.forEach((lista, l) =>
+    lista.forEach((o, i) => {
+      if (!o) return;
+      const g = gatunek(o.sprite);
+      grupy.set(g, [...(grupy.get(g) ?? []), { l, i, o }]);
+    })
+  );
+  const silniejszy = (a: Oddzial, b: Oddzial) =>
+    a.poziom !== b.poziom ? a.poziom > b.poziom : doswStworka(a) > doswStworka(b);
+  const usuniete: string[] = [];
+  for (const miejsca of grupy.values()) {
+    if (miejsca.length < 2) continue;
+    const naj = miejsca.reduce((a, b) => (silniejszy(b.o, a.o) ? b : a));
+    // Pierwsza lista to drużyna: najsilniejszy staje w pierwszym jej slocie,
+    // który zajmował ktoś z tego gatunku — inaczej drużyna mogłaby zostać pusta.
+    const cel = miejsca.find((m) => m.l === 0) ?? naj;
+    for (const m of miejsca) {
+      if (m === naj) continue;
+      dodajDosw(naj.o, Math.floor((doswStworka(m.o) - doswDoPoziomu(POZIOM_MLODEGO)) / 2));
+      usuniete.push(m.o.nazwa);
+      listy[m.l][m.i] = null;
+    }
+    if (cel !== naj) {
+      listy[naj.l][naj.i] = null;
+      listy[cel.l][cel.i] = naj.o;
+    }
+  }
+  return usuniete;
 }

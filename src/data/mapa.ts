@@ -33,12 +33,13 @@ import {
   dodajDosw,
   doswDoPoziomu,
   doswStworka,
+  gatunek,
   napisPoziomu,
   obudz,
   przytnijPoziom,
   skalaPoziomu,
 } from './stworki';
-import type { Armia } from './armia';
+import type { Armia, Slot } from './armia';
 import { efekt } from './umiejetnosci';
 
 /**
@@ -2031,4 +2032,24 @@ export function zdobadzOdznake(s: StanMapy, sala: Obiekt): string | undefined {
 /** Data w formacie z Heroes 3: tydzień i dzień tygodnia. */
 export function data(dzien: number) {
   return { tydzien: Math.floor((dzien - 1) / 7) + 1, dzienTygodnia: ((dzien - 1) % 7) + 1 };
+}
+
+/**
+ * Stworki gracza w kolejności: drużyna, potem garnizony jego zamków — do
+ * zasady „jeden stworek danego gatunku" (`gatunek`, `usunDuplikaty`).
+ */
+export function listyStworkowGracza(s: StanMapy): Slot[][] {
+  return [
+    s.bohater.armia,
+    ...s.obiekty
+      .filter((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'gracz' && o.garnizon)
+      .map((o) => o.garnizon!),
+  ];
+}
+
+/** Stworek gracza z tego samego gatunku (linii ewolucji), jeśli jakiś ma. */
+export function maGatunek(s: StanMapy, sprite: string): Oddzial | undefined {
+  const g = gatunek(sprite);
+  for (const l of listyStworkowGracza(s)) for (const o of l) if (o && gatunek(o.sprite) === g) return o;
+  return undefined;
 }
