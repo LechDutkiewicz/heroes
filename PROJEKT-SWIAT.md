@@ -25,6 +25,12 @@ nie mury, miecze i magia.
 | Obrona bohatera (tarcza) | **Opieka** — trener pilnuje, stworki mniej obrywają | ekran bohatera, mapa |
 | „Armia", „oddział", „zamek" w tekstach | „drużyna", „stworek", „sala" / „miasto" | wszystkie ekrany |
 
+**Ekran walki** (uwaga użytkownika): jest ze starej wersji — niebieski HUD
+z kapsułkami, inny niż drewno, pergamin i złoto reszty gry. Przerabiamy go
+razem z walkami 1 na 1 / 2 na 2 (mniejsze pole i tak zmienia układ): belki,
+karta stworka, pasek ataków, kolejka tur i przyciski w zestawie
+`visual/zestaw.ts`, ikony z tej fali.
+
 ## Fala 2 — zamki na mapie (najbardziej widoczne)
 
 | Teraz | Po zmianie | Grafiki |
