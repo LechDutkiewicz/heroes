@@ -55,6 +55,8 @@ import {
   strzezoneProzez,
   trasa,
   zasiegNaTure,
+  kosztTreningu,
+  treningiZamku,
   trenuj,
   zbuduj,
   KOSZT_ODDZIALU,
@@ -156,7 +158,27 @@ function rozstrzygnijBitwe(s: StanMapy, kto: Wlasciciel, obrona: Obiekt, ziarno:
  * czy `kto` stać na zapłatę. Reszta idzie przez `wartoscObiektu`, która o
  * stanie gracza nic nie wie.
  */
+/**
+ * Ile wart jest powrót do własnego zamku na trening. Drużyna rośnie teraz
+ * poziomami, nie werbunkiem, a Sala treningowa działa tylko w mieście —
+ * AI, które nigdy nie wraca, zbierało ponad tysiąc pokeballi i stało na
+ * jednym poziomie przez pół misji (`tools/symulacja-misji.ts`). Wartość
+ * rośnie z liczbą treningów, na które stać skarbiec; zero, gdy bohater już
+ * stoi w zamku albo nie ma za co trenować.
+ */
+function wartoscTreningu(zamek: Obiekt, s: StanMapy, kto: Wlasciciel): number {
+  const bohater = bohaterOf(s, kto);
+  if (bohater.x === zamek.x && bohater.y === zamek.y) return 0;
+  const druzyna = zywe(bohater.armia);
+  if (!druzyna.length) return 0;
+  const sredniKoszt = druzyna.reduce((a, o) => a + kosztTreningu(o), 0) / druzyna.length;
+  const stac = Math.floor(skarbiecOf(s, kto).pokeball / Math.max(1, sredniKoszt));
+  const mozna = Math.min(stac, treningiZamku(zamek));
+  return mozna >= 3 ? 40 * mozna : 0;
+}
+
 function wartoscKandydata(o: Obiekt, s: StanMapy, kto: Wlasciciel): number {
+  if (o.rodzaj === 'zamek' && o.wlasciciel === kto) return wartoscTreningu(o, s, kto);
   if (o.rodzaj === 'namiot') {
     // Klucz jest jedynym sposobem, żeby AI w ogóle ruszyło się dalej niż
     // pierwszy grzbiet — bez wysokiej wartości eksploracja (30) czasem by
@@ -254,7 +276,9 @@ function znajdzCel(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefine
   for (const o of s.obiekty) {
     if (o.zebrany) continue;
     if (!mgla[o.y]?.[o.x]) continue;
-    if (o.wlasciciel === kto) continue; // już nasze
+    // Już nasze — z jednym wyjątkiem: własny zamek jest celem, kiedy czeka
+    // w nim trening, a skarbiec na niego stać (`wartoscTreningu`).
+    if (o.wlasciciel === kto && !(o.rodzaj === 'zamek' && wartoscTreningu(o, s, kto) > 0)) continue;
 
     // Przeciwnik potrzebuje czasu, żeby w ogóle zebrać wyprawę na stolicę —
     // to samo tempo, które w Heroes 3 daje przewagę pierwszym dniom: nikt
@@ -683,6 +707,12 @@ export function turaAI(s: StanMapy, kto: Wlasciciel, ziarno = 0): void {
   // Obrońca nie wychodzi z zamku — patrz `wrogTryb` w `StanMapy`.
   if (kto === 'wrog' && s.wrogTryb === 'obronca') return;
   ruszSie(s, kto, ziarno);
+  // Dzień skończony w którymś z własnych zamków — Sala treningowa od razu.
+  const bohater = bohaterOf(s, kto);
+  const tu = s.obiekty.find(
+    (o) => o.rodzaj === 'zamek' && o.wlasciciel === kto && o.x === bohater.x && o.y === bohater.y
+  );
+  if (tu) trenujDruzyne(s, kto, tu);
 }
 
 /** Wygodny alias na potrzeby gry: tura przeciwnika gracza. */

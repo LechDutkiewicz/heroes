@@ -1808,7 +1808,7 @@ export function zbuduj(s: StanMapy, zamek: Obiekt, id: string, kto: Wlasciciel =
  * Trening to jeden poziom za pokeballe; cena rośnie z poziomem, więc
  * trenowanie słabszych stworków jest tańsze i drużyna sama się wyrównuje.
  */
-export const TRENINGI_ZA_REZERWAT = 2;
+export const TRENINGI_ZA_REZERWAT = 3;
 
 export function treningiNaTydzien(postawione: string[]) {
   const rezerwaty = postawione.filter((id) => id.startsWith('siedlisko')).length;
@@ -1816,7 +1816,7 @@ export function treningiNaTydzien(postawione: string[]) {
   return Math.round(rezerwaty * TRENINGI_ZA_REZERWAT * mn);
 }
 
-export const kosztTreningu = (o: Pick<Oddzial, 'poziom'>) => 4 + 2 * o.poziom;
+export const kosztTreningu = (o: Pick<Oddzial, 'poziom'>) => Math.round(3 + 1.5 * o.poziom);
 
 /** Ile treningów zostało w tym tygodniu. */
 export const treningiZamku = (zamek: Obiekt) =>
