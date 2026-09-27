@@ -83,6 +83,12 @@ const mgla = await page.evaluate(() => {
   return { przed, kroki: kroki.length };
 });
 await page.waitForTimeout(1600);
+// Marsz musi się skończyć, zanim sonda przestawi bohatera dalej: na
+// obciążonej maszynie pięć kroków trwa dłużej niż 1,6 s, a niedokończony
+// marsz potrafił zebrać coś po drodze już PO odczycie skarbca przy skrzyni.
+await page
+  .waitForFunction(() => window.__game.scene.getScene('adventure').wRuchu === false, null, { timeout: 60000 })
+  .catch(() => {});
 const poMgle = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   return {

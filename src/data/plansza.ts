@@ -145,7 +145,7 @@ function oddzialyStrazy(sila: string, losuj: () => number): Oddzial[] {
  * oblężenia. Przerwy między stworkami na polu bitwy (`NA_POLU`) zniosły tę
  * przewagę, więc zamki padały w 5.–10. dniu; mury oddają ją wprost.
  */
-const MURY = 3;
+const MURY = 2;
 
 function garnizonZamku(frakcja: string, poziomy: number[], tygodnie: number): Oddzial[] {
   const f = factionById(frakcja) ?? FACTIONS[0];
