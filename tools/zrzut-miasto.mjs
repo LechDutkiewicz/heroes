@@ -52,7 +52,7 @@ await page.evaluate(
       frakcja
     ];
     z.postawione = postawione;
-    z.dostepne = [6, 4, 3, 0, 2, 0];
+    z.dostepne = [2, 2, 1, 0, 1, 0];
     Object.assign(s.stan.skarbiec, { pokeball: 140, jagoda: 22, kamien: 6, odlamek: 24 });
     s.stan.bohater.x = z.x;
     s.stan.bohater.y = z.y - 1;
