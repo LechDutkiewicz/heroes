@@ -5594,8 +5594,8 @@ export class AdventureScene extends Phaser.Scene {
         )
       );
     }
-    this.zajety = false;
-    this.odswiezWszystko();
+    // Bez `odswiezWszystko`: to się dzieje w `create`, zanim powstanie HUD —
+    // scena odświeża wszystko sama po zbudowaniu.
   }
 
   /** Pojedynek z rywalem: jego drużyna jako pseudo-obiekt bitwy (`RYWAL_ID`). */
