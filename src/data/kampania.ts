@@ -1,4 +1,4 @@
-import { artefaktPoId, type Bohater, type StanMapy, type Surowiec } from './mapa';
+import { artefaktPoId, type Bohater, type Oddzial, type StanMapy, type Surowiec } from './mapa';
 import { aktywnyProfil, czytajKlucz, imieTrenera, kluczProfilu, piszKlucz, usunKlucz, wymusProfil } from './profile';
 
 export { imieTrenera };
@@ -15,10 +15,9 @@ export { imieTrenera };
  * w trzech miejscach naraz.
  *
  * Co przechodzi między misjami: bohater (doświadczenie, umiejętności,
- * artefakty, atak i obrona) — tak jak w kampaniach Heroes 3. Armia i surowce
- * NIE przechodzą: każda misja zaczyna się od własnej armii startowej, bo
- * inaczej siła ostatniej misji zależałaby od tego, jak skąpo grało się
- * w pierwszej, i nie dałoby się jej zbalansować.
+ * artefakty, atak i obrona) — tak jak w kampaniach Heroes 3 — i DRUŻYNA
+ * (etap 6 w `PROJEKT-TRENERZY.md`): w pokemonach to ten sam stworek przez
+ * całą przygodę, z poziomem i ewolucją. Surowce NIE przechodzą.
  */
 
 export type WarunekZwyciestwa =
@@ -61,6 +60,14 @@ export interface Misja {
   naMapie: { x: number; y: number };
   /** Zdanie pokazywane po wygranej, przed przejściem dalej. */
   epilog: string;
+  /**
+   * Najniższy poziom stworka w drużynie na starcie misji (etap 6). Drużyna
+   * przechodzi z misji do misji, a strojenie zakłada drużynę o mniej więcej
+   * tym poziomie — słabsza (stary zapis, drużyna startowa) jest podciągana.
+   */
+  poziomDruzyny?: number;
+  /** O tyle poziomów silniejsi są obrońcy zamków i drużyna rywala (etap 6). */
+  wrogPoziomy?: number;
 }
 
 export interface Kampania {
@@ -123,6 +130,7 @@ export const KAMPANIA: Kampania = {
       ],
       naMapie: { x: 0.348, y: 0.459 },
       epilog: 'Grota Księżycowa padła. W jej skarbcu była tylko mapa bagien i jedno słowo: Kamień.',
+      poziomDruzyny: 6,
     },
     {
       id: 'bagienny-szlak',
@@ -142,6 +150,7 @@ export const KAMPANIA: Kampania = {
       ],
       naMapie: { x: 0.5971, y: 0.752 },
       epilog: 'Księżycowy Kamień świeci w twojej dłoni. Bez niego twierdze Groty są słabsze niż kiedykolwiek.',
+      poziomDruzyny: 11,
     },
     {
       id: 'oblezenie-groty',
@@ -161,6 +170,8 @@ export const KAMPANIA: Kampania = {
       ],
       naMapie: { x: 0.8242, y: 0.459 },
       epilog: 'Ostatnia twierdza Groty otwiera bramy. Srebrne płaszcze składają broń.',
+      poziomDruzyny: 13,
+      wrogPoziomy: 6,
     },
   ],
   zakonczenie: [
@@ -191,9 +202,17 @@ export interface PostepKampanii {
   bonus?: number;
   /** Bohater zabrany z ostatniej wygranej misji. */
   bohater?: BohaterPrzenoszony;
+  /**
+   * Drużyna z ostatniej wygranej misji — te same stworki, z poziomem,
+   * doświadczeniem i ewolucją. Brak (stary zapis, pierwsza misja) = drużyna
+   * startowa planszy.
+   */
+  druzyna?: Oddzial[];
+  /** Odznaki sal zdobyte w całej kampanii (identyfikatory z `ODZNAKI_PLIKI`) — kampania to droga po odznaki. */
+  odznaki?: string[];
 }
 
-/** To, co z bohatera przechodzi dalej. Pozycja, ruch i armia — nie. */
+/** To, co z bohatera przechodzi dalej. Pozycja i ruch — nie; drużyna osobno (`druzyna`). */
 export type BohaterPrzenoszony = Pick<
   Bohater,
   'imie' | 'atak' | 'obrona' | 'artefakty' | 'doswiadczenie' | 'umiejetnosci' | 'poziomOdebrany'

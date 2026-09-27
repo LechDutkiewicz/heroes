@@ -40,6 +40,8 @@ import {
   saleMapy,
   wypedzZSali,
   zdobadzOdznake,
+  liderSali,
+  type Lider,
   type Krok,
   type Obiekt,
   type Oddzial,
@@ -579,7 +581,10 @@ export class AdventureScene extends Phaser.Scene {
     this.load.image('woda-zmarszczki', `${b}mapa/woda-zmarszczki.png`);
     // Rywal na mapie i odznaki sal (`tools/rywal_wczytaj.py`).
     this.load.image('rywal', `${b}mapa/rywal.png`);
-    for (const id of ODZNAKI_PLIKI) this.load.image(`odznaka-${id}`, `${b}bohater/odznaka-${id}.png`);
+    for (const id of ODZNAKI_PLIKI) {
+      this.load.image(`odznaka-${id}`, `${b}bohater/odznaka-${id}.png`);
+      this.load.image(`lider-${id}`, `${b}bohater/lider-${id}.png`);
+    }
     this.load.spritesheet('bohater', `${b}mapa/bohater.png`, {
       frameWidth: BOHATER_KLATKA,
       frameHeight: BOHATER_KLATKA,
@@ -4918,9 +4923,12 @@ export class AdventureScene extends Phaser.Scene {
         .map((od, slot) => (od && od.ile > 0 && !od.omdlaly ? { slot } : null))
         .filter(Boolean)
     );
-    this.napisUlotny(`${o.nazwa}\nDo boju!`);
+    // Walka w sali: najpierw lider wita trenera (etap 6), jak w serialu.
+    const sala = o.rodzaj === 'zamek' && o.wlasciciel !== 'gracz' && o.frakcjaZamku !== 'bor';
+    if (sala) this.kartaLidera(odznakaSali(o.nazwa), liderSali(o.nazwa), liderSali(o.nazwa).powitanie, 2100);
+    else this.napisUlotny(`${o.nazwa}\nDo boju!`);
     this.registry.set(KLUCZ_STANU, this.stan);
-    this.time.delayedCall(750, () => {
+    this.time.delayedCall(sala ? 2200 : 750, () => {
       this.scene.start('battle', {
         // Każdy stos jedzie do bitwy ZE SWOIM numerem slotu. Bez tego wynik
         // wraca jako gęsta lista i układ, który gracz ułożył na ekranie
@@ -4941,6 +4949,10 @@ export class AdventureScene extends Phaser.Scene {
         // dwie liczby wchodzą do walki. Wcześniej rosły w panelu i nie robiły
         // nic — arena je podnosiła, artefakty je podnosiły, a bitwa o nich
         // nie wiedziała.
+        // Lider sali po drugiej stronie pola (etap 6).
+        przeciwnik: sala
+          ? { imie: liderSali(o.nazwa).imie, portret: `bohater/lider-${odznakaSali(o.nazwa)}.png` }
+          : undefined,
         // Trener przy polu bitwy (etap 5): pokeballe na rzuty, wolne miejsca
         // w drużynie na złapane stworki i czy wolno łapać — tylko dzikie,
         // nie stworki sali ani rywala.
@@ -5506,6 +5518,12 @@ export class AdventureScene extends Phaser.Scene {
         // Wygrana w sali: lider uznaje zwycięstwo, sala przechodzi pod
         // opiekę gracza, a gracz dostaje odznakę (na zawsze).
         odznaka = zdobadzOdznake(this.stan, o);
+        if (odznaka) {
+          const lider = liderSali(o.nazwa);
+          this.time.delayedCall(2600, () =>
+            this.kartaLidera(odznakaSali(o.nazwa), lider, lider.pozegnanie, 3200, true)
+          );
+        }
       } else if (o) {
         o.zebrany = true;
       }
@@ -5518,7 +5536,7 @@ export class AdventureScene extends Phaser.Scene {
         this.napisUlotny(
           [
             o?.rodzaj === 'zamek' ? `${o.nazwa} jest twoja!` : 'Zwycięstwo!',
-            odznaka ? `Odznaka sali: ${odznaka}` : '',
+            odznaka ? `${liderSali(odznaka).odznaka} zdobyta!` : '',
             `+${nagroda} doświadczenia`,
             wyleczeni ? `Uzdrowiciel: ${wyleczeni} × znów na nogach` : '',
             // Ewolucje pierwsze — to one są wydarzeniem, awans o poziom mniej.
@@ -5654,6 +5672,44 @@ export class AdventureScene extends Phaser.Scene {
       nazwa: `Pojedynek: ${r.imie}`,
       oddzialy: r.armia.filter((o): o is Oddzial => !!o && !o.omdlaly && o.ile > 0),
     });
+  }
+
+  /**
+   * Karta lidera sali: portret w medalionie, imię i jedna kwestia w dymku.
+   * Przed walką wita trenera, po wygranej wręcza odznakę (`zOdznaka`).
+   * Znika sama — nie trzeba niczego klikać, więc nie wstrzymuje gry.
+   */
+  private kartaLidera(id: string, lider: Lider, kwestia: string, czas: number, zOdznaka = false) {
+    const w = 460;
+    const h = 132;
+    const x = this.mapaX + (this.oknoW - w) / 2;
+    const y = this.mapaY + this.oknoH - h - 28;
+    const k = this.add.container(0, 0).setDepth(Z.overlay - 1).setAlpha(0);
+    k.add(panelPergaminu(this, x, y, w, h));
+    k.add(medalion(this, x + 66, y + h / 2, 50, BARWA.papierCiemny));
+    const portret = this.add.image(x + 66, y + h / 2 - 2, `lider-${id}`);
+    portret.setScale(Math.min(84 / portret.width, 84 / portret.height));
+    k.add(portret);
+    k.add(this.add.text(x + 132, y + 22, lider.imie, stylEtykiety(22)).setOrigin(0, 0.5));
+    k.add(this.add.text(x + 132, y + 44, lider.kim, stylAtramentu(13, 'miekki')).setOrigin(0, 0.5));
+    const tekst = this.add
+      .text(x + 132, y + 62, `„${kwestia}”`, {
+        ...stylAtramentu(16),
+        fontStyle: 'italic',
+        wordWrap: { width: w - 150 - (zOdznaka ? 64 : 0) },
+      })
+      .setOrigin(0, 0);
+    k.add(tekst);
+    if (zOdznaka) {
+      const o = this.add.image(x + w - 44, y + h / 2 + 10, `odznaka-${id}`);
+      o.setScale(56 / Math.max(o.width, o.height));
+      k.add(o);
+    }
+    // Nad mapą rysuje tylko kamera okien (`naWierzchu`) — inaczej karta
+    // znika pod planszą.
+    this.naWierzchu(k);
+    this.tweens.add({ targets: k, alpha: 1, y: { from: 12, to: 0 }, duration: 220 });
+    this.tweens.add({ targets: k, alpha: 0, delay: czas, duration: 350, onComplete: () => k.destroy() });
   }
 
   private napisUlotny(tekst: string) {

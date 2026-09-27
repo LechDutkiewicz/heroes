@@ -41,7 +41,7 @@ rywal = podkrec(przytnij(Image.open(WSAD / 'rywal-lewo.png').convert('RGBA')))
 wys = 256
 zapisz(rywal.resize((round(rywal.width * wys / rywal.height), wys), Image.LANCZOS), KORZEN / 'public' / 'mapa' / 'rywal.png')
 
-for plik in sorted([*WSAD.glob('odznaka-*.png'), *WSAD.glob('przedmiot-*.png')]):
+for plik in sorted([*WSAD.glob('odznaka-*.png'), *WSAD.glob('przedmiot-*.png'), *WSAD.glob('lider-*.png')]):
     im = przytnij(Image.open(plik).convert('RGBA'))
     im.thumbnail((128, 128), Image.LANCZOS)
     zapisz(podkrec(im, 1.08, 1.04), KORZEN / 'public' / 'bohater' / plik.name)

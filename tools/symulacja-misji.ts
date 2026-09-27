@@ -36,7 +36,8 @@ import {
   type BohaterPrzenoszony,
   type Misja,
 } from '../src/data/kampania';
-import { bohaterDoPrzeniesienia, rozpocznijMisje } from '../src/data/kampania-start';
+import { bohaterDoPrzeniesienia, druzynaDoPrzeniesienia, rozpocznijMisje } from '../src/data/kampania-start';
+import type { Oddzial } from '../src/data/mapa';
 
 declare const process: { env: Record<string, string | undefined>; exitCode?: number };
 const PROB = Number(process.env.PROB ?? 3);
@@ -99,9 +100,20 @@ const zaloga = (s: StanMapy) => {
 };
 
 let weteran: BohaterPrzenoszony | undefined;
+/** Drużyna przechodząca z misji do misji (etap 6); `DRUZYNA=0` — startowa planszy. */
+const DRUZYNA = process.env.DRUZYNA !== '0';
+let druzyna: Oddzial[] | undefined;
 
 function przebieg(m: Misja, graj: boolean, ziarno: number, horyzont: number): Wynik {
-  const s = rozpocznijMisje({ ...nowyPostep('Janek'), bohater: WETERAN ? weteran : undefined }, m, 0);
+  const s = rozpocznijMisje(
+    {
+      ...nowyPostep('Janek'),
+      bohater: WETERAN ? weteran : undefined,
+      druzyna: WETERAN && DRUZYNA ? druzyna : undefined,
+    },
+    m,
+    0
+  );
   if (WROG) s.wrogTryb = WROG;
   if (NATARCIE) s.dzienNatarcia = NATARCIE;
   const zamekWroga = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'wrog')!;
@@ -167,11 +179,17 @@ for (const [i, m] of KAMPANIA.misje.entries()) {
   const p = PROGI[m.id];
   if (TYLKO && m.id !== TYLKO) {
     // Misja przed badaną: jeden przebieg, tylko po to, żeby mieć bohatera.
-    if (WETERAN) weteran = bohaterDoPrzeniesienia(przebieg(m, true, 1000, p.horyzont).stan);
+    if (WETERAN) {
+      const st = przebieg(m, true, 1000, p.horyzont).stan;
+      weteran = bohaterDoPrzeniesienia(st);
+      druzyna = druzynaDoPrzeniesienia(st);
+    }
     continue;
   }
   console.log(`\n=== misja ${m.nr}: ${m.tytul} (plansza ${m.mapa}) — ${PROB} przebiegów ===`);
   console.log(`  bohater: ${opisBohatera(WETERAN ? weteran : undefined)}`);
+  if (WETERAN && DRUZYNA && druzyna)
+    console.log(`  drużyna: ${druzyna.map((o) => `${o.nazwa} ${o.poziom}`).join(', ')}`);
   const t0 = Date.now();
 
   const normalne: Wynik[] = [];
@@ -195,6 +213,7 @@ for (const [i, m] of KAMPANIA.misje.entries()) {
     normalne.every((w) => !(w.rozstrzygniecie === 'przegrana' && w.dzien < p.bezpiecznyDo))
   );
   const nastepny = bohaterDoPrzeniesienia(normalne[0].stan);
+  const nastepnaDruzyna = druzynaDoPrzeniesienia(normalne[0].stan);
 
   const bierne: Wynik[] = [];
   for (let k = 0; k < PROB; k++) bierne.push(przebieg(m, false, 2000 + k, p.horyzont));
@@ -215,6 +234,7 @@ for (const [i, m] of KAMPANIA.misje.entries()) {
     sprawdz('fort umacnia się z czasem', bierne.every((w) => w.zalogaKoniec > w.zalogaStart));
   }
   weteran = nastepny;
+  druzyna = nastepnaDruzyna;
   console.log(`  (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
 }
 

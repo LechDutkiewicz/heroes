@@ -151,12 +151,22 @@ Prompty i imiona — etap 6.
 
 ## Etap 6 — frakcje i kampania
 
-- Drużyna przechodzi z misji do misji (dziś przechodzi tylko bohater) —
-  w pokemonach to TEN SAM Pikachu przez całą przygodę. Wymaga nowego
-  strojenia misji 2–4.
-- Frakcje = trenerzy (dom Eli i Janka, liderka sali wody, lider sali
-  kamienia, drużyna łobuzów), każda ze swoją obsadą Pixmonów i typem.
-- Kampania = droga po odznaki.
+- **Drużyna przechodzi z misji do misji** (`PostepKampanii.druzyna`,
+  `druzynaDoPrzeniesienia`): te same stworki z poziomem, doświadczeniem
+  i ewolucją, wszyscy obudzeni. Strojenie: misja ma `poziomDruzyny`
+  (najniższy poziom stworka na starcie — podciąga stary zapis i drużynę
+  startową) i `wrogPoziomy` (o tyle silniejsi obrońcy zamków i rywal).
+  Wartości: m2 6, m3 11, m4 13 i +6 dla obrońców.
+- **Liderzy sal** (`LIDERZY` w `mapa.ts`, portrety `public/bohater/lider-*.png`):
+  Bazyl (Stary Fort, skała), Luna (Księżycowa Grota), Marina (Warownia na
+  Grobli, woda), Szron (Lodowa Twierdza), Argent (wódz Srebrnych Płaszczy).
+  Przed walką w sali lider wita trenera (karta na mapie), w bitwie stoi
+  w prawym rogu, po wygranej wręcza odznakę.
+- **Kampania = droga po odznaki**: odznaki zbierają się przez całą kampanię
+  (`PostepKampanii.odznaki`) i stoją w górnej belce ekranu kampanii zamiast
+  klejnotów postępu.
+- Zostało: budynki Centrum Pokemon i Sali treningowej na panoramie miasta,
+  frakcje przeciwników jako osobne typy stworków liderów.
 
 ## Stan
 
@@ -168,4 +178,4 @@ Prompty i imiona — etap 6.
 | sale i pojedynki | zrobione |
 | 4 ataki | zrobione |
 | 5 trener w bitwie | zrobione (bez PC Billa i walk 3 na 3) |
-| 6 frakcje i kampania | — |
+| 6 frakcje i kampania | w toku: drużyna, liderzy, odznaki — zrobione |
