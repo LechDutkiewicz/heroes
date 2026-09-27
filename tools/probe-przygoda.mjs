@@ -150,7 +150,8 @@ sprawdz(
     jagoda: skrzynia.jagoda,
     kamien: skrzynia.kamien,
     odlamek: skrzynia.odlamek,
-  })
+  }),
+  `${JSON.stringify(skrzynia)} → ${JSON.stringify(okno.skarbiec)}`
 );
 
 // Klikamy „doświadczenie" — prawy przycisk w oknie skrzyni.
@@ -167,7 +168,7 @@ const poWyborze = await page.evaluate(() => {
   };
 });
 sprawdz('wybór doświadczenia daje doświadczenie', poWyborze.dosw > skrzynia.dosw, `${skrzynia.dosw} → ${poWyborze.dosw}`);
-sprawdz('i NIE daje pokeballi', poWyborze.pokeball === skrzynia.pokeball);
+sprawdz('i NIE daje pokeballi', poWyborze.pokeball === skrzynia.pokeball, `${skrzynia.pokeball} → ${poWyborze.pokeball}`);
 sprawdz('skrzynia znika po decyzji', poWyborze.zebrana === true);
 sprawdz('gra wraca do sterowania', poWyborze.zajety === false);
 
