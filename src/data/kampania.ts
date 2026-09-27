@@ -171,7 +171,7 @@ export const KAMPANIA: Kampania = {
       naMapie: { x: 0.8242, y: 0.459 },
       epilog: 'Ostatnia twierdza Groty otwiera bramy. Srebrne płaszcze składają broń.',
       poziomDruzyny: 13,
-      wrogPoziomy: 3,
+      wrogPoziomy: 2,
     },
   ],
   zakonczenie: [

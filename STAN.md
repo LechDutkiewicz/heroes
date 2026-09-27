@@ -122,7 +122,7 @@ mieście albo kampanii.
   (Centrum, Sala) — rozmiar bryły wynika z WYSOKOŚCI PLIKU (`wsad_wczytaj`),
   nie z `skala`. Symulacja: `DRUZYNA=0` wyłącza przenoszenie drużyny,
   `WETERAN_PLIK=…json` zapamiętuje weterana przed badaną misją. Wyniki
-  z drużyną: m1 d7, m3 d5, m4 przy +6 za trudna (1/3), strojone na +3.
+  z drużyną: m1 d7, m3 d5, m4: +6 wygrywa 1/3, +3 d55–84, +2 d10–17 (wybrane).
   Sonda: `tools/probe-druzyna-kampanii.ts`. OpenAI w etapie 6: 5 liderów +
   3 poprawki + 2 budynki ≈ 0,54 USD.
 - **Do zrobienia dalej**: stworki liderów jako osobne typy (frakcje), walki

@@ -156,7 +156,8 @@ Prompty i imiona — etap 6.
   i ewolucją, wszyscy obudzeni. Strojenie: misja ma `poziomDruzyny`
   (najniższy poziom stworka na starcie — podciąga stary zapis i drużynę
   startową) i `wrogPoziomy` (o tyle silniejsi obrońcy zamków i rywal).
-  Wartości: m2 6, m3 11, m4 13 i +6 dla obrońców.
+  Wartości: m2 6, m3 11, m4 13 i +2 dla obrońców (przy +3 autopilot wygrywa
+  dopiero w dniach 55–84, przy +2 w 10–17 — próg jest stromy).
 - **Liderzy sal** (`LIDERZY` w `mapa.ts`, portrety `public/bohater/lider-*.png`):
   Bazyl (Stary Fort, skała), Luna (Księżycowa Grota), Marina (Warownia na
   Grobli, woda), Szron (Lodowa Twierdza), Argent (wódz Srebrnych Płaszczy).
