@@ -1582,7 +1582,9 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
     // komunikat, że celu nie ma.
     if (o.wlasciciel !== kto) {
       if (obroncyZamku(o).length) return { opis: `${o.nazwa}\nBroni się!`, bitwaZ: o };
+      const dawny = o.wlasciciel;
       o.wlasciciel = kto;
+      if (dawny) wypedzZSali(s, o, dawny);
       obudz(bohater.armia);
       const odznaka = kto === 'gracz' ? zdobadzOdznake(s, o) : undefined;
       return {
@@ -1883,11 +1885,33 @@ export function trenerWGrze(s: StanMapy, kto: Wlasciciel): boolean {
   return bohaterOf(s, kto).armia.some((o) => !!o && o.ile > 0);
 }
 
-/** Czy na polu (x, y) stoi trener przeciwny do `kto`, gotowy do pojedynku. */
+/**
+ * Czy na polu (x, y) stoi trener przeciwny do `kto`, gotowy do pojedynku.
+ * Trener we WŁASNEJ sali się nie liczy: jest w środku, a wejście tam to
+ * wyzwanie sali (bitwa z jej załogą), nie pojedynek na drodze. Bez tego
+ * rywal-obrońca, który z sali nie wychodzi, zamykał ją na zawsze — każde
+ * wejście kończyło się pojedynkiem i powrotem przegranego na to samo pole.
+ */
 export function rywalNa(s: StanMapy, x: number, y: number, kto: Wlasciciel): boolean {
   const drugi: Wlasciciel = kto === 'gracz' ? 'wrog' : 'gracz';
   const r = bohaterOf(s, drugi);
-  return r.x === x && r.y === y && trenerWGrze(s, drugi);
+  if (r.x !== x || r.y !== y || !trenerWGrze(s, drugi)) return false;
+  return !s.obiekty.some((o) => o.rodzaj === 'zamek' && o.wlasciciel === drugi && o.x === x && o.y === y);
+}
+
+/**
+ * Sala właśnie zmieniła właściciela: trener dawnego właściciela, jeśli stał
+ * w środku, przenosi się do innej swojej sali. Bez żadnej — zostaje, gdzie
+ * był, ale i tak wypada z gry (`trenerWGrze`).
+ */
+export function wypedzZSali(s: StanMapy, sala: Obiekt, dawny: Wlasciciel) {
+  const b = bohaterOf(s, dawny);
+  if (b.x !== sala.x || b.y !== sala.y) return;
+  const inna = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === dawny && o !== sala);
+  if (!inna) return;
+  b.x = inna.x;
+  b.y = inna.y;
+  b.ruch = 0;
 }
 
 /**

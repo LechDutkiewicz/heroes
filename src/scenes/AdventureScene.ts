@@ -35,7 +35,7 @@ import {
   RYWAL_ID,
   rozliczPojedynek,
   rywalNa,
-  trenerWGrze,
+  wypedzZSali,
   zdobadzOdznake,
   type Krok,
   type Obiekt,
@@ -2947,7 +2947,8 @@ export class AdventureScene extends Phaser.Scene {
   /** Czy rywala widać: jest w grze i stoi na odsłoniętym polu. */
   private rywalWidoczny(): boolean {
     const r = this.stan.wrogBohater;
-    return trenerWGrze(this.stan, 'wrog') && !!this.stan.odkryte[r.y]?.[r.x];
+    // W swojej sali rywal jest w środku — widać salę, nie jego (`rywalNa`).
+    return rywalNa(this.stan, r.x, r.y, 'gracz') && !!this.stan.odkryte[r.y]?.[r.x];
   }
 
   /**
@@ -5433,6 +5434,7 @@ export class AdventureScene extends Phaser.Scene {
       // się zdobyło.
       let odznaka: string | undefined;
       if (o?.rodzaj === 'zamek') {
+        if (o.wlasciciel && o.wlasciciel !== 'gracz') wypedzZSali(this.stan, o, o.wlasciciel);
         o.wlasciciel = 'gracz';
         o.oddzialy = [];
         o.garnizon = undefined;

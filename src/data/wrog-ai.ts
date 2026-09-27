@@ -59,6 +59,7 @@ import {
   rozliczPojedynek,
   rywalNa,
   trenerWGrze,
+  wypedzZSali,
   treningiZamku,
   trenuj,
   zbuduj,
@@ -126,7 +127,9 @@ function rozstrzygnijBitwe(s: StanMapy, kto: Wlasciciel, obrona: Obiekt, ziarno:
 
   if (outcome === 'player') {
     if (obrona.rodzaj === 'zamek') {
+      const dawny = obrona.wlasciciel;
       obrona.wlasciciel = kto;
+      if (dawny) wypedzZSali(s, obrona, dawny);
       obrona.oddzialy = [];
       obrona.garnizon = undefined;
     } else {

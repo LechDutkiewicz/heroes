@@ -39,9 +39,25 @@ console.log('=== rywal na mapie ===');
   const r = s.wrogBohater;
   sprawdz('rywal ma imię trenera', r.imie === 'Oskar', r.imie);
   sprawdz('rywal jest w grze, dopóki ma salę', trenerWGrze(s, 'wrog'));
-  sprawdz('rywalNa widzi go na jego polu', rywalNa(s, r.x, r.y, 'gracz') && !rywalNa(s, r.x + 1, r.y, 'gracz'));
+  sprawdz('w swojej sali rywal nie jest celem pojedynku (wejście = wyzwanie sali)', !rywalNa(s, r.x, r.y, 'gracz'));
+  r.x += 2;
+  sprawdz('poza salą rywalNa widzi go na jego polu', rywalNa(s, r.x, r.y, 'gracz') && !rywalNa(s, r.x + 1, r.y, 'gracz'));
+  r.x -= 2;
   for (const z of s.obiekty) if (z.rodzaj === 'zamek') z.wlasciciel = 'gracz';
   sprawdz('bez sali rywal wypada z gry (i z mapy)', !trenerWGrze(s, 'wrog') && !rywalNa(s, r.x, r.y, 'gracz'));
+}
+
+{
+  // Sala pada, rywal stał w środku: przenosi się do innej swojej sali.
+  const s = planszaPrzygody('twierdza');
+  const sale = s.obiekty.filter((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'wrog');
+  const r = s.wrogBohater;
+  r.x = sale[0].x;
+  r.y = sale[0].y;
+  sale[0].oddzialy = [];
+  sale[0].garnizon = undefined;
+  odwiedz(s, sale[0]);
+  sprawdz('po utracie sali rywal idzie do drugiej', r.x === sale[1].x && r.y === sale[1].y, `${sale.length} sale`);
 }
 
 console.log('\n=== nagroda i powrót do Centrum ===');
