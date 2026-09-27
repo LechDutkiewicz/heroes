@@ -10,6 +10,22 @@ import {
 import { ALL_SPRITES, FACTIONS, factionById, type Faction } from '../data/factions';
 import { jednostkiBitwy, napisPoziomu } from '../data/stworki';
 import { createPasekAtakow, type PasekAtakow } from '../visual/pasekAtakow';
+import {
+  KOSZT_RZUTU,
+  PLECAK_NA_BITWE,
+  moznaLeczyc,
+  moznaWzmocnic,
+  szansaZlapania,
+  uzyjEliksiru,
+  uzyjMikstury,
+  zlap,
+  LECZENIE_MIKSTURY,
+  SILA_ELIKSIRU,
+  type Przedmiot,
+} from '../data/przedmioty';
+import { pokazPlecak, type WierszPlecaka } from '../visual/oknoPlecaka';
+import { pokazWyborSkladu, type WyborSkladu } from '../visual/wyborSkladu';
+import { medalion } from '../visual/zestaw';
 import { toEtapEwolucji, wczytajPortrety } from '../visual/portrety';
 import { hexDistance, type Cell } from '../data/hex';
 
@@ -43,6 +59,12 @@ interface DaneZPrzygody {
   powrot?: string;
   /** Dodatki z drugorzędnych umiejętności bohatera — patrz `umiejetnosci.ts`. */
   bonusGracza?: { wrecz: number; strzal: number; pancerz: number; atak: number; obrona: number };
+  /**
+   * Trener przy polu bitwy (etap 5): kto to jest, ile pokeballi ma w skarbcu,
+   * ile wolnych miejsc w drużynie i czy przeciwnik to dzikie stworki (tylko
+   * takie wolno łapać).
+   */
+  trener?: { kto: 'janek' | 'ela'; pokeballe: number; wolneSloty: number; dzikie: boolean };
 }
 // Wszystkie zasady walki biorą się STĄD i tylko stąd. Scena ma je odgrywać,
 // nie powtarzać — druga kopia reguł rozjechałaby się z symulatorem balansu.
@@ -180,6 +202,9 @@ interface Unit extends SimUnit {
  * dole niesie prognozę i dwa przyciski, a cała tabela przenosi się do karty
  * oddziału, która wyskakuje nad planszą przy najechaniu.
  */
+/** Tytuł i zdanie o turze odsunięte w prawo — w rogu stoi medalion trenera. */
+const TYTUL_X = BOARD_X + 22;
+
 const BAR_X = BOARD_X - 6;
 const BAR_W = BOARD_W + 12;
 const BAR_H = 62;
@@ -334,6 +359,19 @@ export class BattleScene extends Phaser.Scene {
     this.wybranyAtak = 0;
     this.prognozaDla = null;
     this.pasekAtakow = undefined;
+    this.plecak = { ...PLECAK_NA_BITWE };
+    const tr = this.zPrzygody?.trener;
+    // Bitwa pokazowa (bez mapy) też ma plecak — łapanie tylko „na niby".
+    this.pokeballe = tr?.pokeballe ?? 50;
+    this.wolneSloty = tr?.wolneSloty ?? 1;
+    this.dzikie = tr?.dzikie ?? !this.zPrzygody;
+    this.przedmiotWRundzie = 0;
+    this.celowanie = null;
+    this.oknoPlecaka = undefined;
+    this.plecakButton = undefined;
+    this.zlapani = [];
+    this.wydanePokeballe = 0;
+    this.wyborSkladu = undefined;
   }
 
   private highlightLayer!: Phaser.GameObjects.Container;
@@ -362,6 +400,26 @@ export class BattleScene extends Phaser.Scene {
   /** Na kogo celuje prognoza — żeby klawisz 1–3 mógł ją przeliczyć. */
   private prognozaDla: { a: Unit; t: Unit } | null = null;
   private waitButton!: HudButton;
+  /** Plecak trenera (`przedmioty.ts`): co zostało na tę bitwę. */
+  private plecak = { ...PLECAK_NA_BITWE };
+  private pokeballe = 0;
+  private wolneSloty = 0;
+  private dzikie = false;
+  /** Runda, w której trener ostatnio sięgnął do plecaka — raz na rundę. */
+  private przedmiotWRundzie = 0;
+  /** Przedmiot czekający na wskazanie celu. */
+  private celowanie: Przedmiot | null = null;
+  private oknoPlecaka?: Phaser.GameObjects.Container;
+  private plecakButton?: HudButton;
+  /** Skąd leci pokeball — środek medalionu trenera. */
+  private readonly trenerXY = { x: 34, y: 50 };
+  /** Złapane stworki: wpis w składzie wroga i id na polu. */
+  private zlapani: { skad: number; id: number }[] = [];
+  private wydanePokeballe = 0;
+  /** Okno „Kto walczy?", dopóki jest otwarte. */
+  private wyborSkladu?: WyborSkladu;
+  /** Los rzutu pokeballem — osobno, żeby sonda mogła go ustawić. */
+  losujRzut: () => number = Math.random;
   private guardButton!: HudButton;
 
   private busy = false;
@@ -416,6 +474,12 @@ export class BattleScene extends Phaser.Scene {
     for (const key of ALL_OBSTACLES) {
       this.load.image(key, `${import.meta.env.BASE_URL}terrain/obstacles/${key}.png`);
     }
+    for (const kto of ['janek', 'ela']) {
+      this.load.image(`tr-glowa-${kto}`, `${import.meta.env.BASE_URL}kampania/glowa-${kto}.png`);
+    }
+    this.load.image('przedmiot-mikstura', `${import.meta.env.BASE_URL}bohater/przedmiot-mikstura.png`);
+    this.load.image('przedmiot-eliksir', `${import.meta.env.BASE_URL}bohater/przedmiot-eliksir.png`);
+    this.load.image('przedmiot-pokeball', `${import.meta.env.BASE_URL}kampania/ikona-pokeball.png`);
     loadSfx(this);
   }
 
@@ -547,12 +611,13 @@ export class BattleScene extends Phaser.Scene {
     // czempion na dole; strzelcy i piechota wychodzą przy tym na przemian.
     const rzedyGracza = this.startRows();
     const rzedyWroga = this.startRows();
+    let czekaNaSklad = false;
     if (this.zPrzygody) {
       // Bitwa z mapy NIE losuje rzędów: oddziały stają w kolejności slotów
       // u bohatera, z góry na dół. Losowanie jest dla bitwy pokazowej, gdzie
       // nie ma żadnego układu do uszanowania — tutaj gracz świadomie ustawia
       // armię na swoim ekranie i chce ją zobaczyć tak samo na polu walki.
-      this.wystawZPrzygody();
+      czekaNaSklad = this.wystawZPrzygody();
     } else {
       // Bitwa pokazowa: po czterech losowych stworkach z każdej frakcji,
       // na poziomie 5 — tyle mieści pole z przerwami między stworkami.
@@ -570,6 +635,14 @@ export class BattleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ONE', () => this.wybierzAtak(0));
     this.input.keyboard?.on('keydown-TWO', () => this.wybierzAtak(1));
     this.input.keyboard?.on('keydown-THREE', () => this.wybierzAtak(2));
+    this.input.keyboard?.on('keydown-P', () => (this.oknoPlecaka ? this.zamknijPlecak() : this.otworzPlecak()));
+    this.input.keyboard?.on('keydown-ESC', () => {
+      if (this.oknoPlecaka) this.zamknijPlecak();
+      else if (this.celowanie) this.anulujCelowanie();
+    });
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      if (p.rightButtonDown() && this.celowanie) this.anulujCelowanie();
+    });
     // Wyciszenie. Dźwięku nie da się przeczekać wzrokiem jak animacji — kto go
     // nie chce, musi mieć czym wyłączyć od razu, bez wchodzenia w ustawienia.
     this.input.keyboard?.on('keydown-M', () => {
@@ -609,6 +682,8 @@ export class BattleScene extends Phaser.Scene {
         : undefined
     );
 
+    // Okno „Kto walczy?" jeszcze otwarte — walka rusza po jego zatwierdzeniu.
+    if (czekaNaSklad) return;
     startRound(this.battle);
     this.beginTurn();
   }
@@ -699,7 +774,25 @@ export class BattleScene extends Phaser.Scene {
     // Górna belka ma tylko 100 pikseli do ramy planszy, a rama wystaje jeszcze
     // kilka pikseli ponad BOARD_Y. Stąd trzy ciasno upakowane wiersze:
     // tytuł, wstęgi zamków, zdanie o turze.
-    drawTitle(this, BOARD_X, 0, 'POKÉMON HEROES', 24);
+    // Trener przy polu bitwy — jak bohater Heroes 3 w rogu pola walki.
+    // Medalion z głową trenera, a obok tytułu przycisk plecaka (etap 5).
+    const kto = this.zPrzygody?.trener?.kto ?? 'janek';
+    medalion(this, this.trenerXY.x, this.trenerXY.y, 30, C.panelDeep).setDepth(61);
+    const glowa = this.add.image(this.trenerXY.x, this.trenerXY.y + 1, `tr-glowa-${kto}`).setDepth(62);
+    glowa.setScale(40 / Math.max(glowa.width, glowa.height));
+    glowa.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.otworzPlecak());
+    drawTitle(this, TYTUL_X, 0, 'POKÉMON HEROES', 24);
+    this.plecakButton = makeHudButton(this, {
+      x: TYTUL_X + 316,
+      y: 17,
+      w: 138,
+      h: 28,
+      icon: ICON.star,
+      tone: C.gold,
+      toneDeep: C.goldDeep,
+      onClick: () => (this.oknoPlecaka ? this.zamknijPlecak() : this.otworzPlecak()),
+    });
+    this.plecakButton.setLabel('Plecak  (P)');
 
     // Wstęg z nazwami zamków i kaflem terenu tu NIE MA — świadomie.
     //
@@ -711,7 +804,7 @@ export class BattleScene extends Phaser.Scene {
     // podpisem.
 
     // Zdanie o turze z konturem, bo leży wprost na tle, nie na panelu.
-    this.turnText = this.add.text(BOARD_X, 52, '', display(15)).setOrigin(0, 0.5);
+    this.turnText = this.add.text(TYTUL_X, 52, '', display(15)).setOrigin(0, 0.5);
 
     this.queue = createTurnQueue(this, BOARD_X + BOARD_W, 24);
   }
@@ -874,8 +967,9 @@ export class BattleScene extends Phaser.Scene {
    * statystyk z definicji frakcji — dzięki temu bitwa nie musi znać się na
    * oddziałach, a mapa nie musi przechowywać ich statystyk.
    */
-  private wystawZPrzygody() {
-    const wystaw = (sklad: OddzialZMapy[], side: Side, col: number) => {
+  /** Zwraca `true`, gdy drużyna gracza czeka jeszcze na wybór czwórki. */
+  private wystawZPrzygody(): boolean {
+    const wystaw = (sklad: (OddzialZMapy | null)[], side: Side, col: number) => {
       // Stado dzikich rozpada się na osobne stworki — każdy staje na swoim
       // polu (`jednostkiBitwy`, najwyżej siedem na stronę). Statystyki liczy
       // `defStworka` z gatunku, poziomu i etapu ewolucji.
@@ -890,7 +984,6 @@ export class BattleScene extends Phaser.Scene {
         else this.wrogZMapy.push({ skad, id: unit.id });
       });
     };
-    wystaw(this.zPrzygody!.gracz, 'player', 0);
     wystaw(this.zPrzygody!.wrog, 'enemy', COLS - 1);
     // Nazwy stron w ekranie końca biorą się z frakcji, więc dopasowujemy je
     // do tego, kto naprawdę stanął do walki.
@@ -898,6 +991,35 @@ export class BattleScene extends Phaser.Scene {
     const frakcjaWroga = factionById(this.zPrzygody!.wrog[0]?.frakcja ?? '');
     if (frakcjaGracza) this.playerFaction = frakcjaGracza;
     if (frakcjaWroga) this.enemyFaction = frakcjaWroga;
+
+    const gracz = this.zPrzygody!.gracz;
+    if (gracz.length <= NA_POLU) {
+      wystaw(gracz, 'player', 0);
+      return false;
+    }
+    // Więcej sprawnych stworków niż miejsc na polu: trener wybiera czwórkę,
+    // widząc już przeciwnika (etap 5).
+    this.busy = true;
+    this.setButtonsVisible(false);
+    this.turnText.setText('Wybierz czwórkę do walki');
+    this.wyborSkladu = pokazWyborSkladu(
+      this,
+      gracz.map((o, skad) => ({ skad, sprite: o.sprite, nazwa: o.nazwa, poziom: o.poziom })),
+      NA_POLU,
+      { x: BOARD_X, y: BOARD_Y, w: BOARD_W, h: BOARD_H },
+      (wybrane) => {
+        this.wyborSkladu = undefined;
+        wystaw(
+          gracz.map((o, i) => (wybrane.includes(i) ? o : null)),
+          'player',
+          0
+        );
+        this.busy = false;
+        startRound(this.battle);
+        this.beginTurn();
+      }
+    );
+    return true;
   }
 
   private spawnUnit(def: UnitDef, side: Side, col: number, row: number) {
@@ -978,6 +1100,8 @@ export class BattleScene extends Phaser.Scene {
 
   private beginTurn() {
     if (this.gameOver) return;
+    this.celowanie = null;
+    this.zamknijPlecak();
     this.clearHighlights();
     this.busy = false;
 
@@ -1138,7 +1262,7 @@ export class BattleScene extends Phaser.Scene {
         value:
           unit.count > 1
             ? `${unit.count} × ${unit.def.atk} = ${stackAtk(unit.def, unit)}`
-            : `${unit.def.atk}`,
+            : `${unit.def.atk}${unit.eliksir ? ` (eliksir ×${SILA_ELIKSIRU})` : ''}`,
         icon: MINI.attack,
       },
       {
@@ -1309,6 +1433,11 @@ export class BattleScene extends Phaser.Scene {
 
   private onUnitHover(unit: Unit) {
     if (this.gameOver) return;
+    if (this.celowanie) {
+      this.showStats(unit);
+      this.prognozaPrzedmiotu(unit);
+      return;
+    }
     const active = this.activeUnit();
     const canAttack =
       !!active &&
@@ -1338,6 +1467,10 @@ export class BattleScene extends Phaser.Scene {
 
   private onUnitClicked(unit: Unit) {
     if (this.gameOver || this.busy) return;
+    if (this.celowanie) {
+      this.uzyjNa(unit);
+      return;
+    }
     const active = this.activeUnit();
     if (!active || active.side !== 'player') return;
 
@@ -1387,6 +1520,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private onEnemyPointerMove(target: Unit, pointer: Phaser.Input.Pointer) {
+    if (this.celowanie) return;
     const active = this.activeUnit();
     if (this.gameOver || this.busy || !active || active.side !== 'player') return;
     if (target.side === active.side) return;
@@ -1452,6 +1586,7 @@ export class BattleScene extends Phaser.Scene {
   private setButtonsVisible(visible: boolean) {
     this.waitButton.setVisible(visible);
     this.guardButton.setVisible(visible);
+    this.plecakButton?.setEnabled(visible);
   }
 
   private updateButtons(unit: Unit) {
@@ -1484,6 +1619,235 @@ export class BattleScene extends Phaser.Scene {
     this.wybranyAtak = i;
     this.odswiezAtaki();
     if (this.prognozaDla) this.showForecast(this.prognozaDla.a, this.prognozaDla.t);
+  }
+
+  // ---------- plecak trenera (etap 5) ----------
+
+  /** Dlaczego przedmiotu nie można teraz użyć — albo null, gdy można. */
+  private blokadaPrzedmiotu(co: Przedmiot): string | null {
+    if (this.przedmiotWRundzie === this.battle.round) return 'już sięgałeś do plecaka w tej rundzie';
+    const swoi = this.units.filter((u) => u.side === 'player');
+    if (co === 'mikstura') {
+      if (this.plecak.mikstura <= 0) return 'mikstury się skończyły';
+      if (!swoi.some(moznaLeczyc)) return 'nikt nie jest ranny';
+    } else if (co === 'eliksir') {
+      if (this.plecak.eliksir <= 0) return 'eliksir już wypity';
+      if (!swoi.some(moznaWzmocnic)) return 'wszyscy już po eliksirze';
+    } else {
+      if (!this.dzikie) return 'stworków innego trenera nie wolno łapać';
+      if (this.wolneSloty <= 0) return 'drużyna pełna — nie ma miejsca';
+      if (this.pokeballe < KOSZT_RZUTU) return `za mało pokeballi (masz ${this.pokeballe})`;
+    }
+    return null;
+  }
+
+  /** Czy ten stworek może przyjąć wybrany przedmiot. */
+  private celPrzedmiotu(co: Przedmiot, u: Unit): boolean {
+    if (co === 'pokeball') return u.side === 'enemy';
+    if (u.side !== 'player') return false;
+    return co === 'mikstura' ? moznaLeczyc(u) : moznaWzmocnic(u);
+  }
+
+  private otworzPlecak() {
+    const a = this.activeUnit();
+    if (this.oknoPlecaka || this.gameOver || this.busy || !a || a.side !== 'player') return;
+    this.anulujCelowanie(false);
+    const wiersze: WierszPlecaka[] = [
+      { co: 'mikstura', tekstura: 'przedmiot-mikstura', ile: `× ${this.plecak.mikstura}`, blokada: null },
+      { co: 'eliksir', tekstura: 'przedmiot-eliksir', ile: `× ${this.plecak.eliksir}`, blokada: null },
+      {
+        co: 'pokeball',
+        tekstura: 'przedmiot-pokeball',
+        ile: `${KOSZT_RZUTU} z ${this.pokeballe}`,
+        blokada: null,
+      },
+    ];
+    wiersze.forEach((w) => (w.blokada = this.blokadaPrzedmiotu(w.co)));
+    this.oknoPlecaka = pokazPlecak(
+      this,
+      TYTUL_X + 180,
+      34,
+      wiersze,
+      (co) => this.wybierzPrzedmiot(co),
+      () => this.zamknijPlecak()
+    );
+  }
+
+  private zamknijPlecak() {
+    this.oknoPlecaka?.destroy();
+    this.oknoPlecaka = undefined;
+  }
+
+  /** Przedmiot wybrany — teraz trzeba wskazać, na kogo. */
+  private wybierzPrzedmiot(co: Przedmiot) {
+    this.zamknijPlecak();
+    if (this.blokadaPrzedmiotu(co)) return;
+    this.celowanie = co;
+    this.clearHighlights();
+    const g = this.add.graphics();
+    this.highlightLayer.add(g);
+    pulse(this, g);
+    for (const u of this.units) {
+      if (!this.celPrzedmiotu(co, u)) continue;
+      if (u.side === 'enemy') paintAttackCell(g, u.col, u.row, false);
+      else paintMoveCell(g, u.col, u.row);
+    }
+    this.turnText.setText(
+      co === 'pokeball'
+        ? 'Rzuć pokeball: kliknij dzikiego stworka  ·  Esc — anuluj'
+        : co === 'mikstura'
+          ? 'Mikstura: kliknij swojego rannego stworka  ·  Esc — anuluj'
+          : 'Eliksir siły: kliknij swojego stworka  ·  Esc — anuluj'
+    );
+  }
+
+  /** Esc, prawy klik albo ponowne otwarcie plecaka — wraca zwykła tura. */
+  private anulujCelowanie(pokaz = true) {
+    if (!this.celowanie) return;
+    this.celowanie = null;
+    if (pokaz) this.poPrzedmiocie();
+  }
+
+  private prognozaPrzedmiotu(u: Unit) {
+    const co = this.celowanie;
+    if (!co || !this.celPrzedmiotu(co, u)) {
+      this.forecast.hide();
+      return;
+    }
+    if (co === 'mikstura') {
+      const ile = Math.min(fullHp(u.def) - total(u), Math.round(fullHp(u.def) * LECZENIE_MIKSTURY));
+      this.forecast.show(`Mikstura: +${ile} życia dla ${u.def.name}`, false);
+    } else if (co === 'eliksir') {
+      const atk = stackAtk(u.def, u);
+      this.forecast.show(
+        `Eliksir siły: ${u.def.name} bije mocniej — atak ${atk} → ${Math.round(atk * SILA_ELIKSIRU)}`,
+        false
+      );
+    } else {
+      const s = Math.round(szansaZlapania(u) * 100);
+      this.forecast.show(
+        `Pokeball: szansa ${s}% na złapanie ${u.def.name}${s < 30 ? ' — najpierw go osłab!' : ''}`,
+        false
+      );
+    }
+  }
+
+  private uzyjNa(u: Unit) {
+    const co = this.celowanie;
+    if (!co || !this.celPrzedmiotu(co, u)) return;
+    this.celowanie = null;
+    this.przedmiotWRundzie = this.battle.round;
+    if (co === 'pokeball') {
+      this.rzucPokeball(u);
+      return;
+    }
+    if (co === 'mikstura') {
+      this.plecak.mikstura--;
+      const ile = uzyjMikstury(u);
+      this.refreshStack(u);
+      flashTarget(this, u.view.sprite, C.hpHigh);
+      this.floatText(u, `+${ile} życia`, '#b9f6ca', -52, ICON.star, 19);
+    } else {
+      this.plecak.eliksir--;
+      uzyjEliksiru(u);
+      this.refreshStack(u);
+      flashTarget(this, u.view.sprite, C.gold);
+      this.floatText(u, `Siła ×${SILA_ELIKSIRU}!`, '#ffd166', -52, ICON.sword, 19);
+    }
+    this.poPrzedmiocie();
+  }
+
+  /** Po przedmiocie tura stworka trwa dalej — jak po czarze w Heroes 3. */
+  private poPrzedmiocie() {
+    const a = this.activeUnit();
+    if (!a || a.side !== 'player' || this.gameOver) return;
+    this.turnText.setText(`Twoja tura: ${a.def.name} — kliknij pole, by podejść, albo wroga, by zaatakować`);
+    this.updateButtons(a);
+    this.odswiezAtaki();
+    this.showOptions(a);
+  }
+
+  /**
+   * Rzut pokeballem: lot łukiem od trenera, stworek znika w kuli, kula
+   * kołysze się trzy razy — i albo „Złapany!", albo stworek się wyrywa.
+   */
+  private rzucPokeball(cel: Unit) {
+    this.busy = true;
+    this.clearHighlights();
+    this.pokeballe -= KOSZT_RZUTU;
+    this.wydanePokeballe += KOSZT_RZUTU;
+    const udane = this.losujRzut() < szansaZlapania(cel);
+    const start = this.trenerXY;
+    const kon = this.cellToXY(cel.col, cel.row);
+    const kula = this.add.image(start.x, start.y, 'przedmiot-pokeball').setDepth(120);
+    kula.setScale(30 / kula.width);
+    this.turnText.setText(`Rzucasz pokeball w ${cel.def.name}!`);
+    const sx = cel.container.scaleX;
+    const sy = cel.container.scaleY;
+
+    const wynik = () => {
+      if (udane) {
+        zlap(this.battle, cel);
+        const skad = this.wrogZMapy.find((w) => w.id === cel.id)?.skad ?? -1;
+        this.zlapani.push({ skad, id: cel.id });
+        this.wolneSloty--;
+        cel.container.setVisible(false);
+        flashTarget(this, kula, C.gold);
+        this.floatText(cel, `Złapany! ${cel.def.name} dołącza do drużyny!`, '#ffe08a', -40, ICON.star, 19);
+        this.turnText.setText(`Złapany: ${cel.def.name}!`);
+        this.buildQueueIcons();
+      } else {
+        this.tweens.add({ targets: cel.container, scaleX: sx, scaleY: sy, alpha: 1, duration: 260, ease: 'Back.easeOut' });
+        this.floatText(cel, 'Wyrwał się!', '#ff8a80', -52, undefined, 19);
+        this.turnText.setText(`${cel.def.name} wyrwał się z pokeballa!`);
+      }
+      this.tweens.add({
+        targets: kula,
+        alpha: 0,
+        scale: kula.scale * (udane ? 1 : 1.6),
+        delay: udane ? 700 : 0,
+        duration: 300,
+        onComplete: () => kula.destroy(),
+      });
+      this.time.delayedCall(udane ? 1100 : 700, () => {
+        this.busy = false;
+        this.checkGameOver();
+        if (!this.gameOver) this.poPrzedmiocie();
+      });
+    };
+
+    // Kołysanie: trzy przechyły, jak w grach z pokemonami.
+    const kolysz = () =>
+      this.tweens.add({
+        targets: kula,
+        angle: { from: -22, to: 22 },
+        duration: 180,
+        yoyo: true,
+        repeat: 2,
+        delay: 200,
+        onComplete: () => {
+          kula.setAngle(0);
+          wynik();
+        },
+      });
+
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: 560,
+      onUpdate: (tw) => {
+        const p = tw.getValue() ?? 0;
+        kula.x = start.x + (kon.x - start.x) * p;
+        kula.y = start.y + (kon.y - 24 - start.y) * p - Math.sin(p * Math.PI) * 110;
+        kula.setAngle(p * 540);
+      },
+      onComplete: () => {
+        kula.setAngle(0);
+        flashTarget(this, cel.view.sprite, C.white);
+        this.tweens.add({ targets: cel.container, scaleX: 0.1, scaleY: 0.1, alpha: 0, duration: 240 });
+        this.tweens.add({ targets: kula, y: kon.y + 6, duration: 320, delay: 200, ease: 'Bounce.easeOut', onComplete: kolysz });
+      },
+    });
   }
 
   // ---------- akcje ----------
@@ -1928,11 +2292,24 @@ export class BattleScene extends Phaser.Scene {
     // Ocalałych dopasowujemy po IDENTYFIKATORZE oddziału, nie po gatunku:
     // dwa sloty z tym samym gatunkiem (po podziale stosu) to normalny układ,
     // a szukanie po `sprite` dawało obu liczebność pierwszego z brzegu.
-    const ocalali = this.zPrzygody!.gracz.map((o, i) => {
-      const id = this.slotyZMapy.get(i);
-      const zywy = id !== undefined ? this.units.find((u) => u.id === id) : undefined;
-      return { ...o, ile: zywy ? zywy.count : 0 };
-    });
+    // Tylko ci, którzy stanęli na polu: stworek, który czekał poza czwórką,
+    // nie walczył i nie mdleje (wcześniej wracał z `ile: 0` i mdlał).
+    const ocalali = this.zPrzygody!.gracz
+      .map((o, i) => {
+        const id = this.slotyZMapy.get(i);
+        if (id === undefined) return null;
+        const zywy = this.units.find((u) => u.id === id);
+        return { ...o, ile: zywy ? zywy.count : 0 };
+      })
+      .filter((o) => o !== null);
+    // Złapane dzikie stworki — z poziomem, na którym stały na polu.
+    const zlapani = this.zlapani
+      .map((z) => {
+        const o = this.zPrzygody!.wrog[z.skad];
+        if (!o) return null;
+        return { ...o, ile: 1, poziom: this.roster.get(z.id)?.def.poziom ?? o.poziom, skad: z.skad };
+      })
+      .filter((o) => o !== null);
     // Pokonani przeciwnicy — z nich liczy się doświadczenie drużyny.
     const pokonani = this.wrogZMapy
       .filter((w) => !this.units.some((u) => u.id === w.id))
@@ -1953,6 +2330,8 @@ export class BattleScene extends Phaser.Scene {
       armia: ocalali,
       pokonani,
       wrogOcalali,
+      zlapani,
+      wydanePokeballe: this.wydanePokeballe,
     });
     // Chwila na przeczytanie ekranu końca, dopiero potem powrót.
     this.time.delayedCall(2600, () => this.scene.start(this.zPrzygody!.powrot ?? 'adventure'));
@@ -1974,6 +2353,9 @@ export class BattleScene extends Phaser.Scene {
    */
   rozstrzygnijNatychmiast(wygrana: boolean) {
     if (this.gameOver) return;
+    // Okno wyboru czwórki jeszcze otwarte — bez drużyny na polu każda bitwa
+    // byłaby przegrana.
+    this.wyborSkladu?.zatwierdz();
     const przegrani = wygrana ? 'enemy' : 'player';
     for (const u of [...this.units]) {
       if (u.side !== przegrani) continue;

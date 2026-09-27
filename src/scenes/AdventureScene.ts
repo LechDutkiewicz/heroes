@@ -54,7 +54,7 @@ import type { PoseName } from '../visual/unitView';
 import { planszaPoId } from '../data/mapy';
 import { turaWroga } from '../data/wrog-ai';
 import { SLOTY_ARMII, zywe } from '../data/armia';
-import { ktosNaNogach, napisPoziomu, obudz, rozdajDosw } from '../data/stworki';
+import { doswDoPoziomu, ktosNaNogach, napisPoziomu, obudz, rozdajDosw } from '../data/stworki';
 import { autozapis, nazwaSlotu } from '../data/zapis';
 import { pokazWczytanie, pokazZapis } from '../visual/oknoZapisu';
 import { KAMPANIA, misjaPoId, wczytajPostep } from '../data/kampania';
@@ -4952,6 +4952,15 @@ export class AdventureScene extends Phaser.Scene {
         // dwie liczby wchodzą do walki. Wcześniej rosły w panelu i nie robiły
         // nic — arena je podnosiła, artefakty je podnosiły, a bitwa o nich
         // nie wiedziała.
+        // Trener przy polu bitwy (etap 5): pokeballe na rzuty, wolne miejsca
+        // w drużynie na złapane stworki i czy wolno łapać — tylko dzikie,
+        // nie stworki sali ani rywala.
+        trener: {
+          kto: /^el/i.test(this.stan.bohater.imie.trim()) ? 'ela' : 'janek',
+          pokeballe: this.stan.skarbiec.pokeball,
+          wolneSloty: this.stan.bohater.armia.filter((s) => !s).length,
+          dzikie: o.rodzaj !== 'zamek' && o.id !== RYWAL_ID,
+        },
         bonusGracza: {
           wrecz: efekt(this.stan.bohater, 'wrecz'),
           strzal: efekt(this.stan.bohater, 'strzal'),
@@ -5431,6 +5440,8 @@ export class AdventureScene extends Phaser.Scene {
           armia?: Array<Oddzial & { slot?: number }>;
           pokonani?: Array<{ poziom: number; tier: number }>;
           wrogOcalali?: number[];
+          zlapani?: Array<Oddzial & { skad: number }>;
+          wydanePokeballe?: number;
         }
       | undefined;
     if (!wynik) return;
@@ -5459,6 +5470,34 @@ export class AdventureScene extends Phaser.Scene {
           wynik.pokonani ?? []
         );
       }
+    }
+
+    // Pokeballe rzucone w bitwie i złapane dzikie stworki (etap 5). Złapany
+    // dołącza do drużyny w pierwszym wolnym slocie — bitwa pozwalała rzucać
+    // tylko, gdy było miejsce. Przy przegranej schodzi też ze stada na mapie.
+    if (wynik.wydanePokeballe) {
+      this.stan.skarbiec.pokeball = Math.max(0, this.stan.skarbiec.pokeball - wynik.wydanePokeballe);
+    }
+    const zlapani: string[] = [];
+    for (const z of wynik.zlapani ?? []) {
+      const wolny = this.stan.bohater.armia.findIndex((s) => !s);
+      if (wolny < 0) break;
+      const { skad, ...od } = z;
+      this.stan.bohater.armia[wolny] = {
+        ...od,
+        ile: 1,
+        omdlaly: undefined,
+        bezEwolucji: undefined,
+        dosw: doswDoPoziomu(od.poziom),
+      };
+      zlapani.push(od.nazwa);
+      const wpis = o?.oddzialy?.[skad];
+      if (!wynik.wygrana && wpis) wpis.ile = Math.max(0, wpis.ile - 1);
+    }
+    if (zlapani.length) {
+      this.time.delayedCall(wynik.wygrana ? 2600 : 1800, () =>
+        this.napisUlotny(`Złapany: ${zlapani.join(', ')}!\nDołącza do twojej drużyny.`)
+      );
     }
 
     // Pojedynek z rywalem: jego drużyna mdleje tak samo jak nasza, a przegrany

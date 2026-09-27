@@ -74,8 +74,16 @@ export function createPasekAtakow(
         const blady = stan === 'pusty' || stan === 'zablokowany';
         nazwa.setText(tNazwa).setColor(blady ? H.inkSoft : H.ink).setAlpha(blady ? 0.8 : 1).setScale(1);
         pp.setText(tPp).setColor(stan === 'pusty' ? '#b32d3f' : H.inkSoft);
+        if (stan === 'zablokowany') {
+          // Nazwa i „po ewolucji" w dwóch wierszach — w jednym nachodziły na siebie.
+          nazwa.setText(`${tNazwa}\n${tPp}`).setLineSpacing(-2);
+          pp.setText('');
+        } else {
+          nazwa.setLineSpacing(0);
+        }
         const miejsce = cw - 28 - pp.width - 14;
-        if (nazwa.width > miejsce) nazwa.setScale(Math.max(0.7, miejsce / nazwa.width));
+        const skala = Math.min(stan === 'zablokowany' ? 0.8 : 1, miejsce / nazwa.width, (h - 4) / nazwa.height);
+        nazwa.setScale(Math.max(0.6, skala));
       },
     };
   });
