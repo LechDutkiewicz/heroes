@@ -23,35 +23,29 @@ export interface Faction {
 }
 
 /**
- * Statystyki pojedynczego stworka na każdym poziomie i liczebność oddziału.
+ * Statystyki JEDNEGO stworka każdego poziomu frakcji, na poziomie
+ * doświadczenia 5 i w formie bazowej. `defStworka` (`stworki.ts`) skaluje
+ * je poziomem i etapem ewolucji.
  *
- * WAŻNE, JAK TO CZYTAĆ: liczy się nie statystyka stworka, tylko suma oddziału.
- * Oddział bije za `count × atk` i znosi `count × hp`, więc liczebność mnoży
- * OBA człony naraz. Poprzednia tabela miała przez to sumy prawie stałe na
- * wszystkich poziomach — 30/30/35/40/39/40 życia i 15/20/14/15/15/16 ataku.
- * Czempion bił tyle samo co drobnica i ginął równie szybko, a poziom był
- * czysto ozdobny. Każdy oddział padał w dwa ciosy, więc bitwa sprowadzała się
- * do tego, kto zdąży uderzyć pierwszy; symulator pokazywał, że strona
- * ruszająca się pierwsza przegrywa 100% starć, bo to ona wydaje turę na
- * podejście i obrywa jako pierwsza.
+ * Dawniej była tu tabela stosów (20 drobnicy, 3 czempionów) o prawie równej
+ * sumie życia i ataku na każdym poziomie — bo o sile decydowała liczebność
+ * z tygodniowego przyrostu. Od przebudowy „trener zamiast armii" stworek jest
+ * jeden, więc poziom frakcji znaczy to, co w grach o pokemonach rzadkość
+ * gatunku: czempion z szóstego poziomu jest mniej więcej dwa razy mocniejszy
+ * od drobnicy na tym samym poziomie doświadczenia, a za to rzadki i drogi.
  *
- * Teraz suma życia ROŚNIE z poziomem szybciej niż suma ataku, więc:
- *  - czas do wybicia oddziału wynosi ok. 3 ciosów zamiast 2, przez co
- *    pozycja, odwet i kolejność zaczynają mieć znaczenie;
- *  - wyższy poziom naprawdę jest twardszy, a nie tylko mniej liczny;
- *  - obrońca z poziomu 3 znosi najwięcej w stosunku do tego, co zadaje.
- *
- * Kolumny „suma" są komentarzem, nie kodem — trzymam je, bo bez nich każda
- * zmiana pojedynczej liczby wymaga liczenia w pamięci.
+ * Proporcje HP do ataku pilnują długości walki: równy przeciwnik pada po
+ * 3–4 ciosach, więc pozycja, odwet i kolejka dalej mają znaczenie. Obrońca
+ * z poziomu 3 znosi najwięcej w stosunku do tego, co zadaje — jak dawniej.
  */
 export const TIERS = [
-  //                                            suma HP / suma ataku / ciosów do wybicia
-  { tier: 1, count: 20, hp: 3, atk: 1, move: 4 }, //  60 /  20 / 3.0
-  { tier: 2, count: 14, hp: 5, atk: 2, move: 5 }, //  70 /  28 / 2.5
-  { tier: 3, count: 10, hp: 8, atk: 2, move: 3 }, //  80 /  20 / 4.0
-  { tier: 4, count: 7, hp: 12, atk: 4, move: 7 }, //  84 /  28 / 3.0
-  { tier: 5, count: 5, hp: 18, atk: 6, move: 4 }, //  90 /  30 / 3.0
-  { tier: 6, count: 3, hp: 32, atk: 12, move: 6 }, // 96 /  36 / 2.7
+  //                                              ciosów do wybicia równego
+  { tier: 1, count: 1, hp: 40, atk: 13, move: 4 }, // 3.1
+  { tier: 2, count: 1, hp: 38, atk: 14, move: 5 }, // 2.7 — strzelec
+  { tier: 3, count: 1, hp: 58, atk: 13, move: 3 }, // 4.5 — obrońca
+  { tier: 4, count: 1, hp: 52, atk: 17, move: 7 }, // 3.1 — latacz
+  { tier: 5, count: 1, hp: 58, atk: 20, move: 4 }, // 2.9 — elitarny strzelec
+  { tier: 6, count: 1, hp: 84, atk: 22, move: 6 }, // 3.8 (bije dwa razy)
 ] as const;
 
 /**
@@ -112,32 +106,32 @@ function unit(
     sprite,
     name,
     type,
-    hp: co1(t.hp * p.hp),
-    atk: co1(t.atk * p.atk),
-    count: co1(t.count * p.count),
+    // Liczebność z profilu (dawne „Bór jest liczny") przechodzi na HP
+    // i atak po równo: stos o 20% liczniejszy był o 20% mocniejszy w obu.
+    // Pierwiastek, bo liczy się iloczyn życia i ataku, nie ich suma.
+    hp: co1(t.hp * p.hp * Math.sqrt(p.count)),
+    atk: co1(t.atk * p.atk * Math.sqrt(p.count)),
+    count: 1,
     move: co1(t.move + p.move),
   };
 }
 
 /**
  * Trzy charaktery. Sumy mocy są zbliżone, rozłożone inaczej:
- *  - Bór: liczny i szybki, ale kruchy — bije często, znosi mało.
- *  - Grota: powolna, twarda i ciężka w ciosie — dochodzi na końcu, ale kogo
- *    dosięgnie, tego rozjeżdża; płaci za to najmniejszą liczebnością.
+ *  - Bór: szybki i ostry, ale kruchy — bije mocno, znosi mało.
+ *  - Grota: powolna i twarda — dochodzi na końcu, ale trudno ją przewrócić.
  *  - Zbocze: wyrównane i solidne — nic nie wystaje, nic nie zawodzi.
  */
-// Uwaga przy strojeniu: te liczby NIE są liniowe i nie da się ich dobrać
-// intuicją. Liczebność mnoży ZARAZEM atak i życie, więc działa kwadratowo —
-// zmiana Groty z 0.90 na 0.95 przerzuciła starcie z Borem z 58:42 na 18:82.
-// Do tego statystyki są całkowite, więc drobne mnożniki znikają w
-// zaokrągleniu: atak 1.15 i 1.22 dają dokładnie te same oddziały. Jeśli
-// zmiana „nic nie robi", to zwykle nie jest za mała, tylko wpadła między
-// dwie liczby całkowite — a jeśli robi za dużo, to trafiła w próg.
-// Do przeszukiwania siatki wariantów jest `npx tsx tools/strojenie.ts`,
-// do sprawdzenia wyniku `npm run balans`.
-const BOR: Profil = { hp: 0.75, atk: 0.95, count: 1.2, move: 1 };
-const GROTA: Profil = { hp: 1.15, atk: 1.22, count: 0.9, move: 0 };
-const ZBOCZE: Profil = { hp: 1.12, atk: 1.05, count: 0.95, move: 0 };
+// Strojone po przebudowie „trener zamiast armii" (stworek = postać, cztery
+// na polu bitwy). Dawne mnożniki były dobrane pod stosy, w których
+// liczebność działała kwadratowo — po przejściu na pojedyncze stworki Grota
+// wygrywała z Borem 99:1. `count` zostaje w profilu, bo `unit()` przenosi go
+// na HP i atak (pierwiastek), ale samo strojenie idzie przez `hp` i `atk`.
+// Statystyki są całkowite, więc drobne zmiany potrafią nic nie dać (wpadają
+// między dwie liczby) — sprawdzaj wynik `npm run balans` (cel: do 5 pp).
+const BOR: Profil = { hp: 0.74, atk: 1.10, count: 1.2, move: 1 };
+const GROTA: Profil = { hp: 1.265, atk: 1.0, count: 0.9, move: 0 };
+const ZBOCZE: Profil = { hp: 1.10, atk: 1.03, count: 0.95, move: 0 };
 
 /**
  * Frakcje to miejsca, bo tak jest poukładany świat pokemonów: w lesie żyją

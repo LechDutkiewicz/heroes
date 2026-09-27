@@ -44,25 +44,25 @@ const armia = () =>
   page.evaluate(() =>
     window.__game.registry
       .get('stan-mapy')
-      .bohater.armia.map((o) => (o ? { s: o.sprite, ile: o.ile } : null))
+      .bohater.armia.map((o) => (o ? { s: o.sprite, n: o.nazwa, p: o.poziom, d: o.dosw ?? 0, z: !!o.omdlaly } : null))
   );
 
 await page.goto(`${BASE}/?ekran=mapa`, { waitUntil: 'domcontentloaded' });
 await scena('adventure');
 await page.waitForTimeout(700);
 
-// Układ z dziurami i z rozdzielonym stosem: sloty 0, 2, 3, 4, 6.
-// Slot 0 i 6 to ten sam gatunek w różnej liczebności — po bitwie muszą wrócić
-// jako DWA osobne stosy, każdy ze swoją liczbą.
+// Drużyna z dziurami: sloty 0, 2, 3, 4, 6. Slot 0 i 6 to ten sam gatunek na
+// różnych poziomach (dwie postacie), slot 2 jest zemdlony. Do bitwy idą
+// cztery pierwsze SPRAWNE sloty: 0, 3, 4, 6.
 const ukladPrzed = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   const wzory = s.stan.bohater.armia.filter(Boolean).map((o) => ({ ...o }));
   const nowa = new Array(7).fill(null);
-  nowa[0] = { ...wzory[0], ile: 12 };
-  nowa[2] = { ...wzory[1], ile: 9 };
-  nowa[3] = { ...wzory[2], ile: 6 };
-  nowa[4] = { ...wzory[3], ile: 4 };
-  nowa[6] = { ...wzory[0], ile: 8 };
+  nowa[0] = { ...wzory[0], nazwa: 'Pierwszy', poziom: 12, dosw: undefined };
+  nowa[2] = { ...wzory[1], poziom: 9, dosw: undefined, omdlaly: true };
+  nowa[3] = { ...wzory[2], poziom: 6, dosw: undefined };
+  nowa[4] = { ...wzory[3], poziom: 4, dosw: undefined };
+  nowa[6] = { ...wzory[0], nazwa: 'Drugi', poziom: 8, dosw: undefined };
   s.stan.bohater.armia = nowa;
   s.registry.set('stan-mapy', s.stan);
   const o = s.stan.obiekty.find((x) => x.rodzaj === 'potwor' && !x.zebrany);
@@ -71,20 +71,14 @@ const ukladPrzed = await page.evaluate(() => {
   s.stan.bohater.ruch = 2000;
   s.zajety = false;
   s.idz([{ x: o.x, y: o.y, koszt: 100 }]);
-  return nowa.map((o) => (o ? { s: o.sprite, ile: o.ile } : null));
+  return nowa.map((o) => (o ? { s: o.sprite, n: o.nazwa, p: o.poziom, z: !!o.omdlaly } : null));
 });
 sprawdz('układ startowy ma dziury', ukladPrzed.filter(Boolean).length === 5 && ukladPrzed[1] === null);
-sprawdz(
-  'układ startowy ma dwa stosy tego samego gatunku',
-  ukladPrzed[0].s === ukladPrzed[6].s && ukladPrzed[0].ile !== ukladPrzed[6].ile
-);
 
 await page.waitForTimeout(1400);
 await scena('battle');
 await page.waitForTimeout(400);
 
-// Kolejność na planszy: oddziały gracza czytane z góry na dół muszą odpowiadać
-// kolejności ZAJĘTYCH slotów u bohatera.
 const naPlanszy = await page.evaluate(() => {
   const s = window.__game.scene.getScene('battle');
   const nasi = s.units
@@ -92,54 +86,39 @@ const naPlanszy = await page.evaluate(() => {
     .slice()
     .sort((a, b) => a.row - b.row);
   return {
-    kolejnosc: nasi.map((u) => ({ s: u.def.sprite, ile: u.count, rzad: u.row })),
+    kolejnosc: nasi.map((u) => ({ n: u.def.name, p: u.def.poziom })),
     rzedy: nasi.map((u) => u.row),
+    wrogRzedy: s.units.filter((u) => u.side === 'enemy').map((u) => u.row).sort((a, b) => a - b),
   };
 });
-const oczekiwana = ukladPrzed.filter(Boolean);
+const oczekiwana = [0, 3, 4, 6].map((i) => ukladPrzed[i]);
 sprawdz(
-  'na polu walki stoi tyle oddziałów, ile zajętych slotów',
-  naPlanszy.kolejnosc.length === oczekiwana.length,
-  `${naPlanszy.kolejnosc.length} vs ${oczekiwana.length}`
+  'do bitwy idą cztery pierwsze sprawne stworki, w kolejności slotów',
+  JSON.stringify(naPlanszy.kolejnosc.map((u) => [u.n, u.p])) === JSON.stringify(oczekiwana.map((u) => [u.n, u.p])),
+  naPlanszy.kolejnosc.map((u) => `${u.n}@${u.p}`).join(', ')
 );
-sprawdz(
-  'kolejność na polu walki ODPOWIADA kolejności slotów',
-  JSON.stringify(naPlanszy.kolejnosc.map((u) => [u.s, u.ile])) ===
-    JSON.stringify(oczekiwana.map((u) => [u.s, u.ile])),
-  `plansza: ${naPlanszy.kolejnosc.map((u) => `${u.s}×${u.ile}`).join(', ')}`
-);
-sprawdz(
-  'żadne dwa oddziały nie stoją w tym samym rzędzie',
-  new Set(naPlanszy.rzedy).size === naPlanszy.rzedy.length,
-  naPlanszy.rzedy.join(', ')
-);
+const zPrzerwa = (r) => r.every((x, i) => i === 0 || x - r[i - 1] >= 2);
+sprawdz('między naszymi stworkami zawsze wolne pole', zPrzerwa(naPlanszy.rzedy), naPlanszy.rzedy.join(', '));
+sprawdz('między stworkami przeciwnika też', zPrzerwa(naPlanszy.wrogRzedy), naPlanszy.wrogRzedy.join(', '));
 
 await page.evaluate(() => window.__game.scene.getScene('battle').rozstrzygnijNatychmiast(true));
 await scena('adventure');
 await page.waitForTimeout(1200);
 
 const po = await armia();
+sprawdz('dziury w drużynie przeżywają bitwę', po[1] === null && po[5] === null, JSON.stringify(po));
 sprawdz(
-  'dziury między stosami przeżywają bitwę',
-  po[1] === null && po[5] === null,
-  JSON.stringify(po)
+  'każdy stworek wrócił NA SWÓJ slot',
+  po.every((o, i) => (ukladPrzed[i] === null ? o === null : o?.n === ukladPrzed[i].n)),
+  JSON.stringify(po.map((o) => o?.n ?? null))
 );
+sprawdz('zemdlony został zemdlony i nic nie dostał', po[2]?.z === true && po[2]?.p === 9);
+sprawdz('walczący nie zemdleli (wygrana od ręki)', [0, 3, 4, 6].every((i) => po[i] && !po[i].z));
 sprawdz(
-  'każdy ocalały stos wrócił NA SWÓJ slot',
-  po.every((o, i) => (ukladPrzed[i] === null ? o === null : o === null || o.s === ukladPrzed[i].s)),
-  JSON.stringify(po)
+  'walczący zebrali doświadczenie',
+  [0, 3, 4, 6].every((i) => po[i].d > 5 * ukladPrzed[i].p * (ukladPrzed[i].p - 1)),
+  [0, 3, 4, 6].map((i) => `${po[i].n}: poz. ${ukladPrzed[i].p}→${po[i].p}`).join(', ')
 );
-// Bitwa rozstrzygnięta natychmiast nie zabija nikogo po naszej stronie, więc
-// liczebności muszą wrócić dokładnie takie, jakie poszły. Gdyby powrót szukał
-// po gatunku, slot 6 dostałby liczbę slotu 0.
-sprawdz(
-  'dwa stosy tego samego gatunku zachowują SWOJE liczebności',
-  po[0]?.ile === ukladPrzed[0].ile && po[6]?.ile === ukladPrzed[6].ile,
-  `${po[0]?.ile} i ${po[6]?.ile}, miało być ${ukladPrzed[0].ile} i ${ukladPrzed[6].ile}`
-);
-const sumaPrzed = ukladPrzed.reduce((s, o) => s + (o ? o.ile : 0), 0);
-const sumaPo = po.reduce((s, o) => s + (o ? o.ile : 0), 0);
-sprawdz('bitwa nie mnoży ani nie gubi stworków', sumaPo === sumaPrzed, `${sumaPrzed} → ${sumaPo}`);
 
 sprawdz('bez błędów JS', bledyJs.length === 0, bledyJs.slice(0, 2).join(' | '));
 

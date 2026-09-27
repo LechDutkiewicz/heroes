@@ -82,7 +82,7 @@ export const UMIEJETNOSCI: Umiejetnosc[] = [
   {
     id: 'napastnik',
     nazwa: 'Napastnik',
-    opis: 'Twoje oddziały mocniej biją wręcz.',
+    opis: 'Twoje stworki mocniej biją wręcz.',
     klucz: 'wrecz',
     wartosci: [0.1, 0.2, 0.3],
     jednostka: 'procent',
@@ -98,7 +98,7 @@ export const UMIEJETNOSCI: Umiejetnosc[] = [
   {
     id: 'pancerz',
     nazwa: 'Pancerz',
-    opis: 'Twoje oddziały dostają mniej obrażeń.',
+    opis: 'Twoje stworki dostają mniej obrażeń.',
     klucz: 'pancerz',
     wartosci: [0.08, 0.15, 0.22],
     jednostka: 'procent',
@@ -122,7 +122,7 @@ export const UMIEJETNOSCI: Umiejetnosc[] = [
   {
     id: 'uzdrowiciel',
     nazwa: 'Uzdrowiciel',
-    opis: 'Po wygranej bitwie część poległych wraca do armii.',
+    opis: 'Po wygranej bitwie część zemdlonych stworków od razu wraca do siebie.',
     klucz: 'leczenie',
     wartosci: [0.1, 0.2, 0.33],
     jednostka: 'procent',

@@ -298,15 +298,17 @@ export function zaplac(skarbiec: Skarbiec, koszt: Partial<Skarbiec>) {
 }
 
 /**
- * Dzienny przyrost oddziałów w zamku. Fort podnosi go wszędzie o połowę —
+ * Dzienny przyrost rezerwatów w zamku. Fort podnosi go wszędzie o połowę —
  * to jedyny budynek, który działa na całe miasto naraz, i dlatego jest
  * najciekawszą decyzją: brać go zamiast kolejnego siedliska czy po nim.
  */
 export function przyrostZamku(postawione: string[], bazowy: number[]) {
   const mnoznik = postawione.includes('fort') ? MNOZNIK_FORTU : 1;
+  // Bez zaokrąglania: przyrost rezerwatu to ułamek stworka dziennie
+  // (`PRZYROST_ODDZIALU`), a ułamki sumują się w `dostepne`.
   return bazowy.map((ile, poziom) => {
     const jest = postawione.includes(`siedlisko${poziom + 1}`);
-    return jest ? Math.max(1, Math.round(ile * mnoznik)) : 0;
+    return jest ? ile * mnoznik : 0;
   });
 }
 

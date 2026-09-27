@@ -8,8 +8,11 @@ import {
   data,
   dochod,
   zbuduj,
+  kosztTreningu,
+  treningiZamku,
+  trenuj,
+  TRENINGI_ZA_REZERWAT,
   type Obiekt,
-  type Oddzial,
   type StanMapy,
   type Surowiec,
 } from '../data/mapa';
@@ -22,6 +25,7 @@ import {
   type Budynek,
 } from '../data/zamki';
 import { MNOZNIK_FORTU } from '../data/zasady-h3';
+import { POZIOM_MLODEGO, napisPoziomu, nowyStworek } from '../data/stworki';
 import { FACTIONS, factionById } from '../data/factions';
 import { type Armia, dolacz, znormalizuj, zywe } from '../data/armia';
 import { PanelArmii, blokArmii, listwaArmii, wnekaHerbu } from '../visual/panelArmii';
@@ -799,7 +803,7 @@ export class TownScene extends Phaser.Scene {
     }, () =>
       obecny
         ? `${this.stan.bohater.imie} jest w zamku — kliknij portret, żeby otworzyć ekran bohatera.`
-        : `${this.stan.bohater.imie} jest poza zamkiem — werbunek trafia do garnizonu. Kliknij portret: ekran bohatera.`
+        : `${this.stan.bohater.imie} jest poza zamkiem — nowe stworki trafiają do garnizonu. Kliknij portret: ekran bohatera.`
     , () => this.otworzBohatera());
     this.bohaterStan = this.plakietkaHerbu(BOHATER_Y);
     this.panel.dodajPasek({
@@ -811,14 +815,14 @@ export class TownScene extends Phaser.Scene {
       armia: () => this.stan.bohater.armia,
       chroniona: true,
       aktywny: () => this.bohaterObecny,
-      powodNieaktywny: 'Bohater jest poza zamkiem. Przyprowadź go, żeby wymieniać oddziały z garnizonem.',
+      powodNieaktywny: 'Bohater jest poza zamkiem. Przyprowadź go, żeby wymieniać stworki z garnizonem.',
       gdzie: 'u bohatera',
       dokad: 'do bohatera',
     });
 
     this.rysujPrzyrost();
 
-    // --- komunikat z tabliczką „Podziel" ---
+    // --- komunikat z tabliczką „Trenuj" (Sala treningowa) ---
     const y = KOMUNIKAT_Y;
     const h = KOMUNIKAT_H;
     const podzielW = 86;
@@ -846,11 +850,35 @@ export class TownScene extends Phaser.Scene {
       y: y + h / 2,
       w: podzielW,
       h: 30,
-      tekst: 'Podziel',
+      tekst: 'Trenuj',
       rozmiar: 12,
       glebia: Z.hud + 2,
-      akcja: () => this.panel.podziel(),
+      akcja: () => this.trenujWybranego(),
     });
+  }
+
+  /**
+   * Sala treningowa: zaznaczony stworek (z drużyny albo z garnizonu) dostaje
+   * poziom za pokeballe. Tygodniowa pula treningów to dawny tygodniowy
+   * przyrost z Heroes 3 — patrz `trenuj` w `mapa.ts`.
+   */
+  private trenujWybranego() {
+    const o = this.panel.wybranyStworek;
+    const zostalo = treningiZamku(this.zamek);
+    if (!o) {
+      this.komunikat.setText(
+        `Sala treningowa: zaznacz stworka, potem „Trenuj". Zostało treningów w tym tygodniu: ${zostalo}.`
+      );
+      return;
+    }
+    if (this.zamek.wlasciciel !== 'gracz') return;
+    const w = trenuj(this.stan, this.zamek, o);
+    this.komunikat.setText(
+      w.ok
+        ? `${w.opis} Zostało treningów: ${treningiZamku(this.zamek)}. Następny: ${kosztTreningu(o)} pokeballi.`
+        : w.opis
+    );
+    if (w.ok) this.odswiez();
   }
 
   /** Janek albo Ela — od tego zależy portret w bloku armii. */
@@ -917,7 +945,7 @@ export class TownScene extends Phaser.Scene {
     const y = KOLUMNA_Y;
     const w = PRAWA_SZ;
     panelPergaminu(this, x, y, w, PRZYROST_H).forEach((c) => c.setDepth(Z.hud));
-    this.add.text(x + 10, y + 5, 'Przyrost na tydzień', stylEtykiety(12)).setDepth(Z.hud + 1);
+    this.add.text(x + 10, y + 5, 'Rezerwaty', stylEtykiety(12)).setDepth(Z.hud + 1);
     this.przyrostCzeka = this.add
       .text(x + w - 10, y + 7, '', { ...stylAtramentu(11, 'miekki'), fontFamily: KROJ.kursywa })
       .setOrigin(1, 0)
@@ -957,9 +985,9 @@ export class TownScene extends Phaser.Scene {
     const u = this.frakcja.units[i];
     const b = this.profil.budynki.find((x) => x.rodzaj === 'siedlisko' && x.poziom === i);
     const dziennie = przyrostZamku(this.zamek.postawione ?? [], PRZYROST_ODDZIALU)[i];
-    if (!dziennie) return `${u.name}: ${b?.nazwa ?? 'siedlisko'} jeszcze nie stoi — zbudujesz je przyciskiem „Buduj".`;
-    const czeka = this.zamek.dostepne?.[i] ?? 0;
-    return `${u.name}: przybywa ${dziennie} dziennie (${dziennie * 7} na tydzień), czeka ${czeka}. Kliknij — werbunek.`;
+    if (!dziennie) return `${u.name}: ${b?.nazwa ?? 'rezerwat'} jeszcze nie stoi — zbudujesz go przyciskiem „Buduj".`;
+    const czeka = Math.floor(this.zamek.dostepne?.[i] ?? 0);
+    return `${u.name}: nowy młody stworek co ${Math.round(1 / dziennie)} dni, czeka ${czeka}. Kliknij — zaproszenie.`;
   }
 
   private odswiezPrzyrost() {
@@ -968,7 +996,7 @@ export class TownScene extends Phaser.Scene {
     this.przyrostKomorki.forEach((k, i) => {
       const jest = dzienny[i] > 0;
       const ile = this.zamek.dostepne?.[i] ?? 0;
-      if (jest) czeka += ile;
+      if (jest) czeka += Math.floor(ile);
       k.g.clear();
       k.g.fillStyle(0x2a1a0c, jest ? 0.85 : 0.25);
       k.g.fillRoundedRect(k.cx - k.bok / 2, k.gy, k.bok, k.bok, 3);
@@ -976,9 +1004,16 @@ export class TownScene extends Phaser.Scene {
       k.g.strokeRoundedRect(k.cx - k.bok / 2, k.gy, k.bok, k.bok, 3);
       if (jest) k.im.clearTint().setAlpha(1);
       else k.im.setTint(0x3a2414).setAlpha(0.35);
-      k.t.setText(jest ? `+${dzienny[i] * 7}` : '—').setColor(jest ? BARWA.atramentZielony : BARWA.atramentMiekki);
+      // Całe stworki czekają, ułamek to „za ile dni następny".
+      const cale = Math.floor(ile);
+      const zaDni = Math.ceil((1 - (ile - cale)) / Math.max(1e-6, dzienny[i]) - 1e-6);
+      k.t
+        // Wąska komórka: sama liczba czekających albo dni do następnego.
+        // Słowo „czeka" stoi raz, w rogu panelu (`przyrostCzeka`).
+        .setText(!jest ? '—' : cale > 0 ? `${cale}` : `${zaDni} d.`)
+        .setColor(jest && cale > 0 ? BARWA.atramentZielony : BARWA.atramentMiekki);
     });
-    this.przyrostCzeka.setText(czeka ? `czeka ${czeka}` : '');
+    this.przyrostCzeka.setText(czeka >= 1 ? `czeka ${Math.floor(czeka)}` : '');
   }
 
   /** Ekran bohatera z miasta — i powrót tutaj (`HeroScene.zamknij`). */
@@ -1129,16 +1164,16 @@ export class TownScene extends Phaser.Scene {
       // Postawione siedlisko to sklep ze stworkami — karta pokazuje, kto
       // w nim czeka i za ile.
       const u = this.frakcja.units[b.poziom];
-      const ile = this.zamek.dostepne?.[b.poziom] ?? 0;
-      // Ile przybywa dziennie musi tu być, bo to jedyne miejsce, gdzie widać,
-      // czy fort się opłacił i czy warto czekać dzień dłużej z werbunkiem.
+      const ile = Math.floor(this.zamek.dostepne?.[b.poziom] ?? 0);
+      // Co ile dni pojawia się nowy musi tu być, bo to jedyne miejsce, gdzie
+      // widać, czy fort się opłacił i czy warto czekać dzień dłużej.
       const dziennie = przyrostZamku(
         this.zamek.postawione ?? [],
         PRZYROST_ODDZIALU
       )[b.poziom];
       this.kartaOpis.setText(
-        `${u.name}\nczeka: ${ile} · przybywa ${dziennie} dziennie\natak ${u.atk} · życie ${u.hp}\n` +
-          `trafią: ${this.bohaterObecny ? 'do bohatera' : 'do garnizonu'}`
+        `${u.name}, ${napisPoziomu(POZIOM_MLODEGO)}\nczeka: ${ile} · nowy co ${Math.round(1 / dziennie)} dni\natak ${u.atk} · życie ${u.hp}\n` +
+          `trafi: ${this.bohaterObecny ? 'do drużyny' : 'do garnizonu'}`
       );
       // Okrągły portret storka w medalionie (r 36) — ten sam kadr co w kolejce
       // tur; bez portretu (stworek spoza zamków) — cały sprite jak dawniej.
@@ -1149,9 +1184,9 @@ export class TownScene extends Phaser.Scene {
         this.kartaStworek.setScale(Math.min(1, 58 / this.kartaStworek.height));
       }
       this.kartaMedalion.setVisible(true);
-      this.pokazKoszt({ pokeball: KOSZT_ODDZIALU[b.poziom] }, 'za sztukę');
+      this.pokazKoszt({ pokeball: KOSZT_ODDZIALU[b.poziom] }, 'za stworka');
       const stac = this.stan.skarbiec.pokeball >= KOSZT_ODDZIALU[b.poziom];
-      this.kartaPrzycisk.setLabel(ile > 0 ? `Zwerbuj (${ile})` : 'Nikt nie czeka');
+      this.kartaPrzycisk.setLabel(ile > 0 ? `Zaproś (${ile})` : 'Nikt nie czeka');
       this.kartaPrzycisk.ustaw(ile > 0 && stac && this.zamek.wlasciciel === 'gracz');
       this.ulozKarte();
       return;
@@ -1422,18 +1457,22 @@ export class TownScene extends Phaser.Scene {
         przyrostZamku(lista, PRZYROST_ODDZIALU).reduce((a, x) => a + x, 0);
       const bez = suma(postawione.filter((x) => x !== 'fort'));
       const z = suma([...postawione.filter((x) => x !== 'fort'), 'fort']);
+      const tyg = (x: number) => (x * 7).toLocaleString('pl', { maximumFractionDigits: 1 });
       wiersze.push(
-        `Przyrost we wszystkich gniazdach ×${MNOZNIK_FORTU.toLocaleString('pl')}.`,
+        `Rezerwaty i Sala treningowa ×${MNOZNIK_FORTU.toLocaleString('pl')}.`,
         stoi
-          ? `Dzięki niemu przybywa ${z} stworków dziennie zamiast ${bez}.`
-          : `Byłoby ${z} stworków dziennie zamiast ${bez}.`
+          ? `Dzięki niemu ${tyg(z)} młodych stworków na tydzień zamiast ${tyg(bez)}.`
+          : `Byłoby ${tyg(z)} młodych stworków na tydzień zamiast ${tyg(bez)}.`
       );
     }
 
     if (b.rodzaj === 'siedlisko' && b.poziom !== undefined) {
       const u = this.frakcja.units[b.poziom];
       const ile = przyrostZamku([...postawione, b.id], PRZYROST_ODDZIALU)[b.poziom];
-      wiersze.push(`Otwiera werbunek: ${u.name}.`, `Przybywa ${ile} dziennie.`);
+      wiersze.push(
+        `Tu mieszkają ${u.name}. Nowy młody stworek co ${Math.round(1 / ile)} dni.`,
+        `+${TRENINGI_ZA_REZERWAT} treningi na tydzień w Sali treningowej.`
+      );
     }
 
     if (b.produkuje) {
@@ -1510,55 +1549,42 @@ export class TownScene extends Phaser.Scene {
   }
 
   /**
-   * Werbunek. Oddział tego samego gatunku dokleja się do istniejącego slotu,
-   * a nie zakłada nowego — inaczej cztery zakupy po jednym Pyroko dałyby
-   * cztery osobne oddziały po jednym stworku, czyli armię bez sensu.
+   * Zaproszenie młodego stworka z rezerwatu — zawsze JEDNEGO: to postać,
+   * którą trener potem zna i trenuje, a nie hurtowy werbunek.
    *
-   * Dokąd idą, jak w Heroes 3: z bohaterem w zamku — do niego (a gdy jego
-   * siedem slotów jest zajętych, do garnizonu), bez bohatera — do garnizonu.
+   * Dokąd idzie, jak w Heroes 3: z bohaterem w zamku — do drużyny (a gdy
+   * jej siedem slotów jest zajętych, do garnizonu), bez bohatera — do
+   * garnizonu.
    */
   private kup(tier: number) {
     const dostepne = this.zamek.dostepne ?? [];
     const koszt = KOSZT_ODDZIALU[tier];
-    if ((dostepne[tier] ?? 0) <= 0) {
-      this.komunikat.setText('Nic tu na razie nie czeka. Wróć jutro.');
+    if ((dostepne[tier] ?? 0) < 1) {
+      this.komunikat.setText('Nikt tu na razie nie czeka. Wróć za kilka dni.');
       return;
     }
     if (this.stan.skarbiec.pokeball < koszt) {
       this.komunikat.setText(`Za mało pokeballi — potrzeba ${koszt}.`);
       return;
     }
-
-    // Kupujemy tyle, na ile stać, ale nie więcej niż czeka — jednym kliknięciem,
-    // bo klikanie po jednym stworku przy dwudziestu to nie jest zabawa.
-    const stac = Math.floor(this.stan.skarbiec.pokeball / koszt);
-    const ile = Math.min(stac, dostepne[tier]);
-
-    const u = this.frakcja.units[tier];
-    // Werbunek dokłada do istniejącego stosu albo do pierwszej dziury.
+    const nowy = nowyStworek(this.frakcja.id, tier);
+    if (!nowy) return;
     // Odmowa przy siedmiu zajętych slotach musi być WIDOCZNA: cicho zgubiony
     // zakup wygląda jak zniknięte pokeballe.
-    const nowy: Oddzial = {
-      sprite: u.sprite,
-      nazwa: u.name,
-      ile,
-      frakcja: this.frakcja.id,
-      tier,
-    };
     let dokad: string;
-    if (this.bohaterObecny && dolacz(this.stan.bohater.armia, nowy)) dokad = 'do armii bohatera';
+    if (this.bohaterObecny && dolacz(this.stan.bohater.armia, nowy)) dokad = 'do drużyny';
     else if (dolacz(this.garnizon, nowy)) dokad = 'do garnizonu';
     else {
       this.komunikat.setText(
         this.bohaterObecny
-          ? 'Wszystkie sloty bohatera i garnizonu zajęte — nie ma gdzie ich postawić.'
-          : 'Wszystkie sloty garnizonu zajęte — nie ma gdzie ich postawić.'
+          ? 'Wszystkie sloty drużyny i garnizonu zajęte — nie ma gdzie go przyjąć.'
+          : 'Wszystkie sloty garnizonu zajęte — nie ma gdzie go przyjąć.'
       );
       return;
     }
-    dostepne[tier] -= ile;
-    this.stan.skarbiec.pokeball -= ile * koszt;
-    this.komunikat.setText(`Zwerbowano ${ile} × ${u.name} — ${dokad}.`);
+    dostepne[tier] -= 1;
+    this.stan.skarbiec.pokeball -= koszt;
+    this.komunikat.setText(`${nowy.nazwa} (${napisPoziomu(nowy.poziom)}) dołącza ${dokad}!`);
     this.odswiez();
   }
 
@@ -1596,7 +1622,7 @@ export class TownScene extends Phaser.Scene {
     // Straż miejska z planszy (`zamek.oddzialy`) broni razem z garnizonem,
     // ale gracz nią nie rozporządza — pokazujemy ją jedną liczbą.
     const straz = (this.zamek.oddzialy ?? []).reduce((a, o) => a + o.ile, 0);
-    const wGarnizonie = zywe(this.garnizon).reduce((a, o) => a + o.ile, 0);
+    const wGarnizonie = zywe(this.garnizon).length;
     this.garnizonStan.setText(straz ? `straż ${straz}` : wGarnizonie ? 'garnizon' : 'pusty');
     this.panel.odswiez();
     this.odswiezPrzyrost();

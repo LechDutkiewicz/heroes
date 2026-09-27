@@ -18,6 +18,7 @@ import {
 } from '../src/data/mapa';
 import { planszaPrzygody } from '../src/data/plansza';
 import { nowaTura } from '../src/data/mapa';
+import { skalaPoziomu } from '../src/data/stworki';
 import { KAFEL, KAFEL_EKRAN, KOL, MAPA_H, MAPA_W, OKNO_H, OKNO_W, RAMA_MAPY_H, RAMA_MAPY_W, WIE, ZOOM_MAPY } from '../src/visual/uklad';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -468,30 +469,33 @@ console.log('\n=== straże rosną w czasie ===');
 // strzał". Tak było — stos ustalał się przy składaniu planszy i zostawał taki
 // do końca gry, więc zwlekanie nic nie kosztowało.
 {
+  // Stado nie przybiera na liczbie — dzikie stworki rosną w poziom
+  // (`urosnijStraze`). Siłę mierzymy skalą poziomu razy liczba stworków.
   const s2 = planszaPrzygody();
   const stado = s2.obiekty.find((o) => o.rodzaj === 'potwor' && !o.zebrany)!;
-  const suma = (o: typeof stado) => (o.oddzialy ?? []).reduce((a, od) => a + od.ile, 0);
-  const przed = suma(stado);
+  const sila = (o: typeof stado) => (o.oddzialy ?? []).reduce((a, od) => a + od.ile * skalaPoziomu(od.poziom), 0);
+  const przed = sila(stado);
+  const poziomPrzed = stado.oddzialy![0].poziom;
   for (let i = 0; i < 7; i++) nowaTura(s2);
-  const poTygodniu = suma(stado);
-  sprawdz('po tygodniu stado jest liczniejsze', poTygodniu > przed, `${przed} → ${poTygodniu}`);
+  const poTygodniu = sila(stado);
+  sprawdz('po tygodniu stado jest silniejsze', poTygodniu > przed, `poz. ${poziomPrzed} → ${stado.oddzialy![0].poziom}`);
   // A teraz długa gra: przyrost ma mieć SUFIT, inaczej mapa zamyka się sama
   // i po dwóch miesiącach nie da się jej przejść niezależnie od tego, jak
   // dobrze się grało.
   for (let i = 0; i < 120; i++) nowaTura(s2);
-  const poDwóchMiesiacach = suma(stado);
+  const poDwóchMiesiacach = sila(stado);
   sprawdz(
     'przyrost ma sufit (najwyżej dwuipółkrotność)',
-    poDwóchMiesiacach <= Math.round(przed * 2.5) + 1,
-    `${przed} → ${poDwóchMiesiacach}`
+    poDwóchMiesiacach <= przed * 2.5 + 0.1,
+    `${przed.toFixed(2)} → ${poDwóchMiesiacach.toFixed(2)}`
   );
   sprawdz('pokonane stado nie rośnie', (() => {
     const s3 = planszaPrzygody();
     const m = s3.obiekty.find((o) => o.rodzaj === 'potwor')!;
     m.zebrany = true;
-    const ile = (m.oddzialy ?? []).reduce((a, od) => a + od.ile, 0);
+    const p = (m.oddzialy ?? []).map((od) => od.poziom).join();
     for (let i = 0; i < 14; i++) nowaTura(s3);
-    return (m.oddzialy ?? []).reduce((a, od) => a + od.ile, 0) === ile;
+    return (m.oddzialy ?? []).map((od) => od.poziom).join() === p;
   })());
 }
 

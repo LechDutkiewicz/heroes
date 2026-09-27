@@ -1,5 +1,6 @@
 import { planszaPrzygody } from './plansza';
 import { dolacz } from './armia';
+import { nowyStworek } from './stworki';
 import { FACTIONS, factionById } from './factions';
 import type { StanMapy } from './mapa';
 import {
@@ -35,8 +36,8 @@ export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): Sta
     // w nagrodzie wyglądałoby na pomyłkę.
     const frakcja = s.bohater.armia.find((o) => o)?.frakcja ?? 'bor';
     const f = factionById(frakcja) ?? FACTIONS[0];
-    const u = f.units[b.tier];
-    if (u) dolacz(s.bohater.armia, { sprite: u.sprite, nazwa: u.name, ile: b.ile, frakcja: f.id, tier: b.tier });
+    const nowy = nowyStworek(f.id, b.tier, b.poziom);
+    if (nowy) dolacz(s.bohater.armia, nowy);
   }
   return s;
 }

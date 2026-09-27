@@ -105,15 +105,17 @@ console.log('--- każda umiejętność coś robi ---');
   sprawdz('Nauka mistrzowska daje +25% doświadczenia', nagroda === 100, `${nagroda}`);
 }
 
-// Uzdrowiciel: odsetek strat wraca. Liczymy tym samym wzorem co scena.
+// Uzdrowiciel: część zemdlonych w bitwie wstaje od razu. Liczymy tym samym
+// wzorem co scena (`AdventureScene.uzdrowiciel`): w górę, więc przy jednym
+// zemdlonym działa już pierwszy stopień.
 {
   const z = swiezy();
-  z.bohater.umiejetnosci = { uzdrowiciel: 3 };
-  const straty = 10;
-  const wraca = Math.floor(straty * efekt(z.bohater, 'leczenie'));
-  sprawdz('Uzdrowiciel oddaje część poległych', wraca === 3, `${wraca} z ${straty}`);
+  z.bohater.umiejetnosci = { uzdrowiciel: 1 };
+  const zemdleli = 3;
+  const wraca = Math.ceil(zemdleli * efekt(z.bohater, 'leczenie'));
+  sprawdz('Uzdrowiciel budzi część zemdlonych', wraca === 1, `${wraca} z ${zemdleli}`);
   const bez = swiezy();
-  sprawdz('bez Uzdrowiciela nie wraca nikt', Math.floor(straty * efekt(bez.bohater, 'leczenie')) === 0);
+  sprawdz('bez Uzdrowiciela nie wstaje nikt', Math.ceil(zemdleli * efekt(bez.bohater, 'leczenie')) === 0);
 }
 
 console.log('--- umiejętności bojowe w symulacji bitwy ---');

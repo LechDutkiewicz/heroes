@@ -33,11 +33,15 @@ export interface UnitDef {
   /** nazwa pliku w public/sprites bez rozszerzenia */
   sprite: string;
   name: string;
-  /** ile stworków liczy oddział na starcie — jak stos w Heroes 3 */
+  /**
+   * Ile stworków stoi na jednym polu. Od przebudowy „trener zamiast armii"
+   * zawsze 1 — stworek to postać, nie stos (`stworki.ts`). Silnik bitwy
+   * dalej umie liczyć stosy, więc pole zostaje.
+   */
   count: number;
-  /** HP pojedynczego stworka, nie całego oddziału */
+  /** HP stworka — w `FACTIONS` na poziomie 5, w bitwie już przeskalowane */
   hp: number;
-  /** atak pojedynczego stworka — oddział bije za count × atk */
+  /** atak stworka — jak HP */
   atk: number;
   move: number;
   /** strzelec trafia na dowolny dystans, ale dalej niż shootRange za pół siły */
@@ -47,6 +51,8 @@ export interface UnitDef {
   /** lata nad przeszkodami i nad innymi oddziałami */
   flying?: boolean;
   ability?: Ability;
+  /** poziom stworka (1–50), gdy definicja pochodzi z `defStworka` */
+  poziom?: number;
 }
 
 // Odmiana przez przypadki, bo teksty w panelu wymagają różnych form:

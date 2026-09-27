@@ -22,7 +22,7 @@ import {
 import { obroncyZamku, odwiedz, rozdzielStratyZamku, type Oddzial, type StanMapy } from '../src/data/mapa';
 import { planszaPrzygody } from '../src/data/plansza';
 import { turaAI } from '../src/data/wrog-ai';
-import { factionById } from '../src/data/factions';
+import { nowyStworek } from '../src/data/stworki';
 
 declare const process: { exit(k: number): never };
 
@@ -32,12 +32,14 @@ const sprawdz = (co: string, ok: boolean, szczegol = '') => {
   console.log(`  ${ok ? 'OK  ' : 'ŹLE '} ${co}${szczegol ? ` — ${szczegol}` : ''}`);
 };
 
-const odd = (sprite: string, ile: number, tier = 0, frakcja = 'bor'): Oddzial => ({
+/** Stworek; `imie` odróżnia postacie tego samego gatunku. */
+const odd = (sprite: string, poziom = 5, imie = sprite, tier = 0, frakcja = 'bor'): Oddzial => ({
   sprite,
-  nazwa: sprite,
-  ile,
+  nazwa: imie,
+  ile: 1,
   frakcja,
   tier,
+  poziom,
 });
 
 console.log('=== dwie armie: przypadki ===');
@@ -46,27 +48,24 @@ console.log('=== dwie armie: przypadki ===');
   const garnizon: Armia = pustaArmia();
   bohater[0] = odd('A', 10);
   bohater[1] = odd('B', 5);
-  garnizon[0] = odd('A', 4);
+  garnizon[0] = odd('A', 4, 'A2');
 
   let w = przeniesMiedzy(bohater, 1, garnizon, 3, true);
   sprawdz('przeniesienie do pustego slotu garnizonu', w.ok && !bohater[1] && garnizon[3]?.sprite === 'B');
+  w = przeniesMiedzy(bohater, 0, garnizon, 5, true);
+  sprawdz('ostatni stworek trenera nie przechodzi do garnizonu', !w.ok && bohater[0]?.poziom === 10);
   w = przeniesMiedzy(bohater, 0, garnizon, 0, true);
-  sprawdz('ostatni stos bohatera nie przechodzi do garnizonu', !w.ok && bohater[0]?.ile === 10);
-  w = przeniesMiedzy(bohater, 0, garnizon, 3, true);
-  sprawdz('zamiana z garnizonem wolna nawet przy ostatnim stosie', w.ok && bohater[0]?.sprite === 'B' && garnizon[3]?.sprite === 'A');
   sprawdz(
-    'podział ostatniego stosu zostawia jednego',
-    maksPodzialuMiedzy(bohater, 0, garnizon, 5, true) === 4,
-    String(maksPodzialuMiedzy(bohater, 0, garnizon, 5, true))
+    'ten sam gatunek się zamienia, nie łączy',
+    w.ok && bohater[0]?.nazwa === 'A2' && garnizon[0]?.nazwa === 'A' && zajete(garnizon) === 2
   );
-  w = podzielMiedzy(garnizon, 0, bohater, 2, 4);
-  sprawdz('garnizon oddaje cały stos podziałem (nie jest chroniony)', w.ok && !garnizon[0] && bohater[2]?.ile === 4);
+  sprawdz('stworka nie da się podzielić między armiami', maksPodzialuMiedzy(garnizon, 0, bohater, 5, false) === 1);
   w = przeniesMiedzy(garnizon, 3, bohater, 2, false);
-  sprawdz('łączenie tego samego gatunku między armiami', w.ok && bohater[2]?.ile === 14 && !garnizon[3]);
+  sprawdz('garnizon oddaje stworka (nie jest chroniony)', w.ok && bohater[2]?.sprite === 'B' && !garnizon[3]);
   w = zwolnij(bohater, 2, true);
-  sprawdz('zwolnienie stosu', w.ok && !bohater[2]);
+  sprawdz('wypuszczenie stworka', w.ok && !bohater[2]);
   w = zwolnij(bohater, 0, true);
-  sprawdz('ostatniego stosu bohatera nie da się zwolnić', !w.ok && !!bohater[0]);
+  sprawdz('ostatniego stworka trenera nie da się wypuścić', !w.ok && !!bohater[0]);
 }
 
 console.log('\n=== dwie armie: próba losowa ===');
@@ -75,10 +74,10 @@ console.log('\n=== dwie armie: próba losowa ===');
   const los = () => ((s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
   const bohater: Armia = pustaArmia();
   const garnizon: Armia = pustaArmia();
-  bohater[0] = odd('A', 30);
-  bohater[2] = odd('B', 12);
-  garnizon[1] = odd('C', 20);
-  garnizon[4] = odd('D', 7);
+  bohater[0] = odd('A', 5, 'A1');
+  bohater[2] = odd('B', 6, 'B1');
+  garnizon[1] = odd('A', 7, 'A2');
+  garnizon[4] = odd('D', 8, 'D1');
   const suma0 = lacznie(bohater) + lacznie(garnizon);
   let zgubione = 0;
   let bezArmii = 0;
@@ -92,38 +91,33 @@ console.log('\n=== dwie armie: próba losowa ===');
     const w =
       los() < 0.5
         ? przeniesMiedzy(armie[zi], z, armie[di], d, zi === 0)
-        : podzielMiedzy(armie[zi], z, armie[di], d, 1 + Math.floor(los() * 15), zi === 0);
+        : podzielMiedzy(armie[zi], z, armie[di], d, 1 + Math.floor(los() * 3), zi === 0);
     if (w.ok) udane++;
     if (lacznie(bohater) + lacznie(garnizon) !== suma0) zgubione++;
     if (zajete(bohater) === 0) bezArmii++;
   }
   sprawdz('żaden ruch nie zgubił stworka', zgubione === 0, `${zgubione}`);
-  sprawdz('bohater nigdy bez armii', bezArmii === 0, `${bezArmii}`);
-  sprawdz('ruchy się działy', udane > 8000, `${udane}`);
+  sprawdz('trener nigdy bez drużyny', bezArmii === 0, `${bezArmii}`);
+  sprawdz('ruchy się działy', udane > 5000, `${udane}`);
 }
 
 console.log('\n=== obrońcy zamku: straż + garnizon ===');
 {
-  const z = { id: 1, rodzaj: 'zamek' as const, x: 0, y: 0, nazwa: 'Z', oddzialy: [odd('A', 10)], garnizon: pustaArmia() };
-  z.garnizon[2] = odd('A', 5);
-  z.garnizon[4] = odd('B', 3);
+  const z = { id: 1, rodzaj: 'zamek' as const, x: 0, y: 0, nazwa: 'Z', oddzialy: [odd('A', 10, 'straż')], garnizon: pustaArmia() };
+  z.garnizon[2] = odd('A', 8, 'g1');
+  z.garnizon[4] = odd('B', 5, 'g2');
   const o = obroncyZamku(z);
-  sprawdz('ten sam gatunek staje jako jeden stos', o.length === 2 && o[0].ile === 15, JSON.stringify(o.map((x) => x.ile)));
-  rozdzielStratyZamku(z, [odd('A', 8), odd('B', 3)]);
-  sprawdz('straty najpierw ze straży', (z.oddzialy[0]?.ile ?? 0) === 3 && z.garnizon[2]?.ile === 5, `straż ${z.oddzialy[0]?.ile}, garnizon ${z.garnizon[2]?.ile}`);
-  rozdzielStratyZamku(z, [odd('B', 1)]);
-  sprawdz('po wybiciu: straż pusta, w garnizonie zostaje ocalały', z.oddzialy.length === 0 && !z.garnizon[2] && z.garnizon[4]?.ile === 1);
+  sprawdz('każdy stworek staje osobno, straż pierwsza', o.length === 3 && o[0].nazwa === 'straż', o.map((x) => x.nazwa).join(','));
+  rozdzielStratyZamku(z, o.map((x, i) => ({ ...x, ile: i === 0 ? 0 : 1 })));
+  sprawdz('straty trafiają w tego, kto padł', z.oddzialy.length === 0 && !!z.garnizon[2] && !!z.garnizon[4]);
+  rozdzielStratyZamku(z, [{ ...odd('A'), ile: 0 }, { ...odd('B'), ile: 1 }]);
+  sprawdz('po drugiej bitwie w garnizonie zostaje ocalały', !z.garnizon[2] && z.garnizon[4]?.nazwa === 'g2');
 }
 
 console.log('\n=== garnizon broni zamku w turze przeciwnika ===');
-const smoki = (ile: number): Oddzial => {
-  const u = factionById('grota')!.units[5];
-  return { sprite: u.sprite, nazwa: u.name, ile, frakcja: 'grota', tier: 5 };
-};
-const bor = (tier: number, ile: number): Oddzial => {
-  const u = factionById('bor')!.units[tier];
-  return { sprite: u.sprite, nazwa: u.name, ile, frakcja: 'bor', tier };
-};
+const smoki = (ile: number, poziom: number): Oddzial[] =>
+  Array.from({ length: ile }, (_, i) => nowyStworek('grota', 5, poziom)!).map((o, i) => ({ ...o, nazwa: `${o.nazwa}${i}` }));
+const bor = (tier: number, poziom: number): Oddzial => nowyStworek('bor', tier, poziom)!;
 
 /** Plansza z wrogiem tuż pod bramą zamku gracza, po dniu natarcia. */
 function podBrama(armiaWroga: Oddzial[], garnizon: Oddzial[]): { s: StanMapy; zamek: ReturnType<typeof znajdz> } {
@@ -149,24 +143,30 @@ function znajdz(s: StanMapy) {
 }
 
 {
-  const { s, zamek } = podBrama([smoki(60)], [bor(0, 30)]);
+  const { s, zamek } = podBrama(smoki(6, 50), [bor(0, 10)]);
   sprawdz('wejście wroga na zamek z garnizonem zaczyna bitwę', !!odwiedz({ ...s }, zamek, 'wrog').bitwaZ);
+  const przed = s.wrogBohater.armia.map((o) => o?.dosw ?? 0).reduce((a, b) => a + b, 0);
   turaAI(s, 'wrog');
-  sprawdz('przytłaczająca armia zdobywa zamek', zamek.wlasciciel === 'wrog', String(zamek.wlasciciel));
+  sprawdz('przytłaczająca drużyna zdobywa zamek', zamek.wlasciciel === 'wrog', String(zamek.wlasciciel));
   sprawdz('garnizon przepadł razem z zamkiem', !zamek.garnizon && (zamek.oddzialy ?? []).length === 0);
-  const zostalo = lacznie(s.wrogBohater.armia);
-  sprawdz('wróg zapłacił za szturm (bitwa naprawdę była)', zostalo < 60 && zostalo > 0, `${zostalo} z 60 smoków`);
+  const po = s.wrogBohater.armia.map((o) => o?.dosw ?? 0).reduce((a, b) => a + b, 0);
+  sprawdz('bitwa naprawdę była — drużyna wroga zebrała doświadczenie', po > przed, `${przed} → ${po}`);
 }
 {
-  // Ta sama armia wroga, która bez garnizonu bierze zamek, przy garnizonie
-  // nie rusza — AI liczy obrońców razem (straż + garnizon).
-  const bez = podBrama([smoki(30)], []);
-  turaAI(bez.s, 'wrog');
-  const z = podBrama([smoki(30)], [bor(5, 40), bor(4, 60), bor(3, 80)]);
+  // Najsłabsza drużyna wroga, która bierze zamek bronioną samą strażą —
+  // przy mocnym garnizonie ta sama drużyna nie rusza. AI liczy obrońców
+  // razem (straż + garnizon).
+  let prog = 0;
+  for (let p = 10; p <= 50 && !prog; p += 2) {
+    const bez = podBrama(smoki(3, p), []);
+    turaAI(bez.s, 'wrog');
+    if (bez.zamek.wlasciciel === 'wrog') prog = p;
+  }
+  sprawdz('jest drużyna, która bierze zamek z samą strażą', prog > 0, `3 × poz. ${prog}`);
+  const z = podBrama(smoki(3, prog), [bor(5, 45), bor(4, 45), bor(3, 45)]);
   turaAI(z.s, 'wrog');
-  sprawdz('bez garnizonu 30 smoków bierze zamek (sama straż)', bez.zamek.wlasciciel === 'wrog', String(bez.zamek.wlasciciel));
   sprawdz('z garnizonem zamek zostaje nasz', z.zamek.wlasciciel === 'gracz', String(z.zamek.wlasciciel));
-  sprawdz('garnizon nietknięty', lacznie(z.zamek.garnizon ?? []) === 180, String(lacznie(z.zamek.garnizon ?? [])));
+  sprawdz('garnizon nietknięty', zajete(z.zamek.garnizon ?? pustaArmia()) === 3);
 }
 
 console.log(bledy === 0 ? '\nWszystko przeszło.' : `\n${bledy} sprawdzeń nie przeszło.`);

@@ -1,6 +1,53 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-09-27 (storki: rysunki z PR #6 wracają do gry, a pozy, portrety i obróbka mapy z pętli liczą się teraz z nich).
+Ostatnia aktualizacja: 2026-09-27 (trener zamiast armii: stworek = postać z poziomem, 4 na polu bitwy, trening i Centrum Pokemon).
+
+## Trener zamiast armii — etapy 1 i 2 (2026-09-27)
+
+Uwaga z rozgrywki: mechanika 1:1 z Heroes 3 nie pasuje do lore pokemonów
+(„nikt nie ma stu Pikachu"). Plan całej przebudowy (6 etapów) i decyzje:
+**`PROJEKT-TRENERZY.md`** — czytaj go przed każdą zmianą w armii, bitwie,
+mieście albo kampanii.
+
+- **Model**: `src/data/stworki.ts` — jedyne miejsce ze wzorami (skala
+  poziomu, etapu, EXP, `defStworka`, `jednostkiBitwy`, `rozegrajBitwe`
+  dla AI i symulatorów, `stadoZLiczebnosci` dla dawnych liczb z plansz).
+  `Oddzial.poziom` jest wymagany, `dosw` i `omdlaly` opcjonalne. W drużynie
+  i garnizonie `ile` = 1; w straży na mapie `ile` = liczba stworków stada.
+  Silnik bitwy (`battle.ts`) liczy dalej stosy — stworek to stos o liczebności 1.
+- **Pole bitwy: 4 na stronę, z przerwą** (`NA_POLU`, `rzedyNaPolu` w
+  `battle.ts`) — prośba użytkownika („między stackami puste pole, jak
+  w Heroes"). Walczą cztery pierwsze sprawne sloty; AI ustawia
+  najsilniejszych na przód (`najsilniejsiNaPrzod`), obrońcy zamku —
+  czterech najsilniejszych ze straży i garnizonu (`obroncyWKolejnosci`).
+  Przy okazji zniknęła przewaga strony ruszającej się druga: lustrzana
+  bitwa 6 na 6 bez przerw dawała prawej stronie ~95% (tak było też przed
+  przebudową), teraz ~50%.
+- **Znaleziony błąd**: `createBattle` przy 7 oddziałach po stronie dawał
+  siódmemu rząd `undefined` — stał poza planszą, bitwa kończyła się remisem.
+  Teraz nadmiar ponad `NA_POLU` jest odcinany.
+- **Frakcje przestrojone** (`BOR/GROTA/ZBOCZE` w `factions.ts`): stare
+  profile były pod stosy i Grota wygrywała z Borem 99:1. `npm run balans`
+  losuje czwórkę z sześciu gatunków na bitwę; wynik 4,0 pp (norma do 5).
+  `tools/strojenie.ts` przepisany na nowy model.
+- **Miasto**: rezerwaty (ułamkowy przyrost, `MAKS_CZEKA` = 2, zaproszenie
+  jednego młodego stworka na poziomie 5), przycisk „Podziel" zamieniony na
+  „Trenuj" (Sala treningowa, `trenuj`/`treningiZamku` w `mapa.ts`), wejście
+  do zamku = Centrum Pokemon. Ekran bohatera bez „Podziel".
+- **Ośrodek Ewolucji** ewoluuje w linii stworka (`nastepnyEtap`), bez
+  zmiany poziomu; nie zamienia już gatunku na wyższy poziom frakcji.
+- **Kampania**: bonus „oddział" to jeden stworek z poziomem
+  (`{ tier, poziom }`). Drużyna nadal NIE przechodzi między misjami — to
+  etap 6.
+- **Zapisy**: `migrujNaStworki` w `zapis.ts` przelicza stare stosy
+  (drużyna najmniej na poziomie 5).
+- **Sondy**: przepisane `probe-armia.ts`, `probe-garnizon.ts`,
+  `probe-sloty-bitwa.mjs`; poprawione `probe-budowle.ts`, `probe-mapa.ts`
+  (straże rosną poziomem), `probe-ekonomia.ts` (koszt przyrostu = rezerwaty
+  + pełna pula treningów na poz. 15), `probe-umiejetnosci.ts`.
+- **Do zrobienia dalej**: etapy 3–6 w `PROJEKT-TRENERZY.md`; znacznik na
+  czterech slotach, które idą do bitwy (dziś tylko tekst); tempo misji 2–4
+  po przebudowie (patrz wyniki `tools/symulacja-misji.ts` w PR).
 
 ## Storki w stylu mapy — pętla „gauntlet" (2026-09-26)
 
