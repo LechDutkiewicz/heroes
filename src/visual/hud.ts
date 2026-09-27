@@ -22,6 +22,25 @@ import Phaser from 'phaser';
 import { C, FONT, H, T, body, display } from './theme';
 import { icon, miniIcon, type IconKey, type MiniKey } from './icons';
 import { kluczPortretuOkraglego, wczytajPortrety } from './portrety';
+import { BARWA, KROJ, latki } from './zestaw';
+
+/**
+ * Bitwa na zestawie (drewno, pergamin, złoto — `zestaw.ts`), jak mapa,
+ * miasto i kampania. Gdy tekstur zestawu nie ma (sonda bez wczytania),
+ * zostają dawne mleczne kapsułki.
+ */
+const naZestawie = (scene: Phaser.Scene) => scene.textures.exists('z-pergamin');
+
+/** Napis na tabliczce z drewna: kremowy Cinzel z brązowym konturem. */
+export function stylNaDrewnie(rozmiar: number): Phaser.Types.GameObjects.Text.TextStyle {
+  return {
+    fontFamily: KROJ.tytul,
+    fontSize: `${rozmiar}px`,
+    color: BARWA.krem,
+    stroke: BARWA.braz,
+    strokeThickness: Math.max(2.5, rozmiar * 0.18),
+  };
+}
 
 // ---------- barwy ----------
 
@@ -316,18 +335,34 @@ export function createTurnQueue(scene: Phaser.Scene, right: number, y: number): 
       // Tor pod plakietkami: jedna ciemna kapsułka, dzięki której rząd czyta
       // się jako jedna lista, a nie jako rozsypane kółka.
       const th = ACTIVE_D + 8;
-      plate(track, left - 8, y - th / 2, width + 16, th, th / 2, mix(C.panelDeep, C.shadow, 0.45), C.shadow, {
-        light: 0.1,
-        dark: 0.22,
-        gloss: 0.1,
-        drop: 2,
-      });
+      if (naZestawie(scene)) {
+        // Tor z ciemnego drewna wpuszczony w belkę.
+        track.fillStyle(0x1a0c03, 0.55);
+        track.fillRoundedRect(left - 8, y - th / 2, width + 16, th, th / 2);
+        track.lineStyle(1.5, 0xc99a4a, 0.6);
+        track.strokeRoundedRect(left - 8, y - th / 2, width + 16, th, th / 2);
+      } else
+        plate(track, left - 8, y - th / 2, width + 16, th, th / 2, mix(C.panelDeep, C.shadow, 0.45), C.shadow, {
+          light: 0.1,
+          dark: 0.22,
+          gloss: 0.1,
+          drop: 2,
+        });
 
       if (entries.length > 0) badge(entries[0], left + ACTIVE_D / 2, ACTIVE_D, true);
       for (let i = 1; i <= rest; i++) {
         badge(entries[i], left + ACTIVE_D + (i - 0.5) * (REST_D + GAP), REST_D, false);
       }
 
+      if (naZestawie(scene)) {
+        // Numer rundy wyryty na belce: kremowy Cinzel, bez kapsułki.
+        const t = scene.add
+          .text(left - 18, y, `Runda ${round}`, stylNaDrewnie(14))
+          .setOrigin(1, 0.5)
+          .setShadow(0, 2, '#000000aa', 2, true, true);
+        roundChip = scene.add.container(0, 0, [t]).setDepth(61);
+        return;
+      }
       const chip = makeChip(scene, 0, y, `Runda ${round}`, {
         color: C.gold,
         edge: C.goldDeep,
@@ -391,7 +426,13 @@ const BAND_FILTER = C.skyTop;
  * Zimne (woda, trawa, lód) mieszamy jak dawniej — tam baza jest sąsiadem hue
  * i nic nie brudzi.
  */
-export function markTint(hue?: number, alert = false) {
+export function markTint(hue?: number, alert = false, zestaw = false) {
+  if (zestaw) {
+    // Na pergaminie znaki są atramentem: brąz, a barwa żywiołu tylko go zabarwia.
+    const braz = 0x5a3a1c;
+    if (alert) return 0x8e2a18;
+    return hue === undefined ? braz : mix(braz, hue, 0.55);
+  }
   const base = mix(C.ink, C.skyTop, 0.3);
   if (alert) return mix(base, C.foeDeep, 0.55);
   if (hue === undefined) return base;
@@ -475,11 +516,21 @@ export function createStatTable(
   const labels: Phaser.GameObjects.Text[] = [];
   const values: Phaser.GameObjects.Text[] = [];
   const icons: (Phaser.GameObjects.Image | undefined)[] = [];
+  const zestaw = naZestawie(scene);
+  const atrament = (o: { rozmiar: number; gruby?: boolean }): Phaser.Types.GameObjects.Text.TextStyle => ({
+    fontFamily: KROJ.tekst,
+    fontSize: `${o.rozmiar}px`,
+    color: BARWA.atrament,
+    fontStyle: o.gruby ? 'bold' : 'normal',
+  });
 
   for (const s of slots) {
-    const label = scene.add.text(0, s.y + s.h / 2, '', bandLabelStyle()).setOrigin(0, 0.5).setDepth(62);
+    const label = scene.add
+      .text(0, s.y + s.h / 2, '', zestaw ? atrament({ rozmiar: 13 }) : bandLabelStyle())
+      .setOrigin(0, 0.5)
+      .setDepth(62);
     const value = scene.add
-      .text(s.x + s.w - 10, s.y + s.h / 2, '', bandValueStyle())
+      .text(s.x + s.w - 10, s.y + s.h / 2, '', zestaw ? atrament({ rozmiar: 15, gruby: true }) : bandValueStyle())
       .setOrigin(1, 0.5)
       .setDepth(62);
     parent?.add([label, value]);
@@ -525,15 +576,32 @@ export function createStatTable(
         const edge = s.ribbon
           ? mix(C.panelEdge, C.panelDeep, 0.45)
           : mix(C.panelEdge, BAND_FILTER, 0.32);
-        plate(g, rx, ry, rw, rh, s.ribbon ? rh / 2 : s.h * 0.36, fill, edge, {
-          // Wstęga jest wpuszczona (mało światła u góry, więcej cienia u dołu),
-          // pasma tabeli wypukłe — to drugi sygnał, że to inna warstwa układu.
-          light: s.ribbon ? 0.1 : 0.2,
-          dark: s.ribbon ? 0.22 : 0.1,
-          gloss: s.ribbon ? 0.1 : 0.16,
-          drop: 0,
-          edgeW: 1.5,
-        });
+        if (zestaw) {
+          // Na pergaminie: co drugi wiersz lekko przyciemniony, wstęga pod
+          // tabelą obwiedziona brązową kreską — tabela z księgi, nie z aplikacji.
+          if (s.ribbon) {
+            g.fillStyle(BARWA.papierCiemny, 0.7);
+            g.fillRoundedRect(rx, ry, rw, rh, rh / 2);
+            g.lineStyle(1, BARWA.kreska, 0.6);
+            g.strokeRoundedRect(rx, ry, rw, rh, rh / 2);
+          } else {
+            if (s.band === 1) {
+              g.fillStyle(BARWA.papierCiemny, 0.55);
+              g.fillRoundedRect(rx, ry, rw, rh, 4);
+            }
+            g.lineStyle(1, BARWA.kreska, 0.25);
+            g.lineBetween(rx + 4, ry + rh, rx + rw - 4, ry + rh);
+          }
+        } else
+          plate(g, rx, ry, rw, rh, s.ribbon ? rh / 2 : s.h * 0.36, fill, edge, {
+            // Wstęga jest wpuszczona (mało światła u góry, więcej cienia u dołu),
+            // pasma tabeli wypukłe — to drugi sygnał, że to inna warstwa układu.
+            light: s.ribbon ? 0.1 : 0.2,
+            dark: s.ribbon ? 0.22 : 0.1,
+            gloss: s.ribbon ? 0.1 : 0.16,
+            drop: 0,
+            edgeW: 1.5,
+          });
 
         let textX = rx + 10;
         if (row.icon) {
@@ -546,7 +614,7 @@ export function createStatTable(
             rx + 9 + d / 2,
             ry + rh / 2,
             d,
-            markTint(row.mark, row.alert)
+            markTint(row.mark, row.alert, zestaw)
           ).setDepth(62);
           parent?.add(icons[i]!);
           textX = rx + 11 + d + 5;
@@ -558,13 +626,13 @@ export function createStatTable(
           // Wstęga jest ciemniejsza od pasm tabeli, więc przygaszony atrament
           // etykiety by na niej zniknął — tam etykieta idzie pełną głębią,
           // a różnicę do wartości nadal robi stopień pisma i otoczka.
-          .setColor(s.ribbon ? H.ink : H.inkSoft);
+          .setColor(zestaw ? (s.ribbon ? BARWA.atrament : BARWA.atramentMiekki) : s.ribbon ? H.ink : H.inkSoft);
         value
           .setScale(1)
           .setX(rx + rw - 10)
           .setY(ry + rh / 2)
           .setText(row.value)
-          .setColor(row.alert ? hex(C.foeDeep) : H.ink);
+          .setColor(row.alert ? (zestaw ? BARWA.atramentCzerwony : hex(C.foeDeep)) : zestaw ? BARWA.atrament : H.ink);
 
         // Wartość musi się zmieścić w tym, co zostało po etykiecie. Wiersze
         // trafiają teraz do wąskiej karty oddziału, a nie w szeroki panel na
@@ -617,11 +685,19 @@ export function createForecast(
   hint: string
 ): Forecast {
   const g = scene.add.graphics().setDepth(61);
+  const zestaw = naZestawie(scene);
   // Znak z tego samego kompletu co tabela — prognoza to część panelu, nie
   // wtręt z planszy. Barwę podmieniamy razem z tłem kapsułki.
-  const mark = miniIcon(scene, iconKey, x + 10 + (h - 8) / 2, y + h / 2, h - 10, markTint()).setDepth(62);
+  const mark = miniIcon(scene, iconKey, x + 10 + (h - 8) / 2, y + h / 2, h - 10, markTint(undefined, false, zestaw)).setDepth(62);
   const text = scene.add
-    .text(x + 14 + (h - 8), y + h / 2, '', { ...body(15, H.white), fontStyle: 'bold' })
+    .text(
+      x + 14 + (h - 8),
+      y + h / 2,
+      '',
+      zestaw
+        ? { fontFamily: KROJ.tekst, fontSize: '15px', color: BARWA.atrament, fontStyle: 'bold' }
+        : { ...body(15, H.white), fontStyle: 'bold' }
+    )
     .setOrigin(0, 0.5)
     .setDepth(62);
 
@@ -648,6 +724,21 @@ export function createForecast(
     g.clear();
     // Spoczynek trzyma dokładnie ten sam odcień i obrys co wstęga umiejętności
     // nad nim — dwa pełnoszerokie pasma mają być jedną strefą pod tabelą.
+    if (zestaw) {
+      // Spoczynek: wpuszczony pas pergaminu. Prognoza: złota tabliczka;
+      // cios, który mdli cel: lak.
+      if (next < 0) {
+        g.fillStyle(BARWA.papierCiemny, 0.75);
+        g.fillRoundedRect(x, y, w, h, h / 2);
+        g.lineStyle(1, BARWA.kreska, 0.55);
+        g.strokeRoundedRect(x, y, w, h, h / 2);
+      } else {
+        const fill = next === 1 ? BARWA.lak : C.gold;
+        const edge = next === 1 ? BARWA.lakCiemny : 0x8a5a2b;
+        plate(g, x, y, w, h, h / 2, fill, edge, { light: 0.3, dark: 0.26, gloss: 0.26, drop: 2, edgeW: 2 });
+      }
+      return;
+    }
     const fill = next === 1 ? C.foe : next === 0 ? C.gold : mix(C.panel, C.panelDeep, 0.26);
     const edge =
       next === 1 ? C.foeDeep : next === 0 ? C.goldDeep : mix(C.panelEdge, C.panelDeep, 0.45);
@@ -665,7 +756,12 @@ export function createForecast(
     // prognozę. Puste miejsce w panelu wyglądało jak niedokończony układ,
     // a przy okazji nikt nie wiedział, że prognoza w ogóle istnieje.
     paint(-1);
-    mark.setAlpha(0.7).setTint(markTint());
+    mark.setAlpha(0.7).setTint(markTint(undefined, false, zestaw));
+    if (zestaw) {
+      text.setText(hint).setColor(BARWA.atramentMiekki).setAlpha(1).setFontStyle('italic').setStroke('#000', 0).setShadow(0, 0, '#0000', 0);
+      fit();
+      return;
+    }
     // Podpowiedź też dostaje białą otoczkę — inaczej jedyny napis w panelu bez
     // niej wygląda jak wklejony z innego interfejsu.
     text
@@ -682,6 +778,14 @@ export function createForecast(
   return {
     show(value, deadly) {
       paint(deadly ? 1 : 0);
+      if (zestaw) {
+        mark.setAlpha(1).setTint(deadly ? 0xfff4dc : 0x3b1f08);
+        text.setText(value).setAlpha(1).setFontStyle('bold').setColor(deadly ? '#fff4dc' : '#3b1f08').setStroke('#000', 0);
+        if (deadly) text.setShadow(0, 1, '#00000088', 1, false, true);
+        else text.setShadow(0, 1, '#fff3c8', 0, false, true);
+        fit();
+        return;
+      }
       mark.setAlpha(1).setTint(deadly ? C.white : C.ink);
       text.setText(value).setAlpha(1).setColor(deadly ? H.white : H.ink);
       // Na gorących tłach otoczka jest ciemna, na złocie biała — zawsze
@@ -752,16 +856,40 @@ export function makeHudButton(
     return g;
   };
 
-  const normal = skin(opts.tone, opts.toneDeep, 0.28, 0);
-  const hover = skin(mix(opts.tone, C.white, 0.22), opts.toneDeep, 0.4, 0);
-  const off = skin(mix(opts.tone, C.inkSoft, 0.72), mix(opts.toneDeep, C.shadow, 0.4), 0.08, 0.15);
+  // Tabliczki z zestawu: złota dla głównej czynności (ton złoty), drewniana
+  // dla reszty. Dziewięć łatek, jak `Przycisk` w `zestaw.ts`.
+  const zestaw = naZestawie(scene);
+  const zloty = opts.tone === C.gold;
+  const tabliczka = (stan: string) =>
+    scene.add
+      .nineslice(0, 0, `z-tabliczka-${zloty ? 'zloto' : 'drewno'}${stan}`, undefined, w * 2, h * 2, 40, 40, 30, 30)
+      .setScale(0.5)
+      .setOrigin(0.5);
+  const normal = zestaw ? tabliczka('') : skin(opts.tone, opts.toneDeep, 0.28, 0);
+  const hover = zestaw ? tabliczka('-jasny') : skin(mix(opts.tone, C.white, 0.22), opts.toneDeep, 0.4, 0);
+  const off = zestaw
+    ? tabliczka('-wyl')
+    : skin(mix(opts.tone, C.inkSoft, 0.72), mix(opts.toneDeep, C.shadow, 0.4), 0.08, 0.15);
 
   const mark = opts.icon
     ? icon(scene, opts.icon, -w / 2 + 8 + (h - 14) / 2, 0, h - 14)
     : undefined;
   const label = scene.add
-    .text(opts.icon ? 6 : 0, 0, '', { ...display(15), strokeThickness: 3.5 })
+    .text(
+      opts.icon ? 6 : 0,
+      0,
+      '',
+      zestaw
+        ? zloty
+          ? { fontFamily: KROJ.tytul, fontSize: '14px', color: '#3b1f08' }
+          : stylNaDrewnie(14)
+        : { ...display(15), strokeThickness: 3.5 }
+    )
     .setOrigin(0.5);
+  if (zestaw) {
+    if (zloty) label.setShadow(0, 1.5, '#fff3c8', 0, false, true);
+    else label.setShadow(0, 2, '#000000aa', 2, true, true);
+  }
 
   const zone = scene.add.zone(0, 0, w, h).setInteractive({ useHandCursor: true });
   const container = scene.add.container(
@@ -780,7 +908,7 @@ export function makeHudButton(
     off.setVisible(!enabled);
     mark?.setAlpha(enabled ? 1 : 0.5);
     label.setAlpha(enabled ? 1 : 0.6);
-    gradientText(label, enabled ? H.white : H.panelEdge, enabled ? H.panelEdge : H.inkSoft);
+    if (!zestaw) gradientText(label, enabled ? H.white : H.panelEdge, enabled ? H.panelEdge : H.inkSoft);
   };
 
   zone.on('pointerover', () => {
@@ -845,6 +973,18 @@ export function drawPanelBody(
   inset: number,
   parent?: Phaser.GameObjects.Container
 ) {
+  if (naZestawie(scene)) {
+    // Pergamin w cienkiej złotej ramie, z cieniem na drewnie — jak panele
+    // mapy przygody. `inset` nie ma tu znaczenia: rama leży na krawędzi.
+    const warstwy = [
+      latki(scene, 'z-cien', x - 14, y - 10, w + 28, h + 30, 60).setAlpha(0.7),
+      latki(scene, 'z-pergamin', x, y, w, h, 48),
+      latki(scene, 'z-rama-cienka', x - 5, y - 5, w + 10, h + 10, 16),
+    ];
+    for (const o of warstwy) o.setDepth(60);
+    parent?.add(warstwy);
+    return warstwy[1];
+  }
   const g = scene.add.graphics().setDepth(60);
   parent?.add(g);
   plate(g, x, y, w, h, 18, C.panel, C.panelDeep, {

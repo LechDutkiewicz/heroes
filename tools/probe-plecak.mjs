@@ -1,6 +1,6 @@
-// Etap 5 w przeglądarce: okno „Kto walczy?", plecak trenera (mikstura,
+// Etap 5 w przeglądarce: okno „Kto zaczyna?", plecak trenera (mikstura,
 // pokeball) i powrót na mapę — złapany stworek w drużynie, pokeballe zeszły
-// ze skarbca, a stworki spoza czwórki nie zemdlały.
+// ze skarbca, a czekający w pokeballach nie zemdleli.
 // Użycie: node tools/probe-plecak.mjs [--url http://localhost:5210/] [--out katalog-na-zrzuty]
 import { chromium } from 'playwright';
 const arg = (n, d) => (process.argv.indexOf(n) > 0 ? process.argv[process.argv.indexOf(n) + 1] : d);
@@ -46,6 +46,7 @@ await page.waitForFunction(
   { timeout: 400000 }
 );
 const naPolu = await page.evaluate(() => window.__game.scene.getScene('battle').units.filter((u) => u.side === 'player').length);
+const wPokeballach = await page.evaluate(() => window.__game.scene.getScene('battle').battle.rezerwa.player.length);
 // Ranny swój i osłabiony wróg — żeby było co leczyć i kogo łapać.
 await page.evaluate(() => {
   const s = window.__game.scene.getScene('battle');
@@ -99,15 +100,16 @@ const po = await page.evaluate(() => {
   };
 });
 const zle = [];
-if (!okno) zle.push('brak okna „Kto walczy?" przy sześciu stworkach');
-if (naPolu !== 4) zle.push(`na polu ${naPolu} stworków gracza zamiast 4`);
+if (!okno) zle.push('brak okna „Kto zaczyna?" przy sześciu stworkach');
+if (naPolu !== 1) zle.push(`na polu ${naPolu} stworków gracza zamiast 1 (dziki: 1 na 1)`);
+if (wPokeballach !== 5) zle.push(`w pokeballach ${wPokeballach} zamiast 5`);
 if (!(leczenie.po > leczenie.przed && leczenie.mikstur === 1)) zle.push(`mikstura nie działa: ${JSON.stringify(leczenie)}`);
 if (zlapanych !== 1) zle.push(`złapanych w bitwie: ${zlapanych}`);
 if (po.druzyna !== 7) zle.push(`drużyna po bitwie: ${po.druzyna} (oczekiwane 7 — złapany dołączył)`);
 if (po.pb !== przed.pb - 10) zle.push(`pokeballe ${przed.pb} → ${po.pb}, oczekiwane −10`);
-if (po.zemdleni !== 0) zle.push(`zemdlonych po wygranej bez strat: ${po.zemdleni} (stworki spoza czwórki mdlały)`);
+if (po.zemdleni !== 0) zle.push(`zemdlonych po wygranej bez strat: ${po.zemdleni} (czekający w pokeballach mdleli)`);
 if (bledy.length) zle.push('błędy strony: ' + bledy.join(' | '));
 console.log({ przed, naPolu, leczenie, zlapanych, po });
-console.log(zle.length ? 'ŹLE:\n' + zle.join('\n') : 'OK — wybór czwórki, mikstura, pokeball, złapany w drużynie');
+console.log(zle.length ? 'ŹLE:\n' + zle.join('\n') : 'OK — kto zaczyna, mikstura, pokeball, złapany w drużynie');
 await b.close();
 process.exit(zle.length ? 1 : 0);

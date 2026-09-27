@@ -27,21 +27,29 @@ import { atakiStworka, type Atak } from './ataki';
 /** Mnożnik ataku po Eliksirze siły — tu, a nie w `przedmioty.ts`, żeby nie zapętlić importów. */
 export const SILA_ELIKSIRU = 1.5;
 
-export const COLS = 10;
-export const ROWS = 7;
+/**
+ * Pole walki z bajki: mała arena, nie pole bitwy dwóch armii. Walczy jeden
+ * stworek na jednego (dzikie) albo dwa na dwa (trenerzy, sale, miasta),
+ * więc siedem rzędów Heroes 3 stało prawie puste — osiem kolumn na pięć
+ * rzędów wystarcza, żeby było gdzie podejść i gdzie się cofnąć.
+ */
+export const COLS = 8;
+export const ROWS = 5;
 
 /**
- * Ile stworków staje po jednej stronie pola bitwy. Jak w Heroes 3 między
- * każdymi dwoma jest wolne pole, a plansza ma siedem rzędów — mieszczą się
- * więc cztery (rzędy 1, 3, 5, 7). Pasuje to do walk trenerów: do bitwy idą
- * cztery pierwsze stworki z drużyny, reszta czeka.
+ * Ile stworków staje naraz po jednej stronie — najwięcej. Jak w bajce:
+ * z dzikim stworkiem walczy się jeden na jednego, trenerzy (rywal, liderzy
+ * sal, obrońcy miast) walczą dwa na dwa. Reszta drużyny czeka w pokeballach
+ * i wchodzi, gdy któryś z walczących zemdleje (`wejdzZmiennik`).
  */
-export const NA_POLU = 4;
+export const NA_POLU = 2;
+/** Dzikie stworki: jeden na jednego. */
+export const NA_POLU_DZIKIE = 1;
 
 /** Rzędy startowe dla `ile` stworków: zawsze z przerwą, możliwie pośrodku. */
 export function rzedyNaPolu(ile: number): number[] {
   const n = Math.max(0, Math.min(NA_POLU, ile));
-  const uklady: number[][] = [[], [3], [2, 4], [1, 3, 5], [0, 2, 4, 6]];
+  const uklady: number[][] = [[], [2], [1, 3]];
   return [...uklady[n]];
 }
 
@@ -95,6 +103,12 @@ export interface Battle {
    * i `strojenie.ts` dalej liczą czystą siłę frakcji, po prostu nie podając
    * tego pola.
    */
+  /**
+   * Stworki czekające w pokeballach, po stronach, w kolejności wejścia.
+   * Mają już identyfikatory (liczone razem z polem), więc po bitwie wiadomo,
+   * kto z drużyny walczył i kto zemdlał. Brak pola = bez zmienników.
+   */
+  rezerwa?: Record<Side, SimUnit[]>;
   bonusGracza?: {
     wrecz: number;
     strzal: number;
@@ -352,9 +366,11 @@ export function resolveHit(b: Battle, attacker: SimUnit, target: SimUnit, atak =
   b.dealt.set(attacker.def.name, (b.dealt.get(attacker.def.name) ?? 0) + Math.min(value, before));
   target.count = state.count;
   target.topHp = state.topHp;
+  let zmiennik: SimUnit | undefined;
   if (target.count <= 0) {
     b.units = b.units.filter((u) => u.id !== target.id);
     b.roundQueue = b.roundQueue.filter((id) => id !== target.id);
+    zmiennik = wejdzZmiennik(b, target.side);
   }
   // Zwracamy też stan celu PO ciosie i wszystkie mnożniki, bo scena ma tylko
   // odegrać to, co się stało — nie wolno jej niczego doliczać samodzielnie,
@@ -368,8 +384,56 @@ export function resolveHit(b: Battle, attacker: SimUnit, target: SimUnit, atak =
     guarded,
     countAfter: target.count,
     topHpAfter: target.topHp,
+    zmiennik,
   };
 }
+
+/**
+ * Następny stworek z pokeballa wchodzi na miejsce zemdlonego — jak w bajce.
+ * Staje przy swojej krawędzi, w pierwszym wolnym rzędzie od środka; kolejkę
+ * tej rundy już ma rozdaną, więc rusza się od następnej. Zwraca go, żeby
+ * dziennik ataku i scena mogły pokazać wejście.
+ */
+export function wejdzZmiennik(b: Battle, side: Side): SimUnit | undefined {
+  const czeka = b.rezerwa?.[side];
+  if (!czeka || czeka.length === 0) return undefined;
+  const pole = wolnePoleStartowe(b, side);
+  if (!pole) return undefined;
+  const u = czeka.shift()!;
+  u.col = pole.col;
+  u.row = pole.row;
+  u.waited = false;
+  u.defending = false;
+  u.retaliations = 1;
+  b.units.push(u);
+  return u;
+}
+
+/**
+ * Wolne pole przy krawędzi strony: najpierw takie, które ma wolne pola nad
+ * i pod sobą (jak przy starcie — z przerwą, żeby nazwy i paski się nie
+ * nakładały), od środkowego rzędu na zewnątrz.
+ */
+function wolnePoleStartowe(b: Battle, side: Side): Cell | undefined {
+  const srodek = Math.floor(ROWS / 2);
+  const zajete = (col: number, row: number) => b.units.some((u) => u.col === col && u.row === row);
+  for (let k = 0; k < COLS; k++) {
+    const col = side === 'player' ? k : COLS - 1 - k;
+    const ciasno = (row: number) => (zajete(col, row - 1) || zajete(col, row + 1) ? 1 : 0);
+    const rzedy = Array.from({ length: ROWS }, (_, i) => i).sort(
+      (x, y) => ciasno(x) - ciasno(y) || Math.abs(x - srodek) - Math.abs(y - srodek) || x - y
+    );
+    for (const row of rzedy) {
+      if (b.obstacles.has(cellKey(col, row)) || zajete(col, row)) continue;
+      return { col, row };
+    }
+  }
+  return undefined;
+}
+
+/** Ilu stworków strona ma jeszcze na nogach — na polu i w pokeballach. */
+export const sprawnych = (b: Battle, side: Side) =>
+  b.units.filter((u) => u.side === side).length + (b.rezerwa?.[side].length ?? 0);
 
 /**
  * Dziennik ataku: co po kolei się wydarzyło. Scena odgrywa go animacjami,
@@ -404,6 +468,8 @@ export type BattleEvent =
       guarded: boolean;
     }
   | { rodzaj: 'zejscie'; kto: number }
+  /** zmiennik z pokeballa wchodzi na pole po zemdlonym */
+  | { rodzaj: 'wejscie'; kto: number; kol: number; rzad: number }
   | { rodzaj: 'powrot'; kto: number; doKol: number; doRzed: number };
 
 /**
@@ -451,6 +517,7 @@ export function performAttack(
       guarded: r.guarded,
     });
     if (t.count <= 0) log.push({ rodzaj: 'zejscie', kto: t.id });
+    if (r.zmiennik) log.push({ rodzaj: 'wejscie', kto: r.zmiennik.id, kol: r.zmiennik.col, rzad: r.zmiennik.row });
   };
 
   if (from.col !== attacker.col || from.row !== attacker.row) {
@@ -719,25 +786,34 @@ export function createBattle(
   left: Army,
   right: Army,
   obstacles: string[] = [],
-  rng?: () => number
+  rng?: () => number,
+  naPolu: number = NA_POLU
 ): Battle {
   let id = 1;
   const units: SimUnit[] = [];
-  // Najwyżej `NA_POLU` na stronę, zawsze z wolnym polem między sobą.
+  const rezerwa: Record<Side, SimUnit[]> = { player: [], enemy: [] };
+  // Najwyżej `naPolu` na stronę, zawsze z wolnym polem między sobą; reszta
+  // czeka w pokeballach. Identyfikatory dostają WSZYSCY, po kolei: najpierw
+  // lewa strona, potem prawa — po nich odtwarza się, kto z drużyny zemdlał.
   // Kolejność rzędów losuje `rng`, same rzędy są stałe dla liczebności.
-  const lewe = left.units.slice(0, NA_POLU);
-  const prawe = right.units.slice(0, NA_POLU);
   const rzedy = (ile: number) => (rng ? shuffle(rzedyNaPolu(ile), rng) : rzedyNaPolu(ile));
-  const rzedyL = rzedy(lewe.length);
-  const rzedyP = rzedy(prawe.length);
-  lewe.forEach((def, i) => units.push(makeUnit(def, 'player', 0, rzedyL[i], id++)));
-  prawe.forEach((def, i) => units.push(makeUnit(def, 'enemy', COLS - 1, rzedyP[i], id++)));
+  const wystaw = (defs: UnitDef[], side: Side, col: number) => {
+    const ile = Math.min(naPolu, defs.length);
+    const r = rzedy(ile);
+    defs.forEach((def, i) => {
+      if (i < ile) units.push(makeUnit(def, side, col, r[i], id++));
+      else rezerwa[side].push(makeUnit(def, side, -1, -1, id++));
+    });
+  };
+  wystaw(left.units, 'player', 0);
+  wystaw(right.units, 'enemy', COLS - 1);
   const b: Battle = {
     units,
     obstacles: new Set(obstacles),
     roundQueue: [],
     round: 1,
     dealt: new Map(),
+    rezerwa,
   };
   startRound(b);
   return b;
@@ -749,7 +825,7 @@ export type Outcome = 'player' | 'enemy' | 'remis';
  * Rozgrywa całą bitwę do rozstrzygnięcia. Limit rund chroni przed patem,
  * w którym dwa oddziały nie mogą się dosięgnąć — bez niego pętla wisi.
  */
-export function runBattle(b: Battle, maxRounds = 60): { outcome: Outcome; rounds: number } {
+export function runBattle(b: Battle, maxRounds = 200): { outcome: Outcome; rounds: number } {
   while (b.round <= maxRounds) {
     while (b.roundQueue.length > 0) {
       // Zdejmujemy z kolejki PRZED turą, nie po niej.

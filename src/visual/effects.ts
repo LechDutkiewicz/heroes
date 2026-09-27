@@ -1839,8 +1839,8 @@ export function deathFlash(
   // gubił barwę i sypał samą bielą, a zejście oddziału ma nieść barwę strony.
   sparkSpray(scene, layer, x, y, color, 52, 168);
 
-  // Czaszka jako pieczęć na zejściu — rysowana ikona, nie systemowe emoji.
-  // Czaszka unosi się nad pole, ale nie wyżej niż górna krawędź planszy —
+  // Gwiazdki omdlenia nad zemdlonym (dawniej czaszka — stworki nie giną).
+  // Unoszą się nad pole, ale nie wyżej niż górna krawędź planszy —
   // przy oddziale z pierwszego rzędu wyjeżdżała na pasek stanu tury.
   const top = Math.max(y - 44, BOARD_Y + 22);
   const skull = scene.add.image(x, y - 6, ICON.skull).setDisplaySize(10, 10);

@@ -10,6 +10,7 @@ import Phaser from 'phaser';
 import { PRZEDMIOTY, type Przedmiot } from '../data/przedmioty';
 import { drawPanelBody, mix, plate } from './hud';
 import { C, H, body } from './theme';
+import { BARWA, KROJ } from './zestaw';
 
 export interface WierszPlecaka {
   co: Przedmiot;
@@ -47,8 +48,17 @@ export function pokazPlecak(
     const rw = W - 24;
     const g = scene.add.graphics();
     const wolno = w.blokada === null;
+    const zestaw = scene.textures.exists('z-pergamin');
     const rysuj = (nad: boolean) => {
       g.clear();
+      if (zestaw) {
+        // Wiersz na pergaminie: ciemniejszy pas z brązową kreską; pod kursorem złoci się.
+        g.fillStyle(nad ? 0xf0cf7a : BARWA.papierCiemny, wolno ? (nad ? 0.9 : 0.7) : 0.4);
+        g.fillRoundedRect(rx, ry, rw, RH, 10);
+        g.lineStyle(1.2, BARWA.kreska, wolno ? 0.7 : 0.35);
+        g.strokeRoundedRect(rx, ry, rw, RH, 10);
+        return;
+      }
       plate(
         g,
         rx,
@@ -65,14 +75,31 @@ export function pokazPlecak(
     const obraz = scene.add.image(rx + 28, ry + RH / 2, w.tekstura);
     obraz.setScale(Math.min(40 / obraz.width, 40 / obraz.height)).setAlpha(wolno ? 1 : 0.5);
     const nazwa = scene.add
-      .text(rx + 56, ry + 16, PRZEDMIOTY[w.co].nazwa, { ...body(16, H.ink), fontStyle: 'bold' })
+      .text(
+        rx + 56,
+        ry + 16,
+        PRZEDMIOTY[w.co].nazwa,
+        zestaw ? { fontFamily: KROJ.tytul, fontSize: '16px', color: BARWA.atrament } : { ...body(16, H.ink), fontStyle: 'bold' }
+      )
       .setOrigin(0, 0.5)
       .setAlpha(wolno ? 1 : 0.7);
     const ile = scene.add
-      .text(rx + rw - 12, ry + 16, w.ile, { ...body(14, H.ink), fontStyle: 'bold' })
+      .text(
+        rx + rw - 12,
+        ry + 16,
+        w.ile,
+        zestaw ? { fontFamily: KROJ.tekst, fontSize: '14px', color: BARWA.atrament, fontStyle: 'bold' } : { ...body(14, H.ink), fontStyle: 'bold' }
+      )
       .setOrigin(1, 0.5);
     const opis = scene.add
-      .text(rx + 56, ry + 37, w.blokada ?? PRZEDMIOTY[w.co].opis, body(12, wolno ? H.inkSoft : '#b32d3f'))
+      .text(
+        rx + 56,
+        ry + 37,
+        w.blokada ?? PRZEDMIOTY[w.co].opis,
+        zestaw
+          ? { fontFamily: KROJ.kursywa, fontSize: '12px', color: wolno ? BARWA.atramentMiekki : BARWA.atramentCzerwony }
+          : body(12, wolno ? H.inkSoft : '#b32d3f')
+      )
       .setOrigin(0, 0.5);
     if (opis.width > rw - 66) opis.setScale((rw - 66) / opis.width);
     const strefa = scene.add.zone(rx + rw / 2, ry + RH / 2, rw, RH).setInteractive({ useHandCursor: wolno });

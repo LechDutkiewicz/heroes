@@ -164,18 +164,23 @@ for (const nr of [1, 2, 3]) {
   if (!wystartowala) break;
 
   // Skład musi być świeży: oddziały poprzedniej bitwy nie mają prawa zostać.
+  // Z dzikimi walczy się 1 na 1 — okno „Kto zaczyna?" zatwierdzamy domyślnie,
+  // a reszta czterech stworków czeka w pokeballach.
+  await page.evaluate(() => window.__game.scene.getScene('battle').wyborSkladu?.zatwierdz());
+  await page.waitForTimeout(200);
   const sklad = await page.evaluate(() => {
     const b = window.__game.scene.getScene('battle');
     return {
       wszystkie: b.units.length,
       gracz: b.units.filter((u) => u.side === 'player').length,
+      czeka: b.battle.rezerwa.player.length,
       wrog: b.units.filter((u) => u.side === 'enemy').length,
     };
   });
   sprawdz(
     `bitwa ${nr} zaczyna się od czystego składu`,
-    sklad.gracz === 4 && sklad.wrog >= 1 && sklad.wszystkie === sklad.gracz + sklad.wrog,
-    `${sklad.gracz} nasze, ${sklad.wrog} wroga`
+    sklad.gracz === 1 && sklad.gracz + sklad.czeka === 4 && sklad.wrog >= 1 && sklad.wszystkie === sklad.gracz + sklad.wrog,
+    `${sklad.gracz} nasze na polu, ${sklad.czeka} w pokeballach, ${sklad.wrog} wroga`
   );
 
   await page.waitForTimeout(600);

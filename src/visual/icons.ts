@@ -18,16 +18,24 @@
 import Phaser from 'phaser';
 import { C } from './theme';
 
+/**
+ * Klucze zostały po Heroes (`sword`, `bow`, `shield`, `skull`), ale rysunki są
+ * z bajki (`PROJEKT-SWIAT.md`, fala 1): cios to rękawica z błyskiem, strzał —
+ * kula energii, obrona — bańka ochronna, omdlenie — gwiazdki nad głową,
+ * ruch — but sportowy. Stworki nie noszą mieczy i nie giną.
+ */
 export const ICON = {
-  sword: 'ic_miecz',
-  bow: 'ic_luk',
-  shield: 'ic_tarcza',
+  sword: 'ic_cios',
+  bow: 'ic_kula',
+  shield: 'ic_banka',
   heart: 'ic_serce',
-  boot: 'ic_but',
+  boot: 'ic_but_sportowy',
   wing: 'ic_skrzydlo',
   retaliate: 'ic_odwet',
   hourglass: 'ic_klepsydra',
-  skull: 'ic_czaszka',
+  skull: 'ic_omdlenie',
+  /** Nie da się tam wejść — kursor nad nieprzejezdnym terenem mapy. */
+  zakaz: 'ic_zakaz',
   star: 'ic_gwiazda',
   flame: 'ic_ogien',
   drop: 'ic_woda',
@@ -120,6 +128,19 @@ export function sticker(g: Pen, fill: number, shape: Shape) {
   shape(g);
 }
 
+/**
+ * Mała gwiazdka z konturem w dowolnym miejscu kafla. `sticker` powiększa
+ * kontur względem środka kafla, więc kształtom z boku rozjeżdżał się z
+ * wypełnieniem — tu kontur rośnie wokół środka samej gwiazdki.
+ */
+function gwiazdka(g: Pen, cx: number, cy: number, ramiona: number, r: number, fill: number) {
+  const pts = (rr: number) => starPts(ramiona, rr, rr * (ramiona === 4 ? 0.36 : 0.45)).map((v, i) => v + (i % 2 === 0 ? cx - 32 : cy - 32));
+  g.fillStyle(C.shadow, 1);
+  poly(g, pts(r + 3));
+  g.fillStyle(fill, 1);
+  poly(g, pts(r));
+}
+
 /** Błyk u góry — ten sam kierunek światła na każdej ikonie. */
 export function gloss(g: Pen, x: number, y: number, rx: number, ry: number, a = 0.42) {
   g.fillStyle(C.white, a);
@@ -127,27 +148,44 @@ export function gloss(g: Pen, x: number, y: number, rx: number, ry: number, a = 
 }
 
 const DRAW: Record<string, (g: Pen) => void> = {
-  // Miecz celowo krępy: smukła klinga znikała przy 14 pikselach.
+  // Cios: rękawica treningowa z błyskiem uderzenia. Duża, zwarta bryła —
+  // czyta się przy 14 pikselach, a miecz by tu znaczył coś, czego w bajce nie ma.
   [ICON.sword]: (g) => {
-    sticker(g, 0xe3edf5, (p) => poly(p, [32, 3, 43, 17, 43, 38, 32, 47, 21, 38, 21, 17]));
-    sticker(g, C.goldDeep, (p) => poly(p, [13, 40, 51, 40, 51, 49, 13, 49]));
-    sticker(g, C.gold, (p) => poly(p, [27, 49, 37, 49, 37, 61, 27, 61]));
-    gloss(g, 27, 20, 3.5, 11);
-  },
-
-  // Łuk: łęczysko jako wycinek pierścienia otwarty w lewo, cięciwa i strzała.
-  [ICON.bow]: (g) => {
-    sticker(g, 0xc98a3c, (p) => poly(p, ring(44, 32, 28, 22, 122, 238)));
-    sticker(g, 0xb9c9d6, (p) => bar(p, 30, 10, 30, 54, 3.5));
-    sticker(g, 0xe3edf5, (p) => {
-      bar(p, 9, 32, 46, 32, 6.5);
-      poly(p, [42, 22, 60, 32, 42, 42]);
+    sticker(g, 0xe8483a, (p) => {
+      p.fillEllipse(30, 27, 38, 34);
+      p.fillEllipse(14, 34, 14, 20);
+      poly(p, [15, 36, 45, 36, 43, 46, 17, 46]);
     });
+    sticker(g, 0xf3ecdf, (p) => poly(p, [16, 45, 44, 45, 44, 58, 16, 58]));
+    g.fillStyle(0xa82a1f, 0.8);
+    bar(g, 20, 33, 40, 33, 2.6);
+    gwiazdka(g, 53, 12, 4, 9, C.goldLight);
+    gloss(g, 22, 18, 7, 5);
   },
 
+  // Strzał: kula energii — jasny rdzeń w świecącej otoczce.
+  [ICON.bow]: (g) => {
+    sticker(g, 0x5cc8ff, (p) => p.fillCircle(32, 32, 22));
+    g.fillStyle(0xb8ecff, 1);
+    g.fillCircle(32, 32, 14);
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(32, 32, 7);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(52, 12, 3.5);
+    g.fillCircle(11, 50, 2.5);
+    gloss(g, 24, 21, 6, 4);
+  },
+
+  // Obrona: bańka ochronna — przezroczysta kula z odblaskiem.
   [ICON.shield]: (g) => {
-    sticker(g, C.ally, (p) => poly(p, [32, 4, 55, 14, 55, 33, 32, 59, 9, 33, 9, 14]));
-    gloss(g, 22, 20, 6, 12);
+    sticker(g, 0x9fdcff, (p) => p.fillCircle(32, 32, 26));
+    g.fillStyle(0xd9f3ff, 1);
+    g.fillCircle(32, 34, 19);
+    g.fillStyle(0x9fdcff, 1);
+    g.fillCircle(34, 36, 15);
+    g.fillStyle(0xffffff, 0.95);
+    g.fillEllipse(21, 19, 13, 8);
+    g.fillCircle(44, 46, 3);
   },
 
   [ICON.heart]: (g) => {
@@ -163,9 +201,14 @@ const DRAW: Record<string, (g: Pen) => void> = {
     gloss(g, 22, 20, 5, 8);
   },
 
+  // Ruch: but sportowy — niski, z białą podeszwą i sznurówkami.
   [ICON.boot]: (g) => {
-    sticker(g, 0xc97b4a, (p) => poly(p, [20, 6, 35, 6, 37, 33, 55, 42, 55, 55, 17, 55, 17, 29]));
-    gloss(g, 26, 17, 4, 9);
+    sticker(g, 0xe0463a, (p) => poly(p, [6, 44, 10, 24, 28, 20, 38, 30, 56, 34, 59, 44]));
+    sticker(g, 0xf6f2ea, (p) => poly(p, [5, 43, 60, 43, 58, 53, 7, 53]));
+    g.fillStyle(0xffffff, 1);
+    bar(g, 20, 25, 25, 31, 2.6);
+    bar(g, 26, 26, 31, 32, 2.6);
+    gloss(g, 16, 28, 4, 3);
   },
 
   // Latanie: sylwetka ptaka, nie pojedyncze skrzydło. Skrzydło z piórami jest
@@ -195,16 +238,22 @@ const DRAW: Record<string, (g: Pen) => void> = {
     gloss(g, 23, 15, 5, 4);
   },
 
+  // Omdlenie: gwiazdki krążące nad głową — stworek mdleje, nie ginie.
   [ICON.skull]: (g) => {
-    sticker(g, 0xf0f4f7, (p) => {
-      p.fillCircle(32, 26, 20);
-      poly(p, [19, 39, 45, 39, 45, 55, 19, 55]);
-    });
+    g.lineStyle(3, 0x8a6a2a, 0.9);
+    g.strokeEllipse(32, 38, 50, 22);
+    gwiazdka(g, 12, 36, 5, 10, C.gold);
+    gwiazdka(g, 32, 20, 5, 12, C.gold);
+    gwiazdka(g, 52, 36, 5, 10, C.gold);
+  },
+
+  // Zakaz: czerwone koło z ukośną kreską — jak znak drogowy.
+  [ICON.zakaz]: (g) => {
+    sticker(g, 0xd9412f, (p) => poly(p, ring(32, 32, 26, 17, 0, 359.5, 40)));
     g.fillStyle(C.shadow, 1);
-    g.fillCircle(24, 25, 6.5);
-    g.fillCircle(40, 25, 6.5);
-    g.fillRect(28, 44, 3, 9);
-    g.fillRect(34, 44, 3, 9);
+    bar(g, 17, 47, 47, 17, 11);
+    g.fillStyle(0xd9412f, 1);
+    bar(g, 18, 46, 46, 18, 8);
   },
 
   [ICON.star]: (g) => {
@@ -346,19 +395,12 @@ const MINI_DRAW: Record<string, (g: Pen) => void> = {
     g.fillPath();
   },
 
-  // Atak: miecz. Krępy, bo w 16 pikselach smukła klinga to kreska.
+  // Atak: rękawica — ta sama sylwetka co duża ikona ciosu, bez detali.
   [MINI.attack]: (g) => {
-    // Proporcje robią różnicę: przy krótkiej klindze i wąskim jelcu znak
-    // czytał się jak choinka. Klinga długa i wąska, jelec szeroki i płaski.
-    // Miecz LEŻY NA SKOS. Pionowy, z jelcem w poprzek, w 16 pikselach czytał
-    // się raz jak choinka, raz jak krzyżyk — poziomy jelec i pionowa klinga
-    // mają tam po dwa piksele i zlewają się w jedną plamę. Skos rozdziela
-    // klingę, jelec i rękojeść na trzy różne kierunki, więc każdy z nich widać.
-    bar(g, 26, 40, 52, 14, 12);
-    poly(g, [56.2, 18.2, 47.8, 9.8, 60, 6]);
-    bar(g, 16.2, 34.2, 31.8, 49.8, 7);
-    bar(g, 24, 42, 14, 52, 9);
-    g.fillCircle(11.5, 54.5, 5.5);
+    g.fillEllipse(33, 26, 40, 34);
+    g.fillEllipse(15, 33, 15, 20);
+    poly(g, [16, 36, 48, 36, 46, 46, 18, 46]);
+    poly(g, [18, 48, 46, 48, 46, M1, 18, M1]);
   },
 
   // Zasięg: tarcza celownicza. Wcześniej „Zasięg" nosił ten sam miecz co
@@ -372,8 +414,10 @@ const MINI_DRAW: Record<string, (g: Pen) => void> = {
     poly(g, ring(32, 32, 13, 6.5, 0, 359.5, 32));
   },
 
+  // Ruch: but sportowy z grubą podeszwą.
   [MINI.move]: (g) => {
-    poly(g, [19, M0, 34, M0, 36, 32, 55, 42, 55, M1, 16, M1, 16, 28]);
+    poly(g, [M0, 42, 10, 20, 30, 16, 40, 28, M1, 33, M1, 42]);
+    poly(g, [M0, 45, M1, 45, 56, 54, 8, 54]);
   },
 
   // Lot: podwójny daszek w górę. Poprzednia sylwetka ptaka w rozmiarze

@@ -40,6 +40,7 @@
  */
 
 import {
+  naPoluPrzeciw,
   artefaktPoId,
   budowlaPoId,
   bohaterOf,
@@ -73,7 +74,7 @@ import {
   type Wlasciciel,
 } from './mapa';
 import { SLOTY_ARMII, dolacz, zywe } from './armia';
-import { makeRng } from './battle';
+import { NA_POLU, makeRng } from './battle';
 import { factionById } from './factions';
 import { jednostkiBitwy, najsilniejsiNaPrzod, nowyStworek, rozegrajBitwe, rozliczDruzyne } from './stworki';
 import { moznaBudowac, profilZamku } from './zamki';
@@ -89,7 +90,7 @@ function widokStrony(s: StanMapy, kto: Wlasciciel): StanMapy {
  * symulacja potrafi trafić na pechowy układ kolejności, a decyzja "atakować"
  * nie powinna zależeć od jednego rzutu.
  */
-function wygramy(atak: Oddzial[], obrona: Oddzial[], ziarno: number): boolean {
+function wygramy(atak: Oddzial[], obrona: Oddzial[], ziarno: number, naPolu: number): boolean {
   const lewa = jednostkiBitwy(atak);
   if (lewa.length === 0) return false;
   const prawa = jednostkiBitwy(obrona);
@@ -97,7 +98,7 @@ function wygramy(atak: Oddzial[], obrona: Oddzial[], ziarno: number): boolean {
   let wygrane = 0;
   for (let proba = 0; proba < 3; proba++) {
     const rng = makeRng(ziarno + proba * 104729 + lewa.length * 13 + prawa.length * 7);
-    if (rozegrajBitwe(atak, obrona, rng).outcome === 'player') wygrane++;
+    if (rozegrajBitwe(atak, obrona, rng, undefined, naPolu).outcome === 'player') wygrane++;
   }
   // Wszystkie trzy próby muszą wygrać, nie większość: to samo tempo dla obu
   // stron, ale ostrożniejsze — atak dopiero, gdy przewaga jest niepodważalna,
@@ -119,7 +120,7 @@ function rozstrzygnijBitwe(s: StanMapy, kto: Wlasciciel, obrona: Obiekt, ziarno:
   const bohater = bohaterOf(s, kto);
   const rng = makeRng(ziarno + s.dzien * 7919 + obrona.id * 104729 + 1);
   const obroncy = obrona.rodzaj === 'zamek' ? obroncyZamku(obrona) : (obrona.oddzialy ?? []);
-  const wynik = rozegrajBitwe(bohater.armia, obroncy, rng);
+  const wynik = rozegrajBitwe(bohater.armia, obroncy, rng, undefined, naPoluPrzeciw(obrona));
   const outcome = wynik.outcome;
   // Ten sam rachunek co u gracza: kto nie przetrwał, mdleje, a po wygranej
   // drużyna AI też zbiera doświadczenie — inaczej przeciwnik stałby w miejscu,
@@ -339,7 +340,7 @@ function znajdzCel(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefine
     const straz = strzezoneProzez(widok, o.x, o.y);
     const obronca = straz ?? (o.oddzialy?.length || o.garnizon?.some(Boolean) ? o : undefined);
     const sklad = obronca?.rodzaj === 'zamek' ? obroncyZamku(obronca) : (obronca?.oddzialy ?? []);
-    if (obronca && !wygramy(zywe(bohater.armia), sklad, ziarno)) continue;
+    if (obronca && !wygramy(zywe(bohater.armia), sklad, ziarno, naPoluPrzeciw(obronca))) continue;
 
     const koszt = kroki.reduce((a, k) => a + k.koszt, 0);
     const ocena = wartoscKandydata(o, s, kto) / (koszt + 1);
@@ -364,7 +365,7 @@ function znajdzCel(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefine
   const wolno = kto === 'gracz' || s.dzien >= (s.dzienNatarcia ?? DZIEN_PIERWSZEGO_NATARCIA);
   if (wolno && trenerWGrze(s, drugi) && mgla[rywal.y]?.[rywal.x]) {
     const kroki = trasa(widok, rywal.x, rywal.y);
-    if (kroki?.length && wygramy(zywe(bohater.armia), zywe(rywal.armia), ziarno)) {
+    if (kroki?.length && wygramy(zywe(bohater.armia), zywe(rywal.armia), ziarno, NA_POLU)) {
       const koszt = kroki.reduce((a, k) => a + k.koszt, 0);
       const ocena = WARTOSC_POJEDYNKU / (koszt + 1);
       if (!najlepszy || ocena > najlepszy.ocena) najlepszy = { kroki, ocena };
@@ -514,7 +515,7 @@ function celMisji(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefined
       for (const k of droga ?? []) {
         const straz = strzezoneProzez(widok, k.x, k.y);
         if (!straz) continue;
-        if (!wygramy(armia, straz.oddzialy ?? [], ziarno)) break;
+        if (!wygramy(armia, straz.oddzialy ?? [], ziarno, naPoluPrzeciw(straz))) break;
         const doStrazy = trasa(widok, straz.x, straz.y);
         if (doStrazy && doStrazy.length > 0) return { kroki: doStrazy };
         break;
@@ -522,8 +523,8 @@ function celMisji(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefined
       continue;
     }
     const straz = strzezoneProzez(widok, o.x, o.y);
-    if (straz && !wygramy(armia, straz.oddzialy ?? [], ziarno)) continue;
-    if (o.rodzaj === 'zamek' && !wygramy(armia, obroncyZamku(o), ziarno)) continue;
+    if (straz && !wygramy(armia, straz.oddzialy ?? [], ziarno, naPoluPrzeciw(straz))) continue;
+    if (o.rodzaj === 'zamek' && !wygramy(armia, obroncyZamku(o), ziarno, NA_POLU)) continue;
     return { kroki };
   }
   return undefined;
@@ -550,8 +551,8 @@ function celNatarcia(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefi
     const kroki = trasa(widok, z.x, z.y);
     if (!kroki || kroki.length === 0) continue;
     const straz = strzezoneProzez(widok, z.x, z.y);
-    if (straz && !wygramy(armia, straz.oddzialy ?? [], ziarno)) continue;
-    if (!wygramy(armia, obroncyZamku(z), ziarno)) continue;
+    if (straz && !wygramy(armia, straz.oddzialy ?? [], ziarno, naPoluPrzeciw(straz))) continue;
+    if (!wygramy(armia, obroncyZamku(z), ziarno, NA_POLU)) continue;
     return { kroki };
   }
   return undefined;
@@ -639,7 +640,7 @@ function pojedynek(s: StanMapy, kto: Wlasciciel, ziarno: number) {
   const drugi: Wlasciciel = kto === 'gracz' ? 'wrog' : 'gracz';
   const a = bohaterOf(s, kto);
   const b = bohaterOf(s, drugi);
-  const w = rozegrajBitwe(a.armia, b.armia, makeRng(ziarno + s.dzien * 7919 + 31337));
+  const w = rozegrajBitwe(a.armia, b.armia, makeRng(ziarno + s.dzien * 7919 + 31337), undefined, NA_POLU);
   const zwyciezca: Wlasciciel | null = w.outcome === 'player' ? kto : w.outcome === 'enemy' ? drugi : null;
   rozliczDruzyne(a.armia, w.ocalaliAtak, zwyciezca === kto, w.pokonaniObrona);
   rozliczDruzyne(b.armia, w.ocalaliObrona, zwyciezca === drugi, w.pokonaniAtak);

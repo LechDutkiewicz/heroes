@@ -24,7 +24,7 @@ import {
 } from './mapa';
 import { FACTIONS, factionById } from './factions';
 import { SLOTY_ARMII, znormalizuj } from './armia';
-import { MAKS_W_BITWIE, STARY_STOS, nowyStworek, rozbijStado, stadoZLiczebnosci } from './stworki';
+import { MAKS_STADA, STARY_STOS, nowyStworek, rozbijStado, stadoZLiczebnosci } from './stworki';
 
 /** Dawny dzienny przyrost poziomów 1–6 — w nim plansze podają siłę załóg. */
 const STARY_PRZYROST = [3, 2, 2, 1, 1, 1];
@@ -127,7 +127,7 @@ function oddzialyStrazy(sila: string, losuj: () => number): Oddzial[] {
   const u = frakcja.units[tier];
   // ±25% siły, żeby dwa te same posterunki nie były identyczne.
   const razem = STARY_STOS[tier] * wzor.mnoznik * wzor.stosy * (0.75 + losuj() * 0.5);
-  const stado = stadoZLiczebnosci(tier, razem, Math.min(MAKS_W_BITWIE, wzor.stosy + 1));
+  const stado = stadoZLiczebnosci(tier, razem, Math.min(MAKS_STADA, wzor.stosy + 1));
   return [{ sprite: u.sprite, nazwa: u.name, frakcja: frakcja.id, tier, ...stado }];
 }
 

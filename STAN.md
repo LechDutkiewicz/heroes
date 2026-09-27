@@ -134,9 +134,41 @@ mieście albo kampanii.
   nagroda kampanii za posiadany gatunek = +2 poziomy, autopilot i AI
   gracza nie werbują drugiego (`maGatunek`). Skutek: m1 wygrywana dnia ~30
   (zaakceptowane, próg symulacji 32). Sonda: `tools/probe-gatunek.ts`.
-- **Plan dalej**: walki 1 na 1 (dzikie) i 2 na 2 (rywal, sale, zamki)
-  z wymianą po omdleniu, razem z przerobieniem ekranu walki na zestaw
-  (drewno, pergamin, złoto); potem fale z `PROJEKT-SWIAT.md`.
+- **Walki 1 na 1 i 2 na 2 z wymianą** (uwaga z rozgrywki: w bajce walczy
+  się jeden na jednego, czasem dwa na dwa). `battle.ts`: pole 8 × 5,
+  `NA_POLU = 2`, `NA_POLU_DZIKIE = 1`, `createBattle(…, naPolu)` stawia
+  pierwszych na polu, resztę w `Battle.rezerwa` (identyfikatory dla
+  wszystkich, po kolei — po nich `rozegrajBitwe` odtwarza, kto zemdlał).
+  Po zemdlonym `wejdzZmiennik` wpuszcza następnego (zdarzenie `wejscie`
+  w dzienniku, wolne pole przy krawędzi z przerwą od swoich); także po
+  złapanym dzikim (`zlap`). Zmiennik rusza się od następnej rundy. Do walki
+  idzie cała drużyna (`MAKS_W_BITWIE = 7`); stada dzikich dalej najwyżej
+  4 (`MAKS_STADA`). Kto walczy ile: `naPoluPrzeciw(obiekt)` w `mapa.ts` —
+  scena, AI i autopilot liczą to samo. Okno „Kto zaczyna?" wybiera start,
+  reszta wchodzi w kolejności slotów. Koniec walki liczy także czekających
+  w pokeballach (`sprawnych`). Symulacja (3 przebiegi, bez błędów progów):
+  m1 d24, m2 d40, m3 d5, m4 d22. Sonda: `tools/probe-zmiennicy.ts`, zrzuty:
+  `tools/zrzut-walka.mjs`.
+- **Ekran walki na zestawie** (uwaga użytkownika: „długo niedotykany i ze
+  starej wersji"). Tło z drewna z belką (`drawBackground`), złota rama
+  planszy (`drawFrame`), cienka ciemna siatka zamiast szklanych kafli,
+  pergamin zamiast mlecznych paneli (`drawPanelBody`), tabliczki z drewna
+  i złota zamiast kapsułek (`makeHudButton`, pasek ataków), tabela karty
+  i prognoza atramentem (Lora), drużyny obu stron pod planszą z portretami
+  (`rysujDruzyny`: złoty pierścień — na polu, szary z gwiazdkami — zemdlony).
+  Nazwa walki na belce (`tytulWalki`), podpis końca po bajkowemu
+  (`podpisKonca`). Heksy większe (promień 54, `SKALA_POLA` skaluje wygląd
+  stworka), sylwetki o 20% większe. Wejście wprost do bitwy czeka na kroje
+  zestawu i restartuje scenę. Ikony fali 1 (`icons.ts`): rękawica, kula
+  energii, bańka, gwiazdki omdlenia, but sportowy — klucze `ICON.*` zostały.
+  Uwaga: maska geometryczna w Phaserze 4 nie przycina obrazka terenu —
+  `drawTerrain` przycina go `setCrop`.
+- **Sondy dostosowane** do 1 na 1 i do zasady gatunku: `probe-plecak`,
+  `probe-sloty-bitwa`, `probe-zwis`, `probe-przygoda`, `probe-armia`.
+  `probe-fx` jest zepsuta od dawna (woła nieistniejące `scene.resolveHit`);
+  `probe-fx`, `probe-dzwiek`, `probe-najechanie` mają na sztywno port 4173.
+- **Plan dalej**: reszta fali 1 z `PROJEKT-SWIAT.md` (słowa: Zapał,
+  Opieka, drużyna/stworek w tekstach), potem fale 2–4.
 - **Do zrobienia dalej**: stworki liderów jako osobne typy (frakcje), walki
   z liderami 3 na 3, PC Billa.
 

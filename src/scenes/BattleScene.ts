@@ -25,7 +25,8 @@ import {
 } from '../data/przedmioty';
 import { pokazPlecak, type WierszPlecaka } from '../visual/oknoPlecaka';
 import { pokazWyborSkladu, type WyborSkladu } from '../visual/wyborSkladu';
-import { medalion } from '../visual/zestaw';
+import { BELKA_Y, KROJ, krojeZestawu, latki, medalion, napisTytulowy, wczytajZestaw } from '../visual/zestaw';
+import { kluczPortretuOkraglego } from '../visual/portrety';
 import { toEtapEwolucji, wczytajPortrety } from '../visual/portrety';
 import { hexDistance, type Cell } from '../data/hex';
 
@@ -74,6 +75,11 @@ interface DaneZPrzygody {
   };
   /** Lider sali po drugiej stronie pola (etap 6): imię i portret (ścieżka w `public/`). */
   przeciwnik?: { imie: string; portret: string };
+  /**
+   * Ilu stworków staje naraz po stronie: 1 z dzikimi, 2 z trenerami, salami
+   * i miastami (`NA_POLU_DZIKIE`, `NA_POLU`). Reszta czeka w pokeballach.
+   */
+  naPolu?: number;
 }
 // Wszystkie zasady walki biorą się STĄD i tylko stąd. Scena ma je odgrywać,
 // nie powtarzać — druga kopia reguł rozjechałaby się z symulatorem balansu.
@@ -82,8 +88,8 @@ import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
 import {
   GUARD_REDUCTION,
   NA_POLU,
-  START_ROWS,
   rzedyNaPolu,
+  sprawnych,
   atakDostepny,
   atakiJednostki,
   attackPlan,
@@ -122,8 +128,9 @@ import {
   paintPreviewCell,
   pulse,
 } from '../visual/board';
-import { C, H, Z, body, display } from '../visual/theme';
+import { C, Z } from '../visual/theme';
 import { wersjonujZasoby } from '../visual/zasoby';
+import { OKNO_H } from '../visual/uklad';
 import {
   ICON,
   MINI,
@@ -139,7 +146,7 @@ import {
   createStatTable,
   createTurnQueue,
   drawPanelBody,
-  drawTitle,
+  stylNaDrewnie,
   makeHudButton,
   plate,
   type Forecast,
@@ -173,6 +180,7 @@ import {
   poseStrike,
   poseWindup,
   buildUnitView,
+  SKALA_POLA,
   endUnitMove,
   playUnitDeath,
   stepUnitMove,
@@ -217,7 +225,12 @@ const TYTUL_X = BOARD_X + 22;
 const BAR_X = BOARD_X - 6;
 const BAR_W = BOARD_W + 12;
 const BAR_H = 62;
-const BAR_Y = BOARD_Y + BOARD_H + 12;
+/**
+ * Pasek stoi przy dolnej krawędzi okna, nie pod planszą: pole z bajki
+ * (8 × 5) jest niższe od dawnego, a okno gry ma stałą wysokość (`OKNO_H`).
+ * Między planszą a paskiem leżą drużyny obu stron (`rysujDruzyny`).
+ */
+const BAR_Y = OKNO_H - 14 - BAR_H;
 const BAR_INSET = 6;
 const BAR_PAD = 8;
 
@@ -315,6 +328,7 @@ export class BattleScene extends Phaser.Scene {
     roundQueue: [],
     round: 1,
     dealt: new Map(),
+    rezerwa: { player: [], enemy: [] },
   };
 
   /**
@@ -338,6 +352,22 @@ export class BattleScene extends Phaser.Scene {
 
   private nextId = 1;
 
+  /** Ilu stworków stoi naraz po stronie w tej bitwie (1 albo 2). */
+  private naPolu = NA_POLU;
+
+  /** Stworki w pokeballach, czekające na wejście — po stronach. */
+  private get rezerwa(): Record<Side, SimUnit[]> {
+    return (this.battle.rezerwa ??= { player: [], enemy: [] });
+  }
+
+  /** Czy stworek (po identyfikatorze) jest jeszcze na nogach — na polu albo w pokeballu. */
+  private naNogach(id: number) {
+    return this.units.some((u) => u.id === id) || this.rezerwa.player.some((u) => u.id === id) || this.rezerwa.enemy.some((u) => u.id === id);
+  }
+
+  /** Pokeballe obu drużyn pod planszą: pełny — czeka, pusty — zemdlał. */
+  private druzynyWarstwa?: Phaser.GameObjects.Container;
+
   /**
    * Czyści stan poprzedniej bitwy. MUSI iść jako pierwsza rzecz w `create`.
    *
@@ -357,6 +387,7 @@ export class BattleScene extends Phaser.Scene {
       roundQueue: [],
       round: 1,
       dealt: new Map(),
+      rezerwa: { player: [], enemy: [] },
     };
     this.roster.clear();
     this.slotyZMapy.clear();
@@ -424,7 +455,7 @@ export class BattleScene extends Phaser.Scene {
   private oknoPlecaka?: Phaser.GameObjects.Container;
   private plecakButton?: HudButton;
   /** Skąd leci pokeball — środek medalionu trenera. */
-  private readonly trenerXY = { x: 34, y: 50 };
+  private readonly trenerXY = { x: 32, y: 27 };
   /** Złapane stworki: wpis w składzie wroga i id na polu. */
   private zlapani: { skad: number; id: number }[] = [];
   private wydanePokeballe = 0;
@@ -480,6 +511,10 @@ export class BattleScene extends Phaser.Scene {
     const etapy = [...new Set(zMapy)].filter((s) => !ALL_SPRITES.includes(s));
     for (const key of etapy) this.load.image(key, `${import.meta.env.BASE_URL}sprites/${key}.png`);
     wczytajPortrety(this, { okragle: true }, etapy.filter(toEtapEwolucji));
+    // Okrągłe portrety wszystkich stworków — do kolejki tur i do drużyn pod
+    // planszą, od pierwszej klatki.
+    wczytajPortrety(this, { okragle: true });
+    wczytajZestaw(this);
     for (const t of TERRAINS) {
       this.load.image(t.key, `${import.meta.env.BASE_URL}terrain/${t.key}.png`);
     }
@@ -538,7 +573,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** Rzędy startowe w losowej kolejności — osobno dla każdej strony. */
   private startRows() {
-    return Phaser.Math.RND.shuffle([...START_ROWS]);
+    return Phaser.Math.RND.shuffle(rzedyNaPolu(this.naPolu));
   }
 
   init(dane?: DaneZPrzygody) {
@@ -562,6 +597,7 @@ export class BattleScene extends Phaser.Scene {
       roundQueue: [],
       round: 1,
       dealt: new Map(),
+      rezerwa: { player: [], enemy: [] },
     };
     this.battle.bonusGracza = this.zPrzygody?.bonusGracza;
     this.roster.clear();
@@ -573,7 +609,18 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create() {
+    // Napisy walki są w krojach zestawu (Cinzel, Lora). Z mapy przychodzą
+    // już wczytane; przy wejściu wprost (sonda, `?ekran=bitwa`) czekamy na
+    // nie i zaczynamy scenę od nowa — Phaser nie przerysuje gotowego napisu,
+    // gdy krój dojdzie później.
+    if (!document.fonts.check('16px ZestawCinzel')) {
+      void krojeZestawu().then(() => {
+        if (document.fonts.check('16px ZestawCinzel')) this.scene.restart(this.zPrzygody);
+      });
+    }
     this.zerujBitwe();
+    const wymuszone = Number(new URLSearchParams(window.location.search).get('naPolu'));
+    this.naPolu = this.zPrzygody?.naPolu ?? (wymuszone === 1 || wymuszone === 2 ? wymuszone : NA_POLU);
     // Po `zerujBitwe` — nie przed: ta metoda podmienia cały obiekt stanu walki,
     // więc bonus ustawiony w `init` przepadał i umiejętności bojowe nie
     // działały ani razu. Wyszło dopiero z sondy, bo w oknie nic tego nie widać.
@@ -614,7 +661,7 @@ export class BattleScene extends Phaser.Scene {
     setLabelObstacles(this, () =>
       this.units.map((u) => {
         const p = this.cellToXY(u.col, u.row);
-        return new Phaser.Geom.Rectangle(p.x - 46, p.y - 46, 92, 76);
+        return new Phaser.Geom.Rectangle(p.x - 54, p.y - 66, 108, 98);
       })
     );
 
@@ -633,15 +680,20 @@ export class BattleScene extends Phaser.Scene {
       // armię na swoim ekranie i chce ją zobaczyć tak samo na polu walki.
       czekaNaSklad = this.wystawZPrzygody();
     } else {
-      // Bitwa pokazowa: po czterech losowych stworkach z każdej frakcji,
-      // na poziomie 5 — tyle mieści pole z przerwami między stworkami.
-      const czworka = (f: Faction) => Phaser.Math.RND.shuffle([...f.units]).slice(0, NA_POLU);
-      czworka(this.playerFaction).forEach((def, i) =>
-        this.spawnUnit({ ...def, poziom: 5 }, 'player', 0, rzedyGracza[i])
+      // Bitwa pokazowa: po trzy losowe stworki z każdej frakcji, na
+      // poziomie 5 — na polu stoi `naPolu`, reszta czeka w pokeballach.
+      const trojka = (f: Faction) => Phaser.Math.RND.shuffle([...f.units]).slice(0, 3);
+      trojka(this.playerFaction).forEach((def, i) =>
+        i < this.naPolu
+          ? this.spawnUnit({ ...def, poziom: 5 }, 'player', 0, rzedyGracza[i])
+          : this.spawnUnit({ ...def, poziom: 5 }, 'player', -1, -1, false)
       );
-      czworka(this.enemyFaction).forEach((def, i) =>
-        this.spawnUnit({ ...def, poziom: 5 }, 'enemy', COLS - 1, rzedyWroga[i])
+      trojka(this.enemyFaction).forEach((def, i) =>
+        i < this.naPolu
+          ? this.spawnUnit({ ...def, poziom: 5 }, 'enemy', COLS - 1, rzedyWroga[i])
+          : this.spawnUnit({ ...def, poziom: 5 }, 'enemy', -1, -1, false)
       );
+      this.rysujDruzyny();
     }
 
     this.input.keyboard?.on('keydown-C', () => this.waitTurn());
@@ -785,51 +837,55 @@ export class BattleScene extends Phaser.Scene {
 
   /** Górna belka: tytuł, wstęgi zamków, zdanie o turze i pasek kolejki. */
   private drawTopBar() {
-    // Górna belka ma tylko 100 pikseli do ramy planszy, a rama wystaje jeszcze
-    // kilka pikseli ponad BOARD_Y. Stąd trzy ciasno upakowane wiersze:
-    // tytuł, wstęgi zamków, zdanie o turze.
-    // Trener przy polu bitwy — jak bohater Heroes 3 w rogu pola walki.
-    // Medalion z głową trenera, a obok tytułu przycisk plecaka (etap 5).
+    // Belka z drewna (namalowana w `drewno.jpg`, 0…48 px): trener gracza
+    // w medalionie po lewej, plecak, nazwa walki na środku, kolejka tur
+    // i lider sali po prawej. Pod belką, na drewnie, zdanie o turze.
     const kto = this.zPrzygody?.trener?.kto ?? 'janek';
-    medalion(this, this.trenerXY.x, this.trenerXY.y, 30, C.panelDeep).setDepth(61);
+    medalion(this, this.trenerXY.x, this.trenerXY.y, 27, C.panelDeep).setDepth(61);
     const glowa = this.add.image(this.trenerXY.x, this.trenerXY.y + 1, `tr-glowa-${kto}`).setDepth(62);
-    glowa.setScale(40 / Math.max(glowa.width, glowa.height));
+    glowa.setScale(38 / Math.max(glowa.width, glowa.height));
     glowa.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.otworzPlecak());
-    drawTitle(this, TYTUL_X, 0, 'POKÉMON HEROES', 24);
+    napisTytulowy(this, this.scale.width / 2, BELKA_Y, this.tytulWalki(), 22).setDepth(61);
     // Lider sali stoi po drugiej stronie — medalion w prawym rogu, lustrzanie
     // do trenera gracza.
     const przeciwnik = this.zPrzygody?.przeciwnik;
+    let prawaKrawedz = this.scale.width - 14;
     if (przeciwnik && this.textures.exists(`przeciwnik-${przeciwnik.portret}`)) {
-      const px = this.scale.width - this.trenerXY.x + 8;
-      medalion(this, px, this.trenerXY.y + 26, 24, C.foeDeep).setDepth(61);
-      const twarz = this.add.image(px, this.trenerXY.y + 25, `przeciwnik-${przeciwnik.portret}`).setDepth(62);
-      twarz.setScale(36 / Math.max(twarz.width, twarz.height));
+      const px = this.scale.width - this.trenerXY.x;
+      medalion(this, px, this.trenerXY.y, 27, C.foeDeep).setDepth(61);
+      const twarz = this.add.image(px, this.trenerXY.y + 1, `przeciwnik-${przeciwnik.portret}`).setDepth(62);
+      twarz.setScale(40 / Math.max(twarz.width, twarz.height));
+      prawaKrawedz = px - 40;
     }
     this.plecakButton = makeHudButton(this, {
-      x: TYTUL_X + 316,
-      y: 17,
-      w: 138,
-      h: 28,
+      x: this.trenerXY.x + 34 + 66,
+      y: BELKA_Y,
+      w: 132,
+      h: 32,
       icon: ICON.star,
-      tone: C.gold,
-      toneDeep: C.goldDeep,
+      tone: C.panel,
+      toneDeep: C.panelDeep,
       onClick: () => (this.oknoPlecaka ? this.zamknijPlecak() : this.otworzPlecak()),
     });
-    this.plecakButton.setLabel('Plecak  (P)');
+    this.plecakButton.setLabel('Plecak (P)');
 
-    // Wstęg z nazwami zamków i kaflem terenu tu NIE MA — świadomie.
-    //
-    // Trzy kafle zajmowały cały wiersz górnej belki, żeby powtórzyć rzeczy,
-    // które gracz i tak widzi: strony rozróżnia barwa oddziałów (ta sama, co
-    // na wstędze), a teren widać na planszy, bo się po nim chodzi. Nazwa
-    // zamku nie wpływa na żadną decyzję w bitwie — to podpis pod obrazkiem.
-    // Miejsce po nich idzie na zdanie o turze, które jest instrukcją, a nie
-    // podpisem.
+    // Zdanie o turze: kremowy Cinzel na drewnie, między belką a ramą planszy.
+    this.turnText = this.add
+      .text(BOARD_X + 4, (48 + BOARD_Y - 13) / 2 + 1, '', stylNaDrewnie(15))
+      .setOrigin(0, 0.5)
+      .setShadow(0, 2, '#000000aa', 2, true, true)
+      .setDepth(61);
 
-    // Zdanie o turze z konturem, bo leży wprost na tle, nie na panelu.
-    this.turnText = this.add.text(TYTUL_X, 52, '', display(15)).setOrigin(0, 0.5);
+    this.queue = createTurnQueue(this, prawaKrawedz, BELKA_Y);
+  }
 
-    this.queue = createTurnQueue(this, BOARD_X + BOARD_W, 24);
+  /** Nazwa walki na belce: kto stoi po drugiej stronie. */
+  private tytulWalki() {
+    const z = this.zPrzygody;
+    if (!z) return 'Walka pokazowa';
+    if (z.przeciwnik) return `Sala — ${z.przeciwnik.imie}`;
+    if (z.trener?.dzikie) return 'Dzikie stworki';
+    return this.naPolu >= 2 ? 'Walka trenerów' : 'Walka';
   }
 
   /**
@@ -929,14 +985,11 @@ export class BattleScene extends Phaser.Scene {
       HEAD_H - 6
     ).setDepth(62);
     this.headName = this.add
-      .text(CARD_CONTENT_X + 14 + HEAD_H, HEAD_Y + HEAD_H / 2, '', {
-        ...display(15),
-        strokeThickness: 3.5,
-      })
+      .text(CARD_CONTENT_X + 14 + HEAD_H, HEAD_Y + HEAD_H / 2, '', stylNaDrewnie(15))
       .setOrigin(0, 0.5)
       .setDepth(62);
     this.headMeta = this.add
-      .text(CARD_CONTENT_X + CARD_CONTENT_W - 10, HEAD_Y + HEAD_H / 2, '', body(12, H.white))
+      .text(CARD_CONTENT_X + CARD_CONTENT_W - 10, HEAD_Y + HEAD_H / 2, '', { fontFamily: KROJ.tekst, fontSize: '12px', color: '#fff4dc' })
       .setOrigin(1, 0.5)
       .setDepth(62);
     this.card.add([this.headBand, this.headIcon, this.headName, this.headMeta]);
@@ -992,14 +1045,20 @@ export class BattleScene extends Phaser.Scene {
    */
   /** Zwraca `true`, gdy drużyna gracza czeka jeszcze na wybór czwórki. */
   private wystawZPrzygody(): boolean {
-    const wystaw = (sklad: (OddzialZMapy | null)[], side: Side, col: number) => {
-      // Stado dzikich rozpada się na osobne stworki — każdy staje na swoim
-      // polu (`jednostkiBitwy`, najwyżej siedem na stronę). Statystyki liczy
-      // `defStworka` z gatunku, poziomu i etapu ewolucji.
-      const jednostki = jednostkiBitwy(sklad);
-      const rzedy = rzedyDlaSkladu(jednostki.length);
+    const naPolu = this.naPolu;
+    const wystaw = (sklad: (OddzialZMapy | null)[], side: Side, col: number, kolejnosc?: number[]) => {
+      // Stado dzikich rozpada się na osobne stworki (`jednostkiBitwy`).
+      // Pierwsi `naPolu` stają na polu, reszta czeka w pokeballach i wchodzi
+      // po zemdlonym — jak w bajce. Statystyki liczy `defStworka` z gatunku,
+      // poziomu i etapu ewolucji.
+      let jednostki = jednostkiBitwy(sklad);
+      if (kolejnosc) {
+        const miejsce = (skad: number) => (kolejnosc.includes(skad) ? kolejnosc.indexOf(skad) : kolejnosc.length + skad);
+        jednostki = [...jednostki].sort((x, y) => miejsce(x.skad) - miejsce(y.skad));
+      }
+      const rzedy = rzedyDlaSkladu(Math.min(naPolu, jednostki.length));
       jednostki.forEach(({ def, skad }, i) => {
-        const unit = this.spawnUnit(def, side, col, rzedy[i]);
+        const unit = i < naPolu ? this.spawnUnit(def, side, col, rzedy[i]) : this.spawnUnit(def, side, -1, -1, false);
         // Zapamiętujemy, KTÓRY stworek na planszy odpowiada któremu wpisowi
         // w drużynie. Szukanie go potem po `sprite` wyglądało na
         // wystarczające i nie było: dwa sloty mogą mieć ten sam gatunek.
@@ -1016,27 +1075,25 @@ export class BattleScene extends Phaser.Scene {
     if (frakcjaWroga) this.enemyFaction = frakcjaWroga;
 
     const gracz = this.zPrzygody!.gracz;
-    if (gracz.length <= NA_POLU) {
+    if (gracz.length <= naPolu) {
       wystaw(gracz, 'player', 0);
+      this.rysujDruzyny();
       return false;
     }
-    // Więcej sprawnych stworków niż miejsc na polu: trener wybiera czwórkę,
-    // widząc już przeciwnika (etap 5).
+    // Więcej sprawnych stworków niż miejsc na polu: trener wybiera, kto
+    // zaczyna, widząc już przeciwnika. Reszta wchodzi po kolei ze slotów.
     this.busy = true;
     this.setButtonsVisible(false);
-    this.turnText.setText('Wybierz czwórkę do walki');
+    this.turnText.setText(naPolu === 1 ? 'Kto zaczyna walkę?' : 'Kto zaczyna? Wybierz dwójkę');
     this.wyborSkladu = pokazWyborSkladu(
       this,
       gracz.map((o, skad) => ({ skad, sprite: o.sprite, nazwa: o.nazwa, poziom: o.poziom })),
-      NA_POLU,
+      naPolu,
       { x: BOARD_X, y: BOARD_Y, w: BOARD_W, h: BOARD_H },
       (wybrane) => {
         this.wyborSkladu = undefined;
-        wystaw(
-          gracz.map((o, i) => (wybrane.includes(i) ? o : null)),
-          'player',
-          0
-        );
+        wystaw(gracz, 'player', 0, wybrane);
+        this.rysujDruzyny();
         this.busy = false;
         startRound(this.battle);
         this.beginTurn();
@@ -1045,8 +1102,68 @@ export class BattleScene extends Phaser.Scene {
     return true;
   }
 
-  private spawnUnit(def: UnitDef, side: Side, col: number, row: number) {
-    const { x, y } = this.cellToXY(col, row);
+  /**
+   * Drużyny pod planszą: po pokeballu na każdego stworka strony. Ci na polu
+   * i w pokeballach — pełny, zemdleni — szary. Jak pasek drużyny w grach
+   * z pokemonami: od razu widać, ilu jeszcze zostało.
+   */
+  private rysujDruzyny() {
+    this.druzynyWarstwa?.destroy();
+    const w = this.add.container(0, 0).setDepth(20);
+    this.druzynyWarstwa = w;
+    const y0 = BOARD_Y + BOARD_H + 13 + 8;
+    const h = BAR_Y - 10 - y0;
+    const D = h - 16;
+    const krok = D + 6;
+    const rysuj = (side: Side) => {
+      const wszyscy = [...this.roster.values()].filter((u) => u.side === side).sort((a, b) => a.id - b.id);
+      if (wszyscy.length === 0) return;
+      const lewa = side === 'player';
+      const nazwa = lewa
+        ? 'Drużyna'
+        : this.zPrzygody?.przeciwnik?.imie ?? (this.dzikie ? 'Dzikie' : 'Rywal');
+      const podpis = this.add
+        .text(0, 0, nazwa.toUpperCase(), { fontFamily: KROJ.tytul, fontSize: '12px', color: lewa ? '#2c4f7a' : '#8e2a18' })
+        .setOrigin(0, 0.5);
+      const pw = 18 + podpis.width + 10 + wszyscy.length * krok + 6;
+      const px = lewa ? BOARD_X : BOARD_X + BOARD_W - pw;
+      w.add([
+        latki(this, 'z-cien', px - 12, y0 - 8, pw + 24, h + 26, 60).setAlpha(0.6),
+        latki(this, 'z-pergamin', px, y0, pw, h, 48),
+        latki(this, 'z-rama-cienka', px - 5, y0 - 5, pw + 10, h + 10, 16),
+      ]);
+      podpis.setPosition(px + 14, y0 + h / 2);
+      w.add(podpis);
+      wszyscy.forEach((u, i) => {
+        const cx = px + 14 + podpis.width + 10 + D / 2 + i * krok;
+        const cy = y0 + h / 2;
+        const sprawny = this.naNogach(u.id);
+        const naPolu = this.units.includes(u);
+        const g = this.add.graphics();
+        // Na polu: złoty pierścień; w pokeballu: brązowy; zemdlony: szary.
+        g.fillStyle(0x2a1606, 0.35);
+        g.fillCircle(cx + 1, cy + 2, D / 2 + 2);
+        g.fillStyle(naPolu ? C.gold : sprawny ? 0x8a5a2b : 0x8d8d8d, 1);
+        g.fillCircle(cx, cy, D / 2 + 2);
+        g.fillStyle(0xf3e2ba, 1);
+        g.fillCircle(cx, cy, D / 2 - 1);
+        const klucz = kluczPortretuOkraglego(u.def.sprite);
+        const twarz = this.textures.exists(klucz)
+          ? this.add.image(cx, cy, klucz).setDisplaySize(D - 3, D - 3)
+          : this.add.image(cx, cy, u.def.sprite).setDisplaySize(D * 0.8, D * 0.8);
+        w.add([g, twarz]);
+        if (!sprawny) {
+          twarz.setTint(0x777777).setAlpha(0.6);
+          w.add(icon(this, ICON.skull, cx, cy - D / 2 + 2, D * 0.55));
+        }
+      });
+    };
+    rysuj('player');
+    rysuj('enemy');
+  }
+
+  private spawnUnit(def: UnitDef, side: Side, col: number, row: number, naPole = true) {
+    const { x, y } = this.cellToXY(Math.max(0, col), Math.max(0, row));
     const id = this.nextId++;
     const view = buildUnitView(this, {
       spriteKey: def.sprite,
@@ -1081,7 +1198,15 @@ export class BattleScene extends Phaser.Scene {
       this.hideStats();
     });
 
-    this.units.push(unit);
+    if (naPole) this.units.push(unit);
+    else {
+      // Czeka w pokeballu: istnieje (ma identyfikator i wygląd), ale nie stoi
+      // na polu, dopóki `wejdzZmiennik` go nie wpuści.
+      unit.col = -1;
+      unit.row = -1;
+      unit.container.setVisible(false);
+      this.rezerwa[side].push(unit);
+    }
     this.roster.set(id, unit);
     return unit;
   }
@@ -1817,7 +1942,8 @@ export class BattleScene extends Phaser.Scene {
 
     const wynik = () => {
       if (udane) {
-        zlap(this.battle, cel);
+        const zmiennik = zlap(this.battle, cel);
+        if (zmiennik) this.time.delayedCall(900, () => this.pokazWejscie(zmiennik as Unit));
         const skad = this.wrogZMapy.find((w) => w.id === cel.id)?.skad ?? -1;
         this.zlapani.push({ skad, id: cel.id });
         this.posiadaneGatunki.add(gatunek(cel.def.sprite));
@@ -2052,6 +2178,12 @@ export class BattleScene extends Phaser.Scene {
         return;
       }
 
+      if (ev.rodzaj === 'wejscie') {
+        this.pokazWejscie(this.unitById(ev.kto));
+        this.time.delayedCall(700, next);
+        return;
+      }
+
       const attacker = this.unitById(ev.kto);
       const target = this.unitById(ev.wKogo);
 
@@ -2062,6 +2194,17 @@ export class BattleScene extends Phaser.Scene {
         while (i < log.length && log[i].rodzaj === 'zejscie') {
           this.playDeath((log[i] as { kto: number }).kto);
           i++;
+        }
+        // Zmiennik wchodzi dopiero, gdy zemdlony zdąży zejść.
+        const wejscia: number[] = [];
+        while (i < log.length && log[i].rodzaj === 'wejscie') {
+          wejscia.push((log[i] as { kto: number }).kto);
+          i++;
+        }
+        if (wejscia.length > 0) {
+          this.time.delayedCall(650, () => wejscia.forEach((id) => this.pokazWejscie(this.unitById(id))));
+          this.time.delayedCall(1350, next);
+          return;
         }
         this.time.delayedCall(ev.odwet ? 500 : 450, next);
       };
@@ -2242,9 +2385,36 @@ export class BattleScene extends Phaser.Scene {
     this.refreshStack(target);
   }
 
+  /**
+   * Zmiennik z pokeballa staje na polu (`wejdzZmiennik` już go tam postawił):
+   * błysk, wyrośnięcie z punktu i okrzyk trenera — „Naprzód, Flamir!".
+   */
+  private pokazWejscie(unit: Unit) {
+    const { x, y } = this.cellToXY(unit.col, unit.row);
+    const skala = SKALA_POLA;
+    unit.container.setPosition(x, y).setDepth(10 + unit.row).setVisible(true).setAlpha(0).setScale(0.1 * skala);
+    this.refreshStack(unit);
+    flashTarget(this, unit.view.sprite, C.white);
+    deathFlash(this, this.effectLayer, x, y - 6, C.gold);
+    this.tweens.add({ targets: unit.container, alpha: 1, scaleX: skala, scaleY: skala, duration: 320, ease: 'Back.easeOut' });
+    const okrzyk =
+      unit.side === 'player'
+        ? `Naprzód, ${unit.def.name}!`
+        : this.zPrzygody?.przeciwnik
+          ? `${this.zPrzygody.przeciwnik.imie} wysyła: ${unit.def.name}!`
+          : this.dzikie
+            ? `Dziki ${unit.def.name} wyskakuje!`
+            : `Przeciwnik wysyła: ${unit.def.name}!`;
+    this.floatText(unit, okrzyk, '#ffe08a', -60, ICON.star, 18);
+    this.turnText.setText(okrzyk);
+    this.rysujDruzyny();
+    this.buildQueueIcons();
+  }
+
   /** Zejście oddziału. Z listy żywych zdjął go już `battle.ts`. */
   private playDeath(id: number) {
     const unit = this.unitById(id);
+    this.time.delayedCall(0, () => this.rysujDruzyny());
     const at = this.cellToXY(unit.col, unit.row);
     sfx(this, 'smierc');
     deathFlash(this, this.effectLayer, at.x, at.y - 6, sideAccent(unit.side).color);
@@ -2329,8 +2499,7 @@ export class BattleScene extends Phaser.Scene {
       .map((o, i) => {
         const id = this.slotyZMapy.get(i);
         if (id === undefined) return null;
-        const zywy = this.units.find((u) => u.id === id);
-        return { ...o, ile: zywy ? zywy.count : 0 };
+        return { ...o, ile: this.naNogach(id) ? 1 : 0 };
       })
       .filter((o) => o !== null);
     // Złapane dzikie stworki — z poziomem, na którym stały na polu.
@@ -2343,7 +2512,7 @@ export class BattleScene extends Phaser.Scene {
       .filter((o) => o !== null);
     // Pokonani przeciwnicy — z nich liczy się doświadczenie drużyny.
     const pokonani = this.wrogZMapy
-      .filter((w) => !this.units.some((u) => u.id === w.id))
+      .filter((w) => !this.naNogach(w.id))
       .map((w) => {
         const def = this.roster.get(w.id)?.def;
         return { poziom: def?.poziom ?? 5, tier: (def?.tier ?? 1) - 1 };
@@ -2352,7 +2521,7 @@ export class BattleScene extends Phaser.Scene {
     // z rywalem musi wiedzieć, kto z JEGO drużyny zemdlał.
     const wrogOcalali = this.zPrzygody!.wrog.map((o, skad) => {
       const naPolu = this.wrogZMapy.filter((w) => w.skad === skad);
-      const padli = naPolu.filter((w) => !this.units.some((u) => u.id === w.id)).length;
+      const padli = naPolu.filter((w) => !this.naNogach(w.id)).length;
       return Math.max(0, o.ile - padli);
     });
     this.registry.set('wynik-bitwy', {
@@ -2388,6 +2557,7 @@ export class BattleScene extends Phaser.Scene {
     // byłaby przegrana.
     this.wyborSkladu?.zatwierdz();
     const przegrani = wygrana ? 'enemy' : 'player';
+    this.rezerwa[przegrani] = [];
     for (const u of [...this.units]) {
       if (u.side !== przegrani) continue;
       u.count = 0;
@@ -2399,9 +2569,20 @@ export class BattleScene extends Phaser.Scene {
     this.checkGameOver();
   }
 
+  /** Zdanie pod napisem końca — po bajkowemu: stworki mdleją, nikt nie „rozbija armii". */
+  private podpisKonca(won: boolean) {
+    const lider = this.zPrzygody?.przeciwnik?.imie;
+    if (won) {
+      if (lider) return `Pokonujesz ${lider.endsWith('a') ? 'liderkę' : 'lidera'} sali: ${lider}!`;
+      return this.dzikie ? 'Dzikie stworki uciekają w zarośla' : 'Drużyna przeciwnika mdleje — wygrana!';
+    }
+    return 'Twoja drużyna mdleje — czas na Centrum Pokemon';
+  }
+
   private checkGameOver() {
-    const playersLeft = this.units.some((u) => u.side === 'player');
-    const enemiesLeft = this.units.some((u) => u.side === 'enemy');
+    // Strona trwa, póki ktoś jej stoi na polu ALBO czeka w pokeballu.
+    const playersLeft = sprawnych(this.battle, 'player') > 0;
+    const enemiesLeft = sprawnych(this.battle, 'enemy') > 0;
     if (playersLeft && enemiesLeft) return;
 
     this.gameOver = true;
@@ -2414,6 +2595,7 @@ export class BattleScene extends Phaser.Scene {
     this.turnText.setText('');
 
     const won = playersLeft;
+    this.rysujDruzyny();
     if (this.zPrzygody) this.wrocDoPrzygody(won);
     // Ekran końca należy do warstwy nakładki, nie efektów — inaczej iskry
     // z ostatniego ciosu potrafią wylądować NAD wstęgą z napisem.
@@ -2427,9 +2609,7 @@ export class BattleScene extends Phaser.Scene {
       won,
       BOARD_X + BOARD_W / 2,
       BOARD_Y + BOARD_H / 2,
-      won
-        ? `${this.playerFaction.name} rozbija armię: ${this.enemyFaction.name}`
-        : `${this.enemyFaction.name} rozbija twoją armię`
+      this.podpisKonca(won)
     );
   }
 }

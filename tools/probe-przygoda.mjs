@@ -196,9 +196,10 @@ sprawdz(`artefakt ląduje u bohatera (${artefakt.nazwa})`, poArtefakcie.ile === 
 
 // --- bitwa ---
 console.log('\n=== bitwa ===');
+// Z dzikim stadem walczy się 1 na 1 (`NA_POLU_DZIKIE`); reszta czeka w pokeballach.
 const { NA_POLU } = await page.evaluate(async () => {
   const b = await import('/src/data/battle.ts');
-  return { NA_POLU: b.NA_POLU };
+  return { NA_POLU: b.NA_POLU_DZIKIE };
 });
 const bitwa = await page.evaluate(async (naPolu) => {
   const s = window.__game.scene.getScene('adventure');
@@ -218,6 +219,8 @@ const bitwa = await page.evaluate(async (naPolu) => {
 }, NA_POLU);
 await page.waitForTimeout(1400);
 await scena('battle');
+await page.evaluate(() => window.__game.scene.getScene('battle').wyborSkladu?.zatwierdz());
+await page.waitForTimeout(200);
 const wBitwie = await page.evaluate(() => {
   const s = window.__game.scene.getScene('battle');
   return {
@@ -252,7 +255,9 @@ const koniec = await page.evaluate(() => {
   const nasi = s.units.filter((u) => u.side === 'player');
   const padl = nasi[nasi.length - 1];
   window.__zemdlony = null;
-  if (nasi.length > 1 && padl) {
+  // Pada ten na polu, o ile ktoś jeszcze czeka w pokeballu — drużyna nie
+  // może paść cała, bo wtedy nie ma wygranej.
+  if (nasi.length + s.battle.rezerwa.player.length > 1 && padl) {
     const i = [...s.slotyZMapy.entries()].find(([, id]) => id === padl.id)?.[0];
     window.__zemdlony = i !== undefined ? s.zPrzygody.gracz[i]?.slot ?? null : null;
     padl.count = 0;
@@ -302,7 +307,9 @@ sprawdz('doświadczenie za wygraną wpłynęło', poBitwie.dosw > poWyborze.dosw
   if (typeof z === 'number') {
     sprawdz('stworek, który padł, zostaje w slocie jako zemdlony', d[z]?.omdlaly === true, JSON.stringify(d[z]));
     sprawdz('zemdlony nie dostaje doświadczenia', d[z]?.dosw === d[z]?.przed, JSON.stringify(d[z]));
-    const walczacy = d.map((o, i) => ({ o, i })).filter(({ o, i }) => o && i !== z).slice(0, NA_POLU - 1);
+    // Walczy cała drużyna — na polu po jednym, reszta w pokeballach — więc
+    // doświadczenie dostają wszyscy, którzy nie zemdleli.
+    const walczacy = d.map((o, i) => ({ o, i })).filter(({ o, i }) => o && i !== z);
     sprawdz(
       'zwycięzcy zbierają doświadczenie stworków',
       walczacy.length > 0 && walczacy.every(({ o }) => !o.omdlaly && o.dosw > (o.przed ?? 0)),
@@ -392,6 +399,15 @@ const werbunek = await page.evaluate(async () => {
   const m = await import('/src/data/mapa.ts');
   // Musi być kogo zaprosić — gra startuje z ułamkami w rezerwatach.
   if ((t.zamek.dostepne?.[0] ?? 0) < 1) t.zamek.dostepne[0] = 1;
+  // Jeden stworek danego gatunku: kogoś z tego gatunku drużyna może już
+  // mieć — wypuszczamy go, inaczej rezerwat słusznie odmówi.
+  const st = await import('/src/data/stworki.ts');
+  const fr = await import('/src/data/factions.ts');
+  const ten = st.gatunek(fr.factionById(t.profil.frakcja).units[0].sprite);
+  // W miejscu, nie nową tablicą — ekran miasta trzyma referencje do list.
+  const bezNiego = (lista) => lista.forEach((o, i) => { if (o && st.gatunek(o.sprite) === ten) lista[i] = null; });
+  bezNiego(t.stan.bohater.armia);
+  for (const z of t.stan.obiekty) if (z.rodzaj === 'zamek' && z.garnizon) bezNiego(z.garnizon);
   const przed = {
     pokeballe: t.stan.skarbiec.pokeball,
     armia: t.stan.bohater.armia.filter(Boolean).length,
@@ -428,7 +444,7 @@ const poZamku = await page.evaluate(() => {
     potworZebrany: !!potwor?.zebrany,
   };
 });
-sprawdz('zakup przeżywa powrót na mapę', poZamku.armia > doZamku.przed);
+sprawdz('zakup przeżywa powrót na mapę', poZamku.armia === werbunek.po.armia, `${poZamku.armia} (po zakupie ${werbunek.po.armia})`);
 sprawdz('po wyjściu z zamku da się sterować', poZamku.zajety === false);
 sprawdz(
   'pokonany strażnik NIE jest już rysowany na mapie',

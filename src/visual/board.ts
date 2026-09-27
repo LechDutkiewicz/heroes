@@ -12,24 +12,26 @@
  */
 
 import Phaser from 'phaser';
+import { COLS, ROWS } from '../data/battle';
 import { C, E, T, Z } from './theme';
+import { ramaZlota, tloDrewna } from './zestaw';
 
 // ---------- geometria (nie ruszać — reszta gry na niej stoi) ----------
 // Układ „odd-r": hexy stoją wierzchołkiem do góry, a nieparzyste rzędy są
 // przesunięte o pół hexa w prawo.
 
-export const COLS = 10;
-export const ROWS = 7;
-/** promień hexa: od środka do wierzchołka */
-export const HEX_R = 46;
+// Wymiary planszy są zasadą walki, więc pochodzą z `data/battle.ts`.
+export { COLS, ROWS };
+/** promień hexa: od środka do wierzchołka (pole z bajki: 8 × 5, większe heksy) */
+export const HEX_R = 54;
 export const HEX_W = Math.sqrt(3) * HEX_R;
 export const HEX_H = 2 * HEX_R;
 /** pionowy odstęp między rzędami — hexy zazębiają się, stąd 3/4 wysokości */
 export const ROW_STEP = HEX_R * 1.5;
 
-export const BOARD_X = 62;
-export const BOARD_Y = 100;
 export const BOARD_W = HEX_W * (COLS + 0.5);
+export const BOARD_X = Math.round((960 - BOARD_W) / 2);
+export const BOARD_Y = 100;
 export const BOARD_H = ROW_STEP * (ROWS - 1) + HEX_H;
 
 /** Nic w bajce nie ma ostrego rogu — plansza też nie. */
@@ -168,6 +170,18 @@ function bevel(
 export function drawBackground(scene: Phaser.Scene) {
   const w = scene.scale.width;
   const h = scene.scale.height;
+  // Zestaw (drewno z belką u góry) — ten sam materiał co mapa, miasto
+  // i kampania. Dawne niebieskie tło z heksowym znakiem wodnym zostaje
+  // tylko na wypadek, gdyby tekstura drewna nie doszła.
+  if (scene.textures.exists('z-drewno')) {
+    tloDrewna(scene).setDepth(Z.sky);
+    const cien = scene.add.graphics().setDepth(Z.sky + 0.1);
+    for (let i = 10; i >= 1; i--) {
+      cien.fillStyle(0x0a0602, 0.035);
+      cien.fillRoundedRect(BOARD_X - 6 - i * 3, BOARD_Y - 4 - i * 2, BOARD_W + 12 + i * 6, BOARD_H + 14 + i * 5, 12 + i * 3);
+    }
+    return;
+  }
   const g = scene.add.graphics().setDepth(Z.sky);
 
   const top = mix(C.skyBottom, C.shadow, 0.42);
@@ -277,8 +291,15 @@ function drawTerrain(scene: Phaser.Scene, terrainKey: string) {
   const cy = BOARD_Y + BOARD_H / 2;
 
   const img = scene.add.image(cx, cy, terrainKey).setDepth(Z.board);
-  img.setScale(Math.max(BOARD_W / img.width, BOARD_H / img.height));
+  const k = Math.max(BOARD_W / img.width, BOARD_H / img.height);
+  img.setScale(k);
   img.setMask(boardMask(scene));
+  // Maska geometryczna w Phaserze 4 nie przycina obrazka — a obraz terenu
+  // ma proporcje dawnej planszy (10 × 7) i wystawał nad i pod niższą planszę
+  // z bajki (8 × 5). Przycinamy go więc wprost do prostokąta planszy.
+  const cw = BOARD_W / k;
+  const ch = BOARD_H / k;
+  img.setCrop((img.width - cw) / 2, (img.height - ch) / 2, cw, ch);
 
   // Warstwa detalu: rozmyte plamy światła i cienia rozbijają gładź terenu,
   // która po przeskalowaniu robi się podejrzanie równa.
@@ -334,19 +355,25 @@ function drawGrid(scene: Phaser.Scene) {
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
       const { x, y } = cellToXY(col, row);
-      const zone = col === 0 ? C.ally : col === COLS - 1 ? C.foe : null;
+      // Kolumny startowe bez barwnej mgiełki — na ciepłym terenie czerwień
+      // wroga czytała się jak pomarańczowy szew, a strony i tak odróżnia
+      // barwa podestów pod stworkami.
+      const zone = null;
 
+      // Pole z bajki: teren ma być widać, siatka tylko go dzieli — jak
+      // w Heroes 3 cienka, ciemna kreska, bez szklanych kafli. Kolumny
+      // startowe lekko w barwach stron.
       gradientHex(g, x, y, {
-        veil: zone ? 0.16 : 0.07,
+        veil: zone ? 0.1 : 0.02,
         base: zone ?? LIGHT,
-        lightAlpha: 0.15,
-        darkAlpha: 0.12,
+        lightAlpha: 0.08,
+        darkAlpha: 0.08,
         r: HEX_R - 0.5,
       });
 
-      g.lineStyle(2, SHADE, 0.4);
+      g.lineStyle(1.6, 0x2a1606, 0.32);
       g.strokePoints(hexPoints(x, y, HEX_R - 1), true);
-      bevel(g, x, y, HEX_R - 2.5, 0.45, 0.3);
+      bevel(g, x, y, HEX_R - 2.5, 0.22, 0.12);
     }
   }
 }
@@ -357,6 +384,11 @@ function drawGrid(scene: Phaser.Scene) {
  * okna, a nie jak brzeg pola bitwy.
  */
 function drawFrame(scene: Phaser.Scene) {
+  // Złota rama z zestawu — ta sama, co wokół mapy przygody i obrazów kampanii.
+  if (scene.textures.exists('z-rama-zlota')) {
+    ramaZlota(scene, BOARD_X, BOARD_Y, BOARD_W, BOARD_H).setDepth(Z.units - 0.1);
+    return;
+  }
   // Nad podświetleniami, żeby żadne pole nie wylewało się poza krawędź.
   const g = scene.add.graphics().setDepth(Z.units - 0.1);
 
@@ -449,9 +481,13 @@ function paintCell(
 
 /** Pole, na które aktywny oddział może wejść. */
 export function paintMoveCell(g: Phaser.GameObjects.Graphics, col: number, row: number) {
-  // Mocniej niż zwykły kafel: pola ruchu muszą się odcinać na pierwszy rzut oka,
-  // bo od nich zależy każda decyzja gracza.
-  paintCell(g, col, row, C.ally, C.allyDeep, { veil: 0.27, edge: 0.85, glow: 0.3 });
+  // Jak w Heroes 3: zasięg ruchu to przyciemnione pola z jasnym brzegiem,
+  // nie niebieska szyba — ta gryzła się z drewnem i złotą ramą.
+  const { x, y } = cellToXY(col, row);
+  g.fillStyle(0x1a0c03, 0.2);
+  g.fillPoints(hexPoints(x, y, HEX_R - 1), true);
+  g.lineStyle(2, 0xf8e6b8, 0.55);
+  g.strokePoints(hexPoints(x, y, HEX_R - 2.5), true);
 }
 
 /**
