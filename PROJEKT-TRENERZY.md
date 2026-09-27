@@ -83,14 +83,20 @@ Prompty i imiona — etap 6.
 
 ## Etap 3 — ewolucja jak w lore
 
-- Większość linii ewoluuje po osiągnięciu poziomu (np. 16 i 32).
-- Część linii potrzebuje **kamienia ewolucji** (surowiec już jest w grze) —
-  jak Pikachu → Raichu od Kamienia Gromu.
-- Już w etapie 1: Ośrodek Ewolucji na mapie nie zamienia Pyroko we Flamira
-  (inny gatunek), tylko ewoluuje stworka w jego własnej linii
-  (`src/data/ewolucje.ts`) za kamienie, bez względu na poziom.
-- Gracz może **odmówić** ewolucji (jak Pikachu Asha) — stworek zostaje
-  mniejszy, ale uczy się szybciej.
+- Większość linii ewoluuje sama po osiągnięciu poziomu: **16** (etap 2)
+  i **32** (etap 3) — `PROG_EWOLUCJI` w `ewolucje.ts`. Ten sam stworek,
+  z tym samym poziomem i doświadczeniem, ×1,2 do HP i ataku za etap.
+  Dzieje się to przy każdym doświadczeniu: po bitwie (napis „X ewoluuje
+  w Y!"), po treningu w mieście, u AI.
+- Trzy linie ewoluują **tylko od kamienia** — po jednej na frakcję, strzelec
+  z drugiego poziomu (Flamir, Sporex, Ashko), jak Pikachu bez Kamienia Gromu.
+  Kamień działa w Ośrodku Ewolucji na mapie dla każdej linii, bez względu
+  na poziom.
+- **„Nie ewoluuj"** w oknie stworka (flaga `bezEwolucji`), jak Pikachu Asha,
+  który nie chciał zostać Raichu: poziom rośnie dalej, forma zostaje;
+  Ośrodek też go pomija. „Pozwól ewoluować" zdejmuje flagę — ewolucja
+  przychodzi z najbliższym doświadczeniem.
+- Sonda: `tools/probe-ewolucja.ts`.
 
 ## Etap 4 — ataki
 
@@ -123,7 +129,7 @@ Prompty i imiona — etap 6.
 |---|---|
 | 1 fundament | zrobione |
 | 2 trening i Centrum | zrobione |
-| 3 ewolucja | — |
+| 3 ewolucja | zrobione |
 | 4 ataki | — |
 | 5 trener w bitwie | — |
 | 6 frakcje i kampania | — |

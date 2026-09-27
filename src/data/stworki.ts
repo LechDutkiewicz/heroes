@@ -1,6 +1,6 @@
 import type { UnitDef } from './units';
 import { factionById } from './factions';
-import { etapStworka } from './ewolucje';
+import { etapStworka, nastepnyEtap, progEwolucji } from './ewolucje';
 import type { Oddzial } from './mapa';
 import { NA_POLU, createBattle, runBattle, type Battle, type Outcome } from './battle';
 
@@ -198,14 +198,36 @@ export function doswZaPokonanego(pokonany: { poziom: number; tier: number }, poz
 }
 
 /**
- * Dolicza doświadczenie stworkowi i podnosi mu poziom. Zwraca, o ile
- * poziomów urósł — scena mówi o awansie, a nie o liczbie punktów.
+ * Ewolucja od poziomu: stworek, który doszedł do progu swojej linii
+ * (`progEwolucji`), staje się następnym etapem — ten sam stworek, z tym
+ * samym poziomem i doświadczeniem, większy i silniejszy (`SKALA_ETAPU`).
+ * Linie od kamienia i stworki z `bezEwolucji` zostają, jakie są. Zwraca
+ * nazwy „przed → po" albo `undefined`.
  */
-export function dodajDosw(o: Oddzial, ile: number): number {
+export function ewoluujOdPoziomu(o: Oddzial): { z: string; na: string } | undefined {
+  if (o.bezEwolucji) return undefined;
+  const z = o.nazwa;
+  let zmiana = false;
+  for (let prog = progEwolucji(o.sprite); prog !== undefined && o.poziom >= prog; prog = progEwolucji(o.sprite)) {
+    const na = nastepnyEtap(o.sprite);
+    if (!na) break;
+    o.sprite = na.sprite;
+    o.nazwa = na.nazwa;
+    zmiana = true;
+  }
+  return zmiana ? { z, na: o.nazwa } : undefined;
+}
+
+/**
+ * Dolicza doświadczenie stworkowi, podnosi mu poziom i — jeśli doszedł do
+ * progu — ewoluuje. Zwraca, o ile poziomów urósł i czy ewoluował: scena
+ * mówi o awansie i ewolucji, a nie o liczbie punktów.
+ */
+export function dodajDosw(o: Oddzial, ile: number): { poziomy: number; ewolucja?: { z: string; na: string } } {
   const przed = o.poziom;
   o.dosw = doswStworka(o) + Math.max(0, Math.round(ile));
   o.poziom = Math.max(o.poziom, poziomZDosw(o.dosw));
-  return o.poziom - przed;
+  return { poziomy: o.poziom - przed, ewolucja: ewoluujOdPoziomu(o) };
 }
 
 /**
@@ -217,13 +239,13 @@ export function dodajDosw(o: Oddzial, ile: number): number {
 export function rozdajDosw(
   armia: readonly (Oddzial | null)[],
   pokonani: readonly { poziom: number; tier: number }[]
-): { nazwa: string; poziom: number; o: number }[] {
-  const awanse: { nazwa: string; poziom: number; o: number }[] = [];
+): { nazwa: string; poziom: number; o: number; ewolucja?: { z: string; na: string } }[] {
+  const awanse: { nazwa: string; poziom: number; o: number; ewolucja?: { z: string; na: string } }[] = [];
   for (const s of armia) {
     if (!s || s.omdlaly || s.ile <= 0) continue;
     const ile = pokonani.reduce((a, p) => a + doswZaPokonanego(p, s.poziom), 0);
-    const o = dodajDosw(s, ile);
-    if (o > 0) awanse.push({ nazwa: s.nazwa, poziom: s.poziom, o });
+    const w = dodajDosw(s, ile);
+    if (w.poziomy > 0 || w.ewolucja) awanse.push({ nazwa: s.nazwa, poziom: s.poziom, o: w.poziomy, ewolucja: w.ewolucja });
   }
   return awanse;
 }

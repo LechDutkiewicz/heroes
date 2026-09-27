@@ -604,6 +604,14 @@ export class PanelArmii {
       oddzial: o,
       glebia: this.o.glebia + 100,
       gdzie: m.pasek.gdzie,
+      przelaczEwolucje: aktywny
+        ? () => {
+            o.bezEwolucji = !o.bezEwolucji || undefined;
+            this.o.poZmianie(
+              o.bezEwolucji ? `${o.nazwa} nie będzie ewoluować.` : `${o.nazwa} może znów ewoluować.`
+            );
+          }
+        : undefined,
       zwolnij: aktywny
         ? {
             mozna: !ostatni,

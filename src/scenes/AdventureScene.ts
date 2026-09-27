@@ -5327,7 +5327,7 @@ export class AdventureScene extends Phaser.Scene {
     // Stworki wracają do swoich slotów — to te same postacie, więc nie
     // składamy drużyny od nowa, tylko zaznaczamy, kto zemdlał. Bitwa oddaje
     // każdy wpis z numerem slotu i liczbą stojących na nogach (0 albo 1).
-    let awanse: { nazwa: string; poziom: number }[] = [];
+    let awanse: { nazwa: string; poziom: number; ewolucja?: { z: string; na: string } }[] = [];
     if (wynik.armia) {
       const ocalali = this.stan.bohater.armia.map(() => 1);
       const walczyli = this.stan.bohater.armia.map(() => false);
@@ -5370,8 +5370,15 @@ export class AdventureScene extends Phaser.Scene {
             o?.rodzaj === 'zamek' ? `${o.nazwa} jest twoja!` : 'Zwycięstwo!',
             `+${nagroda} doświadczenia`,
             wyleczeni ? `Uzdrowiciel: ${wyleczeni} × znów na nogach` : '',
-            ...awanse.slice(0, 3).map((a) => `${a.nazwa} — ${napisPoziomu(a.poziom)}!`),
-            awanse.length > 3 ? `i ${awanse.length - 3} więcej awansów` : '',
+            // Ewolucje pierwsze — to one są wydarzeniem, awans o poziom mniej.
+            ...awanse.filter((a) => a.ewolucja).map((a) => `${a.ewolucja!.z} ewoluuje w ${a.ewolucja!.na}!`),
+            ...awanse
+              .filter((a) => !a.ewolucja)
+              .slice(0, 3)
+              .map((a) => `${a.nazwa} — ${napisPoziomu(a.poziom)}!`),
+            awanse.filter((a) => !a.ewolucja).length > 3
+              ? `i ${awanse.filter((a) => !a.ewolucja).length - 3} więcej awansów`
+              : '',
           ]
             .filter(Boolean)
             .join('\n')

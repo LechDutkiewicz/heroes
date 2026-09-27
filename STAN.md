@@ -66,7 +66,14 @@ mieście albo kampanii.
   trzeba go zrestartować, inaczej zrzuty i sondy widzą stary kod.
 - **Znacznik** „do bitwy": złoty róg na czterech pierwszych sprawnych slotach
   drużyny (`panelArmii.ts`).
-- **Do zrobienia dalej**: etapy 3–6 w `PROJEKT-TRENERZY.md`.
+- **Etap 3 — ewolucja** (opis w `PROJEKT-TRENERZY.md`): progi 16 i 32
+  (`PROG_EWOLUCJI`, `progEwolucji` w `ewolucje.ts`), `ewoluujOdPoziomu`
+  wołane z `dodajDosw` (bitwa, trening, AI), linie od kamienia
+  (Flamir, Sporex, Ashko — tylko Ośrodek Ewolucji), flaga `bezEwolucji`
+  z przyciskiem „Nie ewoluuj" w oknie stworka. `spriteDoPortretow` wczytuje
+  też NASTĘPNY etap każdego stworka z drużyny — ewolucja zdarza się
+  w trakcie sceny (po bitwie, po treningu). Sonda `probe-ewolucja.ts`.
+- **Do zrobienia dalej**: etapy 4–6 w `PROJEKT-TRENERZY.md`.
 
 ## Storki w stylu mapy — pętla „gauntlet" (2026-09-26)
 

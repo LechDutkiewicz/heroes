@@ -522,6 +522,12 @@ export interface Oddzial {
    * obudzi go Centrum Pokemon w mieście albo nowy tydzień.
    */
   omdlaly?: boolean;
+  /**
+   * Trener nie pozwala mu ewoluować (jak Pikachu Asha, który nie chciał
+   * zostać Raichu). Poziom rośnie dalej, forma zostaje. Ośrodek Ewolucji
+   * i tak go nie ruszy, dopóki flaga stoi.
+   */
+  bezEwolucji?: boolean;
 }
 
 export interface Bohater {
@@ -1269,7 +1275,7 @@ export function wezZeSkrzyni(s: StanMapy, w: WyborSkrzyni, co: 'pokeballe' | 'do
 export function doUlepszenia(b: Bohater) {
   for (let i = 0; i < b.armia.length; i++) {
     const o = b.armia[i];
-    if (!o) continue;
+    if (!o || o.bezEwolucji) continue;
     const na = nastepnyEtap(o.sprite);
     if (na) return { indeks: i, oddzial: o, na };
   }
@@ -1831,8 +1837,14 @@ export function trenuj(s: StanMapy, zamek: Obiekt, o: Oddzial, kto: Wlasciciel =
   if (skarbiec.pokeball < koszt) return { ok: false, opis: `Trening kosztuje ${koszt} pokeballi.` };
   skarbiec.pokeball -= koszt;
   zamek.treningi = zostalo - 1;
-  dodajDosw(o, Math.max(0, doswDoPoziomu(o.poziom + 1) - doswStworka(o)));
-  return { ok: true, opis: `${o.nazwa} trenuje — teraz ${napisPoziomu(o.poziom)}!` };
+  const stara = o.nazwa;
+  const w = dodajDosw(o, Math.max(0, doswDoPoziomu(o.poziom + 1) - doswStworka(o)));
+  return {
+    ok: true,
+    opis: w.ewolucja
+      ? `${stara} trenuje — ${napisPoziomu(o.poziom)} i ewoluuje w ${o.nazwa}!`
+      : `${o.nazwa} trenuje — teraz ${napisPoziomu(o.poziom)}!`,
+  };
 }
 
 /** Data w formacie z Heroes 3: tydzień i dzień tygodnia. */

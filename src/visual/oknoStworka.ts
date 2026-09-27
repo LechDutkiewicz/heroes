@@ -20,7 +20,7 @@ import Phaser from 'phaser';
 import type { Oddzial } from '../data/mapa';
 import { defStworka, napisPoziomu, postepStworka } from '../data/stworki';
 import { ABILITIES, TYPE_INFO, typeMatchup, type UnitDef } from '../data/units';
-import { etapStworka, liniaStworka, nastepnyEtap } from '../data/ewolucje';
+import { etapStworka, liniaStworka, nastepnyEtap, progEwolucji } from '../data/ewolucje';
 import { MINI, MINI_TYPE, buildIcons, miniIcon, type MiniKey } from './icons';
 import { pytanie } from './oknoZapisu';
 import {
@@ -42,6 +42,11 @@ export interface OpcjeOknaStworka {
    * przeciwnika). `mozna: false` pokazuje wyłączoną tabliczkę i powód.
    */
   zwolnij?: { mozna: boolean; powod?: string; akcja: () => void };
+  /**
+   * Przełącznik „Nie ewoluuj" (flaga `bezEwolucji`). Brak pola — okno nie
+   * pokazuje przycisku (stworek przeciwnika albo nieaktywny pasek).
+   */
+  przelaczEwolucje?: () => void;
   /** Podpis nad liczebnością, np. „w garnizonie" / „u bohatera". */
   gdzie?: string;
   poZamknieciu?: () => void;
@@ -176,7 +181,15 @@ export function pokazOknoStworka(scena: Phaser.Scene, o: OpcjeOknaStworka): Okno
   if (linia) {
     const etap = etapStworka(od.sprite);
     const dalej = nastepnyEtap(od.sprite);
-    const tekst = `Ewolucja: etap ${etap + 1} z ${linia.etapy.length}` + (dalej ? `, następny: ${dalej.nazwa}` : ', forma ostateczna');
+    const prog = progEwolucji(od.sprite);
+    const kiedy = !dalej
+      ? ', forma ostateczna'
+      : od.bezEwolucji
+        ? `. Trener nie pozwala mu ewoluować w: ${dalej.nazwa}`
+        : prog !== undefined
+          ? `. Na poziomie ${prog} ewoluuje w: ${dalej.nazwa}`
+          : `. W ${dalej.nazwa} ewoluuje tylko od kamienia (Ośrodek Ewolucji)`;
+    const tekst = `Ewolucja: etap ${etap + 1} z ${linia.etapy.length}${kiedy}`;
     k.add(
       scena.add
         .text(px, py + r + (o.gdzie ? 70 : 52), tekst, {
@@ -190,15 +203,36 @@ export function pokazOknoStworka(scena: Phaser.Scene, o: OpcjeOknaStworka): Okno
     );
   }
 
-  // Tabliczki: „Zwolnij" (drewno, z pytaniem) i „Zamknij" (złoto).
+  // Tabliczki: „Wypuść" (drewno, z pytaniem), „Nie ewoluuj" (drewno,
+  // przełącznik — tylko gdy stworek ma dokąd ewoluować) i „Zamknij" (złoto).
   const dolY = y + WYS - 38;
+  const przelacznik = o.przelaczEwolucje && nastepnyEtap(od.sprite) ? o.przelaczEwolucje : undefined;
+  // Trzy tabliczki dzielą dół okna na trzy, dwie — na dwie.
+  const krok = przelacznik ? 180 : 95;
+  const szer = przelacznik ? 150 : 160;
+  if (przelacznik) {
+    const napis = () => (od.bezEwolucji ? 'Pozwól ewoluować' : 'Nie ewoluuj');
+    const p = new Przycisk(scena, {
+      x: x + SZER / 2,
+      y: dolY,
+      w: szer,
+      h: 42,
+      tekst: napis(),
+      rozmiar: 14,
+      akcja: () => {
+        przelacznik();
+        p.setLabel(napis(), { rozmiar: 14 });
+      },
+    });
+    k.add(p.kontener);
+  }
   let pytanieOkno: { readonly otwarty: boolean } | undefined;
   if (o.zwolnij) {
     const zw = o.zwolnij;
     const przyciskZwolnij = new Przycisk(scena, {
-      x: x + SZER / 2 - 95,
+      x: x + SZER / 2 - krok,
       y: dolY,
-      w: 160,
+      w: szer,
       h: 42,
       tekst: 'Wypuść',
       rozmiar: 16,
@@ -231,9 +265,9 @@ export function pokazOknoStworka(scena: Phaser.Scene, o: OpcjeOknaStworka): Okno
     }
   }
   const przyciskZamknij = new Przycisk(scena, {
-    x: o.zwolnij ? x + SZER / 2 + 95 : x + SZER / 2,
+    x: o.zwolnij || przelacznik ? x + SZER / 2 + krok : x + SZER / 2,
     y: dolY,
-    w: 160,
+    w: szer,
     h: 42,
     tekst: 'Zamknij',
     glowny: true,
