@@ -590,3 +590,5 @@
 {"czas": "2026-09-27T15:03:14+00:00", "plik": "odznaka-grota.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 315, "wyj": 1056, "usd": 0.0438}
 {"czas": "2026-09-27T15:03:31+00:00", "plik": "odznaka-lod.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 323, "wyj": 1056, "usd": 0.0439}
 {"czas": "2026-09-27T15:03:44+00:00", "plik": "odznaka-srebro.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 315, "wyj": 1056, "usd": 0.0438}
+{"czas": "2026-09-27T15:45:50+00:00", "plik": "kampania-ela.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 404, "wyj": 1584, "usd": 0.0654}
+{"czas": "2026-09-27T15:46:23+00:00", "plik": "postac-ela.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 1049, "wyj": 1584, "usd": 0.0686}

@@ -100,21 +100,25 @@ mieście albo kampanii.
   brak (jest tylko `homm2`), więc ślepego porównania nie było.
 - **Do zrobienia dalej**: etapy 5–6 w `PROJEKT-TRENERZY.md`.
 
-## Ela jako nastolatka (2026-09-27)
+## Ela jako nastolatka-trenerka (2026-09-27)
 
-Na prośbę użytkownika Ela wygląda na ~15 lat (wzorce: Cynthia, Lillie, Dawn),
-nie na małą dziewczynkę. Nowy prompt `kampania-ela.png` (PROMPTY-KAMPANIA.md):
-smukła, długie proste czarne włosy, ta sama zielona kaszkietówka i turkusowa
-kamizelka (żeby zgadzała się z figurką na mapie). Z niego przez `images/edits`
-nowa `postac-ela.png` na lalkę ekranu bohatera (prompt w PROMPTY-BOHATER.md
-dostał „obie ręce w dół, nic w dłoniach" — pierwsza próba trzymała uniesiony,
-zdeformowany bal). Wpięte: `kampania_ilustracje.py` → `portret-ela.jpg`,
-`bohater_postac.py` → `postac-ela.png`. Koszt 3 obrazki ≈ $0,20
-(limit podniesiony jednorazowo `OPENAI_LIMIT_USD=29.5`; razem $28,26).
+Na prośbę użytkownika Ela wygląda na ~15 lat (wzorce: Cynthia, Lillie, Dawn)
+i jak trenerka z bajki, nie bohaterka fantasy. Pierwsza wersja (kaszkietówka,
+kamizelka, skórzana torba) była „zbyt heroesowa" — teraz nowoczesny strój
+trenerki: biała czapka-beanie z turkusowym paskiem, różowy szalik, krótka
+turkusowa kurtka, czarny top, różowa plisowana spódnica na czarnych
+legginsach, żółty plecak, rękawiczki bez palców, opaska na nadgarstku.
+Prompt `kampania-ela.png` (PROMPTY-KAMPANIA.md) wprost zakazuje ubrań
+średniowiecznych. Z portretu przez `images/edits` `postac-ela.png` na lalkę
+ekranu bohatera (obie ręce w dół, nic w dłoniach — gniazda artefaktów).
+Wpięte: `kampania_ilustracje.py` → `portret-ela.jpg`, `bohater_postac.py` →
+`postac-ela.png`. Koszt obu rund 5 obrazków ≈ $0,35 (limit podnoszony
+jednorazowo `OPENAI_LIMIT_USD`; razem $28,79).
 
 Zostało: głowa w medalionie (`public/kampania/glowa-ela.png`) i figurka na
 mapie (`ela.png`, `public/mapa/bohaterka*.png`) to wciąż przemalowany Janek —
-dziecięce proporcje. To obszar mapy przygody / `kampania_postacie.py`.
+dziecięce proporcje, zielona czapka z daszkiem. Nie pasują już do portretu.
+To obszar mapy przygody / `kampania_postacie.py`.
 
 ## Storki w stylu mapy — pętla „gauntlet" (2026-09-26)
 

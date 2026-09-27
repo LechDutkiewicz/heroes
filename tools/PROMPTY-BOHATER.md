@@ -220,18 +220,21 @@ only the character, no ground, no shadow, no scenery, no frame.
 <!-- plik: postac-ela.png | styl: kampania | proporcje: 2:3 | wzor: kampania-ela.png -->
 ```
 The same girl from the reference portrait, now shown as a FULL-BODY standing
-figure from the top of her cap down to her shoes, whole body inside the frame
-with a little empty space above the cap and below the shoes. Standing straight
-facing the viewer, symmetrical heroic pose like a paper doll, feet slightly
-apart, arms relaxed a little away from the body with open hands at hip height,
-calm confident smile. BOTH arms down, hands empty — she holds nothing (no
-ball in her hands). Keep her a slender, tall teenager of about fifteen with
-teen body proportions, not a little child. Keep exactly the same face, long
-straight black hair past the shoulders, green newsboy cap, white long-sleeved
-blouse under a fitted teal-green vest, brown leather satchel strap across the
-chest; add a brown belt, dark green trousers and sturdy brown boots. Same painted storybook style as the reference.
-Transparent background: only the character, no ground, no shadow, no scenery,
-no frame.
+figure from the top of her beanie down to her shoes, whole body inside the
+frame with a little empty space above the beanie and below the shoes.
+Standing straight facing the viewer, symmetrical heroic pose like a paper
+doll, feet slightly apart, arms relaxed a little away from the body with open
+hands at hip height, bright confident smile. BOTH arms down, hands empty — she
+holds nothing (no ball in her hands). Keep her a slender, tall teenager of
+about fifteen with teen body proportions, not a little child. Keep exactly the
+same face and the same modern anime creature-trainer outfit: long straight
+black hair past the shoulders with small teal clips, white knit beanie with
+a teal stripe, pink scarf, black sleeveless top under a short teal zip-up
+jacket with pink trim, fingerless gloves and a slim wristband, yellow
+backpack on her shoulders, short pleated pink skirt over black leggings; add
+pink-and-white sneakers. No medieval clothes, no vest, no belt buckle, no
+satchel. Same painted anime style as the reference. Transparent background:
+only the character, no ground, no shadow, no scenery, no frame.
 ```
 
 ## 4. Rywal i odznaki sal

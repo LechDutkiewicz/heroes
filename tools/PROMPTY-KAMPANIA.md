@@ -114,20 +114,24 @@ same storybook style as a children's adventure game.
 
 <!-- plik: kampania-ela.png | styl: kampania | proporcje: 3:4 -->
 ```
-Portrait from the waist up of a confident teenage girl of about fifteen, an
-experienced young creature trainer and the heroine of a cartoon adventure,
-facing the viewer at a slight three-quarter angle, calm self-assured warm
-smile. Clearly a teenager, not a little child: slender and tall, longer neck,
-slimmer oval face with a defined chin, smaller nose, graceful poise, eyes
-still big and expressive with lashes, like the stylish teenage heroines of
-creature-collecting cartoons. Long straight glossy black hair falling past her
-shoulders with soft side-swept bangs, a green newsboy cap worn slightly
-tilted. She wears a white long-sleeved blouse under a fitted teal-green vest,
-a brown leather satchel strap across her chest, modest and practical
-adventurer clothes. She holds a small red-and-white capture ball raised near
-her shoulder. Behind her a soft sunny emerald forest clearing with warm golden
-light and gentle bokeh. Painted character art, same storybook style as a
-children's adventure game.
+Portrait from the waist up of a confident teenage girl of about fifteen, a
+modern creature trainer exactly like the teenage heroines of a TV anime about
+catching and training cute creatures, facing the viewer at a slight
+three-quarter angle, bright self-assured smile. Clearly a teenager, not a
+little child: slender, longer neck, slimmer oval face with a defined chin,
+big expressive anime eyes with lashes. Long straight glossy black hair past
+her shoulders with side-swept bangs and two small teal hair clips. Modern
+sporty trainer outfit of today, not historical: a white knit beanie with a
+teal stripe, a black sleeveless top under a short teal zip-up jacket with
+short sleeves and a pink trim, a pink scarf, a short pleated pink skirt over
+black leggings, a small yellow backpack with its straps on her shoulders,
+a fingerless glove and a slim digital wristband. She holds a small
+red-and-white capture ball raised near her shoulder, ready to throw. No
+medieval or fantasy clothes: no vest, no tunic, no blouse, no leather
+satchel, no belt buckle, no cloak, no cap with a brim. Behind her a sunny
+grassy route at the edge of an emerald forest with warm golden light and
+gentle bokeh. Clean anime character design, painted with soft light, same
+storybook palette as a children's adventure game.
 ```
 
 ## 3. Wstęp i zakończenie
