@@ -86,7 +86,19 @@ mieście albo kampanii.
   tego m1 była nie do wygrania. Sondy: `probe-pojedynki.ts` (dane),
   `probe-pojedynek.mjs` (przeglądarka). Symulacje: m1 d7, m4 d15–25, m3 d7–9,
   m2 bez wyniku do d60 jak wcześniej, błędów 0. OpenAI: 9 obrazków, 0,38 USD.
-- **Do zrobienia dalej**: etapy 4–6 w `PROJEKT-TRENERZY.md`.
+- **Etap 4 — ataki** (opis w `PROJEKT-TRENERZY.md`): `src/data/ataki.ts`
+  (lista ataków z definicji stworka: żywioł, strzelec, umiejętność, `etap`
+  — nowe pole `UnitDef.etap` z `defStworka`). Silnik: `SimUnit.pp`,
+  `damageOf/resolveHit/performAttack(…, atak)`, zdarzenie `cios.atak`,
+  `AiAction.atak`, `ocenAtaku` w AI. Scena: `visual/pasekAtakow.ts` w miejscu
+  kapsułki prognozy (prognoza dostała `setVisible`), klawisze 1–3, karta
+  oddziału ma wiersz „Ataki" z PP zamiast „Umiejętność" (poprawione też
+  „×1.5" → `TYPE_STRONG`). Okno stworka: wiersz „Ataki" i „Cecha" dla
+  strażnika. Decyzje: PP odnawiają się co bitwę (dzieci), zasięg ataku =
+  rodzaj stworka (bez nowych reguł dojścia), tura zaczyna się od zwykłego
+  ataku (nie marnować PP jednym klikiem). Wzorców HoMM3 w `tools/reference/`
+  brak (jest tylko `homm2`), więc ślepego porównania nie było.
+- **Do zrobienia dalej**: etapy 5–6 w `PROJEKT-TRENERZY.md`.
 
 ## Storki w stylu mapy — pętla „gauntlet" (2026-09-26)
 

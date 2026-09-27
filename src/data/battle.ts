@@ -22,6 +22,7 @@ import {
   type UnitDef,
 } from './units';
 import { hexDistance, hexNeighbours, type Cell } from './hex';
+import { atakiStworka, type Atak } from './ataki';
 
 export const COLS = 10;
 export const ROWS = 7;
@@ -61,6 +62,11 @@ export interface SimUnit extends Cell {
   retaliations: number;
   waited: boolean;
   defending: boolean;
+  /**
+   * Ile razy jeszcze może użyć każdego ataku (`ataki.ts`), po indeksie;
+   * null — bez limitu. Odnawia się co bitwę.
+   */
+  pp: (number | null)[];
 }
 
 export interface Battle {
@@ -267,7 +273,18 @@ export const ATAK_BOHATERA_MAKS = 3;
 export const OBRONA_BOHATERA_ZA_PUNKT = 0.025;
 export const OBRONA_BOHATERA_MAKS = 0.7;
 
-export function damageOf(b: Battle, attacker: SimUnit, target: SimUnit) {
+/** Ataki jednostki w kolejności przycisków — patrz `ataki.ts`. */
+export const atakiJednostki = (u: SimUnit): Atak[] => atakiStworka(u.def);
+
+/** Czy jednostka może teraz użyć ataku o tym indeksie (zna go i ma PP). */
+export function atakDostepny(u: SimUnit, atak: number): boolean {
+  if (atak < 0 || atak >= atakiJednostki(u).length) return false;
+  const pp = u.pp[atak];
+  return pp === null || pp === undefined || pp > 0;
+}
+
+export function damageOf(b: Battle, attacker: SimUnit, target: SimUnit, atak = 0) {
+  const moc = atakiJednostki(attacker)[atak]?.moc ?? 1;
   const typeMult = typeMultiplier(attacker.def.type, target.def.type);
   const pinned = attacker.def.shooter && hasAdjacentEnemy(b, attacker);
   const tooFar =
@@ -276,10 +293,11 @@ export function damageOf(b: Battle, attacker: SimUnit, target: SimUnit) {
   const guard = target.defending ? GUARD_REDUCTION : 1;
   const base = stackAtk(attacker.def, attacker);
   const bonus = bonusUmiejetnosci(b, attacker, target);
-  const value = Math.max(1, Math.round(base * typeMult * penalty * guard * bonus));
+  const value = Math.max(1, Math.round(base * moc * typeMult * penalty * guard * bonus));
   return {
     value,
     base,
+    moc,
     typeMult,
     penalty,
     pinned,
@@ -318,8 +336,8 @@ function bonusUmiejetnosci(b: Battle, attacker: SimUnit, target: SimUnit) {
 }
 
 /** Nalicza jedno trafienie. Zwraca liczbę poległych. */
-export function resolveHit(b: Battle, attacker: SimUnit, target: SimUnit) {
-  const { value, typeMult, pinned, tooFar } = damageOf(b, attacker, target);
+export function resolveHit(b: Battle, attacker: SimUnit, target: SimUnit, atak = 0) {
+  const { value, typeMult, pinned, tooFar } = damageOf(b, attacker, target, atak);
   const guarded = target.defending;
   const { state, killed } = applyDamage(target.def, target, value);
   // Liczymy obrażenia FAKTYCZNIE zadane, nie wyliczone: cios w oddział, któremu
@@ -373,6 +391,8 @@ export type BattleEvent =
       strzal: boolean;
       /** to drugi cios oddziału z podwójnym uderzeniem */
       drugi: boolean;
+      /** indeks użytego ataku (`ataki.ts`); odwet to zawsze atak 0 */
+      atak: number;
       typeMult: number;
       pinned: boolean;
       tooFar: boolean;
@@ -390,14 +410,24 @@ export function performAttack(
   b: Battle,
   attacker: SimUnit,
   target: SimUnit,
-  from: Cell
+  from: Cell,
+  atak = 0
 ): BattleEvent[] {
   const origin = { col: attacker.col, row: attacker.row };
   const shooting = canShoot(b, attacker);
   const log: BattleEvent[] = [];
+  // Atak bez PP (albo nieznany) zamienia się w zwykły — nigdy w brak ciosu.
+  if (!atakDostepny(attacker, atak)) atak = 0;
+  const efekt = atakiJednostki(attacker)[atak]?.efekt;
+  const pp = attacker.pp[atak];
+  if (pp !== null && pp !== undefined) attacker.pp[atak] = pp - 1;
 
-  const hit = (a: SimUnit, t: SimUnit, opts: { odwet: boolean; strzal: boolean; drugi: boolean }) => {
-    const r = resolveHit(b, a, t);
+  const hit = (
+    a: SimUnit,
+    t: SimUnit,
+    opts: { odwet: boolean; strzal: boolean; drugi: boolean; atak: number }
+  ) => {
+    const r = resolveHit(b, a, t, opts.atak);
     log.push({
       rodzaj: 'cios',
       kto: a.id,
@@ -409,6 +439,7 @@ export function performAttack(
       odwet: opts.odwet,
       strzal: opts.strzal,
       drugi: opts.drugi,
+      atak: opts.atak,
       typeMult: r.typeMult,
       pinned: r.pinned,
       tooFar: r.tooFar,
@@ -425,29 +456,30 @@ export function performAttack(
     log.push({ rodzaj: 'ruch', kto: attacker.id, zKol, zRzed, doKol: from.col, doRzed: from.row });
   }
 
-  hit(attacker, target, { odwet: false, strzal: shooting, drugi: false });
+  hit(attacker, target, { odwet: false, strzal: shooting, drugi: false, atak });
 
   // Podwójny cios pada, zanim obrońca zdąży oddać.
-  if (attacker.def.ability === 'double' && isAlive(b, attacker) && isAlive(b, target)) {
-    hit(attacker, target, { odwet: false, strzal: shooting, drugi: true });
+  if (efekt === 'podwojny' && isAlive(b, attacker) && isAlive(b, target)) {
+    hit(attacker, target, { odwet: false, strzal: shooting, drugi: true, atak });
   }
 
-  // Strzał nie prowokuje odwetu; uderz-i-wróć też go nie dostaje.
+  // Strzał nie prowokuje odwetu; uderz-i-wróć i atak ostateczny też nie.
   const retaliates =
     !shooting &&
-    attacker.def.ability !== 'strikeAndReturn' &&
+    efekt !== 'uderzIWroc' &&
+    efekt !== 'bezOdwetu' &&
     isAlive(b, attacker) &&
     isAlive(b, target) &&
     target.retaliations > 0;
 
   if (retaliates) {
     if (target.def.ability !== 'guardian') target.retaliations--;
-    hit(target, attacker, { odwet: true, strzal: false, drugi: false });
+    hit(target, attacker, { odwet: true, strzal: false, drugi: false, atak: 0 });
   }
 
   // Harpia odskakuje na pole, z którego ruszyła.
   const moved = attacker.col !== origin.col || attacker.row !== origin.row;
-  if (attacker.def.ability === 'strikeAndReturn' && isAlive(b, attacker) && moved) {
+  if (efekt === 'uderzIWroc' && isAlive(b, attacker) && moved) {
     const occupied = b.units.some(
       (u) => u.id !== attacker.id && u.col === origin.col && u.row === origin.row
     );
@@ -472,7 +504,7 @@ export function performAttack(
  * własną kopię punktacji celów i to ona rozjeżdżała się z symulacją.
  */
 export type AiAction =
-  | { rodzaj: 'atak'; cel: SimUnit; from: Cell }
+  | { rodzaj: 'atak'; cel: SimUnit; from: Cell; atak: number }
   | { rodzaj: 'ruch'; cel: Cell }
   | { rodzaj: 'obrona' }
   | { rodzaj: 'czekanie' }
@@ -529,25 +561,53 @@ function szarzaSamotna(b: Battle, unit: SimUnit, from: Cell): boolean {
   return wrogowie > swoi;
 }
 
+/**
+ * Ile wart jest atak `atak` w cel — ta sama punktacja, co dawniej dla ciosu
+ * (pewne zemdlenie celu, obrażenia, strzelec na celowniku), plus dwie rzeczy
+ * z ataków: uniknięty odwet liczy się jako połowa jego obrażeń, a zużycie PP
+ * kosztuje 15% zwykłego ciosu — maszyna nie wystrzela specjalnego ataku na
+ * cel, który i tak padnie od zwykłego.
+ */
+function ocenAtaku(b: Battle, unit: SimUnit, target: SimUnit, atak: number, zwykly: number): number {
+  const a = atakiJednostki(unit)[atak];
+  const { value, kills } = damageOf(b, unit, target, atak);
+  const dmg = a.efekt === 'podwojny' ? value * 2 : value;
+  const zemdleje = dmg >= total(target);
+  let score = (zemdleje ? 100 : 0) + kills * 10 + Math.min(dmg, total(target)) + (target.def.shooter ? 5 : 0);
+  if (
+    (a.efekt === 'uderzIWroc' || a.efekt === 'bezOdwetu') &&
+    !canShoot(b, unit) &&
+    !zemdleje &&
+    target.retaliations > 0
+  ) {
+    score += damageOf(b, target, unit, 0).value * 0.5;
+  }
+  if (a.pp !== null) score -= zwykly * 0.15;
+  return score;
+}
+
 export function chooseAction(b: Battle, unit: SimUnit): AiAction {
   const targets = b.units.filter((u) => u.side !== unit.side);
   if (targets.length === 0) return { rodzaj: 'nic' };
 
   const reach = reachable(b, unit);
 
-  let best: { target: SimUnit; from: Cell; score: number } | null = null;
+  let best: { target: SimUnit; from: Cell; score: number; atak: number } | null = null;
+  const ataki = atakiJednostki(unit);
   for (const target of targets) {
     const plan = attackPlan(b, unit, target, reach);
     if (!plan) continue;
-    const { value: dmg, kills } = damageOf(b, unit, target);
-    const score =
-      (dmg >= total(target) ? 100 : 0) + kills * 10 + dmg + (target.def.shooter ? 5 : 0);
-    if (!best || score > best.score) best = { target, from: plan.from, score };
+    const zwykly = damageOf(b, unit, target, 0).value;
+    for (let i = 0; i < ataki.length; i++) {
+      if (!atakDostepny(unit, i)) continue;
+      const score = ocenAtaku(b, unit, target, i, zwykly);
+      if (!best || score > best.score) best = { target, from: plan.from, score, atak: i };
+    }
   }
 
   if (best) {
     if (szarzaSamotna(b, unit, best.from)) return { rodzaj: 'czekanie' };
-    return { rodzaj: 'atak', cel: best.target, from: best.from };
+    return { rodzaj: 'atak', cel: best.target, from: best.from, atak: best.atak };
   }
 
   let nearest = targets[0];
@@ -574,7 +634,7 @@ export function chooseAction(b: Battle, unit: SimUnit): AiAction {
  */
 export function takeTurn(b: Battle, unit: SimUnit): AiAction {
   const action = chooseAction(b, unit);
-  if (action.rodzaj === 'atak') performAttack(b, unit, action.cel, action.from);
+  if (action.rodzaj === 'atak') performAttack(b, unit, action.cel, action.from, action.atak);
   else if (action.rodzaj === 'obrona') unit.defending = true;
   else if (action.rodzaj === 'czekanie') unit.waited = true;
   else if (action.rodzaj === 'ruch') {
@@ -621,6 +681,7 @@ export function makeUnit(def: UnitDef, side: Side, col: number, row: number, id:
     retaliations: 1,
     waited: false,
     defending: false,
+    pp: atakiStworka(def).map((a) => a.pp),
   };
 }
 
