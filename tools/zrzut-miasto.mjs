@@ -67,6 +67,16 @@ await scena('zamek');
 // Gwiazdki nad budynkami falują tweenem — bez odczekania łapiemy je w losowej
 // fazie i dwa zrzuty tej samej wersji różnią się bez powodu.
 await page.waitForTimeout(1800);
+// `--karta centrum|sala` — zrzut z otwartą kartą stałego budynku (etap 6).
+const KARTA = arg('--karta', '');
+if (KARTA) {
+  await page.evaluate((id) => {
+    const t = window.__game.scene.getScene('zamek');
+    if (id === 'sala') t.panel.wybor = { pasek: t.panel.paski[1], slot: 0 };
+    t.pokazBudynek(t.profil.stale.find((b) => b.id === id));
+  }, KARTA);
+  await page.waitForTimeout(600);
+}
 await page.locator('canvas').screenshot({ path: OUT });
 console.log(`zapisano ${OUT}`);
 await browser.close();

@@ -38,6 +38,7 @@ import {
 } from '../src/data/kampania';
 import { bohaterDoPrzeniesienia, druzynaDoPrzeniesienia, rozpocznijMisje } from '../src/data/kampania-start';
 import type { Oddzial } from '../src/data/mapa';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 declare const process: { env: Record<string, string | undefined>; exitCode?: number };
 const PROB = Number(process.env.PROB ?? 3);
@@ -102,6 +103,7 @@ const zaloga = (s: StanMapy) => {
 let weteran: BohaterPrzenoszony | undefined;
 /** Drużyna przechodząca z misji do misji (etap 6); `DRUZYNA=0` — startowa planszy. */
 const DRUZYNA = process.env.DRUZYNA !== '0';
+const WETERAN_PLIK = process.env.WETERAN_PLIK;
 let druzyna: Oddzial[] | undefined;
 
 function przebieg(m: Misja, graj: boolean, ziarno: number, horyzont: number): Wynik {
@@ -179,6 +181,12 @@ for (const [i, m] of KAMPANIA.misje.entries()) {
   const p = PROGI[m.id];
   if (TYLKO && m.id !== TYLKO) {
     // Misja przed badaną: jeden przebieg, tylko po to, żeby mieć bohatera.
+    // `WETERAN_PLIK=…json` zapamiętuje weterana przed badaną misją — kolejne
+    // strojenie tej samej misji nie liczy od nowa misji poprzednich.
+    if (WETERAN && WETERAN_PLIK && existsSync(WETERAN_PLIK)) {
+      ({ weteran, druzyna } = JSON.parse(readFileSync(WETERAN_PLIK, 'utf8')));
+      continue;
+    }
     if (WETERAN) {
       const st = przebieg(m, true, 1000, p.horyzont).stan;
       weteran = bohaterDoPrzeniesienia(st);
@@ -186,6 +194,7 @@ for (const [i, m] of KAMPANIA.misje.entries()) {
     }
     continue;
   }
+  if (WETERAN && WETERAN_PLIK && !existsSync(WETERAN_PLIK)) writeFileSync(WETERAN_PLIK, JSON.stringify({ weteran, druzyna }));
   console.log(`\n=== misja ${m.nr}: ${m.tytul} (plansza ${m.mapa}) — ${PROB} przebiegów ===`);
   console.log(`  bohater: ${opisBohatera(WETERAN ? weteran : undefined)}`);
   if (WETERAN && DRUZYNA && druzyna)

@@ -165,8 +165,13 @@ Prompty i imiona — etap 6.
 - **Kampania = droga po odznaki**: odznaki zbierają się przez całą kampanię
   (`PostepKampanii.odznaki`) i stoją w górnej belce ekranu kampanii zamiast
   klejnotów postępu.
-- Zostało: budynki Centrum Pokemon i Sali treningowej na panoramie miasta,
-  frakcje przeciwników jako osobne typy stworków liderów.
+- **Centrum Pokemon i Sala treningowa na panoramie miasta**
+  (`ProfilZamku.stale` w `zamki.ts`): stoją w każdym mieście od początku,
+  nie ma ich na liście budowy. Klik w Centrum budzi zemdlonych (garnizon,
+  drużynę w mieście), klik w Salę — karta treningu zaznaczonego stworka.
+  Grafiki: `tools/PROMPTY-MIASTO.md` (OpenAI z wzorami stworków i kotwicy
+  miasta), Grota i Zbocze przemalowane `frakcje_przemaluj.py`.
+- Zostało: frakcje przeciwników jako osobne typy stworków liderów.
 
 ## Stan
 

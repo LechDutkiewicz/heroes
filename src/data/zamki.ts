@@ -21,7 +21,7 @@ import { MNOZNIK_FORTU, naPokeballe } from './zasady-h3';
  * i ciężka), Grota siedzi pośrodku i najtaniej stawia ratusze (gra ekonomią).
  */
 
-export type RodzajBudynku = 'ratusz' | 'fort' | 'siedlisko' | 'specjalny';
+export type RodzajBudynku = 'ratusz' | 'fort' | 'siedlisko' | 'specjalny' | 'centrum' | 'sala';
 
 export interface Budynek {
   id: string;
@@ -58,6 +58,12 @@ export interface ProfilZamku {
   /** Krótkie zdanie na ekranie miasta. */
   motto: string;
   budynki: Budynek[];
+  /**
+   * Budynki, które stoją w każdym mieście od początku i których się nie
+   * buduje (etap 6): Centrum Pokemon i Sala treningowa. Osobno od `budynki`,
+   * żeby lista budowy, AI i przyrost ich nie widziały.
+   */
+  stale: Budynek[];
 }
 
 /**
@@ -244,6 +250,28 @@ const BARWY: Record<string, { barwa: number; niebo: number; ziemia: number; mott
   },
 };
 
+/** Centrum Pokemon i Sala treningowa — miejsca na panoramie wolne od reszty brył. */
+const STALE: Array<Pick<Budynek, 'id' | 'rodzaj' | 'nazwa' | 'opis' | 'x' | 'y' | 'skala'>> = [
+  {
+    id: 'centrum',
+    rodzaj: 'centrum',
+    nazwa: 'Centrum Pokemon',
+    opis: 'Tu zemdlone stworki wracają do sił — wystarczy, że trener wejdzie do miasta.',
+    x: 0.88,
+    y: 0.86,
+    skala: 0.45,
+  },
+  {
+    id: 'sala',
+    rodzaj: 'sala',
+    nazwa: 'Sala treningowa',
+    opis: 'Zaznacz stworka i trenuj: +1 poziom za pokeballe.',
+    x: 0.42,
+    y: 0.93,
+    skala: 0.5,
+  },
+];
+
 function zbudujProfil(frakcja: string, nazwaMiasta: string): ProfilZamku {
   const profil = PROFILE[frakcja] ?? PROFILE.bor;
   const nazwy = NAZWY[frakcja] ?? NAZWY.bor;
@@ -272,6 +300,7 @@ function zbudujProfil(frakcja: string, nazwaMiasta: string): ProfilZamku {
       y: s.y,
       skala: s.skala,
     })),
+    stale: STALE.map((s) => ({ ...s, koszt: {}, wymaga: [] })),
   };
 }
 

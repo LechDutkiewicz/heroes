@@ -466,6 +466,8 @@ BUDYNKI = {
     'ratusz1': 520, 'ratusz2': 600, 'ratusz3': 680, 'fort': 520,
     'siedlisko1': 380, 'siedlisko2': 400, 'siedlisko3': 400, 'siedlisko4': 440,
     'siedlisko5': 470, 'siedlisko6': 640, 'specjalny': 380, 'plac': 360,
+    # Etap 6: Centrum Pokemon i Sala treningowa (`tools/PROMPTY-MIASTO.md`).
+    'centrum': 300, 'sala': 280,
     # Ulepszone siedliska trzech górnych poziomów. Stoją w tym samym punkcie
     # panoramy co ich podstawowa wersja, więc i wysokość mają tę samą.
     'siedlisko4u': 440, 'siedlisko5u': 470, 'siedlisko6u': 640,
