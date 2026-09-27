@@ -1,16 +1,20 @@
 import type { ElementType } from './units';
 
 /**
- * Linie ewolucyjne stworków — PROJEKT, jeszcze bez mechaniki w grze.
+ * Linie ewolucyjne stworków i ich zasady (etap 3 w `PROJEKT-TRENERZY.md`).
  *
  * Skąd pomysł: „ewolucja zmienia jednego pokemona w innego — fabularnie się
  * nie klei" (uwagi z rozgrywki, STAN.md). Dziś Ośrodek Ewolucji podnosi
  * oddział o poziom, czyli Pyroko staje się Flamirem, który z Pyroko nie ma
  * nic wspólnego. Tu każdy stworek z zamku dostaje własną linię jak
  * w Pokemonach: forma bazowa (obecny oddział) → etap 2 → etap 3, ten sam
- * gatunek, te same barwy, coraz większy i groźniejszy. Mechanika (budynek
- * w mieście, koszt w kamieniach ewolucji i jagodach, statystyki etapów, AI)
- * to osobne zadanie — ten plik mówi tylko, KTO w KOGO ewoluuje.
+ * gatunek, te same barwy, coraz większy i groźniejszy.
+ *
+ * Jak w grach o pokemonach, większość linii ewoluuje sama po osiągnięciu
+ * poziomu (`PROG_EWOLUCJI`: 16 i 32), a część tylko od kamienia ewolucji
+ * (`kamien: true`) — jak Pikachu, który bez Kamienia Gromu nie zostanie
+ * Raichu. Kamień działa w Ośrodku Ewolucji na mapie, dla każdej linii i bez
+ * względu na poziom. Statystyki etapu: `SKALA_ETAPU` w `stworki.ts`.
  *
  * Sprawdzone pary w frakcjach: każda frakcja ma po dwa oddziały każdego
  * żywiołu (Bór: ogień 1–2, woda 3–4, trawa 5–6; Grota: woda 1–5, trawa
@@ -43,7 +47,23 @@ export interface LiniaEwolucji {
   zywiol: ElementType;
   /** od formy bazowej (obecny oddział) do ostatniej */
   etapy: [EtapEwolucji, EtapEwolucji, EtapEwolucji];
+  /** ewoluuje wyłącznie od kamienia ewolucji, nie od poziomu */
+  kamien?: boolean;
 }
+
+/**
+ * Poziom, od którego stworek ewoluuje sam: do etapu 2 i do etapu 3.
+ * Te same progi co u startowych pokemonów w grach (Charmander 16,
+ * Charmeleon 36 — u nas okrągłe 32, bo poziomów jest 50, nie 100).
+ */
+export const PROG_EWOLUCJI = [16, 32] as const;
+
+/**
+ * Linie od kamienia: po jednej na frakcję, zawsze strzelec z drugiego
+ * poziomu — w każdym mieście jest więc jeden stworek, dla którego warto
+ * szukać kamieni, a nie tylko czekać na poziom.
+ */
+const OD_KAMIENIA = new Set(['00020', '00002', '00058']);
 
 type Para = [sprite: string, nazwa: string];
 
@@ -54,7 +74,7 @@ function linia(
   ...etapy: [Para, Para, Para]
 ): LiniaEwolucji {
   const [a, b, c] = etapy.map(([sprite, nazwa]) => ({ sprite, nazwa }));
-  return { frakcja, poziom, zywiol, etapy: [a, b, c] };
+  return { frakcja, poziom, zywiol, etapy: [a, b, c], kamien: OD_KAMIENIA.has(a.sprite) || undefined };
 }
 
 export const LINIE_EWOLUCJI: LiniaEwolucji[] = [
@@ -102,3 +122,14 @@ export function nastepnyEtap(sprite: string): EtapEwolucji | undefined {
 
 /** Wszystkie sprite'y wszystkich etapów — do wczytania przed sceną z ewolucją. */
 export const SPRITE_EWOLUCJI = LINIE_EWOLUCJI.flatMap((l) => l.etapy.map((e) => e.sprite));
+
+/**
+ * Na jakim poziomie ten stworek ewoluuje sam; `undefined`, gdy nie ewoluuje
+ * od poziomu (ostatni etap, linia od kamienia albo stworek bez linii).
+ */
+export function progEwolucji(sprite: string): number | undefined {
+  const l = liniaStworka(sprite);
+  const i = etapStworka(sprite);
+  if (!l || i < 0 || i >= PROG_EWOLUCJI.length || l.kamien) return undefined;
+  return PROG_EWOLUCJI[i];
+}

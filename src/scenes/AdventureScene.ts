@@ -45,7 +45,8 @@ import { STRAZNICY_MAPOWI } from '../data/strazniki-mapa';
 import type { PoseName } from '../visual/unitView';
 import { planszaPoId } from '../data/mapy';
 import { turaWroga } from '../data/wrog-ai';
-import { SLOTY_ARMII, dolacz, pustaArmia, zywe } from '../data/armia';
+import { SLOTY_ARMII, zywe } from '../data/armia';
+import { ktosNaNogach, napisPoziomu, obudz, rozdajDosw } from '../data/stworki';
 import { autozapis, nazwaSlotu } from '../data/zapis';
 import { pokazWczytanie, pokazZapis } from '../visual/oknoZapisu';
 import { KAMPANIA, misjaPoId, wczytajPostep } from '../data/kampania';
@@ -712,7 +713,7 @@ export class AdventureScene extends Phaser.Scene {
         ? {
             pole: `${this.stan.bohater.x},${this.stan.bohater.y}`,
             ruch: this.stan.bohater.ruch,
-            armia: zywe(this.stan.bohater.armia).map((o) => `${o.sprite}×${o.ile}`),
+            armia: zywe(this.stan.bohater.armia).map((o) => `${o.sprite}×${o.ile}@${o.poziom}${o.omdlaly ? "z" : ""}`),
             skarbiec: this.stan.skarbiec,
             zajety: this.zajety,
             trasa: this.trasaBiezaca?.length ?? 0,
@@ -3650,7 +3651,12 @@ export class AdventureScene extends Phaser.Scene {
         im.setTexture(kluczPortretuPanelu(od.sprite)).setVisible(true);
         im.setDisplaySize(28, 28);
         (slot.getData('oprawa') as Phaser.GameObjects.Graphics).setVisible(true);
-        licznik.setText(String(od.ile));
+        // Tabliczka pod portretem mówi POZIOM stworka (dawniej liczebność
+        // stosu). Zemdlony stworek jest wyszarzony, tak jak w grach
+        // o pokemonach ikona w drużynie — widać od razu, kto nie walczy.
+        licznik.setText(String(od.poziom));
+        if (od.omdlaly) im.setTint(0x6a6a6a).setAlpha(0.7);
+        else im.clearTint().setAlpha(1);
       } else {
         im.setVisible(false);
         (slot.getData('oprawa') as Phaser.GameObjects.Graphics).setVisible(false);
@@ -4133,7 +4139,9 @@ export class AdventureScene extends Phaser.Scene {
 
   private opisObiektu(o: Obiekt) {
     if (o.rodzaj === 'potwor') {
-      const armia = (o.oddzialy ?? []).map((s) => `${s.ile} × ${s.nazwa}`).join(', ');
+      const armia = (o.oddzialy ?? [])
+        .map((s) => `${s.ile > 1 ? `${s.ile} × ` : ''}${s.nazwa}, ${napisPoziomu(s.poziom)}`)
+        .join('\n');
       return `${o.nazwa}\n${armia}\nWejdź, żeby stoczyć bitwę.`;
     }
     if (o.rodzaj === 'kopalnia') {
@@ -4665,34 +4673,23 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   /**
-   * Uzdrowiciel: część poległych wraca po wygranej bitwie.
-   *
-   * Liczymy ze SKŁADU SPRZED BITWY, bo wynik bitwy zna wyłącznie ocalałych —
-   * a „ilu zginęło" to jedyna liczba, z której ta umiejętność może korzystać.
-   * Wracają tylko do stosów, które PRZEŻYŁY: wskrzeszanie wybitego do zera
-   * oddziału byłoby cofaniem bitwy, a nie leczeniem rannych.
+   * Uzdrowiciel: część stworków zemdlonych w tej bitwie od razu wraca do
+   * siebie po wygranej. Liczymy tylko tych, którzy zemdleli TERAZ — kto
+   * ruszał do boju już zemdlony (wcale nie walczył), czeka na Centrum.
+   * Zaokrąglenie w górę: przy jednym zemdlonym nawet pierwszy stopień
+   * umiejętności coś daje, a nie jest pustym wpisem w karcie bohatera.
    */
   private uzdrowiciel(): number {
     const odsetek = efekt(this.stan.bohater, 'leczenie');
-    const przed = this.registry.get(KLUCZ_PRZED_BITWA) as
-      | Array<{ slot: number; ile: number }>
-      | undefined;
+    const przed = this.registry.get(KLUCZ_PRZED_BITWA) as Array<{ slot: number }> | undefined;
     this.registry.remove(KLUCZ_PRZED_BITWA);
     if (odsetek <= 0 || !przed) return 0;
-
-    // Po SLOCIE, nie po gatunku: dwa sloty tego samego gatunku (rozdzielony
-    // stos) to zwykły układ, a szukanie po `sprite` leczyło pierwszy z brzegu
-    // dwa razy i nie leczyło drugiego.
-    let wrocilo = 0;
-    for (const wpis of przed) {
-      const stos = this.stan.bohater.armia[wpis.slot];
-      if (!stos || stos.ile >= wpis.ile) continue;
-      const straty = wpis.ile - stos.ile;
-      const wraca = Math.floor(straty * odsetek);
-      stos.ile += wraca;
-      wrocilo += wraca;
-    }
-    return wrocilo;
+    const zemdleli = przed
+      .map((w) => this.stan.bohater.armia[w.slot])
+      .filter((o): o is Oddzial => !!o?.omdlaly);
+    const wraca = Math.ceil(zemdleli.length * odsetek);
+    zemdleli.slice(0, wraca).forEach((o) => delete o.omdlaly);
+    return Math.min(wraca, zemdleli.length);
   }
 
   /**
@@ -4824,6 +4821,12 @@ export class AdventureScene extends Phaser.Scene {
    * armii i numer obiektu, o który się bije.
    */
   private zacznijBitwe(o: Obiekt) {
+    // Wszyscy zemdleni: nie ma kim walczyć. Bitwa bez ani jednego stworka
+    // byłaby przegrana, zanim się zaczęła — mówimy wprost, co zrobić.
+    if (!ktosNaNogach(this.stan.bohater.armia)) {
+      this.napisUlotny('Twoje stworki są zemdlone.\nOdpocznijcie w mieście.');
+      return;
+    }
     this.zajety = true;
     stopMusic(this);
     stopAmbient(this);
@@ -4833,7 +4836,7 @@ export class AdventureScene extends Phaser.Scene {
     this.registry.set(
       KLUCZ_PRZED_BITWA,
       this.stan.bohater.armia
-        .map((od, slot) => (od && od.ile > 0 ? { slot, ile: od.ile } : null))
+        .map((od, slot) => (od && od.ile > 0 && !od.omdlaly ? { slot } : null))
         .filter(Boolean)
     );
     this.napisUlotny(`${o.nazwa}\nDo boju!`);
@@ -4844,8 +4847,9 @@ export class AdventureScene extends Phaser.Scene {
         // wraca jako gęsta lista i układ, który gracz ułożył na ekranie
         // bohatera, rozsypuje się po każdej walce — dziury się zasklepiają,
         // a oddziały zjeżdżają w lewo.
+        // Zemdlone stworki zostają poza polem walki.
         gracz: this.stan.bohater.armia
-          .map((o, i) => (o && o.ile > 0 ? { ...o, slot: i } : null))
+          .map((o, i) => (o && o.ile > 0 && !o.omdlaly ? { ...o, slot: i } : null))
           .filter((o): o is NonNullable<typeof o> => !!o),
         // Zamku bronią straż i garnizon naraz (`obroncyZamku`).
         wrog: o.rodzaj === 'zamek' ? obroncyZamku(o) : (o.oddzialy ?? []),
@@ -5309,26 +5313,39 @@ export class AdventureScene extends Phaser.Scene {
   /** Po powrocie z bitwy: zwycięstwo usuwa strażnika, porażka cofa do zamku. */
   private rozliczBitwe() {
     const wynik = this.registry.get(KLUCZ_WYNIKU) as
-      | { oObiekt: number; wygrana: boolean; armia?: Array<Oddzial & { slot?: number }> }
+      | {
+          oObiekt: number;
+          wygrana: boolean;
+          armia?: Array<Oddzial & { slot?: number }>;
+          pokonani?: Array<{ poziom: number; tier: number }>;
+        }
       | undefined;
     if (!wynik) return;
     this.registry.remove(KLUCZ_WYNIKU);
     const o = this.stan.obiekty.find((x) => x.id === wynik.oObiekt);
 
+    // Stworki wracają do swoich slotów — to te same postacie, więc nie
+    // składamy drużyny od nowa, tylko zaznaczamy, kto zemdlał. Bitwa oddaje
+    // każdy wpis z numerem slotu i liczbą stojących na nogach (0 albo 1).
+    let awanse: { nazwa: string; poziom: number; ewolucja?: { z: string; na: string } }[] = [];
     if (wynik.armia) {
-      // Ocalali wracają NA SWOJE MIEJSCA. Bitwa oddaje listę w tej samej
-      // kolejności, w jakiej ją dostała, a każdy wpis niesie numer slotu —
-      // więc dziury między stosami zostają tam, gdzie gracz je zostawił.
-      // Wcześniej szło to przez `znormalizuj`, która upycha listę od zera,
-      // i armia sama się przesuwała po każdej wygranej.
-      const nowa = pustaArmia();
+      const ocalali = this.stan.bohater.armia.map(() => 1);
+      const walczyli = this.stan.bohater.armia.map(() => false);
       for (const od of wynik.armia) {
-        if (!od || od.ile <= 0) continue;
-        const slot = typeof od.slot === 'number' && od.slot >= 0 && od.slot < SLOTY_ARMII ? od.slot : -1;
-        if (slot >= 0 && !nowa[slot]) nowa[slot] = { ...od };
-        else dolacz(nowa, od);
+        const slot = typeof od.slot === 'number' ? od.slot : -1;
+        if (slot < 0 || slot >= SLOTY_ARMII || !this.stan.bohater.armia[slot]) continue;
+        walczyli[slot] = true;
+        ocalali[slot] = od.ile > 0 ? 1 : 0;
       }
-      this.stan.bohater.armia = nowa;
+      this.stan.bohater.armia.forEach((o, i) => {
+        if (o && walczyli[i] && ocalali[i] <= 0) o.omdlaly = true;
+      });
+      if (wynik.wygrana) {
+        awanse = rozdajDosw(
+          this.stan.bohater.armia.map((o, i) => (walczyli[i] ? o : null)),
+          wynik.pokonani ?? []
+        );
+      }
     }
 
     if (wynik.wygrana) {
@@ -5352,7 +5369,16 @@ export class AdventureScene extends Phaser.Scene {
           [
             o?.rodzaj === 'zamek' ? `${o.nazwa} jest twoja!` : 'Zwycięstwo!',
             `+${nagroda} doświadczenia`,
-            wyleczeni ? `Uzdrowiciel: wraca ${wyleczeni} stworków` : '',
+            wyleczeni ? `Uzdrowiciel: ${wyleczeni} × znów na nogach` : '',
+            // Ewolucje pierwsze — to one są wydarzeniem, awans o poziom mniej.
+            ...awanse.filter((a) => a.ewolucja).map((a) => `${a.ewolucja!.z} ewoluuje w ${a.ewolucja!.na}!`),
+            ...awanse
+              .filter((a) => !a.ewolucja)
+              .slice(0, 3)
+              .map((a) => `${a.nazwa} — ${napisPoziomu(a.poziom)}!`),
+            awanse.filter((a) => !a.ewolucja).length > 3
+              ? `i ${awanse.filter((a) => !a.ewolucja).length - 3} więcej awansów`
+              : '',
           ]
             .filter(Boolean)
             .join('\n')
@@ -5404,7 +5430,12 @@ export class AdventureScene extends Phaser.Scene {
         this.stan.bohater.y = zamek.y;
       }
       this.stan.bohater.ruch = 0;
-      this.time.delayedCall(400, () => this.napisUlotny('Porażka.\nWracasz do zamku.'));
+      // W zamku jest Centrum Pokemon: zemdlone stworki wstają od razu, tak
+      // jak w grach trener budzi się w ostatnim odwiedzonym Centrum.
+      const obudzeni = zamek ? obudz(this.stan.bohater.armia) : 0;
+      this.time.delayedCall(400, () =>
+        this.napisUlotny(obudzeni ? 'Porażka.\nWracasz do Centrum Pokemon.' : 'Porażka.\nWracasz do zamku.')
+      );
     }
   }
 

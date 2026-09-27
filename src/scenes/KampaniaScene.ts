@@ -1751,7 +1751,7 @@ export class KampaniaScene extends Phaser.Scene {
       return {
         tekstura: kluczPortretuOkraglego(u?.sprite ?? f.units[0].sprite),
         nazwa: u?.name ?? b.opis,
-        liczba: `×${b.ile}`,
+        liczba: `poz. ${b.poziom}`,
         bok: 53,
       };
     }

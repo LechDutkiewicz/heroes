@@ -83,6 +83,12 @@ const mgla = await page.evaluate(() => {
   return { przed, kroki: kroki.length };
 });
 await page.waitForTimeout(1600);
+// Marsz musi się skończyć, zanim sonda przestawi bohatera dalej: na
+// obciążonej maszynie pięć kroków trwa dłużej niż 1,6 s, a niedokończony
+// marsz potrafił zebrać coś po drodze już PO odczycie skarbca przy skrzyni.
+await page
+  .waitForFunction(() => window.__game.scene.getScene('adventure').wRuchu === false, null, { timeout: 60000 })
+  .catch(() => {});
 const poMgle = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   return {
@@ -150,7 +156,8 @@ sprawdz(
     jagoda: skrzynia.jagoda,
     kamien: skrzynia.kamien,
     odlamek: skrzynia.odlamek,
-  })
+  }),
+  `${JSON.stringify(skrzynia)} → ${JSON.stringify(okno.skarbiec)}`
 );
 
 // Klikamy „doświadczenie" — prawy przycisk w oknie skrzyni.
@@ -167,7 +174,7 @@ const poWyborze = await page.evaluate(() => {
   };
 });
 sprawdz('wybór doświadczenia daje doświadczenie', poWyborze.dosw > skrzynia.dosw, `${skrzynia.dosw} → ${poWyborze.dosw}`);
-sprawdz('i NIE daje pokeballi', poWyborze.pokeball === skrzynia.pokeball);
+sprawdz('i NIE daje pokeballi', poWyborze.pokeball === skrzynia.pokeball, `${skrzynia.pokeball} → ${poWyborze.pokeball}`);
 sprawdz('skrzynia znika po decyzji', poWyborze.zebrana === true);
 sprawdz('gra wraca do sterowania', poWyborze.zajety === false);
 
@@ -189,14 +196,26 @@ sprawdz(`artefakt ląduje u bohatera (${artefakt.nazwa})`, poArtefakcie.ile === 
 
 // --- bitwa ---
 console.log('\n=== bitwa ===');
-const bitwa = await page.evaluate(() => {
+const { NA_POLU } = await page.evaluate(async () => {
+  const b = await import('/src/data/battle.ts');
+  return { NA_POLU: b.NA_POLU };
+});
+const bitwa = await page.evaluate(async (naPolu) => {
   const s = window.__game.scene.getScene('adventure');
   const o = window.__podejdz(s, (x) => x.rodzaj === 'potwor' && !x.zebrany);
   window.__potwor = o.id;
   window.__potworPole = { x: o.x, y: o.y };
+  const b = s.stan.bohater;
+  // Uzdrowiciel (umiejętność z awansu) budzi część zemdlonych od razu po
+  // wygranej — sonda sprawdza samo mdlenie, więc bohater idzie bez niego.
+  const u = await import('/src/data/umiejetnosci.ts');
+  for (const { u: um } of u.posiadane(b)) if (um.klucz === 'leczenie') delete b.umiejetnosci[um.id];
+  window.__doswPrzed = b.armia.map((x) => (x ? x.dosw ?? null : null));
   s.idz([{ x: o.x, y: o.y, koszt: 100 }]);
-  return { nazwa: o.nazwa, id: o.id, wrog: (o.oddzialy ?? []).length };
-});
+  const stado = (o.oddzialy ?? []).reduce((a, x) => a + (x.omdlaly ? 0 : x.ile), 0);
+  const sprawni = b.armia.filter((x) => x && !x.omdlaly && x.ile > 0).length;
+  return { nazwa: o.nazwa, id: o.id, wrog: Math.min(naPolu, stado), gracz: Math.min(naPolu, sprawni) };
+}, NA_POLU);
 await page.waitForTimeout(1400);
 await scena('battle');
 const wBitwie = await page.evaluate(() => {
@@ -209,11 +228,15 @@ const wBitwie = await page.evaluate(() => {
   };
 });
 sprawdz(`wejście na potwora (${bitwa.nazwa}) uruchamia bitwę`, wBitwie.aktywna === true);
-sprawdz('po naszej stronie stoi armia z mapy', wBitwie.gracz === 4, `${wBitwie.gracz} oddziały`);
 sprawdz(
-  'po stronie wroga stoi dokładnie to, co stało na mapie',
+  `po naszej stronie stoi drużyna z mapy (najwyżej ${NA_POLU})`,
+  wBitwie.gracz === bitwa.gracz && wBitwie.gracz <= NA_POLU,
+  `${wBitwie.gracz} stworków, oczekiwano ${bitwa.gracz}`
+);
+sprawdz(
+  'po stronie wroga stoi dokładnie to stado, które stało na mapie',
   wBitwie.wrog === bitwa.wrog,
-  wBitwie.nazwyWroga.join(', ')
+  `${wBitwie.nazwyWroga.join(', ')} (oczekiwano ${bitwa.wrog})`
 );
 
 // Rozstrzygamy bitwę po naszej myśli i sprawdzamy powrót.
@@ -224,6 +247,20 @@ sprawdz(
 // powrót z bitwy, a zepsuta była sonda.
 const koniec = await page.evaluate(() => {
   const s = window.__game.scene.getScene('battle');
+  // Jeden nasz stworek pada w boju — tak samo, jak `rozstrzygnijNatychmiast`
+  // zdejmuje przegranych — żeby sprawdzić mdlenie po powrocie na mapę.
+  const nasi = s.units.filter((u) => u.side === 'player');
+  const padl = nasi[nasi.length - 1];
+  window.__zemdlony = null;
+  if (nasi.length > 1 && padl) {
+    const i = [...s.slotyZMapy.entries()].find(([, id]) => id === padl.id)?.[0];
+    window.__zemdlony = i !== undefined ? s.zPrzygody.gracz[i]?.slot ?? null : null;
+    padl.count = 0;
+    padl.view.container.destroy();
+    s.units.splice(s.units.indexOf(padl), 1);
+    const wSym = s.battle.units.indexOf(padl);
+    if (wSym !== -1) s.battle.units.splice(wSym, 1);
+  }
   s.rozstrzygnijNatychmiast(true);
   return { zywiWrogowie: s.units.filter((u) => u.side === 'enemy').length, wynik: window.__game.registry.get('wynik-bitwy') ?? null };
 });
@@ -244,6 +281,10 @@ const poBitwie = await page.evaluate(() => {
     zajety: s.zajety,
     bohater: { x: s.stan.bohater.x, y: s.stan.bohater.y },
     potworPole: window.__potworPole,
+    zemdlony: window.__zemdlony,
+    druzyna: s.stan.bohater.armia.map((o, i) =>
+      o ? { poziom: o.poziom, dosw: o.dosw ?? null, przed: window.__doswPrzed[i], omdlaly: !!o.omdlaly } : null
+    ),
   };
 });
 sprawdz('po bitwie wracamy na mapę', poBitwie.naMapie === true);
@@ -254,6 +295,21 @@ sprawdz(
 );
 sprawdz('pokonany potwór znika z mapy', poBitwie.potworZebrany === true);
 sprawdz('doświadczenie za wygraną wpłynęło', poBitwie.dosw > poWyborze.dosw);
+{
+  const z = poBitwie.zemdlony;
+  const d = poBitwie.druzyna;
+  sprawdz('sonda znalazła slot stworka, który padł', typeof z === 'number', String(z));
+  if (typeof z === 'number') {
+    sprawdz('stworek, który padł, zostaje w slocie jako zemdlony', d[z]?.omdlaly === true, JSON.stringify(d[z]));
+    sprawdz('zemdlony nie dostaje doświadczenia', d[z]?.dosw === d[z]?.przed, JSON.stringify(d[z]));
+    const walczacy = d.map((o, i) => ({ o, i })).filter(({ o, i }) => o && i !== z).slice(0, NA_POLU - 1);
+    sprawdz(
+      'zwycięzcy zbierają doświadczenie stworków',
+      walczacy.length > 0 && walczacy.every(({ o }) => !o.omdlaly && o.dosw > (o.przed ?? 0)),
+      walczacy.map(({ o }) => `${o.przed}→${o.dosw}`).join(', ')
+    );
+  }
+}
 sprawdz('stan mapy przeżył bitwę — artefakt', poBitwie.artefakty === 1);
 sprawdz('stan mapy przeżył bitwę — mgła', poBitwie.odkryte > mgla.przed, `${poBitwie.odkryte} pól`);
 // Z potworem bije się Z SĄSIEDNIEGO POLA, tak jak w Heroes 3 — bohater nie
@@ -314,19 +370,31 @@ const doZamku = await page.evaluate(() => {
   const z = window.__podejdz(s, (o) => o.rodzaj === 'zamek' && o.wlasciciel === 'gracz');
   s.stan.skarbiec.pokeball = 40;
   window.__zamek = z.id;
-  const przed = s.stan.bohater.armia.reduce((a, o) => a + (o ? o.ile : 0), 0);
+  const przed = s.stan.bohater.armia.filter(Boolean).length;
+  const zemdlonych = s.stan.bohater.armia.filter((o) => o?.omdlaly).length;
   s.idz([{ x: z.x, y: z.y, koszt: 100 }]);
-  return { nazwa: z.nazwa, przed };
+  return { nazwa: z.nazwa, przed, zemdlonych };
 });
 await page.waitForTimeout(1400);
 await scena('zamek');
 sprawdz(`wejście do zamku (${doZamku.nazwa}) otwiera ekran miasta`, true);
+const poCentrum = await page.evaluate(() =>
+  window.__game.scene.getScene('zamek').stan.bohater.armia.filter((o) => o?.omdlaly).length
+);
+sprawdz(
+  'Centrum Pokemon we własnym zamku budzi zemdlone stworki',
+  doZamku.zemdlonych > 0 && poCentrum === 0,
+  `zemdlonych ${doZamku.zemdlonych} → ${poCentrum}`
+);
 
-const werbunek = await page.evaluate(() => {
+const werbunek = await page.evaluate(async () => {
   const t = window.__game.scene.getScene('zamek');
+  const m = await import('/src/data/mapa.ts');
+  // Musi być kogo zaprosić — gra startuje z ułamkami w rezerwatach.
+  if ((t.zamek.dostepne?.[0] ?? 0) < 1) t.zamek.dostepne[0] = 1;
   const przed = {
     pokeballe: t.stan.skarbiec.pokeball,
-    armia: t.stan.bohater.armia.reduce((a, o) => a + (o ? o.ile : 0), 0),
+    armia: t.stan.bohater.armia.filter(Boolean).length,
     dostepne: [...(t.zamek.dostepne ?? [])],
   };
   t.kup(0);
@@ -334,14 +402,16 @@ const werbunek = await page.evaluate(() => {
     przed,
     po: {
       pokeballe: t.stan.skarbiec.pokeball,
-      armia: t.stan.bohater.armia.reduce((a, o) => a + (o ? o.ile : 0), 0),
+      armia: t.stan.bohater.armia.filter(Boolean).length,
       dostepne: [...(t.zamek.dostepne ?? [])],
     },
+    koszt: m.KOSZT_ODDZIALU[0],
+    wszyscyPojedynczo: t.stan.bohater.armia.every((o) => !o || o.ile === 1),
   };
 });
-sprawdz('werbunek powiększa armię', werbunek.po.armia > werbunek.przed.armia, `${werbunek.przed.armia} → ${werbunek.po.armia}`);
-sprawdz('werbunek kosztuje pokeballe', werbunek.po.pokeballe < werbunek.przed.pokeballe, `${werbunek.przed.pokeballe} → ${werbunek.po.pokeballe}`);
-sprawdz('zapas w zamku maleje', werbunek.po.dostepne[0] < werbunek.przed.dostepne[0], `${werbunek.przed.dostepne[0]} → ${werbunek.po.dostepne[0]}`);
+sprawdz('zaproszenie dodaje JEDNEGO stworka do drużyny', werbunek.po.armia === werbunek.przed.armia + 1 && werbunek.wszyscyPojedynczo, `${werbunek.przed.armia} → ${werbunek.po.armia}`);
+sprawdz('zaproszenie kosztuje KOSZT_ODDZIALU', werbunek.przed.pokeballe - werbunek.po.pokeballe === werbunek.koszt, `${werbunek.przed.pokeballe} → ${werbunek.po.pokeballe}`);
+sprawdz('w rezerwacie czeka o jednego mniej', Math.abs(werbunek.po.dostepne[0] - (werbunek.przed.dostepne[0] - 1)) < 1e-9, `${werbunek.przed.dostepne[0]} → ${werbunek.po.dostepne[0]}`);
 
 await page.locator('canvas').screenshot({ path: 'tools/shots/zamek.png' });
 await page.evaluate(() => window.__game.scene.getScene('zamek').scene.start('adventure'));
@@ -351,7 +421,7 @@ const poZamku = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   const potwor = s.stan.obiekty.find((o) => o.id === window.__potwor);
   return {
-    armia: s.stan.bohater.armia.reduce((a, o) => a + (o ? o.ile : 0), 0),
+    armia: s.stan.bohater.armia.filter(Boolean).length,
     zajety: s.zajety,
     // Pokonany strażnik NIE ma prawa dalej stać na mapie.
     sprytPokonanego: !!s.ikonyObiektow[window.__potwor],
@@ -421,13 +491,31 @@ if (!pilnowana) {
     // Bitwa toczy się, gdy bohater STOI JUŻ na kopalni, więc po wygranej musi
     // ją zająć sam — inaczej trzeba by zejść z pola i wrócić na nie po raz
     // drugi, co wygląda po prostu na usterkę.
-    await page.waitForTimeout(4000);
+    // Czekamy na warunek, a nie stałe 4 s: na obciążonej maszynie powrót
+    // z bitwy (2,6 s CZASU GRY) potrafi trwać kilka razy dłużej.
+    await zamknijAwans(page);
+    await page
+      .waitForFunction(
+        () =>
+          window.__game.scene.getScene('adventure').stan.obiekty.find((o) => o.id === window.__kopalnia)
+            ?.wlasciciel === 'gracz',
+        null,
+        { timeout: 60000 }
+      )
+      .catch(() => {});
     const po = await page.evaluate(() => {
       const s = window.__game.scene.getScene('adventure');
       const k = s.stan.obiekty.find((o) => o.id === window.__kopalnia);
-      return { nasza: k.wlasciciel === 'gracz', poz: [s.stan.bohater.x, s.stan.bohater.y] };
+      return {
+        nasza: k.wlasciciel === 'gracz',
+        poz: [s.stan.bohater.x, s.stan.bohater.y],
+        kopalnia: [k.x, k.y],
+        wlasciciel: k.wlasciciel,
+        zajety: s.zajety,
+        aktywna: window.__game.scene.getScenes(true).map((x) => x.scene.key),
+      };
     });
-    sprawdz('po wygranej kopalnia jest zajęta bez wchodzenia na nią drugi raz', po.nasza);
+    sprawdz('po wygranej kopalnia jest zajęta bez wchodzenia na nią drugi raz', po.nasza, JSON.stringify(po));
   }
 }
 
@@ -464,11 +552,11 @@ if (drugi) {
       };
     });
     // Gdyby stan poprzedniej bitwy nie został wyczyszczony, na planszy stałyby
-    // oddziały z obu — czyli wyraźnie więcej niż dwie armie po sześć.
+    // stworki z obu — czyli więcej niż dwie strony po NA_POLU.
     sprawdz(
-      'druga bitwa nie dziedziczy oddziałów z pierwszej',
-      swiezo.oddzialy > 0 && swiezo.oddzialy <= 12,
-      `${swiezo.oddzialy} oddziałów`
+      'druga bitwa nie dziedziczy stworków z pierwszej',
+      swiezo.oddzialy > 0 && swiezo.oddzialy <= 2 * NA_POLU,
+      `${swiezo.oddzialy} stworków`
     );
   }
 } else {

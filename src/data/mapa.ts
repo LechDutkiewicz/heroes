@@ -14,6 +14,7 @@ import {
   STAJNIA_DNI,
   STAJNIA_ODNOWA,
   WIATRAK_ODNOWA,
+  MNOZNIK_FORTU,
   naPokeballe,
 } from './zasady-h3';
 import {
@@ -25,7 +26,18 @@ import {
   stacNas,
   zaplac,
 } from './zamki';
-import { factionById } from './factions';
+import { nastepnyEtap } from './ewolucje';
+import {
+  POZIOM_MAX,
+  defStworka,
+  dodajDosw,
+  doswDoPoziomu,
+  doswStworka,
+  napisPoziomu,
+  obudz,
+  przytnijPoziom,
+  skalaPoziomu,
+} from './stworki';
 import type { Armia } from './armia';
 import { efekt } from './umiejetnosci';
 
@@ -286,14 +298,14 @@ export const BUDOWLE: Record<string, Budowla> = {
   },
   gniazdo: {
     nazwa: 'Gniazdo',
-    opis: 'Zajęte hoduje oddziały dla twojego zamku',
+    opis: 'Zajęte przysyła młode stworki do twojego zamku',
     plik: 'gniazdo',
     wys: 1.4,
     efekt: { typ: 'gniazdo' },
   },
   'osrodek-ewolucji': {
     nazwa: 'Ośrodek Ewolucji',
-    opis: `Ulepsza oddział o poziom za ${EWOLUCJA_KOSZT} kamienie ewolucji`,
+    opis: `Ewoluuje stworka w jego własnej linii za ${EWOLUCJA_KOSZT} kamienie ewolucji`,
     plik: 'osrodek-ewolucji',
     wys: 1.9,
     bryla: [3, 1],
@@ -415,6 +427,11 @@ export interface Obiekt {
    */
   budowanoDnia?: number;
   /**
+   * Zamek: ile treningów zostało w tym tygodniu (Sala treningowa). Brak pola
+   * = pełna pula; nowy tydzień ją odnawia. Patrz `trenuj`.
+   */
+  treningi?: number;
+  /**
    * Budowla odwiedzana: identyfikator z `BUDOWLE`. Wszystkie czternaście
    * siedzi pod jednym rodzajem obiektu i różni się właśnie tym polem.
    */
@@ -444,32 +461,47 @@ export interface Obiekt {
 }
 
 /**
- * Ile pokeballi kosztuje oddział danego poziomu i ile przybywa dziennie.
+ * Ile pokeballi kosztuje zaproszenie młodego stworka z rezerwatu i jak
+ * szybko pojawia się następny.
  *
- * Ceny to koszty oddziałów z Heroes 3 (60, 100, 175, 315, 500, 1000 złota)
- * przepuszczone przez `naPokeballe` — tę samą regułę, którą liczą się kopalnie,
- * skrzynie i ratusze. Wcześniej stało tu [2, 4, 7, 12, 20, 35], wycenione poza
- * jakąkolwiek skalą: dzienny przyrost całego miasta kosztował wtedy 95
- * pokeballi przy 30 pokeballach dochodu z CAŁEJ mapy. Teraz przyrost kosztuje
- * 51 przy 60 z samych kopalni i 100 z kopalniami plus trzeci ratusz — czyli
- * armię da się wykupić i jeszcze zostaje na rozbudowę, o co w tym całym
- * zbieraniu chodzi.
+ * Cena to dawny koszt typowego stosu z Heroes 3 (60 złota × 20 drobnicy,
+ * 1000 × 3 czempionów…) przez `naPokeballe`: jeden stworek na poziomie 5 ma
+ * tę samą siłę, co taki stos, więc kosztuje tyle samo. Wychodzi 24–60
+ * pokeballi — przy dochodzie 60–100 dziennie to jeden stworek na dzień,
+ * gdyby rezerwaty nadążały. Nie nadążają celowo: pokeballe, które zostają,
+ * idą na trening (etap 2, `PROJEKT-TRENERZY.md`).
  */
 export const KOSZT_ODDZIALU = [
-  naPokeballe(60),
-  naPokeballe(100),
-  naPokeballe(175),
-  naPokeballe(315),
-  naPokeballe(500),
-  naPokeballe(1000),
+  naPokeballe(60 * 20),
+  naPokeballe(100 * 14),
+  naPokeballe(175 * 10),
+  naPokeballe(315 * 7),
+  naPokeballe(500 * 5),
+  naPokeballe(1000 * 3),
 ];
-export const PRZYROST_ODDZIALU = [3, 2, 2, 1, 1, 1];
+/**
+ * Dzienny przyrost rezerwatu: co ile dni pojawia się nowy młody stworek
+ * danego poziomu (drobnica co 3 dni, czempion co 9). Fort mnoży to przez
+ * `MNOZNIK_FORTU`. Ułamki się sumują, w mieście widać część całkowitą.
+ */
+export const PRZYROST_ODDZIALU = [1 / 3, 1 / 4, 1 / 5, 1 / 6, 1 / 7, 1 / 9];
+/**
+ * Ilu młodych najwyżej czeka w jednym rezerwacie. Bez sufitu po dwóch
+ * nieodwiedzonych tygodniach w mieście czekałaby cała nowa drużyna — a
+ * rezerwat to dzikie miejsce, z którego stworki się też rozchodzą.
+ */
+export const MAKS_CZEKA = 2;
 
-/** Oddział w armii — to samo, co slot w bitwie: jeden gatunek i jego liczba. */
+/**
+ * Stworek w drużynie albo stado dzikich na mapie. W armii bohatera i w
+ * załodze zamku `ile` = 1 (jeden stworek na slot); w straży na mapie `ile`
+ * to liczba osobnych stworków tego samego gatunku i poziomu.
+ */
 export interface Oddzial {
   /** numer pliku w `public/sprites` */
   sprite: string;
   nazwa: string;
+  /** ilu stworków: w drużynie zawsze 1, w stadzie dzikich — ile ich jest */
   ile: number;
   /**
    * Skąd wziąć pełną definicję oddziału (statystyki, żywioł, umiejętność),
@@ -478,6 +510,24 @@ export interface Oddzial {
    */
   frakcja: string;
   tier: number;
+  /**
+   * Poziom stworka (1–50). W stadzie dzikich i w załodze — poziom każdego
+   * z nich. Statystyki liczy z niego `defStworka` w `stworki.ts`.
+   */
+  poziom: number;
+  /** Suma doświadczenia. Brak = początek bieżącego poziomu. */
+  dosw?: number;
+  /**
+   * Zemdlał w bitwie: zostaje w drużynie, ale nie walczy, dopóki nie
+   * obudzi go Centrum Pokemon w mieście albo nowy tydzień.
+   */
+  omdlaly?: boolean;
+  /**
+   * Trener nie pozwala mu ewoluować (jak Pikachu Asha, który nie chciał
+   * zostać Raichu). Poziom rośnie dalej, forma zostaje. Ośrodek Ewolucji
+   * i tak go nie ruszy, dopóki flaga stoi.
+   */
+  bezEwolucji?: boolean;
 }
 
 export interface Bohater {
@@ -1212,26 +1262,22 @@ export function wezZeSkrzyni(s: StanMapy, w: WyborSkrzyni, co: 'pokeballe' | 'do
 }
 
 /**
- * Oddział, który da się ulepszyć w Ośrodku Ewolucji, i to, co z niego wyjdzie.
+ * Stworek, który da się ewoluować w Ośrodku Ewolucji, i to, w kogo.
  *
- * Bierzemy PIERWSZY oddział, który ma dokąd awansować — nie najsilniejszy
- * i nie wybrany z listy. Wybór oddziału to trzecie okno z rzędu na jednym
- * polu, a różnica między awansem drobnicy a awansem czempiona jest dla
- * ośmiolatka niewidoczna; liczba w karcie armii rośnie tak czy inaczej.
+ * Ewolucja idzie w obrębie WŁASNEJ linii stworka (`ewolucje.ts`): Pyroko
+ * staje się Pyrokinem, nie Flamirem — ten sam stworek, większy i silniejszy,
+ * z tym samym poziomem i doświadczeniem. Ośrodek to ewolucja „od kamienia"
+ * jak w grach o pokemonach: kamień działa bez względu na poziom.
+ *
+ * Bierzemy PIERWSZEGO, który ma dokąd ewoluować — wybór z listy to trzecie
+ * okno z rzędu na jednym polu.
  */
 export function doUlepszenia(b: Bohater) {
   for (let i = 0; i < b.armia.length; i++) {
     const o = b.armia[i];
-    if (!o || o.tier >= 5) continue;
-    const f = factionById(o.frakcja);
-    if (!f) continue;
-    const z = f.units[o.tier];
-    const na = f.units[o.tier + 1];
-    // Liczebność spada w proporcji, w jakiej stoją te poziomy w drzewku
-    // frakcji — inaczej ulepszenie byłoby czystym zyskiem i nie byłoby czego
-    // rozważać. Nigdy poniżej jednego: oddział nie może zniknąć w nagrodę.
-    const ile = Math.max(1, Math.round((o.ile * na.count) / z.count));
-    return { indeks: i, oddzial: o, na, ile };
+    if (!o || o.bezEwolucji) continue;
+    const na = nastepnyEtap(o.sprite);
+    if (na) return { indeks: i, oddzial: o, na };
   }
   return undefined;
 }
@@ -1261,18 +1307,13 @@ export function odpowiedzNaPytanie(
 
   if (b?.efekt.typ === 'ewolucja') {
     const u = doUlepszenia(bohater);
-    if (!u) return 'Nie ma czego ulepszać';
+    if (!u) return 'Nikt w drużynie nie może już ewoluować';
     if (skarbiec.kamien < EWOLUCJA_KOSZT) return 'Za mało kamieni ewolucji';
     skarbiec.kamien -= EWOLUCJA_KOSZT;
     const stara = u.oddzial.nazwa;
-    bohater.armia[u.indeks] = {
-      sprite: u.na.sprite,
-      nazwa: u.na.name,
-      ile: u.ile,
-      frakcja: u.oddzial.frakcja,
-      tier: u.oddzial.tier + 1,
-    };
-    return `${stara} ewoluuje!\n${u.ile} × ${u.na.name}`;
+    u.oddzial.sprite = u.na.sprite;
+    u.oddzial.nazwa = u.na.nazwa;
+    return `${stara} ewoluuje!\nTeraz to ${u.na.nazwa}`;
   }
 
   return '';
@@ -1361,12 +1402,12 @@ function odwiedzBudowle(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
   if (e.typ === 'gniazdo') {
     if (o.wlasciciel === kto) return { opis: `${b.nazwa} — już twoje` };
     o.wlasciciel = kto;
-    return { opis: `${b.nazwa} jest twoje!\nOddziały czekają w zamku`, zajete: o };
+    return { opis: `${b.nazwa} jest twoje!\nMłode stworki czekają w zamku`, zajete: o };
   }
 
   if (e.typ === 'ewolucja') {
     const u = doUlepszenia(bohater);
-    if (!u) return { opis: `${b.nazwa}\nNie ma czego ulepszać` };
+    if (!u) return { opis: `${b.nazwa}\nNikt w drużynie nie może już ewoluować` };
     if (skarbiec.kamien < EWOLUCJA_KOSZT)
       return { opis: `${b.nazwa}\nPotrzeba ${EWOLUCJA_KOSZT} kamieni ewolucji` };
     return {
@@ -1374,7 +1415,7 @@ function odwiedzBudowle(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
       pytanie: {
         obiekt: o,
         tytul: b.nazwa,
-        tresc: `${u.oddzial.nazwa} → ${u.na.name} (${u.ile})`,
+        tresc: `${u.oddzial.nazwa} (${napisPoziomu(u.oddzial.poziom)}) → ${u.na.nazwa}`,
         opcje: [
           { klucz: 'tak', etykieta: `Za ${EWOLUCJA_KOSZT} kamienie` },
           { klucz: 'nie', etykieta: 'Nie teraz' },
@@ -1530,8 +1571,13 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
     if (o.wlasciciel !== kto) {
       if (obroncyZamku(o).length) return { opis: `${o.nazwa}\nBroni się!`, bitwaZ: o };
       o.wlasciciel = kto;
+      obudz(bohater.armia);
       return { opis: `${o.nazwa} jest twoja!`, zamek: o, zajete: o };
     }
+    // Centrum Pokemon: we własnym mieście zemdlone stworki od razu wracają
+    // do siebie — i te w drużynie, i te w garnizonie.
+    const obudzone = obudz(bohater.armia) + obudz(o.garnizon ?? []);
+    if (obudzone > 0) return { opis: `${o.nazwa}\nCentrum Pokemon: ${obudzone} × znów na nogach!`, zamek: o };
     return { opis: o.nazwa, zamek: o };
   }
 
@@ -1539,43 +1585,43 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
 }
 
 /**
- * Kto broni zamku: straż z planszy i garnizon, połączone po gatunku (bitwa
- * ma sześć rzędów startowych, więc dwa stosy tego samego stworka stają jako
- * jeden). Ta sama lista idzie do bitwy gracza i do bitew rozstrzyganych
- * w turze przeciwnika.
+ * Obrońcy zamku w kolejności, w jakiej stają do bitwy: najsilniejsi pierwsi.
+ * Na polu mieszczą się cztery stworki (`MAKS_W_BITWIE`), a straż z planszy
+ * i garnizon razem potrafią mieć więcej — wtedy bronią najmocniejsi, a nie
+ * ci, którzy akurat stoją na początku listy. Stworki się nie łączą: dwa
+ * Glacyny na różnych poziomach to dwie różne postacie.
  */
-export function obroncyZamku(o: Obiekt): Oddzial[] {
-  const wynik: Oddzial[] = [];
-  const zrodla = [...(o.oddzialy ?? []), ...(o.garnizon ?? [])];
-  for (const od of zrodla) {
-    if (!od || od.ile <= 0) continue;
-    const ten = wynik.find((x) => x.sprite === od.sprite);
-    if (ten) ten.ile += od.ile;
-    else wynik.push({ ...od });
-  }
-  return wynik;
+function obroncyWKolejnosci(o: Obiekt): Oddzial[] {
+  const sila = (od: Oddzial) => {
+    const d = defStworka(od);
+    return d ? d.hp * d.atk * (d.ability === 'double' ? 2 : 1) : 0;
+  };
+  return [...(o.oddzialy ?? []), ...(o.garnizon ?? [])]
+    .filter((od): od is Oddzial => !!od && od.ile > 0 && !od.omdlaly)
+    .map((od, i) => ({ od, i, s: sila(od) }))
+    .sort((a, b) => b.s - a.s || a.i - b.i)
+    .map((x) => x.od);
 }
 
 /**
- * Straty obrońców zamku po bitwie: `ocalali` (po gatunku) rozkłada się z
- * powrotem na straż i garnizon. Pierwsza pada straż na murach, dopiero potem
- * garnizon gracza — to jego własne, kupione oddziały i niech zostają
- * najdłużej. Pusty wynik (wszyscy polegli) czyści obie listy.
+ * Kto broni zamku: straż z planszy i garnizon, każdy wpis osobno (kopie).
+ * Ta sama lista idzie do bitwy gracza i do bitew rozstrzyganych w turze
+ * przeciwnika, a `rozdzielStratyZamku` oddaje wynik po tej samej kolejności.
+ */
+export function obroncyZamku(o: Obiekt): Oddzial[] {
+  return obroncyWKolejnosci(o).map((od) => ({ ...od }));
+}
+
+/**
+ * Wynik obrony zamku: `ocalali` to lista z `obroncyZamku` (ta sama
+ * kolejność) z liczebnościami po bitwie. Kto nie przetrwał, znika — straż
+ * i garnizon zamku nie mają Centrum Pokemon za plecami, bo to ich miasto
+ * właśnie padło albo się obroniło kosztem tych, którzy upadli.
  */
 export function rozdzielStratyZamku(o: Obiekt, ocalali: Oddzial[]) {
-  const zostalo = new Map<string, number>();
-  for (const od of ocalali) zostalo.set(od.sprite, (zostalo.get(od.sprite) ?? 0) + od.ile);
-  const przed = obroncyZamku(o);
-  const straty = new Map<string, number>();
-  for (const od of przed) straty.set(od.sprite, Math.max(0, od.ile - (zostalo.get(od.sprite) ?? 0)));
-  const odejmij = (od: Oddzial) => {
-    const s = straty.get(od.sprite) ?? 0;
-    const ile = Math.min(s, od.ile);
-    od.ile -= ile;
-    straty.set(od.sprite, s - ile);
-  };
-  for (const od of o.oddzialy ?? []) odejmij(od);
-  for (const od of o.garnizon ?? []) if (od) odejmij(od);
+  obroncyWKolejnosci(o).forEach((od, i) => {
+    od.ile = Math.max(0, Math.min(od.ile, ocalali[i]?.ile ?? 0));
+  });
   o.oddzialy = (o.oddzialy ?? []).filter((od) => od.ile > 0);
   if (o.garnizon) o.garnizon = o.garnizon.map((od) => (od && od.ile > 0 ? od : null));
 }
@@ -1619,18 +1665,21 @@ export function urosnijStraze(s: StanMapy): number {
   let urosly = 0;
   for (const o of s.obiekty) {
     if (o.rodzaj !== 'potwor' || o.zebrany || !o.oddzialy?.length) continue;
-    const razem = o.oddzialy.reduce((a, od) => a + od.ile, 0);
-    if (o.wyjsciowe === undefined) o.wyjsciowe = razem;
-    const sufit = Math.round(o.wyjsciowe * PRZYROST_STRAZY_SUFIT);
-    if (razem >= sufit) continue;
-    let zostalo = sufit - razem;
+    // Stado nie przybiera na liczbie — dzikie stworki rosną w siłę, czyli
+    // w poziom. Przyrost i sufit liczone na skali poziomu (siła stworka),
+    // tak jak dawniej na liczebności: +10% tygodniowo, najwyżej 2,5 raza.
+    const pierwszy = o.oddzialy[0];
+    if (o.wyjsciowe === undefined) o.wyjsciowe = pierwszy.poziom;
+    const sufit = skalaPoziomu(o.wyjsciowe) * PRZYROST_STRAZY_SUFIT;
+    let urosl = false;
     for (const od of o.oddzialy) {
-      if (zostalo <= 0) break;
-      const ile = Math.min(zostalo, Math.max(1, Math.round(od.ile * PRZYROST_STRAZY)));
-      od.ile += ile;
-      zostalo -= ile;
+      const skala = skalaPoziomu(od.poziom);
+      if (skala >= sufit) continue;
+      const nowy = przytnijPoziom(Math.min(sufit, skala * (1 + PRZYROST_STRAZY)) * 15 - 10);
+      od.poziom = Math.max(od.poziom + 1, nowy);
+      urosl = true;
     }
-    urosly++;
+    if (urosl) urosly++;
   }
   return urosly;
 }
@@ -1648,7 +1697,15 @@ export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
   // Nowy tydzień: stada na mapie się powiększają. Dzień 8, 15, 22...
   // Straże są NICZYJE, więc rosną raz na dzień, a nie raz na stronę —
   // dlatego stoi to przed pętlą po graczu i wrogu, a nie w niej.
-  if (s.dzien > 1 && s.dzien % 7 === 1) urosnijStraze(s);
+  if (s.dzien > 1 && s.dzien % 7 === 1) {
+    urosnijStraze(s);
+    // Sale treningowe odnawiają tygodniową pulę.
+    for (const o of s.obiekty) if (o.rodzaj === 'zamek') delete o.treningi;
+    // Zemdlone stworki dochodzą do siebie z nowym tygodniem, nawet daleko
+    // od miasta — inaczej przegrana bitwa w głębi mapy zamykałaby grę.
+    obudz(s.bohater.armia);
+    obudz(s.wrogBohater.armia);
+  }
   s.bohater.ruch = ruchNaDzis(s, 'gracz');
   s.wrogBohater.ruch = ruchNaDzis(s, 'wrog');
   let wplywGracza: Partial<Record<Surowiec, number>> = {};
@@ -1670,7 +1727,7 @@ export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
     for (const o of s.obiekty) {
       if (o.rodzaj === 'zamek' && o.wlasciciel === kto && o.dostepne) {
         const przyrost = przyrostZamku(o.postawione ?? [], PRZYROST_ODDZIALU);
-        o.dostepne = o.dostepne.map((ile, t) => Math.min(ile + przyrost[t], 99));
+        o.dostepne = o.dostepne.map((ile, t) => Math.min(ile + przyrost[t], MAKS_CZEKA));
       }
     }
     // Zajęte gniazda hodują do zamku TEJ SAMEJ strony, bo rekrutuje się w mieście.
@@ -1687,7 +1744,7 @@ export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
         const t = GNIAZDO_TIER;
         zamekTejStrony.dostepne[t] = Math.min(
           zamekTejStrony.dostepne[t] + PRZYROST_ODDZIALU[t],
-          99
+          MAKS_CZEKA
         );
       }
     }
@@ -1741,10 +1798,53 @@ export function zbuduj(s: StanMapy, zamek: Obiekt, id: string, kto: Wlasciciel =
   // dostaje tygodniowy przyrost natychmiast — bez tego dziecko stawia budynek
   // i nic się nie zmienia, więc nie widzi związku między budową a armią.
   if (b.rodzaj === 'siedlisko' && b.poziom !== undefined && zamek.dostepne) {
-    const przyrost = przyrostZamku(postawione, PRZYROST_ODDZIALU);
-    zamek.dostepne[b.poziom] += przyrost[b.poziom];
+    zamek.dostepne[b.poziom] = Math.min(MAKS_CZEKA, zamek.dostepne[b.poziom] + 1);
   }
   return { ok: true, opis: `${b.nazwa} — gotowe!` };
+}
+
+/**
+ * Sala treningowa w każdym mieście — etap 2 przebudowy „trener zamiast
+ * armii". Dawny tygodniowy przyrost Heroes 3 („siedlisko daje co tydzień
+ * nowe stworki") zamienia się tu w tygodniową pulę treningów: każdy
+ * postawiony rezerwat to `TRENINGI_ZA_REZERWAT` treningów na tydzień, fort
+ * mnoży pulę jak dawniej przyrost. Rozbudowa miasta dalej czyni drużynę
+ * silniejszą — tylko przez poziomy, a nie przez liczebność.
+ *
+ * Trening to jeden poziom za pokeballe; cena rośnie z poziomem, więc
+ * trenowanie słabszych stworków jest tańsze i drużyna sama się wyrównuje.
+ */
+export const TRENINGI_ZA_REZERWAT = 3;
+
+export function treningiNaTydzien(postawione: string[]) {
+  const rezerwaty = postawione.filter((id) => id.startsWith('siedlisko')).length;
+  const mn = postawione.includes('fort') ? MNOZNIK_FORTU : 1;
+  return Math.round(rezerwaty * TRENINGI_ZA_REZERWAT * mn);
+}
+
+export const kosztTreningu = (o: Pick<Oddzial, 'poziom'>) => Math.round(3 + 1.5 * o.poziom);
+
+/** Ile treningów zostało w tym tygodniu. */
+export const treningiZamku = (zamek: Obiekt) =>
+  zamek.treningi ?? treningiNaTydzien(zamek.postawione ?? []);
+
+export function trenuj(s: StanMapy, zamek: Obiekt, o: Oddzial, kto: Wlasciciel = 'gracz'): WynikBudowy {
+  const skarbiec = skarbiecOf(s, kto);
+  if (o.poziom >= POZIOM_MAX) return { ok: false, opis: `${o.nazwa} ma już najwyższy poziom.` };
+  const zostalo = treningiZamku(zamek);
+  if (zostalo <= 0) return { ok: false, opis: 'W tym tygodniu nie ma już wolnych treningów.' };
+  const koszt = kosztTreningu(o);
+  if (skarbiec.pokeball < koszt) return { ok: false, opis: `Trening kosztuje ${koszt} pokeballi.` };
+  skarbiec.pokeball -= koszt;
+  zamek.treningi = zostalo - 1;
+  const stara = o.nazwa;
+  const w = dodajDosw(o, Math.max(0, doswDoPoziomu(o.poziom + 1) - doswStworka(o)));
+  return {
+    ok: true,
+    opis: w.ewolucja
+      ? `${stara} trenuje — ${napisPoziomu(o.poziom)} i ewoluuje w ${o.nazwa}!`
+      : `${o.nazwa} trenuje — teraz ${napisPoziomu(o.poziom)}!`,
+  };
 }
 
 /** Data w formacie z Heroes 3: tydzień i dzień tygodnia. */

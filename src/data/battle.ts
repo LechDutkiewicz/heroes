@@ -26,8 +26,23 @@ import { hexDistance, hexNeighbours, type Cell } from './hex';
 export const COLS = 10;
 export const ROWS = 7;
 
-/** Sześć oddziałów w kolumnie z przerwą pośrodku, jak w Heroes 3. */
-export const START_ROWS = [0, 1, 2, 4, 5, 6];
+/**
+ * Ile stworków staje po jednej stronie pola bitwy. Jak w Heroes 3 między
+ * każdymi dwoma jest wolne pole, a plansza ma siedem rzędów — mieszczą się
+ * więc cztery (rzędy 1, 3, 5, 7). Pasuje to do walk trenerów: do bitwy idą
+ * cztery pierwsze stworki z drużyny, reszta czeka.
+ */
+export const NA_POLU = 4;
+
+/** Rzędy startowe dla `ile` stworków: zawsze z przerwą, możliwie pośrodku. */
+export function rzedyNaPolu(ile: number): number[] {
+  const n = Math.max(0, Math.min(NA_POLU, ile));
+  const uklady: number[][] = [[], [3], [2, 4], [1, 3, 5], [0, 2, 4, 6]];
+  return [...uklady[n]];
+}
+
+/** Wszystkie rzędy startowe przy pełnym składzie. */
+export const START_ROWS = rzedyNaPolu(NA_POLU);
 
 /** O tyle słabsze jest trafienie w oddział, który stoi w obronie. */
 export const GUARD_REDUCTION = 0.7;
@@ -642,11 +657,15 @@ export function createBattle(
 ): Battle {
   let id = 1;
   const units: SimUnit[] = [];
-  const rzedy = () => (rng ? shuffle([...START_ROWS], rng) : [...START_ROWS]);
-  const rzedyL = rzedy();
-  const rzedyP = rzedy();
-  left.units.forEach((def, i) => units.push(makeUnit(def, 'player', 0, rzedyL[i], id++)));
-  right.units.forEach((def, i) => units.push(makeUnit(def, 'enemy', COLS - 1, rzedyP[i], id++)));
+  // Najwyżej `NA_POLU` na stronę, zawsze z wolnym polem między sobą.
+  // Kolejność rzędów losuje `rng`, same rzędy są stałe dla liczebności.
+  const lewe = left.units.slice(0, NA_POLU);
+  const prawe = right.units.slice(0, NA_POLU);
+  const rzedy = (ile: number) => (rng ? shuffle(rzedyNaPolu(ile), rng) : rzedyNaPolu(ile));
+  const rzedyL = rzedy(lewe.length);
+  const rzedyP = rzedy(prawe.length);
+  lewe.forEach((def, i) => units.push(makeUnit(def, 'player', 0, rzedyL[i], id++)));
+  prawe.forEach((def, i) => units.push(makeUnit(def, 'enemy', COLS - 1, rzedyP[i], id++)));
   const b: Battle = {
     units,
     obstacles: new Set(obstacles),

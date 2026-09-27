@@ -203,24 +203,29 @@ console.log('\n=== gniazdo: zajmuje się, a nie zbiera ===');
   nowaTura(s);
   const po = zamek.dostepne!;
   sprawdz(
-    'nazajutrz w zamku czeka więcej oddziałów niż z samego miasta',
+    'nazajutrz rezerwat w zamku jest bliżej nowego stworka niż z samego miasta',
     po.some((ile, i) => ile > przed[i]),
     `${przed.join('/')} → ${po.join('/')}`
   );
 }
 
-console.log('\n=== ośrodek ewolucji: kamienie zamieniają się w awans ===');
+console.log('\n=== ośrodek ewolucji: kamienie zamieniają się w ewolucję ===');
 {
   const s = swiat();
   const o = budowla(s, 'osrodek-ewolucji');
   s.skarbiec.kamien = EWOLUCJA_KOSZT;
   const u = doUlepszenia(s.bohater)!;
+  const poziomPrzed = u.oddzial.poziom;
   const w = odwiedz(s, o);
   sprawdz('pyta o zgodę', w.pytanie !== undefined);
   const opis = odpowiedzNaPytanie(s, w.pytanie!, 'tak');
-  const oddzial = s.bohater.armia[u.indeks];
-  sprawdz('oddział awansował o poziom', oddzial.tier === u.oddzial.tier + 1, opis.replace('\n', ' / '));
-  sprawdz('liczebność spadła, ale oddział został', oddzial.ile >= 1 && oddzial.ile <= u.oddzial.ile);
+  const oddzial = s.bohater.armia[u.indeks]!;
+  sprawdz(
+    'stworek ewoluował w swojej linii (ten sam gatunek, nowa forma)',
+    oddzial.tier === u.oddzial.tier && oddzial.sprite === u.na.sprite && oddzial.nazwa === u.na.nazwa,
+    opis.replace('\n', ' / ')
+  );
+  sprawdz('poziom i doświadczenie zostają', oddzial.poziom === poziomPrzed && oddzial.ile === 1);
   sprawdz('kamienie zapłacone', s.skarbiec.kamien === 0);
   const w2 = odwiedz(s, o);
   sprawdz('bez kamieni ośrodek mówi, czego trzeba', w2.pytanie === undefined && w2.opis.includes('kamieni'));

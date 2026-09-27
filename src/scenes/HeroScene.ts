@@ -17,9 +17,8 @@
  *    cień w półprzezroczystym gnieździe — zbieranie ma widoczny koniec,
  *    a postać prześwituje;
  *  - dół: blok armii na całą szerokość (ta sama ciężka rama i te same sloty
- *    co w mieście — `PanelArmii`: klik-klik, przeciąganie, Shift = okno
- *    podziału, Ctrl = jeden stworek, drugi klik / prawy klik = okno
- *    stworka), obok linia statusu, „Podziel" i wyjście.
+ *    co w mieście — `PanelArmii`: klik-klik, przeciąganie, drugi klik /
+ *    prawy klik = okno stworka), obok linia statusu i wyjście.
  *
  * Stałych napisów-samouczków nie ma (runda 2 ślepego porównania: „wygląda
  * jak samouczek w formularzu"). Podpowiedź jest w dymku po najechaniu i w
@@ -45,7 +44,7 @@ import {
   type Artefakt,
   type StanMapy,
 } from '../data/mapa';
-import { lacznie, znormalizuj, zywe } from '../data/armia';
+import { znormalizuj, zywe } from '../data/armia';
 import { planszaPrzygody } from '../data/plansza';
 import {
   ATAK_BOHATERA_MAKS,
@@ -104,7 +103,7 @@ const BLOK_Y = OKNO_H - 8 - 13 - BLOK_H;
 const POLA_H = BLOK_Y - 13 - 12 - POLA_Y;
 const LEWA = { x: MARGINES + 5, w: 568 - (MARGINES + 5) };
 const PRAWA = { x: 586, w: OKNO_W - MARGINES - 5 - 586 };
-/** Herb (figurka z mapy) i siedem slotów; po prawej status, „Podziel", wyjście. */
+/** Herb (figurka z mapy) i siedem slotów; po prawej status i wyjście. */
 const HERB_X = BLOK_X + BLOK_PAD;
 const RZAD_X = HERB_X + SLOT + 10;
 const RZAD_Y = BLOK_Y + BLOK_PAD;
@@ -616,20 +615,10 @@ export class HeroScene extends Phaser.Scene {
       .setDepth(Z.hud + 2)
       .setWordWrapWidth(STATUS_W - 18);
 
-    // --- „Podziel" i wyjście (złota tabliczka — jedyny „następny krok") ---
-    const podzielW = 96;
-    new Przycisk(this, {
-      x: STATUS_X + podzielW / 2,
-      y: PRZYCISKI_Y,
-      w: podzielW,
-      h: 32,
-      tekst: 'Podziel',
-      rozmiar: 13,
-      glebia: Z.hud + 2,
-      akcja: () => this.panel.podziel(),
-    });
+    // --- wyjście (złota tabliczka — jedyny „następny krok") ---
+    // „Podziel" zniknął razem ze stosami: stworek to jedna postać.
     const doMiasta = this.registry.get(KLUCZ_POWROTU) === 'zamek';
-    const wyjscieW = STATUS_W - podzielW - 8;
+    const wyjscieW = STATUS_W;
     new Przycisk(this, {
       x: STATUS_X + STATUS_W - wyjscieW / 2,
       y: PRZYCISKI_Y,
@@ -654,9 +643,12 @@ export class HeroScene extends Phaser.Scene {
   /** Stan armii jednym zdaniem — domyślna treść linii statusu. */
   private stanArmii() {
     const a = this.stan.bohater.armia;
-    const ile = lacznie(a);
-    const stosy = zywe(a).length;
-    return `${this.stan.bohater.imie} prowadzi ${ile} ${ile === 1 ? 'stworka' : 'stworków'} w ${stosy} ${stosy === 1 ? 'oddziale' : 'oddziałach'}.`;
+    const ile = zywe(a).length;
+    const omdlale = zywe(a).filter((o) => o.omdlaly).length;
+    return (
+      `${this.stan.bohater.imie} ma w drużynie ${ile} ${ile === 1 ? 'stworka' : 'stworków'}. Do bitwy idą cztery pierwsze.` +
+      (omdlale ? ` Zemdlone: ${omdlale} (obudzi je miasto).` : '')
+    );
   }
 
   /** Linia statusu: najpierw 13 px, a gdy się nie mieści — mniej (jak w mieście). */
@@ -768,7 +760,7 @@ export class HeroScene extends Phaser.Scene {
       podtytul: `Poziom ${p.poziom} · ${ela ? 'trenerka' : 'trener'}`,
       tresc:
         (ela ? 'Sprytna i uważna. Żaden ślad jej nie umknie!' : 'Odważny i szybki. Zawsze pierwszy do przygody!') +
-        `\n\nProwadzi ${lacznie(b.armia)} stworków. Nosi ${b.artefakty.length} ${b.artefakty.length === 1 ? 'artefakt' : 'artefaktów'} i zna ${posiadane(b).length} ${posiadane(b).length === 1 ? 'umiejętność' : 'umiejętności'}.`,
+        `\n\nMa w drużynie ${zywe(b.armia).length} stworków. Nosi ${b.artefakty.length} ${b.artefakty.length === 1 ? 'artefakt' : 'artefaktów'} i zna ${posiadane(b).length} ${posiadane(b).length === 1 ? 'umiejętność' : 'umiejętności'}.`,
     };
   }
 
@@ -815,8 +807,8 @@ export class HeroScene extends Phaser.Scene {
         ikona: atak ? 'k-ikona-miecz' : 'k-ikona-tarcza',
         tresc:
           (atak
-            ? `Każdy twój oddział zadaje w bitwie o ${proc}% więcej obrażeń.`
-            : `Każdy twój oddział dostaje w bitwie o ${proc}% mniej obrażeń.`) +
+            ? `Każdy twój stworek zadaje w bitwie o ${proc}% więcej obrażeń.`
+            : `Każdy twój stworek dostaje w bitwie o ${proc}% mniej obrażeń.`) +
           `\n\nSkąd to masz:\n${lw.join('\n')}`,
       };
     }
@@ -867,12 +859,13 @@ export class HeroScene extends Phaser.Scene {
     const b = this.stan.bohater;
     return {
       klucz: 'armia',
-      tytul: 'Armia',
+      tytul: 'Drużyna',
       podtytul: this.stanArmii(),
       tresc:
-        'Kliknij stworka, potem inny slot — przeniesiesz, zamienisz albo połączysz oddziały. ' +
-        'Możesz też przeciągnąć. Shift: podział z suwakiem, Ctrl: jeden stworek. ' +
-        `Prawy klik albo drugi klik: opis stworka.\n\n${b.imie} nie może zostać bez ani jednego oddziału.`,
+        'Kliknij stworka, potem inny slot — przeniesiesz go albo zamienisz miejscami. ' +
+        'Możesz też przeciągnąć. Liczba pod portretem to poziom stworka. ' +
+        'Do bitwy idą cztery pierwsze sprawne stworki — ustaw na początku tych, którzy mają walczyć (mają złoty róg). ' +
+        `Prawy klik albo drugi klik: opis stworka.\n\n${b.imie} nie może zostać bez ani jednego stworka.`,
     };
   }
 

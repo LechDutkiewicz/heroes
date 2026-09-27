@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { FACTIONS } from '../data/factions';
-import { SPRITE_EWOLUCJI } from '../data/ewolucje';
+import { SPRITE_EWOLUCJI, nastepnyEtap } from '../data/ewolucje';
 import { BARWA, KROJ, krojeZestawu, ramaZlota } from './zestaw';
 
 /**
@@ -60,12 +60,19 @@ export const toEtapEwolucji = (sprite: string) => ETAPY_EWOLUCJI.has(sprite);
 
 /**
  * Lista do `wczytajPortrety`: 18 stworów zamków i do tego etapy ewolucji,
- * które naprawdę są w podanych armiach. Wszystkie 36 etapów to kilkadziesiąt
- * plików więcej na każdą scenę — a dziś ewolucja nie ma jeszcze mechaniki.
+ * które są w podanych armiach — razem z NASTĘPNYM etapem każdego stworka.
+ * Stworek potrafi ewoluować w trakcie sceny (po bitwie na mapie, po
+ * treningu w mieście), a portret nowej formy musi już wtedy czekać.
+ * Wszystkie 36 etapów naraz to kilkadziesiąt plików więcej na każdą scenę.
  */
 export function spriteDoPortretow(...armie: Iterable<string>[]): string[] {
   const wynik = new Set(FACTIONS.flatMap((f) => f.units.map((u) => u.sprite)));
-  for (const a of armie) for (const s of a) if (ETAPY_EWOLUCJI.has(s)) wynik.add(s);
+  for (const a of armie)
+    for (const s of a) {
+      if (ETAPY_EWOLUCJI.has(s)) wynik.add(s);
+      const dalej = nastepnyEtap(s);
+      if (dalej) wynik.add(dalej.sprite);
+    }
   return [...wynik];
 }
 
