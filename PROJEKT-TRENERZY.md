@@ -130,12 +130,24 @@ Prompty i imiona — etap 6.
 
 ## Etap 5 — trener w bitwie
 
-- Wybór czwórki na bitwę w oknie przed walką (dziś: cztery pierwsze sloty).
-- Trener stoi przy swojej krawędzi pola. Zamiast czarów ma przedmioty:
-  mikstura, eliksir ataku, **pokeball** (łapanie osłabionego dzikiego
-  stworka — to zastępuje „neutralni dołączają do armii").
-- Drużyna: przy sobie 6 stworków (reszta w mieście, jak w PC Billa).
-- Walki z liderami w kampanii: może mniej niż cztery (np. 3 na 3).
+- **Wybór czwórki**: gdy sprawnych stworków jest więcej niż miejsc na polu,
+  bitwa otwiera okno „Kto walczy?" (`visual/wyborSkladu.ts`) — domyślnie
+  cztery pierwsze, klik dodaje/zdejmuje, Enter zatwierdza. Stworki spoza
+  czwórki nie walczą i nie mdleją.
+- **Trener przy polu**: medalion z głową trenera w lewym górnym rogu i
+  przycisk „Plecak (P)" obok tytułu. Raz na rundę, bez zużycia tury
+  stworka (jak czar w Heroes 3), trener sięga do plecaka
+  (`data/przedmioty.ts`, okno `visual/oknoPlecaka.ts`):
+  - **Mikstura** (2 na bitwę) — leczy swojego stworka o połowę życia,
+  - **Eliksir siły** (1 na bitwę) — ×1,5 ataku do końca bitwy,
+  - **Pokeball** — 10 pokeballi ze skarbca za rzut; szansa rośnie, im mniej
+    życia ma cel (5–95%, rzadsze stworki trudniej). Tylko DZIKIE stworki —
+    stworków sali ani rywala łapać nie wolno — i tylko, gdy w drużynie jest
+    wolny slot. Złapany dołącza do drużyny z poziomem, na którym stał.
+    Zastępuje „neutralni dołączają do armii" z Heroes.
+- Plecak napełnia się co bitwę — bez sklepu i bez pilnowania zapasów.
+- Zostało na później: PC Billa (drużyna 6 przy sobie, reszta w mieście),
+  walki z liderami 3 na 3.
 
 ## Etap 6 — frakcje i kampania
 
@@ -155,5 +167,5 @@ Prompty i imiona — etap 6.
 | 3 ewolucja | zrobione |
 | sale i pojedynki | zrobione |
 | 4 ataki | zrobione |
-| 5 trener w bitwie | — |
+| 5 trener w bitwie | zrobione (bez PC Billa i walk 3 na 3) |
 | 6 frakcje i kampania | — |
