@@ -648,7 +648,7 @@ export class HeroScene extends Phaser.Scene {
     const omdlale = zywe(a).filter((o) => o.omdlaly).length;
     return (
       `${this.stan.bohater.imie} ma w drużynie ${ile} ${ile === 1 ? 'stworka' : 'stworków'}. Do bitwy idą cztery pierwsze.` +
-      (omdlale ? ` Zemdlone: ${omdlale} — obudzi je Centrum Pokemon w mieście.` : '')
+      (omdlale ? ` Zemdlone: ${omdlale} (obudzi je miasto).` : '')
     );
   }
 
