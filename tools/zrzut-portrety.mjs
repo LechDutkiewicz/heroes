@@ -5,8 +5,11 @@
 // (`tools/reference/homm3/ref-portret-*.png`).
 //
 //   node tools/zrzut-portrety.mjs [--url http://localhost:4173] [--out tools/shots]
+//                                 [--ewolucje]
 //
 // Wynik: portrety-bohater.png, portrety-miasto.png, portrety-hud.png.
+// `--ewolucje`: armia z etapów ewolucji (`01xxx`, `02xxx`) — sprawdza, że
+// sceny doczytują ich portrety; pliki z przyrostkiem `-ewolucje`.
 
 import { chromium } from 'playwright';
 import { mkdir } from 'node:fs/promises';
@@ -32,6 +35,17 @@ const ARMIA = [
   ['00096', 'Verdiko', 3, 4],
   ['00227', 'Silvena', 1, 5],
 ].map((o) => (o ? { sprite: o[0], nazwa: o[1], ile: o[2], frakcja: 'bor', tier: o[3] } : null));
+const EWOLUCJE = process.argv.includes('--ewolucje');
+const ARMIA_EWOLUCJI = [
+  ['01193', 'Pyrokin', 12, 0],
+  ['02020', 'Flamidor', 5, 1],
+  ['01218', 'Aquilon', 6, 2],
+  null,
+  ['02030', 'Torrendor', 2, 3],
+  ['01096', 'Verdilo', 3, 4],
+  ['02227', 'Silvanora', 1, 5],
+].map((o) => (o ? { sprite: o[0], nazwa: o[1], ile: o[2], frakcja: 'bor', tier: o[3] } : null));
+const PRZYROSTEK = EWOLUCJE ? '-ewolucje' : '';
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 // Skala 2: wzorce (portrety z Heroes 3) są powiększone 2×, więc nasze kadry
@@ -53,8 +67,8 @@ const scena = (n) =>
 /** Kadr płótna w pikselach gry (płótno stoi w lewym górnym rogu strony). */
 const kadr = async (nazwa, x, y, w, h) => {
   const r = await page.locator('canvas').boundingBox();
-  await page.screenshot({ path: `${OUT}/${nazwa}.png`, clip: { x: r.x + x, y: r.y + y, width: w, height: h } });
-  console.log(`zapisano ${OUT}/${nazwa}.png`);
+  await page.screenshot({ path: `${OUT}/${nazwa}${PRZYROSTEK}.png`, clip: { x: r.x + x, y: r.y + y, width: w, height: h } });
+  console.log(`zapisano ${OUT}/${nazwa}${PRZYROSTEK}.png`);
 };
 
 await page.goto(`${BASE}/?ekran=mapa`, { waitUntil: 'domcontentloaded' });
@@ -69,7 +83,7 @@ await page.evaluate((armia) => {
   s.stan.bohater.armia = armia.map((o) => (o ? { ...o } : null));
   gra.registry.set('stan-mapy', s.stan);
   s.scene.restart();
-}, ARMIA);
+}, EWOLUCJE ? ARMIA_EWOLUCJI : ARMIA);
 await page.waitForTimeout(400);
 await scena('adventure');
 await page.waitForTimeout(1500);

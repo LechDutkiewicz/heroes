@@ -31,7 +31,7 @@
  */
 
 import Phaser from 'phaser';
-import { wczytajPortrety } from '../visual/portrety';
+import { spriteDoPortretow, wczytajPortrety } from '../visual/portrety';
 import {
   ARTEFAKTY,
   ARTEFAKTY_LOSOWE,
@@ -190,12 +190,13 @@ export class HeroScene extends Phaser.Scene {
     // Sprite'y z armii, którą naprawdę mamy. Ekran bohatera potrafi być
     // pierwszą sceną po wczytaniu strony, więc nie zakładamy, że tekstury
     // wgrała już mapa.
-    for (const o of zywe(this.wczytajStan().bohater.armia)) {
-      this.load.image(`p-${o.sprite}`, `${b}sprites/${o.sprite}.png`);
+    const armia = zywe(this.wczytajStan().bohater.armia).map((o) => o.sprite);
+    for (const s of armia) {
+      this.load.image(`p-${s}`, `${b}sprites/${s}.png`);
     }
     // Portrety do slotów paska armii i okna podziału (`PanelArmii`,
-    // `src/visual/portrety.ts`).
-    wczytajPortrety(this, { duze: true, okragle: true });
+    // `src/visual/portrety.ts`) — także etapów ewolucji, jeśli są w armii.
+    wczytajPortrety(this, { duze: true, okragle: true }, spriteDoPortretow(armia));
     const kto = this.kto;
     // Te same klucze, co w ekranie kampanii — jeśli tam już są, nie idą drugi raz.
     this.load.image(`bh-postac-${kto}`, `${b}bohater/postac-${kto}.png`);

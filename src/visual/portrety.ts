@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { FACTIONS } from '../data/factions';
+import { SPRITE_EWOLUCJI } from '../data/ewolucje';
 import { BARWA, KROJ, krojeZestawu, ramaZlota } from './zestaw';
 
 /**
@@ -14,6 +15,11 @@ import { BARWA, KROJ, krojeZestawu, ramaZlota } from './zestaw';
  * kadr zakotwiczony w oczach (ta sama linia oczu i wielkość twarzy
  * u wszystkich), jedno ciepłe tło pergaminu i jedno światło. Po
  * przemalowaniu stworka wystarczy puścić skrypt jeszcze raz.
+ *
+ * Portrety mają też etapy ewolucji (`01xxx`, `02xxx`, `src/data/ewolucje.ts`)
+ * — ten sam skrypt, ci sami mistrzowie z rysunków PR #6. Sceny wczytują je
+ * tylko dla etapów, które są w armiach (`spriteDoPortretow`); wszędzie,
+ * gdzie portretu brak, UI i tak pokazuje cały sprite.
  *
  * Cztery pliki na stwora, każdy w wielkości, w jakiej gra go pokazuje:
  *  - duży (`pd-<id>`, 96 px) — ekran bohatera, karta werbunku;
@@ -44,6 +50,23 @@ export function kluczPortretuPanelu(sprite: string) {
 /** Klucz okrągłego portretu (medalion). */
 export function kluczPortretuOkraglego(sprite: string) {
   return `po-${sprite}`;
+}
+
+/** Etapy ewolucji (bez form bazowych) — mają portrety w `public/portrety/`. */
+const ETAPY_EWOLUCJI = new Set(SPRITE_EWOLUCJI.filter((s) => !FACTIONS.some((f) => f.units.some((u) => u.sprite === s))));
+
+/** Czy `sprite` to etap ewolucji (`01xxx`, `02xxx`), a nie stwór zamku. */
+export const toEtapEwolucji = (sprite: string) => ETAPY_EWOLUCJI.has(sprite);
+
+/**
+ * Lista do `wczytajPortrety`: 18 stworów zamków i do tego etapy ewolucji,
+ * które naprawdę są w podanych armiach. Wszystkie 36 etapów to kilkadziesiąt
+ * plików więcej na każdą scenę — a dziś ewolucja nie ma jeszcze mechaniki.
+ */
+export function spriteDoPortretow(...armie: Iterable<string>[]): string[] {
+  const wynik = new Set(FACTIONS.flatMap((f) => f.units.map((u) => u.sprite)));
+  for (const a of armie) for (const s of a) if (ETAPY_EWOLUCJI.has(s)) wynik.add(s);
+  return [...wynik];
 }
 
 /**

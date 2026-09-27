@@ -43,7 +43,7 @@ Wyjście (`public/portrety/`):
   - `<id>-o.png` okrągły, 56 px — medaliony (kolejka tur, kampania, wynik).
 Gra ładuje je jako `pd-`, `pm-`, `pp-`, `po-<id>` (`src/visual/portrety.ts`).
 
-    python3 tools/stworki_portrety.py                   # wszystkie 18
+    python3 tools/stworki_portrety.py                   # 18 stworów zamków + etapy ewolucji
     python3 tools/stworki_portrety.py --arkusz out.png  # arkusz kontrolny w wielkościach z gry
     python3 tools/stworki_portrety.py --pomiar out.png  # mistrzowie z naniesionymi oczami i kadrem
 
@@ -73,11 +73,11 @@ ROZMIARY = {
 
 # ————————————————————————————————————————————————— kadr
 
-# Oczy, których na mistrzu nie widać przy wielkości portretu (Flamir ma
-# oko-kreskę 2 px). Portret dorysowuje je w pikselach mistrza: (x, y, promień).
-OKO: dict[str, tuple[float, float, float]] = {
-    '00020': (72, 76, 3.6),
-}
+# Oczy, których na mistrzu nie widać przy wielkości portretu. Portret
+# dorysowuje je w pikselach mistrza: (x, y, promień). Flamir z pętli miał
+# oko-kreskę 2 px ('00020': (72, 76, 3.6)); rysunki PR #6 mają oczy
+# wyraźne, więc tabela jest pusta — po zmianie mistrzów sprawdzić `--pomiar`.
+OKO: dict[str, tuple[float, float, float]] = {}
 
 # Zapas od ramy (ułamek boku kadru) na ciaśniejszej osi i linia stóp
 # (ułamek boku od dołu). Panel mapy: górna część postaci, cięta od dołu.
@@ -109,6 +109,13 @@ def frakcje() -> dict[str, str]:
         if m and obecna:
             wynik[m.group(1)] = obecna
     return wynik
+
+
+def ewolucje() -> list[str]:
+    """Etapy ewolucji (`01xxx`, `02xxx`) z `src/data/ewolucje.ts` — portrety
+    dostają też one, jeśli mają mistrza (`tools/stworki_wczytaj.py`)."""
+    tekst = (KORZEN / 'src' / 'data' / 'ewolucje.ts').read_text(encoding='utf-8')
+    return sorted(set(re.findall(r"\['(0[12]\d{3})'", tekst)))
 
 
 def tlo(bok: int) -> Image.Image:
@@ -331,7 +338,10 @@ def main():
     brak = [sid for sid in fr if not (MISTRZOWIE / f'{sid}.png').exists()]
     if brak:
         raise SystemExit(f'brak mistrzów: {brak}')
-    ids = [s for s in fr if not args.ids or s in args.ids]
+    # Etapy ewolucji: tylko te, które mają mistrza (bez mistrza gra pokazuje
+    # w slocie cały sprite — `PanelArmii`).
+    ewo = [sid for sid in ewolucje() if (MISTRZOWIE / f'{sid}.png').exists()]
+    ids = [s for s in [*fr, *ewo] if not args.ids or s in args.ids]
     if args.pomiar:
         pomiar(ids, args.pomiar)
     WYJSCIE.mkdir(parents=True, exist_ok=True)

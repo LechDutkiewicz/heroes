@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { dnoGniazda, kluczPortretuPanelu, oprawPortret, wczytajPortrety } from '../visual/portrety';
+import { dnoGniazda, kluczPortretuPanelu, oprawPortret, spriteDoPortretow, wczytajPortrety } from '../visual/portrety';
 import { ZESTAWY_KLIMATU } from '../data/zestawy-klimatu';
 import {
   BUDOWLE,
@@ -41,6 +41,7 @@ import {
 } from '../data/mapa';
 import { planszaPrzygody } from '../data/plansza';
 import { ALL_SPRITES } from '../data/factions';
+import { STRAZNICY_MAPOWI } from '../data/strazniki-mapa';
 import type { PoseName } from '../visual/unitView';
 import { planszaPoId } from '../data/mapy';
 import { turaWroga } from '../data/wrog-ai';
@@ -326,19 +327,22 @@ const STWORKI_MAPY = new Map<string, StworekNaMape>();
  * najechaniu — co klatkę zmieniają się już tylko krycie, skala i obrót.
  */
 const NAJECHANIE_POZY: Record<string, PoseName> = {
-  // Pozy „zamach" przejrzane na arkuszu: zwinięcie, pochylenie, łeb w dół
-  // — wyczekanie przed ciosem, czyli groźba. Wyjątki niżej.
-  //
-  // Zamach płasko przy ziemi (Silvena leży, Glacyn przypada do skoku, Cindro
-  // i kogut kucają) albo ze smugą kurzu w pliku (Glacyn, Bazalt, Ashko):
-  // na mapie to podmiana stworka, a nie gest. Zamiast niego:
-  '00023': 'krok', // Cynder staje wyżej i unosi łeb
-  '00041': 'trafiony', // kogut rozkłada skrzydła
-  '00058': 'trafiony', // Ashko odchyla się z uniesioną łapą
-  '00074': 'trafiony', // Bazalt odwraca łeb, bez kurzu
-  '00227': 'atak', // Silvena wskazuje ręką — bez żadnego efektu
-  '00246': 'atak', // Glacyn wyciąga szyję z rykiem
-  '00263': 'trafiony', // Cindro unosi łapę
+  // Pozy rysunków PR #6 (2026-09-27), przejrzane na `tools/shots/pozy-arkusz.png`.
+  // Domyślnie „zamach" — wygięty z mistrza (odchylenie przed ciosem) albo
+  // malowany, gdy stoi (Sporex, Sadzin). Malowane zamachy płasko przy
+  // ziemi (Silvena, Glacyn, Cindro, Aquator, Vulkaron, Bazalt, Ashko,
+  // Cynder) na mapie czytały się jak podmiana stworka, a nie gest — ci
+  // biorą cios, który w tej wersji jest bez efektów i bez kurzu.
+  // Dotyczy tylko strażników bez figury mapowej (`STRAZNICY_MAPOWI` mają
+  // własny gest `mapa-<numer>-gest`).
+  '00227': 'atak', // Silvena tnie ręką, peleryna z liści za nią
+  '00246': 'atak', // Glacyn wyciąga szyję z otwartą paszczą
+  '00263': 'atak', // Cindro wyprowadza cios pięścią
+  '00220': 'atak', // Aquator jeży kolce i warczy
+  '00196': 'atak', // Vulkaron uderza pięściami
+  '00074': 'atak', // Bazalt rzuca się z paszczą
+  '00058': 'atak', // Ashko staje dęba
+  '00023': 'atak', // Cynder rzuca się ze skrzydłami w górze
 };
 const najechaniePoza = (sprite: string): PoseName => NAJECHANIE_POZY[sprite] ?? 'zamach';
 /** Długość jednej pętli (ms). */
@@ -622,18 +626,29 @@ export class AdventureScene extends Phaser.Scene {
     for (const o of zywe(stan.bohater.armia)) potrzebne.add(o.sprite);
     for (const ob of stan.obiekty) for (const o of ob.oddzialy ?? []) potrzebne.add(o.sprite);
     for (const s of potrzebne) this.load.image(`p-${s}`, `${b}sprites/${s}.png`);
-    // Klatka pozy strażników do najechania (`NAJECHANIE_POZY`). Pozy ma każdy
+    // Strażnik stoi na mapie jako malowana figura mapowa z PR #6
+    // (`public/sprites/mapa-<numer>.png`, `STRAZNICY_MAPOWI`), gdy ją ma —
+    // inaczej jako sprite bitwy. Obie drogi idą przez `stworekNaMape`.
+    // Klatka do najechania: figura mapowa ma własny gest (`mapa-<numer>-gest`,
+    // wygięty z figury: `tools/strazniki_wczytaj.py --gesty`), bo poza z bitwy
+    // to inny rysunek; sprite bitwy — pozę z `NAJECHANIE_POZY`. Pozy ma każdy
     // stworek zamków (`ALL_SPRITES`, `tools/stworki_przemaluj.py`) — spoza tej
     // listy nie prosimy, żeby nie sypać 404; taki strażnik tylko oddycha.
     const zPozami = new Set(ALL_SPRITES);
-    for (const ob of stan.obiekty)
-      if (ob.rodzaj === 'potwor' && ob.oddzialy?.[0] && zPozami.has(ob.oddzialy[0].sprite)) {
-        const s = ob.oddzialy[0].sprite;
+    for (const ob of stan.obiekty) {
+      const s = ob.rodzaj === 'potwor' ? ob.oddzialy?.[0]?.sprite : undefined;
+      if (!s) continue;
+      if (STRAZNICY_MAPOWI.has(s)) {
+        this.load.image(`pmapa-${s}`, `${b}sprites/mapa-${s}.png`);
+        this.load.image(`pmapa-${s}-gest`, `${b}sprites/pozy/mapa-${s}-gest.png`);
+      } else if (zPozami.has(s)) {
         const poza = najechaniePoza(s);
         this.load.image(`p-${s}-${poza}`, `${b}sprites/pozy/${s}-${poza}.png`);
       }
-    // Sloty armii w panelu pokazują małe portrety (`src/visual/portrety.ts`).
-    wczytajPortrety(this, { panel: true });
+    }
+    // Sloty armii w panelu pokazują małe portrety (`src/visual/portrety.ts`),
+    // także etapów ewolucji, które są w armiach.
+    wczytajPortrety(this, { panel: true }, spriteDoPortretow(potrzebne));
   }
 
   /**
@@ -2448,10 +2463,11 @@ export class AdventureScene extends Phaser.Scene {
       // Granice `WYS_STRAZNIKA_MIN/MAX` i `SZER_STRAZNIKA_MAX` trzymają
       // skrajne kształty. Zwracana `wys` to wysokość PLIKU, więc cień
       // kontaktowy, spód rysunku i trafienia kliknięciem idą za nią same.
-      // Malowanych figur mapowych z gałęzi głównej (`public/sprites/mapa-<numer>.png`,
-      // `STRAZNICY_MAPOWI`) tu nie bierzemy: strażnik to ten sam storek co
-      // w bitwie i w armii, podany na mapę przez `stworekNaMape` (scalenie storków).
-      const klucz = `p-${o.oddzialy?.[0].sprite ?? '00002'}`;
+      // Malowana figura mapowa z PR #6 (`pmapa-`, `STRAZNICY_MAPOWI`), gdy
+      // jest — inaczej sprite bitwy. Obróbka ta sama (`stworekNaMape`: obrys
+      // i cień jak u skrzyni, barwy w zakresie obiektów planszy).
+      const sprite = o.oddzialy?.[0].sprite ?? '00002';
+      const klucz = this.textures.exists(`pmapa-${sprite}`) ? `pmapa-${sprite}` : `p-${sprite}`;
       const p = this.podstawaRysunku(klucz);
       const zrodlo = this.textures.get(klucz).getSourceImage() as { width: number; height: number };
       const proporcja = (zrodlo.width || 1) / (zrodlo.height || 1);
@@ -3874,7 +3890,7 @@ export class AdventureScene extends Phaser.Scene {
     const a: KlatkaRuchu = { wpis: stoi, rysunek: sylwetka(stoi, 0, 0), obrys: z.obrys, cien: z.cien, dx: 0, dy: 0 };
     wstawZa(z.im, a.rysunek);
     const sprite = z.klucz.replace(/^p-/, '');
-    const kluczPozy = `${z.klucz}-${najechaniePoza(sprite)}`;
+    const kluczPozy = z.klucz.startsWith('pmapa-') ? `${z.klucz}-gest` : `${z.klucz}-${najechaniePoza(sprite)}`;
     if (!this.textures.exists(kluczPozy)) return [a];
     const wpis = this.stworekNaMape(kluczPozy, z.wys, z.tlo, stoi);
     if (wpis.rysunek === kluczPozy) return [a];

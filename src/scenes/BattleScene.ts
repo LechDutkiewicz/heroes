@@ -8,6 +8,7 @@ import {
   type UnitDef,
 } from '../data/units';
 import { ALL_SPRITES, FACTIONS, factionById, type Faction } from '../data/factions';
+import { toEtapEwolucji, wczytajPortrety } from '../visual/portrety';
 import { hexDistance, type Cell } from '../data/hex';
 
 /**
@@ -390,6 +391,13 @@ export class BattleScene extends Phaser.Scene {
         this.load.image(poseKey(key, poza), `${import.meta.env.BASE_URL}sprites/pozy/${key}-${poza}.png`);
       }
     }
+    // Etapy ewolucji (`01xxx`, `02xxx`) z armii przyniesionych z mapy: sam
+    // sprite i okrągły portret do kolejki tur. Póz nie mają — `setPose`
+    // zostawia wtedy obrazek „stoi", a o pliki póz nie prosimy (bez 404).
+    const zMapy = [...(this.zPrzygody?.gracz ?? []), ...(this.zPrzygody?.wrog ?? [])].map((o) => o.sprite);
+    const etapy = [...new Set(zMapy)].filter((s) => !ALL_SPRITES.includes(s));
+    for (const key of etapy) this.load.image(key, `${import.meta.env.BASE_URL}sprites/${key}.png`);
+    wczytajPortrety(this, { okragle: true }, etapy.filter(toEtapEwolucji));
     for (const t of TERRAINS) {
       this.load.image(t.key, `${import.meta.env.BASE_URL}terrain/${t.key}.png`);
     }

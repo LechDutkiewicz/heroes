@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { kluczPortretuOkraglego, wczytajPortrety } from '../visual/portrety';
+import { kluczPortretuOkraglego, spriteDoPortretow, toEtapEwolucji, wczytajPortrety } from '../visual/portrety';
 import {
   KOSZT_ODDZIALU,
   PRZYROST_ODDZIALU,
@@ -251,9 +251,15 @@ export class TownScene extends Phaser.Scene {
     const b = import.meta.env.BASE_URL;
     for (const s of SUROWCE) this.load.image(`m-${SUROWIEC_INFO[s].ikona}`, `${b}mapa/${SUROWIEC_INFO[s].ikona}.png`);
     for (const f of FACTIONS) for (const u of f.units) this.load.image(`p-${u.sprite}`, `${b}sprites/${u.sprite}.png`);
+    // Etapy ewolucji z armii bohatera i garnizonu: sprite (okno stworka)
+    // i portrety — stwory zamków są już na liście wyżej.
+    const stan = this.registry.get(KLUCZ_STANU) as StanMapy | undefined;
+    const zamek = stan?.obiekty.find((o) => o.id === this.registry.get(KLUCZ_ZAMKU));
+    const armie = [...(stan?.bohater.armia ?? []), ...(zamek?.garnizon ?? [])].flatMap((o) => (o ? [o.sprite] : []));
+    for (const s of armie) if (toEtapEwolucji(s)) this.load.image(`p-${s}`, `${b}sprites/${s}.png`);
     // Portrety: duże do slotów garnizonu i bohatera (`PanelArmii`), okrągłe
     // do medalionu na karcie siedliska (`src/visual/portrety.ts`).
-    wczytajPortrety(this, { duze: true, okragle: true });
+    wczytajPortrety(this, { duze: true, okragle: true }, spriteDoPortretow(armie));
     // Portret bohatera w pierwszej wnęce dolnego rzędu — ten sam co w kampanii.
     for (const kto of ['janek', 'ela']) {
       if (!this.textures.exists(`k-portret-${kto}`)) this.load.image(`k-portret-${kto}`, `${b}kampania/portret-${kto}.jpg`);
