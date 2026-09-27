@@ -110,10 +110,23 @@ Prompty i imiona — etap 6.
 
 ## Etap 4 — ataki
 
-- Każdy stworek ma 2 ataki (wręcz i z dystansu albo specjalny), trzeci
-  dochodzi po ewolucji. Punkty mocy (PP) działają jak amunicja strzelca.
-- Obecne umiejętności (podwójny cios, nieograniczony odwet, uderz i wróć)
-  stają się atakami.
+- Każdy stworek ma 2 ataki, trzeci dochodzi po pierwszej ewolucji
+  (`src/data/ataki.ts`): **zwykły** (bez limitu, siła 1 — dawny cios albo
+  strzał), **specjalny** (siła ×1,5, 2 PP na bitwę) i **ostateczny** (siła ×2,
+  1 PP, cel nie oddaje). Nazwy z żywiołu i rodzaju: Ognisty pazur / Płomienny
+  skok / Wielki ogień, Strumień / Wodny pocisk / Wodna pompa itd.
+- Podwójny cios i Uderz i wróć są teraz atakiem specjalnym (3 PP) —
+  wybiera się je, a nie działają same. Nieograniczony odwet zostaje cechą.
+- Zasięg idzie za stworkiem (strzelec strzela każdym atakiem), więc
+  dojście, zablokowanie i złamana strzała działają bez zmian. PP odnawiają
+  się co bitwę.
+- Bitwa: w dolnej belce trzy przyciski ataków (klawisze 1–3) w miejscu
+  prognozy; po najechaniu na wroga prognoza liczy wybrany atak. Każda tura
+  zaczyna się od zwykłego ataku. Górna belka: „X używa: Y!".
+- AI wybiera atak tą samą punktacją co cel, z karą 15% zwykłego ciosu za
+  zużycie PP i premią za uniknięty odwet.
+- Balans (`npm run balans`): odchylenie 2,4 pp (przed: 4,0). Sonda:
+  `tools/probe-ataki.ts`, zrzuty `tools/zrzut-ataki.mjs`.
 
 ## Etap 5 — trener w bitwie
 
@@ -141,6 +154,6 @@ Prompty i imiona — etap 6.
 | 2 trening i Centrum | zrobione |
 | 3 ewolucja | zrobione |
 | sale i pojedynki | zrobione |
-| 4 ataki | — |
+| 4 ataki | zrobione |
 | 5 trener w bitwie | — |
 | 6 frakcje i kampania | — |

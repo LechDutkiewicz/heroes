@@ -86,6 +86,7 @@ export function defStworka(o: Pick<Oddzial, 'frakcja' | 'tier' | 'sprite' | 'naz
     hp: Math.max(1, Math.round(baza.hp * s)),
     atk: Math.max(1, Math.round(baza.atk * s)),
     poziom: o.poziom,
+    etap,
   };
 }
 

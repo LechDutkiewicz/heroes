@@ -19,6 +19,7 @@
 import Phaser from 'phaser';
 import type { Oddzial } from '../data/mapa';
 import { defStworka, napisPoziomu, postepStworka } from '../data/stworki';
+import { opisAtakow } from '../data/ataki';
 import { ABILITIES, TYPE_INFO, typeMatchup, type UnitDef } from '../data/units';
 import { etapStworka, liniaStworka, nastepnyEtap, progEwolucji } from '../data/ewolucje';
 import { MINI, MINI_TYPE, buildIcons, miniIcon, type MiniKey } from './icons';
@@ -167,11 +168,10 @@ export function pokazOknoStworka(scena: Phaser.Scene, o: OpcjeOknaStworka): Okno
     wiersz(MINI_TYPE[def.type], 'Żywioł', TYPE_INFO[def.type].label, TYPE_INFO[def.type].color);
     wiersz(MINI.strong, 'Mocny przeciw', TYPE_INFO[mecz.strong].dative);
     wiersz(MINI.weak, 'Słaby wobec', TYPE_INFO[mecz.weak].genitive);
-    wiersz(
-      MINI.ability,
-      'Umiejętność',
-      def.ability ? `${ABILITIES[def.ability].name} — ${ABILITIES[def.ability].desc}` : 'brak'
-    );
+    wiersz(MINI.ability, 'Ataki', opisAtakow(def));
+    if (def.ability === 'guardian') {
+      wiersz(MINI.retaliate, 'Cecha', `${ABILITIES.guardian.name} — ${ABILITIES.guardian.desc}`);
+    }
   } else {
     wiersz(MINI.ability, 'Opis', 'Nieznany stworek.');
   }

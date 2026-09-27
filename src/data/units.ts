@@ -53,6 +53,8 @@ export interface UnitDef {
   ability?: Ability;
   /** poziom stworka (1–50), gdy definicja pochodzi z `defStworka` */
   poziom?: number;
+  /** etap ewolucji (0 = pierwsza forma) — od niego zależy trzeci atak (`ataki.ts`) */
+  etap?: number;
 }
 
 // Odmiana przez przypadki, bo teksty w panelu wymagają różnych form:
