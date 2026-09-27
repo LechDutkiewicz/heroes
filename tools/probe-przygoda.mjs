@@ -489,9 +489,16 @@ if (!pilnowana) {
     const po = await page.evaluate(() => {
       const s = window.__game.scene.getScene('adventure');
       const k = s.stan.obiekty.find((o) => o.id === window.__kopalnia);
-      return { nasza: k.wlasciciel === 'gracz', poz: [s.stan.bohater.x, s.stan.bohater.y] };
+      return {
+        nasza: k.wlasciciel === 'gracz',
+        poz: [s.stan.bohater.x, s.stan.bohater.y],
+        kopalnia: [k.x, k.y],
+        wlasciciel: k.wlasciciel,
+        zajety: s.zajety,
+        aktywna: window.__game.scene.getScenes(true).map((x) => x.scene.key),
+      };
     });
-    sprawdz('po wygranej kopalnia jest zajęta bez wchodzenia na nią drugi raz', po.nasza);
+    sprawdz('po wygranej kopalnia jest zajęta bez wchodzenia na nią drugi raz', po.nasza, JSON.stringify(po));
   }
 }
 
