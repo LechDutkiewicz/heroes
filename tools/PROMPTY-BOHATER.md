@@ -209,27 +209,34 @@ figure from the top of his cap down to his shoes, whole body inside the frame
 with a little empty space above the cap and below the shoes. Standing straight
 facing the viewer, symmetrical heroic pose like a paper doll, feet slightly
 apart, arms relaxed a little away from the body with open hands at hip height,
-friendly confident grin. Keep exactly the same face, the red-and-white
-baseball cap with a plain white circle (no letters), messy brown hair, blue
-short-sleeved jacket over a white t-shirt, brown shoulder bag strap across the
-chest; add brown belt, blue-grey shorts or trousers, and sturdy brown hiking
-boots. Same painted storybook style as the reference. Transparent background:
+confident grin. BOTH arms down, hands empty — he holds nothing. Keep him a
+lean boy of about twelve, not a little child. Keep exactly the same face and
+the same outfit: plain red baseball cap tilted back with a small white star
+badge on the side, spiky brown hair, blue zip-up hoodie with white sleeve
+stripes and sleeves pushed up, white t-shirt, sports watch, orange backpack on
+his shoulders, dark green cargo shorts; add white socks and red-and-white
+sneakers. No medieval clothes, no satchel. Same painted anime style as the reference. Transparent background:
 only the character, no ground, no shadow, no scenery, no frame.
 ```
 
 <!-- plik: postac-ela.png | styl: kampania | proporcje: 2:3 | wzor: kampania-ela.png -->
 ```
 The same girl from the reference portrait, now shown as a FULL-BODY standing
-figure from the top of her cap down to her shoes, whole body inside the frame
-with a little empty space above the cap and below the shoes. Standing straight
-facing the viewer, symmetrical heroic pose like a paper doll, feet slightly
-apart, arms relaxed a little away from the body with open hands at hip height,
-determined warm smile. Keep exactly the same face, short black bob hair, green
-newsboy cap, white long-sleeved shirt under a teal-green vest, brown leather
-satchel strap across the chest; add a brown belt, dark green trousers and
-sturdy brown boots. Same painted storybook style as the reference.
-Transparent background: only the character, no ground, no shadow, no scenery,
-no frame.
+figure from the top of her beanie down to her shoes, whole body inside the
+frame with a little empty space above the beanie and below the shoes.
+Standing straight facing the viewer, symmetrical heroic pose like a paper
+doll, feet slightly apart, arms relaxed a little away from the body with open
+hands at hip height, bright confident smile. BOTH arms down, hands empty — she
+holds nothing (no ball in her hands). Keep her a slender, tall teenager of
+about fifteen with teen body proportions, not a little child. Keep exactly the
+same face and the same modern anime creature-trainer outfit: long straight
+black hair past the shoulders with small teal clips, white knit beanie with
+a teal stripe, pink scarf, black sleeveless top under a short teal zip-up
+jacket with pink trim, fingerless gloves and a slim wristband, yellow
+backpack on her shoulders, short pleated pink skirt over black leggings; add
+pink-and-white sneakers. No medieval clothes, no vest, no belt buckle, no
+satchel. Same painted anime style as the reference. Transparent background:
+only the character, no ground, no shadow, no scenery, no frame.
 ```
 
 ## 4. Rywal i odznaki sal

@@ -8,14 +8,14 @@ wklejony na miękkie, malowane tła — zastępstwa z innej gry". Pierwsza runda
 miała odwrotny zarzut (Janek malowany, Ola — dziś Ela — pikselowa), więc ujednolicamy
 W GÓRĘ: wszystko malowane.
 
-Malowany jest tylko Janek (`tools/wsad/bohater-dol.png`, `bohater-prawo.png`).
-Model graficzny od dwóch rund odpowiada 402, więc reszta jest z niego
-WYPROWADZONA, a nie wygenerowana:
+Janek i Ela to ich ujęcia przodem z mapy przygody (`tools/wsad/bohater-dol.png`,
+`bohaterka-dol.png`, PROMPTY-MAPA-2.md) — ta sama postać co na portrecie
+kampanii. Głowa do medalionu jest wycięta z tej samej figurki.
 
- - Ela: ten sam rysunek przemalowany maskami barw (czapka zielona, kurtka
-   morska, czarne włosy, ciemne spodenki, brązowe trzewiki), z dorysowaną za
-   głową fryzurą „na pazia" i odbity w poziomie. Cieniowanie zostaje oryginalne
-   — podmieniamy barwę, nie jasność — więc Ela jest z tej samej ręki co Janek.
+Reszta jest WYPROWADZONA z pierwszego, malowanego Janka
+(`tools/wsad/stary-bohater-dol.png`, `stary-bohater-prawo.png`), a nie
+wygenerowana:
+
  - Srebrne płaszcze: Janek z profilu i z przodu pod kapturem i płaszczem,
    zanurzony w cieniu z księżycowym światłem krawędziowym i świecącymi oczami.
    Twarz ginie w cieniu celowo — złoczyńca ma być tajemnicą, nie drugim Jankiem.
@@ -40,62 +40,26 @@ CEL = KORZEN / 'public' / 'kampania'
 
 # ————————————————————————————————————————————————— Janek i Ela
 
-def wczytaj():
-    im = Image.open(W + 'bohater-dol.png').convert('RGBA')
-    return im.crop(im.getbbox())
+def wczytaj(plik):
+    """Trener z ujęcia przodem na mapę (`PROMPTY-MAPA-2.md`, prawdziwa alfa)."""
+    im = Image.open(W + plik).convert('RGBA')
+    a = im.getchannel('A').point(lambda v: 255 if v > 24 else 0)
+    return im.crop(a.getbbox())
 
 
-def maski(im):
-    a = np.asarray(im).astype(np.float32) / 255
-    rgb, al = a[..., :3], a[..., 3]
-    H, Wd = al.shape
-    yy, xx = np.mgrid[0:H, 0:Wd]
-    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
-    mx, mn = rgb.max(2), rgb.min(2)
-    v = mx
-    s = np.where(mx > 0, (mx - mn) / np.maximum(mx, 1e-5), 0)
-    d = np.maximum(mx - mn, 1e-5)
-    h = np.where(mx == r, ((g - b) / d) % 6, np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4)) * 60
-    braz = (h > 15) & (h < 45) & (s > 0.3) & (al > 0.5)
-    skora = (h > 10) & (h < 40) & (s > 0.2) & (s < 0.55) & (v > 0.75)
-    m = {
-        'kurtka': (h > 190) & (h < 250) & (s > 0.3) & (al > 0.5),
-        'czapka': ((h < 20) | (h > 340)) & (s > 0.35) & (yy < 320) & (al > 0.5),
-        'daszek': (s < 0.18) & (v > 0.75) & (yy < 300) & (al > 0.5),
-        'wlosy': braz & (yy > 150) & (yy < 470) & (((s > 0.5) | (v < 0.62)) | (((xx < 430) | (xx > 650)) & ~skora)),
-        'koszula': (s < 0.15) & (v > 0.8) & (yy > 440) & (yy < 720) & (al > 0.5),
-        'spodenki': braz & (yy > 720) & (yy < 950) & (xx > 370) & (xx < 700) & ~((xx < 500) & (yy < 840)) & ~skora,
-        'buty': braz & (yy > 960),
-    }
-    return rgb, al, m
-
-
-def przemaluj(im, kolory):
-    rgb, al, m = maski(im)
-    out = rgb.copy()
-    lum = (0.3 * rgb[..., 0] + 0.59 * rgb[..., 1] + 0.11 * rgb[..., 2])[..., None]
-    for czesc, (kolor, jas) in kolory.items():
-        k = np.array(kolor, np.float32) / 255
-        nowy = np.clip(k * lum / 0.55 * jas, 0, 1)
-        out[m[czesc]] = nowy[m[czesc]]
-    return Image.fromarray((np.dstack([out, al]) * 255).clip(0, 255).astype(np.uint8), 'RGBA')
-
-
-def ela():
-    im = wczytaj()
-    res = przemaluj(im, {
-        'kurtka': ((30, 140, 125), 1.0), 'czapka': ((58, 122, 52), 1.0), 'daszek': ((96, 150, 78), 0.8),
-        'wlosy': ((40, 36, 52), 0.9), 'spodenki': ((46, 58, 66), 0.9), 'buty': ((120, 66, 34), 0.85)})
-    tlo = Image.new('RGBA', res.size, (0, 0, 0, 0))
-    ImageDraw.Draw(tlo).rounded_rectangle([288, 290, 712, 492], radius=90, fill=(34, 30, 44, 255))
-    tlo = tlo.filter(ImageFilter.GaussianBlur(3))
-    hl = Image.new('RGBA', res.size, (0, 0, 0, 0))
-    dh = ImageDraw.Draw(hl)
-    dh.line([(300, 330), (306, 470)], fill=(90, 90, 120, 140), width=6)
-    dh.line([(700, 330), (694, 470)], fill=(90, 90, 120, 140), width=6)
-    tlo.alpha_composite(hl.filter(ImageFilter.GaussianBlur(3)))
-    tlo.alpha_composite(res)
-    return tlo.transpose(Image.FLIP_LEFT_RIGHT)
+def glowa(f):
+    """Kwadrat z głową do medalionu: głowa z czapką i brodą to ~0,3 wysokości sylwetki,
+    środek w poziomie liczony z samej głowy, nie z całej figurki (plecak
+    i rozłożone ręce przesuwałyby go w bok)."""
+    w, h = f.size
+    bok = int(h * 0.31)
+    gora = np.asarray(f.getchannel('A'))[: int(h * 0.12)] > 24
+    xs = np.nonzero(gora.any(axis=0))[0]
+    sx = (xs[0] + xs[-1]) // 2
+    x0 = max(0, min(w - bok, sx - bok // 2))
+    kw = Image.new('RGBA', (bok, bok), (0, 0, 0, 0))
+    kw.alpha_composite(f.crop((x0, 0, x0 + bok, bok)))
+    return kw.resize((64, 64), Image.LANCZOS)
 
 
 
@@ -186,7 +150,7 @@ def zakapturzony(rgb, a, kaptur, twarz, oczy, swiatlo, barwa=(178, 184, 214)):
 
 
 def wrog_profil():
-    rgb, a = zBialego(W + 'bohater-prawo.png')
+    rgb, a = zBialego(W + 'stary-bohater-prawo.png')
     return zakapturzony(
         rgb, a,
         kaptur=lambda d: (d.ellipse([400, 20, 840, 480], fill=255), d.polygon([(420, 200), (330, 40), (560, 60)], fill=255)),
@@ -197,7 +161,7 @@ def wrog_profil():
 
 
 def wrog_przod():
-    im = Image.open(W + 'bohater-dol.png').convert('RGBA')
+    im = Image.open(W + 'stary-bohater-dol.png').convert('RGBA')
     arr = np.asarray(im, np.float32) / 255
     ox, oy = 105, 21
     return zakapturzony(
@@ -357,22 +321,17 @@ def zmniejsz(im, wys):
 def main():
     CEL.mkdir(parents=True, exist_ok=True)
     # Figurki w 2× tego, co na ekranie wyboru (270 px).
-    janek = zmniejsz(wczytaj(), 540)
-    ela_ = zmniejsz(ela(), 540)
+    janek = zmniejsz(wczytaj('bohater-dol.png'), 540)
+    ela_ = zmniejsz(wczytaj('bohaterka-dol.png'), 540)
     janek.save(CEL / 'janek.png', optimize=True)
     ela_.save(CEL / 'ela.png', optimize=True)
-    # Głowy do medalionu: kwadrat z twarzą (bez daszka czapki po bokach).
+    # Głowy do medalionu.
     for nazwa, f in (('janek', janek), ('ela', ela_)):
-        w, h = f.size
-        g = f.crop((int(w * 0.18), int(h * 0.02), int(w * 0.82), int(h * 0.38)))
-        bok = max(g.size)
-        kw = Image.new('RGBA', (bok, bok), (0, 0, 0, 0))
-        kw.alpha_composite(g, ((bok - g.width) // 2, (bok - g.height) // 2))
-        kw.resize((64, 64), Image.LANCZOS).save(CEL / f'glowa-{nazwa}.png', optimize=True)
+        glowa(f).save(CEL / f'glowa-{nazwa}.png', optimize=True)
     zmniejsz(wrog_profil(), 260).save(CEL / 'wrog-a.png', optimize=True)
     zmniejsz(wrog_przod(), 250).save(CEL / 'wrog-b.png', optimize=True)
     # Ikony nagród (128 px; na ekranie ~46).
-    buty = Image.open(W + 'bohater-dol.png').convert('RGBA').crop((105 + 340, 21 + 920, 105 + 760, 21 + 1207))
+    buty = Image.open(W + 'stary-bohater-dol.png').convert('RGBA').crop((105 + 340, 21 + 920, 105 + 760, 21 + 1207))
     # Surowce z malowanych oryginałów wsadu (1254 px), nie z 29-pikselowych
     # ikonek mapy — powiększona ikonka mapy wyglądała płasko obok stworka.
     # Wszystkie ikony przechodzą przez `gotowa`: ten sam ciemny obrys i ta sama

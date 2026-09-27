@@ -107,56 +107,93 @@ padlock and chains, a stone buttress on one side, dead ivy climbing the corner,
 a raven perched on the roof ridge. Sombre but not frightening, storybook scale.
 ```
 
-**Drugi bohater — trzy ujęcia**
+**Trenerzy na mapie — trzy ujęcia każdego (2026-09-27)**
 
-Trzy osobne wywołania, bo model oddaje jeden obrazek na raz, a `bohater_wczytaj.py`
-potrzebuje kompletu w tej samej skali. Prompty różnią się ostatnim zdaniem.
+Janek i Ela chodzą po mapie jako te same postacie co na portretach
+kampanii i lalce ekranu bohatera: wzorem (`images/edits`) jest
+`postac-<janek|ela>.png`, więc strój i twarz się zgadzają, a model oddaje
+prawdziwą alfę (magenta nie wchodzi w grę — Ela ma różowy strój).
+`tools/bohater_wczytaj.py` składa z trzech ujęć arkusz chodu 4 × 4 (lewy
+profil to odbity prawy), `tools/kampania_postacie.py` bierze z ujęcia
+przodem figurkę i głowę do medalionu. Prompty różnią się ostatnim zdaniem.
 
-<!-- plik: bohaterka-dol.png | styl: brak -->
+<!-- plik: bohater-dol.png | styl: brak | proporcje: 2:3 | wzor: postac-janek.png -->
 ```
-Full-body character sprite of a young pokemon trainer girl, about ten years old,
-short dark hair under a green cap, teal jacket with white sleeves, dark shorts,
-tall boots, a satchel on one hip. Cheerful, standing upright, arms relaxed.
-Drawn small and simple enough to read at 55 pixels tall. No shadow, no ground, no props.
-Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge,
-with no gradient, no vignette, no glow, no shadow and no checkerboard pattern.
-Nothing in the object itself may be magenta or pink. The background is a
-chroma key that gets cut out afterwards, so it must stay one exact colour. Exactly the same character, outfit, proportions
-and scale in every pose of this set.
-FRONT view, facing the camera.
-```
-
-<!-- plik: bohaterka-gora.png | styl: brak -->
-```
-Full-body character sprite of a young pokemon trainer girl, about ten years old,
-short dark hair under a green cap, teal jacket with white sleeves, dark shorts,
-tall boots, a satchel on one hip. Cheerful, standing upright, arms relaxed.
-Drawn small and simple enough to read at 55 pixels tall. No shadow, no ground, no props.
-Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge,
-with no gradient, no vignette, no glow, no shadow and no checkerboard pattern.
-Nothing in the object itself may be magenta or pink. The background is a
-chroma key that gets cut out afterwards, so it must stay one exact colour. Exactly the same character, outfit, proportions
-and scale in every pose of this set.
-BACK view, seen from behind.
+The same boy from the reference image, redrawn as a full-body character
+figure for the adventure map of a creature-collecting strategy game, whole
+body inside the frame from the top of the head to the shoes. Keep exactly the
+same face, hair and outfit as the reference, keep his proportions: a lean boy of about twelve, not a little child,
+about five and a half heads tall, not chibi. Same painted anime style with a
+clean dark outline and soft shading, simple readable shapes that still read
+when shrunk to 55 pixels tall. Standing upright, arms relaxed, empty hands.
+No shadow, no ground, no props, no text. Transparent background: only the
+character. FRONT view, facing the camera, seen slightly from above.
 ```
 
-<!-- plik: bohaterka-prawo.png | styl: brak -->
+<!-- plik: bohater-gora.png | styl: brak | proporcje: 2:3 | wzor: postac-janek.png -->
 ```
-Full-body character sprite of a young pokemon trainer girl, about ten years old,
-short dark hair under a green cap, teal jacket with white sleeves, dark shorts,
-tall boots, a satchel on one hip. Cheerful, standing upright, arms relaxed.
-Drawn small and simple enough to read at 55 pixels tall. No shadow, no ground, no props.
-Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge,
-with no gradient, no vignette, no glow, no shadow and no checkerboard pattern.
-Nothing in the object itself may be magenta or pink. The background is a
-chroma key that gets cut out afterwards, so it must stay one exact colour. Exactly the same character, outfit, proportions
-and scale in every pose of this set.
-SIDE view, walking to the right.
+The same boy from the reference image, redrawn as a full-body character
+figure for the adventure map of a creature-collecting strategy game, whole
+body inside the frame from the top of the head to the shoes. Keep exactly the
+same face, hair and outfit as the reference, keep his proportions: a lean boy of about twelve, not a little child,
+about five and a half heads tall, not chibi. Same painted anime style with a
+clean dark outline and soft shading, simple readable shapes that still read
+when shrunk to 55 pixels tall. Standing upright, arms relaxed, empty hands.
+No shadow, no ground, no props, no text. Transparent background: only the
+character. BACK view, seen from behind and slightly from above: we see the back of the head, the backpack and the heels.
 ```
 
-*(Tu prosimy o BIAŁE tło, nie przezroczyste — tak samo jak przy pierwszym
-bohaterze. `bohater_wczytaj.py` wycina je wypełnieniem od krawędzi, a przy postaci
-z dużą ilością jasnych fragmentów to wychodzi pewniej niż alfa z modelu.)*
+<!-- plik: bohater-prawo.png | styl: brak | proporcje: 2:3 | wzor: postac-janek.png -->
+```
+The same boy from the reference image, redrawn as a full-body character
+figure for the adventure map of a creature-collecting strategy game, whole
+body inside the frame from the top of the head to the shoes. Keep exactly the
+same face, hair and outfit as the reference, keep his proportions: a lean boy of about twelve, not a little child,
+about five and a half heads tall, not chibi. Same painted anime style with a
+clean dark outline and soft shading, simple readable shapes that still read
+when shrunk to 55 pixels tall. Standing upright, arms relaxed, empty hands.
+No shadow, no ground, no props, no text. Transparent background: only the
+character. SIDE view in profile, walking to the right mid-stride, seen slightly from above.
+```
+
+<!-- plik: bohaterka-dol.png | styl: brak | proporcje: 2:3 | wzor: postac-ela.png -->
+```
+The same girl from the reference image, redrawn as a full-body character
+figure for the adventure map of a creature-collecting strategy game, whole
+body inside the frame from the top of the head to the shoes. Keep exactly the
+same face, hair and outfit as the reference, keep her proportions: a slender teenage girl of about fifteen, not a little child,
+about five and a half heads tall, not chibi. Same painted anime style with a
+clean dark outline and soft shading, simple readable shapes that still read
+when shrunk to 55 pixels tall. Standing upright, arms relaxed, empty hands.
+No shadow, no ground, no props, no text. Transparent background: only the
+character. FRONT view, facing the camera, seen slightly from above.
+```
+
+<!-- plik: bohaterka-gora.png | styl: brak | proporcje: 2:3 | wzor: postac-ela.png -->
+```
+The same girl from the reference image, redrawn as a full-body character
+figure for the adventure map of a creature-collecting strategy game, whole
+body inside the frame from the top of the head to the shoes. Keep exactly the
+same face, hair and outfit as the reference, keep her proportions: a slender teenage girl of about fifteen, not a little child,
+about five and a half heads tall, not chibi. Same painted anime style with a
+clean dark outline and soft shading, simple readable shapes that still read
+when shrunk to 55 pixels tall. Standing upright, arms relaxed, empty hands.
+No shadow, no ground, no props, no text. Transparent background: only the
+character. BACK view, seen from behind and slightly from above: we see the back of the head, the backpack and the heels.
+```
+
+<!-- plik: bohaterka-prawo.png | styl: brak | proporcje: 2:3 | wzor: postac-ela.png -->
+```
+The same girl from the reference image, redrawn as a full-body character
+figure for the adventure map of a creature-collecting strategy game, whole
+body inside the frame from the top of the head to the shoes. Keep exactly the
+same face, hair and outfit as the reference, keep her proportions: a slender teenage girl of about fifteen, not a little child,
+about five and a half heads tall, not chibi. Same painted anime style with a
+clean dark outline and soft shading, simple readable shapes that still read
+when shrunk to 55 pixels tall. Standing upright, arms relaxed, empty hands.
+No shadow, no ground, no props, no text. Transparent background: only the
+character. SIDE view in profile, walking to the right mid-stride, seen slightly from above.
+```
 
 ## 3. Chata jasnowidza
 

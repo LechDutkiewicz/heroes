@@ -866,7 +866,7 @@ def bohater() -> Image.Image:
     ku drogowskazowi i sztandarowi. Plecy ma odwrócone od latarni, więc jest
     ciemniejszy od desek, ze złotym konturem światła po lewej.
     """
-    rgb, a = wytnijZBialego(WSAD / 'bohater-gora.png')
+    rgb, a = wytnijZBialego(WSAD / 'stary-bohater-gora.png')
     rgb, a = rgb[:, ::-1], a[:, ::-1]
     # Nogi ciemniej niż ramiona: dół kadru jest w winiecie tła, a trener
     # stoi plecami do światła — jasne od góry łapie tylko czapka i barki.

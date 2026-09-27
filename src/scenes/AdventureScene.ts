@@ -200,6 +200,8 @@ const KLUCZ_WYNIKU = 'wynik-bitwy';
 const KLUCZ_TLA = 'tlo-planszy';
 /** Zestaw klimatu, z którego wczytano sprite'y `m-…` — patrz `preload`. */
 const KLUCZ_ZESTAWU = 'zestaw-planszy';
+/** Plik, z którego wczytano arkusz `bohater` (Janek albo Ela) — patrz `preload`. */
+const KLUCZ_ARKUSZA = 'arkusz-bohatera';
 /** Tekstura miękkiego cienia kontaktowego — patrz `zbudujCien`. */
 const CIEN_KONTAKTOWY = 't-cien-miekki';
 /** Tło planszy pomniejszone do boku minimapy — patrz `zbudujMiniature`. */
@@ -585,7 +587,16 @@ export class AdventureScene extends Phaser.Scene {
       this.load.image(`odznaka-${id}`, `${b}bohater/odznaka-${id}.png`);
       this.load.image(`lider-${id}`, `${b}bohater/lider-${id}.png`);
     }
-    this.load.spritesheet('bohater', `${b}mapa/bohater.png`, {
+    // Ela chodzi własnym arkuszem pod tym samym kluczem `bohater`, więc przy
+    // zmianie trenera trzeba zdjąć poprzedni arkusz, jego wersję w świetle
+    // planszy i animacje chodu, które wskazują na jej klatki.
+    const arkusz = `${b}mapa/${/^el/i.test(this.wczytajStan().bohater.imie.trim()) ? 'bohaterka' : 'bohater'}.png`;
+    if (this.registry.get(KLUCZ_ARKUSZA) !== arkusz) {
+      for (const k of ['bohater', BOHATER_MAPA]) if (this.textures.exists(k)) this.textures.remove(k);
+      for (const k of Object.keys(KIERUNEK_WIERSZ)) this.anims.remove(`chod-${k}`);
+      this.registry.set(KLUCZ_ARKUSZA, arkusz);
+    }
+    this.load.spritesheet('bohater', arkusz, {
       frameWidth: BOHATER_KLATKA,
       frameHeight: BOHATER_KLATKA,
     });
