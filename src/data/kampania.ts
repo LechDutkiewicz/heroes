@@ -270,8 +270,15 @@ export function ocenMisje(stan: StanMapy, m: Misja): Rozstrzygniecie {
   }
   const z = m.zwyciestwo;
   if (z.typ === 'zamki') {
-    const cudze = stan.obiekty.some((o) => o.rodzaj === 'zamek' && o.wlasciciel !== 'gracz');
-    return cudze ? null : 'wygrana';
+    // Liczą się odznaki, nie bieżący właściciele: sala, w której gracz już
+    // wygrał, zostaje zaliczona, nawet jeśli rywal ją potem odbił
+    // (`zdobadzOdznake` w mapa.ts). Zamek gracza też „się liczy" — zapisy
+    // sprzed odznak nie mają listy, więc własność dalej wystarcza.
+    const odznaki = stan.odznaki ?? [];
+    const brakuje = stan.obiekty.some(
+      (o) => o.rodzaj === 'zamek' && o.wlasciciel !== 'gracz' && !odznaki.includes(o.nazwa)
+    );
+    return brakuje ? null : 'wygrana';
   }
   if (z.typ === 'artefakt') return stan.bohater.artefakty.includes(z.artefakt) ? 'wygrana' : null;
   if (z.typ === 'zbierz') return stan.skarbiec[z.surowiec] >= z.ile ? 'wygrana' : null;
@@ -285,7 +292,7 @@ export function ocenMisje(stan: StanMapy, m: Misja): Rozstrzygniecie {
 /** Warunki misji słowami — dla okna „Warunki misji" i ekranu kampanii. */
 export function opisZwyciestwa(m: Misja): string {
   const z = m.zwyciestwo;
-  if (z.typ === 'zamki') return 'Zdobądź wszystkie zamki przeciwnika.';
+  if (z.typ === 'zamki') return 'Zdobądź odznaki wszystkich sal przeciwnika — wygraj w każdym jego zamku.';
   if (z.typ === 'artefakt') return `Odnajdź artefakt: ${artefaktPoId(z.artefakt)?.nazwa ?? z.artefakt}.`;
   if (z.typ === 'zbierz') return `Zbierz ${z.ile} × ${z.surowiec}.`;
   return `Pokonaj: ${z.nazwa}.`;
@@ -293,7 +300,7 @@ export function opisZwyciestwa(m: Misja): string {
 
 export function opisPorazki(m: Misja): string {
   return m.porazka
-    .map((w) => (w.typ === 'utrata' ? 'Stracisz wszystkie zamki.' : `Nie zdążysz w ${w.dni} dni.`))
+    .map((w) => (w.typ === 'utrata' ? 'Stracisz swój ostatni zamek.' : `Nie zdążysz w ${w.dni} dni.`))
     .join(' ');
 }
 

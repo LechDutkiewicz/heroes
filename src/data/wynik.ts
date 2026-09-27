@@ -53,7 +53,7 @@ export function przyczynaPorazki(s: StanMapy): WarunekPorazki {
  * („ksiezycowy-kamien"); tu idzie jego nazwa, a surowiec — po polsku.
  */
 export function celSlowami(w: WarunekZwyciestwa): string {
-  if (w.typ === 'zamki') return 'Zdobądź wszystkie zamki przeciwnika.';
+  if (w.typ === 'zamki') return 'Zdobądź odznaki wszystkich sal przeciwnika — wygraj w każdym jego zamku.';
   if (w.typ === 'artefakt') return `Odnajdź ${artefaktPoId(w.artefakt)?.nazwa ?? nazwaZId(w.artefakt)}.`;
   if (w.typ === 'zbierz') return `Zbierz ${w.ile} ${SUROWIEC_INFO[w.surowiec].dopelniacz}.`;
   return `Pokonaj: ${w.nazwa}.`;

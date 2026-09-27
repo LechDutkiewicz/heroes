@@ -75,6 +75,8 @@ function czytajPlik(profil: string, slot: Slot): PlikZapisu | null {
     if (!plik || !plik.stan?.bohater || !Array.isArray(plik.stan.obiekty)) return null;
     // Bohaterka zwała się kiedyś Ola — zapisy sprzed zmiany czytamy jako Elę.
     plik.stan.bohater.imie = imieTrenera(plik.stan.bohater.imie);
+    // Rywal nazywał się kiedyś jak frakcja („Grota") — teraz to Oskar.
+    if (plik.stan.wrogBohater?.imie === 'Grota') plik.stan.wrogBohater.imie = 'Oskar';
     // Garnizon zamku (`garnizon`) przyszedł z ekranem miasta. Zapis sprzed
     // zmiany nie ma pola — to pusty garnizon; zapisany doprowadzamy do
     // siedmiu slotów, jak armię bohatera.

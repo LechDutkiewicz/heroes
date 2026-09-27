@@ -56,6 +56,9 @@ import {
   trasa,
   zasiegNaTure,
   kosztTreningu,
+  rozliczPojedynek,
+  rywalNa,
+  trenerWGrze,
   treningiZamku,
   trenuj,
   zbuduj,
@@ -349,6 +352,21 @@ function znajdzCel(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefine
   // daleki (patrz `znajdzFrontowe`), więc dzielenie przez koszt zawsze
   // przegrywałoby z byle bliską drobnicą i z powrotem zamieniałoby AI w
   // maszynę do skubania okolicy zamiast w odkrywcę.
+  // Rywal jako cel: pojedynek trenerów (`pojedynek`). Tylko gdy widać go
+  // we własnej mgle i symulacja wróży wygraną — i, dla AI przeciwnika, od
+  // dnia natarcia, jak zamek gracza: pierwsze tygodnie należą do dziecka.
+  const drugi: Wlasciciel = kto === 'gracz' ? 'wrog' : 'gracz';
+  const rywal = bohaterOf(s, drugi);
+  const wolno = kto === 'gracz' || s.dzien >= (s.dzienNatarcia ?? DZIEN_PIERWSZEGO_NATARCIA);
+  if (wolno && trenerWGrze(s, drugi) && mgla[rywal.y]?.[rywal.x]) {
+    const kroki = trasa(widok, rywal.x, rywal.y);
+    if (kroki?.length && wygramy(zywe(bohater.armia), zywe(rywal.armia), ziarno)) {
+      const koszt = kroki.reduce((a, k) => a + k.koszt, 0);
+      const ocena = WARTOSC_POJEDYNKU / (koszt + 1);
+      if (!najlepszy || ocena > najlepszy.ocena) najlepszy = { kroki, ocena };
+    }
+  }
+
   const front = znajdzFrontowe(s, kto);
   if (front && (!najlepszy || WARTOSC_EKSPLORACJI > najlepszy.ocena)) {
     najlepszy = { kroki: front.kroki, ocena: WARTOSC_EKSPLORACJI };
@@ -573,6 +591,12 @@ function ruszSie(s: StanMapy, kto: Wlasciciel, ziarno: number) {
 
     for (let i = 0; i < ile; i++) {
       const k = cel.kroki[i];
+      // Rywal na następnym polu — pojedynek z sąsiedniego pola, koniec marszu.
+      if (rywalNa(s, k.x, k.y, kto)) {
+        pojedynek(s, kto, ziarno);
+        lepkiCel.delete(bohater);
+        return;
+      }
       bohater.ruch -= k.koszt;
       bohater.x = k.x;
       bohater.y = k.y;
@@ -595,6 +619,29 @@ function ruszSie(s: StanMapy, kto: Wlasciciel, ziarno: number) {
       wejdzNa(s, kto, naObiekcie, ziarno);
     }
   }
+}
+
+/** Ile wart jest pojedynek z rywalem — tyle co otwarcie bramy kluczem. */
+const WARTOSC_POJEDYNKU = 250;
+
+/**
+ * Pojedynek trenerów rozegrany bez sceny: drużyna `kto` na drużynę rywala.
+ * Obie strony mdleją i zbierają doświadczenie jak w każdej bitwie, a skutki
+ * pojedynku (nagroda, powrót przegranego do Centrum) liczy `rozliczPojedynek`
+ * — ta sama reguła, której używa scena, gdy wyzywa gracz. Wynik trafia do
+ * `s.pojedynki`, żeby scena mogła powiedzieć o nim graczowi.
+ */
+function pojedynek(s: StanMapy, kto: Wlasciciel, ziarno: number) {
+  const drugi: Wlasciciel = kto === 'gracz' ? 'wrog' : 'gracz';
+  const a = bohaterOf(s, kto);
+  const b = bohaterOf(s, drugi);
+  const w = rozegrajBitwe(a.armia, b.armia, makeRng(ziarno + s.dzien * 7919 + 31337));
+  const zwyciezca: Wlasciciel | null = w.outcome === 'player' ? kto : w.outcome === 'enemy' ? drugi : null;
+  rozliczDruzyne(a.armia, w.ocalaliAtak, zwyciezca === kto, w.pokonaniObrona);
+  rozliczDruzyne(b.armia, w.ocalaliObrona, zwyciezca === drugi, w.pokonaniAtak);
+  const nagroda = zwyciezca ? rozliczPojedynek(s, zwyciezca) : 0;
+  a.ruch = 0;
+  (s.pojedynki ??= []).push({ wyzywajacy: kto, zwyciezca, nagroda });
 }
 
 /** Kolejność, w jakiej AI stawia budynki: przyrost i dochód przed dekoracją. */
