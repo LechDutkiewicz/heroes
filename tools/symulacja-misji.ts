@@ -107,6 +107,8 @@ const WETERAN_PLIK = process.env.WETERAN_PLIK;
 let druzyna: Oddzial[] | undefined;
 
 function przebieg(m: Misja, graj: boolean, ziarno: number, horyzont: number): Wynik {
+  // `WROG_POZIOMY=2` — strojenie `wrogPoziomy` bez edycji kampanii.
+  if (process.env.WROG_POZIOMY !== undefined) m = { ...m, wrogPoziomy: Number(process.env.WROG_POZIOMY) };
   const s = rozpocznijMisje(
     {
       ...nowyPostep('Janek'),
