@@ -24,6 +24,9 @@ import {
 import { hexDistance, hexNeighbours, type Cell } from './hex';
 import { atakiStworka, type Atak } from './ataki';
 
+/** Mnożnik ataku po Eliksirze siły — tu, a nie w `przedmioty.ts`, żeby nie zapętlić importów. */
+export const SILA_ELIKSIRU = 1.5;
+
 export const COLS = 10;
 export const ROWS = 7;
 
@@ -67,6 +70,8 @@ export interface SimUnit extends Cell {
    * null — bez limitu. Odnawia się co bitwę.
    */
   pp: (number | null)[];
+  /** wypił Eliksir siły (`przedmioty.ts`) — bije mocniej do końca bitwy */
+  eliksir?: boolean;
 }
 
 export interface Battle {
@@ -291,7 +296,7 @@ export function damageOf(b: Battle, attacker: SimUnit, target: SimUnit, atak = 0
     attacker.def.shooter && !pinned && hexDistance(attacker, target) > attacker.def.shootRange;
   const penalty = pinned || tooFar ? HALF_DAMAGE : 1;
   const guard = target.defending ? GUARD_REDUCTION : 1;
-  const base = stackAtk(attacker.def, attacker);
+  const base = stackAtk(attacker.def, attacker) * (attacker.eliksir ? SILA_ELIKSIRU : 1);
   const bonus = bonusUmiejetnosci(b, attacker, target);
   const value = Math.max(1, Math.round(base * moc * typeMult * penalty * guard * bonus));
   return {

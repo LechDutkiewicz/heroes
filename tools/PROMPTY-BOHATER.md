@@ -319,3 +319,31 @@ no walls, no roof, no flag. Chunky, bold, simple silhouette readable at 24
 pixels, painted soft storybook style with glossy highlights. No text, no
 ribbon, no background.
 ```
+
+## 5. Plecak trenera (bitwa, etap 5)
+
+Przedmioty, których trener używa w bitwie zamiast czarów. Pokeball ma już
+swój rysunek (`public/mapa/pokeball.png`) — tu tylko mikstura i eliksir.
+Wczytanie: `python3 tools/rywal_wczytaj.py` (przycina i skaluje do 128 px).
+
+<!-- plik: przedmiot-mikstura.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object: a single small healing potion spray bottle
+seen from the front, centered and filling the square frame. A chubby round
+glass flask filled with glowing pink-magenta liquid, a white rounded cap on
+top with a short nozzle, and a little white cross-shaped plus sign painted
+on the glass. Warm glossy reflections on the glass. Chunky, bold, simple
+silhouette readable at 24 pixels, painted soft storybook style with glossy
+highlights. No text, no letters, no hand, no background.
+```
+
+<!-- plik: przedmiot-eliksir.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object: a single small strength elixir bottle seen
+from the front, centered and filling the square frame. A tall slim glass
+vial with a cork stopper, filled with bright glowing orange-red liquid with
+tiny rising bubbles, and a small golden lightning-bolt shaped charm tied to
+its neck with a string. Warm glossy reflections on the glass. Chunky, bold,
+simple silhouette readable at 24 pixels, painted soft storybook style with
+glossy highlights. No text, no letters, no hand, no background.
+```

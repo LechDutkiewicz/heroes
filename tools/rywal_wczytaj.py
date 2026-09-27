@@ -7,6 +7,7 @@ Wyjście:
   public/mapa/rywal.png          — sylwetka przycięta do alfy, 256 px wysokości
                                    (na mapie ~70 px, jak Janek: `WYS_BOHATERA`)
   public/bohater/odznaka-<id>.png — przypinka przycięta, 128 px na dłuższym boku
+  public/bohater/przedmiot-<id>.png — przedmioty plecaka (bitwa), tak samo
 
     python3 tools/rywal_wczytaj.py
 """
@@ -40,7 +41,7 @@ rywal = podkrec(przytnij(Image.open(WSAD / 'rywal-lewo.png').convert('RGBA')))
 wys = 256
 zapisz(rywal.resize((round(rywal.width * wys / rywal.height), wys), Image.LANCZOS), KORZEN / 'public' / 'mapa' / 'rywal.png')
 
-for plik in sorted(WSAD.glob('odznaka-*.png')):
+for plik in sorted([*WSAD.glob('odznaka-*.png'), *WSAD.glob('przedmiot-*.png')]):
     im = przytnij(Image.open(plik).convert('RGBA'))
     im.thumbnail((128, 128), Image.LANCZOS)
     zapisz(podkrec(im, 1.08, 1.04), KORZEN / 'public' / 'bohater' / plik.name)

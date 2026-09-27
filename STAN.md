@@ -98,7 +98,20 @@ mieście albo kampanii.
   rodzaj stworka (bez nowych reguł dojścia), tura zaczyna się od zwykłego
   ataku (nie marnować PP jednym klikiem). Wzorców HoMM3 w `tools/reference/`
   brak (jest tylko `homm2`), więc ślepego porównania nie było.
-- **Do zrobienia dalej**: etapy 5–6 w `PROJEKT-TRENERZY.md`.
+- **Etap 5 — trener w bitwie** (opis w `PROJEKT-TRENERZY.md`):
+  `data/przedmioty.ts` (mikstura, eliksir, pokeball; `SimUnit.eliksir`
+  działa w `damageOf`), scena: medalion trenera + „Plecak (P)" w górnej
+  belce (tytuł i zdanie o turze przesunięte o `TYTUL_X`), celowanie
+  przedmiotem przez `celowanie` (Esc / prawy klik anuluje), rzut pokeballem
+  z animacją (`rzucPokeball`, los w `losujRzut` — sonda go ustawia; NIE
+  podmieniać `Math.random`, Phaser się na tym wywraca). Mapa przekazuje
+  `trener` (kto, pokeballe, wolne sloty, czy dzikie), wynik bitwy niesie
+  `zlapani` i `wydanePokeballe`, `rozliczBitwe` dokłada złapanych do
+  drużyny. Okno „Kto walczy?" przy >4 sprawnych. Naprawiony stary błąd:
+  stworki spoza czwórki wracały z bitwy z `ile: 0` i mdlały. Grafiki:
+  `przedmiot-mikstura/eliksir.png` (OpenAI, 0,08 USD), pokeball
+  i głowa trenera z `public/kampania/`. Sonda: `tools/probe-plecak.mjs`.
+- **Do zrobienia dalej**: etap 6 w `PROJEKT-TRENERZY.md`.
 
 ## Storki w stylu mapy — pętla „gauntlet" (2026-09-26)
 
