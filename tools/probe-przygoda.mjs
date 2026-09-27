@@ -485,7 +485,18 @@ if (!pilnowana) {
     // Bitwa toczy się, gdy bohater STOI JUŻ na kopalni, więc po wygranej musi
     // ją zająć sam — inaczej trzeba by zejść z pola i wrócić na nie po raz
     // drugi, co wygląda po prostu na usterkę.
-    await page.waitForTimeout(4000);
+    // Czekamy na warunek, a nie stałe 4 s: na obciążonej maszynie powrót
+    // z bitwy (2,6 s CZASU GRY) potrafi trwać kilka razy dłużej.
+    await zamknijAwans(page);
+    await page
+      .waitForFunction(
+        () =>
+          window.__game.scene.getScene('adventure').stan.obiekty.find((o) => o.id === window.__kopalnia)
+            ?.wlasciciel === 'gracz',
+        null,
+        { timeout: 60000 }
+      )
+      .catch(() => {});
     const po = await page.evaluate(() => {
       const s = window.__game.scene.getScene('adventure');
       const k = s.stan.obiekty.find((o) => o.id === window.__kopalnia);

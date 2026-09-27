@@ -185,14 +185,15 @@ export function rozbijStado(o: Oddzial): Oddzial[] {
 }
 
 /**
- * Doświadczenie za pokonanie jednego stworka: 4 × jego poziom, więcej za
- * rzadszy gatunek. Kto pokonał silniejszego od siebie, uczy się szybciej —
- * mnożnik to stosunek poziomów, przycięty do 0,5–2. Tak słabszy stworek
- * w drużynie dogania resztę, a silny nie farmi drobnicy.
+ * Doświadczenie za pokonanie jednego stworka: `DOSW_ZA_POZIOM` × jego
+ * poziom, więcej za rzadszy gatunek. Kto pokonał silniejszego od siebie,
+ * uczy się szybciej — mnożnik to stosunek poziomów, przycięty do 0,5–1,5.
+ * Tak słabszy stworek w drużynie dogania resztę, a silny nie farmi drobnicy.
  */
+export const DOSW_ZA_POZIOM = 2;
 export function doswZaPokonanego(pokonany: { poziom: number; tier: number }, poziomUcznia: number) {
-  const baza = 4 * pokonany.poziom * (1 + 0.2 * pokonany.tier);
-  const mn = Math.max(0.5, Math.min(2, pokonany.poziom / Math.max(1, poziomUcznia)));
+  const baza = DOSW_ZA_POZIOM * pokonany.poziom * (1 + 0.2 * pokonany.tier);
+  const mn = Math.max(0.5, Math.min(1.5, pokonany.poziom / Math.max(1, poziomUcznia)));
   return Math.round(baza * mn);
 }
 

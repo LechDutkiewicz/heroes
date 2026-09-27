@@ -138,13 +138,22 @@ function oddzialyStrazy(sila: string, losuj: () => number): Oddzial[] {
  * stworki przelicza ją `stadoZLiczebnosci`, a załoga dostaje je osobno
  * (każdy stworek to jeden slot, jak w armii bohatera). Najwyżej siedem.
  */
+/**
+ * Mury: załoga zamku liczy się tak, jakby miała tyle razy więcej dawnych
+ * stworków. W starym modelu obrońca (strona ruszająca się druga) wygrywał
+ * ~95% równych bitew — i to on trzymał zamki wroga do 20.–34. dnia misji
+ * oblężenia. Przerwy między stworkami na polu bitwy (`NA_POLU`) zniosły tę
+ * przewagę, więc zamki padały w 5.–10. dniu; mury oddają ją wprost.
+ */
+const MURY = 3;
+
 function garnizonZamku(frakcja: string, poziomy: number[], tygodnie: number): Oddzial[] {
   const f = factionById(frakcja) ?? FACTIONS[0];
   const zaloga: Oddzial[] = [];
   for (const tier of poziomy) {
     const u = f.units[tier];
     if (!u) continue;
-    const stado = stadoZLiczebnosci(tier, STARY_PRZYROST[tier] * 7 * tygodnie, 2);
+    const stado = stadoZLiczebnosci(tier, STARY_PRZYROST[tier] * 7 * tygodnie * MURY, 2);
     zaloga.push(...rozbijStado({ sprite: u.sprite, nazwa: u.name, frakcja: f.id, tier, ...stado }));
   }
   return zaloga.slice(0, SLOTY_ARMII);

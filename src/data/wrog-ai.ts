@@ -638,13 +638,24 @@ function rozbudujIWerbuj(s: StanMapy, kto: Wlasciciel) {
 }
 
 /**
- * Trening AI: tą samą funkcją co gracz, najsłabszy stworek drużyny pierwszy.
- * Tylko w zamku — trenuje się w Sali treningowej, a nie w polu.
+ * Trening AI: tą samą funkcją co gracz, najsłabszy stworek pierwszy.
+ * Z bohaterem w zamku trenuje drużynę; pod jego nieobecność Sala treningowa
+ * nie stoi pusta — trenuje straż zamku (jak lider sali, który ćwiczy swoich
+ * podopiecznych). Dawniej zamek wroga rósł z tygodnia na tydzień werbunkiem
+ * do stosów; bez tego straż zostawała na poziomie z pierwszego dnia, a misje
+ * z oblężeniem robiły się kilka razy krótsze (`tools/symulacja-misji.ts`).
  */
 function trenujDruzyne(s: StanMapy, kto: Wlasciciel, zamek: Obiekt) {
   const bohater = bohaterOf(s, kto);
   const wZamku = bohater.x === zamek.x && bohater.y === zamek.y;
-  const druzyna = kto === 'wrog' && s.wrogTryb === 'obronca' ? (zamek.oddzialy ?? []) : wZamku ? bohater.armia : [];
+  const druzyna =
+    kto === 'wrog' && s.wrogTryb === 'obronca'
+      ? (zamek.oddzialy ?? [])
+      : wZamku
+        ? bohater.armia
+        : kto === 'wrog'
+          ? (zamek.oddzialy ?? [])
+          : [];
   for (let proba = 0; proba < 20; proba++) {
     const najslabszy = druzyna
       .filter((o): o is Oddzial => !!o)
