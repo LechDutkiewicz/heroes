@@ -1,6 +1,6 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-09-26 (scalenie: storki w stylu mapy — rysunki, portrety, animacje — z ekranem bohatera, garnizonem, paskiem armii, ewolucjami, profilami i zapisami).
+Ostatnia aktualizacja: 2026-09-27 (storki: rysunki z PR #6 wracają do gry, a pozy, portrety i obróbka mapy z pętli liczą się teraz z nich).
 
 ## Storki w stylu mapy — pętla „gauntlet" (2026-09-26)
 
@@ -27,19 +27,46 @@ przegrywają też nasze OBIEKTY mapy (chata, most, skrzynia) — 0/3. (2) Test
 bo surowy krytyk zawsze wskazuje stwora. Żaden z nich nie rozróżnia dobrych
 stworów od złych. Porównania ANIMACJI (sam ruch, bez stylu) rozróżniają.
 
+**Rysunki stworków: źródłem prawdy są rysunki z PR #6 (decyzja gracza,
+2026-09-27).** Przemalowania z tej pętli przegrały z nimi u gracza; z pętli
+zostaje wszystko POZA rysunkiem: pozy do bitwy, portrety, obróbka strażnika
+na mapie, animacja najechania — liczone teraz z rysunków PR #6.
+
 **Gdzie co jest:**
-- wzorce: `assets/stworki/<id>.png` (256², w prawo, stopy na y=252), gra
-  ładuje `public/sprites/<id>.png`; stare płaskie: `assets/sprites-stare/`;
-  generator: `tools/stworki_przemaluj.py` (OpenAI edits, dziennik kosztów
-  `tools/wsad/koszty-openai.jsonl`, limit `OPENAI_LIMIT_USD`, dotąd $19,06);
-- pozy do bitwy: `assets/stworki/pozy/`, `public/sprites/pozy/`
-  (`--pozy`, `--pozy-z-mistrza` — wygięte wzorce jako zapas), arkusz
-  `tools/shots/pozy-arkusz.png`;
+- rysunki: `tools/wsad/stworek-<id>.png` (1024 px, 18 form bazowych
+  i 36 etapów ewolucji `01xxx`/`02xxx`) → `python3 tools/stworki_wczytaj.py`
+  pisze `public/sprites/<id>.png` (128 px, gra; bit w bit jak w PR #6)
+  ORAZ mistrza `assets/stworki/<id>.png` (256², w prawo, stopy na y=252,
+  ta sama obróbka w dwa razy większej skali). Tylko ten skrypt pisze te
+  dwa katalogi;
+- archiwum pętli: mistrzowie przemalowań `assets/stworki-petla/<id>.png`,
+  ich pozy `assets/stworki-petla/pozy/`, surowe pozy
+  `tools/wsad/stworki/pozy-petla/`, surowe przemalowania
+  `tools/wsad/stworki/<id>-<n>.png`. `tools/stworki_przemaluj.py`
+  (`--generuj`, `--czysc`, `--mapowy`, `--kadruj`, `--arkusz`) czyta i pisze
+  już TYLKO archiwum — gry nie rusza; dziennik kosztów
+  `tools/wsad/koszty-openai.jsonl` (wspólny z gałęzią główną), limit
+  `OPENAI_LIMIT_USD`; stare płaskie: `assets/sprites-stare/`;
+- pozy do bitwy (z mistrzów PR #6): `tools/stworki_przemaluj.py --pozy …`
+  (surowe `tools/wsad/stworki/pozy/`, opisy rysunków PR #6 w `STWORKI`,
+  odrzuty w `ODRZUC_POZ`) → `--kadruj-pozy` → `assets/stworki/pozy/`,
+  `public/sprites/pozy/`; brakujące — `--pozy-z-mistrza` (wygięte, darmowe);
+  arkusz `tools/shots/pozy-arkusz.png` (`--arkusz-poz`). Etapy ewolucji póz
+  nie mają: bitwa o nie nie prosi, `setPose` zostaje przy obrazku „stoi";
 - strażnicy na mapie: `stworekNaMape` w `AdventureScene.ts` (obrys i cień jak
-  u skrzyni, barwy w zakresie obiektów planszy, animacja po najechaniu);
-- portrety: `tools/stworki_portrety.py` → `public/portrety/`, `src/visual/portrety.ts`
-  (po zmianie wzorców uruchomić ponownie);
-- zrzuty: `tools/zrzut-stwory-mapa.mjs`, `zrzut-portrety.mjs`,
+  u skrzyni, barwy w zakresie obiektów planszy, animacja po najechaniu).
+  Rysunek: malowana figura mapowa z PR #6 `public/sprites/mapa-<id>.png`
+  (`STRAZNICY_MAPOWI` — 7 gatunków, czyli wszyscy strażnicy plansz
+  kampanii), inaczej sprite bitwy — jak chciała gałąź główna. Figura ma
+  własną klatkę gestu do najechania `public/sprites/pozy/mapa-<id>-gest.png`
+  (`tools/strazniki_wczytaj.py --gesty`: figura wygięta od stóp — staje
+  wyżej i pochyla się w stronę, w którą patrzy, `KIERUNEK`); sprite bitwy
+  bierze pozę z `NAJECHANIE_POZY`. Chorągiewek nad strażnikami nie ma;
+- portrety: `tools/stworki_portrety.py` → `public/portrety/` (18 stworów
+  zamków + 36 etapów ewolucji), `src/visual/portrety.ts`; etapy wczytują
+  sceny tylko wtedy, gdy są w armii (`spriteDoPortretow` — mapa, bohater,
+  miasto, bitwa); po zmianie mistrzów uruchomić ponownie;
+- zrzuty: `tools/zrzut-stwory-mapa.mjs`, `zrzut-portrety.mjs` (`--ewolucje`),
   `zrzut-anim.mjs`, `zrzut-najechanie.mjs`; wzorce HotA w `tools/reference/homm3/`
   (poza gitem, źródła w `ZRODLA.md` tamże).
 
@@ -48,19 +75,30 @@ towarowego); w animacji najechania widać półprzezroczysty ślad w klatce
 przenikania; drugi krok chodu za mało różni się od pierwszego; ekran bitwy
 (tło, HUD) wciąż w starym stylu.
 
-**Scalenie z gałęzią główną (#6, #8).** Obie strony przemalowały 18 stworków
-zamków; w `public/sprites/<id>.png` zostały storki z tej pętli (kadr ten sam:
-128 px, stopy przy dolnej krawędzi, w prawo). Uwaga: `tools/stworki_wczytaj.py`
-z gałęzi głównej przepisuje te pliki z `tools/wsad/stworek-*.png` — nie
-puszczać go dla form bazowych. Etapy ewolucji (`01xxx`, `02xxx`,
-`src/data/ewolucje.ts`) są z gałęzi głównej, w jej stylu i bez portretów
-(pasek armii i okno podziału biorą wtedy cały sprite). Strażnicy na mapie:
-`stworekNaMape` i skala z masy (`MASA_STRAZNIKA`), malowane figury
-`public/sprites/mapa-<id>.png` (`STRAZNICY_MAPOWI`) leżą, ale gra ich nie
-wczytuje; z gałęzi głównej zostały bohater 1,9 pola z proporcem, cień
-rzucany bohatera i przygaszanie łupu. Portrety wpięte w nowy `PanelArmii`
-(sloty bohatera i garnizonu — `pd-`, okno podziału — `po-`) i w medalion
-karty siedliska; okno stworka i „Przyrost na tydzień" pokazują cały storek.
+**Scalenie z gałęzią główną (#6, #8) i powrót rysunków PR #6.** Scalenie
+(e66c2fc) zostawiło w `public/sprites/` przemalowania z pętli — gracz
+wybrał rysunki PR #6, więc 18 plików wróciło z gałęzi głównej, a mistrzowie
+powstają z tego samego wsadu. Z gałęzi głównej zostały też: bohater 1,9 pola
+z proporcem, cień rzucony bohatera, przygaszanie łupu. Portrety wpięte
+w `PanelArmii` (sloty bohatera i garnizonu — `pd-`, okno podziału — `po-`),
+w medalion karty siedliska i w pasek armii na mapie (`pp-`); okno stworka
+i „Przyrost na tydzień" pokazują cały rysunek.
+
+**Pozy rysunków PR #6 (2026-09-27).** Ten sam zestaw co w pętli: cios
+wszystkim 18, zamach, trzy klatki chodu (dwa rozkroki + przejście) i cztery
+fazy skrzydeł lataczom (Torrenar, Sporina, Cynder); trafienie zawsze wygięte.
+Malowanych 62 ze 180, reszta wygięta z mistrza. Filtr bezpieczeństwa
+odrzucał w kółko Verdiko (cios, chód), chód Cindra, krok Sporexa (za drugim
+razem przeszedł) i ponowiony cios Torrenara — te są wygięte. Odrzucone po
+obejrzeniu (`ODRZUC_POZ`): ciosy z namalowanym efektem (ogień, zarodniki,
+woda — skala pozy liczy się z pola sylwetki, więc efekt zmniejszał stworka),
+z kurzem pod stopami, i chód Aquatora i Bazalta wyciągniętych w jaszczury.
+Pomogło: opisy rysunków PR #6 (`STWORKI`), ciosy bez „as if spitting…"
+w `AKCJE`, zdanie „nothing comes out of its mouth or hands" w `PROMPT_POZA`,
+`_bezPylu` wycina też oddzielne plamy w dolnych 20% sylwetki. OpenAI
++$3,78 (dziennik po scaleniu z gałęzią główną: $28,06; bez jej wydatków
+ta gałąź ma $22,84). Do zrobienia: w chodzie Sporexa została cienka kreska
+gruntu pod stopami; Obsydian w ciosie ma smugi ruchu za sobą.
 
 ## Ekran bohatera na wspólnym zestawie (2026-09-26)
 

@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
-"""Przemalowuje 18 stworków frakcji w stylu mapy przygody.
+"""Przemalowuje 18 stworków frakcji w stylu mapy przygody — i maluje im pozy do bitwy.
+
+UWAGA — co jest źródłem prawdy (decyzja gracza, 2026-09-27)
+-----------------------------------------------------------
+Rysunki stworków w grze to rysunki z PR #6: `tools/stworki_wczytaj.py`
+robi z `tools/wsad/stworek-<id>.png` zarówno `public/sprites/<id>.png`, jak
+i mistrza `assets/stworki/<id>.png`. Przemalowania z pętli „gauntlet"
+(`--generuj`, `--czysc`, `--mapowy`, `--kadruj`) zostały jako archiwum:
+czytają i piszą WYŁĄCZNIE `assets/stworki-petla/` (i surowe
+`tools/wsad/stworki/<id>-<n>.png`), a `public/sprites/` ani
+`assets/stworki/` nie ruszają. Żywa część tego skryptu to pozy do bitwy
+(`--pozy`, `--kadruj-pozy`, `--pozy-z-mistrza`, `--arkusz-poz`) — malowane
+z mistrzów PR #6. Opisy stworków dla modelu (`STWORKI`) mówią o rysunkach
+PR #6; opisy z pętli są w `OPISY_PETLA`.
 
 Po co
 -----
@@ -21,18 +34,19 @@ Trzy kroki, każdy osobno
     python3 tools/stworki_przemaluj.py --generuj 00020 00030  # nowe wersje (kosztuje)
     python3 tools/stworki_przemaluj.py --generuj --brakujace  # tylko te bez żadnej wersji
     python3 tools/stworki_przemaluj.py --czysc 00246 00074   # zdejmij namalowany grunt (kosztuje)
-    python3 tools/stworki_przemaluj.py --kadruj              # wersje → gra (darmowe)
+    python3 tools/stworki_przemaluj.py --kadruj              # wersje → archiwum assets/stworki-petla (darmowe)
     python3 tools/stworki_przemaluj.py --arkusz out.png      # podgląd wszystkich wybranych
 
 Surowe wyjścia API leżą w `tools/wsad/stworki/<id>-<n>.png` i nigdy nie są
 nadpisywane — kolejne generowanie dopisuje następny numer. Kadrowanie czyta
-je z dysku, więc poprawka kadru nic nie kosztuje. Która wersja idzie do gry,
-mówi `WYBOR` niżej (brak wpisu = najnowsza); `ODBIJ` odwraca w poziomie te,
+je z dysku, więc poprawka kadru nic nie kosztuje. Która wersja szła do gry
+(do 2026-09-26; dziś do archiwum), mówi `WYBOR` niżej (brak wpisu = najnowsza); `ODBIJ` odwraca w poziomie te,
 które model namalował przodem w lewo.
 
 Kadr
 ----
-Mistrz: `assets/stworki/<id>.png`, 256 × 256. Sylwetka wpisana w kwadrat
+Mistrz (dziś robi go `stworki_wczytaj.py` z rysunków PR #6, archiwum pętli
+w `assets/stworki-petla/` ma ten sam kadr): 256 × 256. Sylwetka wpisana w kwadrat
 248 px (margines 4 px) z zachowaniem proporcji, wyśrodkowana w poziomie,
 STOPY NA LINII y = 252 (dolny margines 4 px) — każdy stworek stoi na tej
 samej linii, przodem w prawo, bez namalowanego gruntu (cień rysuje gra).
@@ -40,16 +54,17 @@ Margines 4/256 to ten sam ułamek co w starych plikach (sylwetka w 124 px
 ze 128), a sceny skalują stworka po wysokości PLIKU (slot armii, karta
 w mieście, bitwa) — przy innym ułamku każdy stworek w grze zmieniłby
 rozmiar. Różnica względem starych plików: szerokie sylwetki (Cynder,
-Bazalt) stały wyśrodkowane w pionie, teraz stoją na linii stóp jak reszta. Do gry idzie `public/sprites/<id>.png`
-w `--bok` (domyślnie 128) — ten sam kadr zmniejszony Lanczosem. 128 px, a nie
+Bazalt) stały wyśrodkowane w pionie, teraz stoją na linii stóp jak reszta. Do gry szedł `public/sprites/<id>.png`
+w `--bok` (domyślnie 128) — ten sam kadr zmniejszony Lanczosem (tak samo
+pozy: `public/sprites/pozy/`, 192 × 128). 128 px, a nie
 256, bo nigdzie w grze stworek nie jest większy niż 72 px (karta w mieście),
 a Phaser zmniejsza bez mipmap: z 256 px do 24 px w slocie armii próbkowałby co
 dziesiąty piksel i sylwetka by się szarpała. Wszystkie sceny skalują stworka
 względem wymiarów pliku albo jego widocznej sylwetki, więc zmiana kadru nie
 zmienia ich rozmiaru na ekranie.
 
-Stare, płaskie pliki (128 px, tak jak były w `public/sprites/`) zostają
-w `assets/sprites-stare/` — kopiowane raz, przy pierwszym kadrowaniu.
+Stare, płaskie pliki (128 px, sprzed obu przemalowań) leżą
+w `assets/sprites-stare/`.
 
 Koszty
 ------
@@ -85,8 +100,12 @@ from generuj_grafiki import LIMIT_USD, wydaneDotad, zapiszKoszt  # noqa: E402
 
 ZRODLA = KORZEN / 'assets' / 'pokemon'
 WSAD = NARZEDZIA / 'wsad' / 'stworki'
+#: Mistrzowie PR #6 — pisze je `tools/stworki_wczytaj.py`, tu tylko czytamy
+#: (wejście póz). Tego katalogu ten skrypt nie nadpisuje.
 MISTRZE = KORZEN / 'assets' / 'stworki'
-STARE = KORZEN / 'assets' / 'sprites-stare'
+#: Archiwum mistrzów z pętli (przemalowania oryginałów) — wejście i wyjście
+#: trybów `--mapowy`, `--kadruj`, `--arkusz`.
+PETLA = KORZEN / 'assets' / 'stworki-petla'
 GRA = KORZEN / 'public' / 'sprites'
 ARKUSZ_STYLU = WSAD / '_styl.png'
 
@@ -101,10 +120,11 @@ NAJDROZSZE = 0.10
 BOK_MISTRZA = 256
 MARGINES = 4
 
-#: Stworki frakcji: id → (nazwa w grze, opis dla modelu). Opis mówi, CO ma
+#: Opisy z pętli „gauntlet" (przemalowania oryginałów z `assets/pokemon/`) —
+#: tylko dla trybów archiwalnych. id → (nazwa w grze, opis dla modelu). Opis mówi, CO ma
 #: zostać z oryginału — model bez niego „poprawiał" anatomię (dokładał łapy,
 #: zmieniał barwy), bo oryginały są małe i płaskie.
-STWORKI: dict[str, tuple[str, str]] = {
+OPISY_PETLA: dict[str, tuple[str, str]] = {
     # Bór Szmaragdowy
     '00193': ('Pyroko', 'a plump, round, egg-shaped fire creature with a red-orange body, a big yellow-orange flame-shaped patch on its back and side, tiny stubby feet and a small cute face'),
     '00020': ('Flamir', 'a slender bird-like creature with a cream body and a red stripe down its chest, a crest of long red feathers on its head, two cream wings with black stripes and red tips, thin dark legs'),
@@ -127,6 +147,35 @@ STWORKI: dict[str, tuple[str, str]] = {
     '00077': ('Lawina', 'a golden-olive insect-like creature with a blue body in the middle, six long thin jointed limbs with clawed hands, two thin antennas and a small head'),
     '00041': ('Sadzin', 'a round orange-red creature with a yellow chick-like head, a red crest and beak, big blue eyes, orange arms and yellow-orange feathered feet'),
 }
+
+#: Stworki frakcji: id → (nazwa w grze, opis RYSUNKU Z PR #6 dla modelu).
+#: Opis mówi, co ma zostać z mistrza przy malowaniu pozy — bez niego model
+#: „poprawiał" anatomię (dokładał łapy, zmieniał barwy). Źródło: akapity
+#: z `tools/PROMPTY-STWORKI.md` poprawione po obejrzeniu mistrzów.
+STWORKI: dict[str, tuple[str, str]] = {
+    # Bór Szmaragdowy
+    '00193': ('Pyroko', 'a tiny round fire spirit shaped like a chubby red-orange bean, no tail and no snout, a big curling tongue of yellow-orange flame rising from the back of its head like a hood, tiny arms, stubby little feet, big friendly eyes'),
+    '00020': ('Flamir', 'a slender crimson firebird chick on two thin orange legs, a crest of red flame-feathers on its head, a yellow beak, small red wings, a long curled tail feather striped black and cream'),
+    '00218': ('Aquino', 'a soft pale-blue water jelly creature built from round glossy bubbles: a big round head, small bubble wings, bubble arms and bubble feet, two simple dark eyes and a gentle smile'),
+    '00030': ('Torrenar', 'a sturdy blue-grey armoured beast with smooth stone-like plates, a rounded head with a dark band across it and one bright red-orange eye, small fin-wings on its back, four stubby legs'),
+    '00096': ('Verdiko', 'a small pale yellow-green sprout creature like a leafy kitten, one big leaf growing from the top of its head, curly spiral marks on its body, a round belly, short legs, a happy open mouth'),
+    '00227': ('Silvena', 'a slim pale-green forest dryad standing upright, a pink flower blooming on top of its head, a cape of long green leaves on its back, thin arms and legs, a calm gentle face'),
+    # Grota Księżycowa
+    '00246': ('Glacyn', 'a small light-blue slender creature like a baby seahorse standing on two legs, a curled fin tail, a little fin crest on its head, a long neck, big curious eyes'),
+    '00002': ('Sporex', 'a round mint-green bulb creature with a friendly face, rosy pink cheeks and a wide smile, a crown of long curling purple petals on top like a flower hat, two thin dark-green vine arms, short green stem legs'),
+    '00263': ('Cindro', 'a small cheeky fire lemur with big round ears, a rust-orange furry body, a cream face and belly, big eyes, orange paws, a long ringed tail with a little flame at the tip'),
+    '00250': ('Sporina', 'a small floating pale-green oval seed-pod creature covered with tiny dots, two red eyes, a thin antenna on top with a glowing white bubble, two tiny leaf wings'),
+    '00220': ('Aquator', 'a blue spiky four-legged water beast, rows of pointed blue spikes along its back and head, a cream belly, big eyes, a wide grinning face'),
+    '00196': ('Vulkaron', 'a bulky round black volcanic creature, a crown of golden horns, small orange bat-like wings, a glowing red-orange ring on its chest like a burning core, stubby strong arms, short legs'),
+    # Zbocze Popielne
+    '00074': ('Bazalt', 'a stocky crimson salamander with a big wide mouth, a cream belly, a curly green vine sprouting from its head like an antenna, green leaves along its back, four short legs, cheerful face'),
+    '00058': ('Ashko', 'a small grey goat-like creature on four thin legs with small hooves, a big fluffy grey rain-cloud for a head mane, a pale crescent mark on its face, blue raindrops falling from the cloud'),
+    '00095': ('Obsydian', 'a round squat glossy deep-purple plum-shaped berry creature, a crown of cream-white petals on top, one big shy eye, two tiny green leaves as arms, small lavender feet'),
+    '00023': ('Cynder', 'a small red dragon-lizard with a big grin, small horns, dark teal bat-like wings, a long tail, four short legs with little claws'),
+    '00077': ('Lawina', 'a golden mantis-like insect standing upright on two thin golden legs, thin golden arms, a small blue chest, pale translucent wings, a small head with antennae and a little flame on top'),
+    '00041': ('Sadzin', 'a red-orange rooster-like creature standing upright, a yellow chest with a blue water-drop mark, a red crest comb, red wing-arms, orange flipper-shaped feet'),
+}
+
 
 #: Która surowa wersja idzie do gry (numer z `<id>-<n>.png`). Brak wpisu —
 #: najnowsza. Wpisy dopisuje człowiek po obejrzeniu wersji.
@@ -346,13 +395,13 @@ def _generuj(sid: str, czysc: bool | str) -> Path | None:
         # Wejście: mistrz 256 px powiększony do 512 (model gubi szczegóły
         # na małym obrazku), drugi obrazek — arkusz obiektów naszej mapy.
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as t:
-            Image.open(MISTRZE / f'{sid}.png').convert('RGBA').resize((512, 512), Image.LANCZOS).save(t.name)
+            Image.open(PETLA / f'{sid}.png').convert('RGBA').resize((512, 512), Image.LANCZOS).save(t.name)
             wejscie = t.name
         obrazy = ['-F', f'image[]=@{wejscie}', '-F', f'image[]=@{ARKUSZ_MAPY}']
         if czysc.startswith('poprawka:'):
-            prompt = PROMPT_POPRAWKA.format(zmiana=czysc[len('poprawka:'):], opis=STWORKI[sid][1])
+            prompt = PROMPT_POPRAWKA.format(zmiana=czysc[len('poprawka:'):], opis=OPISY_PETLA[sid][1])
         else:
-            prompt = (PROMPT_MATOWY if czysc == 'matowy' else PROMPT_MAPA).format(opis=STWORKI[sid][1])
+            prompt = (PROMPT_MATOWY if czysc == 'matowy' else PROMPT_MAPA).format(opis=OPISY_PETLA[sid][1])
         print(f'  {sid}: maluję z mistrza ({czysc[:40]})', flush=True)
     elif czysc:
         zrodlo = wybrana(sid)
@@ -373,7 +422,7 @@ def _generuj(sid: str, czysc: bool | str) -> Path | None:
             Image.open(ZRODLA / f'{sid}.png').convert('RGB').resize((512, 512), Image.LANCZOS).save(t.name)
             wejscie = t.name
         obrazy = ['-F', f'image[]=@{wejscie}', '-F', f'image[]=@{styl}']
-        prompt = PROMPT.format(opis=STWORKI[sid][1])
+        prompt = PROMPT.format(opis=OPISY_PETLA[sid][1])
     polecenie = [
         'curl', '-s', '--max-time', '120', 'https://api.openai.com/v1/images/edits',
         '-F', f'model={MODEL}', *obrazy,
@@ -515,20 +564,21 @@ def wybrana(sid: str) -> Path | None:
 
 
 def kadruj(bok: int) -> None:
-    MISTRZE.mkdir(parents=True, exist_ok=True)
-    STARE.mkdir(parents=True, exist_ok=True)
+    """Wybrane surowe wersje z pętli → archiwum `assets/stworki-petla/`.
+
+    Do 2026-09-26 pisało też `assets/stworki/` i `public/sprites/` — dziś
+    to pliki `tools/stworki_wczytaj.py` (rysunki PR #6) i tu ich NIE
+    ruszamy, żeby dwa skrypty nie nadpisywały sobie nawzajem stworków.
+    `bok` zostaje w sygnaturze dla zgodności wywołania; nie jest używany."""
+    PETLA.mkdir(parents=True, exist_ok=True)
     for sid in STWORKI:
-        # Stary płaski plik zachowujemy raz — przed pierwszym nadpisaniem.
-        if not (STARE / f'{sid}.png').exists() and (GRA / f'{sid}.png').exists():
-            shutil.copy2(GRA / f'{sid}.png', STARE / f'{sid}.png')
         zrodlo = wybrana(sid)
         if not zrodlo:
-            print(f'  {sid}: brak wersji — zostaje stary plik')
+            print(f'  {sid}: brak wersji')
             continue
         m = mistrz(wycinek(zrodlo, zrodlo.stem in ODBIJ))
-        m.save(MISTRZE / f'{sid}.png', optimize=True)
-        m.resize((bok, bok), Image.LANCZOS).save(GRA / f'{sid}.png', optimize=True)
-        print(f'  {sid}: {zrodlo.name}{" (odbity)" if zrodlo.stem in ODBIJ else ""} → mistrz {BOK_MISTRZA}, gra {bok}')
+        m.save(PETLA / f'{sid}.png', optimize=True)
+        print(f'  {sid}: {zrodlo.name}{" (odbity)" if zrodlo.stem in ODBIJ else ""} → assets/stworki-petla (archiwum)')
 
 
 def arkusz(wyjscie: Path, wszystkie: bool) -> None:
@@ -540,8 +590,8 @@ def arkusz(wyjscie: Path, wszystkie: bool) -> None:
             for n in wersje(sid):
                 k = f'{sid}-{n}'
                 wpisy.append((k + (' odb' if k in ODBIJ else ''), mistrz(wycinek(WSAD / f'{k}.png', k in ODBIJ))))
-        elif (MISTRZE / f'{sid}.png').exists():
-            wpisy.append((f'{sid} {STWORKI[sid][0]}', Image.open(MISTRZE / f'{sid}.png').convert('RGBA')))
+        elif (PETLA / f'{sid}.png').exists():
+            wpisy.append((f'{sid} {STWORKI[sid][0]}', Image.open(PETLA / f'{sid}.png').convert('RGBA')))
     kol = 6
     rz = (len(wpisy) + kol - 1) // kol
     a = Image.new('RGB', (kol * 256, rz * 276), (118, 142, 72))
@@ -577,8 +627,9 @@ MISTRZE_POZ = MISTRZE / 'pozy'
 GRA_POZ = GRA / 'pozy'
 
 #: Ile ta część (pozy) może wydać łącznie — osobno od limitu całego projektu
-#: (runda 1–2: $3.50, runda 3: +$2.00 — wydane $1.39, runda 4: +$1.20).
-LIMIT_POZ_USD = float(os.environ.get('POZY_LIMIT_USD', '5.60'))
+#: (runda 1–2: $3.50, runda 3: +$2.00 — wydane $1.39, runda 4: +$1.20;
+#: pozy rysunków PR #6, 2026-09-27: +$5.40 — w pętli wydane $5.08).
+LIMIT_POZ_USD = float(os.environ.get('POZY_LIMIT_USD', '10.50'))
 
 #: Opis pozy dla modelu. `{akcja}` — cios właściwy dla stworka (AKCJE),
 #: `{nogi}` — jak chodzi (NOGI), `{lot}` — czym bije w locie (LOTY).
@@ -667,67 +718,71 @@ POZY: dict[str, str] = {
 #: Jak stworek chodzi — model bez tego dokładał dwunożnym łapy albo
 #: kulom nogi, których nie mają.
 NOGI: dict[str, str] = {
-    '00193': 'it waddles on its tiny stubby feet under the round body.',
+    '00193': 'it waddles on its tiny stubby feet under the round bean body.',
     '00020': 'a bird-like biped walking on its two thin dark legs, wings folded.',
     '00218': 'it waddles on its round stubby bulb-feet.',
     '00096': 'it toddles on its two tiny feet.',
     '00227': 'an upright biped walking gracefully on two thin legs, arms swinging.',
     '00246': 'an upright biped lizard walking on its two hind legs, tail out behind.',
-    '00002': 'it waddles on its two short legs, tentacles swaying.',
+    '00002': 'it waddles on its two short green stem legs, vine arms and petals swaying.',
     '00263': 'an upright biped walking on its two legs, arms swinging.',
-    '00220': 'a four-legged beast: one diagonal pair of legs forward, the other pair back. Keep its two BIG round white eyes on the sides of its body and its compact rounded body.',
+    '00220': 'a four-legged beast: one diagonal pair of legs forward, the other pair back. Keep its SHORT, compact, rounded body exactly as long as in the input, its big head and big eyes — do not stretch it into a lizard.',
     '00196': 'a heavy biped stomping on its two short legs, arms swinging.',
-    '00074': 'a four-legged beast: one diagonal pair of legs forward, the other pair back. Keep its SHORT, stocky, compact body exactly as long as in the input — do not stretch it.',
+    '00074': 'a four-legged beast: one diagonal pair of legs forward, the other pair back. Keep its SHORT, stocky, compact body exactly as long as in the input and its big head — do not stretch it into a long lizard or crocodile; short steps.',
     '00058': 'a four-legged hoofed creature: one diagonal pair of legs forward, the other pair back.',
     '00095': 'it waddles on its two round lavender feet.',
-    '00077': 'it walks on its six long jointed legs, alternating tripods.',
-    '00041': 'a biped bird walking on its two feathered feet, arms swinging.',
+    '00077': 'an upright insect walking on its two thin golden legs, arms swinging, wings folded back.',
+    '00041': 'an upright rooster walking on its two orange flipper feet, wing-arms swinging.',
 }
 
 #: Czym latacz bije w locie. Torrenar i Sporina nie mają skrzydeł — dostają
 #: ruch tułowia / liścia zamiast skrzydła.
 LOTY_SRODEK: dict[str, str] = {
-    '00023': 'its teal cape-like wing flap spread open as a real wing, held out LEVEL and straight to the side at body height, halfway between up and down.',
-    '00030': 'its armoured body held straight and level, head forward, tail straight out behind.',
-    '00250': 'its leaf-shaped pod body half open, edges held level, the white orb above.',
+    '00023': 'its dark teal bat-like wings spread open, held out LEVEL and straight to the side at body height, halfway between up and down.',
+    '00030': 'its small fin-wings spread LEVEL to the sides, armoured body held straight, head forward.',
+    '00250': 'its two tiny leaf wings held out LEVEL to the sides, the oval pod body upright, the glowing bubble on the antenna above.',
 }
 
 LOTY_POWROT: dict[str, str] = {
-    '00023': 'its teal wing folded half-way, the wing bent at the wrist and being pulled UP and BACK, the wingtip trailing behind and below, membrane edge-on.',
-    '00030': 'its armoured body gathering itself, head slightly down, tail curling back up.',
-    '00250': 'its leaf-shaped pod body folding back up from below, edges curling upward, the white orb above.',
+    '00023': 'its dark teal wings folded half-way, bent at the wrist and being pulled UP and BACK, the wingtips trailing behind and below, membranes edge-on.',
+    '00030': 'its small fin-wings folded half-way and pulled back up, head slightly down, body gathering itself.',
+    '00250': 'its two tiny leaf wings folding back up from below, the pod body tilted slightly back, the glowing bubble above.',
 }
 
 LOTY: dict[str, tuple[str, str]] = {
-    '00023': ('its teal cape-like wing flap spread open as a real wing and raised HIGH above its back.',
-              'its teal cape-like wing flap spread open as a real bat-like wing, fully extended and swept DOWN so the wingtip points below the belly line, the membrane lit and clearly visible in front of the body with its finger bones readable — not a dark shadow.'),
-    '00030': ('its armoured body arched upward, head raised, tail and back plates lifted.',
-              'its armoured body curled slightly, head forward, tail swept down like a stroke.'),
-    '00250': ('its leaf-shaped pod body flared wide open like a wing, the white orb above.',
-              'its leaf-shaped pod body folded narrow and swept down, the white orb above.'),
+    '00023': ('its dark teal bat-like wings spread wide open and raised HIGH above its back.',
+              'its dark teal bat-like wings fully extended and swept DOWN so the wingtips point below the belly line, the membranes lit and clearly visible with their finger bones readable — not a dark shadow.'),
+    '00030': ('its small fin-wings raised HIGH above its back, armoured body arched upward, head raised.',
+              'its small fin-wings swept DOWN below the belly line, armoured body curled slightly, head forward.'),
+    '00250': ('its two tiny leaf wings raised HIGH and spread wide, the pod body tilted forward, the glowing bubble above.',
+              'its two tiny leaf wings swept DOWN below its body, the pod body lifted, the glowing bubble above.'),
 }
 
 #: Cios właściwy dla stworka — bez tego model dawał każdemu ten sam
 #: „wyskok z otwartą paszczą", a strzelcy nie wyglądali na strzelających.
 AKCJE: dict[str, str] = {
     '00193': 'it rears back and slams its whole round body forward in a headbutt, stubby feet kicking off the ground',
-    '00020': 'wings flung open and long neck stretched forward, beak wide open as if spitting a fireball forward',
+    # PR #6, runda 1: „as if spitting / blasting" dawało namalowany ogień,
+    # zarodniki i strumień wody w klatce — skala pozy liczy się z pola
+    # sylwetki, więc efekt zmniejszał stworka. Stąd ciosy bez niczego „z paszczy".
+    '00020': 'wings flung open and long neck stretched forward, beak wide open in a fierce screech',
     '00218': 'its big round arm-bulb punches forward to the right like a boxer\'s jab, the other bulb pulled back',
     '00030': 'it lowers its armoured head and charges forward, ramming with its head plate, mouth open',
-    '00096': 'leaning forward, leaf sprout whipped forward, mouth wide open as if shooting a seed forward, arms thrown back',
+    # PR #6: „shooting a seed" filtr bezpieczeństwa odrzucał 8 razy z rzędu.
+    '00096': 'leaning forward, its head leaf whipped forward like a lash, mouth wide open in a battle cry, arms thrown back',
     '00227': 'one arm swept forward in a graceful slashing strike, the leaf cape billowing out behind',
     '00246': 'it snaps its long neck forward with jaws wide open, biting to the right, tail swung back for balance',
-    '00002': 'purple petal-tentacles flung forward, huge mouth wide open as if spitting spores forward',
+    '00002': 'its purple petal crown and vine arms flung forward, mouth wide open in a shout',
     '00263': 'it throws a punch forward with its right fist, the other arm pulled far back, tail curled up',
-    '00250': 'its pod body tilts hard forward and the dotted leaf edge lashes forward like a blade, the small white orb swung forward too',
-    '00220': 'crouched low with its crystal spikes bristling, head thrust forward, mouth open as if launching an ice shard forward',
-    '00196': 'both black arms swung forward in a heavy double-fisted smash, its big red mouth gaping wide',
-    '00074': 'lunging forward with jaws wide open to bite, shaggy mane bristling, tail raised high',
-    '00058': 'rearing up on its hind legs with the cloud head thrust forward, as if blowing a blast of ash forward',
-    '00095': 'its whole vase body tips forward and swings the tall stone column like a club toward the right',
-    '00023': 'lunging forward with jaws wide open, the teal wing flap raised high, front claws out',
-    '00077': 'its front limbs thrust forward with clawed hands open, body tilted forward as if hurling a stone forward',
-    '00041': 'pecking forward hard with its beak, arms flung back, one clawed foot kicking forward',
+    '00250': 'its oval pod body tilts hard forward like a charging dart, the antenna with the glowing bubble swung forward, tiny leaf wings flared back',
+    '00220': 'crouched low with its back spikes bristling, head thrust forward, jaws open in a snarl',
+    '00196': 'both black arms swung forward in a heavy double-fisted smash, wings flared, body leaning forward',
+    '00074': 'lunging forward with its big mouth wide open to bite, back leaves bristling, tail raised high',
+    '00058': 'rearing up on its hind legs with the rain-cloud head thrust forward, front hooves kicking forward',
+    '00095': 'its whole round berry body tips forward in a heavy body slam toward the right, petal crown swung forward, leaf arms thrown back',
+    '00023': 'lunging forward with jaws wide open, dark teal wings raised high, front claws out',
+    '00077': 'both thin golden arms thrust forward with open claws, body tilted forward, wings spread open',
+    '00041': 'pecking forward hard with its beak, wing-arms flung back, one flipper foot kicking forward',
 }
 
 PROMPT_POZA = (
@@ -742,7 +797,9 @@ PROMPT_POZA = (
     'three-quarter view facing the RIGHT side of the image, exactly like the '
     'input. The whole creature fully visible, not cropped. Only the creature, '
     'cut out on a fully transparent background: no ground, no dust patch, no shadow, no '
-    'motion lines, no dust, no sparks, no fire, no glow, no frame, no text.'
+    'motion lines, no dust, no sparks, no fire, no glow, no frame, no text. Only '
+    'the creature\'s own body: nothing comes out of its mouth or hands — no '
+    'breath, no flame, no spray, no beam, no projectile, no splash.'
 )
 
 
@@ -817,7 +874,11 @@ def generujPoze(sid: str, poza: str) -> Path | None:
 
 
 #: Która surowa wersja pozy idzie do gry (klucz `<id>-<poza>`). Brak — najnowsza.
-WYBOR_POZ: dict[str, int] = {}
+WYBOR_POZ: dict[str, int] = {
+    # Sporex: druga próba kroku 2 i pierwsza przejścia z brązową kreską
+    # „gruntu" pod stopami — bierzemy czystsze.
+    '00002-krok2': 1, '00002-krok3': 2,
+}
 
 #: Surowe pozy namalowane przodem w lewo (klucz `<id>-<poza>-<n>`).
 ODBIJ_POZ: set[str] = set()
@@ -825,24 +886,16 @@ ODBIJ_POZ: set[str] = set()
 
 #: Malowane pozy odrzucone po obejrzeniu (klucz `<id>-<poza>-<n>`) — gra
 #: bierze wtedy poprzednią malowaną albo pozę wygiętą z mistrza.
+#: Odrzuty z pętli (pozy przemalowań, dziś w `tools/wsad/stworki/pozy-petla/`)
+#: są w historii gita (commit 42e6398); tu tylko pozy rysunków PR #6.
 ODRZUC_POZ: set[str] = {
-    # Kula Pyroko wyciągnięta w morsa; Aquino dostał ludzkie nogi i rękę;
-    # Obsydian — oko i ręce na wazie; Lawina z sześciu odnóży zrobiła dwunoga;
-    # Vulkaron w pierwszym kroku zmienił się w goryla z paszczą na brzuchu.
-    '00193-krok-1', '00193-krok2-1', '00218-krok-1', '00218-krok2-1',
-    '00095-krok-1', '00095-krok2-1', '00077-krok-1', '00077-krok2-1',
-    '00196-krok-1',
-    # Druga próba Vulkarona lepsza, ale obok wygiętego krok2 wyglądała jak
-    # inny stwór — przy chodzie na zmianę bije to w oczy bardziej niż brak nóg.
-    '00196-krok-2',
-    # Runda 3 (szeroki rozkrok): Vulkaron i Lawina drugi raz stracili swoją
-    # budowę (dwunóg z twarzą, dwunóg z czterech odnóży) — zostają przy
-    # pozach wygiętych. Bazalt wyciągnięty w krokodyla, Aquator zgubił oczy
-    # na bokach — po jednej ponownej próbie.
-    '00196-krok-3', '00196-krok2-1', '00077-krok-2', '00077-krok2-2',
-    '00074-krok-2', '00074-krok2-2', '00220-krok-2', '00220-krok2-2',
-    # Runda 4: przejście Glacyna wyszło kolejnym szerokim rozkrokiem.
-    '00246-krok3-1',
+    # Runda 1 (2026-09-27): cios z namalowanym efektem — ogień z dzioba,
+    # zarodniki, strumień wody, kula ognia, pióropusz pary — albo z pyłem
+    # i plamą pod stopami (Torrenar, Obsydian, Cynder, smuga Sporiny).
+    '00020-atak-1', '00002-atak-1', '00220-atak-1', '00058-atak-1', '00077-atak-1',
+    '00196-atak-1', '00030-atak-1', '00095-atak-1', '00250-atak-1', '00023-atak-1',
+    # Chód: Aquator i Bazalt wyciągnięci w długie jaszczury (jak w pętli).
+    '00220-krok-1', '00220-krok2-1', '00220-krok3-1', '00074-krok-1', '00074-krok2-1',
 }
 
 
@@ -1021,6 +1074,19 @@ def _bezPylu(im: Image.Image) -> Image.Image:
     pyl = (mx > 150) & (sat < 0.3)
     pyl[:y0] = False
     t[..., 3] = np.where(pyl, 0, a)
+    # Rysunki PR #6: model podkłada też smugę piasku w barwie stworka (Pyroko
+    # w ciosie) — osobną plamę pod stopami. Plamy niepołączone z główną
+    # sylwetką, które w całości leżą w dolnych 20% wysokości, wycinamy.
+    from scipy import ndimage
+
+    etyk, n = ndimage.label(t[..., 3] > 60)
+    if n > 1:
+        rozm = ndimage.sum(np.ones_like(etyk), etyk, range(1, n + 1))
+        glowna = int(np.argmax(rozm)) + 1
+        dol20 = ys.max() - (ys.max() - ys.min()) * 0.2
+        for i, sl in enumerate(ndimage.find_objects(etyk), start=1):
+            if i != glowna and sl is not None and sl[0].start >= dol20:
+                t[..., 3][ndimage.binary_dilation(etyk == i, iterations=2) & (etyk != glowna)] = 0
     wynik = Image.fromarray(t.clip(0, 255).astype(np.uint8), 'RGBA')
     bb = wynik.getchannel('A').point(lambda v: 255 if v > 8 else 0).getbbox()
     return wynik.crop(bb) if bb else im
@@ -1109,9 +1175,9 @@ def main() -> None:
     ap.add_argument('--matowy', action='store_true', help='z --mapowy: mniej „chibi", matowo (PROMPT_MATOWY)')
     ap.add_argument('--poprawka', help='z --mapowy: jedna zmiana w mistrzu, opisana po angielsku (PROMPT_POPRAWKA)')
     ap.add_argument('--rownolegle', type=int, default=3, help='ile zapytań naraz (limit ~5/min)')
-    ap.add_argument('--kadruj', action='store_true', help='wybrane wersje → assets/stworki + public/sprites')
+    ap.add_argument('--kadruj', action='store_true', help='wybrane wersje z pętli → archiwum assets/stworki-petla (gry nie rusza)')
     ap.add_argument('--bok', type=int, default=128, help='bok pliku w public/sprites')
-    ap.add_argument('--arkusz', type=Path, help='zapisz podgląd wybranych mistrzów')
+    ap.add_argument('--arkusz', type=Path, help='zapisz podgląd archiwum mistrzów z pętli')
     ap.add_argument('--wszystkie-wersje', action='store_true', help='z --arkusz: każda surowa wersja')
     ap.add_argument('--pozy', nargs='+', choices=list(POZY), help='pozy do bitwy przez OpenAI (kosztuje)')
     ap.add_argument('--kadruj-pozy', action='store_true', help='surowe pozy → assets/stworki/pozy + public/sprites/pozy')
