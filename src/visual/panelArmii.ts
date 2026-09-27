@@ -32,6 +32,7 @@ import {
   SLOTY_ARMII,
 } from '../data/armia';
 import { pokazOknoStworka, type OknoStworka } from './oknoStworka';
+import { kluczPortretu, kluczPortretuOkraglego } from './portrety';
 import { C } from './theme';
 import {
   BARWA,
@@ -315,11 +316,20 @@ export class PanelArmii {
         s.kontener.setAlpha(aktywny ? 1 : 0.6);
         s.plakietka.clear();
         if (o) {
+          // Portret storka (`pd-`, `src/visual/portrety.ts`) wypełnia wnętrze
+          // złotej ramki — jak portret stwora w slocie armii Heroes. Stworek
+          // bez portretu (etapy ewolucji) — cały sprite na cały slot: sprite ma
+          // przezroczysty margines, więc skala liczy się z wysokości slotu.
+          const portret = kluczPortretu(o.sprite);
           const klucz = `p-${o.sprite}`;
-          if (this.scena.textures.exists(klucz)) {
-            s.rysunek.setTexture(klucz).setVisible(true);
-            // Stworek na cały slot: sprite ma przezroczysty margines, więc
-            // skala liczy się z wysokości slotu, a nie z wnętrza ramki.
+          if (this.scena.textures.exists(portret)) {
+            s.rysunek
+              .setTexture(portret)
+              .setPosition(pasek.slotW / 2, pasek.slotH / 2)
+              .setDisplaySize(pasek.slotW - 4, pasek.slotH - 4)
+              .setVisible(true);
+          } else if (this.scena.textures.exists(klucz)) {
+            s.rysunek.setTexture(klucz).setPosition(pasek.slotW / 2, pasek.slotH / 2 - 3).setVisible(true);
             s.rysunek.setScale(Math.min((pasek.slotH + 2) / s.rysunek.height, (pasek.slotW + 2) / s.rysunek.width));
           } else s.rysunek.setVisible(false);
           s.licznik.setText(String(o.ile));
@@ -419,9 +429,11 @@ export class PanelArmii {
     if (!oddzial) return;
     this.ciagnie = true;
     this.zegarPrzytrzymania?.remove();
+    const portret = kluczPortretu(oddzial.sprite);
     const klucz = `p-${oddzial.sprite}`;
-    const im = this.scena.add.image(0, 0, this.scena.textures.exists(klucz) ? klucz : '__DEFAULT');
-    im.setScale(Math.min(1, (w.m.pasek.slotH - 4) / im.height));
+    const im = this.scena.add.image(0, 0, this.scena.textures.exists(portret) ? portret : this.scena.textures.exists(klucz) ? klucz : '__DEFAULT');
+    if (im.texture.key === portret) im.setDisplaySize(w.m.pasek.slotW - 4, w.m.pasek.slotH - 4);
+    else im.setScale(Math.min(1, (w.m.pasek.slotH - 4) / im.height));
     const licznik = this.scena.add
       .text(0, w.m.pasek.slotH / 2 - 8, String(oddzial.ile), {
         fontFamily: KROJ.tytul,
@@ -639,8 +651,13 @@ export class PanelArmii {
     const liczby: Phaser.GameObjects.Text[] = [];
     kolumny.forEach((cx, i) => {
       k.add(medalion(scena, cx, y + 96, 32, BARWA.papierCiemny));
+      // Okrągły portret storka w medalionie, jak na karcie siedliska; bez
+      // niego (etapy ewolucji) — cały sprite.
+      const portret = kluczPortretuOkraglego(zrodlo.sprite);
       const klucz = `p-${zrodlo.sprite}`;
-      if (scena.textures.exists(klucz)) {
+      if (scena.textures.exists(portret)) {
+        k.add(scena.add.image(cx, y + 96, portret).setDisplaySize(52, 52));
+      } else if (scena.textures.exists(klucz)) {
         const im = scena.add.image(cx, y + 95, klucz);
         im.setScale(Math.min(1, 48 / Math.max(im.width, im.height)));
         k.add(im);

@@ -8,6 +8,7 @@ import {
   type UnitDef,
 } from '../data/units';
 import { ALL_SPRITES, FACTIONS, factionById, type Faction } from '../data/factions';
+import { toEtapEwolucji, wczytajPortrety } from '../visual/portrety';
 import { hexDistance, type Cell } from '../data/hex';
 
 /**
@@ -125,12 +126,21 @@ import {
   floatLabel,
   impactBurst,
   launchProjectile,
+  muzzleFlash,
   setLabelObstacles,
   showOutcomeScreen,
   slashArc,
 } from '../visual/effects';
 import {
   beginUnitMove,
+  muzzleOf,
+  playHitPose,
+  playShootPose,
+  poseKey,
+  poseRecover,
+  POSES,
+  poseStrike,
+  poseWindup,
   buildUnitView,
   endUnitMove,
   playUnitDeath,
@@ -375,7 +385,19 @@ export class BattleScene extends Phaser.Scene {
     wersjonujZasoby(this);
     for (const key of ALL_SPRITES) {
       this.load.image(key, `${import.meta.env.BASE_URL}sprites/${key}.png`);
+      // Klatki póz (zamach, cios, trafienie, krok). Brak pliku nie psuje
+      // bitwy — `setPose` zostawia wtedy obrazek „stoi".
+      for (const poza of POSES) {
+        this.load.image(poseKey(key, poza), `${import.meta.env.BASE_URL}sprites/pozy/${key}-${poza}.png`);
+      }
     }
+    // Etapy ewolucji (`01xxx`, `02xxx`) z armii przyniesionych z mapy: sam
+    // sprite i okrągły portret do kolejki tur. Póz nie mają — `setPose`
+    // zostawia wtedy obrazek „stoi", a o pliki póz nie prosimy (bez 404).
+    const zMapy = [...(this.zPrzygody?.gracz ?? []), ...(this.zPrzygody?.wrog ?? [])].map((o) => o.sprite);
+    const etapy = [...new Set(zMapy)].filter((s) => !ALL_SPRITES.includes(s));
+    for (const key of etapy) this.load.image(key, `${import.meta.env.BASE_URL}sprites/${key}.png`);
+    wczytajPortrety(this, { okragle: true }, etapy.filter(toEtapEwolucji));
     for (const t of TERRAINS) {
       this.load.image(t.key, `${import.meta.env.BASE_URL}terrain/${t.key}.png`);
     }
@@ -845,6 +867,7 @@ export class BattleScene extends Phaser.Scene {
     const id = this.nextId++;
     const view = buildUnitView(this, {
       spriteKey: def.sprite,
+      tier: def.tier,
       name: def.name,
       type: def.type,
       shooter: def.shooter,
@@ -1570,31 +1593,41 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * Cios wręcz: krótkie odchylenie do tyłu, szybkie natarcie i powrót.
-   * Zamach przed uderzeniem to jedna klatka więcej (60 ms), ale bez niego cios
-   * był płaskim przesunięciem — oko nie miało czego wyczekać.
+   * Cios wręcz: zamach, natarcie, uderzenie z przytrzymaniem i powrót.
+   * Kontener niesie dojście do celu, a sylwetka w tym czasie zmienia pozy
+   * (unitView.ts): odchylenie w zamachu, poza ciosu w natarciu, trzymana
+   * przez uderzenie. Przytrzymanie na trafieniu (110 ms) to ta klatka
+   * z Heroes 3, w której broń jest w celu — bez niej cios przelatywał.
    */
   private meleeLunge(attacker: Unit, target: Unit, onDone: () => void) {
     const start = { x: attacker.container.x, y: attacker.container.y };
     const to = this.cellToXY(target.col, target.row);
     const dx = to.x - start.x;
     const dy = to.y - start.y;
+    // Runda 2 porównania z Heroes 3: przytrzymanie wydłużone z 60 do 110 ms,
+    // bo przy 60 rozbłysk trafienia wypadał już na cofającym się stworku.
+    const ZAMACH = 110;
+    const NATARCIE = 90;
+    const TRZYMA = 110;
+    const POWROT = 150;
 
+    poseWindup(this, attacker.view, ZAMACH);
     // Dwa osobne ruchy zamiast yoyo: yoyo zgłasza się raz na animowaną
     // właściwość, więc trafienie liczyłoby się podwójnie (x i y).
     this.tweens.add({
       targets: attacker.container,
-      x: start.x - dx * 0.12,
-      y: start.y - dy * 0.12,
-      duration: 60,
+      x: start.x - dx * 0.1,
+      y: start.y - dy * 0.1,
+      duration: ZAMACH,
       ease: 'Sine.easeOut',
       onComplete: () => {
+        poseStrike(this, attacker.view, NATARCIE);
         this.tweens.add({
           targets: attacker.container,
           x: start.x + dx * 0.42,
           y: start.y + dy * 0.42,
-          duration: 105,
-          ease: 'Quad.easeOut',
+          duration: NATARCIE,
+          ease: 'Quad.easeIn',
           onComplete: () => {
             // Cięcie rysujemy w połowie drogi do celu, czyli tam, gdzie ręce
             // faktycznie się spotykają — nie na środku hexa obrońcy.
@@ -1608,12 +1641,14 @@ export class BattleScene extends Phaser.Scene {
               TYPE_INFO[attacker.def.type].color
             );
             onDone();
+            poseRecover(this, attacker.view, TRZYMA, POWROT);
             this.tweens.add({
               targets: attacker.container,
               x: start.x,
               y: start.y,
-              duration: 150,
-              ease: 'Quad.easeIn',
+              delay: TRZYMA,
+              duration: POWROT,
+              ease: 'Quad.easeInOut',
             });
           },
         });
@@ -1623,12 +1658,21 @@ export class BattleScene extends Phaser.Scene {
 
   /** Pocisk strzelca — kształt, barwa i ślad bierze się z żywiołu (effects.ts). */
   private fireProjectile(attacker: Unit, target: Unit, broken: boolean, onDone: () => void) {
+    // Pocisk wylatuje w chwili, gdy stworek przechodzi z zamachu w pozę
+    // strzału — nie wcześniej, bo wtedy leciałby ze stojącego obrazka.
+    playShootPose(this, attacker.view, () => this.releaseProjectile(attacker, target, broken, onDone));
+  }
+
+  private releaseProjectile(attacker: Unit, target: Unit, broken: boolean, onDone: () => void) {
     sfx(this, 'strzal');
+    const wylot = muzzleOf(attacker.view);
+    muzzleFlash(this, this.effectLayer, wylot.x, wylot.y, TYPE_INFO[attacker.def.type].color);
     launchProjectile(
       this,
       this.effectLayer,
       {
-        from: this.cellToXY(attacker.col, attacker.row),
+        // Z pyska / przodu sylwetki, w klatce wypuszczenia — nie ze środka heksa.
+        from: wylot,
         to: this.cellToXY(target.col, target.row),
         color: TYPE_INFO[attacker.def.type].color,
         element: attacker.def.type,
@@ -1680,6 +1724,9 @@ export class BattleScene extends Phaser.Scene {
         hitAt.x - this.cellToXY(attacker.col, attacker.row).x
       ),
     });
+    // Najpierw poza „oberwał", potem rozbłysk — kopia do rozbłysku bierze
+    // bieżącą teksturę, więc świeci już skulona sylwetka.
+    playHitPose(this, target.view, Math.sign(target.container.x - attacker.container.x) || 1);
     flashTarget(this, target.view.sprite, TYPE_INFO[attacker.def.type].color);
     battleShake(this, typeMult > 1 ? Math.min(1, power + 0.25) : power);
 

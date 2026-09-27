@@ -78,7 +78,7 @@ export interface UstawieniaPlanszy {
    */
   znajdzki?: number;
   /**
-   * Mnożnik wysokości widocznej sylwetki strażników (`WYS_STRAZNIKA`) na tej
+   * Mnożnik skali strażników (`MASA_STRAZNIKA` i jej granic) na tej
    * planszy. Twierdza, runda 10: „stwory to malutkie naklejki w innej skali
    * niż zamek". Brak = 1.
    */

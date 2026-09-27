@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
 """Wczytuje malowane stworki z wsadu (`tools/wsad/stworek-<numer>.png`) do gry.
 
+ŹRÓDŁO PRAWDY dla rysunków stworków (decyzja gracza, 2026-09-27): rysunki
+z PR #6 — ten wsad, 18 form bazowych i 36 etapów ewolucji. Skrypt pisze
+DWA pliki na numer:
+- `public/sprites/<numer>.png` — sprite gry, 128 px (jak dotąd);
+- `assets/stworki/<numer>.png` — mistrz 256 px (w prawo, stopy na y = 252,
+  przezroczyste tło) z tego samego pliku 1024 px, tą samą obróbką. Z mistrzów
+  liczą portrety (`tools/stworki_portrety.py`) i klatki póz do bitwy
+  (`tools/stworki_przemaluj.py --pozy` / `--pozy-z-mistrza`).
+`tools/stworki_przemaluj.py` (przemalowania z pętli „gauntlet") tych plików
+już nie rusza — jego `--kadruj` pisze tylko do archiwum `assets/stworki-petla/`.
+
 Prompty: `tools/PROMPTY-STWORKI.md`, linie ewolucyjne: `src/data/ewolucje.ts`.
 Każdy plik wsadu idzie do `public/sprites/<numer>.png` — tam, skąd sceny
 wczytują teksturę `p-<numer>`. Formy bazowe nadpisują stare sprite'y (kopia
@@ -46,6 +57,9 @@ KORZEN = Path(__file__).resolve().parent.parent
 WSAD = KORZEN / 'tools' / 'wsad'
 STARE = WSAD / 'stare-sprites'
 CEL = KORZEN / 'public' / 'sprites'
+#: Mistrzowie 256 px — wejście portretów i póz (patrz nagłówek).
+MISTRZE = KORZEN / 'assets' / 'stworki'
+BOK_MISTRZA = 256
 
 BOK = 128
 #: Margines w pikselach wyniku: przy filtrowaniu liniowym piksel na samej
@@ -176,7 +190,15 @@ def zdejmijBialaObwodke(a: np.ndarray) -> tuple[np.ndarray, int]:
     return b, zdjete
 
 
-def przetworz(sciezka: Path, numer: str) -> tuple[Image.Image, int]:
+def przetworz(sciezka: Path, numer: str, bok: int = BOK) -> tuple[Image.Image, int]:
+    """Plik wsadu → kwadrat `bok` (stopy na dole, w prawo, z obwódką).
+
+    `bok` 128 — sprite gry; `BOK_MISTRZA` (256) — mistrz do portretów, póz
+    i mapy. Margines, wyostrzenie i obwódka skalują się z bokiem, więc mistrz
+    zmniejszony do 128 px to prawie ten sam obraz co sprite (przy 128 wynik
+    jest bit w bit taki jak przed dodaniem mistrzów)."""
+    k = bok / BOK
+    margines = round(MARGINES * k)
     a = np.array(Image.open(sciezka).convert('RGBA'))
     a, obwodka = zdejmijBialaObwodke(a)
     if obwodka:
@@ -206,26 +228,27 @@ def przetworz(sciezka: Path, numer: str) -> tuple[Image.Image, int]:
     if ramka is None:
         raise SystemExit(f'{sciezka.name}: pusty obrazek')
     im = im.crop(ramka)
-    wnetrze = BOK - 2 * MARGINES
+    wnetrze = bok - 2 * margines
     skala = wnetrze / max(im.size)
     nowy = (max(1, round(im.width * skala)), max(1, round(im.height * skala)))
     # Premultiplikowana alfa: bez niej przezroczyste piksele (czarne albo
     # białe w RGB) wlewają się w krawędź sylwetki jako obwódka.
     male = im.convert('RGBa').resize(nowy, Image.LANCZOS).convert('RGBA')
-    male = male.filter(ImageFilter.UnsharpMask(radius=0.8, percent=60, threshold=2))
+    male = male.filter(ImageFilter.UnsharpMask(radius=0.8 * k, percent=60, threshold=2))
     male = ImageEnhance.Color(male).enhance(NASYCENIE)
-    wynik = Image.new('RGBA', (BOK, BOK), (0, 0, 0, 0))
+    wynik = Image.new('RGBA', (bok, bok), (0, 0, 0, 0))
     # Stopy na dole kwadratu, w poziomie środek.
-    wynik.alpha_composite(male, ((BOK - male.width) // 2, BOK - MARGINES - male.height))
-    return obwiedz(wynik), zdjeto
+    wynik.alpha_composite(male, ((bok - male.width) // 2, bok - margines - male.height))
+    return obwiedz(wynik, k), zdjeto
 
 
-def obwiedz(im: Image.Image) -> Image.Image:
+def obwiedz(im: Image.Image, k: float = 1.0) -> Image.Image:
     """Cienka ciemna obwódka w barwie krawędzi (przyciemnionej), pod sylwetką.
 
     Budowle i znajdźki mapy mają ciemny kontur, a malowany stworek bez niego
     zlewał się z trawą przy ~40 px. Obwódka ma 1 px w pliku 128 px, czyli
     mniej niż piksel na ekranie — przyciemnia brzeg, nie rysuje kreski.
+    `k` — skala względem 128 px (mistrz 256 px: `k` 2, obwódka 2 px).
     """
     a = np.array(im).astype(np.float32)
     alfa = a[..., 3:4] / 255
@@ -233,10 +256,10 @@ def obwiedz(im: Image.Image) -> Image.Image:
     # podzielone przez rozmytą alfę.
     pre = Image.fromarray(np.clip(a[..., :3] * alfa, 0, 255).astype(np.uint8))
     al = Image.fromarray((alfa[..., 0] * 255).astype(np.uint8))
-    pre_b = np.array(pre.filter(ImageFilter.GaussianBlur(1.5))).astype(np.float32)
-    al_b = np.array(al.filter(ImageFilter.GaussianBlur(1.5))).astype(np.float32)[..., None] / 255
+    pre_b = np.array(pre.filter(ImageFilter.GaussianBlur(1.5 * k))).astype(np.float32)
+    al_b = np.array(al.filter(ImageFilter.GaussianBlur(1.5 * k))).astype(np.float32)[..., None] / 255
     barwa = pre_b / np.maximum(al_b, 1e-3) * 0.3
-    zasieg = np.array(al.filter(ImageFilter.MaxFilter(3))).astype(np.float32) / 255
+    zasieg = np.array(al.filter(ImageFilter.MaxFilter(2 * round(k) + 1))).astype(np.float32) / 255
     kontur = np.dstack([np.clip(barwa, 0, 255), zasieg[..., None] * 255 * KRYCIE_OBWODKI]).astype(np.uint8)
     wynik = Image.fromarray(kontur, 'RGBA')
     wynik.alpha_composite(im)
@@ -279,13 +302,15 @@ def main() -> int:
             shutil.copy2(cel, kopia)
         im, zdjeto = przetworz(p, numer)
         im.save(cel, optimize=True)
+        MISTRZE.mkdir(parents=True, exist_ok=True)
+        przetworz(p, numer, BOK_MISTRZA)[0].save(MISTRZE / f'{numer}.png', optimize=True)
         zrobione.append(numer)
         uwagi = []
         if zdjeto:
             uwagi.append(f'zdjęty placek {zdjeto} px')
         if numer not in W_PRAWO:
             uwagi.append('odbity')
-        print(f'  {p.name} → public/sprites/{numer}.png  {"· ".join(uwagi)}')
+        print(f'  {p.name} → public/sprites/{numer}.png + assets/stworki/{numer}.png  {"· ".join(uwagi)}')
     if args.arkusz:
         arkusz(zrobione, args.arkusz)
     return 0

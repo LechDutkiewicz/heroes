@@ -1333,6 +1333,15 @@ export function flashTarget(
     .setBlendMode(Phaser.BlendModes.ADD)
     .setAlpha(0);
   if (parent) parent.add(lit);
+  // Kopia idzie za sylwetką: trafiony stworek odskakuje i kuli się (poza
+  // trafienia w unitView.ts), a rozbłysk ma leżeć na nim, nie obok.
+  const follow = () => {
+    if (!lit.active || !sprite.active) return;
+    lit.setPosition(sprite.x, sprite.y).setScale(sprite.scaleX, sprite.scaleY).setAngle(sprite.angle);
+    if (lit.texture.key !== sprite.texture.key) lit.setTexture(sprite.texture.key);
+  };
+  scene.events.on('postupdate', follow);
+  lit.once('destroy', () => scene.events.off('postupdate', follow));
   scene.tweens.add({
     targets: lit,
     alpha: 0.55,
@@ -1373,6 +1382,35 @@ export interface ShotOpts {
   element: keyof typeof TYPE_ICON;
   /** Złamana strzała: pocisk sypie się w locie i leci wolniej. */
   broken: boolean;
+}
+
+/**
+ * Błysk wylotu: krótki rozbłysk w barwie żywiołu przy pysku strzelca,
+ * w klatce wypuszczenia. Bez niego pocisk „pojawiał się znikąd" obok
+ * stworka — oko nie łączyło go z tym, kto strzelił.
+ */
+export function muzzleFlash(
+  scene: Phaser.Scene,
+  layer: Phaser.GameObjects.Container,
+  x: number,
+  y: number,
+  color: number
+) {
+  const g = scene.add
+    .image(x, y, FX.glow)
+    .setTint(shade(color, 0.85))
+    .setBlendMode(Phaser.BlendModes.ADD)
+    .setScale(0.12)
+    .setAlpha(1);
+  layer.add(g);
+  scene.tweens.add({
+    targets: g,
+    scale: 0.42,
+    alpha: 0,
+    duration: 150,
+    ease: E.snap,
+    onComplete: () => g.destroy(),
+  });
 }
 
 /**

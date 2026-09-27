@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { kluczPortretuOkraglego, spriteDoPortretow, toEtapEwolucji, wczytajPortrety } from '../visual/portrety';
 import {
   KOSZT_ODDZIALU,
   PRZYROST_ODDZIALU,
@@ -250,6 +251,15 @@ export class TownScene extends Phaser.Scene {
     const b = import.meta.env.BASE_URL;
     for (const s of SUROWCE) this.load.image(`m-${SUROWIEC_INFO[s].ikona}`, `${b}mapa/${SUROWIEC_INFO[s].ikona}.png`);
     for (const f of FACTIONS) for (const u of f.units) this.load.image(`p-${u.sprite}`, `${b}sprites/${u.sprite}.png`);
+    // Etapy ewolucji z armii bohatera i garnizonu: sprite (okno stworka)
+    // i portrety — stwory zamków są już na liście wyżej.
+    const stan = this.registry.get(KLUCZ_STANU) as StanMapy | undefined;
+    const zamek = stan?.obiekty.find((o) => o.id === this.registry.get(KLUCZ_ZAMKU));
+    const armie = [...(stan?.bohater.armia ?? []), ...(zamek?.garnizon ?? [])].flatMap((o) => (o ? [o.sprite] : []));
+    for (const s of armie) if (toEtapEwolucji(s)) this.load.image(`p-${s}`, `${b}sprites/${s}.png`);
+    // Portrety: duże do slotów garnizonu i bohatera (`PanelArmii`), okrągłe
+    // do medalionu na karcie siedliska (`src/visual/portrety.ts`).
+    wczytajPortrety(this, { duze: true, okragle: true }, spriteDoPortretow(armie));
     // Portret bohatera w pierwszej wnęce dolnego rzędu — ten sam co w kampanii.
     for (const kto of ['janek', 'ela']) {
       if (!this.textures.exists(`k-portret-${kto}`)) this.load.image(`k-portret-${kto}`, `${b}kampania/portret-${kto}.jpg`);
@@ -1130,8 +1140,14 @@ export class TownScene extends Phaser.Scene {
         `${u.name}\nczeka: ${ile} · przybywa ${dziennie} dziennie\natak ${u.atk} · życie ${u.hp}\n` +
           `trafią: ${this.bohaterObecny ? 'do bohatera' : 'do garnizonu'}`
       );
-      this.kartaStworek.setTexture(`p-${u.sprite}`).setVisible(true);
-      this.kartaStworek.setScale(Math.min(1, 58 / this.kartaStworek.height));
+      // Okrągły portret storka w medalionie (r 36) — ten sam kadr co w kolejce
+      // tur; bez portretu (stworek spoza zamków) — cały sprite jak dawniej.
+      const portret = kluczPortretuOkraglego(u.sprite);
+      if (this.textures.exists(portret)) this.kartaStworek.setTexture(portret).setPosition(KARTA_W - 50, 52).setDisplaySize(58, 58).setVisible(true);
+      else {
+        this.kartaStworek.setTexture(`p-${u.sprite}`).setPosition(KARTA_W - 50, 50).setVisible(true);
+        this.kartaStworek.setScale(Math.min(1, 58 / this.kartaStworek.height));
+      }
       this.kartaMedalion.setVisible(true);
       this.pokazKoszt({ pokeball: KOSZT_ODDZIALU[b.poziom] }, 'za sztukę');
       const stac = this.stan.skarbiec.pokeball >= KOSZT_ODDZIALU[b.poziom];

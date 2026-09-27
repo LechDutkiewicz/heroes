@@ -1,0 +1,512 @@
+{
+ "updated": "Koniec pętli. Animacje w bitwie 3/5 (runda 2), po dopracowaniu lot 2/2 i chód 1/2; najechanie 2/3; mapa i portrety zamknięte decyzją gracza. OpenAI: $19,06 z $20.",
+ "pieces": [
+  {
+   "name": "Stwory na mapie przygody (malowane rysunki, stos na mapie)",
+   "status": "done",
+   "bar": "Od 2026-09-26 (decyzja gracza): poprzeczką jest NASZA mapa, nie HotA. Krytyk dostaje sam nasz kadr, wskazuje element, który najmniej pasuje, i ocenia, czy stwory pasują do naszej mapy. Wygrana: w 2 z 3 kadrów najgorszym elementem nie jest stwór i werdykt brzmi PASUJĄ.",
+   "note": "Wszystkie 18 stworów przemalowane w stylu mapy; stos neutralny na mapie: skala, cień, osadzenie w terenie. ZAMKNIĘTE decyzją gracza po 9 rundach: kontrola pokazała, że test „co nie pasuje” oblewa też oryginalne HoMM3 (0/3), więc nie rozstrzyga. Stan końcowy: obrys i cień jak u skrzyni, barwy w zakresie obiektów planszy, 1–1,1 pola, bez chorągiewek.",
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Nasycone kolory (magenta/turkus) spoza palety mapy, gruby jednolity obrys jak naklejka, brak cienia kontaktowego zgodnego ze światłem mapy.",
+     "blind": "tools/postep-obrazy/stwory-mapa-polana-r1.jpg",
+     "note": "Runda 1, Polana; wzorzec: stosy HoMM3 (szkielet, centaur)."
+    },
+    {
+     "win": false,
+     "gap": "Pastelowy błękit Glacyna nie występuje nigdzie na mapie; brak uziemienia; gładkie wektorowe gradienty zamiast teksturowanego cieniowania.",
+     "blind": "tools/postep-obrazy/stwory-mapa-bagna-r1.jpg",
+     "note": "Runda 1, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Twarde ciemne obrysy i płaskie cieniowanie na miękkiej malowanej zimie; płaska niebieska elipsa zamiast miękkiego cienia w kierunku światła.",
+     "blind": "tools/postep-obrazy/stwory-mapa-twierdza-r1.jpg",
+     "note": "Runda 1, Twierdza. Wynik 0/3."
+    },
+    {
+     "win": false,
+     "gap": "Sporex nadal nasycony fiolet i kreskówkowa twarz-maskotka, gruba ciemna krawędź na miękkiej trawie.",
+     "blind": "tools/postep-obrazy/stwory-mapa-polana-r2.jpg",
+     "note": "Runda 2 (barwy z okolicy, cień rzucany), Polana."
+    },
+    {
+     "win": false,
+     "gap": "Glacyn teraz wyprany, pastelowa mięta, za mały zakres jasności wobec chaty i wierzby.",
+     "blind": "tools/postep-obrazy/stwory-mapa-bagna-r2.jpg",
+     "note": "Runda 2, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Rysunek maskotkowy: czyste kreskówkowe twarze, fiolet i magenta na zimowej mapie; szare placki cienia.",
+     "blind": "tools/postep-obrazy/stwory-mapa-twierdza-r2.jpg",
+     "note": "Runda 2, Twierdza. 0/3 — obróbka w grze nie wystarcza, trzeba przemalować wzorce."
+    },
+    {
+     "win": false,
+     "gap": "Stwór wygląda jak mały, chrupki, pikselowy sprite na miękko malowanej mapie; wchodzi na barierkę mostu, brak cienia kontaktowego.",
+     "blind": "tools/postep-obrazy/stwory-mapa-polana-r3.jpg",
+     "note": "Runda 3 (wzorce przemalowane pędzlem mapy), Polana."
+    },
+    {
+     "win": false,
+     "gap": "Proporcje chibi (duże głowy), jaskrawe obrzeża, chorągiewki jak znaczniki UI; stwory za duże względem mostu i chaty.",
+     "blind": "tools/postep-obrazy/stwory-mapa-bagna-r3.jpg",
+     "note": "Runda 3, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Błyszczące naklejki z gry mobilnej na miękkiej akwareli; smoki wielkości gór; twarde obrysy.",
+     "blind": "tools/postep-obrazy/stwory-mapa-twierdza-r3.jpg",
+     "note": "Runda 3, Twierdza. 0/3. Gracz: bez chorągiewek — strażnicy są neutralni (zdjęte)."
+    },
+    {
+     "win": false,
+     "gap": "Stwór mały, ciemny i zamulony, schowany za końcem mostu; brak czytelnego kontaktu z ziemią.",
+     "blind": "tools/postep-obrazy/stwory-mapa-polana-r4.jpg",
+     "note": "Runda 4 (1 pole, miękkie krawędzie), Polana."
+    },
+    {
+     "win": false,
+     "gap": "Stwory rozmyte i w niższej rozdzielczości niż chata, most i trzcina, które mają ostrą ciemną kreskę i cieniowanie cel.",
+     "blind": "tools/postep-obrazy/stwory-mapa-bagna-r4.jpg",
+     "note": "Runda 4, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Fioletowe smoki bez uziemienia i bez chłodnego światła śniegu, smok na szczycie góry.",
+     "blind": "tools/postep-obrazy/stwory-mapa-twierdza-r4.jpg",
+     "note": "Runda 4, Twierdza. 0/3 — przestrzelone w miękkość; wzorcem ma być rysunek chaty i mostu z naszej mapy."
+    },
+    {
+     "win": false,
+     "gap": "Mały stwór z ciemniejszym, twardszym obrysem niż miękka trawa i rzeka; brak ciepłego cienia kontaktowego.",
+     "blind": "tools/postep-obrazy/stwory-mapa-polana-r5.jpg",
+     "note": "Runda 5 (stwory renderowane jak obiekty mapy), Polana."
+    },
+    {
+     "win": false,
+     "gap": "Gruby równy czarny obrys i płaskie dwutonowe cieniowanie na malarskim bagnie.",
+     "blind": "tools/postep-obrazy/stwory-mapa-bagna-r5.jpg",
+     "note": "Runda 5, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Najostrzejsze i najbardziej nasycone rzeczy na ekranie na miękkim, zamglonym śniegu.",
+     "blind": "tools/postep-obrazy/stwory-mapa-twierdza-r5.jpg",
+     "note": "Runda 5, Twierdza. 0/3. TEST KONTROLNY na tych samych kadrach: nasze OBIEKTY (chata, most, skrzynia, wóz) też przegrywają 0/3 z identycznym zarzutem — stwory dorównały obiektom mapy; pułap wyznacza sama mapa (obrysowane obiekty na miękkim terenie)."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Sporex — zamulony szaro-fioletowo-oliwkowy, miękki i mało kontrastowy przy ciepłych, nasyconych, obrysowanych obiektach; bez cienia kontaktowego.",
+     "blind": "tools/postep-obrazy/dopasowanie-polana-r5.jpg",
+     "note": "Nowy test (sam nasz kadr, co nie pasuje), runda 5, Polana: NIE PASUJĄ."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: stwór na ścieżce — twardy ciemny obrys 1 px, chłodny fiolet, brak cienia; chata i trzcina mają miękkie malowane krawędzie. Stwory za małe przy trzcinie.",
+     "blind": "tools/postep-obrazy/dopasowanie-bagna-r5.jpg",
+     "note": "Runda 5, Bagna: NIE PASUJĄ."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: fioletowo-złoty stwór — najbardziej kontrastowy kształt, brak chłodnego światła śniegu i niebieskoszarej podkładki cienia jak pod skałami i skrzynią.",
+     "blind": "tools/postep-obrazy/dopasowanie-twierdza-r5.jpg",
+     "note": "Runda 5, Twierdza: NIE PASUJĄ. 0/3 w nowym teście."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Sporex — mętny, bez czytelnego kierunku światła, poszarpana sylwetka z cienkich macek; obiekty mają czyste, obrysowane bryły w ciepłym świetle.",
+     "blind": "tools/postep-obrazy/dopasowanie-polana-r6.jpg",
+     "note": "Runda 6 (obróbka z ustawień planszy), Polana: NIE PASUJĄ."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Cindro — najbardziej nasycony na bagnie, prawie czarny obrys przy cienkich ciepłobrązowych krawędziach chaty i mostu, brak cienia pod stopami.",
+     "blind": "tools/postep-obrazy/dopasowanie-bagna-r6.jpg",
+     "note": "Runda 6, Bagna: NIE PASUJĄ."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Lawina — ostry obrys, kontrastowy fiolet z ochrą, cienka przeostrzona sylwetka; płaskie nasycone niebieskie elipsy pod stworami jak znaczniki zaznaczenia.",
+     "blind": "tools/postep-obrazy/dopasowanie-twierdza-r6.jpg",
+     "note": "Runda 6, Twierdza: NIE PASUJĄ. 0/3."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Sporex — szarozielone ciało, miękkie niskokontrastowe cieniowanie, bez obrysu i cienia; nieco za mały przy moście.",
+     "blind": "tools/postep-obrazy/dopasowanie-polana-r7.jpg",
+     "note": "Runda 7 (cień u stóp 0,42, obrys w kolorze krawędzi, barwy w zakresie obiektów), Polana."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: różowy stwór z latarnią — cukierkowy róż spoza palety, brak widocznego cienia; oba stwory ostrzejsze i mniej uziemione niż obiekty.",
+     "blind": "tools/postep-obrazy/dopasowanie-bagna-r7.jpg",
+     "note": "Runda 7, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: fioletowy pająk — płaski nasycony wycinek z ostrym obrysem, bez cienia i odbicia śniegu; smok na zboczu unosi się.",
+     "blind": "tools/postep-obrazy/dopasowanie-twierdza-r7.jpg",
+     "note": "Runda 7, Twierdza. 0/3. Cień u stóp niewidoczny na ciemnym gruncie."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Sporex — neonowa limonka i magenta, bez obrysu i bez widocznego cienia (skrzynia obok ma gruby obrys i cień; sprawdzone w powiększeniu).",
+     "blind": "tools/postep-obrazy/dopasowanie-polana-r8.jpg",
+     "note": "Runda 8 (cień jak pod obiektami — nie widać go w kadrze), Polana."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Sporex na koronie drzewa — neonowe barwy, brak cienia, stoi na liściach zamiast na ziemi.",
+     "blind": "tools/postep-obrazy/dopasowanie-bagna-r8.jpg",
+     "note": "Runda 8, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: fioletowy pająk — barwy spoza mapy, ostrzejszy niż malowane skały, bez cienia; smok wisi na urwisku.",
+     "blind": "tools/postep-obrazy/dopasowanie-twierdza-r8.jpg",
+     "note": "Runda 8, Twierdza. 0/3."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: Sporex — cieńszy obrys niż u mostu i skrzyni, zachodzi na barierkę mostu.",
+     "blind": "tools/postep-obrazy/dopasowanie-polana-r9.jpg",
+     "note": "Runda 9 (obrys i cień jak u skrzyni), Polana."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: różowy smok — prawie czarny obrys, płaskie cieniowanie, magenta spoza palety.",
+     "blind": "tools/postep-obrazy/dopasowanie-bagna-r9.jpg",
+     "note": "Runda 9, Bagna."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: pająk na ścieżce — cienka ciemna sylwetka bez objętości.",
+     "blind": "tools/postep-obrazy/dopasowanie-twierdza-r9.jpg",
+     "note": "Runda 9, Twierdza. 0/3. TEST KONTROLNY 2: ten sam test na trzech kadrach oryginalnego HoMM3/HotA — też 0/3 (demon, oko, stwór z grzebieniem wskazane jako najgorsze, werdykt NIE). Test „co nie pasuje” zawsze wskazuje stwory, więc nie rozróżnia dobrych od złych."
+    }
+   ]
+  },
+  {
+   "name": "Najechanie na stos (mapa przygody)",
+   "status": "done",
+   "bar": "Paski animacji stworów na mapie HotA (satyr, pirat, leprikon; tools/reference/homm3/ref-anim-mapa-hota-*-pasek-x2.png). Krytyk ocenia na ślepo tylko animację (gest, rytm, waga, ruch wtórny, czysta pętla), nie styl. Wygrana: 2 z 3.",
+   "note": "Drobna animacja stosu po najechaniu kursorem, jak w HotA.",
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Przełącznik dwóch póz bez klatek pośrednich, bez ruchu wtórnego — przy tej skali to zająknięcie.",
+     "blind": "tools/postep-obrazy/najechanie-satyr-r1.jpg",
+     "note": "Runda 1 (oddech + poza kroku co drugi cykl), wzór: satyr."
+    },
+    {
+     "win": false,
+     "gap": "Krok w miejscu i machanie wąsami to niejasne drżenie; brak jednego gestu z przytrzymaniem.",
+     "blind": "tools/postep-obrazy/najechanie-pirat-r1.jpg",
+     "note": "Runda 1, wzór: pirat."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: oddech, wymach liści, kołysanie głowy z opóźnieniem, czysty powrót.",
+     "blind": "tools/postep-obrazy/najechanie-lep-r1.jpg",
+     "note": "Runda 1, wzór: leprikon. 1/3."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: jeden czytelny gest (skręt i rozwinięcie z koroną w ruchu wtórnym); słabość: przenikanie w klatce 4 zamiast klatek pośrednich.",
+     "blind": "tools/postep-obrazy/najechanie-satyr-r2.jpg",
+     "note": "Runda 2 (gest z przytrzymaniem, sprężynujące wyciągnięcie), wzór: satyr."
+    },
+    {
+     "win": false,
+     "gap": "Stoi–nagła przemiana–stoi; potrzebny ciągły oddech przez całą pętlę i płynne przejście.",
+     "blind": "tools/postep-obrazy/najechanie-pirat-r2.jpg",
+     "note": "Runda 2, wzór: pirat."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: czytelny gest macką, korona dosiada z opóźnieniem, czysty szew pętli.",
+     "blind": "tools/postep-obrazy/najechanie-leprechaun-r2.jpg",
+     "note": "Runda 2, wzór: leprikon. 2/3 — kawałek wygrywa."
+    }
+   ]
+  },
+  {
+   "name": "Stwory na polu bitwy",
+   "status": "done",
+   "bar": "Nasza mapa przygody i nasz ekran bitwy kontra Heroes 3 HotA/VCMI (zrzuty w tools/reference/homm3/). Krytyk dostaje oba kadry bez podpisów i wybiera, na którym stwór bardziej NALEŻY do swojego świata. Trzech krytyków na ślepo, wygrana przy 2 z 3. Od 2026-09-26 (decyzja gracza): storki zostają urocze — krytyk nie ocenia klimatu (uroczy vs ponury), tylko spójność stworów z ich własnym światem i UI.",
+   "note": "Wygląd oddziału w bitwie: rysunek, skala, cień, licznik. Łączone z animacjami: skala wg poziomu, cień pod stopami (runda 1). Oceniane razem z animacjami (wygrana 3/5 w rundzie 2).",
+   "rounds": []
+  },
+  {
+   "name": "Animacje w bitwie: ruch, lot, atak, obrona, strzał",
+   "status": "done",
+   "bar": "Paski klatek z HoMM3/HotA (tools/reference/homm3/ref-anim-*-pasek.png): pikinier atak i trafienie, ork strzał, miecznik chód, gryf lot. Krytyk ocenia na ślepo tylko czytelność ruchu (zamach, uderzenie, odrzut, powrót), nie styl. Wygrana: 3 z 5 akcji.",
+   "note": "Klatki póz zamiast samego przesuwania obrazka.",
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Sztywny rysunek przechylony i przesunięty po heksie; błysk uderzenia dopiero po cofnięciu — cios bez wagi.",
+     "blind": "tools/postep-obrazy/anim-atak-r1.jpg",
+     "note": "Runda 1 (pozy z wygiętych wzorców — OpenAI bez środków), atak."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: przysiad i wzdrygnięcie w klatkach 2–3, powrót w 4–6; błysk zasłania pozę kontaktu.",
+     "blind": "tools/postep-obrazy/anim-trafiony-r1.jpg",
+     "note": "Runda 1, trafienie."
+    },
+    {
+     "win": false,
+     "gap": "Prawie trzymana poza, pocisk znikąd, bez zamachu i odrzutu.",
+     "blind": "tools/postep-obrazy/anim-strzal-r1.jpg",
+     "note": "Runda 1, strzał."
+    },
+    {
+     "win": false,
+     "gap": "Podskoki z obiema nogami w powietrzu zamiast kroku; brak naprzemienności nóg (bez nowych klatek nie do zrobienia).",
+     "blind": "tools/postep-obrazy/anim-ruch-r1.jpg",
+     "note": "Runda 1, chód."
+    },
+    {
+     "win": false,
+     "gap": "Stwór kuca nad podkładką przez 6 klatek — brak uniesienia, wyciągnięcia ciała i łuku.",
+     "blind": "tools/postep-obrazy/anim-lot-r1.jpg",
+     "note": "Runda 1, lot. 1/5."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: przysiad, wypad z otwartą paszczą, pełne wyciągnięcie z błyskiem; brak klatki wyhamowania po wypadzie.",
+     "blind": "tools/postep-obrazy/anim-atak-r2.jpg",
+     "note": "Runda 2 (64 malowane klatki póz), atak."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: cięcie i błysk w 2, czerwony odcień i ściśnięcie w 3–4, powrót w 5–6.",
+     "blind": "tools/postep-obrazy/anim-trafiony-r2.jpg",
+     "note": "Runda 2, trafienie."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: zamach płatków, wyrzut z błyskiem i widocznym pociskiem, przytrzymanie; brak odrzutu na końcu.",
+     "blind": "tools/postep-obrazy/anim-strzal-r2.jpg",
+     "note": "Runda 2, strzał."
+    },
+    {
+     "win": false,
+     "gap": "Pięć niemal identycznych póz i jeden wypad — nogi się nie przestawiają.",
+     "blind": "tools/postep-obrazy/anim-ruch-r2.jpg",
+     "note": "Runda 2, chód."
+    },
+    {
+     "win": false,
+     "gap": "Trzy pozy puszczone w przód i w tył, brak uderzenia skrzydeł w dół — unoszenie bez machania.",
+     "blind": "tools/postep-obrazy/anim-lot-r2.jpg",
+     "note": "Runda 2, lot. 3/5 — kawałek wygrywa; chód i lot do dopracowania."
+    },
+    {
+     "win": false,
+     "gap": "Przeskok między wyprostem a głębokim wypadem bez klatek pośrednich; brak fazy przejścia z uniesioną stopą.",
+     "blind": "tools/postep-obrazy/anim-ruch-r3.jpg",
+     "note": "Runda 3 (dopracowanie), chód vs miecznik."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: szerokie kroki z pochyleniem i ogonem w przeciwruchu; ale 4 z 6 klatek to prawie wyprost.",
+     "blind": "tools/postep-obrazy/anim-ruch2-r3.jpg",
+     "note": "Runda 3, chód vs pikinier."
+    },
+    {
+     "win": false,
+     "gap": "Sztywne ciało na łuku podskoku, dwa stany skrzydeł, zawieszenie w szczycie.",
+     "blind": "tools/postep-obrazy/anim-lot-r3.jpg",
+     "note": "Runda 3, lot vs gryf."
+    },
+    {
+     "win": false,
+     "gap": "Skok z rozłożeniem skrzydeł — brak uderzenia w dół pod linię brzucha.",
+     "blind": "tools/postep-obrazy/anim-lot2-r3.jpg",
+     "note": "Runda 3, lot vs archanioł."
+    },
+    {
+     "win": false,
+     "gap": "Dwie trzymane pozy (wyprost, wypad) zamiast ciągłego cyklu; druga noga niemal jak pierwsza.",
+     "blind": "tools/postep-obrazy/anim-ruch-r4.jpg",
+     "note": "Runda 4 (klatka przejścia z uniesioną nogą), chód vs miecznik."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: czytelne pozy kontaktu i przejścia, nogi się rozchodzą i schodzą, ogon w przeciwruchu.",
+     "blind": "tools/postep-obrazy/anim-ruch2-r4.jpg",
+     "note": "Runda 4, chód vs pikinier."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: pełny cykl skrzydeł w 8 klatkach, ciało pochyla się i wyciąga z uderzeniem; słabe unoszenie.",
+     "blind": "tools/postep-obrazy/anim-lot-r4.jpg",
+     "note": "Runda 4, lot vs gryf."
+    },
+    {
+     "win": true,
+     "gap": "Wygrywa: pełne uderzenie skrzydeł (góra, rozpostarte, pod brzuchem, powrót), ciało pochyla się z każdym uderzeniem.",
+     "blind": "tools/postep-obrazy/anim-lot2-r4.jpg",
+     "note": "Runda 4, lot vs archanioł. Lot 2/2, chód 1/2."
+    }
+   ]
+  },
+  {
+   "name": "Portrety i ikony stworów (sloty armii, kolejka tury, bohater, miasto)",
+   "status": "done",
+   "bar": "Od 2026-09-26 (decyzja gracza): poprzeczką jest NASZ interfejs, nie HotA. Krytyk dostaje sam nasz ekran (×2), wskazuje element, który najmniej pasuje, i ocenia, czy portrety pasują. Wygrana: w 2 z 3 ekranów najgorszym elementem nie jest portret i werdykt PASUJĄ.",
+   "note": "Małe portrety w interfejsie z tego samego malowanego rysunku. ZAMKNIĘTE decyzją gracza po 8 rundach: wersja B — cała postać w kadrze, ciepłe tło, liczby na tabliczkach, puste gniazdo z gwiazdą.",
+   "rounds": [
+    {
+     "win": false,
+     "gap": "Niespójny kadr (cały stwór / pół głowy), błyszczące maskotki w cienkich złotych ramkach na płaskim niebieskim panelu jak z aplikacji webowej.",
+     "blind": "tools/postep-obrazy/portrety-bohater-r1.jpg",
+     "note": "Runda 1, ekran bohatera; wzorzec: rząd armii HoMM3."
+    },
+    {
+     "win": false,
+     "gap": "Portrety w pasku za małe (~24 px), jasnoniebieskie zaokrąglone pudełka zamiast ramy ze świata gry.",
+     "blind": "tools/postep-obrazy/portrety-miasto-r1.jpg",
+     "note": "Runda 1, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Nasycone kolory kłócą się z pergaminowo-złotym panelem, liczniki zasłaniają dolną trzecią portretu.",
+     "blind": "tools/postep-obrazy/portrety-hud-r1.jpg",
+     "note": "Runda 1, HUD. 0/3."
+    },
+    {
+     "win": false,
+     "gap": "Stwory pływają małe na środku kafla na oliwkowej winiecie bez otoczenia; urocze renderowanie chibi przy rzeźbionym drewnie.",
+     "blind": "tools/postep-obrazy/portrety-bohater-r2.jpg",
+     "note": "Runda 2 (jeden szablon kadru, ramki z zestawu), bohater."
+    },
+    {
+     "win": false,
+     "gap": "Płaskie tła czerwone/brązowe zamiast malowanego otoczenia; stwory za małe w slocie; karta ucięta na szyi.",
+     "blind": "tools/postep-obrazy/portrety-miasto-r2.jpg",
+     "note": "Runda 2, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Nieczytelne plamy przy tej wielkości, licznik zasłania dolną trzecią, chłodne szare tła przy ciepłym pergaminie.",
+     "blind": "tools/postep-obrazy/portrety-hud-r2.jpg",
+     "note": "Runda 2, HUD. 0/3."
+    },
+    {
+     "win": false,
+     "gap": "Niespójna odległość kamery (sama twarz / cała głowa / ucięty tułów), jasne łąki za stworami kłócą się z ciemnym mahoniem panelu.",
+     "blind": "tools/postep-obrazy/portrety-bohater-r3.jpg",
+     "note": "Runda 3 (pierwsza z klauzulą: klimat nieoceniany), bohater."
+    },
+    {
+     "win": false,
+     "gap": "Stwory płasko cieniowane na teksturowanym tle; pasek ~30 px, plakietki zasłaniają twarze.",
+     "blind": "tools/postep-obrazy/portrety-miasto-r3.jpg",
+     "note": "Runda 3, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Twarze nieczytelne przy ~20 px, każde tło w innym głośnym kolorze, pusty slot jak płaski beżowy prostokąt.",
+     "blind": "tools/postep-obrazy/portrety-hud-r3.jpg",
+     "note": "Runda 3, HUD. 0/3. Błąd pomiaru: wzorzec ×2, nasze ×1 — od rundy 4 oba ×2."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: pusty slot z dużą cyfrą. Portrety: NIE — kadr skacze (dziób i pierś, ucięta głowa, skrajne zbliżenie, plan średni).",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-bohater-r4.jpg",
+     "note": "Runda 4 (×2, nowy test), bohater."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: ikona kosztu (błyszczący pokeball — też ryzyko praw). Portrety: NIE — Flamir to sam dziób, tła różne (brąz, szaroniebieskie, oliwka).",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-miasto-r4.jpg",
+     "note": "Runda 4, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: portret bohatera w złotym kole. Portrety: NIE — kadry bez wspólnego szablonu, ciemne tło połyka ciemne stwory.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-hud-r4.jpg",
+     "note": "Runda 4, HUD. Portret nigdzie nie jest najgorszym elementem, ale werdykt 0/3 przez niespójny kadr."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: tła portretów — zimna szaro-oliwkowa łąka w ciepłych złotych ramkach. Linia oczu skacze 35–60% wysokości; Pyroko to czerwona plama z twarzą przy krawędzi.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-bohater-r5.jpg",
+     "note": "Runda 5 (ręcznie mierzona ramka głowy), bohater."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: ikona pokeballa. Portrety: NIE — Flamir na karcie to skrajne zbliżenie dzioba, grzebień ucięty; tło karty mętne oliwkowo-brązowe.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-miasto-r5.jpg",
+     "note": "Runda 5, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: portret bohatera. Portrety: NIE — miękkie, lekko rozmyte przy ostrych ramkach; blade stwory giną na bladoszarym tle.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-hud-r5.jpg",
+     "note": "Runda 5, HUD. 0/3 — kadr od ramki głowy zawodzi przy nietypowej budowie; następnie kadr od oczu."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: pusty slot (przygaszona rama, czarna dziura). Portrety: NIE — Pyroko skrajne zbliżenie bez twarzy, duch przyklejony do ramy, kiełek i 227 za daleko.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-bohater-r6.jpg",
+     "note": "Runda 6 (kadr od oczu, jedno ciepłe tło), bohater."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: pokeball. Portrety: NIE — Pyroko bez twarzy, plakietki zasłaniają ciało w różnych miejscach, pusty slot bez oprawy.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-miasto-r6.jpg",
+     "note": "Runda 6, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: portret bohatera. Portrety: NIE — różna odległość kamery, blady 227 ginie na bladym tle.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-hud-r6.jpg",
+     "note": "Runda 6, HUD. 0/3 — kadr od oczu zawodzi przy stworach-kulach (Pyroko)."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: bladoniebieskie panele nad rzędem (stary zestaw UI). Portrety: NIE — Pyroko od krawędzi do krawędzi, Flamir ucięty z prawej, 227 mały i ucięty u góry.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-bohater-r7.jpg",
+     "note": "Runda 7 (cała głowa / cała kula, jeden margines), bohater."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: pokeball przy cenie. Portrety: NIE — Pyroko ucięty, różny zapas nad głową, na karcie Flamira ucięte ciało i obcy fragment przy prawej krawędzi.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-miasto-r7.jpg",
+     "note": "Runda 7, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: portret bohatera. Portrety: NIE — różne tła i kadry, blade stwory giną.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-hud-r7.jpg",
+     "note": "Runda 7, HUD. 0/3 — kolejna zmiana: cała postać zamiast popiersia."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: bladoniebieskie panele starego UI. Portrety: NIE — skala skacze (kula 85%, smok i wróżka 50%), brak wspólnej linii ziemi.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-bohater-r8.jpg",
+     "note": "Runda 8 (cała postać), bohater."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: pokeball. Portrety: NIE — kula wypełnia slot, reszta pływa mała w ciemnych studniach.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-miasto-r8.jpg",
+     "note": "Runda 8, miasto."
+    },
+    {
+     "win": false,
+     "gap": "Najmniej pasuje: same stwory w slotach — chłodne, bez obrysu, na ciemnym, nieoświetlonym tle.",
+     "blind": "tools/postep-obrazy/dopasowanie-portrety-hud-r8.jpg",
+     "note": "Runda 8, HUD. 0/3 — przy popiersiu zarzut „kadr skacze”, przy całej postaci „skala skacze”."
+    }
+   ]
+  }
+ ]
+}

@@ -27,6 +27,16 @@ Po drodze:
     python3 tools/strazniki_wczytaj.py               # wszystkie straznik-*.png
     python3 tools/strazniki_wczytaj.py 00002 00246   # wybrane numery
     python3 tools/strazniki_wczytaj.py --arkusz tools/shots/strazniki.png
+    python3 tools/strazniki_wczytaj.py --gesty       # tylko klatki gestu (darmowe)
+
+Gest do najechania (2026-09-27): mapa przygody po najechaniu na stos gra
+pętlę jednego gestu (`ozywStraznika` w `AdventureScene.ts`). Sprite bitwy
+bierze do tego pozę z bitwy, ale figura mapowa to inny rysunek (rzut z góry,
+własna poza), więc dostaje własną klatkę: `public/sprites/pozy/mapa-<numer>-gest.png`,
+figura wygięta od linii stóp (`wygnij` ze `stworki_przemaluj.py`) — staje
+wyżej i pochyla się w stronę, w którą patrzy (`KIERUNEK`). Kadr jak pozy
+bitwy: półtora boku wszerz, kwadrat figury dokładnie pośrodku, stopy na tej
+samej linii — scena przenika klatki bez przeliczania skali.
 """
 
 from __future__ import annotations
@@ -153,6 +163,35 @@ def przetworz(sciezka: Path) -> tuple[Image.Image, list[str]]:
     return wynik, uwagi
 
 
+#: W którą stronę patrzy figura mapowa (1 — w prawo, -1 — w lewo): gest
+#: pochyla ją ku przodowi. Uzupełniane po obejrzeniu `mapa-<numer>.png`.
+KIERUNEK: dict[str, int] = {
+    '00002': -1, '00023': -1, '00041': -1, '00077': -1,
+    '00095': 1, '00246': 1, '00263': 1,
+}
+#: Gest: wyprostowanie (sy) i pochylenie ku przodowi (bend, ułamek wysokości
+#: sylwetki), łukiem od stóp (p). Parametry `wygnij`.
+GEST = dict(bend=0.13, p=1.6, sy=1.07, sx=0.05, stopy=0.0)
+
+
+def gesty(numery: list[str]) -> None:
+    from stworki_przemaluj import BOK_MISTRZA, SZER_POZY, wygnij
+
+    (CEL / 'pozy').mkdir(parents=True, exist_ok=True)
+    for n in numery:
+        fig = Image.open(CEL / f'mapa-{n}.png').convert('RGBA')
+        duza = fig.resize((BOK_MISTRZA, BOK_MISTRZA), Image.LANCZOS)
+        w = dict(GEST, bend=GEST['bend'] * KIERUNEK.get(n, 1))
+        # Szeroka figura przy pełnym pochyleniu wychodzi poza kadr — łagodzimy.
+        for _ in range(8):
+            m = wygnij(duza, **w)
+            if np.array(m.getchannel('A'))[:, [0, 1, -2, -1]].max() <= 8:
+                break
+            w['bend'] *= 0.88
+        m.resize((BOK * SZER_POZY // BOK_MISTRZA, BOK), Image.LANCZOS).save(CEL / 'pozy' / f'mapa-{n}-gest.png', optimize=True)
+        print(f'  mapa-{n}.png → public/sprites/pozy/mapa-{n}-gest.png')
+
+
 def zapiszListe() -> list[str]:
     numery = sorted(p.stem.removeprefix('mapa-') for p in CEL.glob('mapa-*.png'))
     wiersze = ',\n'.join(f"  '{n}'" for n in numery)
@@ -183,7 +222,12 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('numery', nargs='*')
     ap.add_argument('--arkusz', type=Path, help='zapisz arkusz podglądu')
+    ap.add_argument('--gesty', action='store_true', help='tylko klatki gestu z gotowych mapa-*.png (darmowe)')
     args = ap.parse_args()
+    if args.gesty:
+        numery = sorted(p.stem.removeprefix('mapa-') for p in CEL.glob('mapa-*.png'))
+        gesty([n for n in numery if not args.numery or n in args.numery])
+        return 0
     pliki = sorted(WSAD.glob('straznik-*.png'))
     if args.numery:
         pliki = [p for p in pliki if p.stem.removeprefix('straznik-') in args.numery]
@@ -197,6 +241,7 @@ def main() -> int:
         print(f'  {p.name} → public/sprites/mapa-{numer}.png  {" · ".join(uwagi)}')
     numery = zapiszListe()
     print(f'{LISTA_TS.relative_to(KORZEN)}: {", ".join(numery)}')
+    gesty([p.stem.removeprefix('straznik-') for p in pliki])
     if args.arkusz:
         arkusz(numery, args.arkusz)
     return 0

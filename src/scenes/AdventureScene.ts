@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { dnoGniazda, kluczPortretuPanelu, oprawPortret, spriteDoPortretow, wczytajPortrety } from '../visual/portrety';
 import { ZESTAWY_KLIMATU } from '../data/zestawy-klimatu';
 import {
   BUDOWLE,
@@ -39,6 +40,9 @@ import {
   type WyborSkrzyni,
 } from '../data/mapa';
 import { planszaPrzygody } from '../data/plansza';
+import { ALL_SPRITES } from '../data/factions';
+import { STRAZNICY_MAPOWI } from '../data/strazniki-mapa';
+import type { PoseName } from '../visual/unitView';
 import { planszaPoId } from '../data/mapy';
 import { turaWroga } from '../data/wrog-ai';
 import { SLOTY_ARMII, dolacz, pustaArmia, zywe } from '../data/armia';
@@ -85,19 +89,18 @@ import {
   PROPORZEC,
   RAMA_MAPY_H,
   RAMA_MAPY_W,
-  STWORKI_NA_MAPIE,
-  STRAZNIK_MALOWANY,
   BOHATER_NA_MAPIE,
   SZER_STRAZNIKA_MAX,
+  MASA_STRAZNIKA,
+  WYS_STRAZNIKA_MIN,
+  WYS_STRAZNIKA_MAX,
   WYS_BOHATERA,
-  WYS_STRAZNIKA,
   ZNAJDZKI_NA_MAPIE,
   ZOOM_MAPY,
 } from '../visual/uklad';
 import { dodajWode } from '../visual/woda';
 import { MGLA_GESTOSC, MalarzMgly } from '../visual/mgla';
 import { wersjonujZasoby } from '../visual/zasoby';
-import { STRAZNICY_MAPOWI } from '../data/strazniki-mapa';
 import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
 import {
   MUZYKA_MAPA,
@@ -166,7 +169,8 @@ type Kierunek = keyof typeof KIERUNEK_WIERSZ;
  * Widoczne piksele rysunku, w ułamkach wymiarów pliku (`podstawaRysunku`):
  * pas podstawy w poziomie oraz szerokość i wysokość całej sylwetki.
  */
-type PodstawaRysunku = { lewo: number; prawo: number; widocznaSzer?: number; widocznaWys?: number };
+/** `pole` — ułamek pikseli pliku, które są widoczne (masa sylwetki). */
+type PodstawaRysunku = { lewo: number; prawo: number; widocznaSzer?: number; widocznaWys?: number; pole?: number };
 
 /**
  * Położenie rysunku bohatera względem środka jego pola, w pikselach świata
@@ -192,6 +196,215 @@ const MINIATURA = 'plansza-mini';
 /** Krycie cienia kontaktowego: pod znajdźką, stworkiem i bohaterem / pod dużą bryłą. */
 const KRYCIE_CIENIA = 0.48;
 const KRYCIE_CIENIA_BRYLY = 0.38;
+/**
+ * Stworek-strażnik na mapie (`stworekNaMape`, `obrazyStworka`).
+ *
+ * Wzorcem są NASZE obiekty mapy (chata, most, wieża, skrzynia) w tej samej
+ * skali, a nie opisy krytyków — rundy przerzucały nas między „za ostre
+ * naklejki" a „rozmyty muł". Obiekty mają pliki ok. 1,5–2,5 raza większe
+ * niż na ekranie i zmniejsza je karta graficzna. Stworek idzie tą samą
+ * drogą: tekstura `STWOREK_NADPROBKA` raza większa od ekranu.
+ */
+const STWOREK_NADPROBKA = 2;
+/**
+ * …wygładzenie wnętrza (0 — brak, 1 — pełne rozmycie 3 × 3). Runda 6:
+ * cienkie macki i nogi (Sporex, Lawina) po wyostrzeniu robiły się szumem
+ * igiełek; łagodne rozmycie skleja je w kilka dużych kształtów.
+ */
+const STWOREK_WYGLADZENIE = 0.3;
+/**
+ * …ciemny stworek na ciemnym gruncie: jasna krawędź od strony światła
+ * (lewa-góra), jak u obiektów. Włącza się poniżej tej średniej jasności
+ * sylwetki (0–255); siła — ile dokłada do piksela krawędzi.
+ */
+const STWOREK_PROG_CIEMNY = 105;
+const STWOREK_KRAWEDZ_SWIATLA = 0.35;
+/**
+ * Cień stworka. Runda 7: plama 0,42 w barwie przyciemnionego gruntu na
+ * ciemnej trawie Bagien była niewidoczna — czwarta runda z rzędu „brak
+ * cienia kontaktowego". Teraz jak pod obiektami (`cienKontaktowy`): ta sama
+ * miękka tekstura, ciemny rdzeń (tekstura ma rdzeń 0,92, więc przy
+ * `STWOREK_STYK` ok. 0,6 w środku), szerokość ~0,9 sylwetki, przesunięta
+ * w prawo-dół od światła. Barwa: ciepła czerń jak pod skrzynią; na śniegu
+ * szaroniebieska (`STWOREK_STYK_SNIEG`), nie nasycony błękit.
+ */
+const STWOREK_STYK = 0.85;
+const STWOREK_STYK_SNIEG = 0x3e4a5e;
+/** Krycie cienia rzuconego w kształcie stworka (nad plamą styku). */
+const STWOREK_CIEN = 0.45;
+/** Chłodna barwa strony cienia na śniegu (`STWOREK_SNIEG`). */
+const STWOREK_CHLOD = [96, 112, 140];
+/**
+ * Klimat śnieżny (plansza z `cienNaSniegu`, jak Twierdza): obiekty stoją tam
+ * w chłodnym, rozproszonym świetle. Stworek: mniej nasycenia i kontrastu,
+ * odcień lekko ku barwie okolicy, jasna chłodna krawędź od strony światła.
+ */
+const STWOREK_SNIEG = { nasycenie: 0.65, kontrast: 0.72, odcien: 0.2, krawedz: 0.3 };
+/** Bryła: rozjaśnienie lewej-góry i przyciemnienie prawej-dołu sylwetki (±). */
+const STWOREK_BRYLA = 0.16;
+/**
+ * Obiekty planszy, z których bierzemy zakres barw dla stworków
+ * (`barwyObiektow`): nasycenie i jasność stworka nie wychodzą poza to,
+ * co mają chata, skrzynia, wóz i wieża na tej samej planszy.
+ */
+const OBIEKTY_WZORCOWE = ['m-chatka', 'm-skrzynia', 'm-woz', 'm-wieza-obserwacyjna', 'm-kopalnia'];
+/** Zakres barw obiektów planszy — patrz `barwyObiektow`. Klucz: id planszy. */
+const BARWY_OBIEKTOW = new Map<string, { med: number; nas: number; sufit: number; jas: number; roz: number }>();
+/**
+ * Piksel [r, g, b] z odcieniem różu/magenty (320–360°) przesunięty ku
+ * ciepłej czerwieni (ok. 8°) — o 70% drogi, im bliżej różu, tym mocniej.
+ * Fiolet (Sporex, ok. 280°) i czerwień zostają nietknięte.
+ */
+function bezRozu(rgb: number[]): number[] {
+  const [r, g, b] = rgb;
+  const mx = Math.max(r, g, b);
+  const mn = Math.min(r, g, b);
+  if (mx - mn < 12 || mx !== r) return rgb;
+  let hue = (60 * (g - b)) / (mx - mn);
+  if (hue >= 0) return rgb;
+  hue += 360;
+  if (hue < 320) return rgb;
+  const nowy = hue + (368 - hue) * 0.7;
+  // Z powrotem do RGB przy tej samej jasności (mx) i nasyceniu (mx − mn).
+  const h = (nowy % 360) / 60;
+  const C = mx - mn;
+  const x = C * (1 - Math.abs((h % 2) - 1));
+  // Tylko dwa sektory koła barw są tu możliwe: 300–360° i 0–60°.
+  const [a, bb, c] = h < 1 ? [C, x, 0] : [C, 0, x];
+  return [a + mn, bb + mn, c + mn];
+}
+
+type StworekNaMape = {
+  rysunek: string;
+  /** Ile pikseli tekstury nad sylwetką i po bokach to margines na obrys. */
+  margines: number;
+  cien?: { klucz: string; ox: number; oy: number; stopy: number; barwa: number };
+  /**
+   * Strojenie barw i bryły policzone z obrazka „stoi". Klatki najechania
+   * (`NAJECHANIE_POZY`) biorą je stąd, a nie liczą od nowa: poza ma inną
+   * sylwetkę i inne statystyki barw, więc własne strojenie migałoby barwą
+   * i światłem przy każdej podmianie klatki.
+   */
+  strojenie?: Strojenie;
+};
+type Strojenie = {
+  srL: number;
+  nasycenie: number;
+  kontrast: number;
+  jasnosc: number;
+  krawedz: number;
+  /** Bryła: środek sylwetki względem środka tekstury, połowa szerokości, góra i wysokość. */
+  sxOdSrodka: number;
+  pw: number;
+  y0: number;
+  ph: number;
+};
+const STWORKI_MAPY = new Map<string, StworekNaMape>();
+
+/**
+ * Najechanie na stos (`ozywStraznika`) — jak stwory na mapie HotA
+ * (`tools/reference/homm3/ref-anim-mapa-hota-*-pasek.png`): kursor nad
+ * strażnikiem budzi pętlę JEDNEGO wyraźnego gestu, jak pirat HotA (unosi
+ * pistolet, celuje, opuszcza). Pętla (`NAJECHANIE_OKRES`): oddech → gest
+ * (wejście, przytrzymanie w skrajnym położeniu, powrót) → wydech i spokój;
+ * koniec pętli to dokładnie klatka „stoi", więc powtórka nie skacze.
+ *
+ * Runda 1 (krytyk, 1 na 3 wzorce): dwie pozy przełączane „na pstryk", bez
+ * klatek pośrednich; „krok" czytał się jak dreptanie w miejscu; góra
+ * sylwetki sztywna, szarpana razem z nogami. Stąd:
+ * - przejście to przenikanie dwóch gotowych klatek (`NAJECHANIE_WEJSCIE_GESTU`
+ *   i `NAJECHANIE_POWROT`), z łagodnym startem i końcem;
+ * - stopy stoją w miejscu: klatka pozy jest dosunięta tak, żeby środek jej
+ *   stóp wypadł tam, gdzie środek stóp „stoi" (`stopyRysunku`);
+ * - sylwetka dociąga za gestem: wyciągnięcie w górę od stóp idzie za celem
+ *   sprężyną (`NAJECHANIE_SPREZYNA`) — z opóźnieniem i małym przerzutem,
+ *   a po powrocie przysiada o włos i siada na miejsce;
+ * - poza wybrana PER STWOREK (`NAJECHANIE_POZY`) — ta, która czyta się
+ *   jak gest w stronę bohatera, a nie chód, przysiad na płasko czy efekt.
+ *
+ * Klatka pozy idzie tą samą drogą co obrazek „stoi" (`stworekNaMape`: barwy,
+ * bryła, obrys, cień rzucony), pieczona RAZ na strażnika przy pierwszym
+ * najechaniu — co klatkę zmieniają się już tylko krycie, skala i obrót.
+ */
+const NAJECHANIE_POZY: Record<string, PoseName> = {
+  // Pozy rysunków PR #6 (2026-09-27), przejrzane na `tools/shots/pozy-arkusz.png`.
+  // Domyślnie „zamach" — wygięty z mistrza (odchylenie przed ciosem) albo
+  // malowany, gdy stoi (Sporex, Sadzin). Malowane zamachy płasko przy
+  // ziemi (Silvena, Glacyn, Cindro, Aquator, Vulkaron, Bazalt, Ashko,
+  // Cynder) na mapie czytały się jak podmiana stworka, a nie gest — ci
+  // biorą cios, który w tej wersji jest bez efektów i bez kurzu.
+  // Dotyczy tylko strażników bez figury mapowej (`STRAZNICY_MAPOWI` mają
+  // własny gest `mapa-<numer>-gest`).
+  '00227': 'atak', // Silvena tnie ręką, peleryna z liści za nią
+  '00246': 'atak', // Glacyn wyciąga szyję z otwartą paszczą
+  '00263': 'atak', // Cindro wyprowadza cios pięścią
+  '00220': 'atak', // Aquator jeży kolce i warczy
+  '00196': 'atak', // Vulkaron uderza pięściami
+  '00074': 'atak', // Bazalt rzuca się z paszczą
+  '00058': 'atak', // Ashko staje dęba
+  '00023': 'atak', // Cynder rzuca się ze skrzydłami w górze
+};
+const najechaniePoza = (sprite: string): PoseName => NAJECHANIE_POZY[sprite] ?? 'zamach';
+/** Długość jednej pętli (ms). */
+const NAJECHANIE_OKRES = 1600;
+/** Gest w pętli (ms): start, wejście, przytrzymanie w skrajnym położeniu, powrót. */
+const NAJECHANIE_GEST_OD = 380;
+const NAJECHANIE_WEJSCIE_GESTU = 200;
+const NAJECHANIE_PRZYTRZYMANIE = 250;
+const NAJECHANIE_POWROT = 250;
+const NAJECHANIE_GEST_DO =
+  NAJECHANIE_GEST_OD + NAJECHANIE_WEJSCIE_GESTU + NAJECHANIE_PRZYTRZYMANIE + NAJECHANIE_POWROT;
+/** Oddech: o ile rośnie wysokość sylwetki (i chudnie szerokość — o 40% tego). */
+const NAJECHANIE_ODDECH = 0.035;
+/**
+ * Wyciągnięcie sylwetki w pełnym geście (ułamek wysokości; szerokość chudnie
+ * o połowę tego). Nie pochylenie obrotem: Phaser 4.2.1 w zamaskowanym
+ * świecie (`budujSwiat`) ucinał obróconemu obrazkowi lewą część
+ * — wychodziły ciemne prostokąty z obrysu.
+ */
+const NAJECHANIE_WYCIAGNIECIE = 0.05;
+/**
+ * Sprężyna wyciągnięcia: częstość własna (rad/s) i tłumienie (ułamek
+ * krytycznego). 20 rad/s i 0,35 — ruch spóźnia się o 1–2 klatki za gestem
+ * i przerzuca o ok. 1/3, zanim siądzie.
+ */
+const NAJECHANIE_SPREZYNA = { w: 20, zeta: 0.35 };
+/** Narastanie i gaśnięcie oddechu (ms). */
+const NAJECHANIE_WEJSCIE = 140;
+const NAJECHANIE_WYJSCIE = 240;
+/** Obrazki jednej klatki w ruchu: sylwetka, jej obrys, cień rzucony. */
+type KlatkaRuchu = {
+  wpis: StworekNaMape;
+  rysunek: Phaser.GameObjects.Image;
+  obrys: Phaser.GameObjects.Image[];
+  cien?: Phaser.GameObjects.Image;
+  /** Przesunięcie całej klatki (świat), które stawia jej stopy na stopach „stoi". */
+  dx: number;
+  dy: number;
+};
+/** Ruch jednego strażnika po najechaniu — patrz `obrazyStworka`, `ozywStraznika`. */
+type OzywienieStraznika = {
+  klucz: string;
+  wys: number;
+  tlo: [number, number, number];
+  /** Obrazek „stoi" — ten sam, który trafia kliknięciem; w ruchu ukryty. */
+  im: Phaser.GameObjects.Image;
+  obrys: Phaser.GameObjects.Image[];
+  /** Krycie obrysu planszy (`USTAWIENIA.obrysObiektow`), 0 — bez obrysu. */
+  krycieObrysu: number;
+  cien?: Phaser.GameObjects.Image;
+  /** Klatki [stoi, poza] w ruchu — budowane przy pierwszym najechaniu. */
+  klatki?: KlatkaRuchu[];
+  /** Czas w pętli (ms, 0 … `NAJECHANIE_OKRES`). */
+  czas: number;
+  /** Siła oddechu 0–1. */
+  sila: number;
+  aktywne: boolean;
+  /** Wyciągnięcie i jego prędkość — sprężyna `NAJECHANIE_SPREZYNA`. */
+  ugiecie: number;
+  predkosc: number;
+};
+
 /**
  * Cień RZUCONY przez jednostkę (strażnik, bohater) — patrz `cienRzucany`.
  * `kx`, `ky`: gdzie na gruncie ląduje czubek głowy, w ułamkach widocznej
@@ -244,6 +457,10 @@ export class AdventureScene extends Phaser.Scene {
   private ikonyObiektow: Record<number, Phaser.GameObjects.Container> = {};
   /** Rysunki obiektów wraz z ich obiektami — do samodzielnego trafiania kliknięciem. */
   private trafienia: Array<{ o: Obiekt; im: Phaser.GameObjects.Image }> = [];
+  /** Strażnicy, którzy umieją się ruszyć po najechaniu (`ozywStraznika`), po id obiektu. */
+  private ozywienia = new Map<number, OzywienieStraznika>();
+  /** Strażnik pod kursorem albo jeszcze dogrywający pętlę — tylko te liczymy co klatkę. */
+  private ruchomeStraze = new Set<OzywienieStraznika>();
   private ruchTekst!: Phaser.GameObjects.Text;
   private statTeksty: Phaser.GameObjects.Text[] = [];
   private poziomTekst!: Phaser.GameObjects.Text;
@@ -409,13 +626,29 @@ export class AdventureScene extends Phaser.Scene {
     for (const o of zywe(stan.bohater.armia)) potrzebne.add(o.sprite);
     for (const ob of stan.obiekty) for (const o of ob.oddzialy ?? []) potrzebne.add(o.sprite);
     for (const s of potrzebne) this.load.image(`p-${s}`, `${b}sprites/${s}.png`);
-    // Malowani strażnicy NA MAPĘ (stworki runda 5): osobny rysunek grupki
-    // w rzucie planszy, tylko dla numerów z `STRAZNICY_MAPOWI` — inaczej
-    // brak pliku byłby błędem 404 w konsoli.
+    // Strażnik stoi na mapie jako malowana figura mapowa z PR #6
+    // (`public/sprites/mapa-<numer>.png`, `STRAZNICY_MAPOWI`), gdy ją ma —
+    // inaczej jako sprite bitwy. Obie drogi idą przez `stworekNaMape`.
+    // Klatka do najechania: figura mapowa ma własny gest (`mapa-<numer>-gest`,
+    // wygięty z figury: `tools/strazniki_wczytaj.py --gesty`), bo poza z bitwy
+    // to inny rysunek; sprite bitwy — pozę z `NAJECHANIE_POZY`. Pozy ma każdy
+    // stworek zamków (`ALL_SPRITES`, `tools/stworki_przemaluj.py`) — spoza tej
+    // listy nie prosimy, żeby nie sypać 404; taki strażnik tylko oddycha.
+    const zPozami = new Set(ALL_SPRITES);
     for (const ob of stan.obiekty) {
-      const s = ob.rodzaj === 'potwor' ? ob.oddzialy?.[0].sprite : undefined;
-      if (s && STRAZNICY_MAPOWI.has(s)) this.load.image(`pmapa-${s}`, `${b}sprites/mapa-${s}.png`);
+      const s = ob.rodzaj === 'potwor' ? ob.oddzialy?.[0]?.sprite : undefined;
+      if (!s) continue;
+      if (STRAZNICY_MAPOWI.has(s)) {
+        this.load.image(`pmapa-${s}`, `${b}sprites/mapa-${s}.png`);
+        this.load.image(`pmapa-${s}-gest`, `${b}sprites/pozy/mapa-${s}-gest.png`);
+      } else if (zPozami.has(s)) {
+        const poza = najechaniePoza(s);
+        this.load.image(`p-${s}-${poza}`, `${b}sprites/pozy/${s}-${poza}.png`);
+      }
     }
+    // Sloty armii w panelu pokazują małe portrety (`src/visual/portrety.ts`),
+    // także etapów ewolucji, które są w armiach.
+    wczytajPortrety(this, { panel: true }, spriteDoPortretow(potrzebne));
   }
 
   /**
@@ -465,6 +698,8 @@ export class AdventureScene extends Phaser.Scene {
     this.dochody = {};
     this.ikonyObiektow = {};
     this.trafienia = [];
+    this.ozywienia.clear();
+    this.ruchomeStraze.clear();
     this.marginesy.clear();
     this.alfy.clear();
     this.podstawy.clear();
@@ -542,6 +777,7 @@ export class AdventureScene extends Phaser.Scene {
       // wyjeżdżała za okno gry — a systemowy kursor jest tam wyłączony.
       this.kursorZnak.setVisible(false);
       this.podswietlWejscie(undefined);
+      this.ozywStraznika(undefined);
       this.input.setDefaultCursor('default');
     });
     // Strzałki przesuwają widok. Na planszy 36 × 36 samo podążanie za bohaterem
@@ -724,84 +960,85 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   /**
-   * Średnia barwa namalowanego gruntu wokół punktu świata (0–255) — z tła
-   * planszy, prostokąt ok. 1,6 × 1 pola. Stąd stworek bierze paletę miejsca,
-   * w którym stoi (`teksturaStworkaNaMape`).
+   * Średnia barwa namalowanego tła planszy (`plansza-0`) w prostokącie
+   * pól wokół (x, y) — światło i kolor miejsca, w którym stoi stworek.
    */
-  private barwaGruntu(x: number, y: number): [number, number, number] {
-    const zrodlo = this.textures.exists('plansza-0')
-      ? (this.textures.get('plansza-0').getSourceImage() as HTMLImageElement | HTMLCanvasElement)
-      : null;
-    const p = document.createElement('canvas');
-    p.width = 8;
-    p.height = 5;
-    const ctx = p.getContext('2d', { willReadFrequently: true });
-    if (!zrodlo?.width || !ctx) return [110, 120, 80];
-    const w = KAFEL * 1.6;
-    const h = KAFEL;
-    const x0 = Phaser.Math.Clamp(x - w / 2, 0, Math.max(0, zrodlo.width - w));
-    const y0 = Phaser.Math.Clamp(y - h * 0.6, 0, Math.max(0, zrodlo.height - h));
+  private barwaOkolicy(x: number, y: number, promien = 3): [number, number, number] {
+    const domyslna: [number, number, number] = [120, 130, 90];
+    if (!this.textures.exists('plansza-0')) return domyslna;
+    const zrodlo = this.textures.get('plansza-0').getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    if (!zrodlo?.width) return domyslna;
+    const skala = zrodlo.width / this.mapaW;
+    const bok = (2 * promien + 1) * KAFEL * skala;
+    const c = document.createElement('canvas');
+    c.width = 16;
+    c.height = 16;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return domyslna;
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(zrodlo, x0, y0, w, h, 0, 0, p.width, p.height);
-    const d = ctx.getImageData(0, 0, p.width, p.height).data;
-    const s = [0, 0, 0];
-    for (let i = 0; i < d.length; i += 4) for (let k = 0; k < 3; k++) s[k] += d[i + k];
-    const n = d.length / 4;
-    return [s[0] / n, s[1] / n, s[2] / n];
+    ctx.drawImage(zrodlo, ((x + 0.5) * KAFEL) * skala - bok / 2, ((y + 0.5) * KAFEL) * skala - bok / 2, bok, bok, 0, 0, 16, 16);
+    const d = ctx.getImageData(0, 0, 16, 16).data;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 128) continue;
+      r += d[i];
+      g += d[i + 1];
+      b += d[i + 2];
+      n++;
+    }
+    return n ? [r / n, g / n, b / n] : domyslna;
   }
 
   /**
-   * Tekstura stworka-strażnika NA MAPĘ — z pliku bitwy (`p-<numer>`), ale
-   * w świetle planszy (stworki runda 3: „cieniowane płasko/kreskówkowo,
-   * wklejone z innej gry; w HotA stwór ma to samo światło z lewej-góry,
-   * paletę i gęstość detalu co teren"). Parametry: `STWORKI_NA_MAPIE`
-   * (`uklad.ts`), nadpisywane per plansza (`USTAWIENIA.stworkiNaMapie`).
-   *
-   * 1. Zdjęta ciemna obwódka 1 px, którą `stworki_wczytaj.py` dokłada pod
-   *    bitwę (erozja alfy o piksel) — na mapie to ona robi „naklejkę".
-   * 2. Nasycenie w dół (plik ma +12% pod bitwę).
-   * 3. Barwa gruntu spod stworka: mnożnik chromy i odrobina samego gruntu.
-   * 4. Światło: jaśniej ku lewej-górze sylwetki, ciemniej ku prawemu-dołowi,
-   *    podcień przy ziemi i ciemniejszy brzeg od strony cienia — bryła
-   *    zamiast płaskiej plamy koloru. Jasnego obrysu (poświaty) nie ma.
-   *
-   * Tekstura jest wspólna dla stworków tego samego rodzaju na podobnym
-   * gruncie (klucz z barwy zaokrąglonej do 12), więc płótno liczy się raz;
-   * wymiary te same co plik, więc skala, cienie i trafienia się nie zmieniają.
+   * Zakres barw obiektów tej planszy (`OBIEKTY_WZORCOWE`, te, które są):
+   * mediana, 85. i 95. percentyl chromy (`med`, `nas`, `sufit`), średnia i odchylenie
+   * jasności pikseli nieprzezroczystych. Liczone raz na planszę.
    */
-  private teksturaStworkaNaMape(klucz: string, x: number, y: number): string {
-    const zrodlo = this.textures.get(klucz)?.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
-    if (!zrodlo?.width) return klucz;
-    // Malowany strażnik mapowy (`pmapa-`) ma światło, paletę i brzeg już
-    // w rysunku i nie ma obwódki bitwy — dostaje tylko lekki przebieg
-    // (`STRAZNIK_MALOWANY`) i bez erozji.
-    const malowany = klucz.startsWith('pmapa-');
-    const ust = {
-      ...STWORKI_NA_MAPIE,
-      ...planszaPoId(this.stan.mapa).modul.USTAWIENIA?.stworkiNaMapie,
-      ...(malowany ? STRAZNIK_MALOWANY : {}),
+  private barwyObiektow(): { med: number; nas: number; sufit: number; jas: number; roz: number } | null {
+    const znane = BARWY_OBIEKTOW.get(this.stan.mapa ?? '');
+    if (znane) return znane;
+    const nas: number[] = [];
+    let suma = 0;
+    let suma2 = 0;
+    let n = 0;
+    for (const klucz of OBIEKTY_WZORCOWE) {
+      if (!this.textures.exists(klucz)) continue;
+      const zr = this.textures.get(klucz).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+      if (!zr?.width) continue;
+      const k = Math.min(1, 64 / Math.max(zr.width, zr.height));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(zr.width * k));
+      c.height = Math.max(1, Math.round(zr.height * k));
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      if (!ctx) continue;
+      ctx.drawImage(zr, 0, 0, c.width, c.height);
+      const d = ctx.getImageData(0, 0, c.width, c.height).data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i + 3] < 220) continue;
+        // Chroma (max − min, 0–255), a nie nasycenie HSV: w HSV ciemne
+        // drewno ma „nasycenie" jak cukierek i sufit nic nie ścinał.
+        nas.push(Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]));
+        const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        suma += L;
+        suma2 += L * L;
+        n++;
+      }
+    }
+    if (!n) return null;
+    nas.sort((a, b) => a - b);
+    const jas = suma / n;
+    const wynik = {
+      med: nas[Math.floor(nas.length * 0.5)],
+      nas: nas[Math.floor(nas.length * 0.85)],
+      sufit: nas[Math.floor(nas.length * 0.95)],
+      jas,
+      roz: Math.sqrt(Math.max(0, suma2 / n - jas * jas)),
     };
-    const grunt = this.barwaGruntu(x, y).map((v) => Math.round(v / 12) * 12) as [number, number, number];
-    const nowy = `pm-${this.stan.mapa ?? ''}-${klucz}-${grunt.join('-')}`;
-    if (this.textures.exists(nowy)) return nowy;
-    const W = zrodlo.width;
-    const H = zrodlo.height;
-    const plotno = document.createElement('canvas');
-    plotno.width = W;
-    plotno.height = H;
-    const ctx = plotno.getContext('2d', { willReadFrequently: true });
-    const t = this.textures.createCanvas(nowy, W, H);
-    if (!ctx || !t) return klucz;
-    ctx.drawImage(zrodlo, 0, 0);
-    const obraz = ctx.getImageData(0, 0, W, H);
-    const d = obraz.data;
-    const a0 = new Uint8Array(W * H);
-    for (let i = 0; i < a0.length; i++) a0[i] = d[i * 4 + 3];
-    const kr = Math.max(2, Math.round((W / 128) * 3));
-    if (!this.oswietlObszar(d, a0, W, { x: 0, y: 0, w: W, h: H }, ust, grunt, kr, !malowany)) return klucz;
-    t.getContext().putImageData(obraz, 0, 0);
-    t.refresh();
-    return nowy;
+    BARWY_OBIEKTOW.set(this.stan.mapa ?? '', wynik);
+    return wynik;
   }
 
   /**
@@ -809,8 +1046,8 @@ export class AdventureScene extends Phaser.Scene {
    * zmian, `W` — szerokość płótna) w świetle planszy: erozja obwódki o piksel,
    * nasycenie, barwa gruntu (gdy jest `grunt`), światło z lewej-góry,
    * podcień przy ziemi i ciemny brzeg od strony cienia (`kr` — grubość
-   * brzegu w pikselach pliku). Wspólne dla strażników (cały plik) i bohatera
-   * (każda klatka arkusza osobno). `false` — w obszarze nic nie widać.
+   * brzegu w pikselach pliku). Dziś tylko bohater (każda klatka arkusza
+   * osobno) — strażników podaje na mapę `stworekNaMape`. `false` — w obszarze nic nie widać.
    */
   private oswietlObszar(
     d: Uint8ClampedArray,
@@ -964,6 +1201,345 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   /**
+   * Stworek-strażnik przygotowany na mapę: tekstura w rozmiarze bliskim
+   * ekranowi i własny cień rzucony. Zasady — patrz `STWOREK_NADPROBKA`.
+   *
+   * 1. Zmniejszenie z pliku płótnem, schodkami po połowie (każdy krok
+   *    uśrednia, jak mipmapa), do `STWOREK_NADPROBKA` × rozmiar na ekranie,
+   *    z marginesem na obrys. Resztę zmniejsza karta graficzna.
+   * 2. Barwy w zakresie obiektów planszy (`barwyObiektow`): nasycenie nie
+   *    wyżej niż u chaty i skrzyni (runda 6: Cindro był najjaskrawszą rzeczą
+   *    na Bagnach), za ciemny stworek podniesiony do ich jasności, za
+   *    kontrastowy — ściszony (Sporex na Polanie był „mętny i ciemny").
+   *    Na śnieżnych planszach (`cienNaSniegu`) jeszcze chłodniej i ciszej
+   *    (`STWOREK_SNIEG`).
+   * 3. Wyraźna bryła: światło z lewej-góry, cień z prawej-dołu.
+   * 4. Łagodne wygładzenie wnętrza (`STWOREK_WYGLADZENIE`) — cienkie macki
+   *    i nogi czytają się jak kilka kształtów, a nie szum.
+   * 5. Jasna krawędź od strony światła: na śniegu chłodna u każdego, gdzie
+   *    indziej tylko u ciemnych (Vulkaron), żeby nie zlewały się z gruntem.
+   * 6. Obrys: NIE w teksturze, tylko ten sam co pod skrzynią i chatą
+   *    (`obrysRysunku`, w `obrazyStworka`). Runda 8: obrys 1,2 px w teksturze
+   *    znikał po zmniejszeniu — na zbliżeniu skrzynia miała wyraźny ciemny
+   *    kontur, stworek żadnego.
+   * 7. Cień rzucony: sylwetka spłaszczona i pochylona w prawo-dół (od
+   *    światła z lewej-góry), rozmyta, w ciemnej barwie okolicy.
+   *
+   * Proporcje pliku zostają; skalę liczy `obrazyStworka` z wysokości BEZ
+   * marginesu. Pomiary podstawy i marginesu dolnego idą z oryginału.
+   *
+   * `wzor` — obrazek „stoi" tego samego stworka, gdy pieczemy klatkę pozy
+   * (`NAJECHANIE_POZY`): barwy i bryła idą wtedy z niego (`Strojenie`).
+   * Plik pozy jest szerszy (192 × 128), ale ma tę samą wysokość i kwadrat
+   * „stoi" dokładnie pośrodku — przy tej samej wysokości tekstury wychodzi
+   * ta sama skala i ten sam środek dołu, więc klatki leżą jedna na drugiej.
+   */
+  private stworekNaMape(
+    klucz: string,
+    wys: number,
+    tlo: [number, number, number],
+    wzor?: StworekNaMape
+  ): StworekNaMape {
+    const h = Math.max(8, Math.round(wys * ZOOM_MAPY * STWOREK_NADPROBKA));
+    // Barwa okolicy zaokrąglona, żeby stworki na podobnym gruncie dzieliły teksturę.
+    const [tr, tg, tb] = tlo.map((v) => Math.round(v / 8) * 8);
+    const cel = `${klucz}@mapa${h}-${tr}-${tg}-${tb}-${this.stan.mapa}`;
+    const znany = STWORKI_MAPY.get(cel);
+    if (znany && this.textures.exists(cel)) return znany;
+    const zrodlo = this.textures.get(klucz).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    if (!zrodlo?.width || zrodlo.height <= h) return { rysunek: klucz, margines: 0 };
+    const ust = planszaPoId(this.stan.mapa).modul.USTAWIENIA;
+
+    // 1. Zmniejszenie, z marginesem na obrys (u góry i po bokach).
+    let obraz: HTMLImageElement | HTMLCanvasElement = zrodlo;
+    while (obraz.height / 2 >= h) {
+      const c = document.createElement('canvas');
+      c.width = Math.round(obraz.width / 2);
+      c.height = Math.round(obraz.height / 2);
+      const x = c.getContext('2d')!;
+      x.imageSmoothingQuality = 'high';
+      x.drawImage(obraz, 0, 0, c.width, c.height);
+      obraz = c;
+    }
+    const M = 3;
+    const w0 = Math.max(1, Math.round((zrodlo.width * h) / zrodlo.height));
+    const w = w0 + 2 * M;
+    const hh = h + M;
+    const plotno = document.createElement('canvas');
+    plotno.width = w;
+    plotno.height = hh;
+    const ctx = plotno.getContext('2d', { willReadFrequently: true })!;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(obraz, M, M, w0, h);
+    const obr = ctx.getImageData(0, 0, w, hh);
+    const d = obr.data;
+
+    // Obrys sylwetki i statystyki barw.
+    let x0 = w;
+    let x1 = -1;
+    let y0 = hh;
+    let y1 = -1;
+    const nasS: number[] = [];
+    let sumaL = 0;
+    let suma2 = 0;
+    let ileL = 0;
+    for (let y = 0; y < hh; y++)
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (d[i + 3] <= 40) continue;
+        x0 = Math.min(x0, x);
+        x1 = Math.max(x1, x);
+        y0 = Math.min(y0, y);
+        y1 = Math.max(y1, y);
+        if (d[i + 3] > 200) {
+          const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          nasS.push(Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]));
+          sumaL += L;
+          suma2 += L * L;
+          ileL++;
+        }
+      }
+    if (y1 < 0) return { rysunek: klucz, margines: 0 };
+    const srL = ileL > 0 ? sumaL / ileL : 128;
+    const rozL = ileL > 0 ? Math.sqrt(Math.max(0, suma2 / ileL - srL * srL)) : 40;
+    nasS.sort((a, b) => a - b);
+    const nas50 = nasS.length ? nasS[Math.floor(nasS.length * 0.5)] : 70;
+    const ciemny = srL < STWOREK_PROG_CIEMNY;
+    const st = wzor?.strojenie;
+    const ph = st ? st.ph : Math.max(1, y1 - y0);
+    const sx = st ? w / 2 + st.sxOdSrodka : (x0 + x1) / 2;
+    const pw = st ? st.pw : Math.max(1, (x1 - x0) / 2);
+    const gora = st ? st.y0 : y0;
+
+    // 2. Zakres barw obiektów planszy + klimat śnieżny.
+    const snieg = !!ust?.cienNaSniegu;
+    const obiekty = this.barwyObiektow();
+    let nasycenie = snieg ? STWOREK_SNIEG.nasycenie : 1;
+    let kontrast = snieg ? STWOREK_SNIEG.kontrast : 1;
+    let jasnosc = 1;
+    if (st) {
+      ({ nasycenie, kontrast, jasnosc } = st);
+    } else if (obiekty) {
+      // Mediana chromy stworka najwyżej 1,15 × mediany obiektów. Runda 8
+      // mierzyła 85. percentyl — a przy nim neonowy Sporex (cały jaskrawy,
+      // bez ciemnych partii) mieścił się „w normie" drewnianego wozu.
+      if (nas50 > obiekty.med * 1.15) nasycenie *= Math.max(0.55, (obiekty.med * 1.15) / nas50);
+      if (rozL > obiekty.roz * 1.1) kontrast *= Math.max(0.7, (obiekty.roz * 1.1) / rozL);
+      if (srL < obiekty.jas * 0.85) jasnosc = Math.min(1.35, (obiekty.jas * 0.85) / srL);
+    }
+    const odcien = snieg ? STWOREK_SNIEG.odcien : 0;
+    const sr = (tr + tg + tb) / 3 || 1;
+    const krawedz = st ? st.krawedz : snieg ? STWOREK_SNIEG.krawedz : ciemny ? STWOREK_KRAWEDZ_SWIATLA : 0;
+    const srodekL = st ? st.srL : srL;
+    const barwaKrawedzi = snieg
+      ? [tr, tg, tb].map((v) => Math.min(255, (v * 255) / Math.max(tr, tg, tb, 1)))
+      : [255, 255, 255];
+
+    // 3–5. Barwa, bryła, wygładzenie, jasna krawędź — z kopii, żeby sąsiedzi
+    // byli sprzed zmian.
+    const alfa = (x: number, y: number) => (x < 0 || y < 0 || x >= w || y >= hh ? 0 : d[(y * w + x) * 4 + 3]);
+    const wynik = new Uint8ClampedArray(d);
+    for (let y = 0; y < hh; y++)
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (!d[i + 3]) continue;
+        const rozmyte = [0, 0, 0];
+        let ile = 0;
+        let swiatlo = false;
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -1; dx <= 1; dx++) {
+            if (alfa(x + dx, y + dy) > 100) {
+              const j = ((y + dy) * w + x + dx) * 4;
+              rozmyte[0] += d[j];
+              rozmyte[1] += d[j + 1];
+              rozmyte[2] += d[j + 2];
+              ile++;
+            } else if (dx + dy < 0) swiatlo = true;
+          }
+        const bryla = 1 + STWOREK_BRYLA * (-(x - sx) / pw - ((y - gora) / ph - 0.5) * 2) * 0.5;
+        const src = [0, 1, 2].map((c) =>
+          ile ? d[i + c] * (1 - STWOREK_WYGLADZENIE) + (rozmyte[c] / ile) * STWOREK_WYGLADZENIE : d[i + c]
+        );
+        // Róż i magenta (odcień 320–360°) ciągniemy ku ciepłej czerwieni:
+        // odbarwiona czerwień Cindra czytała się na Bagnach jak cukierkowy
+        // róż, a róż nie istnieje w palecie żadnej planszy.
+        const barwa = bezRozu(src);
+        const L = 0.299 * barwa[0] + 0.587 * barwa[1] + 0.114 * barwa[2];
+        // Odbarwianie ku CIEPŁEJ szarości — ku zwykłej czerwień bladła w róż.
+        const szary = [L * 1.06, L, L * 0.88];
+        for (let c = 0; c < 3; c++) {
+          let v = szary[c] + (barwa[c] - szary[c]) * nasycenie;
+          v = srodekL + (v - srodekL) * kontrast;
+          v *= jasnosc;
+          v *= 1 - odcien + (odcien * [tr, tg, tb][c]) / sr;
+          v *= bryla;
+          wynik[i + c] = v;
+        }
+        // Sufit chromy piksela: nie jaskrawiej niż najjaskrawsze 5% pikseli
+        // obiektów planszy (fioletowa korona Sporexa, róż Cindra).
+        const sufit = obiekty?.sufit ?? 255;
+        const mxP = Math.max(wynik[i], wynik[i + 1], wynik[i + 2]);
+        const mnP = Math.min(wynik[i], wynik[i + 1], wynik[i + 2]);
+        if (mxP - mnP > sufit) {
+          const Lp = 0.299 * wynik[i] + 0.587 * wynik[i + 1] + 0.114 * wynik[i + 2];
+          const k = sufit / (mxP - mnP);
+          for (let c = 0; c < 3; c++) wynik[i + c] = Lp + (wynik[i + c] - Lp) * k;
+        }
+        for (let c = 0; c < 3; c++) {
+          let v = wynik[i + c];
+          // Na śniegu strona cienia chłodnieje, a cały brzeg mięknie ku
+          // barwie okolicy — obiekty Twierdzy nie mają ciemnej linii.
+          if (snieg && bryla < 1) v += (STWOREK_CHLOD[c] - v) * Math.min(0.5, (1 - bryla) * 2.5);
+          if (snieg && ile < 9) v += ([tr, tg, tb][c] - v) * 0.25;
+          if (krawedz && swiatlo) v += (barwaKrawedzi[c] - v) * krawedz;
+          wynik[i + c] = v;
+        }
+      }
+
+    obr.data.set(wynik);
+    ctx.putImageData(obr, 0, 0);
+    this.textures.addCanvas(cel, plotno);
+
+    // 7. Cień rzucony: y' = stopy − (stopy − y)·SPLASZCZ, x' = x + (stopy − y)·POCHYL.
+    const p = 3 * STWOREK_NADPROBKA;
+    const stopy = y1 + 1;
+    const pochyl = 0.62;
+    const splaszcz = 0.3;
+    const cw = w + Math.ceil(ph * pochyl) + 2 * p;
+    const chh = Math.ceil(stopy * splaszcz) + 2 * p;
+    const cc = document.createElement('canvas');
+    cc.width = cw;
+    cc.height = chh;
+    const cx = cc.getContext('2d')!;
+    cx.filter = `blur(${1.6 * STWOREK_NADPROBKA}px)`;
+    cx.setTransform(1, 0, -pochyl, splaszcz, stopy * pochyl + p, chh - p - stopy * splaszcz);
+    cx.drawImage(plotno, 0, 0);
+    cx.setTransform(1, 0, 0, 1, 0, 0);
+    cx.filter = 'none';
+    cx.globalCompositeOperation = 'source-in';
+    // Ciemna barwa okolicy — na śniegu szaroniebieska, w trawie brunatnozielona.
+    const barwaCienia = [Math.round(tr * 0.3 + 10), Math.round(tg * 0.3 + 8), Math.round(tb * 0.3 + 6)];
+    cx.fillStyle = `rgb(${barwaCienia.join(',')})`;
+    cx.fillRect(0, 0, cw, chh);
+    const kluczCienia = `${cel}-cien`;
+    this.textures.addCanvas(kluczCienia, cc);
+    const wpis: StworekNaMape = {
+      rysunek: cel,
+      margines: M,
+      cien: {
+        klucz: kluczCienia,
+        ox: (w / 2 + p) / cw,
+        oy: (chh - p) / chh,
+        stopy: hh - stopy,
+        barwa: (barwaCienia[0] << 16) | (barwaCienia[1] << 8) | barwaCienia[2],
+      },
+      strojenie: st ?? {
+        srL,
+        nasycenie,
+        kontrast,
+        jasnosc,
+        krawedz,
+        sxOdSrodka: sx - w / 2,
+        pw,
+        y0,
+        ph,
+      },
+    };
+    STWORKI_MAPY.set(cel, wpis);
+    return wpis;
+  }
+
+  /**
+   * Wszystkie obrazki strażnika, w kolejności rysowania, względem środka
+   * jego pola: plama styku, cień rzucony, obrys planszy i na końcu sam
+   * stworek (`im`, do
+   * trafień kliknięciem). Jedno miejsce dla sceny i dla arkusza porównania
+   * (`tools/zrzut-stwory-porownanie.mjs`), żeby arkusz pokazywał dokładnie
+   * to, co gra.
+   *
+   * Cień jest własny, a nie podkładka skrzyń (`cienKontaktowy`): runda 6 —
+   * na Twierdzy płaski, nasycony niebieski owal PONIŻEJ stóp czytał się jak
+   * znacznik zaznaczenia, a smok nad nim wisiał. Plama styku leży dokładnie
+   * pod stopami i na nie zachodzi, z ciemnym rdzeniem jak pod skrzynią
+   * (runda 8: słabsza ginęła na ciemnej trawie), na śniegu szaroniebieska.
+   */
+  private obrazyStworka(
+    klucz: string,
+    wys: number,
+    tlo: [number, number, number]
+  ): { obrazy: Phaser.GameObjects.Image[]; im: Phaser.GameObjects.Image; ozywienie: OzywienieStraznika } {
+    const naMape = this.stworekNaMape(klucz, wys, tlo);
+    const im = this.add.image(0, KAFEL * 0.46, naMape.rysunek).setOrigin(0.5, 1);
+    im.setScale(wys / (im.height - naMape.margines));
+    const obrazy: Phaser.GameObjects.Image[] = [];
+    let cien: Phaser.GameObjects.Image | undefined;
+    if (naMape.cien) {
+      const sk = im.scaleY;
+      const yStop = im.y - naMape.cien.stopy * sk;
+      const szer = (im.width - 2 * naMape.margines) * sk * (this.podstawaRysunku(klucz).widocznaSzer ?? 0.8);
+      const snieg = !!planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienNaSniegu;
+      const szerC = Math.max(KAFEL * 0.55, szer * 1.0);
+      const wysC = szerC * 0.36;
+      obrazy.push(
+        // Rdzeń zachodzi na stopy (środek plamy o 0,15 jej wysokości NAD
+        // linią stóp), reszta wychodzi w prawo-dół.
+        this.add
+          .image(szerC * 0.12, yStop + wysC * 0.1, CIEN_KONTAKTOWY)
+          .setDisplaySize(szerC, wysC)
+          .setTint(snieg ? STWOREK_STYK_SNIEG : 0x0e0904)
+          .setTintMode(Phaser.TintModes.FILL)
+          .setAlpha(STWOREK_STYK),
+        (cien = this.add
+          .image(0, yStop, naMape.cien.klucz)
+          .setOrigin(naMape.cien.ox, naMape.cien.oy)
+          .setScale(sk)
+          .setAlpha(STWOREK_CIEN))
+      );
+    }
+    // Obrys planszy — ten sam co pod skrzynią (grubość, barwa, krycie).
+    const krycieObrysu = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.obrysObiektow;
+    const obrys = krycieObrysu ? this.obrysRysunku(im, krycieObrysu) : [];
+    obrazy.push(...obrys, im);
+    const ozywienie: OzywienieStraznika = {
+      klucz,
+      wys,
+      tlo,
+      im,
+      obrys,
+      krycieObrysu: krycieObrysu ?? 0,
+      cien,
+      czas: 0,
+      sila: 0,
+      aktywne: false,
+      ugiecie: 0,
+      predkosc: 0,
+    };
+    return { obrazy, im, ozywienie };
+  }
+
+  /**
+   * Obrys obiektów gry (`USTAWIENIA.obrysObiektow`, per plansza): ciemna
+   * sylwetka przesunięta o 2,5 piksela świata w ośmiu kierunkach, pod
+   * rysunkiem. Bagna, runda 6: „obiekty interaktywne zlewają się
+   * z dekoracją — bez konturu i kontrastu". Drzewa i skały obrysu nie mają,
+   * więc to, co da się podnieść, odwiedzić albo pokonać, odcina się od tła.
+   * Stworki dostają ten sam obrys (`obrazyStworka`).
+   */
+  private obrysRysunku(im: Phaser.GameObjects.Image, krycie: number): Phaser.GameObjects.Image[] {
+    const d = 2.5;
+    return [[-1, 0], [1, 0], [0, -1], [0, 1], [-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]].map(
+      ([ox, oy]) =>
+        this.add
+          .image(im.x + ox * d, im.y + oy * d, im.texture.key)
+          .setOrigin(0.5, 1)
+          .setScale(im.scaleX, im.scaleY)
+          .setTint(0x1c1408)
+          .setTintMode(Phaser.TintModes.FILL)
+          .setAlpha(krycie)
+    );
+  }
+
+  /**
    * Gdzie w poziomie leży spód rysunku — lewa i prawa krawędź widocznych
    * pikseli w najniższym pasie rysunku (ułamki szerokości pliku) oraz
    * szerokość całej sylwetki. Liczone z alfy i zapamiętane, jak margines.
@@ -978,9 +1554,11 @@ export class AdventureScene extends Phaser.Scene {
       let gora = a.h;
       let minX = a.w;
       let maxX = -1;
+      let widoczne = 0;
       for (let y = 0; y < a.h; y++)
         for (let x = 0; x < a.w; x++)
           if (a.dane[y * a.w + x] > 40) {
+            widoczne++;
             if (y > dol) dol = y;
             if (y < gora) gora = y;
             if (x < minX) minX = x;
@@ -1002,6 +1580,7 @@ export class AdventureScene extends Phaser.Scene {
           prawo: (r + 1) / a.w,
           widocznaSzer: (maxX - minX + 1) / a.w,
           widocznaWys: (dol - gora + 1) / a.h,
+          pole: widoczne / (a.w * a.h),
         };
       }
     }
@@ -1209,6 +1788,9 @@ export class AdventureScene extends Phaser.Scene {
     // Marsz, bitwa czy okno: złota elipsa wejścia nie zostaje pod kursorem,
     // choćby mysz się nie ruszyła — wróci przy następnym jej ruchu.
     if (this.zajety && this.znakWejscia) this.podswietlWejscie(undefined);
+    // Tak samo najechany stos: w marszu i w oknie dogrywa pętlę i staje.
+    if (this.zajety && this.ruchomeStraze.size) this.ozywStraznika(undefined);
+    if (this.ruchomeStraze.size) this.krokOzywienia(delta);
     if (!this.kursor || this.zajety) {
       this.krawedzOd = null;
       return;
@@ -1233,6 +1815,8 @@ export class AdventureScene extends Phaser.Scene {
     // Bez wygładzania: to ma być natychmiastowe i ciągłe. Tween co klatkę
     // nakładałby się sam na siebie i mapa szarpałaby się zamiast płynąć.
     this.przewin(this.przewX + kx * krok, this.przewY + ky * krok, false);
+    // Mapa jedzie pod nieruchomym kursorem — stos pod nim może się zmienić.
+    this.ozywStraznika(this.straznikPodKursorem(this.kursor));
   }
 
   private klawisz(e: KeyboardEvent) {
@@ -1873,24 +2457,31 @@ export class AdventureScene extends Phaser.Scene {
     if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: this.wysZnajdzki('m-skrzynia', 1.05) };
     if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: this.wysZnajdzki('m-kamien-ewolucji') };
     if (o.rodzaj === 'potwor') {
-      // Strażnik ma mieć `WYS_STRAZNIKA` pola WIDOCZNEJ sylwetki, nie pliku:
-      // stworki mają różny przezroczysty margines, a przy jednej wysokości
-      // pliku część wychodziła na plamkę. Szerokie sylwetki przycina
-      // `SZER_STRAZNIKA_MAX`. Zwracana `wys` to nadal wysokość PLIKU, więc
-      // cień kontaktowy, spód rysunku i trafienia kliknięciem idą za nią same.
-      // Malowana wersja mapowa (`pmapa-`, stworki runda 5), gdy jest —
-      // inaczej sprite bitwy, jak dotąd.
+      // Strażnik ma mieć `MASA_STRAZNIKA` pola² WIDOCZNEJ sylwetki (pierwiastek
+      // z pola powierzchni), a nie stałą wysokość: przy jednej wysokości
+      // chudy Glacyn wyglądał na zabawkę, a przysadzisty smok — na górę.
+      // Granice `WYS_STRAZNIKA_MIN/MAX` i `SZER_STRAZNIKA_MAX` trzymają
+      // skrajne kształty. Zwracana `wys` to wysokość PLIKU, więc cień
+      // kontaktowy, spód rysunku i trafienia kliknięciem idą za nią same.
+      // Malowana figura mapowa z PR #6 (`pmapa-`, `STRAZNICY_MAPOWI`), gdy
+      // jest — inaczej sprite bitwy. Obróbka ta sama (`stworekNaMape`: obrys
+      // i cień jak u skrzyni, barwy w zakresie obiektów planszy).
       const sprite = o.oddzialy?.[0].sprite ?? '00002';
       const klucz = this.textures.exists(`pmapa-${sprite}`) ? `pmapa-${sprite}` : `p-${sprite}`;
       const p = this.podstawaRysunku(klucz);
       const zrodlo = this.textures.get(klucz).getSourceImage() as { width: number; height: number };
       const proporcja = (zrodlo.width || 1) / (zrodlo.height || 1);
-      // `USTAWIENIA.skalaStrazy` (per plansza; Twierdza, runda 10: „stwory to
-      // malutkie naklejki w innej skali niż zamek"). Brak = 1.
+      // `USTAWIENIA.skalaStrazy` (per plansza). Brak = 1.
       const skalaStrazy = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaStrazy ?? 1;
-      const wys = Math.min(
-        (WYS_STRAZNIKA * skalaStrazy) / (p.widocznaWys ?? 1),
-        (SZER_STRAZNIKA_MAX * skalaStrazy) / ((p.widocznaSzer ?? 1) * proporcja)
+      const vw = p.widocznaWys ?? 1;
+      const wys = Phaser.Math.Clamp(
+        Math.min(
+          (MASA_STRAZNIKA * skalaStrazy) / Math.sqrt((p.pole ?? 0.4) * proporcja),
+          (WYS_STRAZNIKA_MAX * skalaStrazy) / vw,
+          (SZER_STRAZNIKA_MAX * skalaStrazy) / ((p.widocznaSzer ?? 1) * proporcja)
+        ),
+        (WYS_STRAZNIKA_MIN * skalaStrazy) / vw,
+        Infinity
       );
       return { klucz, wys: KAFEL * wys };
     }
@@ -1939,7 +2530,12 @@ export class AdventureScene extends Phaser.Scene {
           )
       );
     };
-    for (const o of this.stan.obiekty) {
+    // Kontener świata rysuje w kolejności dodania, nie po `depth` — obiekty
+    // idą więc od górnego rzędu do dolnego. W kolejności z listy planszy
+    // budowla z rzędu wyżej, dodana później, zasłaniała strażnika stojącego
+    // pod nią (stwory na mapie, runda 4). Sortowanie stabilne: w jednym
+    // rzędzie kolejność zostaje ta z planszy.
+    for (const o of [...this.stan.obiekty].sort((a, b) => a.y - b.y)) {
       if (o.zebrany) continue;
       const { x, y } = this.naEkran(o.x, o.y);
       const kont = this.add.container(x, y).setDepth(o.y + 0.5);
@@ -1978,63 +2574,19 @@ export class AdventureScene extends Phaser.Scene {
           : o.rodzaj === 'jasnowidz'
             ? undefined
             : planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienZnajdzek;
-      kont.add(
-        this.cienKontaktowy(
-          klucz,
-          wys,
-          0,
-          spod,
-          (bryla ? KRYCIE_CIENIA_BRYLY : KRYCIE_CIENIA) * (cb?.krycie ?? 1),
-          cb?.szer ?? 1
-        )
-      );
-      // Strażnik to jednostka, nie przedmiot: rzuca na grunt własną sylwetkę
-      // (`cienRzucany`), której znajdźki nie mają.
-      if (o.rodzaj === 'potwor') {
-        // Malowany strażnik (`pmapa-`): cień i podstawka mogą podejść pod
-        // rysunek o `STRAZNIK_MALOWANY.podGrupe` widocznej wysokości (grupka
-        // z rundy 5 stała stopami tylnych stworków wyżej niż dolna krawędź;
-        // pojedyncza figura z rundy 6 stoi na krawędzi — prawie 0).
-        const malowany = klucz.startsWith('pmapa-');
-        const podGrupe = malowany
-          ? STRAZNIK_MALOWANY.podGrupe * (this.podstawaRysunku(klucz).widocznaWys ?? 1) * wys
-          : 0;
-        const rzut = this.cienRzucany(klucz, wys / this.textures.get(klucz).getSourceImage().height, 0, spod - podGrupe);
-        if (rzut) kont.add(rzut);
-        // Podstawka (stworki runda 4: „brak podstawki / znacznika strażnika"):
-        // zwarta, ciemna plama gruntu wprost pod stopami — jednostka stoi
-        // ciężko, łup obok leży lekko. Bez jasnej obwódki (to byłaby naklejka).
-        // Malowana figura (runda 6: „brak cienia kontaktowego — naklejki nad
-        // ziemią") ma podstawkę mocniejszą i szerszą od rozstawu stóp
-        // (`STRAZNIK_MALOWANY.podstawka`, `szerPodstawki`).
-        const podst = malowany
-          ? STRAZNIK_MALOWANY.podstawka
-          : { ...STWORKI_NA_MAPIE, ...planszaPoId(this.stan.mapa).modul.USTAWIENIA?.stworkiNaMapie }.podstawka;
-        if (podst > 0) {
-          const zr = this.textures.get(klucz).getSourceImage() as { width: number; height: number };
-          const sk = wys / (zr.height || 1);
-          const pr = this.podstawaRysunku(klucz);
-          const szerP = Math.max(
-            (pr.prawo - pr.lewo) * zr.width * sk * (malowany ? STRAZNIK_MALOWANY.szerPodstawki : 1.05),
-            KAFEL * (malowany ? 0.7 : 0.55)
-          );
-          const srodekP = ((pr.lewo + pr.prawo) / 2 - 0.5) * zr.width * sk;
-          kont.add(
-            this.naSniegu(
-              this.add
-                .image(
-                  srodekP + szerP * 0.05,
-                  spod + 1 - podGrupe - (malowany ? szerP * 0.3 * STRAZNIK_MALOWANY.podstawkaWyzej : 0),
-                  CIEN_KONTAKTOWY
-                )
-                .setDisplaySize(szerP, szerP * 0.3)
-                .setTint(0x0e0904)
-                .setTintMode(Phaser.TintModes.FILL)
-                .setAlpha(podst)
-            )
-          );
-        }
-      }
+      // Stworek ma własny cień rzucony (`obrazyStworka`), dodawany niżej.
+      const stworek = o.rodzaj === 'potwor' ? this.obrazyStworka(klucz, wys, this.barwaOkolicy(o.x, o.y)) : null;
+      if (!stworek)
+        kont.add(
+          this.cienKontaktowy(
+            klucz,
+            wys,
+            0,
+            spod,
+            (bryla ? KRYCIE_CIENIA_BRYLY : KRYCIE_CIENIA) * (cb?.krycie ?? 1),
+            cb?.szer ?? 1
+          )
+        );
       // Wejście do budowli z bryłą (zamek, kopalnia) nie ma żadnego
       // odrębnego oznaczenia na gruncie — z daleka wygląda jak zwykła
       // ścieżka POD budynkiem, więc nie widać, gdzie naprawdę trzeba
@@ -2067,41 +2619,27 @@ export class AdventureScene extends Phaser.Scene {
       // Budowle z bryłą stoją ZA polem wejścia, a nie na nim: podstawa siada na
       // górnej krawędzi tego pola, więc brama zostaje odsłonięta i widać, że
       // jest po niej gdzie chodzić. Reszta obiektów stoi na swoim polu.
-      // Rysunek na mapę: strażnik w świetle i barwie gruntu, znajdźka
-      // przygaszona (stworki runda 3). Cienie i spód liczą się dalej z pliku
-      // (`klucz`) — wymiary są te same.
-      const znajdzka = o.rodzaj === 'surowiec' || o.rodzaj === 'skrzynia' || o.rodzaj === 'artefakt';
-      const kluczRys =
-        o.rodzaj === 'potwor'
-          ? this.teksturaStworkaNaMape(klucz, kont.x, kont.y + spod)
-          : znajdzka
-            ? this.teksturaZnajdzkiNaMape(klucz, przyStrazniku(o, klucz))
-            : klucz;
-      const im = this.add
-        .image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, kluczRys)
-        .setOrigin(0.5, 1);
-      im.setScale(wys / im.height);
-      // Obrys obiektów gry (`USTAWIENIA.obrysObiektow`, per plansza): ciemna
-      // sylwetka przesunięta o 2,5 piksela świata w ośmiu kierunkach, pod rysunkiem.
-      // Bagna, runda 6: „obiekty interaktywne zlewają się z dekoracją — bez
-      // konturu i kontrastu". Drzewa i skały obrysu nie mają, więc to, co
-      // da się podnieść albo odwiedzić, odcina się od tła. Stworki bez obrysu.
-      // Łup ma obrys słabszy (`ZNAJDZKI_NA_MAPIE.obrys`, stworki runda 4).
-      const obrys = (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.obrysObiektow ?? 0) * (znajdzka ? zn.obrys : 1);
-      if (obrys && o.rodzaj !== 'potwor') {
-        const d = 2.5;
-        for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]]) {
-          const cien = this.add
-            .image(im.x + ox * d, im.y + oy * d, kluczRys)
-            .setOrigin(0.5, 1)
-            .setScale(im.scaleX, im.scaleY)
-            .setTint(0x1c1408)
-            .setTintMode(Phaser.TintModes.FILL)
-            .setAlpha(obrys);
-          kont.add(cien);
-        }
+      // Stworek ma gotowy komplet obrazków (`obrazyStworka`: cień, obrys,
+      // rysunek); reszta obiektów — rysunek z pliku i obrys planszy.
+      let im: Phaser.GameObjects.Image;
+      if (stworek) {
+        kont.add(stworek.obrazy);
+        im = stworek.im;
+        this.ozywienia.set(o.id, stworek.ozywienie);
+      } else {
+        // Znajdźka przygaszona (stworki runda 3). Cienie i spód liczą się
+        // dalej z pliku (`klucz`) — wymiary są te same.
+        const znajdzka = o.rodzaj === 'surowiec' || o.rodzaj === 'skrzynia' || o.rodzaj === 'artefakt';
+        const kluczRys = znajdzka ? this.teksturaZnajdzkiNaMape(klucz, przyStrazniku(o, klucz)) : klucz;
+        im = this.add.image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, kluczRys).setOrigin(0.5, 1);
+        im.setScale(wys / im.height);
+        // Obrys obiektów gry (`USTAWIENIA.obrysObiektow`, per plansza) — Bagna,
+        // runda 6: „obiekty interaktywne zlewają się z dekoracją". Łup ma obrys
+        // słabszy (`ZNAJDZKI_NA_MAPIE.obrys`, stworki runda 4).
+        const obrys = (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.obrysObiektow ?? 0) * (znajdzka ? zn.obrys : 1);
+        if (obrys) kont.add(this.obrysRysunku(im, obrys));
+        kont.add(im);
       }
-      kont.add(im);
 
       // Klik w RYSUNEK ma celować w pole obiektu.
       //
@@ -2127,10 +2665,9 @@ export class AdventureScene extends Phaser.Scene {
         });
       }
 
-      // Strażnik nie ma chorągiewki (stworki runda 5: „różowe proporczyki nad
-      // stworami mylą się z flagą obiektu do przejęcia"). W HoMM3 też jej nie
-      // ma — potwora poznaje się po figurze, cieniu rzuconym i podstawce;
-      // kto pilnuje, mówi podpowiedź po najechaniu (`opisObiektu`).
+      // Strażnicy nie mają chorągiewki: to oddziały neutralne, nie należą do
+      // żadnego gracza — jak stwory na mapie Heroes 3. Wroga poznaje się po
+      // tym, że stoi na drodze, a siłę pokazuje podpowiedź po najechaniu.
       const doZajecia =
         o.rodzaj === 'kopalnia' ||
         o.rodzaj === 'zamek' ||
@@ -2152,18 +2689,55 @@ export class AdventureScene extends Phaser.Scene {
       if (bryla) this.zaroslaPrzyPodstawie(o, im, kont, spod);
       // `USTAWIENIA.osadzZnajdzki` (per plansza; Twierdza, runda 10: „zasoby
       // i stwory to płaskie naklejki bez osadzenia w podłożu"): stosy,
-      // skrzynie, artefakty i stworki dostają tę samą nierówną krawędź gruntu
+      // skrzynie i artefakty dostają tę samą nierówną krawędź gruntu
       // co budowle, tylko w skali drobnej rzeczy — spód grzęźnie w śniegu.
       const osadz = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.osadzZnajdzki;
-      // Malowany strażnik (`pmapa-`) bez tego: pas gruntu zakrywał
-      // stopy przedniego stworka razem z cieniem pod nim i grupa wisiała nad
-      // własnym cieniem (stworki runda 5).
-      if (osadz && !bryla && o.rodzaj !== 'budynek' && o.rodzaj !== 'jasnowidz' && !klucz.startsWith('pmapa-'))
+      // Bez stworków: mają własny cień rzucony (`stworekNaMape`), a pas tła
+      // pod stworkiem stojącym przy górze wycinał spod niej szary placek
+      // skały — stworek wyglądał jak na cokole (stwory na mapie, runda 3).
+      if (osadz && !bryla && o.rodzaj !== 'budynek' && o.rodzaj !== 'jasnowidz' && o.rodzaj !== 'potwor')
         this.zaroslaPrzyPodstawie(o, im, kont, spod, osadz);
 
       kont.setData('obiekt', o);
       this.ikonyObiektow[o.id] = kont;
       this.swiat.add(kont);
+    }
+    this.strazePodKorony();
+  }
+
+  /**
+   * Kępy lasu i drzewa są w świecie przed obiektami, więc korona drzewa
+   * z niższego rzędu nie mogła zasłonić strażnika stojącego nad nią —
+   * stworek stał NA koronie (Bagna, runda 8). Strażnika przestawiamy na
+   * liście tuż przed pierwszą nachodzącą na niego przeszkodą o większej
+   * głębokości — o ile między nią a nim nie leży przeszkoda płytsza, która
+   * wtedy zasłoniłaby go od przodu (tego przypadku nie ruszamy).
+   */
+  private strazePodKorony() {
+    const lista = this.swiat.list as Phaser.GameObjects.GameObject[];
+    // Tylko drzewa i kępy lasu — góra z niższego rzędu zasłaniała strażnika
+    // w całości (Twierdza), a strażnik ma być widoczny.
+    const przeszkoda = (e: Phaser.GameObjects.GameObject) =>
+      e instanceof Phaser.GameObjects.Image && /^m-(kepa-las|drzewo|sosna)/.test(e.texture.key);
+    for (const kont of Object.values(this.ikonyObiektow)) {
+      const o = kont.getData('obiekt') as Obiekt | undefined;
+      if (o?.rodzaj !== 'potwor' || o.zebrany) continue;
+      const b = kont.getBounds();
+      const gi = lista.indexOf(kont);
+      let j = -1;
+      let plytsza = false;
+      for (let i = 0; i < gi; i++) {
+        const e = lista[i];
+        if (!przeszkoda(e)) continue;
+        const im = e as Phaser.GameObjects.Image;
+        if (!Phaser.Geom.Rectangle.Overlaps(b, im.getBounds())) continue;
+        if (im.depth > kont.depth) {
+          if (j < 0) j = i;
+        } else if (j >= 0) plytsza = true;
+      }
+      if (j < 0 || plytsza) continue;
+      lista.splice(gi, 1);
+      lista.splice(j, 0, kont);
     }
   }
 
@@ -2800,30 +3374,48 @@ export class AdventureScene extends Phaser.Scene {
     // Rysunek i licznik powstają ZAWSZE, także dla pustego slotu, i są tylko
     // chowane: ekran bohatera przekłada oddziały między slotami, więc panel
     // musi umieć pokazać każdą zawartość każdego slotu bez przebudowy.
-    const slotBok = 28;
-    const odstep = 3;
+    // 30 px i odstęp 1: siedem gniazd wypełnia szerokość karty (218 px).
+    const slotBok = 30;
+    const odstep = 1;
     const rzadX = wnetrzeX + (wnetrzeW - (SLOTY_ARMII * slotBok + (SLOTY_ARMII - 1) * odstep)) / 2;
     const rzadY = kartaY + 86;
     for (let i = 0; i < SLOTY_ARMII; i++) {
       const sx = rzadX + i * (slotBok + odstep);
-      // Gniazdo: ciemniejszy papier z kreską atramentu, jak kratka w księdze.
+      // Gniazdo: ciemne drewno wpuszczone w pergamin — puste miejsce ma być
+      // DZIURĄ, w którą wchodzi portret, a nie beżowym prostokątem.
       const g = this.add.graphics();
-      g.fillStyle(0x8a5a2a, 0.16);
-      g.fillRoundedRect(0, 0, slotBok, slotBok + 12, 4);
-      g.lineStyle(1.2, BARWA.kreska, 0.6);
-      g.strokeRoundedRect(0, 0, slotBok, slotBok + 12, 4);
-      const im = this.add.image(slotBok / 2, slotBok / 2 - 1, 'bohater').setVisible(false);
+      g.fillStyle(0x6b4a26, 0.5);
+      g.fillRect(0, 0, slotBok, slotBok);
+      dnoGniazda(g, 1, 1, slotBok - 2);
+      // Portret, nie figurka: przy 28 px cały stworek był plamką z nóżkami,
+      // a ciasny kadr twarzy (mały portret, jak w Heroes) czyta się od razu.
+      // Oprawa rysowana osobno, bo pusty slot ma zostać samą kratką.
+      //
+      // Liczba stoi na OSOBNEJ tabliczce pod ramą, nie na portrecie — na
+      // dolnej trzeciej zasłaniała pierś i brodę stwora (runda 2 portretów).
+      const oprawa = this.add.graphics().setVisible(false);
+      oprawPortret(oprawa, 1, 1, slotBok - 2, 1);
+      oprawa.fillStyle(0x1a0e04, 0.95);
+      oprawa.fillRoundedRect(1, slotBok + 1, slotBok - 2, 11, 3);
+      oprawa.fillStyle(0x3a2410, 1);
+      oprawa.fillRoundedRect(2, slotBok + 2, slotBok - 4, 9, 2.5);
+      oprawa.fillStyle(0xe0a53a, 0.9);
+      oprawa.fillRect(4, slotBok + 2, slotBok - 8, 1);
+      const im = this.add
+        .image(slotBok / 2, slotBok / 2, 'bohater')
+        .setDisplaySize(slotBok - 2, slotBok - 2)
+        .setVisible(false);
       const licznik = this.add
-        .text(slotBok / 2, slotBok + 4, '', {
+        .text(slotBok / 2, slotBok + 6.5, '', {
           fontFamily: KROJ.tytul,
-          fontSize: '11px',
+          fontSize: '10px',
           color: BARWA.krem,
           stroke: BARWA.braz,
-          strokeThickness: 3,
+          strokeThickness: 2,
         })
         .setOrigin(0.5);
-      const slot = this.add.container(sx, rzadY, [g, im, licznik]).setDepth(Z.hud + 1);
-      slot.setData('licznik', licznik).setData('rysunek', im);
+      const slot = this.add.container(sx, rzadY, [g, oprawa, im, licznik]).setDepth(Z.hud + 1);
+      slot.setData('licznik', licznik).setData('rysunek', im).setData('oprawa', oprawa);
       this.slotyArmii.push(slot);
     }
 
@@ -3055,11 +3647,13 @@ export class AdventureScene extends Phaser.Scene {
       const im = slot.getData('rysunek') as Phaser.GameObjects.Image;
       const licznik = slot.getData('licznik') as Phaser.GameObjects.Text;
       if (od) {
-        im.setTexture(`p-${od.sprite}`).setVisible(true);
-        im.setScale(24 / im.height);
+        im.setTexture(kluczPortretuPanelu(od.sprite)).setVisible(true);
+        im.setDisplaySize(28, 28);
+        (slot.getData('oprawa') as Phaser.GameObjects.Graphics).setVisible(true);
         licznik.setText(String(od.ile));
       } else {
         im.setVisible(false);
+        (slot.getData('oprawa') as Phaser.GameObjects.Graphics).setVisible(false);
         licznik.setText('');
       }
     }
@@ -3244,8 +3838,213 @@ export class AdventureScene extends Phaser.Scene {
     this.znakWejscia = znak?.active ? znak.setVisible(true) : undefined;
   }
 
+  /**
+   * Strażnik do ożywienia (`ozywStraznika`): ten, którego rysunek albo pole
+   * jest pod kursorem — to samo, nad czym podpowiedź pokazuje jego armię.
+   * Pod mgłą i w czasie marszu nikt się nie rusza.
+   */
+  private straznikPodKursorem(p: { x: number; y: number }): OzywienieStraznika | undefined {
+    if (this.zajety || !this.wRamie(p.x, p.y)) return undefined;
+    const { x, y } = this.zEkranu(p.x, p.y);
+    if (!this.wGranicach(x, y) || !this.stan.odkryte[y][x]) return undefined;
+    const o = this.obiektPodKursorem(p as Phaser.Input.Pointer) ?? obiektNa(this.stan, x, y);
+    if (o?.rodzaj !== 'potwor' || o.zebrany || !this.stan.odkryte[o.y][o.x]) return undefined;
+    return this.ozywienia.get(o.id);
+  }
+
+  /**
+   * Najechanie na stos — patrz `NAJECHANIE_POZY`. Budzi `z` (albo nikogo),
+   * a pozostałych puszcza, żeby dograli gest i zgaśli (`krokOzywienia`).
+   */
+  private ozywStraznika(z: OzywienieStraznika | undefined) {
+    for (const r of this.ruchomeStraze) if (r !== z) r.aktywne = false;
+    if (!z || z.aktywne || !z.im.active) return;
+    z.aktywne = true;
+    // Powrót kursora na stos, który jeszcze gaśnie, ciągnie pętlę dalej —
+    // od zera zaczyna tylko ten, który stał.
+    if (!this.ruchomeStraze.has(z)) z.czas = 0;
+    this.ruchomeStraze.add(z);
+    if (!z.klatki) z.klatki = this.klatkiRuchu(z);
+  }
+
+  /**
+   * Pierwsze najechanie: dwie klatki w ruchu — „stoi" i poza — każda z własną
+   * sylwetką, obrysem i cieniem rzuconym, żeby dało się je przenikać.
+   * Osobne obrazki, a nie `im`: `im` zostaje przy „stoi" i przy trafianiu
+   * kliknięciem — szersza poza, oddech i pochylenie nie mogą przesuwać granic
+   * rysunku, bo kursor na brzegu sylwetki gubiłby stos i łapał go z powrotem.
+   * Cień i obrys „stoi" to te same obrazki co w spoczynku.
+   */
+  private klatkiRuchu(z: OzywienieStraznika): KlatkaRuchu[] {
+    const kont = z.im.parentContainer;
+    const wstawZa = (ref: Phaser.GameObjects.GameObject, ...obiekty: Phaser.GameObjects.GameObject[]) => {
+      if (kont) kont.addAt(obiekty, kont.getIndex(ref) + 1);
+    };
+    const sylwetka = (wpis: StworekNaMape, dx: number, dy: number) =>
+      this.add
+        .image(z.im.x + dx, z.im.y + dy, wpis.rysunek)
+        .setOrigin(0.5, 1)
+        .setScale(z.im.scaleX, z.im.scaleY)
+        .setVisible(false);
+    const stoi = this.stworekNaMape(z.klucz, z.wys, z.tlo);
+    const a: KlatkaRuchu = { wpis: stoi, rysunek: sylwetka(stoi, 0, 0), obrys: z.obrys, cien: z.cien, dx: 0, dy: 0 };
+    wstawZa(z.im, a.rysunek);
+    const sprite = z.klucz.replace(/^p-/, '');
+    const kluczPozy = z.klucz.startsWith('pmapa-') ? `${z.klucz}-gest` : `${z.klucz}-${najechaniePoza(sprite)}`;
+    if (!this.textures.exists(kluczPozy)) return [a];
+    const wpis = this.stworekNaMape(kluczPozy, z.wys, z.tlo, stoi);
+    if (wpis.rysunek === kluczPozy) return [a];
+    // Stopy pozy na stopach „stoi": bez tego krok czy wypad przesuwał
+    // całą sylwetkę w bok i gest czytał się jak chód.
+    const sk = z.im.scaleY;
+    const sA = this.stopyRysunku(stoi.rysunek);
+    const sB = this.stopyRysunku(wpis.rysunek);
+    const dx = (sA.x - sB.x) * sk;
+    const dy = (sB.dol - sA.dol) * sk;
+    const b: KlatkaRuchu = { wpis, rysunek: sylwetka(wpis, dx, dy), obrys: [], dx, dy };
+    wstawZa(a.rysunek, b.rysunek);
+    if (z.krycieObrysu && z.obrys.length) {
+      b.obrys = this.obrysRysunku(b.rysunek, z.krycieObrysu).map((o) => o.setVisible(false));
+      wstawZa(z.obrys[z.obrys.length - 1], ...b.obrys);
+    }
+    if (z.cien && wpis.cien) {
+      b.cien = this.add
+        .image(z.im.x + dx, z.im.y + dy - wpis.cien.stopy * sk, wpis.cien.klucz)
+        .setOrigin(wpis.cien.ox, wpis.cien.oy)
+        .setScale(sk)
+        .setVisible(false);
+      wstawZa(z.cien, b.cien);
+    }
+    return [a, b];
+  }
+
+  /**
+   * Środek stóp rysunku: średnie x widocznych pikseli w dolnym pasie sylwetki
+   * (6% jej wysokości), względem środka tekstury, i odstęp najniższego
+   * widocznego wiersza od dołu tekstury — oba w pikselach tekstury.
+   */
+  private stopyRysunku(klucz: string): { x: number; dol: number } {
+    const a = this.alfa(klucz);
+    if (!a) return { x: 0, dol: 0 };
+    let dol = -1;
+    let gora = a.h;
+    for (let y = 0; y < a.h; y++)
+      for (let x = 0; x < a.w; x++)
+        if (a.dane[y * a.w + x] > 100) {
+          dol = Math.max(dol, y);
+          gora = Math.min(gora, y);
+        }
+    if (dol < 0) return { x: 0, dol: 0 };
+    const pas = Math.max(2, Math.round((dol - gora + 1) * 0.06));
+    let suma = 0;
+    let ile = 0;
+    for (let y = dol - pas + 1; y <= dol; y++)
+      for (let x = 0; x < a.w; x++)
+        if (a.dane[y * a.w + x] > 100) {
+          suma += x;
+          ile++;
+        }
+    return { x: (ile ? suma / ile : a.w / 2) - a.w / 2, dol: a.h - 1 - dol };
+  }
+
+  /**
+   * Jedna klatka ruchu strażników z `ruchomeStraze` (z `update`).
+   *
+   * - Gest `g` (0 — stoi, 1 — poza) z osi pętli: łagodne wejście, przytrzymanie,
+   *   łagodny powrót. Sylwetki się przenikają: „stoi" gaśnie w drugiej
+   *   połowie przejścia, poza rozjaśnia się w pierwszej — w połowie obie są
+   *   pełne, więc przez sylwetkę nie prześwituje trawa.
+   * - Oddech przed gestem i krótszy wydech po nim, razy siła (narasta
+   *   w `NAJECHANIE_WEJSCIE`, gaśnie w `NAJECHANIE_WYJSCIE`). Na końcu pętli
+   *   zero — powtórka zaczyna się od tej samej klatki.
+   * - Wyciągnięcie za gestem, na sprężynie.
+   *
+   * Gest zaczyna się tylko pod kursorem, a zaczęty trwa do końca — zjechanie
+   * kursorem nie ucina go w połowie.
+   */
+  private krokOzywienia(delta: number) {
+    const { w, zeta } = NAJECHANIE_SPREZYNA;
+    const gladko = (x: number) => 0.5 - 0.5 * Math.cos(Math.PI * Phaser.Math.Clamp(x, 0, 1));
+    for (const z of this.ruchomeStraze) {
+      const klatki = z.klatki;
+      if (!z.im.active || !klatki?.[0].rysunek.active) {
+        this.ruchomeStraze.delete(z);
+        continue;
+      }
+      z.sila = z.aktywne
+        ? Math.min(1, z.sila + delta / NAJECHANIE_WEJSCIE)
+        : Math.max(0, z.sila - delta / NAJECHANIE_WYJSCIE);
+      const przed = z.czas;
+      z.czas += delta;
+      // Gest zaczęty pod kursorem dogrywa się do końca; bez kursora nowy nie rusza.
+      if (!z.aktywne && przed < NAJECHANIE_GEST_OD && z.czas >= NAJECHANIE_GEST_OD) z.czas = NAJECHANIE_GEST_DO;
+      if (z.czas >= NAJECHANIE_OKRES) z.czas %= NAJECHANIE_OKRES;
+      const t = z.czas;
+      const g =
+        klatki.length < 2 || t < NAJECHANIE_GEST_OD || t >= NAJECHANIE_GEST_DO
+          ? 0
+          : t < NAJECHANIE_GEST_OD + NAJECHANIE_WEJSCIE_GESTU
+            ? gladko((t - NAJECHANIE_GEST_OD) / NAJECHANIE_WEJSCIE_GESTU)
+            : t < NAJECHANIE_GEST_DO - NAJECHANIE_POWROT
+              ? 1
+              : 1 - gladko((t - (NAJECHANIE_GEST_DO - NAJECHANIE_POWROT)) / NAJECHANIE_POWROT);
+      // Sprężyna wyciągnięcia, w krokach nie dłuższych niż 1/120 s.
+      const cel = NAJECHANIE_WYCIAGNIECIE * g;
+      for (let reszta = delta / 1000; reszta > 1e-6; ) {
+        const dt = Math.min(reszta, 1 / 120);
+        z.predkosc += (w * w * (cel - z.ugiecie) - 2 * zeta * w * z.predkosc) * dt;
+        z.ugiecie += z.predkosc * dt;
+        reszta -= dt;
+      }
+      const koniec =
+        !z.aktywne && z.sila === 0 && g === 0 && Math.abs(z.ugiecie) < 0.001 && Math.abs(z.predkosc) < 0.01;
+      if (koniec) {
+        z.ugiecie = 0;
+        z.predkosc = 0;
+      }
+      const oddech =
+        t < NAJECHANIE_GEST_OD
+          ? Math.sin((Math.PI * t) / NAJECHANIE_GEST_OD)
+          : t >= NAJECHANIE_GEST_DO
+            ? 0.5 * Math.sin((Math.PI * (t - NAJECHANIE_GEST_DO)) / (NAJECHANIE_OKRES - NAJECHANIE_GEST_DO))
+            : 0;
+      const b = koniec ? 0 : oddech * (z.sila * z.sila * (3 - 2 * z.sila));
+      const u = koniec ? 0 : z.ugiecie;
+      const sy = (1 + NAJECHANIE_ODDECH * b) * (1 + u);
+      const sx = (1 - NAJECHANIE_ODDECH * 0.4 * b) * (1 - u * 0.5);
+      const sk = z.im.scaleY;
+      klatki.forEach((k, i) => {
+        const udzial = koniec ? 0 : i === 0 ? Math.min(1, 2 * (1 - g)) : Math.min(1, 2 * g);
+        for (const obraz of [k.rysunek, ...k.obrys]) {
+          obraz.setScale(sk * sx, sk * sy);
+          if (obraz === k.rysunek) continue;
+          // Obrys gaśnie szybciej niż sylwetka (kwadrat udziału): osiem
+          // ciemnych warstw przy półprzezroczystej sylwetce sumowało się
+          // w szarą smugę po gaszonej klatce.
+          const pelny = koniec && i === 0;
+          obraz.setAlpha(z.krycieObrysu * (pelny ? 1 : udzial * udzial)).setVisible(pelny || udzial > 0);
+        }
+        k.rysunek.setAlpha(udzial).setVisible(udzial > 0);
+        // Cień idzie za sylwetką: te same stopy i skala (jego długość
+        // w prawo-dół rośnie z wysokością, więc w poziomie pół oddechu);
+        // przenikanie liniowe, żeby dwa cienie nie ciemniały na zakładce.
+        if (k.cien && k.wpis.cien) {
+          const c = i === 0 ? 1 - g : g;
+          k.cien
+            .setY(z.im.y + k.dy - k.wpis.cien.stopy * sk * sy)
+            .setScale(sk * (1 + (sy - 1) * 0.5 + (sx - 1) * 0.5), sk * sy)
+            .setAlpha(STWOREK_CIEN * c)
+            .setVisible(c > 0);
+        }
+      });
+      z.im.setVisible(koniec);
+      if (koniec) this.ruchomeStraze.delete(z);
+    }
+  }
+
   private ruchMyszy(p: Phaser.Input.Pointer) {
     this.podswietlWejscie(this.wejscieDoPodswietlenia(p));
+    this.ozywStraznika(this.straznikPodKursorem(p));
     if (this.zajety) {
       this.kursorZnak.setVisible(false);
       return;

@@ -40,9 +40,9 @@ export const KAFEL_EKRAN = KAFEL * ZOOM_MAPY;
  *
  * Wysokości to WIDOCZNA sylwetka (od stóp do czubka głowy, bez przezroczystego
  * marginesu pliku), w polach. Hierarchia jak w Heroes 3: bohater jest
- * największą ruchomą rzeczą na mapie (1,8 pola), strażnik 1,45 pola — zawsze
- * wyraźnie większy od kupki surowca (0,62 pola, `ZNAJDZKI_NA_MAPIE`),
- * a mniejszy od budowli. Wcześniej bohater miał 0,9 pola, czyli
+ * największą ruchomą rzeczą na mapie (1,9 pola), strażnik ok. 1,05–1,25 pola
+ * (z masy sylwetki, `MASA_STRAZNIKA`) — zawsze wyraźnie większy od kupki
+ * surowca (0,58 pola, `ZNAJDZKI_NA_MAPIE`), a mniejszy od budowli. Wcześniej bohater miał 0,9 pola, czyli
  * mniej niż kryształ przy drodze, a strażnik 1,0 — oba ginęły między
  * znajdźkami. Znajdźek i budowli te liczby nie dotyczą.
  *
@@ -69,14 +69,26 @@ export const KAFEL_EKRAN = KAFEL * ZOOM_MAPY;
  * nie grupka — 1,5 pola wysokości, nadal niżej od bohatera; figura z ogonem
  * albo rozłożonymi ramionami jest szersza, stąd 1,8 wszerz (przy 1,65
  * ściskało ją do ~1,3 pola).
+ *
+ * Scalenie ze „storkami w stylu mapy": strażnik to znów ten sam storek co
+ * w bitwie (przemalowany, `stworekNaMape` w scenie mapy), bez osobnej figury
+ * mapowej, a jego skala idzie z masy sylwetki (`MASA_STRAZNIKA` niżej).
+ * Bohater, proporzec i znajdźki — jak w rundach powyżej.
  */
 export const WYS_BOHATERA = 1.9;
-export const WYS_STRAZNIKA = 1.5;
 /**
- * Szerokie stworki (węże, płaszczki) przy pełnej wysokości rozlewałyby się
- * na trzy pola i zasłaniały sąsiadów — ich sylwetkę ograniczamy szerokością.
+ * Strażnik na mapie: skala z MASY sylwetki, nie z wysokości. Runda 3 wzorca
+ * „stwory na mapie": 1,2 pola wysokości robiło ze smoka Cyndera górę; runda
+ * 5: przy 1,0 pola chudy stworek na Bagnach był „zabawką" obok trzcin
+ * i mostu. `MASA_STRAZNIKA` to pierwiastek z pola widocznej sylwetki,
+ * w polach — przysadzisty i chudy stworek zajmują na mapie tyle samo
+ * miejsca; typowy wychodzi na ok. 1,05–1,1 pola wysokości. Wysokość
+ * trzymają granice MIN/MAX, a szerokie sylwetki (węże, smok) — SZER.
  */
-export const SZER_STRAZNIKA_MAX = 1.8;
+export const MASA_STRAZNIKA = 0.75;
+export const WYS_STRAZNIKA_MIN = 0.85;
+export const WYS_STRAZNIKA_MAX = 1.25;
+export const SZER_STRAZNIKA_MAX = 1.4;
 
 /**
  * Proporzec bohatera w kolorze gracza (runda 3: „bez flagi, podstawki ani
@@ -101,6 +113,10 @@ export const PROPORZEC = { ponadGlowe: 0.4, dlugosc: 0.8, wysokosc: 0.45 };
  *   „brak podstawki / znacznika strażnika") — cień kontaktowy jednostki,
  *   ciemniejszy i węższy niż pod znajdźką, bez poświaty.
  * Bitwa, miasto i HUD dalej biorą oryginalne pliki.
+ *
+ * Po scaleniu ze storkami strażników podaje na mapę `stworekNaMape`
+ * (AdventureScene); te liczby zostały jako wzorzec `BOHATER_NA_MAPIE`
+ * i per plansza (`USTAWIENIA.stworkiNaMapie`) nic dziś nie zmieniają.
  */
 export const STWORKI_NA_MAPIE = {
   nasycenie: 0.95,
@@ -110,34 +126,6 @@ export const STWORKI_NA_MAPIE = {
   paleta: 0.12,
   otoczenie: 0.03,
   podstawka: 0.42,
-};
-
-/**
- * Malowany strażnik NA MAPĘ (`public/sprites/mapa-<numer>.png`, stworki
- * runda 5–6): figura stworka malowana jak budowle plansz, ze światłem
- * z lewej-góry już w rysunku. Nadpisuje `STWORKI_NA_MAPIE` łagodniej —
- * bez zdejmowania nasycenia i z lekkim światłem/brzegiem; barwa gruntu
- * i podstawka zostają. `podGrupe` — o tyle widocznej wysokości cień
- * rzucany i podstawka wchodzą pod rysunek. Przy grupce z rundy 5 było 0,1
- * (stopy tylnych stworków stały wyżej niż dolna krawędź); pojedyncza
- * figura z rundy 6 stoi stopami na dolnej krawędzi, więc tylko 0,03 —
- * przy 0,1 podstawka chowała się za figurą.
- * `podstawka` — krycie ciemnej plamy pod stopami (nadpisuje
- * `STWORKI_NA_MAPIE.podstawka`), `szerPodstawki` — jej szerokość względem
- * rozstawu stóp, `podstawkaWyzej` — o tyle jej wysokości środek plamy stoi
- * NAD linią stóp: figurę widać lekko z góry, więc grunt za stopami (między
- * nogami) leży w rysunku wyżej niż one; plama z górną krawędzią na linii
- * stóp wyglądała na śniegu jak cień pod unoszącą się naklejką.
- */
-export const STRAZNIK_MALOWANY = {
-  nasycenie: 1,
-  swiatlo: 0.08,
-  podcien: 0.16,
-  krawedz: 0.12,
-  podGrupe: 0.03,
-  podstawka: 0.55,
-  szerPodstawki: 1.25,
-  podstawkaWyzej: 0.3,
 };
 
 /**
