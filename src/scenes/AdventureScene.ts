@@ -34,7 +34,10 @@ import {
   dniNaTrase,
   RYWAL_ID,
   rozliczPojedynek,
+  ODZNAKI_PLIKI,
+  odznakaSali,
   rywalNa,
+  saleMapy,
   wypedzZSali,
   zdobadzOdznake,
   type Krok,
@@ -574,6 +577,9 @@ export class AdventureScene extends Phaser.Scene {
     this.load.image('plansza-0', `${tlo}plansza-0.jpg`);
     this.load.image('woda-maska', `${tlo}woda-maska.png`);
     this.load.image('woda-zmarszczki', `${b}mapa/woda-zmarszczki.png`);
+    // Rywal na mapie i odznaki sal (`tools/rywal_wczytaj.py`).
+    this.load.image('rywal', `${b}mapa/rywal.png`);
+    for (const id of ODZNAKI_PLIKI) this.load.image(`odznaka-${id}`, `${b}bohater/odznaka-${id}.png`);
     this.load.spritesheet('bohater', `${b}mapa/bohater.png`, {
       frameWidth: BOHATER_KLATKA,
       frameHeight: BOHATER_KLATKA,
@@ -2953,9 +2959,8 @@ export class AdventureScene extends Phaser.Scene {
 
   /**
    * Rywal na mapie. W Heroes 3 bohater przeciwnika stoi na mapie jak nasz;
-   * tu do tej pory był tylko w danych. Własnego rysunku nie ma (budżet grafik
-   * jest wyczerpany), więc to ten sam arkusz trenera, przebarwiony na srebrno
-   * — „srebrne płaszcze" z opowieści kampanii — na pierścieniu w barwie wroga.
+   * tu do tej pory był tylko w danych. Oskar ze Srebrnych Płaszczy
+   * (`PROMPTY-BOHATER.md`, rozdział 4) na pierścieniu w barwie wroga.
    */
   private odswiezRywala() {
     if (!this.swiat) return;
@@ -2972,11 +2977,10 @@ export class AdventureScene extends Phaser.Scene {
       g.strokeEllipse(0, s.stopy, s.polSzer * 2.4, s.polSzer * 0.9);
       g.fillStyle(C.foe, 0.18);
       g.fillEllipse(0, s.stopy, s.polSzer * 2.4, s.polSzer * 0.9);
-      const postac = this.add
-        .sprite(0, s.kotwica, this.teksturaBohateraNaMape(), KIERUNEK_WIERSZ.lewo * 4)
-        .setOrigin(0.5, 1)
-        .setScale(s.skala)
-        .setTint(0xaab4dc);
+      // Własny rysunek (`public/mapa/rywal.png`, sylwetka przycięta do
+      // stóp) — tej samej wysokości co Janek (`WYS_BOHATERA`).
+      const postac = this.add.image(0, s.stopy, 'rywal').setOrigin(0.5, 1);
+      postac.setScale((WYS_BOHATERA * KAFEL) / postac.height);
       this.rywalObj = this.add.container(0, 0, [g, postac]);
       this.swiat.add(this.rywalObj);
     }
@@ -5245,12 +5249,34 @@ export class AdventureScene extends Phaser.Scene {
             ? obrazek(ICON.sword, 36)
             : rysowanyZamek(true);
     wierszWarunku(zOdznaka(obrazZwyciestwa, true), 'Zwycięstwo', BARWA.atramentZielony, celSlowami(z));
+    // Odznaki sal: zdobyte w kolorze, brakujące jako ciemna sylwetka — jak
+    // gablota z odznakami w pokemonach. Tylko przy celu „wszystkie sale".
+    const sale = z.typ === 'zamki' ? saleMapy(s) : [];
+    if (sale.length) {
+      const bok = 34;
+      const odstep = 12;
+      const zdobyte = s.odznaki ?? [];
+      const szerRzedu = sale.length * bok + (sale.length - 1) * odstep;
+      sale.forEach((sala, i) => {
+        const ma = zdobyte.includes(sala.nazwa);
+        const im = this.add.image(-szerRzedu / 2 + bok / 2 + i * (bok + odstep), y + 18, `odznaka-${odznakaSali(sala.nazwa)}`);
+        im.setScale(bok / Math.max(im.width, im.height));
+        if (!ma) im.setTint(0x3a2a1c).setAlpha(0.45);
+        k.add(im);
+      });
+      k.add(
+        this.add
+          .text(szerRzedu / 2 + 14, y + 18, `Odznaki: ${sale.filter((x) => zdobyte.includes(x.nazwa)).length} z ${sale.length}`, stylEtykiety(14, BARWA.atrament))
+          .setOrigin(0, 0.5)
+      );
+      y += 42;
+    }
     for (const p of w.porazka) {
       wierszWarunku(
         p.typ === 'termin' ? obrazek(ICON.hourglass, 38) : zOdznaka(rysowanyZamek(false), false),
         'Porażka, jeśli…',
         BARWA.atramentCzerwony,
-        p.typ === 'termin' ? `Minie ${p.dni} dni. Dziś jest dzień ${s.dzien}.` : 'Stracisz wszystkie swoje zamki.'
+        p.typ === 'termin' ? `Minie ${p.dni} dni. Dziś jest dzień ${s.dzien}.` : 'Stracisz swój ostatni zamek.'
       );
     }
 

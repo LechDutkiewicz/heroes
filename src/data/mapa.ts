@@ -1945,6 +1945,24 @@ export function rozliczPojedynek(s: StanMapy, zwyciezca: Wlasciciel): number {
 }
 
 /**
+ * Obrazek odznaki sali (`public/bohater/odznaka-<id>.png`) po nazwie sali.
+ * Nazwy sal pochodzą z plansz (`nazwyZamkowWroga`); sala bez wpisu dostaje
+ * odznakę Groty — tak nazywają się zamki przeciwnika bez własnej nazwy.
+ */
+const ODZNAKI: Record<string, string> = {
+  'Stary Fort': 'fort',
+  'Warownia na Grobli': 'grobla',
+  'Lodowa Twierdza': 'lod',
+  'Srebrna Strażnica': 'srebro',
+};
+export const ODZNAKI_PLIKI = ['fort', 'grota', 'grobla', 'lod', 'srebro'] as const;
+export const odznakaSali = (nazwa: string) => ODZNAKI[nazwa] ?? 'grota';
+
+/** Sale planszy: zamki spoza frakcji gracza (dziś Bór) — każda ma odznakę. */
+export const saleMapy = (s: StanMapy) =>
+  s.obiekty.filter((o) => o.rodzaj === 'zamek' && o.frakcjaZamku !== 'bor');
+
+/**
  * Wygrana w sali (zamku przeciwnika): odznaka dla gracza. Zwraca nazwę
  * odznaki, gdy to nowa odznaka.
  */
