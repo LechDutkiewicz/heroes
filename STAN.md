@@ -125,6 +125,18 @@ mieście albo kampanii.
   z drużyną: m1 d7, m3 d5, m4: +6 wygrywa 1/3, +3 d55–84, +2 d10–17 (wybrane).
   Sonda: `tools/probe-druzyna-kampanii.ts`. OpenAI w etapie 6: 5 liderów +
   3 poprawki + 2 budynki ≈ 0,54 USD.
+- **Jeden stworek danego gatunku** (uwaga z rozgrywki: dwa Flamiry).
+  Gatunek = pierwszy etap linii (`gatunek(sprite)` w `stworki.ts`).
+  `usunDuplikaty(listy)` zostawia najsilniejszego, przenosi go do drużyny,
+  jeśli duplikat w niej był, i daje mu połowę doświadczenia usuniętego;
+  woła je wczytanie zapisu i start misji. Rezerwat odmawia („Masz już X”),
+  pokeball nie celuje w posiadany gatunek, złapany duplikat nie dołącza,
+  nagroda kampanii za posiadany gatunek = +2 poziomy, autopilot i AI
+  gracza nie werbują drugiego (`maGatunek`). Skutek: m1 wygrywana dnia ~30
+  (zaakceptowane, próg symulacji 32). Sonda: `tools/probe-gatunek.ts`.
+- **Plan dalej**: walki 1 na 1 (dzikie) i 2 na 2 (rywal, sale, zamki)
+  z wymianą po omdleniu, razem z przerobieniem ekranu walki na zestaw
+  (drewno, pergamin, złoto); potem fale z `PROJEKT-SWIAT.md`.
 - **Do zrobienia dalej**: stworki liderów jako osobne typy (frakcje), walki
   z liderami 3 na 3, PC Billa.
 
