@@ -578,3 +578,6 @@
 {"czas": "2026-09-27T04:59:55+00:00", "plik": "stworki/pozy/00002-krok-1.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 496, "wyj": 1443, "usd": 0.0487}
 {"czas": "2026-09-27T05:00:06+00:00", "plik": "stworki/pozy/00002-krok3-2.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 406, "wyj": 1439, "usd": 0.0481}
 {"czas": "2026-09-27T05:00:53+00:00", "plik": "stworki/pozy/00002-krok2-2.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 500, "wyj": 1380, "usd": 0.0467}
+{"czas": "2026-09-27T10:59:35+00:00", "plik": "kampania-ela.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 331, "wyj": 1584, "usd": 0.065}
+{"czas": "2026-09-27T11:00:06+00:00", "plik": "postac-ela.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 982, "wyj": 1584, "usd": 0.0683}
+{"czas": "2026-09-27T11:00:48+00:00", "plik": "postac-ela.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 1000, "wyj": 1584, "usd": 0.0684}

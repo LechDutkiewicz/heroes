@@ -2,6 +2,22 @@
 
 Ostatnia aktualizacja: 2026-09-27 (storki: rysunki z PR #6 wracają do gry, a pozy, portrety i obróbka mapy z pętli liczą się teraz z nich).
 
+## Ela jako nastolatka (2026-09-27)
+
+Na prośbę użytkownika Ela wygląda na ~15 lat (wzorce: Cynthia, Lillie, Dawn),
+nie na małą dziewczynkę. Nowy prompt `kampania-ela.png` (PROMPTY-KAMPANIA.md):
+smukła, długie proste czarne włosy, ta sama zielona kaszkietówka i turkusowa
+kamizelka (żeby zgadzała się z figurką na mapie). Z niego przez `images/edits`
+nowa `postac-ela.png` na lalkę ekranu bohatera (prompt w PROMPTY-BOHATER.md
+dostał „obie ręce w dół, nic w dłoniach" — pierwsza próba trzymała uniesiony,
+zdeformowany bal). Wpięte: `kampania_ilustracje.py` → `portret-ela.jpg`,
+`bohater_postac.py` → `postac-ela.png`. Koszt 3 obrazki ≈ $0,20
+(limit podniesiony jednorazowo `OPENAI_LIMIT_USD=29.5`; razem $28,26).
+
+Zostało: głowa w medalionie (`public/kampania/glowa-ela.png`) i figurka na
+mapie (`ela.png`, `public/mapa/bohaterka*.png`) to wciąż przemalowany Janek —
+dziecięce proporcje. To obszar mapy przygody / `kampania_postacie.py`.
+
 ## Storki w stylu mapy — pętla „gauntlet" (2026-09-26)
 
 Cel gracza: stwory mają pasować do malowanej mapy przygody; do tego klatki

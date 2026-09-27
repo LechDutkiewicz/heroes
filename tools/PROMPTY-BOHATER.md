@@ -224,10 +224,12 @@ figure from the top of her cap down to her shoes, whole body inside the frame
 with a little empty space above the cap and below the shoes. Standing straight
 facing the viewer, symmetrical heroic pose like a paper doll, feet slightly
 apart, arms relaxed a little away from the body with open hands at hip height,
-determined warm smile. Keep exactly the same face, short black bob hair, green
-newsboy cap, white long-sleeved shirt under a teal-green vest, brown leather
-satchel strap across the chest; add a brown belt, dark green trousers and
-sturdy brown boots. Same painted storybook style as the reference.
+calm confident smile. BOTH arms down, hands empty — she holds nothing (no
+ball in her hands). Keep her a slender, tall teenager of about fifteen with
+teen body proportions, not a little child. Keep exactly the same face, long
+straight black hair past the shoulders, green newsboy cap, white long-sleeved
+blouse under a fitted teal-green vest, brown leather satchel strap across the
+chest; add a brown belt, dark green trousers and sturdy brown boots. Same painted storybook style as the reference.
 Transparent background: only the character, no ground, no shadow, no scenery,
 no frame.
 ```

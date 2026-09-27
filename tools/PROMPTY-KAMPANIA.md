@@ -114,14 +114,20 @@ same storybook style as a children's adventure game.
 
 <!-- plik: kampania-ela.png | styl: kampania | proporcje: 3:4 -->
 ```
-Portrait from the waist up of a brave 10-year-old girl, a young creature
-trainer, facing the viewer at a slight three-quarter angle, determined warm
-smile. She has short black bob hair and wears a green newsboy cap, a white
-long-sleeved shirt under a teal-green vest, a brown leather satchel strap
-across her chest. She holds a small red-and-white capture ball in one hand.
-Behind her a soft sunny emerald forest clearing with warm golden light and
-gentle bokeh. Painted character art, big expressive eyes, same storybook style
-as a children's adventure game.
+Portrait from the waist up of a confident teenage girl of about fifteen, an
+experienced young creature trainer and the heroine of a cartoon adventure,
+facing the viewer at a slight three-quarter angle, calm self-assured warm
+smile. Clearly a teenager, not a little child: slender and tall, longer neck,
+slimmer oval face with a defined chin, smaller nose, graceful poise, eyes
+still big and expressive with lashes, like the stylish teenage heroines of
+creature-collecting cartoons. Long straight glossy black hair falling past her
+shoulders with soft side-swept bangs, a green newsboy cap worn slightly
+tilted. She wears a white long-sleeved blouse under a fitted teal-green vest,
+a brown leather satchel strap across her chest, modest and practical
+adventurer clothes. She holds a small red-and-white capture ball raised near
+her shoulder. Behind her a soft sunny emerald forest clearing with warm golden
+light and gentle bokeh. Painted character art, same storybook style as a
+children's adventure game.
 ```
 
 ## 3. Wstęp i zakończenie
