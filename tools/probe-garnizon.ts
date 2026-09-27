@@ -163,10 +163,10 @@ function znajdz(s: StanMapy) {
     if (bez.zamek.wlasciciel === 'wrog') prog = p;
   }
   sprawdz('jest drużyna, która bierze zamek z samą strażą', prog > 0, `3 × poz. ${prog}`);
-  const z = podBrama(smoki(3, prog), [bor(5, 45), bor(4, 45), bor(3, 45)]);
+  const z = podBrama(smoki(3, prog), [bor(5, 50), bor(5, 50), bor(4, 50), bor(4, 50)]);
   turaAI(z.s, 'wrog');
   sprawdz('z garnizonem zamek zostaje nasz', z.zamek.wlasciciel === 'gracz', String(z.zamek.wlasciciel));
-  sprawdz('garnizon nietknięty', zajete(z.zamek.garnizon ?? pustaArmia()) === 3);
+  sprawdz('garnizon nietknięty', zajete(z.zamek.garnizon ?? pustaArmia()) === 4);
 }
 
 console.log(bledy === 0 ? '\nWszystko przeszło.' : `\n${bledy} sprawdzeń nie przeszło.`);

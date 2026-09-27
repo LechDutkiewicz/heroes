@@ -45,9 +45,28 @@ mieście albo kampanii.
   `probe-sloty-bitwa.mjs`; poprawione `probe-budowle.ts`, `probe-mapa.ts`
   (straże rosną poziomem), `probe-ekonomia.ts` (koszt przyrostu = rezerwaty
   + pełna pula treningów na poz. 15), `probe-umiejetnosci.ts`.
-- **Do zrobienia dalej**: etapy 3–6 w `PROJEKT-TRENERZY.md`; znacznik na
-  czterech slotach, które idą do bitwy (dziś tylko tekst); tempo misji 2–4
-  po przebudowie (patrz wyniki `tools/symulacja-misji.ts` w PR).
+- **Tempo misji** (`tools/symulacja-misji.ts`, PROB 2–3): misja 1 bez
+  zmian (wygrana 7. dnia), misja 3 bez zmian (5. dnia), misja 2 — autopilot
+  nie wygrywa do 60. dnia (stary model: porażka 47. dnia; próg 0%), misja 4
+  — wygrane 3/3 w dniach 18–63 (stary: 26–34). Żeby to osiągnąć:
+  doświadczenie `DOSW_ZA_POZIOM` = 2 × poziom, mnożnik za silniejszego do
+  1,5; **mury** (`MURY` = 1,5 w `plansza.ts`) — załoga zamku startuje
+  silniejsza, bo przerwy na polu zniosły starą przewagę obrońcy; Sala
+  treningowa: 3 treningi na rezerwat, cena 3 + 1,5 × poziom; **AI wraca do
+  własnego zamku na trening** (`wartoscTreningu` w `wrog-ai.ts`), gdy stać
+  je na ≥ 3 treningi — bez tego autopilot zbierał tysiąc pokeballi i stał
+  na jednym poziomie. Odrzucone: AI trenujące straż zamku pod nieobecność
+  bohatera (drugi zamek w misji 4 robił się nie do zdobycia).
+  `tools/wrog-symulacja.ts` (40 przebiegów) nie mieści się w 25 min —
+  niepuszczony do końca.
+- **Sondy przeglądarkowe** przepisane (subagent): `probe-armia.mjs`,
+  `probe-bohater.mjs`, `probe-miasto.mjs`, `probe-przygoda.mjs` — przechodzą;
+  `zrzut-*` budują stworki z poziomem. Zrzuty: `tools/zrzut-trenerzy.mjs`.
+  Uwaga: serwer na porcie 5200–5229 nie śledzi plików — po zmianie w `src`
+  trzeba go zrestartować, inaczej zrzuty i sondy widzą stary kod.
+- **Znacznik** „do bitwy": złoty róg na czterech pierwszych sprawnych slotach
+  drużyny (`panelArmii.ts`).
+- **Do zrobienia dalej**: etapy 3–6 w `PROJEKT-TRENERZY.md`.
 
 ## Storki w stylu mapy — pętla „gauntlet" (2026-09-26)
 

@@ -144,8 +144,10 @@ function oddzialyStrazy(sila: string, losuj: () => number): Oddzial[] {
  * ~95% równych bitew — i to on trzymał zamki wroga do 20.–34. dnia misji
  * oblężenia. Przerwy między stworkami na polu bitwy (`NA_POLU`) zniosły tę
  * przewagę, więc zamki padały w 5.–10. dniu; mury oddają ją wprost.
+ * Strojone symulacją misji oblężenia: ×1,5 — autopilot wygrywa 3/3
+ * (dni 18–63), ×2 — 1/2 do dnia 84, bez murów — dzień 10.
  */
-const MURY = Number((globalThis as any).process?.env?.MURY ?? 1.5);
+const MURY = 1.5;
 
 function garnizonZamku(frakcja: string, poziomy: number[], tygodnie: number): Oddzial[] {
   const f = factionById(frakcja) ?? FACTIONS[0];

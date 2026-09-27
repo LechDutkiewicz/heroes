@@ -221,7 +221,9 @@ console.log('--- atak i obrona bohatera w walce ---');
   // Sufity z Heroes 3: atak nie przekracza +300%, obrona nie schodzi niżej
   // niż −70%. Bez nich sto punktów ataku dawałoby stukrotne obrażenia.
   const ogromnyAtak = nasz(bitwa({ ...zera, atak: 500 }));
-  sprawdz('atak ma sufit', ogromnyAtak <= Math.round(bezStatystyk * 4) + 1, `${ogromnyAtak} przy bazie ${bezStatystyk}`);
+  // Baza jest już zaokrąglona (14 może być 14,4), a gra mnoży niezaokrągloną —
+  // stąd pół punktu zapasu na bazie przed pomnożeniem przez sufit.
+  sprawdz('atak ma sufit', ogromnyAtak <= Math.round((bezStatystyk + 0.5) * 4), `${ogromnyAtak} przy bazie ${bezStatystyk}`);
   const ogromnaObrona = wNas(bitwa({ ...zera, obrona: 500 }));
   sprawdz('obrona ma podłogę', ogromnaObrona >= Math.round(wNasBez * 0.3) - 1, `${ogromnaObrona} przy bazie ${wNasBez}`);
 }
