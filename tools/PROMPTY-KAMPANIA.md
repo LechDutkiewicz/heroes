@@ -102,26 +102,45 @@ z figurkami z mapy przygody (`public/mapa/bohater.png`,
 
 <!-- plik: kampania-janek.png | styl: kampania | proporcje: 3:4 -->
 ```
-Portrait from the waist up of a cheerful 10-year-old boy, a young creature
-trainer, facing the viewer at a slight three-quarter angle, confident friendly
-grin, one hand giving a thumbs up. He wears a red-and-white baseball cap with
-a plain white circle on the front (no letters), messy brown hair sticking out,
-a blue short-sleeved jacket over a white t-shirt, a brown shoulder bag strap
-across his chest. Behind him a soft sunny emerald forest clearing with warm
-golden light and gentle bokeh. Painted character art, big expressive eyes,
-same storybook style as a children's adventure game.
+Portrait from the waist up of a boy of about twelve, a modern creature
+trainer exactly like the young heroes of a TV anime about catching and
+training cute creatures, facing the viewer at a slight three-quarter angle,
+confident energetic grin, one hand giving a thumbs up. Not a little child:
+lean and wiry, a slimmer face with a defined jaw, smaller nose, big
+expressive anime eyes, spiky messy brown hair sticking out from under the
+cap. Modern sporty trainer outfit of today, not historical, his own design: a
+plain red baseball cap worn slightly backwards-tilted with a small white
+star badge on the side (no logo on the front, no letters), a blue zip-up
+hoodie with white stripes along the sleeves, sleeves pushed up to the
+elbows, over a white t-shirt, a sports watch on one wrist, dark cargo
+shorts, an orange backpack with its straps on his shoulders. No gloves.
+No medieval or fantasy clothes: no tunic, no leather satchel, no belt
+buckle, no cloak. Behind him a sunny grassy route at the edge of an emerald
+forest with warm golden light and gentle bokeh. Clean anime character
+design, painted with soft light, same storybook palette as a children's
+adventure game.
 ```
 
 <!-- plik: kampania-ela.png | styl: kampania | proporcje: 3:4 -->
 ```
-Portrait from the waist up of a brave 10-year-old girl, a young creature
-trainer, facing the viewer at a slight three-quarter angle, determined warm
-smile. She has short black bob hair and wears a green newsboy cap, a white
-long-sleeved shirt under a teal-green vest, a brown leather satchel strap
-across her chest. She holds a small red-and-white capture ball in one hand.
-Behind her a soft sunny emerald forest clearing with warm golden light and
-gentle bokeh. Painted character art, big expressive eyes, same storybook style
-as a children's adventure game.
+Portrait from the waist up of a confident teenage girl of about fifteen, a
+modern creature trainer exactly like the teenage heroines of a TV anime about
+catching and training cute creatures, facing the viewer at a slight
+three-quarter angle, bright self-assured smile. Clearly a teenager, not a
+little child: slender, longer neck, slimmer oval face with a defined chin,
+big expressive anime eyes with lashes. Long straight glossy black hair past
+her shoulders with side-swept bangs and two small teal hair clips. Modern
+sporty trainer outfit of today, not historical: a white knit beanie with a
+teal stripe, a black sleeveless top under a short teal zip-up jacket with
+short sleeves and a pink trim, a pink scarf, a short pleated pink skirt over
+black leggings, a small yellow backpack with its straps on her shoulders,
+a fingerless glove and a slim digital wristband. She holds a small
+red-and-white capture ball raised near her shoulder, ready to throw. No
+medieval or fantasy clothes: no vest, no tunic, no blouse, no leather
+satchel, no belt buckle, no cloak, no cap with a brim. Behind her a sunny
+grassy route at the edge of an emerald forest with warm golden light and
+gentle bokeh. Clean anime character design, painted with soft light, same
+storybook palette as a children's adventure game.
 ```
 
 ## 3. Wstęp i zakończenie

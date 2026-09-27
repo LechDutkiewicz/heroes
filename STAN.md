@@ -113,6 +113,48 @@ mieście albo kampanii.
   i głowa trenera z `public/kampania/`. Sonda: `tools/probe-plecak.mjs`.
 - **Do zrobienia dalej**: etap 6 w `PROJEKT-TRENERZY.md`.
 
+## Trenerzy w stylu bajki: Ela i Janek (2026-09-27)
+
+Na prośbę użytkownika oboje trenerzy wyglądają jak postacie z anime
+o stworkach, nie jak bohaterowie fantasy. Ela ma ~15 lat (wzorce: Cynthia,
+Lillie, Dawn): białą czapkę-beanie z turkusowym paskiem, różowy szalik,
+krótką turkusową kurtkę, różową plisowaną spódnicę na legginsach, żółty
+plecak i rękawiczki bez palców. Janek ma ~12 lat, jest mniej dziecinny:
+czerwoną czapkę z białą gwiazdką z boku, niebieską bluzę z paskami,
+szorty cargo i pomarańczowy plecak. Pierwsza wersja Janka była kopią Asha
+(czapka z logo, rękawiczki) — filtr OpenAI odrzucał z niej wszystko, co
+szło przez `images/edits`, więc dostał własny strój.
+
+Łańcuch jednej postaci: portret `kampania-<kto>.png` (PROMPTY-KAMPANIA.md,
+z samego opisu) → lalka `postac-<kto>.png` (PROMPTY-BOHATER.md, `wzor:`
+portret) → trzy ujęcia na mapę `bohater[ka]-{dol,gora,prawo}.png`
+(PROMPTY-MAPA-2.md, `wzor:` lalka, prawdziwa alfa — magenty nie da się
+użyć, bo Ela ma różowy strój). Z nich: `bohater_wczytaj.py` → arkusze
+`public/mapa/bohater.png`, `bohaterka.png`; `kampania_postacie.py` →
+figurki `public/kampania/<kto>.png` i głowy do medalionu `glowa-<kto>.png`
+(wycięte z tej samej figurki, dawniej Ela była przemalowanym Jankiem);
+`wynik_wczytaj.postacie()` → `public/wynik/bohater.png`;
+`kampania_ilustracje.py` → `portret-<kto>.jpg`; `bohater_postac.py` →
+`public/bohater/postac-<kto>.png`.
+
+Mapa przygody zawsze ładowała arkusz Janka, także gdy grała Ela.
+`AdventureScene.preload` wybiera teraz plik po imieniu bohatera pod tym
+samym kluczem `bohater`; przy zmianie trenera zdejmuje stary arkusz, jego
+wersję w świetle planszy i animacje chodu (`KLUCZ_ARKUSZA` w registry).
+
+Pierwszy, malowany Janek został jako `tools/wsad/stary-bohater-*.png`, bo
+wyprowadza się z niego więcej niż sam Janek: srebrne płaszcze i ikona butów
+(`kampania_postacie.py`) oraz trener tyłem w menu (`menu_wczytaj.py`) —
+te pliki się nie zmieniły.
+
+Koszt: ta sesja 14 obrazków ≈ $0,95 (limit podnoszony jednorazowo
+`OPENAI_LIMIT_USD`; razem $29,39).
+
+Zostało: ilustracje wyniku i zakończenia kampanii (`tools/PROMPTY-WYNIK.md`)
+oraz trener tyłem w menu wciąż pokazują pierwszego, dziecinnego Janka.
+Gniazda artefaktów na lalce Janka (`HeroScene`, `gn.fx/fy`) były ustawione
+pod starą sylwetkę — leżą znośnie, ale warto je dostroić.
+
 ## Storki w stylu mapy — pętla „gauntlet" (2026-09-26)
 
 Cel gracza: stwory mają pasować do malowanej mapy przygody; do tego klatki
