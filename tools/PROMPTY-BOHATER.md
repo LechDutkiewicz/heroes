@@ -209,11 +209,13 @@ figure from the top of his cap down to his shoes, whole body inside the frame
 with a little empty space above the cap and below the shoes. Standing straight
 facing the viewer, symmetrical heroic pose like a paper doll, feet slightly
 apart, arms relaxed a little away from the body with open hands at hip height,
-friendly confident grin. Keep exactly the same face, the red-and-white
-baseball cap with a plain white circle (no letters), messy brown hair, blue
-short-sleeved jacket over a white t-shirt, brown shoulder bag strap across the
-chest; add brown belt, blue-grey shorts or trousers, and sturdy brown hiking
-boots. Same painted storybook style as the reference. Transparent background:
+confident grin. BOTH arms down, hands empty — he holds nothing. Keep him a
+lean boy of about twelve, not a little child. Keep exactly the same face and
+the same outfit: plain red baseball cap tilted back with a small white star
+badge on the side, spiky brown hair, blue zip-up hoodie with white sleeve
+stripes and sleeves pushed up, white t-shirt, sports watch, orange backpack on
+his shoulders, dark green cargo shorts; add white socks and red-and-white
+sneakers. No medieval clothes, no satchel. Same painted anime style as the reference. Transparent background:
 only the character, no ground, no shadow, no scenery, no frame.
 ```
 

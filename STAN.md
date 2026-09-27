@@ -100,25 +100,47 @@ mieście albo kampanii.
   brak (jest tylko `homm2`), więc ślepego porównania nie było.
 - **Do zrobienia dalej**: etapy 5–6 w `PROJEKT-TRENERZY.md`.
 
-## Ela jako nastolatka-trenerka (2026-09-27)
+## Trenerzy w stylu bajki: Ela i Janek (2026-09-27)
 
-Na prośbę użytkownika Ela wygląda na ~15 lat (wzorce: Cynthia, Lillie, Dawn)
-i jak trenerka z bajki, nie bohaterka fantasy. Pierwsza wersja (kaszkietówka,
-kamizelka, skórzana torba) była „zbyt heroesowa" — teraz nowoczesny strój
-trenerki: biała czapka-beanie z turkusowym paskiem, różowy szalik, krótka
-turkusowa kurtka, czarny top, różowa plisowana spódnica na czarnych
-legginsach, żółty plecak, rękawiczki bez palców, opaska na nadgarstku.
-Prompt `kampania-ela.png` (PROMPTY-KAMPANIA.md) wprost zakazuje ubrań
-średniowiecznych. Z portretu przez `images/edits` `postac-ela.png` na lalkę
-ekranu bohatera (obie ręce w dół, nic w dłoniach — gniazda artefaktów).
-Wpięte: `kampania_ilustracje.py` → `portret-ela.jpg`, `bohater_postac.py` →
-`postac-ela.png`. Koszt obu rund 5 obrazków ≈ $0,35 (limit podnoszony
-jednorazowo `OPENAI_LIMIT_USD`; razem $28,79).
+Na prośbę użytkownika oboje trenerzy wyglądają jak postacie z anime
+o stworkach, nie jak bohaterowie fantasy. Ela ma ~15 lat (wzorce: Cynthia,
+Lillie, Dawn): białą czapkę-beanie z turkusowym paskiem, różowy szalik,
+krótką turkusową kurtkę, różową plisowaną spódnicę na legginsach, żółty
+plecak i rękawiczki bez palców. Janek ma ~12 lat, jest mniej dziecinny:
+czerwoną czapkę z białą gwiazdką z boku, niebieską bluzę z paskami,
+szorty cargo i pomarańczowy plecak. Pierwsza wersja Janka była kopią Asha
+(czapka z logo, rękawiczki) — filtr OpenAI odrzucał z niej wszystko, co
+szło przez `images/edits`, więc dostał własny strój.
 
-Zostało: głowa w medalionie (`public/kampania/glowa-ela.png`) i figurka na
-mapie (`ela.png`, `public/mapa/bohaterka*.png`) to wciąż przemalowany Janek —
-dziecięce proporcje, zielona czapka z daszkiem. Nie pasują już do portretu.
-To obszar mapy przygody / `kampania_postacie.py`.
+Łańcuch jednej postaci: portret `kampania-<kto>.png` (PROMPTY-KAMPANIA.md,
+z samego opisu) → lalka `postac-<kto>.png` (PROMPTY-BOHATER.md, `wzor:`
+portret) → trzy ujęcia na mapę `bohater[ka]-{dol,gora,prawo}.png`
+(PROMPTY-MAPA-2.md, `wzor:` lalka, prawdziwa alfa — magenty nie da się
+użyć, bo Ela ma różowy strój). Z nich: `bohater_wczytaj.py` → arkusze
+`public/mapa/bohater.png`, `bohaterka.png`; `kampania_postacie.py` →
+figurki `public/kampania/<kto>.png` i głowy do medalionu `glowa-<kto>.png`
+(wycięte z tej samej figurki, dawniej Ela była przemalowanym Jankiem);
+`wynik_wczytaj.postacie()` → `public/wynik/bohater.png`;
+`kampania_ilustracje.py` → `portret-<kto>.jpg`; `bohater_postac.py` →
+`public/bohater/postac-<kto>.png`.
+
+Mapa przygody zawsze ładowała arkusz Janka, także gdy grała Ela.
+`AdventureScene.preload` wybiera teraz plik po imieniu bohatera pod tym
+samym kluczem `bohater`; przy zmianie trenera zdejmuje stary arkusz, jego
+wersję w świetle planszy i animacje chodu (`KLUCZ_ARKUSZA` w registry).
+
+Pierwszy, malowany Janek został jako `tools/wsad/stary-bohater-*.png`, bo
+wyprowadza się z niego więcej niż sam Janek: srebrne płaszcze i ikona butów
+(`kampania_postacie.py`) oraz trener tyłem w menu (`menu_wczytaj.py`) —
+te pliki się nie zmieniły.
+
+Koszt: ta sesja 14 obrazków ≈ $0,95 (limit podnoszony jednorazowo
+`OPENAI_LIMIT_USD`; razem $29,39).
+
+Zostało: ilustracje wyniku i zakończenia kampanii (`tools/PROMPTY-WYNIK.md`)
+oraz trener tyłem w menu wciąż pokazują pierwszego, dziecinnego Janka.
+Gniazda artefaktów na lalce Janka (`HeroScene`, `gn.fx/fy`) były ustawione
+pod starą sylwetkę — leżą znośnie, ale warto je dostroić.
 
 ## Storki w stylu mapy — pętla „gauntlet" (2026-09-26)
 
