@@ -41,6 +41,8 @@ import {
   wypedzZSali,
   zdobadzOdznake,
   liderSali,
+  listyStworkowGracza,
+  maGatunek,
   type Lider,
   type Krok,
   type Obiekt,
@@ -56,7 +58,7 @@ import type { PoseName } from '../visual/unitView';
 import { planszaPoId } from '../data/mapy';
 import { turaWroga } from '../data/wrog-ai';
 import { SLOTY_ARMII, zywe } from '../data/armia';
-import { doswDoPoziomu, ktosNaNogach, napisPoziomu, obudz, rozdajDosw } from '../data/stworki';
+import { doswDoPoziomu, gatunek, ktosNaNogach, napisPoziomu, obudz, rozdajDosw } from '../data/stworki';
 import { autozapis, nazwaSlotu } from '../data/zapis';
 import { pokazWczytanie, pokazZapis } from '../visual/oknoZapisu';
 import { KAMPANIA, misjaPoId, wczytajPostep } from '../data/kampania';
@@ -4972,6 +4974,10 @@ export class AdventureScene extends Phaser.Scene {
           pokeballe: this.stan.skarbiec.pokeball,
           wolneSloty: this.stan.bohater.armia.filter((s) => !s).length,
           dzikie: o.rodzaj !== 'zamek' && o.id !== RYWAL_ID,
+          posiadane: listyStworkowGracza(this.stan)
+            .flat()
+            .filter((x): x is Oddzial => !!x)
+            .map((x) => gatunek(x.sprite)),
         },
         bonusGracza: {
           wrecz: efekt(this.stan.bohater, 'wrecz'),
@@ -5494,6 +5500,7 @@ export class AdventureScene extends Phaser.Scene {
     for (const z of wynik.zlapani ?? []) {
       const wolny = this.stan.bohater.armia.findIndex((s) => !s);
       if (wolny < 0) break;
+      if (maGatunek(this.stan, z.sprite)) continue;
       const { skad, ...od } = z;
       this.stan.bohater.armia[wolny] = {
         ...od,

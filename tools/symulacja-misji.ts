@@ -64,7 +64,9 @@ const PROGI: Record<
   string,
   { wygranaDo: number; wygranych: number; bezpiecznyDo: number; wrogWychodzi: boolean; horyzont: number }
 > = {
-  'pierwsze-kroki': { wygranaDo: 21, wygranych: 1, bezpiecznyDo: 99, wrogWychodzi: false, horyzont: 35 },
+  // Od zasady „jeden stworek danego gatunku" autopilot nie werbuje duplikatów
+  // i fort pada ok. dnia 30 — użytkownik: „wygrana w dniu 30 jak najbardziej OK".
+  'pierwsze-kroki': { wygranaDo: 32, wygranych: 1, bezpiecznyDo: 99, wrogWychodzi: false, horyzont: 35 },
   // „Dwie Doliny" są zamrożone i strojone osobno (`tools/wrog-symulacja.ts`):
   // tu liczy się tylko to, żeby przeciwnik grał i żeby nie wygrywał w dwa tygodnie.
   // Od USTAWIEŃ misji 2 (natarcie od dnia 40) grający normalnie ma mieć

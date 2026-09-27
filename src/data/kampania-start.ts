@@ -1,8 +1,8 @@
 import { planszaPrzygody } from './plansza';
 import { dolacz } from './armia';
-import { doswDoPoziomu, ewoluujOdPoziomu, nowyStworek } from './stworki';
+import { doswDoPoziomu, ewoluujOdPoziomu, nowyStworek, usunDuplikaty } from './stworki';
 import { FACTIONS, factionById } from './factions';
-import { odznakaSali, type Oddzial, type StanMapy } from './mapa';
+import { maGatunek, odznakaSali, type Oddzial, type StanMapy } from './mapa';
 import { SLOTY_ARMII, znormalizuj } from './armia';
 import {
   type BohaterPrzenoszony,
@@ -41,8 +41,13 @@ export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): Sta
     const frakcja = s.bohater.armia.find((o) => o)?.frakcja ?? 'bor';
     const f = factionById(frakcja) ?? FACTIONS[0];
     const nowy = nowyStworek(f.id, b.tier, b.poziom);
-    if (nowy) dolacz(s.bohater.armia, nowy);
+    // Jeden stworek danego gatunku: gdy trener już go ma (drużyna z poprzedniej
+    // misji), nagroda to trening tego stworka — co najmniej poziom nagrody, +2.
+    const ma = nowy && maGatunek(s, nowy.sprite);
+    if (ma) podciagnij(ma, Math.max(ma.poziom + 2, b.poziom));
+    else if (nowy) dolacz(s.bohater.armia, nowy);
   }
+  usunDuplikaty([s.bohater.armia]);
 
   // Strojenie misji pod drużynę, która przychodzi z poprzedniej (etap 6).
   if (m.poziomDruzyny) for (const o of s.bohater.armia) if (o) podciagnij(o, m.poziomDruzyny);

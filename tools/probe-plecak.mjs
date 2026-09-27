@@ -20,9 +20,11 @@ const przed = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   const st = s.stan;
   // Sześć sprawnych stworków: więcej niż mieści pole.
-  const wzor = st.bohater.armia.filter(Boolean);
+  // Sześciu z różnych gatunków (jeden stworek danego gatunku) — więcej niż mieści pole.
+  const wzor = st.bohater.armia.filter(Boolean)[0];
+  const bor = [['00193', 'Pyroko'], ['00020', 'Flamir'], ['00218', 'Aquino'], ['00030', 'Torrenar'], ['00096', 'Verdiko'], ['00227', 'Silvena']];
   st.bohater.armia = Array.from({ length: 7 }, (_, i) =>
-    i < 6 ? { ...wzor[i % wzor.length], ile: 1, poziom: 8 + i, omdlaly: undefined } : null
+    i < 6 ? { ...wzor, sprite: bor[i][0], nazwa: bor[i][1], tier: i, ile: 1, poziom: 8 + i, omdlaly: undefined } : null
   );
   const straz = st.obiekty.find((o) => o.rodzaj !== 'zamek' && !o.zebrany && o.oddzialy?.length);
   s.zajety = false;
