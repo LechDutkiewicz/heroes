@@ -1,5 +1,7 @@
-// Sonda ekranu bohatera: czy da się tam WEJŚĆ i czy da się armią ZARZĄDZAĆ
-// myszą — przenieść, zamienić, scalić i podzielić, także skrótami.
+// Sonda ekranu bohatera: czy da się tam WEJŚĆ i czy da się drużyną ZARZĄDZAĆ
+// myszą — przenieść i zamienić stworka. Od „trenera zamiast armii" każdy slot
+// to jeden stworek z poziomem: nic się nie scala (ten sam gatunek się
+// zamienia) i nic się nie dzieli (Shift i Ctrl nie mają czego rozdzielić).
 //
 // Po co osobno od `probe-armia.ts`: tamta sprawdza arytmetykę, ta sprawdza
 // drogę gracza. Na tym już raz poległa mapa przygody — sonda liczyła punkt
@@ -48,9 +50,12 @@ const armia = () =>
   page.evaluate(() =>
     window.__game.registry
       .get('stan-mapy')
-      .bohater.armia.map((o) => (o ? { s: o.sprite, ile: o.ile } : null))
+      .bohater.armia.map((o) => (o ? { s: o.sprite, p: o.poziom, ile: o.ile } : null))
   );
+/** Ilu stworków w drużynie (każdy slot to jeden). */
 const suma = (a) => a.reduce((s, o) => s + (o ? o.ile : 0), 0);
+/** Zapis slotu do porównań: gatunek i poziom. */
+const kto = (o) => (o ? `${o.s}@${o.p}×${o.ile}` : '—');
 
 /**
  * Ustawia armię w znany układ. Wzorce gatunków bierzemy RAZ, na starcie —
@@ -71,7 +76,9 @@ const ustaw = (wpisy) =>
     const gra = window.__game;
     const stan = gra.registry.get('stan-mapy');
     const nowa = new Array(7).fill(null);
-    for (const [slot, ktory, ile] of w) nowa[slot] = { ...window.__wzory[ktory], ile };
+    // [slot, który wzór, poziom] — zawsze jeden stworek na slot.
+    for (const [slot, ktory, poziom] of w)
+      nowa[slot] = { ...window.__wzory[ktory], ile: 1, poziom, dosw: 5 * poziom * (poziom - 1) };
     stan.bohater.armia = nowa;
     gra.registry.set('stan-mapy', stan);
     const s = gra.scene.getScene('bohater');
@@ -82,7 +89,7 @@ const ustaw = (wpisy) =>
 const gotowy = () =>
   page.waitForFunction(() => window.__game.scene.getScene('bohater')?.gotowy === true, null, { timeout: 30000 });
 
-/** Czy okno podziału stoi otwarte — pytamy scenę, nie zgadujemy z pikseli. */
+/** Czy stoi otwarte okno panelu (stworka, podziału) — pytamy scenę, nie zgadujemy z pikseli. */
 const oknoOtwarte = () =>
   page.evaluate(() => !!window.__game.scene.getScene('bohater').oknoOtwarte);
 
@@ -219,92 +226,71 @@ sprawdz('dymek artefaktu opisuje efekt', /do ataku|do obrony|punktów ruchu/.tes
 // ---------- przenoszenie ----------
 
 await ustaw([
-  [0, 0, 20],
+  [0, 0, 12],
   [1, 1, 9],
   [2, 2, 6],
 ]);
 await page.waitForTimeout(500);
 
-// Geometria okna podziału — te same liczby co w `PanelArmii.oknoPodzialu`.
-const OW = 420;
-const OH = 270;
-const OX = Math.round((960 - OW) / 2);
-const OY = Math.round((694 - OH) / 2);
-const SUWAK = { x: OX + 140, w: OW - 280, y: OY + 110 };
-const PODZIEL = { x: OX + OW / 2 + 90, y: OY + OH - 36 };
-
-// Zwykłe przeciągnięcie na puste miejsce PRZENOSI cały stos. Okno z liczbą
-// siedzi pod Shiftem — przekładanie oddziału robi się dużo częściej niż podział.
-await przeciagnij(0, 5);
-let a = await armia();
-sprawdz('zwykłe przeciągnięcie na pusty slot nie otwiera okna', !(await oknoOtwarte()));
-sprawdz(
-  'zwykłe przeciągnięcie PRZENOSI cały stos',
-  a[0] === null && a[5]?.ile === 20,
-  JSON.stringify([a[0], a[5]])
+const tabliczki = await page.evaluate(() =>
+  window.__game.scene.getScene('bohater').panel.paski[0].sloty.map((s) => s.licznik.text)
 );
-sprawdz('przeniesienie niczego nie gubi', suma(a) === 35, `${suma(a)}`);
+sprawdz('tabliczka slotu pokazuje poziom („poz. N")', tabliczki[0] === 'poz. 12' && tabliczki[2] === 'poz. 6' && tabliczki[3] === '', tabliczki.join(' | '));
+const napisPodziel = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('bohater');
+  let jest = false;
+  const przejdz = (l) => l.forEach((o) => { if (o.type === 'Text' && o.text === 'Podziel' && o.visible) jest = true; if (o.list) przejdz(o.list); });
+  przejdz(s.children.list);
+  return jest;
+});
+sprawdz('na ekranie bohatera nie ma tabliczki „Podziel"', !napisPodziel);
+
+// Zwykłe przeciągnięcie na puste miejsce PRZENOSI stworka.
+let a = await armia();
+const pierwszy = kto(a[0]);
+await przeciagnij(0, 5);
+a = await armia();
+sprawdz('zwykłe przeciągnięcie na pusty slot nie otwiera okna', !(await oknoOtwarte()));
+sprawdz('zwykłe przeciągnięcie PRZENOSI stworka (z poziomem)', a[0] === null && kto(a[5]) === pierwszy, `${kto(a[0])} → ${kto(a[5])}`);
+sprawdz('przeniesienie niczego nie gubi', suma(a) === 3, `${suma(a)}`);
+
+// ---------- Shift, Ctrl i Alt: nic się nie dzieli ----------
 
 await ustaw([
-  [0, 0, 20],
+  [0, 0, 12],
   [1, 1, 9],
   [2, 2, 6],
 ]);
 await page.waitForTimeout(400);
+let przed = JSON.stringify(await armia());
 await przeciagnij(0, 5, 'Shift');
-sprawdz('Shift otwiera okno podziału', await oknoOtwarte());
-
-// Suwak do końca plus „Podziel": maksimum na pusty slot to n-1, więc
-// w źródle zostanie dokładnie jeden — bohater nigdy nie zostaje z pustym stosem.
-await page.mouse.click(SUWAK.x + SUWAK.w + 8, SUWAK.y);
-await page.waitForTimeout(150);
-await page.mouse.click(PODZIEL.x, PODZIEL.y);
-await page.waitForTimeout(350);
+sprawdz('Shift nie otwiera okna podziału', !(await oknoOtwarte()));
 a = await armia();
-sprawdz('okno zamyka się po potwierdzeniu', !(await oknoOtwarte()));
-sprawdz(
-  'okno podziału przelewa wszystko oprócz jednego',
-  a[0]?.ile === 1 && a[5]?.ile === 19,
-  JSON.stringify([a[0], a[5]])
-);
-sprawdz('podział niczego nie gubi', suma(a) === 35, `${suma(a)}`);
+sprawdz('Shift+przeciągnięcie niczego nie rozdziela', JSON.stringify(a) === przed, a.map(kto).join(' '));
 
-// ---------- skróty ----------
-
-await ustaw([
-  [0, 0, 20],
-  [1, 1, 9],
-]);
-await page.waitForTimeout(400);
-await przeciagnij(0, 4, 'Shift');
-// Okno podziału startuje od połowy — Enter ją zatwierdza.
-await page.keyboard.press('Enter');
-await page.waitForTimeout(300);
-a = await armia();
-sprawdz('Shift + Enter dzieli stos na pół', a[0]?.ile === 10 && a[4]?.ile === 10, JSON.stringify([a[0], a[4]]));
-
-await ustaw([
-  [0, 0, 20],
-  [1, 1, 9],
-]);
-await page.waitForTimeout(400);
 await przeciagnij(0, 6, 'Control');
 a = await armia();
-sprawdz('Ctrl odkłada jednego stworka', a[0]?.ile === 19 && a[6]?.ile === 1, JSON.stringify([a[0], a[6]]));
+sprawdz('Ctrl nie odkłada „jednego stworka"', JSON.stringify(a) === przed, a.map(kto).join(' '));
+sprawdz('po Shift i Ctrl w każdym slocie dalej jeden stworek', a.every((o) => !o || o.ile === 1));
 
-// ---------- zamiana i scalenie ----------
+await przeciagnij(0, 4, 'Alt');
+a = await armia();
+sprawdz('Alt na pusty slot po prostu przenosi', a[0] === null && kto(a[4]) === pierwszy && suma(a) === 3, `${kto(a[0])} → ${kto(a[4])}`);
+
+// ---------- zamiana ----------
 
 await ustaw([
-  [0, 0, 20],
+  [0, 0, 12],
   [3, 1, 9],
 ]);
 await page.waitForTimeout(400);
-const przedZamiana = (await armia())[0].s;
+przed = await armia();
 await przeciagnij(0, 3);
 a = await armia();
-sprawdz('przeciągnięcie na obcy gatunek zamienia sloty', a[3]?.s === przedZamiana, JSON.stringify([a[0], a[3]]));
-sprawdz('zamiana niczego nie gubi', suma(a) === 29, `${suma(a)}`);
+sprawdz('przeciągnięcie na obcy gatunek zamienia sloty', kto(a[3]) === kto(przed[0]) && kto(a[0]) === kto(przed[3]), `${kto(a[0])} ${kto(a[3])}`);
+sprawdz('zamiana niczego nie gubi', suma(a) === 2, `${suma(a)}`);
 
+// Ten sam gatunek na dwóch poziomach — to dwie różne postacie, nie stos.
 await ustaw([
   [0, 0, 12],
   [2, 0, 8],
@@ -312,7 +298,11 @@ await ustaw([
 await page.waitForTimeout(400);
 await przeciagnij(0, 2);
 a = await armia();
-sprawdz('przeciągnięcie na ten sam gatunek scala stosy', a[2]?.ile === 20 && a[0] === null, JSON.stringify([a[0], a[2]]));
+sprawdz(
+  'przeciągnięcie na ten sam gatunek ZAMIENIA (oba zachowują poziom)',
+  a[0]?.p === 8 && a[2]?.p === 12 && a[0]?.ile === 1 && a[2]?.ile === 1 && a[0]?.s === a[2]?.s,
+  `${kto(a[0])} ${kto(a[2])}`
+);
 
 // ---------- klik-klik bez przeciągania ----------
 
@@ -321,12 +311,13 @@ await ustaw([
   [1, 1, 5],
 ]);
 await page.waitForTimeout(400);
+przed = await armia();
 await page.mouse.click(slotX(0), PAS_Y);
 await page.waitForTimeout(200);
 await page.mouse.click(slotX(1), PAS_Y);
 await page.waitForTimeout(300);
 a = await armia();
-sprawdz('dwa kliknięcia zamieniają sloty bez przeciągania', a[0]?.ile === 5 && a[1]?.ile === 12, JSON.stringify([a[0], a[1]]));
+sprawdz('dwa kliknięcia zamieniają sloty bez przeciągania', kto(a[0]) === kto(przed[1]) && kto(a[1]) === kto(przed[0]), `${kto(a[0])} ${kto(a[1])}`);
 
 // ---------- okno stworka ----------
 
