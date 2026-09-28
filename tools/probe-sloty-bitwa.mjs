@@ -118,11 +118,11 @@ sprawdz(
   JSON.stringify(po.map((o) => o?.n ?? null))
 );
 sprawdz('zemdlony został zemdlony i nic nie dostał', po[2]?.z === true && po[2]?.p === 9);
-sprawdz('walczący nie zemdleli (wygrana od ręki)', [0, 3, 4, 6].every((i) => po[i] && !po[i].z));
+sprawdz('nikt sprawny nie zemdlał (wygrana od ręki, reszta nie walczyła)', [0, 3, 4, 6].every((i) => po[i] && !po[i].z));
 sprawdz(
-  'walczący zebrali doświadczenie',
-  [0, 3, 4, 6].every((i) => po[i].d > 5 * ukladPrzed[i].p * (ukladPrzed[i].p - 1)),
-  [0, 3, 4, 6].map((i) => `${po[i].n}: poz. ${ukladPrzed[i].p}→${po[i].p}`).join(', ')
+  'walcząca dwójka zebrała doświadczenie',
+  [0, 3].every((i) => po[i].d > 5 * ukladPrzed[i].p * (ukladPrzed[i].p - 1)),
+  [0, 3].map((i) => `${po[i].n}: poz. ${ukladPrzed[i].p}→${po[i].p}`).join(', ')
 );
 
 sprawdz('bez błędów JS', bledyJs.length === 0, bledyJs.slice(0, 2).join(' | '));
