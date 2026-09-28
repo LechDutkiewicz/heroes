@@ -2,6 +2,7 @@ import type { UnitDef } from './units';
 import { factionById } from './factions';
 import { etapStworka, liniaStworka, nastepnyEtap, progEwolucji } from './ewolucje';
 import type { Oddzial } from './mapa';
+import { wzorStartera } from './startery';
 import { NA_POLU, NA_POLU_DZIKIE, createBattle, runBattle, type Battle, type Outcome } from './battle';
 
 /**
@@ -73,9 +74,14 @@ export function postepStworka(o: Pick<Oddzial, 'poziom' | 'dosw'>) {
  * poziomem i etapem ewolucji. Liczebność zawsze 1 — stado rozwija
  * `jednostkiBitwy`.
  */
-export function defStworka(o: Pick<Oddzial, 'frakcja' | 'tier' | 'sprite' | 'nazwa' | 'poziom'>): UnitDef | undefined {
-  const baza = factionById(o.frakcja)?.units[o.tier];
-  if (!baza) return undefined;
+export function defStworka(
+  o: Pick<Oddzial, 'frakcja' | 'tier' | 'sprite' | 'nazwa' | 'poziom'> & Partial<Pick<Oddzial, 'starter'>>
+): UnitDef | undefined {
+  const gatunek = factionById(o.frakcja)?.units[o.tier];
+  if (!gatunek) return undefined;
+  // Starter ma własne, wyrównane HP i atak; reszta (żywioł, ruch) z gatunku.
+  const wzor = wzorStartera(o);
+  const baza = wzor ? { ...gatunek, hp: wzor.hp, atk: wzor.atk } : gatunek;
   const etap = Math.max(0, etapStworka(o.sprite));
   const s = skalaPoziomu(o.poziom) * SKALA_ETAPU[etap];
   return {
@@ -121,7 +127,9 @@ export function jednostkiBitwy(
 export function najsilniejsiNaPrzod(armia: (Oddzial | null)[]) {
   const sila = (o: Oddzial) => {
     const d = defStworka(o);
-    return d ? d.hp * d.atk * (d.ability === 'double' ? 2 : 1) : 0;
+    // Strzelec bije bez odwetu i z daleka — sam iloczyn HP × atak go zaniżał,
+    // przez co AI trzymało go na ławce za słabszym stworkiem wręcz.
+    return d ? d.hp * d.atk * (d.ability === 'double' ? 2 : 1) * (d.shooter ? 1.5 : 1) : 0;
   };
   const stworki = armia.filter((o): o is Oddzial => !!o).sort((a, b) => sila(b) - sila(a));
   for (let i = 0; i < armia.length; i++) armia[i] = stworki[i] ?? null;

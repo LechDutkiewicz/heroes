@@ -41,7 +41,9 @@ export type Bonus =
   | { typ: 'artefakt'; artefakt: string; opis: string }
   /** Nowy stworek do drużyny: gatunek `tier` frakcji bohatera na poziomie `poziom`. */
   | { typ: 'oddzial'; tier: number; poziom: number; opis: string }
-  | { typ: 'statystyka'; atak?: number; obrona?: number; opis: string };
+  | { typ: 'statystyka'; atak?: number; obrona?: number; opis: string }
+  /** Starter (wybierany na mapie, `startery.ts`) zaczyna o tyle poziomów wyżej. */
+  | { typ: 'starter'; poziomy: number; opis: string };
 
 export interface Misja {
   id: string;
@@ -107,7 +109,7 @@ export const KAMPANIA: Kampania = {
       bonusy: [
         { typ: 'surowiec', surowiec: 'pokeball', ile: 30, opis: '30 pokeballi' },
         { typ: 'artefakt', artefakt: 'buty', opis: 'Buty Wędrowca' },
-        { typ: 'oddzial', tier: 1, poziom: 8, opis: 'Nowy stworek: Flamir, poziom 8' },
+        { typ: 'starter', poziomy: 3, opis: 'Starter +3 poziomy' },
       ],
       naMapie: { x: 0.2198, y: 0.8643 },
       epilog: 'Fort jest wolny, a stworki z Polany wracają do domu. Ale srebrne płaszcze uciekły za góry.',

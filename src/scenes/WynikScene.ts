@@ -16,6 +16,7 @@ import {
 } from '../data/kampania';
 import { rozpocznijMisje, zaliczMisje } from '../data/kampania-start';
 import { planszaPrzygody } from '../data/plansza';
+import { POZIOM_STARTERA } from '../data/startery';
 import { planszaPoId } from '../data/mapy';
 import { umiejetnoscPoId } from '../data/umiejetnosci';
 import { ILE_REKORDOW, dodajRekord, wczytajRekordy, type Rekord } from '../data/rekordy';
@@ -790,7 +791,7 @@ export class WynikScene extends Phaser.Scene {
   }
 
   private nowaGraPojedyncza() {
-    this.registry.set('stan-mapy', planszaPrzygody(this.dane.stan.mapa));
+    this.registry.set('stan-mapy', planszaPrzygody(this.dane.stan.mapa, { starter: { poziom: POZIOM_STARTERA } }));
     this.wyjdz('adventure');
   }
 

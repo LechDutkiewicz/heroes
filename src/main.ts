@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { wybierzStartera } from './data/startery';
 import { BattleScene, SCENE_H } from './scenes/BattleScene';
 import { AdventureScene } from './scenes/AdventureScene';
 import { TownScene } from './scenes/TownScene';
@@ -64,7 +65,7 @@ const game = new Phaser.Game({
 (window as unknown as { __game: Phaser.Game }).__game = game;
 // Drugi most, dla sond kampanii (`tools/probe-misja.mjs`): start misji tą samą
 // funkcją, której używa gra, zamiast składania stanu misji ręcznie w sondzie.
-(window as unknown as { __kampania: object }).__kampania = { rozpocznijMisje, misjaPoId, nowyPostep };
+(window as unknown as { __kampania: object }).__kampania = { rozpocznijMisje, misjaPoId, nowyPostep, wybierzStartera };
 
 // Generator Phasera istnieje dopiero teraz, więc ziarno sesji wysiewamy po
 // utworzeniu gry — a jeszcze przed pierwszą sceną, która z niego korzysta.

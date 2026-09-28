@@ -1770,6 +1770,16 @@ export class KampaniaScene extends Phaser.Scene {
         bok: 53,
       };
     }
+    if (b.typ === 'starter') {
+      // Startera wybiera się dopiero na mapie — medalion pokazuje pokeball.
+      const malowana = `k-ikona-${IKONA_SUROWCA.pokeball}`;
+      return {
+        tekstura: this.textures.exists(malowana) ? malowana : `m-${SUROWIEC_INFO.pokeball.ikona}`,
+        nazwa: 'Silniejszy starter',
+        liczba: `+${b.poziomy} poz.`,
+        bok: 50,
+      };
+    }
     const atak = b.atak ?? 0;
     return {
       tekstura: atak ? 'k-ikona-zapal' : 'k-ikona-opieka',

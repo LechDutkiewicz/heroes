@@ -9,6 +9,8 @@ import {
 } from '../data/kampania';
 import { type Slot, listaZapisow, najnowszyZapis, usunZapis, wczytajGre } from '../data/zapis';
 import { aktywnyProfil, listaProfili } from '../data/profile';
+import { planszaPrzygody } from '../data/plansza';
+import { POZIOM_STARTERA } from '../data/startery';
 import { MUZYKA_MIASTO, initSfx, startMusic, stopMusic } from '../audio/mapSfx';
 import { gradientText } from '../visual/hud';
 import { TEX, ZM, ozywTlo, stworek, zbudujTekstury } from '../visual/menuZycie';
@@ -508,7 +510,8 @@ export class MenuScene extends Phaser.Scene {
           wlaczona: true,
           akcja: () =>
             this.zProfilem(() => {
-              this.registry.remove('stan-mapy');
+              // Nowa gra zaczyna się od wyboru startera na mapie (`startery.ts`).
+              this.registry.set('stan-mapy', planszaPrzygody(undefined, { starter: { poziom: POZIOM_STARTERA } }));
               this.idz('adventure');
             }),
         },

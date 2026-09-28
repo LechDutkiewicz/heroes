@@ -53,7 +53,9 @@ import {
   type WyborSkrzyni,
 } from '../data/mapa';
 import { planszaPrzygody } from '../data/plansza';
-import { ALL_SPRITES } from '../data/factions';
+import { ALL_SPRITES, factionById } from '../data/factions';
+import { STARTERY, nowyStarter, wybierzStartera } from '../data/startery';
+import { TYPE_INFO } from '../data/units';
 import { STRAZNICY_MAPOWI } from '../data/strazniki-mapa';
 import type { PoseName } from '../visual/unitView';
 import { planszaPoId } from '../data/mapy';
@@ -662,6 +664,7 @@ export class AdventureScene extends Phaser.Scene {
     const stan = this.wczytajStan();
     const potrzebne = new Set<string>();
     for (const o of zywe(stan.bohater.armia)) potrzebne.add(o.sprite);
+    if (stan.starter) for (const st of STARTERY) potrzebne.add(nowyStarter(STARTERY.indexOf(st))!.sprite);
     for (const ob of stan.obiekty) for (const o of ob.oddzialy ?? []) potrzebne.add(o.sprite);
     for (const s of potrzebne) this.load.image(`p-${s}`, `${b}sprites/${s}.png`);
     // Strażnik stoi na mapie jako malowana figura mapowa z PR #6
@@ -791,7 +794,11 @@ export class AdventureScene extends Phaser.Scene {
     // Warunki misji — raz, na starcie, jak okno „Scenario Information"
     // w Heroes 2. Chwila zwłoki, żeby najpierw było widać mapę, na której
     // to wszystko się rozegra.
-    if (this.stan.misja && !this.stan.warunkiPokazane) {
+    // Nowa gra: najpierw starter (pusta drużyna nie może nic zrobić), potem
+    // warunki misji.
+    if (this.stan.starter) {
+      this.time.delayedCall(450, () => this.pokazStartera());
+    } else if (this.stan.misja && !this.stan.warunkiPokazane) {
       this.time.delayedCall(450, () => {
         if (!this.stan.warunkiPokazane) this.pokazWarunki();
       });
@@ -5128,6 +5135,129 @@ export class AdventureScene extends Phaser.Scene {
    * dalszy ciąg. Pokazuje się samo na starcie misji, a potem pod „Cele"
    * i klawiszem C — także w grze pojedynczej.
    */
+  /** Okno startera otwarte teraz na mapie — sondy wybierają przez `wybierz(i)`. */
+  oknoStartera?: { wybierz(i: number): void };
+
+  /**
+   * Wybór startera — pierwsze okno nowej gry, jak u Profesora w grach
+   * o pokemonach. Trzy karty: stworek, żywioł, zdanie o nim. Zamknąć się
+   * go nie da: bez stworka trener nie ma czym walczyć.
+   */
+  private pokazStartera() {
+    if (this.zajety || !this.stan.starter) return;
+    this.zajety = true;
+    void krojeZestawu().then(() => this.zbudujStartera());
+  }
+
+  private zbudujStartera() {
+    const s = this.stan;
+    const poziom = s.starter?.poziom ?? 5;
+    const cx = this.mapaX + this.oknoW / 2;
+    const cy = this.mapaY + this.oknoH / 2;
+    const KW = 168;
+    const KH = 236;
+    const ODST = 16;
+    const szer = STARTERY.length * (KW + ODST) - ODST + 64;
+    const wys = 420;
+    const gora = Math.round(cy - wys / 2);
+    const nowe = this.znacznik();
+
+    this.add.rectangle(0, 0, this.scale.width, this.scale.height, C.shadow, 0.55).setOrigin(0, 0).setDepth(Z.overlay);
+    const k = this.add.container(cx, gora).setDepth(Z.overlay + 1);
+    k.add(panelPergaminu(this, -szer / 2, 0, szer, wys));
+    k.add(wstazka(this, 0, 34, 'PIERWSZY STWOREK'));
+    k.add(this.add.text(0, 76, 'Wybierz startera', stylEtykiety(28)).setOrigin(0.5));
+    k.add(
+      this.add
+        .text(0, 104, `Pójdzie z tobą przez całą przygodę. Zaczyna na poziomie ${poziom}.`, {
+          ...stylAtramentu(15, 'miekki'),
+          fontFamily: KROJ.kursywa,
+        })
+        .setOrigin(0.5)
+    );
+
+    let wybrany = -1;
+    const karty = STARTERY.map((st, i) => {
+      const o = nowyStarter(i, poziom)!;
+      const typ = factionById(st.frakcja)?.units[st.tier]?.type ?? 'fire';
+      const info = TYPE_INFO[typ];
+      const x0 = -szer / 2 + 32 + i * (KW + ODST);
+      const y0 = 130;
+      const tlo = this.add.graphics();
+      const obraz = this.add.image(x0 + KW / 2, y0 + 70, `p-${o.sprite}`);
+      obraz.setScale(Math.min(104 / obraz.width, 104 / obraz.height));
+      const nazwa = this.add.text(x0 + KW / 2, y0 + 136, o.nazwa, stylEtykiety(20)).setOrigin(0.5);
+      const zywiol = this.add
+        .text(x0 + KW / 2, y0 + 160, info.label.toUpperCase(), {
+          ...stylEtykiety(13),
+          color: Phaser.Display.Color.IntegerToColor(info.color).darken(25).rgba,
+        })
+        .setOrigin(0.5);
+      const opis = this.add
+        .text(x0 + KW / 2, y0 + 178, st.opis, {
+          ...stylAtramentu(13, 'zwykly', KW - 20),
+          align: 'center',
+          lineSpacing: 2,
+        })
+        .setOrigin(0.5, 0);
+      const strefa = this.add.zone(x0 + KW / 2, y0 + KH / 2, KW, KH).setInteractive({ useHandCursor: true });
+      strefa.on('pointerdown', () => wybierz(i));
+      strefa.on('pointerover', () => rysuj(i, true));
+      strefa.on('pointerout', () => rysuj(i, false));
+      k.add([tlo, obraz, nazwa, zywiol, opis, strefa]);
+      const rysuj = (j: number, najechany: boolean) => {
+        if (j !== i) return;
+        tlo.clear();
+        tlo.fillStyle(BARWA.cien, 0.25);
+        tlo.fillRoundedRect(x0 + 2, y0 + 4, KW, KH, 14);
+        tlo.fillStyle(najechany ? 0xfff4d6 : BARWA.papierCiemny, 1);
+        tlo.fillRoundedRect(x0, y0, KW, KH, 14);
+        tlo.lineStyle(najechany ? 4 : 2, najechany ? C.gold : BARWA.kreska, 1);
+        tlo.strokeRoundedRect(x0, y0, KW, KH, 14);
+        tlo.fillStyle(info.color, 0.22);
+        tlo.fillCircle(x0 + KW / 2, y0 + 70, 58);
+      };
+      rysuj(i, false);
+      return { obraz };
+    });
+    k.add(
+      this.add
+        .text(0, wys - 22, 'Kliknij stworka albo naciśnij 1, 2 lub 3.', {
+          ...stylAtramentu(13, 'miekki'),
+          fontFamily: KROJ.kursywa,
+        })
+        .setOrigin(0.5)
+    );
+    k.setAlpha(0);
+    this.tweens.add({ targets: k, alpha: 1, y: { from: gora + 14, to: gora }, duration: 280, ease: E.snap });
+
+    const klawisz = (e: KeyboardEvent) => {
+      const i = Number(e.key) - 1;
+      if (i >= 0 && i < STARTERY.length) wybierz(i);
+    };
+    this.input.keyboard?.on('keydown', klawisz);
+    const wybierz = (i: number) => {
+      if (wybrany !== -1) return;
+      const o = wybierzStartera(s, i);
+      if (!o) return;
+      wybrany = i;
+      this.input.keyboard?.off('keydown', klawisz);
+      this.oknoStartera = undefined;
+      sfx(this, 'zbior', 0.7);
+      this.tweens.add({ targets: karty[i].obraz, scale: karty[i].obraz.scale * 1.15, yoyo: true, duration: 160 });
+      this.time.delayedCall(420, () => {
+        this.zamknijOkno(nowe());
+        this.zajety = false;
+        this.registry.set(KLUCZ_STANU, s);
+        this.napisUlotny(`${o.nazwa} dołącza do drużyny!`);
+        this.odswiezWszystko();
+        if (s.misja && !s.warunkiPokazane) this.time.delayedCall(700, () => this.pokazWarunki());
+      });
+    };
+    this.oknoStartera = { wybierz };
+    this.naWierzchu(...nowe());
+  }
+
   private pokazWarunki() {
     if (this.zajety) return;
     this.zajety = true;

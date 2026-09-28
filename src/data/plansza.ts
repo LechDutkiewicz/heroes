@@ -252,7 +252,20 @@ function mapaZAdresu(): string | undefined {
   return new URLSearchParams(location.search).get('mapa') ?? undefined;
 }
 
-export function planszaPrzygody(mapaId?: string): StanMapy {
+export interface OpcjeStartu {
+  /**
+   * Nowa gra ze starterem: pusta drużyna i wybór jednego z trzech na mapie,
+   * miasto bez rezerwatów, a w skarbcu dość, żeby pierwszego dnia postawić
+   * jeden i zaprosić z niego stworka. Bez tej opcji (sondy, narzędzia) start
+   * jest dawny: czwórka stworków i dwa gotowe rezerwaty.
+   */
+  starter?: { poziom: number };
+}
+
+/** Ile pokeballi więcej ma skarbiec przy starcie ze starterem — na rezerwat i pierwszego stworka. */
+const DOPLATA_STARTERA = 20;
+
+export function planszaPrzygody(mapaId?: string, opcje: OpcjeStartu = {}): StanMapy {
   const plansza = planszaPoId(mapaId ?? mapaZAdresu());
   const { TEREN, PUNKTY, ROZSTAWIENIE } = plansza.modul;
   const ust = plansza.modul.USTAWIENIA ?? {};
@@ -396,12 +409,14 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
     // pierwszego dnia (inaczej dzień 1 to zero pokeballi i nie ma czym zacząć),
     // dwa siedliska dają co werbować — reszta drzewka jest do postawienia,
     // bo to ona jest właściwą grą na ekranie miasta.
-    postawione: ['ratusz1', 'siedlisko1', 'siedlisko2'],
+    // Start ze starterem: rezerwat trener wybiera i stawia sam — to pierwsza
+    // decyzja w mieście (tani Pyroko od razu albo droższy gatunek jutro).
+    postawione: opcje.starter ? ['ratusz1'] : ['ratusz1', 'siedlisko1', 'siedlisko2'],
     // Czekają TYLKO te poziomy, dla których miasto ma siedlisko. Wcześniej
     // stało tu [6, 4, 3, 2, 1, 0] — cztery poziomy do kupienia z budynków,
     // których nie ma.
     // Po jednym młodym stworku w każdym stojącym rezerwacie.
-    dostepne: [1, 1, 0, 0, 0, 0],
+    dostepne: opcje.starter ? [0, 0, 0, 0, 0, 0] : [1, 1, 0, 0, 0, 0],
     // Garnizon domowy. Symetrycznie z zamkiem przeciwnika: bez tego byłby to
     // jedyny zamek na mapie, który pada BEZ WALKI, kiedy tylko ktoś do niego
     // dojdzie, bez względu na to, jak silna jest armia stojąca w polu.
@@ -451,7 +466,7 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
   // z szybkości najwolniejszego, dokładnie jak w Heroes 3 — dzięki temu
   // dobór armii naprawdę wpływa na to, jak daleko się dojdzie.
   const bor = factionById('bor') ?? FACTIONS[0];
-  const armia = znormalizuj(druzynaStartowa(bor.id, 1));
+  const armia = znormalizuj(opcje.starter ? [] : druzynaStartowa(bor.id, 1));
   const najwolniejszy = Math.min(...bor.units.slice(0, 4).map((u) => u.move));
   const ruchMax = ruchNaDzien(najwolniejszy);
 
@@ -462,7 +477,9 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
   const grota = factionById('grota') ?? FACTIONS[1] ?? bor;
   // Mnożnik z planszy: na Polanie bohater wroga siedzi w forcie i jego
   // drużyna nie gra roli, w Twierdzy ma być groźniejszy niż zwykle.
-  const wrogArmia = znormalizuj(druzynaStartowa(grota.id, ust.armiaWroga ?? 1));
+  // Przy starcie ze starterem rywal też zaczyna skromnie — dwójką, a nie
+  // czwórką, żeby w pierwszych dniach nie polował na trenera z jednym stworkiem.
+  const wrogArmia = znormalizuj(druzynaStartowa(grota.id, ust.armiaWroga ?? 1).slice(0, opcje.starter ? 2 : 4));
   const wrogNajwolniejszy = Math.min(...grota.units.slice(0, 4).map((u) => u.move));
   const wrogRuchMax = ruchNaDzien(wrogNajwolniejszy);
 
@@ -488,6 +505,7 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
     // decyzję (siedlisko albo garść oddziałów), a nie żeby było na wszystko.
     // Przy 15 pokeballach dzień pierwszy był tylko klikaniem „dalej".
     skarbiec: { ...(ust.skarbiec ?? { pokeball: 40, jagoda: 6, kamien: 1, odlamek: 4 }) },
+    starter: opcje.starter ? { ...opcje.starter } : undefined,
     wrogBohater: {
       // Bez zamku wroga (misja bez przeciwnika) bohater wroga stoi poza
       // grą w rogu mapy i nigdy nie dostaje tury — patrz `turaAI`.
@@ -538,5 +556,6 @@ export function planszaPrzygody(mapaId?: string): StanMapy {
   for (const m of ust.odkryte ?? []) odslon(stan, m.promien, { x: m.x, y: m.y });
   odslon(stan, undefined, undefined, 'wrog');
   for (const m of ust.wrogOdkryte ?? []) odslon(stan, m.promien, { x: m.x, y: m.y }, 'wrog');
+  if (opcje.starter) stan.skarbiec.pokeball += DOPLATA_STARTERA;
   return stan;
 }

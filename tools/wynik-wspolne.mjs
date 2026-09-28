@@ -47,9 +47,9 @@ export const aktywne = (page) => page.evaluate(() => window.__game.scene.getScen
  * z `main.ts`), a potem wchodzi na mapę jak ekran kampanii: stan do rejestru,
  * `scene.start('adventure')`.
  */
-export async function startMisji(page, idMisji, postep, { bezWarunkow = false } = {}) {
+export async function startMisji(page, idMisji, postep, { bezWarunkow = false, starter = 0 } = {}) {
   await page.evaluate(
-    ({ id, p, kod, bez }) => {
+    ({ id, p, kod, bez, starter }) => {
       const K = window.__kampania;
       const pelny = { ...K.nowyPostep(p.trener ?? 'Janek'), ...p };
       localStorage.setItem(eval(kod), JSON.stringify(pelny));
@@ -58,12 +58,15 @@ export async function startMisji(page, idMisji, postep, { bezWarunkow = false } 
       // Okno warunków planuje się w `create`, więc flagę trzeba ustawić
       // PRZED wejściem na mapę — ustawiona później nie odwoła już okna.
       if (bez) s.warunkiPokazane = true;
+      // Nowa kampania zaczyna się od wyboru startera — sonda wybiera od razu
+      // (`starter: null` zostawia okno wyboru na mapie).
+      if (s.starter && starter !== null) K.wybierzStartera(s, starter);
       const g = window.__game;
       g.registry.set('stan-mapy', s);
       const zywa = g.scene.getScenes(true)[0];
       zywa.scene.start('adventure');
     },
-    { id: idMisji, p: postep, kod: kluczPostepuWStronie, bez: bezWarunkow }
+    { id: idMisji, p: postep, kod: kluczPostepuWStronie, bez: bezWarunkow, starter }
   );
   await page.waitForTimeout(300);
   await scena(page, 'adventure');

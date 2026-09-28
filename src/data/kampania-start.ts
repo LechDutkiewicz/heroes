@@ -1,4 +1,5 @@
 import { planszaPrzygody } from './plansza';
+import { POZIOM_STARTERA } from './startery';
 import { dolacz } from './armia';
 import { doswDoPoziomu, ewoluujOdPoziomu, nowyStworek, usunDuplikaty } from './stworki';
 import { FACTIONS, factionById } from './factions';
@@ -18,7 +19,10 @@ import {
  * (pierwsze wejście) i ekran porażki („spróbuj jeszcze raz").
  */
 export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): StanMapy {
-  const s = planszaPrzygody(m.mapa);
+  // Bez drużyny z poprzedniej misji (pierwsza misja) trener zaczyna od
+  // startera, którego wybiera na mapie — `startery.ts`.
+  const bezDruzyny = !p.druzyna?.length;
+  const s = planszaPrzygody(m.mapa, bezDruzyny ? { starter: { poziom: POZIOM_STARTERA } } : {});
   s.misja = m.id;
   s.bohater.imie = p.trener;
 
@@ -35,6 +39,10 @@ export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): Sta
   } else if (b.typ === 'statystyka') {
     s.bohater.atak += b.atak ?? 0;
     s.bohater.obrona += b.obrona ?? 0;
+  } else if (b.typ === 'starter') {
+    if (s.starter) s.starter.poziom += b.poziomy;
+    // Drużyna już jest (stary zapis): premia idzie w pierwszego stworka.
+    else if (s.bohater.armia[0]) podciagnij(s.bohater.armia[0], s.bohater.armia[0].poziom + b.poziomy);
   } else if (b.typ === 'oddzial') {
     // Oddział z frakcji, którą bohater już prowadzi — mieszanie frakcji
     // w nagrodzie wyglądałoby na pomyłkę.
@@ -51,6 +59,7 @@ export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): Sta
 
   // Strojenie misji pod drużynę, która przychodzi z poprzedniej (etap 6).
   if (m.poziomDruzyny) for (const o of s.bohater.armia) if (o) podciagnij(o, m.poziomDruzyny);
+  if (m.poziomDruzyny && s.starter) s.starter.poziom = Math.max(s.starter.poziom, m.poziomDruzyny);
   if (m.wrogPoziomy) {
     const wrog = [
       ...s.wrogBohater.armia,
