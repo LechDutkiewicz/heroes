@@ -478,6 +478,10 @@ PANORAMY = {'tlo-bor': 'bor', 'tlo-grota': 'grota', 'tlo-zbocze': 'zbocze'}
 
 def miasto():
     MIASTO.mkdir(parents=True, exist_ok=True)
+    if (WSAD / 'm2-tlo-bor.png').exists():
+        # Nowe miasto wczytuje `miasto2_wczytaj.py`; stare bryły by je nadpisały.
+        print('  miasto: pomijam — nowe miasto z miasto2_wczytaj.py')
+        return
     for nazwa, wys in BUDYNKI.items():
         # BEZ wypalonego cienia rzuconego.
         #

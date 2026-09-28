@@ -266,7 +266,7 @@ const STALE: Array<Pick<Budynek, 'id' | 'rodzaj' | 'nazwa' | 'opis' | 'x' | 'y' 
     rodzaj: 'sala',
     nazwa: 'Sala treningowa',
     opis: 'Zaznacz stworka i trenuj: +1 poziom za pokeballe.',
-    x: 0.42,
+    x: 0.45,
     y: 0.93,
     skala: 0.5,
   },
