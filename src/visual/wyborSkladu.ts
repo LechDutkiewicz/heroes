@@ -1,16 +1,18 @@
 /**
- * Okno „Kto zaczyna?" przed bitwą.
+ * Okno „Kto walczy?" przed bitwą.
  *
- * Na polu stoi jeden stworek (dzikie) albo dwa (trenerzy), a reszta drużyny
- * czeka w pokeballach i wchodzi po zemdlonych. Trener wybiera, kogo wysyła
- * na początek — widząc, z kim się bije. Domyślnie zaznaczeni są pierwsi
- * z drużyny, więc „Do boju!" od razu działa.
+ * Trener wystawia dwa stworki; gdy sprawnych jest więcej, wybiera dwójkę
+ * tuż przed walką — widząc, z kim się bije. Reszta drużyny w tej walce nie
+ * bierze udziału. Domyślnie zaznaczeni są pierwsi z drużyny, więc
+ * „Do boju!" od razu działa.
+ *
+ * Wygląd jak reszta ekranu walki (`stylWalki.ts`): biały panel z obrysem,
+ * karty stworków w pokeballowych barwach, wybrane w żółtym pierścieniu.
  */
 import Phaser from 'phaser';
-import { drawPanelBody, makeHudButton, mix, plate } from './hud';
-import { C, H, body, display } from './theme';
+import { przyciskWalki } from './hudWalki';
 import { ICON } from './icons';
-import { BARWA, KROJ } from './zestaw';
+import { TUSZ, TUSZ_CSS, ZOLTY, panelBialy, stylWalki } from './stylWalki';
 
 export interface Kandydat {
   /** indeks wpisu w składzie z mapy */
@@ -34,97 +36,72 @@ export function pokazWyborSkladu(
 ): WyborSkladu {
   const warstwa = scene.add.container(0, 0).setDepth(150);
   // Przygaszenie planszy — okno jest jedyną rzeczą, z którą teraz się coś robi.
-  const cien = scene.add.rectangle(obszar.x, obszar.y, obszar.w, obszar.h, C.shadow, 0.45).setOrigin(0, 0);
+  const cien = scene.add.rectangle(obszar.x, obszar.y, obszar.w, obszar.h, TUSZ, 0.45).setOrigin(0, 0);
   cien.setInteractive();
   warstwa.add(cien);
 
   const KW = 84;
   const KH = 112;
   const ODST = 10;
-  const w = Math.max(460, kandydaci.length * (KW + ODST) - ODST + 60);
-  const h = 250;
+  const w = Math.max(480, kandydaci.length * (KW + ODST) - ODST + 60);
+  const h = 256;
   const x = obszar.x + (obszar.w - w) / 2;
   const y = obszar.y + (obszar.h - h) / 2;
-  drawPanelBody(scene, x, y, w, h, 6, warstwa);
+  const tlo = scene.add.graphics();
+  panelBialy(tlo, x, y, w, h, 20, { obrys: 4, cien: 6 });
+  warstwa.add(tlo);
 
-  const zestaw = scene.textures.exists('z-pergamin');
-  warstwa.add(
-    scene.add
-      .text(x + w / 2, y + 26, 'Kto zaczyna?', zestaw ? { fontFamily: KROJ.tytul, fontSize: '24px', color: BARWA.atramentCzerwony } : display(22))
-      .setOrigin(0.5)
-  );
-  const podpis = scene.add
-    .text(x + w / 2, y + 54, '', zestaw ? { fontFamily: KROJ.kursywa, fontSize: '14px', color: BARWA.atramentMiekki } : body(14, H.inkSoft))
-    .setOrigin(0.5);
+  warstwa.add(scene.add.text(x + w / 2, y + 28, 'Kto walczy?', stylWalki(24)).setOrigin(0.5));
+  const podpis = scene.add.text(x + w / 2, y + 56, '', { ...stylWalki(14, '#5b6270', 800), fontStyle: 'italic 800' }).setOrigin(0.5);
   warstwa.add(podpis);
 
   const wybrane = new Set(kandydaci.slice(0, maks).map((k) => k.skad));
   const x0 = x + (w - (kandydaci.length * (KW + ODST) - ODST)) / 2;
-  const ky = y + 72;
+  const ky = y + 74;
 
   const karty = kandydaci.map((k, i) => {
     const kx = x0 + i * (KW + ODST);
     const g = scene.add.graphics();
     const obraz = scene.add.image(kx + KW / 2, ky + 48, scene.textures.exists(k.sprite) ? k.sprite : '__MISSING');
-    obraz.setScale(Math.min(64 / obraz.width, 64 / obraz.height));
-    const nazwa = scene.add
-      .text(
-        kx + KW / 2,
-        ky + 86,
-        k.nazwa,
-        zestaw ? { fontFamily: KROJ.tytul, fontSize: '12px', color: BARWA.atrament } : { ...body(12, H.ink), fontStyle: 'bold' }
-      )
-      .setOrigin(0.5);
-    if (nazwa.width > KW - 6) nazwa.setScale((KW - 6) / nazwa.width);
-    const poz = scene.add
-      .text(kx + KW / 2, ky + 101, `poz. ${k.poziom}`, zestaw ? { fontFamily: KROJ.tekst, fontSize: '11px', color: BARWA.atramentMiekki } : body(11, H.inkSoft))
-      .setOrigin(0.5);
-    const znak = scene.add.text(kx + KW - 12, ky + 12, '✓', display(15)).setOrigin(0.5);
+    obraz.setScale(Math.min(62 / obraz.width, 62 / obraz.height));
+    const nazwa = scene.add.text(kx + KW / 2, ky + 88, k.nazwa, stylWalki(12)).setOrigin(0.5);
+    if (nazwa.width > KW - 8) nazwa.setScale((KW - 8) / nazwa.width);
+    const poz = scene.add.text(kx + KW / 2, ky + 102, `poz. ${k.poziom}`, stylWalki(11, '#5b6270', 800)).setOrigin(0.5);
     const strefa = scene.add.zone(kx + KW / 2, ky + KH / 2, KW, KH).setInteractive({ useHandCursor: true });
     strefa.on('pointerdown', () => {
       if (wybrane.has(k.skad)) wybrane.delete(k.skad);
       else if (wybrane.size < maks) wybrane.add(k.skad);
       else if (maks === 1) {
-        // Jeden na jednego: klik w innego stworka po prostu go wybiera.
         wybrane.clear();
         wybrane.add(k.skad);
       }
       odswiez();
     });
-    warstwa.add([g, obraz, nazwa, poz, znak, strefa]);
+    warstwa.add([g, obraz, nazwa, poz, strefa]);
     return {
       rysuj() {
         const tak = wybrane.has(k.skad);
         g.clear();
-        if (zestaw && !tak) {
-          g.fillStyle(BARWA.papierCiemny, 0.8);
-          g.fillRoundedRect(kx, ky, KW, KH, 12);
-          g.lineStyle(1.5, BARWA.kreska, 0.6);
-          g.strokeRoundedRect(kx, ky, KW, KH, 12);
-          obraz.setAlpha(0.6);
-          znak.setVisible(false);
-          return;
+        if (tak) {
+          g.fillStyle(TUSZ, 1);
+          g.fillRoundedRect(kx - 5, ky - 5, KW + 10, KH + 10, 16);
+          g.fillStyle(ZOLTY, 1);
+          g.fillRoundedRect(kx - 2, ky - 2, KW + 4, KH + 4, 14);
         }
-        plate(g, kx, ky, KW, KH, 12, tak ? C.gold : mix(C.panel, C.inkSoft, 0.2), tak ? C.goldDeep : C.panelEdge, {
-          light: 0.3,
-          dark: 0.24,
-          gloss: tak ? 0.34 : 0.14,
-          drop: tak ? 3 : 1,
-        });
+        panelBialy(g, kx, ky, KW, KH, 12, { obrys: 3, cien: tak ? 0 : 3, wypelnienie: tak ? 0xe6efff : 0xffffff });
         obraz.setAlpha(tak ? 1 : 0.55);
-        znak.setVisible(tak);
+        nazwa.setColor(tak ? TUSZ_CSS : '#8b93a0');
       },
     };
   });
 
-  const przycisk = makeHudButton(scene, {
+  const przycisk = przyciskWalki(scene, {
     x: x + w / 2,
-    y: y + h - 28,
-    w: 180,
-    h: 36,
-    icon: ICON.sword,
-    tone: C.gold,
-    toneDeep: C.goldDeep,
+    y: y + h - 30,
+    w: 196,
+    h: 40,
+    kolor: 'czerwony',
+    ikona: ICON.sword,
     depth: 151,
     onClick: () => zatwierdz(),
   });
@@ -134,8 +111,8 @@ export function pokazWyborSkladu(
     karty.forEach((k) => k.rysuj());
     podpis.setText(
       maks === 1
-        ? 'Kliknij stworka, który wychodzi pierwszy — reszta czeka w pokeballach'
-        : `Kliknij dwa stworki na początek (${wybrane.size} z ${maks}) — reszta czeka w pokeballach`
+        ? 'Kliknij stworka, który walczy'
+        : `Kliknij dwa stworki (${wybrane.size} z ${maks}) — reszta drużyny tę walkę przeczeka`
     );
     przycisk.setEnabled(wybrane.size > 0);
   }
@@ -150,8 +127,7 @@ export function pokazWyborSkladu(
     scene.input.keyboard?.off('keydown-ENTER', enter);
     przycisk.destroy();
     warstwa.destroy();
-    // Kolejność na polu = kolejność w drużynie, nie kolejność klikania;
-    // po nich wchodzą pozostali, też w kolejności drużyny.
+    // Kolejność na polu = kolejność w drużynie, nie kolejność klikania.
     gotowe(kandydaci.filter((k) => wybrane.has(k.skad)).map((k) => k.skad));
   }
   return { zatwierdz };

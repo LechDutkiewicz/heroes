@@ -148,20 +148,23 @@ mieście albo kampanii.
   zwykły cios stworka (odwet się nie liczy); `atakDostepny` blokuje ataki
   1 i 2 do tego czasu, pasek pokazuje „po 1. ciosie". Sonda:
   `tools/probe-sklad-walki.ts`.
-- **Ekran walki na zestawie** (uwaga użytkownika: „długo niedotykany i ze
-  starej wersji"). Tło z drewna z belką (`drawBackground`), złota rama
-  planszy (`drawFrame`), cienka ciemna siatka zamiast szklanych kafli,
-  pergamin zamiast mlecznych paneli (`drawPanelBody`), tabliczki z drewna
-  i złota zamiast kapsułek (`makeHudButton`, pasek ataków), tabela karty
-  i prognoza atramentem (Lora), drużyny obu stron pod planszą z portretami
-  (`rysujDruzyny`: złoty pierścień — na polu, szary z gwiazdkami — zemdlony).
-  Nazwa walki na belce (`tytulWalki`), podpis końca po bajkowemu
-  (`podpisKonca`). Heksy większe (promień 54, `SKALA_POLA` skaluje wygląd
-  stworka), sylwetki o 20% większe. Wejście wprost do bitwy czeka na kroje
-  zestawu i restartuje scenę. Ikony fali 1 (`icons.ts`): rękawica, kula
-  energii, bańka, gwiazdki omdlenia, but sportowy — klucze `ICON.*` zostały.
-  Uwaga: maska geometryczna w Phaserze 4 nie przycina obrazka terenu —
-  `drawTerrain` przycina go `setCrop`.
+- **Ekran walki w stylu gier Pokémon** (makieta A, wybór użytkownika:
+  wersja na drewnie i pergaminie „bardziej Heroes niż lore"). Moduły:
+  `visual/stylWalki.ts` (barwy, krój Nunito z `public/walka/` — OFL, pełny
+  polski alfabet; `panelBialy`, `pigulka`, `pokeball`, `tloWalki`,
+  `medalionPokeball`) i `visual/hudWalki.ts` (przycisk-pigułka, kolejka tur
+  w kółkach, tabela karty, prognoza). Belka-pokeball u góry, okienko dialogu
+  z czerwonym ▼ na zdanie o turze, plansza w białej ramie z obrysem tuszem,
+  drużyny pod planszą jako pokeballe z figurkami i paskami życia (odświeżane
+  po ciosie i miksturze), ataki — pomarańczowe pigułki z licznikiem PP,
+  Czekaj niebieski, Broń się zielony. Mapa, miasto i kampania zostają na
+  zestawie z drewna. Stare kapsułki z `hud.ts` usunięte (zostały `mix`,
+  `plate`, `gradientText`, `blinkPanel`). Krój: własna flaga gotowości —
+  `document.fonts.check` mówi „gotowe" dla niezarejestrowanego kroju.
+  Makiety B (Pokédex) i C (anime) w historii rozmowy, nie w repo.
+- Ikony fali 1 (`icons.ts`): rękawica, kula energii, bańka, gwiazdki
+  omdlenia, but sportowy, znak zakazu na mapie. Uwaga: maska geometryczna
+  w Phaserze 4 nie przycina obrazka terenu — `drawTerrain` używa `setCrop`.
 - **Sondy dostosowane** do dwójki trenera i do zasady gatunku: `probe-plecak`,
   `probe-sloty-bitwa`, `probe-zwis`, `probe-przygoda`, `probe-armia`.
   `probe-fx` jest zepsuta od dawna (woła nieistniejące `scene.resolveHit`);

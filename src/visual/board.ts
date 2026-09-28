@@ -14,7 +14,7 @@
 import Phaser from 'phaser';
 import { COLS, ROWS } from '../data/battle';
 import { C, E, T, Z } from './theme';
-import { ramaZlota, tloDrewna } from './zestaw';
+import { TUSZ, panelBialy, tloWalki } from './stylWalki';
 
 // ---------- geometria (nie ruszać — reszta gry na niej stoi) ----------
 // Układ „odd-r": hexy stoją wierzchołkiem do góry, a nieparzyste rzędy są
@@ -162,74 +162,10 @@ function bevel(
 
 // ---------- tło za planszą ----------
 
-/**
- * Tło ma dawać głębię, ale nie kraść uwagi: plansza jest jasna, więc otoczenie
- * schodzi w przygaszony błękit. Czysty granat z poprzedniej wersji wyglądał jak
- * pusty ekran ładowania.
- */
+/** Tło ekranu walki — styl z gier Pokémon (`stylWalki.ts`). */
 export function drawBackground(scene: Phaser.Scene) {
-  const w = scene.scale.width;
-  const h = scene.scale.height;
-  // Zestaw (drewno z belką u góry) — ten sam materiał co mapa, miasto
-  // i kampania. Dawne niebieskie tło z heksowym znakiem wodnym zostaje
-  // tylko na wypadek, gdyby tekstura drewna nie doszła.
-  if (scene.textures.exists('z-drewno')) {
-    tloDrewna(scene).setDepth(Z.sky);
-    const cien = scene.add.graphics().setDepth(Z.sky + 0.1);
-    for (let i = 10; i >= 1; i--) {
-      cien.fillStyle(0x0a0602, 0.035);
-      cien.fillRoundedRect(BOARD_X - 6 - i * 3, BOARD_Y - 4 - i * 2, BOARD_W + 12 + i * 6, BOARD_H + 14 + i * 5, 12 + i * 3);
-    }
-    return;
-  }
-  const g = scene.add.graphics().setDepth(Z.sky);
-
-  const top = mix(C.skyBottom, C.shadow, 0.42);
-  const bottom = mix(C.shadow, C.panelDeep, 0.3);
-  g.fillGradientStyle(top, top, bottom, bottom, 1);
-  g.fillRect(0, 0, w, h);
-
-  // Ukośne smugi światła — w Masters tłem paneli są właśnie takie pasy, dzięki
-  // nim płaszczyzna przestaje być martwa.
-  for (let i = -2; i < 6; i++) {
-    const x = i * 260;
-    g.fillStyle(C.skyTop, 0.035);
-    g.fillPoints(
-      [
-        new Phaser.Math.Vector2(x, 0),
-        new Phaser.Math.Vector2(x + 120, 0),
-        new Phaser.Math.Vector2(x + 120 - h * 0.45, h),
-        new Phaser.Math.Vector2(x - h * 0.45, h),
-      ],
-      true
-    );
-  }
-
-  // Znak wodny z hexów: zapowiada kształt planszy, zanim wzrok na nią spadnie.
-  const wr = 62;
-  const stepX = Math.sqrt(3) * wr;
-  const stepY = wr * 1.5;
-  for (let row = -1; row * stepY < h + wr; row++) {
-    for (let col = -1; col * stepX < w + stepX; col++) {
-      const x = col * stepX + (row & 1 ? stepX / 2 : 0);
-      const y = row * stepY;
-      g.lineStyle(2, C.skyTop, 0.05);
-      g.strokePoints(hexPoints(x, y, wr - 4), true);
-    }
-  }
-
-  // Poświata dokładnie za planszą — plansza ma wyglądać na podświetloną od tyłu,
-  // a nie doklejoną do tła.
-  for (let i = 12; i >= 1; i--) {
-    g.fillStyle(C.skyTop, 0.012);
-    g.fillRoundedRect(
-      BOARD_X - i * 8,
-      BOARD_Y - i * 8,
-      BOARD_W + i * 16,
-      BOARD_H + i * 16,
-      BOARD_RADIUS + i * 7
-    );
-  }
+  // Styl z gier Pokémon (makieta A): jasne tło w kropki i belka-pokeball.
+  tloWalki(scene, Z.sky);
 }
 
 // ---------- podłoże, siatka, rama ----------
@@ -267,17 +203,9 @@ export function drawBoard(scene: Phaser.Scene, terrainKey: string) {
  * z alfą daje twardy kant, a plansza ma sprawiać wrażenie bryły leżącej nad tłem.
  */
 function drawGroundShadow(scene: Phaser.Scene) {
-  const g = scene.add.graphics().setDepth(Z.board);
-  for (let i = 9; i >= 1; i--) {
-    g.fillStyle(C.shadow, 0.05);
-    g.fillRoundedRect(
-      BOARD_X - i * 1.6,
-      BOARD_Y - i * 1.6 + i * 2.6,
-      BOARD_W + i * 3.2,
-      BOARD_H + i * 3.2,
-      BOARD_RADIUS + i * 1.6
-    );
-  }
+  // Plansza w grubej białej ramie z obrysem tuszem — jak ekran w grze Pokémon.
+  const rama = scene.add.graphics().setDepth(Z.board - 0.5);
+  panelBialy(rama, BOARD_X - 10, BOARD_Y - 10, BOARD_W + 20, BOARD_H + 20, 18, { obrys: 4, cien: 5 });
 }
 
 /**
@@ -384,47 +312,10 @@ function drawGrid(scene: Phaser.Scene) {
  * okna, a nie jak brzeg pola bitwy.
  */
 function drawFrame(scene: Phaser.Scene) {
-  // Złota rama z zestawu — ta sama, co wokół mapy przygody i obrazów kampanii.
-  if (scene.textures.exists('z-rama-zlota')) {
-    ramaZlota(scene, BOARD_X, BOARD_Y, BOARD_W, BOARD_H).setDepth(Z.units - 0.1);
-    return;
-  }
-  // Nad podświetleniami, żeby żadne pole nie wylewało się poza krawędź.
-  const g = scene.add.graphics().setDepth(Z.units - 0.1);
-
-  const outer = (inset: number, radius: number) =>
-    g.strokeRoundedRect(BOARD_X + inset, BOARD_Y + inset, BOARD_W - inset * 2, BOARD_H - inset * 2, radius);
-
-  // Rama wychodzi poza planszę tylko o kilka pikseli: wyżej zaczyna się już
-  // wiersz stanu tury, a plansza nie może go przykryć.
-  g.lineStyle(10, mix(C.panelDeep, C.shadow, 0.45), 1);
-  outer(-1, BOARD_RADIUS + 1);
-  g.lineStyle(6, C.goldDeep, 1);
-  outer(0, BOARD_RADIUS);
-  g.lineStyle(3, C.gold, 1);
-  outer(0.5, BOARD_RADIUS);
-  g.lineStyle(1.2, C.goldLight, 0.8);
-  outer(2, BOARD_RADIUS - 1);
-  g.lineStyle(1.2, mix(C.panelDeep, C.shadow, 0.5), 0.6);
-  outer(3.5, BOARD_RADIUS - 2);
-
-  // Ćwieki: małe hexy, bo hex jest tu motywem przewodnim.
-  const studs = [
-    [BOARD_X, BOARD_Y],
-    [BOARD_X + BOARD_W, BOARD_Y],
-    [BOARD_X, BOARD_Y + BOARD_H],
-    [BOARD_X + BOARD_W, BOARD_Y + BOARD_H],
-    [BOARD_X + BOARD_W / 2, BOARD_Y],
-    [BOARD_X + BOARD_W / 2, BOARD_Y + BOARD_H],
-  ];
-  for (const [x, y] of studs) {
-    g.fillStyle(C.goldDeep, 1);
-    g.fillPoints(hexPoints(x, y, 8), true);
-    g.fillStyle(C.gold, 1);
-    g.fillPoints(hexPoints(x, y, 6), true);
-    g.fillStyle(C.goldLight, 0.9);
-    g.fillPoints(hexPoints(x, y - 0.5, 3), true);
-  }
+  // Obrys tuszem na krawędzi pola — wnętrze białej ramy (`drawGroundShadow`).
+  const obrys = scene.add.graphics().setDepth(Z.units - 0.1);
+  obrys.lineStyle(3, TUSZ, 1);
+  obrys.strokeRoundedRect(BOARD_X - 1.5, BOARD_Y - 1.5, BOARD_W + 3, BOARD_H + 3, 10);
 }
 
 // ---------- podświetlenia pól ----------
