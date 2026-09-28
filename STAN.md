@@ -143,6 +143,14 @@ mieście albo kampanii.
   więcej. `naPoluPrzeciw(obiekt)` w `mapa.ts` — limit przeciwnika, ten sam
   dla sceny, AI i autopilota; `jednostkiBitwy(lista, maks)`. Stada dzikich
   najwyżej 3 (`MAKS_STADA`). Wersja z wymianą (#17) była w grze jeden dzień.
+- **Słabe stada dzikich w parach** (uwaga z gry: pierwsze walki misji 1
+  banalne — pojedynczy dziki na 1. poziomie). `plansza.ts` `STRAZE`:
+  `ileMin` i `poziomMin` na klasę straży; słabe stado (poniżej
+  `POZIOM_SILNEGO_STADA` = 8) dostaje towarzyszy i podłogę poziomu z losowym
+  +0/+1 — w misji 1 pary na 2.–3. poziomie. Pomiar par 5. poziomu: dobra
+  dwójka wygrywa z ok. 60% życia, najkruchsza (Pyroko + Flamir) ok. co drugi
+  raz. Silne pojedyncze stada (12.–18. poziom) zostają bez zmian — pilnują
+  przejść na później.
 - **Ładowanie ataków specjalnych** (uwaga: drugi atak od pierwszej tury
   robił z wczesnych walk formalność). `SimUnit.naladowany` — ustawia go
   zwykły cios stworka (odwet się nie liczy); `atakDostepny` blokuje ataki
