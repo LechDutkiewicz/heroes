@@ -254,6 +254,13 @@ mieście albo kampanii.
   `styl: 'walka'`, rezerwaty na białych płytkach. Lista budowy: opis nie
   wchodzi już pod ceny (Nunito jest szerszy od Lory — schodzi o piksel,
   potem łamie). Ślepe porównanie: nowe miasto wygrywa we wszystkich 4.
+- **Okna mapy z obrazkami** (uwaga użytkownika). Awans: karta z malowaną
+  ikoną umiejętności (`bh-umiejetnosc-*`, jak na ekranie trenera). Skrzynia:
+  obrazek skrzyni i dwie karty z ikoną nagrody (pokeball / gwiazda
+  doświadczenia) i przyciskiem „Biorę". Znaleziony artefakt (luzem, ze
+  skrzyni, z chaty/wozu): okno `oknoArtefaktu` z obrazkiem, klasą i tym,
+  co daje — zamiast ulotnego napisu nad mapą. Mapa wczytuje `bh-artefakt-*`
+  i `bh-umiejetnosc-*` w `preload`.
 - **Plan dalej**: styl A (ekran walki) na mapę, bohatera, miasto
   i kampanię — użytkownik zauważył, że drewno i pergamin odstają od walki;
   potem fale 3–4 z `PROJEKT-SWIAT.md`.

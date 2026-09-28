@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { kluczPortretuPanelu, spriteDoPortretow, wczytajPortrety } from '../visual/portrety';
 import { ZESTAWY_KLIMATU } from '../data/zestawy-klimatu';
 import {
+  ARTEFAKTY,
   BUDOWLE,
   SUROWCE,
   SUROWIEC_INFO,
@@ -86,6 +87,7 @@ import {
   opisWartosci,
   POZIOMY,
   przyznaj,
+  UMIEJETNOSCI,
   umiejetnoscPoId,
 } from '../data/umiejetnosci';
 import { C, E, Z } from '../visual/theme';
@@ -576,8 +578,17 @@ export class AdventureScene extends Phaser.Scene {
     const b = import.meta.env.BASE_URL;
     // Malowane ikony statystyk trenera w panelu (Zapał, Opieka, ruch) — te
     // same klucze, co na ekranie bohatera i kampanii.
-    for (const n of ['zapal', 'opieka', 'buty']) {
+    for (const n of ['zapal', 'opieka', 'buty', 'gwiazda']) {
       if (!this.textures.exists(`k-ikona-${n}`)) this.load.image(`k-ikona-${n}`, `${b}kampania/ikona-${n}.png`);
+    }
+    // Malowane artefakty i umiejętności z ekranu bohatera — do okien
+    // znalezionego artefaktu i awansu (te same klucze co w `HeroScene`).
+    for (const a of ARTEFAKTY) {
+      if (!this.textures.exists(`bh-artefakt-${a.id}`)) this.load.image(`bh-artefakt-${a.id}`, `${b}bohater/artefakt-${a.id}.png`);
+    }
+    for (const u of UMIEJETNOSCI) {
+      if (!this.textures.exists(`bh-umiejetnosc-${u.id}`))
+        this.load.image(`bh-umiejetnosc-${u.id}`, `${b}bohater/umiejetnosc-${u.id}.png`);
     }
     // Tło zależy od planszy, a klucze tekstur zostają te same (`plansza-0`,
     // `woda-maska`) — sięga po nie kilka miejsc sceny i shader wody. Phaser
@@ -4534,6 +4545,7 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   private wejdzNa(o: Obiekt) {
+    const artefaktyPrzed = [...this.stan.bohater.artefakty];
     const wynik = odwiedz(this.stan, o);
     zapisz('mapa', `wejście na obiekt: ${o.nazwa}`, {
       id: o.id,
@@ -4558,7 +4570,11 @@ export class AdventureScene extends Phaser.Scene {
     // Wieża obserwacyjna odsłania mgłę bez ruchu bohatera, więc trzeba ją
     // przemalować tutaj — pętla ruchu robi to tylko po każdym kroku.
     if (wynik.odkryto) this.malujMgle();
-    if (wynik.opis) this.napisUlotny(wynik.opis);
+    // Znaleziony artefakt dostaje własne okno z obrazkiem i tym, co daje —
+    // zamiast ulotnego napisu nad mapą, który łatwo przegapić.
+    const nowyArtefakt = this.stan.bohater.artefakty.find((id) => !artefaktyPrzed.includes(id));
+    if (nowyArtefakt) this.oknoArtefaktu(nowyArtefakt, o.rodzaj === 'skrzynia' ? 'W skrzyni był artefakt!' : undefined);
+    else if (wynik.opis) this.napisUlotny(wynik.opis);
     if (wynik.przenies) this.przeniesBohatera(wynik.przenies.x, wynik.przenies.y);
     if (o.zebrany) {
       sfx(this, 'zbior');
@@ -4606,8 +4622,8 @@ export class AdventureScene extends Phaser.Scene {
    */
   private zapytajOSkrzynie(w: WyborSkrzyni) {
     this.zajety = true;
-    const szer = 380;
-    const wys = 176;
+    const szer = 460;
+    const wys = 330;
     const cx = this.mapaX + this.oknoW / 2;
     const cy = this.mapaY + this.oknoH / 2;
     // Okno nie należy ani do planszy (jechałoby razem z mapą), ani do HUD-u
@@ -4615,12 +4631,11 @@ export class AdventureScene extends Phaser.Scene {
     // Wszystko, co przybyło na liście sceny od tej chwili, jest oknem.
     const nowe = this.znacznik();
     this.oknoPergaminu(cx, cy, szer, wys);
+    const gora = cy - wys / 2;
+    const skrzynia = this.add.image(cx, gora + 44, 'm-skrzynia').setDepth(Z.overlay + 2);
+    skrzynia.setScale(64 / Math.max(skrzynia.width, skrzynia.height));
     this.add
-      .text(cx, cy - wys / 2 + 30, 'Skrzynia!', stylEtykiety(26))
-      .setOrigin(0.5)
-      .setDepth(Z.overlay + 2);
-    this.add
-      .text(cx, cy - wys / 2 + 62, 'Co wolisz?', stylAtramentu(17))
+      .text(cx, gora + 92, 'Skrzynia! Co wolisz?', stylEtykiety(22))
       .setOrigin(0.5)
       .setDepth(Z.overlay + 2);
 
@@ -4633,10 +4648,105 @@ export class AdventureScene extends Phaser.Scene {
       this.zajety = false;
       this.odswiezWszystko();
     };
-    // Dwie równorzędne odpowiedzi — obie drewniane; złota tabliczka
-    // podpowiadałaby, że jedna jest „tą właściwą".
-    this.guzikOkna(cx - 86, cy + 36, 160, `${w.pokeballe} pokeballi`, () => zamknij('pokeballe'));
-    this.guzikOkna(cx + 86, cy + 36, 160, `${w.doswiadczenie} dośw.`, () => zamknij('doswiadczenie'));
+    // Dwie równorzędne karty z obrazkiem nagrody — obie z białą pigułką;
+    // czerwona podpowiadałaby, że jedna jest „tą właściwą".
+    const kartaW = 180;
+    const kartaH = 150;
+    const kartaY = gora + 114;
+    const karty: Array<{ ikona: string; ile: number; napis: string; co: 'pokeballe' | 'doswiadczenie' }> = [
+      { ikona: `m-${SUROWIEC_INFO.pokeball.ikona}`, ile: w.pokeballe, napis: 'pokeballi', co: 'pokeballe' },
+      { ikona: 'k-ikona-gwiazda', ile: w.doswiadczenie, napis: 'doświadczenia', co: 'doswiadczenie' },
+    ];
+    karty.forEach((k, i) => {
+      const kx = cx + (i - 0.5) * (kartaW + 24) - kartaW / 2;
+      const g = this.add.graphics().setDepth(Z.overlay + 2);
+      panelBialy(g, kx, kartaY, kartaW, kartaH, 14, { obrys: 3, cien: 3, wypelnienie: 0xf4f8fd });
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(kx + kartaW / 2, kartaY + 46, 34);
+      const im = this.add.image(kx + kartaW / 2, kartaY + 46, k.ikona).setDepth(Z.overlay + 3);
+      im.setScale(52 / Math.max(im.width, im.height));
+      this.add
+        .text(kx + kartaW / 2, kartaY + 100, String(k.ile), stylEtykiety(28))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      this.add
+        .text(kx + kartaW / 2, kartaY + 128, k.napis, stylAtramentu(14, 'miekki'))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      this.add
+        .zone(kx, kartaY, kartaW, kartaH)
+        .setOrigin(0)
+        .setDepth(Z.overlay + 4)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => zamknij(k.co));
+      this.guzikOkna(kx + kartaW / 2, gora + wys - 34, kartaW, 'Biorę', () => zamknij(k.co));
+    });
+    this.naWierzchu(...nowe());
+  }
+
+  /**
+   * Znaleziony artefakt: obrazek, nazwa i co daje. Okno zatrzymuje grę na
+   * chwilę, bo artefakt to nagroda na zawsze — ulotny napis nad mapą
+   * znikał, zanim dziecko zdążyło go przeczytać.
+   */
+  private oknoArtefaktu(id: string, naglowek?: string) {
+    const a = artefaktPoId(id);
+    if (!a) return;
+    this.zajety = true;
+    sfx(this, 'awans');
+    const szer = 400;
+    const wys = 340;
+    const cx = this.mapaX + this.oknoW / 2;
+    const cy = this.mapaY + this.oknoH / 2;
+    const gora = cy - wys / 2;
+    const nowe = this.znacznik();
+    this.oknoPergaminu(cx, cy, szer, wys);
+    wstazka(this, cx, gora + 28, naglowek ?? (a.klasa === 'misja' ? 'CEL MISJI' : 'NOWY ARTEFAKT')).setDepth(Z.overlay + 2);
+    const g = this.add.graphics().setDepth(Z.overlay + 2);
+    g.fillStyle(TUSZ, 1);
+    g.fillCircle(cx, gora + 108, 52);
+    g.fillStyle(0xeaf4ff, 1);
+    g.fillCircle(cx, gora + 108, 48);
+    g.fillStyle(0xffffff, 0.6);
+    g.fillCircle(cx, gora + 94, 28);
+    const im = this.add.image(cx, gora + 108, `bh-artefakt-${a.id}`).setDepth(Z.overlay + 3);
+    im.setScale(76 / Math.max(im.width, im.height)).setAlpha(0);
+    this.tweens.add({ targets: im, alpha: 1, scale: { from: im.scale * 0.6, to: im.scale }, duration: 360, ease: E.out });
+    this.add
+      .text(cx, gora + 180, a.nazwa, stylEtykiety(22))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    const klasa = { drobny: 'artefakt drobny', znaczny: 'artefakt znaczny', relikt: 'relikt', misja: 'cel misji' }[a.klasa];
+    this.add
+      .text(cx, gora + 204, klasa, stylAtramentu(13, 'miekki'))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    const co = [
+      a.atak ? `+${a.atak} zapału` : '',
+      a.obrona ? `+${a.obrona} opieki` : '',
+      a.ruch ? `+${a.ruch} ruchu na dzień` : '',
+    ].filter(Boolean);
+    this.add
+      .text(
+        cx,
+        gora + 236,
+        a.klasa === 'misja' ? 'Zanieś go tam, dokąd każe misja.' : co.length ? co.join('   ·   ') : 'Trener nosi go na szczęście.',
+        stylEtykiety(17, a.klasa === 'misja' ? BARWA.atrament : BARWA.atramentZielony)
+      )
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    this.add
+      .text(cx, gora + 264, 'Działa, dopóki trener go nosi.', {
+        ...stylAtramentu(12, 'miekki', szer - 60),
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    this.guzikOkna(cx, gora + wys - 34, 200, 'Super!', () => {
+      this.zamknijOkno(nowe());
+      this.zajety = false;
+      this.odswiezWszystko();
+    }, true);
     this.naWierzchu(...nowe());
   }
 
@@ -4729,14 +4839,17 @@ export class AdventureScene extends Phaser.Scene {
       .setDepth(Z.overlay + 2);
 
     const zamknij = (klucz: string) => {
+      const artefaktyPrzed = [...this.stan.bohater.artefakty];
       const opis = odpowiedzNaPytanie(this.stan, p, klucz);
       this.zamknijOkno(nowe());
       if (p.obiekt.zebrany) {
         sfx(this, 'zbior');
         this.znikaj(p.obiekt);
       }
-      if (opis) this.napisUlotny(opis);
       this.zajety = false;
+      const nowyArtefakt = this.stan.bohater.artefakty.find((id) => !artefaktyPrzed.includes(id));
+      if (nowyArtefakt) this.oknoArtefaktu(nowyArtefakt);
+      else if (opis) this.napisUlotny(opis);
       this.odswiezWszystko();
     };
 
@@ -4812,7 +4925,7 @@ export class AdventureScene extends Phaser.Scene {
     const oferty = ofertaAwansu(this.stan.bohater, (n) => Phaser.Math.RND.between(0, n - 1));
 
     const szer = 560;
-    const wys = oferty.length ? 336 : 200;
+    const wys = oferty.length ? 382 : 200;
     const cx = MARGINES + this.oknoW / 2;
     const cy = GORA + this.oknoH / 2;
     const nowe = this.znacznik();
@@ -4854,8 +4967,8 @@ export class AdventureScene extends Phaser.Scene {
       .setDepth(Z.overlay + 2);
 
     const kartaW = 236;
-    const kartaH = 156;
-    const kartaY = cy - wys / 2 + 106;
+    const kartaH = 196;
+    const kartaY = cy - wys / 2 + 112;
     oferty.forEach((oferta, i) => {
       const u = umiejetnoscPoId(oferta.id)!;
       const kx = cx + (i - (oferty.length - 1) / 2) * (kartaW + 20) - kartaW / 2;
@@ -4871,23 +4984,30 @@ export class AdventureScene extends Phaser.Scene {
       const zw = znak.width + 26;
       pigulka(g, kx + kartaW / 2 - zw / 2, kartaY - 11, zw, 24, oferta.nowa ? 'czerwony' : 'zielony');
       napisNaPigulce(znak, oferta.nowa ? 'czerwony' : 'zielony');
+      // Malowana ikona umiejętności — ta sama co na ekranie trenera.
+      g.fillStyle(TUSZ, 1);
+      g.fillCircle(kx + kartaW / 2, kartaY + 42, 27);
+      g.fillStyle(0xeaf4ff, 1);
+      g.fillCircle(kx + kartaW / 2, kartaY + 42, 24);
+      const ikona = this.add.image(kx + kartaW / 2, kartaY + 42, `bh-umiejetnosc-${u.id}`).setDepth(Z.overlay + 3);
+      ikona.setScale(40 / Math.max(ikona.width, ikona.height));
       this.add
-        .text(kx + kartaW / 2, kartaY + 34, u.nazwa, stylEtykiety(20, BARWA.atrament))
+        .text(kx + kartaW / 2, kartaY + 76, u.nazwa, stylEtykiety(20, BARWA.atrament))
         .setOrigin(0.5)
         .setDepth(Z.overlay + 3);
       this.add
-        .text(kx + kartaW / 2, kartaY + 56, POZIOMY[oferta.poziom - 1], {
+        .text(kx + kartaW / 2, kartaY + 98, POZIOMY[oferta.poziom - 1], {
           ...stylAtramentu(13, 'miekki'),
           fontFamily: KROJ.kursywa,
         })
         .setOrigin(0.5)
         .setDepth(Z.overlay + 3);
       this.add
-        .text(kx + kartaW / 2, kartaY + 80, opisWartosci(u, oferta.poziom), stylEtykiety(18, BARWA.atramentZielony))
+        .text(kx + kartaW / 2, kartaY + 122, opisWartosci(u, oferta.poziom), stylEtykiety(18, BARWA.atramentZielony))
         .setOrigin(0.5)
         .setDepth(Z.overlay + 3);
       this.add
-        .text(kx + kartaW / 2, kartaY + 120, u.opis, { ...stylAtramentu(13, 'zwykly', kartaW - 24), align: 'center' })
+        .text(kx + kartaW / 2, kartaY + 162, u.opis, { ...stylAtramentu(13, 'zwykly', kartaW - 24), align: 'center' })
         .setOrigin(0.5)
         .setDepth(Z.overlay + 3);
       // Dwie karty to dwie równorzędne decyzje — obie tabliczki drewniane.
