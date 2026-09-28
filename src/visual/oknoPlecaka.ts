@@ -8,9 +8,7 @@
  */
 import Phaser from 'phaser';
 import { PRZEDMIOTY, type Przedmiot } from '../data/przedmioty';
-import { drawPanelBody, mix, plate } from './hud';
-import { C, H, body } from './theme';
-import { BARWA, KROJ } from './zestaw';
+import { TUSZ, TUSZ_CSS, panelBialy, stylWalki } from './stylWalki';
 
 export interface WierszPlecaka {
   co: Przedmiot;
@@ -40,7 +38,9 @@ export function pokazPlecak(
     .setInteractive();
   tlo.on('pointerdown', () => zamknij());
   warstwa.add(tlo);
-  drawPanelBody(scene, x, y, W, H_, 6, warstwa);
+  const tloOkna = scene.add.graphics();
+  panelBialy(tloOkna, x, y, W, H_, 18, { obrys: 4, cien: 5 });
+  warstwa.add(tloOkna);
 
   wiersze.forEach((w, i) => {
     const ry = y + 14 + i * (RH + 6);
@@ -48,58 +48,23 @@ export function pokazPlecak(
     const rw = W - 24;
     const g = scene.add.graphics();
     const wolno = w.blokada === null;
-    const zestaw = scene.textures.exists('z-pergamin');
+    // Wiersz jak przycisk z gry: biały z obrysem, pod kursorem żółty.
     const rysuj = (nad: boolean) => {
       g.clear();
-      if (zestaw) {
-        // Wiersz na pergaminie: ciemniejszy pas z brązową kreską; pod kursorem złoci się.
-        g.fillStyle(nad ? 0xf0cf7a : BARWA.papierCiemny, wolno ? (nad ? 0.9 : 0.7) : 0.4);
-        g.fillRoundedRect(rx, ry, rw, RH, 10);
-        g.lineStyle(1.2, BARWA.kreska, wolno ? 0.7 : 0.35);
-        g.strokeRoundedRect(rx, ry, rw, RH, 10);
-        return;
-      }
-      plate(
-        g,
-        rx,
-        ry,
-        rw,
-        RH,
-        14,
-        wolno ? (nad ? mix(C.gold, C.white, 0.2) : mix(C.panel, C.gold, 0.35)) : mix(C.panel, C.inkSoft, 0.3),
-        wolno ? C.goldDeep : C.panelEdge,
-        { light: 0.26, dark: 0.22, gloss: wolno ? 0.28 : 0.1, drop: wolno ? 2 : 0 }
-      );
+      g.fillStyle(wolno ? TUSZ : 0xb9c0c9, 1);
+      g.fillRoundedRect(rx, ry, rw, RH, 12);
+      g.fillStyle(!wolno ? 0xeef1f5 : nad ? 0xffe27a : 0xffffff, 1);
+      g.fillRoundedRect(rx + 2.5, ry + 2.5, rw - 5, RH - 5, 10);
     };
     rysuj(false);
     const obraz = scene.add.image(rx + 28, ry + RH / 2, w.tekstura);
     obraz.setScale(Math.min(40 / obraz.width, 40 / obraz.height)).setAlpha(wolno ? 1 : 0.5);
     const nazwa = scene.add
-      .text(
-        rx + 56,
-        ry + 16,
-        PRZEDMIOTY[w.co].nazwa,
-        zestaw ? { fontFamily: KROJ.tytul, fontSize: '16px', color: BARWA.atrament } : { ...body(16, H.ink), fontStyle: 'bold' }
-      )
-      .setOrigin(0, 0.5)
-      .setAlpha(wolno ? 1 : 0.7);
-    const ile = scene.add
-      .text(
-        rx + rw - 12,
-        ry + 16,
-        w.ile,
-        zestaw ? { fontFamily: KROJ.tekst, fontSize: '14px', color: BARWA.atrament, fontStyle: 'bold' } : { ...body(14, H.ink), fontStyle: 'bold' }
-      )
-      .setOrigin(1, 0.5);
+      .text(rx + 56, ry + 16, PRZEDMIOTY[w.co].nazwa, stylWalki(16, wolno ? TUSZ_CSS : '#8b93a0'))
+      .setOrigin(0, 0.5);
+    const ile = scene.add.text(rx + rw - 12, ry + 16, w.ile, stylWalki(14, wolno ? TUSZ_CSS : '#8b93a0')).setOrigin(1, 0.5);
     const opis = scene.add
-      .text(
-        rx + 56,
-        ry + 37,
-        w.blokada ?? PRZEDMIOTY[w.co].opis,
-        zestaw
-          ? { fontFamily: KROJ.kursywa, fontSize: '12px', color: wolno ? BARWA.atramentMiekki : BARWA.atramentCzerwony }
-          : body(12, wolno ? H.inkSoft : '#b32d3f')
-      )
+      .text(rx + 56, ry + 37, w.blokada ?? PRZEDMIOTY[w.co].opis, stylWalki(12, wolno ? '#5b6270' : '#c0280c', 800))
       .setOrigin(0, 0.5);
     if (opis.width > rw - 66) opis.setScale((rw - 66) / opis.width);
     const strefa = scene.add.zone(rx + rw / 2, ry + RH / 2, rw, RH).setInteractive({ useHandCursor: wolno });

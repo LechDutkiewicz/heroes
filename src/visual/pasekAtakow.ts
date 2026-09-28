@@ -7,14 +7,17 @@
  * jak w pokemonach: najpierw atak, potem cel.
  *
  * Trzeci przycisk jest zawsze — zanim stworek ewoluuje, zablokowany
- * z podpisem „po ewolucji". Dziecko widzi, że jest o co grać.
+ * z podpisem „po ewolucji". Dziecko widzi, że jest o co grać. Specjalne
+ * przed pierwszym zwykłym ciosem są zablokowane z podpisem „po 1. ciosie".
+ *
+ * Wygląd: pomarańczowe pigułki z numerem w kółku i licznikiem PP, wybrany
+ * atak w żółtym pierścieniu, zablokowany — szary (`stylWalki.ts`).
  */
 import Phaser from 'phaser';
 import { atakiStworka, nazwaTrzeciego } from '../data/ataki';
 import type { UnitDef } from '../data/units';
-import { mix, plate, stylNaDrewnie } from './hud';
-import { KROJ } from './zestaw';
-import { C, H, body } from './theme';
+import { numerWKolku } from './hudWalki';
+import { TUSZ, TUSZ_CSS, napisNaPigulce, pigulka, stylWalki } from './stylWalki';
 
 export interface PasekAtakow {
   /**
@@ -26,7 +29,7 @@ export interface PasekAtakow {
 }
 
 const ILE = 3;
-const ODSTEP = 6;
+const ODSTEP = 10;
 
 export function createPasekAtakow(
   scene: Phaser.Scene,
@@ -40,94 +43,48 @@ export function createPasekAtakow(
   const cw = (w - ODSTEP * (ILE - 1)) / ILE;
   const y = cy - h / 2;
 
-  // Na zestawie ataki to tabliczki: złota — wybrany, drewniana — gotowy,
-  // wyblakła — bez PP albo przed ewolucją.
-  const zestaw = scene.textures.exists('z-tabliczka-drewno');
   const przyciski = Array.from({ length: ILE }, (_, i) => {
     const px = x + i * (cw + ODSTEP);
     const g = scene.add.graphics();
-    const tabliczka = (klucz: string) =>
-      scene.add
-        .nineslice(px + cw / 2, cy, klucz, undefined, cw * 2, h * 2, 40, 40, 30, 30)
-        .setScale(0.5)
-        .setOrigin(0.5)
-        .setVisible(false);
-    const skory = zestaw
-      ? {
-          wybrany: tabliczka('z-tabliczka-zloto'),
-          gotowy: tabliczka('z-tabliczka-drewno'),
-          // Wyblakła drewniana, nie szara „-wyl" — ciemny łupek odstawał od reszty paska.
-          pusty: tabliczka('z-tabliczka-drewno').setAlpha(0.5),
-        }
-      : undefined;
-    if (skory) kontener.add(Object.values(skory));
-    const znak = scene.add.graphics();
-    const cyfra = scene.add
-      .text(px + 14, cy, String(i + 1), { ...body(13, H.white), fontStyle: 'bold' })
-      .setOrigin(0.5);
-    const nazwa = scene.add
-      .text(px + 28, cy, '', { ...body(14, H.ink), fontStyle: 'bold' })
-      .setOrigin(0, 0.5);
-    const pp = scene.add.text(px + cw - 10, cy, '', { ...body(12, H.inkSoft), fontStyle: 'bold' }).setOrigin(1, 0.5);
+    const [kolko, cyfra] = numerWKolku(scene, px + 17, cy, String(i + 1));
+    const nazwa = scene.add.text(px + 33, cy - 1, '', stylWalki(14)).setOrigin(0, 0.5);
+    const odznaka = scene.add.graphics();
+    const pp = scene.add.text(px + cw - 14, cy, '', stylWalki(12, TUSZ_CSS)).setOrigin(1, 0.5);
     const strefa = scene.add.zone(px + cw / 2, cy, cw, h).setInteractive({ useHandCursor: true });
     let aktywny = false;
     strefa.on('pointerdown', () => {
       if (aktywny) onPick(i);
     });
-    kontener.add([g, znak, cyfra, nazwa, pp, strefa]);
+    kontener.add([g, kolko, cyfra, nazwa, odznaka, pp, strefa]);
     return {
-      px,
       rysuj(stan: 'wybrany' | 'gotowy' | 'pusty' | 'zablokowany', tNazwa: string, tPp: string) {
         aktywny = stan === 'gotowy' || stan === 'wybrany';
         strefa.input!.cursor = aktywny ? 'pointer' : 'default';
-        if (skory) {
-          g.clear();
-          znak.clear();
-          skory.wybrany.setVisible(stan === 'wybrany');
-          skory.gotowy.setVisible(stan === 'gotowy');
-          skory.pusty.setVisible(stan === 'pusty' || stan === 'zablokowany');
-          const zloto = stan === 'wybrany';
-          const blady = stan === 'pusty' || stan === 'zablokowany';
-          const styl = zloto
-            ? { fontFamily: KROJ.tytul, fontSize: '14px', color: '#3b1f08', stroke: '#000', strokeThickness: 0 }
-            : stylNaDrewnie(14);
-          cyfra.setStyle({ ...styl, fontSize: '13px' }).setAlpha(blady ? 0.5 : 0.85);
-          nazwa.setStyle(styl).setAlpha(blady ? 0.55 : 1);
-          pp.setStyle({ ...styl, fontSize: '12px' }).setAlpha(blady ? 0.6 : 0.9);
-          if (stan === 'pusty') pp.setColor('#ffb4a0');
-          nazwa.setText(stan === 'zablokowany' ? `${tNazwa}\n${tPp}` : tNazwa).setLineSpacing(-3);
-          pp.setText(stan === 'zablokowany' ? '' : tPp);
-          const miejsce = cw - 28 - pp.width - 14;
-          const skala = Math.min(stan === 'zablokowany' ? 0.78 : 1, miejsce / nazwa.width, (h - 6) / nazwa.height);
-          nazwa.setScale(Math.max(0.55, skala));
-          return;
-        }
-        const fill =
-          stan === 'wybrany' ? C.gold : stan === 'gotowy' ? mix(C.panel, C.ally, 0.12) : mix(C.panel, C.inkSoft, 0.35);
-        const edge = stan === 'wybrany' ? C.goldDeep : stan === 'gotowy' ? C.allyDeep : mix(C.inkSoft, C.shadow, 0.3);
-        g.clear();
-        plate(g, px, y, cw, h, h / 2, fill, edge, {
-          light: 0.3,
-          dark: 0.26,
-          gloss: stan === 'wybrany' ? 0.36 : 0.2,
-          drop: stan === 'wybrany' ? 3 : 1,
-        });
-        znak.clear();
-        znak.fillStyle(stan === 'wybrany' ? C.goldDeep : stan === 'gotowy' ? C.allyDeep : C.inkSoft, 1);
-        znak.fillCircle(px + 14, cy, 9);
         const blady = stan === 'pusty' || stan === 'zablokowany';
-        nazwa.setText(tNazwa).setColor(blady ? H.inkSoft : H.ink).setAlpha(blady ? 0.8 : 1).setScale(1);
-        pp.setText(tPp).setColor(stan === 'pusty' ? '#b32d3f' : H.inkSoft);
-        if (stan === 'zablokowany') {
-          // Nazwa i „po ewolucji" w dwóch wierszach — w jednym nachodziły na siebie.
-          nazwa.setText(`${tNazwa}\n${tPp}`).setLineSpacing(-2);
-          pp.setText('');
-        } else {
-          nazwa.setLineSpacing(0);
+        g.clear();
+        pigulka(g, px, y, cw, h, blady ? 'szary' : 'pomaranczowy', { wybrana: stan === 'wybrany', r: 12 });
+        kolko.clear();
+        kolko.fillStyle(blady ? 0x8b93a0 : TUSZ, 1);
+        kolko.fillCircle(px + 17, cy, 11);
+        kolko.fillStyle(0xffffff, 1);
+        kolko.fillCircle(px + 17, cy, 9);
+        cyfra.setColor(blady ? '#8b93a0' : TUSZ_CSS);
+        napisNaPigulce(nazwa, blady ? 'szary' : 'pomaranczowy');
+        nazwa.setScale(1).setFontSize(stan === 'zablokowany' ? 12 : 14).setLineSpacing(-4);
+        nazwa.setText(stan === 'zablokowany' ? `${tNazwa}\n${tPp}` : tNazwa);
+        // Licznik PP w białej odznace po prawej.
+        odznaka.clear();
+        pp.setText(stan === 'zablokowany' ? '' : tPp).setColor(stan === 'pusty' ? '#c0280c' : TUSZ_CSS);
+        if (pp.text) {
+          const ow = Math.max(24, pp.width + 12);
+          odznaka.fillStyle(blady ? 0x8b93a0 : TUSZ, 1);
+          odznaka.fillRoundedRect(px + cw - 8 - ow, cy - 11, ow, 22, 8);
+          odznaka.fillStyle(0xffffff, 1);
+          odznaka.fillRoundedRect(px + cw - 6 - ow, cy - 9, ow - 4, 18, 6);
+          pp.setX(px + cw - 8 - ow / 2).setOrigin(0.5, 0.5);
         }
-        const miejsce = cw - 28 - pp.width - 14;
-        const skala = Math.min(stan === 'zablokowany' ? 0.8 : 1, miejsce / nazwa.width, (h - 4) / nazwa.height);
-        nazwa.setScale(Math.max(0.6, skala));
+        const miejsce = cw - 33 - (pp.text ? pp.width + 26 : 10);
+        if (nazwa.width > miejsce) nazwa.setScale(Math.max(0.6, miejsce / nazwa.width));
       },
     };
   });
