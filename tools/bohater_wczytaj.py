@@ -47,6 +47,10 @@ CEL = KORZEN / 'public' / 'mapa'
 #: poprawka animacji trafiałaby za każdym razem w jeden z trzech.
 POSTACIE = {'bohater': 'bohater', 'bohaterka': 'bohaterka', 'wrog': 'wrog'}
 
+#: Wsady, w których model narysował profil `-prawo` patrzący W LEWO (Janek
+#: i Ela). Bez odbicia trener szedł w bok tyłem — zgłoszone z rozgrywki.
+PROFIL_W_LEWO = {'bohater', 'bohaterka'}
+
 #: Bok jednej klatki. Musi zgadzać się z `BOHATER_KLATKA` w `AdventureScene`.
 KLATKA = 96
 
@@ -120,6 +124,8 @@ if __name__ == '__main__':
             print(f'  {przedrostek} — brak wsadu, pomijam')
             continue
         zrodla = {k: wczytaj(f'{przedrostek}-{k}') for k in ('dol', 'gora', 'prawo')}
+        if przedrostek in PROFIL_W_LEWO:
+            zrodla['prawo'] = zrodla['prawo'].transpose(Image.FLIP_LEFT_RIGHT)
         zrodla['lewo'] = zrodla['prawo'].transpose(Image.FLIP_LEFT_RIGHT)
 
         arkusz = Image.new('RGBA', (KLATKA * 4, KLATKA * len(WIERSZE)), (0, 0, 0, 0))

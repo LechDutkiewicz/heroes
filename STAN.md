@@ -2,6 +2,22 @@
 
 Ostatnia aktualizacja: 2026-09-27 (trener zamiast armii: stworek = postać z poziomem, 4 na polu bitwy, trening i Centrum Pokemon).
 
+## Uwagi z rozgrywki misji 1 (2026-09-28)
+
+**Trener chodził w bok tyłem.** Wsady `bohater-prawo.png` i `bohaterka-prawo.png`
+model narysował z profilem patrzącym w LEWO, a `bohater_wczytaj.py` robił
+z nich „prawo" i lustrem „lewo". Poprawka w skrypcie (`PROFIL_W_LEWO`),
+arkusze przebudowane; `wrog-prawo.png` był dobry i zostaje.
+
+**Lider sali wystawiał trzy stworki.** `naPoluPrzeciw` dawało zamkowi
+`NA_POLU_DZIKIE` (3), choć komentarz w AdventureScene mówił „sale i miasta:
+dwa na dwa". Teraz zamek = walka trenerów = 2 na polu (scena, AI
+`wrog-ai.ts`, autopilot). Skutek w symulacji: misja 1 — fort pada dnia 23
+zamiast 30; misje 2–4 bez zmiany progów, wszystkie OK.
+
+**Przeciwnik nie wychodzi z wioski w misji 1** — to nie błąd: Polana ma
+`wrog: 'obronca'` (`tools/mapy/polana.py`), samouczek bez napadu na gracza.
+
 ## Menu główne w stylu gier Pokémon (2026-09-28)
 
 **Co jest.** Ekran tytułowy zamiast baśniowej wioski z drogowskazem: tło to
