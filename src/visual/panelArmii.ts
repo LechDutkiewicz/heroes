@@ -451,7 +451,7 @@ export class PanelArmii {
     pigulka(s.plakietka, px, py, pw, ph, o.omdlaly ? 'szary' : 'niebieski', { r: ph / 2, cien: false });
     s.licznik.setOrigin(0.5).setPosition(px + pw / 2, py + ph / 2 - 1);
     // Pokeball w rogu: ten stworek zaczyna walkę.
-    if (doBitwy) pokeball(s.plakietka, 11, 11, 8);
+    if (doBitwy) pokeball(s.plakietka, 13, 13, 7);
   }
 
   /**
