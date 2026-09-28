@@ -239,21 +239,21 @@ export interface Budowla {
 export const BUDOWLE: Record<string, Budowla> = {
   'oboz-treningowy': {
     nazwa: 'Obóz Treningowy',
-    opis: `+${BUDOWLA_STATYSTYKA} do ataku, raz na zawsze`,
+    opis: `+${BUDOWLA_STATYSTYKA} do zapału, raz na zawsze`,
     plik: 'oboz-treningowy',
     wys: 1.6,
     efekt: { typ: 'staty', atak: BUDOWLA_STATYSTYKA },
   },
   'kamienna-wieza': {
     nazwa: 'Kamienna Wieża',
-    opis: `+${BUDOWLA_STATYSTYKA} do obrony, raz na zawsze`,
+    opis: `+${BUDOWLA_STATYSTYKA} do opieki, raz na zawsze`,
     plik: 'kamienna-wieza',
     wys: 2.0,
     efekt: { typ: 'staty', obrona: BUDOWLA_STATYSTYKA },
   },
   arena: {
     nazwa: 'Arena',
-    opis: `Wybór: +${ARENA_BONUS} ataku albo +${ARENA_BONUS} obrony`,
+    opis: `Wybór: +${ARENA_BONUS} zapału albo +${ARENA_BONUS} opieki`,
     plik: 'arena',
     wys: 1.5,
     bryla: [3, 1],
@@ -1313,10 +1313,10 @@ export function odpowiedzNaPytanie(
     o.uzyteDnia = s.dzien;
     if (klucz === 'atak') {
       bohater.atak += ARENA_BONUS;
-      return `+${ARENA_BONUS} do ataku`;
+      return `+${ARENA_BONUS} do zapału`;
     }
     bohater.obrona += ARENA_BONUS;
-    return `+${ARENA_BONUS} do obrony`;
+    return `+${ARENA_BONUS} do opieki`;
   }
 
   if (b?.efekt.typ === 'ewolucja') {
@@ -1358,7 +1358,7 @@ function odwiedzBudowle(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
     o.uzyteDnia = s.dzien;
     bohater.atak += e.atak ?? 0;
     bohater.obrona += e.obrona ?? 0;
-    const co = e.atak ? `+${e.atak} do ataku` : `+${e.obrona} do obrony`;
+    const co = e.atak ? `+${e.atak} do zapału` : `+${e.obrona} do opieki`;
     return { opis: `${b.nazwa}\n${co}` };
   }
 
@@ -1370,8 +1370,8 @@ function odwiedzBudowle(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
         tytul: b.nazwa,
         tresc: 'Czego chcesz się nauczyć?',
         opcje: [
-          { klucz: 'atak', etykieta: `+${ARENA_BONUS} ataku` },
-          { klucz: 'obrona', etykieta: `+${ARENA_BONUS} obrony` },
+          { klucz: 'atak', etykieta: `+${ARENA_BONUS} zapału` },
+          { klucz: 'obrona', etykieta: `+${ARENA_BONUS} opieki` },
         ],
       },
     };

@@ -162,14 +162,14 @@ const wyglad = await page.evaluate(() => {
     // Runda 2: w prawym polu lalka — postać w całej sylwetce (`bh-postac-`),
     // głowa zostaje w medalionie (`k-glowa-`).
     portret: obrazy.some((k) => k.startsWith('bh-postac-')) && obrazy.some((k) => k.startsWith('k-glowa-')),
-    ikonyStat: ['k-ikona-miecz', 'k-ikona-tarcza', 'k-ikona-buty'].every((k) => obrazy.includes(k)),
+    ikonyStat: ['k-ikona-zapal', 'k-ikona-opieka', 'k-ikona-buty'].every((k) => obrazy.includes(k)),
     strefy: s.strefyOpisu.size,
   };
 });
 sprawdz('wczytane malowane ikony ośmiu umiejętności', wyglad.umiejetnosci === 8, `${wyglad.umiejetnosci}`);
 sprawdz('osiem gniazd artefaktów z malowanymi ikonami', wyglad.artefakty >= 8, `${wyglad.artefakty}`);
 sprawdz('postać bohatera na lalce i głowa w medalionie', wyglad.portret);
-sprawdz('atak, obrona i ruch jako malowane ikony', wyglad.ikonyStat);
+sprawdz('zapał, opieka i ruch jako malowane ikony', wyglad.ikonyStat);
 
 // Wolne gniazdo umiejętności widać (bohater z mapy startuje bez umiejętności).
 const wolne = await page.evaluate(() => {
@@ -221,7 +221,7 @@ const artefakt = await page.evaluate(() => {
   }
   return '';
 });
-sprawdz('dymek artefaktu opisuje efekt', /do ataku|do obrony|punktów ruchu/.test(artefakt), artefakt.slice(0, 80));
+sprawdz('dymek artefaktu opisuje efekt', /do zapału|do opieki|punktów ruchu/.test(artefakt), artefakt.slice(0, 80));
 
 // ---------- przenoszenie ----------
 

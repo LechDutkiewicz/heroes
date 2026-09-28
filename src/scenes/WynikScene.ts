@@ -101,8 +101,8 @@ const NA_OBRAZIE = {
 const IKONA = {
   gwiazda: 'w-ikona-gwiazda',
   klepsydra: 'w-ikona-klepsydra',
-  miecz: 'w-ikona-miecz',
-  tarcza: 'w-ikona-tarcza',
+  zapal: 'w-ikona-zapal',
+  opieka: 'w-ikona-opieka',
 } as const;
 
 export class WynikScene extends Phaser.Scene {
@@ -715,8 +715,8 @@ export class WynikScene extends Phaser.Scene {
       ...w2.czesci,
       ...w3.czesci,
       g4,
-      ...polowa(lx, IKONA.miecz, 'Atak', st.atak),
-      ...polowa(lx + lw / 2, IKONA.tarcza, 'Obrona', st.obrona)
+      ...polowa(lx, IKONA.zapal, 'Zapał', st.atak),
+      ...polowa(lx + lw / 2, IKONA.opieka, 'Opieka', st.obrona)
     );
     this.nabijaj(w2.wartosc, pkt, 1100);
 

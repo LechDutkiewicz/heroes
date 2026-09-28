@@ -1053,7 +1053,7 @@ export class BattleScene extends Phaser.Scene {
    * statystyk z definicji frakcji — dzięki temu bitwa nie musi znać się na
    * oddziałach, a mapa nie musi przechowywać ich statystyk.
    */
-  /** Zwraca `true`, gdy drużyna gracza czeka jeszcze na wybór czwórki. */
+  /** Zwraca `true`, gdy drużyna gracza czeka jeszcze na wybór dwójki do walki. */
   private wystawZPrzygody(): boolean {
     const wystaw = (sklad: (OddzialZMapy | null)[], side: Side, col: number, ile: number) => {
       // Stado dzikich rozpada się na osobne stworki (`jednostkiBitwy`). Na

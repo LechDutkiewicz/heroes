@@ -211,7 +211,7 @@ const NAZWY_FABULARNE: Record<string, string> = { 'ksiezycowy-kamien': 'Księży
  */
 const IKONA = {
   gwiazda: 'k-ikona-gwiazda',
-  czaszka: 'k-ikona-czaszka',
+  uwaga: 'k-ikona-uwaga',
   klepsydra: 'k-ikona-klepsydra',
   sakwa: 'k-ikona-sakwa',
   pokeball: 'k-ikona-pokeball',
@@ -229,7 +229,7 @@ const nazwaArtefaktu = (id: string) =>
  */
 function celMisji(m: Misja): string {
   const z = m.zwyciestwo;
-  if (z.typ === 'zamki') return 'Zdobądź odznaki wszystkich sal przeciwnika — wygraj w każdym jego zamku.';
+  if (z.typ === 'zamki') return 'Zdobądź odznaki wszystkich sal przeciwnika — wygraj w każdej jego sali.';
   if (z.typ === 'artefakt') return `Odnajdź ${nazwaArtefaktu(z.artefakt)}.`;
   if (z.typ === 'zbierz') return `Zbierz ${z.ile} ${SUROWIEC_INFO[z.surowiec].dopelniacz}.`;
   return `Pokonaj: ${z.nazwa}.`;
@@ -239,7 +239,7 @@ function celMisji(m: Misja): string {
 function porazkiMisji(m: Misja): { ikona: string; tekst: string }[] {
   return m.porazka.map((w) =>
     w.typ === 'utrata'
-      ? { ikona: IKONA.czaszka, tekst: 'Przegrasz, jeśli stracisz wszystkie zamki.' }
+      ? { ikona: IKONA.uwaga, tekst: 'Przegrasz, jeśli stracisz wszystkie miasta.' }
       : {
           ikona: IKONA.klepsydra,
           tekst:
@@ -335,7 +335,7 @@ export class KampaniaScene extends Phaser.Scene {
     // (`tools/kampania_ilustracje.py`, wsad z `tools/PROMPTY-KAMPANIA.md`).
     for (const n of ['wstep', 'koniec', 'portret-janek', 'portret-ela']) this.load.image(`k-${n}`, `${b}kampania/${n}.jpg`);
     // Ikony nagród (`tools/kampania_postacie.py`) i ognisko obozu z mapy przygody.
-    for (const i of new Set(['buty', 'rower', 'tarcza', 'miecz', 'pokeball', 'jagody', 'kamien', 'odlamki', ...Object.keys(IKONA)]))
+    for (const i of new Set(['buty', 'rower', 'tarcza', 'zapal', 'opieka', 'pokeball', 'jagody', 'kamien', 'odlamki', ...Object.keys(IKONA)]))
       this.load.image(`k-ikona-${i}`, `${b}kampania/ikona-${i}.png`);
     this.load.image('k-ognisko', `${b}mapa/ognisko.png`);
     for (const id of ODZNAKI_PLIKI) this.load.image(`k-odznaka-${id}`, `${b}bohater/odznaka-${id}.png`);
@@ -1545,7 +1545,7 @@ export class KampaniaScene extends Phaser.Scene {
     }
     kreska();
     wiersz(IKONA.gwiazda, 'Cel misji', celMisji(m));
-    for (const w of porazkiMisji(m)) wiersz(w.ikona, w.ikona === IKONA.czaszka ? 'Uważaj' : 'Czas', w.tekst);
+    for (const w of porazkiMisji(m)) wiersz(w.ikona, w.ikona === IKONA.uwaga ? 'Uważaj' : 'Czas', w.tekst);
     const plecak = p.bohater?.artefakty ?? [];
     // Drużyna idzie z trenerem dalej — te same stworki (etap 6). Jednym
     // zdaniem przy plecaku: osobny wiersz nie mieścił się na zwoju.
@@ -1772,8 +1772,8 @@ export class KampaniaScene extends Phaser.Scene {
     }
     const atak = b.atak ?? 0;
     return {
-      tekstura: atak ? 'k-ikona-miecz' : 'k-ikona-tarcza',
-      nazwa: atak ? 'Silniejszy atak' : 'Mocniejsza obrona',
+      tekstura: atak ? 'k-ikona-zapal' : 'k-ikona-opieka',
+      nazwa: atak ? 'Więcej zapału' : 'Lepsza opieka',
       liczba: `+${atak || b.obrona || 0}`,
       bok: 50,
     };

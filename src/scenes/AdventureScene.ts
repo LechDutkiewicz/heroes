@@ -559,6 +559,11 @@ export class AdventureScene extends Phaser.Scene {
     wczytajZestaw(this);
     loadSfx(this, MUZYKA_MAPA);
     const b = import.meta.env.BASE_URL;
+    // Malowane ikony statystyk trenera w panelu (Zapał, Opieka, ruch) — te
+    // same klucze, co na ekranie bohatera i kampanii.
+    for (const n of ['zapal', 'opieka', 'buty']) {
+      if (!this.textures.exists(`k-ikona-${n}`)) this.load.image(`k-ikona-${n}`, `${b}kampania/ikona-${n}.png`);
+    }
     // Tło zależy od planszy, a klucze tekstur zostają te same (`plansza-0`,
     // `woda-maska`) — sięga po nie kilka miejsc sceny i shader wody. Phaser
     // nie wczytuje drugi raz klucza, który już zna, więc przy zmianie
@@ -3427,9 +3432,10 @@ export class AdventureScene extends Phaser.Scene {
     this.doswPasek.setData('x', pdX).setData('y', pdY).setData('w', pdW);
 
     const statY = kartaY + 70;
-    [ICON.sword, ICON.shield, ICON.boot].forEach((klucz, i) => {
+    // Zapał, Opieka i ruch trenera (`PROJEKT-SWIAT.md`, fala 1).
+    ['k-ikona-zapal', 'k-ikona-opieka', 'k-ikona-buty'].forEach((klucz, i) => {
       const sx = wnetrzeX + 20 + i * 64;
-      this.add.image(sx, statY, klucz).setDisplaySize(18, 18).setDepth(Z.hud + 2);
+      this.add.image(sx, statY, klucz).setDisplaySize(20, 20).setDepth(Z.hud + 2);
       this.statTeksty[i] = this.add
         .text(sx + 13, statY, '', stylEtykiety(16, i === 2 ? BARWA.atramentZielony : BARWA.atrament))
         .setOrigin(0, 0.5)
@@ -4236,7 +4242,7 @@ export class AdventureScene extends Phaser.Scene {
         : `${o.nazwa}\nWejdź, żeby zająć: +${o.ile} ${co} dziennie`;
     }
     if (o.rodzaj === 'zamek')
-      return `${o.nazwa}\n${o.wlasciciel === 'gracz' ? 'Twój zamek' : 'Zamek przeciwnika'}`;
+      return `${o.nazwa}\n${o.wlasciciel === 'gracz' ? 'Twoje miasto' : 'Sala przeciwnika'}`;
     if (o.rodzaj === 'budynek') {
       const b = budowlaPoId(o.budynek);
       if (!b) return o.nazwa;
@@ -4805,8 +4811,8 @@ export class AdventureScene extends Phaser.Scene {
     const przed = bonusPoziomu(poziomPrzed);
     const po = bonusPoziomu(poziomPo);
     const zyski: string[] = [];
-    if (po.atak > przed.atak) zyski.push(`+${po.atak - przed.atak} atak`);
-    if (po.obrona > przed.obrona) zyski.push(`+${po.obrona - przed.obrona} obrona`);
+    if (po.atak > przed.atak) zyski.push(`+${po.atak - przed.atak} zapału`);
+    if (po.obrona > przed.obrona) zyski.push(`+${po.obrona - przed.obrona} opieki`);
     if (po.ruch > przed.ruch) zyski.push(`+${po.ruch - przed.ruch} ruchu`);
 
     const oferty = ofertaAwansu(this.stan.bohater, (n) => Phaser.Math.RND.between(0, n - 1));
@@ -5168,7 +5174,7 @@ export class AdventureScene extends Phaser.Scene {
         y,
         m
           ? m.opis.join('\n')
-          : 'Dwie doliny, dwa zamki i rywal, który też trenuje drużynę.\nKto pierwszy wygra w sali rywala, ten zdobywa odznakę i wygrywa.',
+          : 'Dwie doliny, dwa miasta i rywal, który też trenuje drużynę.\nKto pierwszy wygra w sali rywala, ten zdobywa odznakę i wygrywa.',
         { ...stylAtramentu(15, 'zwykly', wnetrze), align: 'center', lineSpacing: 4 }
       )
       .setOrigin(0.5, 0);
@@ -5317,7 +5323,7 @@ export class AdventureScene extends Phaser.Scene {
         p.typ === 'termin' ? obrazek(ICON.hourglass, 38) : zOdznaka(rysowanyZamek(false), false),
         'Porażka, jeśli…',
         BARWA.atramentCzerwony,
-        p.typ === 'termin' ? `Minie ${p.dni} dni. Dziś jest dzień ${s.dzien}.` : 'Stracisz swój ostatni zamek.'
+        p.typ === 'termin' ? `Minie ${p.dni} dni. Dziś jest dzień ${s.dzien}.` : 'Stracisz swoje ostatnie miasto.'
       );
     }
 
@@ -5624,7 +5630,7 @@ export class AdventureScene extends Phaser.Scene {
       // jak w grach trener budzi się w ostatnim odwiedzonym Centrum.
       const obudzeni = zamek ? obudz(this.stan.bohater.armia) : 0;
       this.time.delayedCall(400, () =>
-        this.napisUlotny(obudzeni ? 'Porażka.\nWracasz do Centrum Pokemon.' : 'Porażka.\nWracasz do zamku.')
+        this.napisUlotny(obudzeni ? 'Porażka.\nWracasz do Centrum Pokemon.' : 'Porażka.\nWracasz do miasta.')
       );
     }
   }
@@ -5740,7 +5746,7 @@ export class AdventureScene extends Phaser.Scene {
       .text(x, y + this.sylwetkaBohatera().glowa - KAFEL * 0.07, tekst, {
         // Lora pogrubiona, kremowa z brązowym konturem — ta sama para co
         // napisy na drewnie, tylko krojem tekstu: ulotny napis bywa zdaniem
-        // („Porażka. Wracasz do zamku."), a zdanie kapitałami czyta się gorzej.
+        // („Porażka. Wracasz do miasta."), a zdanie kapitałami czyta się gorzej.
         fontFamily: KROJ.tekst,
         fontSize: '17px',
         fontStyle: 'bold',

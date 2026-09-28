@@ -215,6 +215,9 @@ więc liczy się gruba, prosta sylwetka, nie szczegół.
 | `ikona-miecz.png` | `…/ikona-miecz.png` | nagroda „Silniejszy atak" |
 | `ikona-tarcza.png` | `…/ikona-tarcza.png` | nagroda „Mocniejsza obrona", Tarcza z Łusek |
 | `ikona-rower.png` | `…/ikona-rower.png` | Rower Terenowy |
+| `ikona-zapal.png` | `…/ikona-zapal.png` | Zapał trenera (dawny atak bohatera; `PROJEKT-SWIAT.md`, fala 1) |
+| `ikona-opieka.png` | `…/ikona-opieka.png` | Opieka trenera (dawna obrona bohatera) |
+| `ikona-uwaga.png` | `…/ikona-uwaga.png` | „Uważaj" zamiast czaszki — stworki mdleją, nie giną |
 
 <!-- plik: ikona-gwiazda.png | styl: obiekt | proporcje: 1:1 -->
 ```
@@ -282,6 +285,40 @@ darker base, framed by a thick polished golden rim with a few round rivets and
 a small golden boss in the upper middle. Chunky, bold, simple silhouette that
 stays readable at 24 pixels, painted soft storybook style with glossy
 highlights. No emblem, no letters.
+```
+
+<!-- plik: ikona-zapal.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon — NOT a building, NOT a tower, NOT a castle, NOT a house, no
+ground, no trees: a single bright red-and-white cheering
+megaphone (a sports fan's loudhailer), pointing to the upper right, centered
+and filling the square frame. Glossy red cone with a white rim at the wide end
+and a white handle, three short golden sound-wave arcs coming out of the wide
+end. Chunky, bold, simple silhouette that stays readable at 24 pixels, painted
+soft storybook style with glossy highlights. No letters, no person. The
+megaphone floats alone: no background tile, no square card, no frame.
+```
+
+<!-- plik: ikona-opieka.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon — NOT a building, NOT a tower, NOT a castle, NOT a house, no
+ground, no trees: a single plump glossy pink-red heart, centered
+and filling the square frame, with a small white sticking plaster (band-aid)
+placed diagonally across its lower left side and one tiny white sparkle on
+the upper right. Chunky, bold, simple silhouette that stays readable at 24
+pixels, painted soft storybook style with glossy highlights. No letters, no
+cross symbol. The heart floats alone: no background tile, no square card, no
+frame.
+```
+
+<!-- plik: ikona-uwaga.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object: a single rounded yellow warning sign triangle
+with a thick dark red rim and a big bold dark exclamation mark in the middle,
+centered and filling the square frame. Soft rounded corners, glossy highlight
+on the top edge. Chunky, bold, simple silhouette that stays readable at 20
+pixels, painted soft storybook style. No other letters. The sign floats alone:
+no pole, no background tile, no frame.
 ```
 
 <!-- plik: ikona-rower.png | styl: obiekt | proporcje: 1:1 -->

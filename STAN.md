@@ -143,6 +143,16 @@ mieście albo kampanii.
   więcej. `naPoluPrzeciw(obiekt)` w `mapa.ts` — limit przeciwnika, ten sam
   dla sceny, AI i autopilota; `jednostkiBitwy(lista, maks)`. Stada dzikich
   najwyżej 3 (`MAKS_STADA`). Wersja z wymianą (#17) była w grze jeden dzień.
+- **Fala 1 z `PROJEKT-SWIAT.md` — słowa** (2026-09-28). Atak i obrona
+  trenera to w tekstach Zapał i Opieka (pola w danych zostają `atak`/
+  `obrona`, żeby nie ruszać zapisów). Ikony malowane (OpenAI, 0,22 USD
+  z poprawką): `ikona-zapal.png` (megafon), `ikona-opieka.png` (serce
+  z plastrem), `ikona-uwaga.png` (zamiast czaszki); wczytuje je
+  `tools/kampania_ikony.py zapal opieka uwaga`. UWAGA: wspólny styl
+  `obiekt` wpycha w obrazek budynki — w promptach ikon trzeba pisać wprost
+  „NOT a building, NOT a tower". W tekstach „miasto"/„sala" zamiast
+  „zamek", „drużyna" zamiast „armia". Atak i obrona STWORKÓW zostają —
+  to statystyki jak w grach Pokémon.
 - **Słabe stada dzikich w parach** (uwaga z gry: pierwsze walki misji 1
   banalne — pojedynczy dziki na 1. poziomie). `plansza.ts` `STRAZE`:
   `ileMin` i `poziomMin` na klasę straży; słabe stado (poniżej
