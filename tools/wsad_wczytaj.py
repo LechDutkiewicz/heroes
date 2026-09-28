@@ -544,7 +544,10 @@ OBIEKTY = {
     'm-kopalnia': [('kopalnia', 160)],
     'm-sad': [('sad', 160)],
     'm-skrzynia': [('skrzynia', 38)],
-    'm-zamek': [('zamek-las', 384), ('zamek-ogien', 336)],
+    # Fala 2: twoje miasteczko i sala przeciwnika to dwa różne rysunki
+    # (dawniej jeden zamek pod dwiema nazwami).
+    'm-zamek': [('zamek-las', 384)],
+    'm-sala': [('zamek-ogien', 336)],
     's-pokeball': [('pokeball', 29)],
     's-jagody': [('jagody', 31)],
     's-kamien': [('kamien-ewolucji', 29)],
