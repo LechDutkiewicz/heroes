@@ -36,6 +36,7 @@ import { NA_POLU } from '../data/battle';
 import { pokazOknoStworka, type OknoStworka } from './oknoStworka';
 import { kluczPortretu, kluczPortretuOkraglego } from './portrety';
 import { C } from './theme';
+import { TUSZ, ZOLTY, panelBialy, pigulka, pokeball, stylWalki } from './stylWalki';
 import {
   BARWA,
   KROJ,
@@ -192,6 +193,12 @@ export interface OpcjePaneluArmii {
   powiedz: (tekst: string) => void;
   /** Po każdej udanej zmianie armii — scena zapisuje stan i odświeża resztę. */
   poZmianie: (opis: string) => void;
+  /**
+   * Wygląd slotów: `zestaw` — skóra i złoto (mapa, miasto), `walka` — białe
+   * płytki z obrysem tuszem jak na ekranie walki (`stylWalki.ts`), stworek
+   * figurką, poziom na niebieskiej pigułce. Gesty te same.
+   */
+  styl?: 'zestaw' | 'walka';
 }
 
 interface WidokSlotu {
@@ -294,8 +301,20 @@ export class PanelArmii {
           strokeThickness: 3.5,
         })
         .setOrigin(1, 1);
+      if (this.o.styl === 'walka') {
+        skora.setVisible(false);
+        rama.setVisible(false);
+        zaznaczenie.clear();
+        zaznaczenie.fillStyle(TUSZ, 1);
+        zaznaczenie.fillRoundedRect(-5, -5, slotW + 10, slotH + 10, 16);
+        zaznaczenie.fillStyle(ZOLTY, 1);
+        zaznaczenie.fillRoundedRect(-3, -3, slotW + 6, slotH + 6, 14);
+        licznik.setStyle(stylWalki(Math.max(11, Math.round(slotH * 0.17)), '#ffffff')).setShadow(0, 1, 'rgba(0,0,0,0.35)', 0);
+      }
       const kontener = this.scena.add
-        .container(x, y, [skora, tlo, rysunek, rama, zaznaczenie, plakietka, licznik])
+        .container(x, y, this.o.styl === 'walka'
+          ? [zaznaczenie, skora, tlo, rysunek, rama, plakietka, licznik]
+          : [skora, tlo, rysunek, rama, zaznaczenie, plakietka, licznik])
         .setDepth(this.o.glebia);
       const m: Miejsce = { pasek, slot: i };
       this.scena.add
@@ -323,6 +342,10 @@ export class PanelArmii {
       pasek.sloty.forEach((s, i) => {
         const o = armia[i];
         const wybrany = this.wybor?.pasek === pasek && this.wybor.slot === i;
+        if (this.o.styl === 'walka') {
+          this.odswiezSlotWalki(pasek, s, o, wybrany, aktywny, doBitwy.has(i));
+          return;
+        }
         s.skora.setTint(o ? SKORA_PELNA : SKORA_PUSTA);
         rysujWneke(s.tlo, pasek.slotW, pasek.slotH, !!o);
         s.zaznaczenie.setVisible(wybrany);
@@ -374,6 +397,61 @@ export class PanelArmii {
         }
       });
     }
+  }
+
+  /** Slot w stylu ekranu walki: biała płytka, figurka stworka, poziom na pigułce. */
+  private odswiezSlotWalki(
+    pasek: Pasek,
+    s: WidokSlotu,
+    o: Armia[number],
+    wybrany: boolean,
+    aktywny: boolean,
+    doBitwy: boolean
+  ) {
+    const { slotW: w, slotH: h } = pasek;
+    const g = s.tlo;
+    g.clear();
+    s.zaznaczenie.setVisible(wybrany);
+    s.kontener.setAlpha(aktywny ? 1 : 0.6);
+    s.plakietka.clear();
+    if (!o) {
+      // Pusty: wklęsła szara płytka, bez obrysu tuszem — cicha.
+      g.fillStyle(0xb9c0c9, 1);
+      g.fillRoundedRect(0, 0, w, h, 12);
+      g.fillStyle(0xdde3ea, 1);
+      g.fillRoundedRect(2, 2, w - 4, h - 4, 10);
+      g.fillStyle(0x000000, 0.06);
+      g.fillRoundedRect(2, 2, w - 4, 6, { tl: 10, tr: 10, bl: 0, br: 0 });
+      s.rysunek.setVisible(false);
+      s.licznik.setText('');
+      return;
+    }
+    panelBialy(g, 0, 0, w, h, 12, { obrys: 3, cien: 3, wypelnienie: o.omdlaly ? 0xeef0f3 : 0xeaf4ff });
+    // Blask za stworkiem i cień pod nim — stoi na płytce, nie wisi.
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(w / 2, h * 0.4, w * 0.28);
+    g.fillStyle(0x26262e, 0.14);
+    g.fillEllipse(w / 2, h - 22, w * 0.46, 7);
+    const klucz = `p-${o.sprite}`;
+    const portret = kluczPortretu(o.sprite);
+    if (this.scena.textures.exists(klucz)) {
+      // Figurka nad pigułką poziomu — pigułka nie zasłania stworka.
+      s.rysunek.setTexture(klucz).setPosition(w / 2, (h - 16) / 2 + 1).setVisible(true);
+      s.rysunek.setScale(Math.min((h - 22) / s.rysunek.height, (w - 12) / s.rysunek.width));
+    } else if (this.scena.textures.exists(portret)) {
+      s.rysunek.setTexture(portret).setPosition(w / 2, h / 2).setDisplaySize(w - 10, h - 10).setVisible(true);
+    } else s.rysunek.setVisible(false);
+    if (o.omdlaly) s.rysunek.setTint(0x8a8a8a).setAlpha(0.6);
+    else s.rysunek.clearTint().setAlpha(1);
+    s.licznik.setText(o.ile > 1 ? String(o.ile) : napisPoziomu(o.poziom));
+    const pw = s.licznik.width + 14;
+    const ph = s.licznik.height;
+    const px = (w - pw) / 2;
+    const py = h - 4 - ph;
+    pigulka(s.plakietka, px, py, pw, ph, o.omdlaly ? 'szary' : 'niebieski', { r: ph / 2, cien: false });
+    s.licznik.setOrigin(0.5).setPosition(px + pw / 2, py + ph / 2 - 1);
+    // Pokeball w rogu: ten stworek zaczyna walkę.
+    if (doBitwy) pokeball(s.plakietka, 11, 11, 8);
   }
 
   /**
