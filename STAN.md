@@ -261,6 +261,16 @@ mieście albo kampanii.
   skrzyni, z chaty/wozu): okno `oknoArtefaktu` z obrazkiem, klasą i tym,
   co daje — zamiast ulotnego napisu nad mapą. Mapa wczytuje `bh-artefakt-*`
   i `bh-umiejetnosc-*` w `preload`.
+- **Styl A w kampanii i na ekranie wyniku** (2026-09-28). Oba importują
+  `zestawWalki`; jego `tloDrewna` rysuje teraz kropki i czerwoną belkę
+  `BELKA_H` (48 px, jak namalowana belka drewna), więc ekrany z tytułem na
+  `BELKA_Y` nie przesuwają niczego. Kampania ręcznie: zwój → biały panel
+  (wymiary `PAPIER` bez zmian), deska tytułu wstępu → czerwona pigułka,
+  podpisy misji → białe pigułki (zamknięte szare), karty nagród → białe
+  z żółtą obwódką wybranej. Napisy krojem tytułowym dostały `fontStyle
+  '900'` (Nunito bez wagi wyglądał cienko). Baner końca na mapie: podpis
+  tuszem zamiast białego z obrysem. Menu główne (malowane drogowskazy
+  i baner) — następne.
 - **Plan dalej**: styl A (ekran walki) na mapę, bohatera, miasto
   i kampanię — użytkownik zauważył, że drewno i pergamin odstają od walki;
   potem fale 3–4 z `PROJEKT-SWIAT.md`.

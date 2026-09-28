@@ -36,7 +36,8 @@ import {
   tloDrewna,
   wczytajZestaw,
   wstazka,
-} from '../visual/zestaw';
+} from '../visual/zestawWalki';
+import { panelBialy, pigulka } from '../visual/stylWalki';
 import { buildIcons } from '../visual/icons';
 import { buildArtefakty, kluczArtefaktu } from '../visual/artefakty';
 import { wersjonujZasoby } from '../visual/zasoby';
@@ -579,7 +580,7 @@ export class KampaniaScene extends Phaser.Scene {
     const py = y0 + h - 22;
     const metryczka = this.panelPergaminu(-pw2 / 2, py, pw2, phh);
     const imie = this.add
-      .text(0, py + 27, t.imie, { fontFamily: SERIF, fontSize: '30px', color: ATRAMENT_CZERWONY })
+      .text(0, py + 27, t.imie, { fontFamily: SERIF, fontStyle: '900', fontSize: '30px', color: ATRAMENT_CZERWONY })
       .setOrigin(0.5)
       .setShadow(0, 1, '#fff6dc', 0, false, true);
     const opis = this.add
@@ -703,11 +704,9 @@ export class KampaniaScene extends Phaser.Scene {
     // Tytuł na desce — tej samej, z której są tabliczki przycisków.
     const tytul = napisTytulowy(this, il.tytul.x, il.tytul.y, o.naglowek, 26);
     const dw = tytul.width + 64;
-    const deska = this.add
-      .nineslice(il.tytul.x, il.tytul.y, 'z-tabliczka-drewno', undefined, dw * 2, 100, 40, 40, 30, 30)
-      .setScale(0.5)
-      .setOrigin(0.5);
-    n.add([this.add.ellipse(il.tytul.x, il.tytul.y + 26, dw * 0.9, 12, BARWA.cien, 0.45), deska, tytul]);
+    const deska = this.add.graphics();
+    pigulka(deska, il.tytul.x - dw / 2, il.tytul.y - 25, dw, 50, 'czerwony', { r: 25 });
+    n.add([deska, tytul]);
 
     // Pergamin: wysokość z tekstu, przylega do krawędzi podanej w układzie.
     const T = il.tekst;
@@ -1050,7 +1049,7 @@ export class KampaniaScene extends Phaser.Scene {
 
     const nr = this.add
       .text(0, 0, String(m.nr), {
-        fontFamily: SERIF,
+        fontFamily: SERIF, fontStyle: '900',
         fontSize: `${stan === 'biezaca' ? 16 : 13}px`,
         color: '#fff8e4',
         stroke: BRAZ,
@@ -1098,16 +1097,13 @@ export class KampaniaScene extends Phaser.Scene {
       .text(0, r + 16, m.tytul, {
         fontFamily: SERIF,
         fontSize: '12.5px',
-        color: stan === 'zamknieta' ? '#cdbfa6' : BARWA.krem,
-        stroke: BRAZ,
-        strokeThickness: 3,
+        fontStyle: '900',
+        color: stan === 'zamknieta' ? '#8b93a0' : BARWA.atrament,
       })
       .setOrigin(0.5);
     const ww = podpis.width + 26;
-    const deska = this.add
-      .nineslice(0, r + 16, 'k-deseczka', undefined, ww, 26, 12, 12, 8, 8)
-      .setOrigin(0.5);
-    if (stan === 'zamknieta') deska.setTint(0x9a8f84);
+    const deska = this.add.graphics();
+    pigulka(deska, -ww / 2, r + 3, ww, 26, stan === 'zamknieta' ? 'szary' : 'bialy', { r: 13 });
     k.add([deska, podpis]);
 
     if (stan === 'biezaca') {
@@ -1366,8 +1362,10 @@ export class KampaniaScene extends Phaser.Scene {
 
   private rysujZwoj() {
     // Cień tylko pod papierem — gałki wałków wystają w powietrze.
-    this.cien(ZWOJ.x + 26, ZWOJ.y + 20, ZWOJ.w - 52, ZWOJ.h - 30, 0.9);
-    this.add.image(ZWOJ.x, ZWOJ.y, 'k-zwoj').setOrigin(0).setDisplaySize(ZWOJ.w, ZWOJ.h);
+    // Biały panel jak na ekranie walki w miejscu malowanego zwoju — wymiary
+    // papieru (`PAPIER`) zostają, więc treść układa się tak samo.
+    const g = this.add.graphics();
+    panelBialy(g, ZWOJ.x + 14, ZWOJ.y + 30, ZWOJ.w - 28, ZWOJ.h - 44, 18);
   }
 
   private pokazMisje(m: Misja) {
@@ -1434,7 +1432,7 @@ export class KampaniaScene extends Phaser.Scene {
     const tytul = (tekst: string) => {
       const t = this.add
         .text(srodek, y + 16, tekst, {
-          fontFamily: SERIF,
+          fontFamily: SERIF, fontStyle: '900',
           fontSize: tekst.length > 18 ? '22px' : '25px',
           color: ATRAMENT_CZERWONY,
         })
@@ -1450,7 +1448,7 @@ export class KampaniaScene extends Phaser.Scene {
     };
     const wiersz = (ikona: string, etykieta: string, tekst: string) => {
       const ik = this.add.image(lewy + 12, y + 10, ikona).setDisplaySize(24, 24);
-      const e = this.add.text(lewy + 30, y, etykieta, { fontFamily: SERIF, fontSize: '14px', color: ATRAMENT_CZERWONY });
+      const e = this.add.text(lewy + 30, y, etykieta, { fontFamily: SERIF, fontStyle: '900', fontSize: '14px', color: ATRAMENT_CZERWONY });
       k.add([ik, e]);
       y += e.height + 1;
       akapit(tekst, { wciecie: 30, rozmiar: rozmiar - 1 });
@@ -1650,7 +1648,7 @@ export class KampaniaScene extends Phaser.Scene {
     // Tytuł pasa JEST poleceniem. Wcześniej „Wybierz jedną nagrodę" było
     // bladą kursywą po prawej, gdzie wzrok nie trafia.
     this.add.text(PAS.x + 20, PAS.y + 12, `Wybierz nagrodę na start misji ${biezaca.nr}`, {
-      fontFamily: SERIF,
+      fontFamily: SERIF, fontStyle: '900',
       fontSize: '18px',
       color: ATRAMENT_CZERWONY,
     });
@@ -1700,7 +1698,7 @@ export class KampaniaScene extends Phaser.Scene {
     obraz.setScale(Math.min(bok / obraz.width, bok / obraz.height));
     k.add(obraz);
     if (wyglad.liczba) {
-      const t = this.add.text(0, 0, wyglad.liczba, { fontFamily: SERIF, fontSize: '14px', color: '#fff4dc' }).setOrigin(0.5);
+      const t = this.add.text(0, 0, wyglad.liczba, { fontFamily: SERIF, fontStyle: '900', fontSize: '14px', color: '#fff4dc' }).setOrigin(0.5);
       const lw = Math.max(26, t.width + 12);
       const lg = this.add.graphics();
       lg.fillStyle(0x3a0a06, 0.4);
@@ -1715,7 +1713,7 @@ export class KampaniaScene extends Phaser.Scene {
 
     const opis = this.add
       .text(86, h / 2, wyglad.nazwa, {
-        fontFamily: SERIF,
+        fontFamily: SERIF, fontStyle: '900',
         fontSize: '14px',
         color: ATRAMENT,
         wordWrap: { width: w - 100 },
@@ -1810,22 +1808,14 @@ export class KampaniaScene extends Phaser.Scene {
           g.fillStyle(C.gold, 0.13);
           g.fillRoundedRect(-j * 3, -j * 3, w + j * 6, h + j * 6, 10 + j * 3);
         }
-        g.fillStyle(C.goldDeep, 1);
-        g.fillRoundedRect(-3, -3, w + 6, h + 6, 11);
-        g.fillStyle(C.gold, 1);
-        g.fillRoundedRect(-1.5, -1.5, w + 3, h + 3, 10);
-        g.fillStyle(0xfbeecb, 1);
-        g.fillRoundedRect(1.5, 1.5, w - 3, h - 3, 8);
+        g.fillStyle(0x26262e, 1);
+        g.fillRoundedRect(-6, -6, w + 12, h + 12, 16);
+        g.fillStyle(0xffd43b, 1);
+        g.fillRoundedRect(-3, -3, w + 6, h + 6, 14);
+        panelBialy(g, 0, 0, w, h, 12, { obrys: 3, cien: 0, wypelnienie: 0xeaf4ff });
       } else {
         // Wgłębienie w pergaminie: ciemniejsze dno, cień od górnej krawędzi.
-        g.fillStyle(0x8a5a2b, 0.55);
-        g.fillRoundedRect(0, 0, w, h, 9);
-        g.fillStyle(0xe8d2a2, 1);
-        g.fillRoundedRect(1.5, 1.5, w - 3, h - 3, 8);
-        g.fillStyle(0x6b4a26, 0.14);
-        g.fillRoundedRect(1.5, 1.5, w - 3, 7, { tl: 8, tr: 8, bl: 0, br: 0 });
-        g.lineStyle(1, 0x8a5a2b, 0.45);
-        g.strokeRoundedRect(5, 5, w - 10, h - 10, 6);
+        panelBialy(g, 0, 0, w, h, 12, { obrys: 3, cien: 3 });
       }
       // Pieczęć wyboru: pusty okrąg atramentem albo czerwony lak z ptaszkiem.
       const p = kt.pieczec;
@@ -1883,7 +1873,7 @@ export class KampaniaScene extends Phaser.Scene {
   /** Pas po zakończeniu kampanii: kronika wszystkich misji w jednym rzędzie. */
   private pasWynikow() {
     const p = this.postep!;
-    this.add.text(PAS.x + 20, PAS.y + 12, 'Twoja kronika', { fontFamily: SERIF, fontSize: '18px', color: ATRAMENT_CZERWONY });
+    this.add.text(PAS.x + 20, PAS.y + 12, 'Twoja kronika', { fontFamily: SERIF, fontStyle: '900', fontSize: '18px', color: ATRAMENT_CZERWONY });
     const n = KAMPANIA.misje.length;
     const kw = (PAS.w - 36) / n;
     const g = this.add.graphics();
@@ -1900,10 +1890,10 @@ export class KampaniaScene extends Phaser.Scene {
       g.fillStyle(0x3f9d57, 1);
       g.fillCircle(x + 22, y + 14, 9.5);
       this.add
-        .text(x + 22, y + 14, `${m.nr}`, { fontFamily: SERIF, fontSize: '13px', color: '#fff8e4' })
+        .text(x + 22, y + 14, `${m.nr}`, { fontFamily: SERIF, fontStyle: '900', fontSize: '13px', color: '#fff8e4' })
         .setOrigin(0.5);
       this.add.text(x + 40, y + 5, m.tytul, {
-        fontFamily: SERIF,
+        fontFamily: SERIF, fontStyle: '900',
         fontSize: '13px',
         color: ATRAMENT,
         wordWrap: { width: kw - 46 },
@@ -2006,7 +1996,7 @@ export class KampaniaScene extends Phaser.Scene {
     const y = (EKRAN_H - h) / 2;
     n.add([tlo, blok, ...this.panelPergaminu(x, y, w, h)]);
     const t1 = this.add
-      .text(EKRAN_W / 2, y + 40, 'Zacząć od nowa?', { fontFamily: SERIF, fontSize: '26px', color: ATRAMENT_CZERWONY })
+      .text(EKRAN_W / 2, y + 40, 'Zacząć od nowa?', { fontFamily: SERIF, fontStyle: '900', fontSize: '26px', color: ATRAMENT_CZERWONY })
       .setOrigin(0.5);
     const t2 = this.add
       .text(EKRAN_W / 2, y + 90, 'Kampania zacznie się od pierwszej misji,\na twoje wyniki znikną.', {

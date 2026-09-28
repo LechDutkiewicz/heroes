@@ -112,7 +112,7 @@ export function pytanie(
   let otwarty = true;
   const { k, W, H } = korzen(scene, o);
   const ROZ = 15;
-  const miarka = scene.add.text(0, 0, '', { fontFamily: KROJ.tytul, fontSize: `${ROZ}px` });
+  const miarka = scene.add.text(0, 0, '', { fontFamily: KROJ.tytul, fontStyle: '900', fontSize: `${ROZ}px` });
   const szer = o.opcje.map((p) => Math.max(116, Math.ceil(miarka.setText(p.tekst).width) + 56));
   miarka.destroy();
   const ODSTEP = 16;
@@ -271,7 +271,7 @@ function oknoSlotow(scene: Phaser.Scene, o: OpcjeListy): OknoGracza {
       const med = medalion(scene, listaX + 26, wy + WIERSZ / 2, 16, slot === 'auto' ? 0x2f4a22 : 0x3a2210);
       const nr = scene.add
         .text(listaX + 26, wy + WIERSZ / 2, slot === 'auto' ? 'A' : String(slot), {
-          fontFamily: KROJ.tytul,
+          fontFamily: KROJ.tytul, fontStyle: '900',
           fontSize: '15px',
           color: '#ffe9a8',
         })

@@ -539,7 +539,7 @@ export class PanelArmii {
     else im.setScale(Math.min(1, (w.m.pasek.slotH - 4) / im.height));
     const licznik = this.scena.add
       .text(0, w.m.pasek.slotH / 2 - 8, oddzial.ile > 1 ? String(oddzial.ile) : napisPoziomu(oddzial.poziom), {
-        fontFamily: KROJ.tytul,
+        fontFamily: KROJ.tytul, fontStyle: '900',
         fontSize: '14px',
         color: BARWA.krem,
         stroke: BARWA.braz,
