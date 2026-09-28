@@ -218,6 +218,17 @@ mieście albo kampanii.
   trzymało Flamira na ławce. Symulacja misji 1 (`STARTER=0|1|2`): wygrana
   dnia 23 / 30 / 30 (próg 32); Pyroko szybciej, bo jego rezerwat odpada
   i autopilot wydaje na trening.
+- **Styl A na ekranie bohatera** (2026-09-28, próbka przed mapą, miastem
+  i kampanią). `HeroScene`: `tloWalki` z belką-pokeballem (medalion z głową,
+  imię i motto na czerwieni, data w pigułce), białe panele `panelBialy`,
+  statystyki trenera jako karty z barwną pigułką-nazwą, pasek doświadczenia
+  jak pasek życia, poziom umiejętności pokeballami, lalka na błękicie,
+  puste gniazda z przerywanym obrysem, dymki białe. `PanelArmii` dostał
+  opcję `styl: 'walka'` (biała płytka, figurka `p-<sprite>`, poziom na
+  niebieskiej pigułce, pokeball w rogu = idzie do walki) — miasto dalej na
+  zestawie. Okno stworka i okno podziału jeszcze na pergaminie. Ślepe
+  porównanie (świeży krytyk, A/B + ekran walki): nowy wygrywa we wszystkich
+  4 kryteriach; jego 3 uwagi poprawione w rundzie 2.
 - **Plan dalej**: styl A (ekran walki) na mapę, bohatera, miasto
   i kampanię — użytkownik zauważył, że drewno i pergamin odstają od walki;
   potem fale 3–4 z `PROJEKT-SWIAT.md`.
