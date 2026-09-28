@@ -104,9 +104,8 @@ const BLOK_Y = OKNO_H - 10 - BLOK_H;
 const POLA_H = BLOK_Y - 14 - POLA_Y;
 const LEWA = { x: 12, w: 556 };
 const PRAWA = { x: 580, w: OKNO_W - 12 - 580 };
-/** Figurka bohatera i siedem slotów; po prawej status i wyjście. */
-const HERB_X = BLOK_X + BLOK_PAD + 4;
-const RZAD_X = HERB_X + SLOT + 12;
+/** Siedem slotów drużyny; po prawej status i wyjście. Trenera widać na lalce — w rzędzie go nie ma. */
+const RZAD_X = BLOK_X + BLOK_PAD + 6;
 const RZAD_Y = BLOK_Y + BLOK_PAD;
 const STATUS_X = RZAD_X + 7 * SLOT + 6 * SLOT_ODSTEP + 16;
 const STATUS_W = BLOK_X + BLOK_W - 12 - STATUS_X;
@@ -577,18 +576,13 @@ export class HeroScene extends Phaser.Scene {
     // --- pas drużyny: biały panel, figurka z mapy w pierwszym slocie, 7 slotów ---
     const g = this.add.graphics().setDepth(Z.hud);
     panelBialy(g, BLOK_X, BLOK_Y, BLOK_W, BLOK_H, 18);
-    panelBialy(g, HERB_X, RZAD_Y, SLOT, SLOT, 12, { obrys: 3, cien: 3, wypelnienie: 0xcfe6fb });
-    const figurka = this.kto === 'ela' && this.textures.exists('bohaterka') ? 'bohaterka' : 'bohater';
-    if (this.textures.exists(figurka)) {
-      const f = this.add.image(HERB_X + SLOT / 2, RZAD_Y + SLOT / 2 - 1, figurka, 0).setDepth(Z.hud + 3);
-      f.setScale((SLOT - 8) / f.height);
-    }
     const tag = this.add.text(0, 0, 'DRUŻYNA', stylWalki(11)).setDepth(Z.hud + 4);
     const tw = tag.width + 16;
     const tg = this.add.graphics().setDepth(Z.hud + 3);
     pigulka(tg, BLOK_X + 26, BLOK_Y - 10, tw, 20, 'niebieski', { r: 10, cien: false });
     napisNaPigulce(tag.setOrigin(0.5).setPosition(BLOK_X + 26 + tw / 2, BLOK_Y - 1), 'niebieski');
-    this.strefaOpisu({ x: HERB_X, y: RZAD_Y, w: SLOT, h: SLOT }, () => this.opisArmii());
+    // Opis drużyny — po najechaniu na pigułkę „DRUŻYNA".
+    this.strefaOpisu({ x: BLOK_X + 26, y: BLOK_Y - 10, w: tw, h: 20 }, () => this.opisArmii());
     this.panel.dodajPasek({
       x: RZAD_X,
       y: RZAD_Y,

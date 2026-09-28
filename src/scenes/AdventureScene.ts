@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { dnoGniazda, kluczPortretuPanelu, oprawPortret, spriteDoPortretow, wczytajPortrety } from '../visual/portrety';
+import { kluczPortretuPanelu, spriteDoPortretow, wczytajPortrety } from '../visual/portrety';
 import { ZESTAWY_KLIMATU } from '../data/zestawy-klimatu';
 import {
   BUDOWLE,
@@ -55,6 +55,20 @@ import {
 import { planszaPrzygody } from '../data/plansza';
 import { ALL_SPRITES, factionById } from '../data/factions';
 import { STARTERY, nowyStarter, wybierzStartera } from '../data/startery';
+import {
+  TUSZ,
+  TUSZ_CSS,
+  ZOLTY,
+  krojWalki,
+  medalionPokeball,
+  panelBialy,
+  pigulka,
+  napisNaPigulce,
+  stylWalki,
+  tloEkranu,
+  type KolorPigulki,
+} from '../visual/stylWalki';
+import { przyciskWalki } from '../visual/hudWalki';
 import { TYPE_INFO } from '../data/units';
 import { STRAZNICY_MAPOWI } from '../data/strazniki-mapa';
 import type { PoseName } from '../visual/unitView';
@@ -81,20 +95,17 @@ import {
   KROJ,
   Przycisk,
   cienPanelu,
-  tloDrewna,
   krojeZestawu,
-  latki,
   medalion,
   napisNaDrewnie,
   napisTytulowy,
   ozdobnik,
   panelPergaminu,
-  ramaZlota,
   stylAtramentu,
   stylEtykiety,
   wczytajZestaw,
   wstazka,
-} from '../visual/zestaw';
+} from '../visual/zestawWalki';
 import { ICON, buildIcons } from '../visual/icons';
 import {
   GORA,
@@ -155,6 +166,9 @@ import {
  * całej planszy zajmowało jakieś trzy sekundy: szybciej gubi się orientację,
  * wolniej łatwiej sięgnąć po minimapę.
  */
+/** Wysokość czerwonej belki nad mapą (`tloEkranu`) — kończy się nad ramą mapy. */
+const BELKA_MAPY = 36;
+
 const PREDKOSC_PRZEWIJANIA = 560;
 
 /**
@@ -433,9 +447,8 @@ const CIEN_RZUT = { kx: 0.75, ky: 0.28, krycie: 0.68 };
 
 const DOMYSLNA_PODPOWIEDZ =
   'Kliknij pole — zobaczysz trasę.\n' +
-  'Kliknij drugi raz — bohater rusza.\n' +
-  'Strzałki przesuwają mapę, spacja wraca do bohatera.\n' +
-  'C — cele misji.';
+  'Kliknij drugi raz — trener rusza.\n' +
+  'Spacja wraca do trenera. C — cele.';
 
 export class AdventureScene extends Phaser.Scene {
   private stan!: StanMapy;
@@ -789,7 +802,11 @@ export class AdventureScene extends Phaser.Scene {
     // Kroje zestawu (Cinzel, Lora) wczytują się raz na grę. Przy wejściu
     // prosto na mapę (np. `?ekran=mapa`) potrafią dojść po zbudowaniu HUD-u —
     // wtedy przerysowujemy wszystkie napisy, które powstały krojem zapasowym.
-    void krojeZestawu().then(() => this.przerysujNapisy());
+    void Promise.all([krojeZestawu(), krojWalki()]).then(() => {
+      this.przerysujNapisy();
+      // Podpowiedź dobiera rozmiar do pola z pomiaru — po nowym kroju mierzy od nowa.
+      this.podpowiedz?.setText(this.podpowiedz.text);
+    });
 
     // Warunki misji — raz, na starcie, jak okno „Scenario Information"
     // w Heroes 2. Chwila zwłoki, żeby najpierw było widać mapę, na której
@@ -1927,40 +1944,41 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   private rysujTlo() {
-    // Drewno na całe okno z belką nagłówka u góry — ten sam materiał co
-    // ekran kampanii i okna misji. Niebo z bitwy zostało w bitwie.
-    tloDrewna(this).setDepth(Z.sky);
+    // Tło i czerwona belka jak na ekranie walki i bohatera (`stylWalki.ts`).
+    tloEkranu(this, Z.sky, BELKA_MAPY);
     // W misji nagłówek mówi, KTÓRA to misja — dziecko wraca do gry po
     // tygodniu i pierwsze pytanie brzmi „gdzie ja jestem".
     const m = misjaPoId(this.stan.misja);
-    napisNaDrewnie(this, MARGINES + 6, 20, m ? `Misja ${m.nr} · ${m.tytul}` : 'Mapa przygody', 19)
+    this.add
+      .text(MARGINES + 8, BELKA_MAPY / 2 - 3, m ? `Misja ${m.nr} · ${m.tytul}` : 'Mapa przygody', stylWalki(19, '#ffffff'))
       .setOrigin(0, 0.5)
+      .setShadow(0, 2, 'rgba(0,0,0,0.35)', 0, false, true)
       .setDepth(Z.hud);
 
     // Cele i wyjście do menu w górnej belce nad panelem — jedyne wolne
     // miejsce, które nie zabiera wysokości podpowiedziom ani minimapie.
     const px = this.mapaX + this.oknoW + 14;
     const polowa = (PANEL_W - 8) / 2;
-    new Przycisk(this, {
+    przyciskWalki(this, {
       x: px + polowa / 2,
-      y: 19,
+      y: BELKA_MAPY / 2 - 3,
       w: polowa,
-      h: 30,
-      tekst: 'Cele (C)',
+      h: 26,
+      kolor: 'bialy',
       rozmiar: 13,
-      glebia: Z.hud + 2,
-      akcja: () => this.pokazWarunki(),
-    });
-    new Przycisk(this, {
+      depth: Z.hud + 2,
+      onClick: () => this.pokazWarunki(),
+    }).setLabel('Cele (C)');
+    przyciskWalki(this, {
       x: px + polowa + 8 + polowa / 2,
-      y: 19,
+      y: BELKA_MAPY / 2 - 3,
       w: polowa,
-      h: 30,
-      tekst: 'Menu',
+      h: 26,
+      kolor: 'bialy',
       rozmiar: 13,
-      glebia: Z.hud + 2,
-      akcja: () => this.zapytajOWyjscie(),
-    });
+      depth: Z.hud + 2,
+      onClick: () => this.zapytajOWyjscie(),
+    }).setLabel('Menu');
   }
 
   private budujSwiat() {
@@ -1969,8 +1987,12 @@ export class AdventureScene extends Phaser.Scene {
     // kreskę) — a w HotA rama i tak nachodzi na krawędź planszy.
     // Gruba złota rama z rozetami w rogach — jak obraz, bo w Heroes 2 mapa
     // też siedzi w ozdobnej ramie, a nie w kresce.
-    cienPanelu(this, this.mapaX, this.mapaY, this.oknoW, this.oknoH, 0.8).setDepth(Z.hud - 2);
-    ramaZlota(this, this.mapaX, this.mapaY, this.oknoW, this.oknoH, true).setDepth(Z.hud - 1);
+    // Biała rama z obrysem tuszem — jak plansza w walce. Mapę rysuje własna
+    // kamera NAD ramą, więc tusz na samej krawędzi to druga, cienka kreska.
+    const rama = this.add.graphics().setDepth(Z.hud - 2);
+    panelBialy(rama, this.mapaX - 7, this.mapaY - 5, this.oknoW + 14, this.oknoH + 12, 14, { obrys: 3, cien: 4 });
+    rama.fillStyle(TUSZ, 1);
+    rama.fillRect(this.mapaX - 2, this.mapaY - 2, this.oknoW + 4, this.oknoH + 4);
 
     this.swiat = this.add.container(0, 0).setDepth(Z.board);
     // Maska przycina świat do ramy. Bez niej mapa wychodzi na panel i na pasek
@@ -3328,49 +3350,39 @@ export class AdventureScene extends Phaser.Scene {
 
   private rysujPanel() {
     const px = this.mapaX + this.oknoW + 14;
-    const py = this.mapaY - 8;
-    const ph = this.oknoH + 16;
-    // Prawa kolumna jak w Heroes 2: wpuszczone w drewno pole w cienkiej
-    // złotej ramie, a w nim minimapa, karta bohatera i przyciski — ten sam
-    // materiał co okna warunków i ekran kampanii. Wcześniej był tu mleczny
-    // panel z bitwy i mapa wyglądała jak inna gra niż jej własne okna.
-    cienPanelu(this, px, py, PANEL_W, ph, 0.7).setDepth(Z.hud - 2);
-    const tloPanelu = this.add.graphics().setDepth(Z.hud - 1);
-    tloPanelu.fillStyle(0x1c1006, 0.55);
-    tloPanelu.fillRect(px, py, PANEL_W, ph);
-    ramaZlota(this, px, py, PANEL_W, ph, false).setDepth(Z.hud - 1);
+    const py = this.mapaY - 5;
+    const ph = this.oknoH + 12;
+    // Prawa kolumna jak w Heroes 2 (minimapa, karta bohatera, przyciski), ale
+    // w barwach ekranu walki: biały panel z obrysem tuszem.
+    const tlo = this.add.graphics().setDepth(Z.hud - 1);
+    panelBialy(tlo, px, py, PANEL_W, ph, 16);
 
-    const wnetrzeX = px + 16;
-    const wnetrzeW = PANEL_W - 32;
+    const wnetrzeX = px + 14;
+    const wnetrzeW = PANEL_W - 28;
 
     // Minimapa jest węższa od panelu, żeby pod nią zmieścił się pasek
     // własności. Przy planszy 36 × 36 to nadal blisko pięć pikseli na pole —
     // dość, żeby rozpoznać kształt lądu, a o to w minimapie chodzi.
     const mmBok = 176;
     const mmX = wnetrzeX + (wnetrzeW - mmBok) / 2;
-    const mmY = py + 26;
+    const mmY = py + 22;
     const ramka = this.add.graphics().setDepth(Z.hud);
+    ramka.fillStyle(TUSZ, 1);
+    ramka.fillRoundedRect(mmX - 4, mmY - 4, mmBok + 8, mmBok + 8, 8);
     ramka.fillStyle(0x0d0904, 1);
     ramka.fillRect(mmX, mmY, mmBok, mmBok);
     // Pod minimapą leży SAMA plansza, pomniejszona — ten sam malowany teren
     // co w oknie mapy, a nie kratka płaskich barw, która gryzła się z resztą.
     if (this.zbudujMiniature(mmBok))
       this.add.image(mmX, mmY, MINIATURA).setOrigin(0, 0).setDisplaySize(mmBok, mmBok).setDepth(Z.hud + 0.5);
-    ramaZlota(this, mmX, mmY, mmBok, mmBok, false).setDepth(Z.hud + 3);
     for (const [lit, dx, dy] of [
-      ['N', mmBok / 2, -14],
-      ['S', mmBok / 2, mmBok + 14],
-      ['W', -15, mmBok / 2],
-      ['E', mmBok + 15, mmBok / 2],
+      ['N', mmBok / 2, -13],
+      ['S', mmBok / 2, mmBok + 13],
+      ['W', -14, mmBok / 2],
+      ['E', mmBok + 14, mmBok / 2],
     ] as Array<[string, number, number]>) {
       this.add
-        .text(mmX + dx, mmY + dy, lit, {
-          fontFamily: KROJ.tytul,
-          fontSize: '12px',
-          color: BARWA.krem,
-          stroke: BARWA.braz,
-          strokeThickness: 3,
-        })
+        .text(mmX + dx, mmY + dy, lit, stylWalki(12, '#5b6270'))
         .setOrigin(0.5)
         .setDepth(Z.hud);
     }
@@ -3401,106 +3413,73 @@ export class AdventureScene extends Phaser.Scene {
       });
 
     const kartaY = this.rysujPasekWlasnosci(wnetrzeX, mmY + mmBok + 22, wnetrzeW) + 10;
-    const kartaH = 134;
-    panelPergaminu(this, wnetrzeX, kartaY, wnetrzeW, kartaH).forEach((c) => c.setDepth(Z.hud));
+    const kartaH = 148;
+    const karta = this.add.graphics().setDepth(Z.hud);
+    panelBialy(karta, wnetrzeX, kartaY, wnetrzeW, kartaH, 12, { obrys: 3, cien: 3, wypelnienie: 0xf4f8fd });
 
     const b = this.stan.bohater;
-    const portretBok = 50;
-    medalion(this, wnetrzeX + 8 + portretBok / 2, kartaY + 8 + portretBok / 2, portretBok / 2, BARWA.papierCiemny).setDepth(
-      Z.hud + 1
-    );
-    const portret = this.add
-      .image(wnetrzeX + 8 + portretBok / 2, kartaY + 6 + portretBok / 2, 'bohater', 0)
-      .setDepth(Z.hud + 2);
-    portret.setScale((portretBok - 8) / portret.height);
+    const r = 23;
+    const mx = wnetrzeX + 10 + r;
+    const my = kartaY + 10 + r;
+    medalionPokeball(this, mx, my, r).setDepth(Z.hud + 1);
+    const portret = this.add.image(mx, my, 'bohater', 0).setDepth(Z.hud + 2);
+    portret.setScale(((r - 8) * 2 + 4) / portret.height);
 
     this.add
-      .text(wnetrzeX + portretBok + 18, kartaY + 7, b.imie, stylEtykiety(17, BARWA.atrament))
+      .text(wnetrzeX + r * 2 + 20, kartaY + 8, b.imie, stylWalki(17))
       .setOrigin(0, 0)
       .setDepth(Z.hud + 2);
     this.poziomTekst = this.add
-      .text(wnetrzeX + portretBok + 18, kartaY + 28, '', stylAtramentu(12, 'miekki'))
+      .text(wnetrzeX + r * 2 + 20, kartaY + 29, '', stylWalki(11, '#5b6270', 800))
       .setOrigin(0, 0)
       .setDepth(Z.hud + 2)
-      .setData('maks', wnetrzeW - portretBok - 24);
+      .setData('maks', wnetrzeW - r * 2 - 26);
 
-    // Pasek do awansu. Sama liczba „190/384" mówi, ILE brakuje, ale nie mówi,
-    // czy to blisko — a to jest jedyne pytanie, które gracz sobie przy niej
-    // zadaje. Pasek odpowiada na nie bez czytania.
-    const pdX = wnetrzeX + portretBok + 18;
-    const pdW = wnetrzeW - portretBok - 26;
+    // Pasek do awansu — żółty jak pasek doświadczenia na ekranie bohatera.
+    const pdX = wnetrzeX + r * 2 + 20;
+    const pdW = wnetrzeW - r * 2 - 30;
     const pdY = kartaY + 46;
     const rowek = this.add.graphics().setDepth(Z.hud + 1);
-    rowek.fillStyle(0x3a2410, 1);
-    rowek.fillRoundedRect(pdX, pdY, pdW, 8, 4);
-    rowek.lineStyle(1.5, BARWA.kreska, 0.8);
-    rowek.strokeRoundedRect(pdX, pdY, pdW, 8, 4);
+    rowek.fillStyle(TUSZ, 1);
+    rowek.fillRoundedRect(pdX, pdY, pdW, 10, 5);
+    rowek.fillStyle(0xdfe4ea, 1);
+    rowek.fillRoundedRect(pdX + 2, pdY + 2, pdW - 4, 6, 3);
     this.doswPasek = this.add.graphics().setDepth(Z.hud + 2);
-    this.doswPasek.setData('x', pdX).setData('y', pdY).setData('w', pdW);
+    this.doswPasek.setData('x', pdX + 2).setData('y', pdY + 2).setData('w', pdW - 4);
 
-    const statY = kartaY + 70;
+    const statY = kartaY + 74;
     // Zapał, Opieka i ruch trenera (`PROJEKT-SWIAT.md`, fala 1).
     ['k-ikona-zapal', 'k-ikona-opieka', 'k-ikona-buty'].forEach((klucz, i) => {
-      const sx = wnetrzeX + 20 + i * 64;
-      this.add.image(sx, statY, klucz).setDisplaySize(20, 20).setDepth(Z.hud + 2);
+      const sx = wnetrzeX + 22 + i * 66;
+      this.add.image(sx, statY, klucz).setDisplaySize(22, 22).setDepth(Z.hud + 2);
       this.statTeksty[i] = this.add
-        .text(sx + 13, statY, '', stylEtykiety(16, i === 2 ? BARWA.atramentZielony : BARWA.atrament))
+        .text(sx + 14, statY, '', stylWalki(15, i === 2 ? '#2f9e55' : TUSZ_CSS))
         .setOrigin(0, 0.5)
         .setDepth(Z.hud + 2);
     });
     this.ruchTekst = this.statTeksty[2];
 
-    // Siedem slotów w JEDNYM rzędzie.
-    //
-    // Były w dwóch, bo przy boku 40 px siedem się nie mieści — ale dwa rzędy
-    // urosły kartę o 58 px i pole podpowiedzi pod nią zrobiło się tak niskie,
-    // że tekst wychodził spod przycisku „Zakończ turę". Panel na mapie ma
-    // pokazywać SKŁAD, a nie służyć do zarządzania: od tego jest ekran
-    // bohatera, gdzie sloty są dwa i pół raza większe. Bok 28 px wystarczy,
-    // żeby rozpoznać sylwetkę i odczytać liczbę.
-    //
-    // Rysunek i licznik powstają ZAWSZE, także dla pustego slotu, i są tylko
-    // chowane: ekran bohatera przekłada oddziały między slotami, więc panel
-    // musi umieć pokazać każdą zawartość każdego slotu bez przebudowy.
-    // 30 px i odstęp 1: siedem gniazd wypełnia szerokość karty (218 px).
-    const slotBok = 30;
-    const odstep = 1;
+    // Siedem slotów w JEDNYM rzędzie — skład drużyny, nie zarządzanie nią
+    // (od tego jest ekran bohatera). Płytki jak w pasku drużyny na ekranie
+    // bohatera: biel z obrysem, stworek figurką, poziom na pigułce pod spodem.
+    // Rysunek i licznik powstają ZAWSZE i są tylko chowane.
+    const slotBok = 28;
+    const odstep = 2;
     const rzadX = wnetrzeX + (wnetrzeW - (SLOTY_ARMII * slotBok + (SLOTY_ARMII - 1) * odstep)) / 2;
-    const rzadY = kartaY + 86;
+    const rzadY = kartaY + 94;
     for (let i = 0; i < SLOTY_ARMII; i++) {
       const sx = rzadX + i * (slotBok + odstep);
-      // Gniazdo: ciemne drewno wpuszczone w pergamin — puste miejsce ma być
-      // DZIURĄ, w którą wchodzi portret, a nie beżowym prostokątem.
       const g = this.add.graphics();
-      g.fillStyle(0x6b4a26, 0.5);
-      g.fillRect(0, 0, slotBok, slotBok);
-      dnoGniazda(g, 1, 1, slotBok - 2);
-      // Portret, nie figurka: przy 28 px cały stworek był plamką z nóżkami,
-      // a ciasny kadr twarzy (mały portret, jak w Heroes) czyta się od razu.
-      // Oprawa rysowana osobno, bo pusty slot ma zostać samą kratką.
-      //
-      // Liczba stoi na OSOBNEJ tabliczce pod ramą, nie na portrecie — na
-      // dolnej trzeciej zasłaniała pierś i brodę stwora (runda 2 portretów).
+      g.fillStyle(0x8b93a0, 1);
+      g.fillRoundedRect(0, 0, slotBok, slotBok, 7);
+      g.fillStyle(0xdde3ea, 1);
+      g.fillRoundedRect(2, 2, slotBok - 4, slotBok - 4, 5);
       const oprawa = this.add.graphics().setVisible(false);
-      oprawPortret(oprawa, 1, 1, slotBok - 2, 1);
-      oprawa.fillStyle(0x1a0e04, 0.95);
-      oprawa.fillRoundedRect(1, slotBok + 1, slotBok - 2, 11, 3);
-      oprawa.fillStyle(0x3a2410, 1);
-      oprawa.fillRoundedRect(2, slotBok + 2, slotBok - 4, 9, 2.5);
-      oprawa.fillStyle(0xe0a53a, 0.9);
-      oprawa.fillRect(4, slotBok + 2, slotBok - 8, 1);
-      const im = this.add
-        .image(slotBok / 2, slotBok / 2, 'bohater')
-        .setDisplaySize(slotBok - 2, slotBok - 2)
-        .setVisible(false);
+      panelBialy(oprawa, 0, 0, slotBok, slotBok, 7, { obrys: 2, cien: 0, wypelnienie: 0xeaf4ff });
+      pigulka(oprawa, 1, slotBok + 1, slotBok - 2, 14, 'bialy', { r: 7, cien: false });
+      const im = this.add.image(slotBok / 2, slotBok / 2, 'bohater').setVisible(false);
       const licznik = this.add
-        .text(slotBok / 2, slotBok + 6.5, '', {
-          fontFamily: KROJ.tytul,
-          fontSize: '10px',
-          color: BARWA.krem,
-          stroke: BARWA.braz,
-          strokeThickness: 2,
-        })
+        .text(slotBok / 2, slotBok + 7.5, '', stylWalki(11))
         .setOrigin(0.5);
       const slot = this.add.container(sx, rzadY, [g, oprawa, im, licznik]).setDepth(Z.hud + 1);
       slot.setData('licznik', licznik).setData('rysunek', im).setData('oprawa', oprawa);
@@ -3508,8 +3487,6 @@ export class AdventureScene extends Phaser.Scene {
     }
 
     // Karta bohatera jest KLIKALNA — stąd wchodzi się na ekran bohatera.
-    // Bez tego jedyną drogą byłoby kliknięcie w sylwetkę na mapie, a ta
-    // potrafi stać za krawędzią widoku.
     this.add
       .zone(wnetrzeX, kartaY, wnetrzeW, kartaH)
       .setOrigin(0, 0)
@@ -3517,41 +3494,44 @@ export class AdventureScene extends Phaser.Scene {
       .on('pointerdown', () => this.otworzBohatera());
 
     // Pole podpowiedzi kończy się nad rzędem zapisu; rząd zapisu (30 px)
-    // i „Zakończ turę" (40 px) stoją od dołu panelu. Liczby idą z jednego
-    // miejsca — przestawienie któregokolwiek bez reszty rozjeżdża odstępy.
-    const turaY = py + ph - 28;
-    const wierszAkcjiY = turaY - 40;
+    // i „Zakończ turę" (40 px) stoją od dołu panelu.
+    const turaY = py + ph - 30;
+    const wierszAkcjiY = turaY - 42;
     const podY = kartaY + kartaH + 12;
     const podH = wierszAkcjiY - 21 - podY;
-    panelPergaminu(this, wnetrzeX, podY, wnetrzeW, podH).forEach((c) => c.setDepth(Z.hud));
+    // Okienko jak dialog w walce: szare, z obrysem tuszem.
+    const pod = this.add.graphics().setDepth(Z.hud);
+    pod.fillStyle(TUSZ, 1);
+    pod.fillRoundedRect(wnetrzeX, podY, wnetrzeW, podH, 10);
+    pod.fillStyle(0xf4f6f9, 1);
+    pod.fillRoundedRect(wnetrzeX + 2, podY + 2, wnetrzeW - 4, podH - 4, 8);
     this.podpowiedz = this.add
-      .text(wnetrzeX + 9, podY + 6, DOMYSLNA_PODPOWIEDZ, { ...stylAtramentu(12), lineSpacing: 0 })
+      .text(wnetrzeX + 9, podY + 7, DOMYSLNA_PODPOWIEDZ, { ...stylWalki(13, TUSZ_CSS, 700), lineSpacing: 0 })
       .setOrigin(0, 0)
       .setDepth(Z.hud + 2)
       .setWordWrapWidth(wnetrzeW - 18);
-    // Lora jest szersza od dawnego kroju, a opisy obiektów bywają długie.
-    // Każdy nowy tekst podpowiedzi najpierw próbuje 12 px; dopiero gdy nie
-    // mieści się w polu, schodzi o piksel — zamiast wychodzić na przyciski.
+    // Opisy obiektów bywają długie. Każdy nowy tekst podpowiedzi najpierw
+    // próbuje 12 px; dopiero gdy nie mieści się w polu, schodzi o piksel.
     const pp = this.podpowiedz;
     const zwykly = pp.setText.bind(pp);
     pp.setText = ((t: string | string[]) => {
-      pp.setFontSize(12);
+      pp.setFontSize(13);
       zwykly(t);
-      for (const r of [11, 10]) {
-        if (pp.height <= podH - 8) break;
+      for (const r of [12, 11, 10]) {
+        if (pp.height <= podH - 12) break;
         pp.setFontSize(r);
       }
       return pp;
     }) as typeof pp.setText;
 
     const polowaW = (wnetrzeW - 8) / 2;
-    const guzik = (x: number, y: number, w: number, h: number, tekst: string, akcja: () => void, glowny = false) =>
-      new Przycisk(this, { x, y, w, h, tekst, glowny, rozmiar: glowny ? 17 : 13, glebia: Z.hud + 2, akcja });
-    guzik(wnetrzeX + polowaW / 2, wierszAkcjiY, polowaW, 30, 'Zapisz', () => this.zapiszStanGry());
-    guzik(wnetrzeX + polowaW + 8 + polowaW / 2, wierszAkcjiY, polowaW, 30, 'Wczytaj', () => this.wczytajStanGry());
-    // „Zakończ turę" jest JEDYNĄ złotą tabliczką na mapie — to jedyny krok,
+    const guzik = (x: number, y: number, w: number, h: number, tekst: string, akcja: () => void, kolor: KolorPigulki, rozmiar: number) =>
+      przyciskWalki(this, { x, y, w, h, kolor, rozmiar, depth: Z.hud + 2, onClick: akcja }).setLabel(tekst);
+    guzik(wnetrzeX + polowaW / 2, wierszAkcjiY, polowaW, 30, 'Zapisz', () => this.zapiszStanGry(), 'bialy', 13);
+    guzik(wnetrzeX + polowaW + 8 + polowaW / 2, wierszAkcjiY, polowaW, 30, 'Wczytaj', () => this.wczytajStanGry(), 'bialy', 13);
+    // „Zakończ turę" jest JEDYNĄ czerwoną pigułką na mapie — to jedyny krok,
     // który zawsze da się zrobić, kiedy dziecko nie wie, co dalej.
-    guzik(px + PANEL_W / 2, turaY, wnetrzeW, 40, 'Zakończ turę', () => this.koniecTury(), true);
+    guzik(px + PANEL_W / 2, turaY, wnetrzeW, 40, 'Zakończ turę', () => this.koniecTury(), 'czerwony', 18);
   }
 
   /**
@@ -3626,9 +3606,7 @@ export class AdventureScene extends Phaser.Scene {
     for (const [i, w] of wpisy.entries()) {
       const sx = rzadX + i * (bok + odstep);
       const g = this.add.graphics().setDepth(Z.hud);
-      g.fillStyle(BARWA.papierCiemny, 1);
-      g.fillRect(sx, y, bok, bok);
-      ramaZlota(this, sx, y, bok, bok, false).setDepth(Z.hud + 2);
+      panelBialy(g, sx, y, bok, bok, 9, { obrys: 3, cien: 3, wypelnienie: 0xcfe6fb });
       const im = this.add.image(sx + bok / 2, y + bok / 2, w.klucz).setDepth(Z.hud + 1);
       im.setScale(Math.min((bok - 8) / im.width, (bok - 6) / im.height));
       this.add
@@ -3643,29 +3621,33 @@ export class AdventureScene extends Phaser.Scene {
 
   private rysujPasekSurowcow() {
     const y = this.mapaY + this.oknoH + 14;
-    const x0 = this.mapaX - 8;
-    const szer = this.oknoW + 16;
-    // Pergamin w cienkiej złotej ramie — surowce czyta się jak rachunek
-    // w księdze skarbnika, ciemnym atramentem na jasnym papierze.
-    panelPergaminu(this, x0, y, szer, PASEK_H).forEach((c) => c.setDepth(Z.hud));
+    const x0 = this.mapaX - 7;
+    const szer = this.oknoW + 14;
+    const g = this.add.graphics().setDepth(Z.hud);
+    panelBialy(g, x0, y, szer, PASEK_H + 4, 14, { obrys: 3, cien: 3 });
 
     const krok = (szer - 24) / SUROWCE.length;
     SUROWCE.forEach((s, i) => {
-      const sx = x0 + 20 + i * krok;
+      const sx = x0 + 22 + i * krok;
       const sy = y + PASEK_H / 2;
       const im = this.add.image(sx, sy, `m-${SUROWIEC_INFO[s].ikona}`).setDepth(Z.hud + 1);
-      im.setScale(Math.min(1, (PASEK_H - 10) / im.height));
+      im.setScale(Math.min(1, (PASEK_H - 8) / im.height));
       this.podpisy[s] = this.add
-        .text(sx + 17, sy, '0', stylEtykiety(17, BARWA.atrament))
+        .text(sx + 17, sy, '0', stylWalki(17))
         .setOrigin(0, 0.5)
         .setDepth(Z.hud + 1);
       this.dochody[s] = this.add
-        .text(sx + 17, sy + 1, '', { ...stylAtramentu(12, 'zielony'), fontStyle: 'bold' })
+        .text(sx + 17, sy + 1, '', stylWalki(12, '#2f9e55'))
         .setOrigin(0, 0.5)
         .setDepth(Z.hud + 1);
     });
 
-    this.dataTekst = napisNaDrewnie(this, this.mapaX + this.oknoW + 14 + PANEL_W / 2, y + PASEK_H / 2, '', 15)
+    // Data w białej pigułce pod panelem.
+    const dx = this.mapaX + this.oknoW + 14;
+    const dg = this.add.graphics().setDepth(Z.hud);
+    pigulka(dg, dx, y + 2, PANEL_W, PASEK_H, 'bialy');
+    this.dataTekst = this.add
+      .text(dx + PANEL_W / 2, y + 2 + PASEK_H / 2 - 1, '', stylWalki(15))
       .setOrigin(0.5)
       .setDepth(Z.hud + 1);
   }
@@ -3724,10 +3706,10 @@ export class AdventureScene extends Phaser.Scene {
     this.doswPasek.clear();
     const ulamek = Phaser.Math.Clamp(p.wPoziomie / p.doAwansu, 0, 1);
     if (ulamek > 0.01) {
-      this.doswPasek.fillStyle(C.gold, 1);
-      this.doswPasek.fillRoundedRect(pdX + 1, pdY + 1, Math.max(4, (pdW - 2) * ulamek), 6, 3);
-      this.doswPasek.fillStyle(C.white, 0.35);
-      this.doswPasek.fillRoundedRect(pdX + 1, pdY + 1.5, Math.max(4, (pdW - 2) * ulamek), 2.5, 1.5);
+      this.doswPasek.fillStyle(ZOLTY, 1);
+      this.doswPasek.fillRoundedRect(pdX, pdY, Math.max(6, pdW * ulamek), 6, 3);
+      this.doswPasek.fillStyle(C.white, 0.45);
+      this.doswPasek.fillRoundedRect(pdX + 2, pdY + 1, Math.max(3, pdW * ulamek - 4), 2, 1);
     }
     for (let i = 0; i < SLOTY_ARMII; i++) {
       const slot = this.slotyArmii[i];
@@ -3736,8 +3718,13 @@ export class AdventureScene extends Phaser.Scene {
       const im = slot.getData('rysunek') as Phaser.GameObjects.Image;
       const licznik = slot.getData('licznik') as Phaser.GameObjects.Text;
       if (od) {
-        im.setTexture(kluczPortretuPanelu(od.sprite)).setVisible(true);
-        im.setDisplaySize(28, 28);
+        // Figurka stworka (`p-<sprite>`) jak w pasku drużyny; bez niej —
+        // mały portret.
+        const fig = `p-${od.sprite}`;
+        if (this.textures.exists(fig)) {
+          im.setTexture(fig).setVisible(true);
+          im.setScale(Math.min(25 / im.height, 26 / im.width));
+        } else im.setTexture(kluczPortretuPanelu(od.sprite)).setDisplaySize(24, 24).setVisible(true);
         (slot.getData('oprawa') as Phaser.GameObjects.Graphics).setVisible(true);
         // Tabliczka pod portretem mówi POZIOM stworka (dawniej liczebność
         // stosu). Zemdlony stworek jest wyszarzony, tak jak w grach
@@ -4876,34 +4863,31 @@ export class AdventureScene extends Phaser.Scene {
       // dostaje wstęgę z laku, ulepszenie — zieloną: gracz ma widzieć różnicę
       // „dokładam coś" kontra „podbijam coś", zanim przeczyta obie karty.
       const g = this.add.graphics().setDepth(Z.overlay + 2);
-      g.fillStyle(0x8a5a2a, 0.12);
-      g.fillRect(kx, kartaY, kartaW, kartaH);
-      ramaZlota(this, kx, kartaY, kartaW, kartaH, false).setDepth(Z.overlay + 2);
-      g.fillStyle(oferta.nowa ? BARWA.lak : 0x3f7a42, 1);
-      g.fillRect(kx + 10, kartaY + 9, kartaW - 20, 22);
-      g.fillStyle(0xffffff, 0.14);
-      g.fillRect(kx + 10, kartaY + 11, kartaW - 20, 3);
+      panelBialy(g, kx, kartaY, kartaW, kartaH, 14, { obrys: 3, cien: 3, wypelnienie: 0xf4f8fd });
+      const znak = this.add
+        .text(kx + kartaW / 2, kartaY + 1, oferta.nowa ? 'NOWA' : 'ULEPSZENIE', stylWalki(12, '#ffffff'))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      const zw = znak.width + 26;
+      pigulka(g, kx + kartaW / 2 - zw / 2, kartaY - 11, zw, 24, oferta.nowa ? 'czerwony' : 'zielony');
+      napisNaPigulce(znak, oferta.nowa ? 'czerwony' : 'zielony');
       this.add
-        .text(kx + kartaW / 2, kartaY + 20, oferta.nowa ? 'NOWA' : 'ULEPSZENIE', stylEtykiety(12, '#fff4dc'))
+        .text(kx + kartaW / 2, kartaY + 34, u.nazwa, stylEtykiety(20, BARWA.atrament))
         .setOrigin(0.5)
         .setDepth(Z.overlay + 3);
       this.add
-        .text(kx + kartaW / 2, kartaY + 50, u.nazwa, stylEtykiety(20, BARWA.atrament))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 3);
-      this.add
-        .text(kx + kartaW / 2, kartaY + 72, POZIOMY[oferta.poziom - 1], {
+        .text(kx + kartaW / 2, kartaY + 56, POZIOMY[oferta.poziom - 1], {
           ...stylAtramentu(13, 'miekki'),
           fontFamily: KROJ.kursywa,
         })
         .setOrigin(0.5)
         .setDepth(Z.overlay + 3);
       this.add
-        .text(kx + kartaW / 2, kartaY + 96, opisWartosci(u, oferta.poziom), stylEtykiety(18, BARWA.atramentZielony))
+        .text(kx + kartaW / 2, kartaY + 80, opisWartosci(u, oferta.poziom), stylEtykiety(18, BARWA.atramentZielony))
         .setOrigin(0.5)
         .setDepth(Z.overlay + 3);
       this.add
-        .text(kx + kartaW / 2, kartaY + 128, u.opis, { ...stylAtramentu(13, 'zwykly', kartaW - 24), align: 'center' })
+        .text(kx + kartaW / 2, kartaY + 120, u.opis, { ...stylAtramentu(13, 'zwykly', kartaW - 24), align: 'center' })
         .setOrigin(0.5)
         .setDepth(Z.overlay + 3);
       // Dwie karty to dwie równorzędne decyzje — obie tabliczki drewniane.
@@ -5066,8 +5050,10 @@ export class AdventureScene extends Phaser.Scene {
     const szer = 520;
     const wys = 128;
     const cien = cienPanelu(this, -szer / 2, -wys / 2, szer, wys);
-    const deska = latki(this, 'z-tabliczka-drewno', -szer / 2, -wys / 2, szer, wys, 40, 40, 30, 30);
-    const rama = ramaZlota(this, -szer / 2, -wys / 2, szer, wys, true);
+    const deska = this.add.graphics();
+    panelBialy(deska, -szer / 2, -wys / 2, szer, wys, 22, { obrys: 4, cien: 0 });
+    const rama = this.add.graphics();
+    pigulka(rama, -szer / 2 + 14, -wys / 2 + 8, szer - 28, 10, wygrana ? 'czerwony' : 'szary', { r: 5, cien: false });
     const napis = wygrana
       ? napisTytulowy(this, 0, -16, 'Zwycięstwo!', 44)
       : napisNaDrewnie(this, 0, -16, 'Koniec wyprawy', 40).setOrigin(0.5);
@@ -5089,7 +5075,6 @@ export class AdventureScene extends Phaser.Scene {
       .setDepth(Z.overlay + 2)
       .setScale(0.4)
       .setAlpha(0);
-    if (!wygrana) deska.setTint(0xb0a8b8);
     this.tweens.add({ targets: baner, scale: 1, alpha: 1, duration: 520, ease: E.out });
 
     if (wygrana) {
@@ -5318,7 +5303,7 @@ export class AdventureScene extends Phaser.Scene {
     const wierszWarunku = (obrazek: Obrazek, etykieta: string, barwa: string, zdanie: string) => {
       const x0 = -wnetrze / 2;
       const pas = this.add.graphics();
-      pas.fillStyle(0x8a5a2a, 0.09);
+      pas.fillStyle(0xeef2f7, 1);
       pas.fillRoundedRect(x0, y + 4, wnetrze, 58, 10);
       const md = medalion(this, x0 + 34, y + 33, 29, BARWA.papier);
       const et = this.add.text(x0 + 76, y + 20, etykieta, stylEtykiety(15, barwa)).setOrigin(0, 0.5);

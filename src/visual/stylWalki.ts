@@ -212,6 +212,30 @@ export function tloWalki(scene: Phaser.Scene, glebia: number, belkaH = 58) {
   return g;
 }
 
+/**
+ * Tło ekranu poza walką (mapa, miasto): ten sam błękit z kropkami, a u góry
+ * sama czerwona belka z pasem tuszu — niska, bo pod nią od razu jest treść.
+ */
+export function tloEkranu(scene: Phaser.Scene, glebia: number, belkaH = 36) {
+  const w = scene.scale.width;
+  const h = scene.scale.height;
+  const g = scene.add.graphics().setDepth(glebia);
+  g.fillGradientStyle(0xdfe7f0, 0xdfe7f0, 0xcfd9e6, 0xcfd9e6, 1);
+  g.fillRect(0, 0, w, h);
+  g.fillStyle(0xffffff, 0.55);
+  for (let y = 12; y < h; y += 24) for (let x = 12; x < w; x += 24) g.fillCircle(x, y, 3);
+  const pas = belkaH - 5;
+  g.fillGradientStyle(0xf2503a, 0xf2503a, 0xc92a09, 0xc92a09, 1);
+  g.fillRect(0, 0, w, pas);
+  g.fillStyle(0xffffff, 0.3);
+  g.fillRect(0, 3, w, 5);
+  g.fillStyle(TUSZ, 1);
+  g.fillRect(0, pas, w, 5);
+  g.fillStyle(0x000000, 0.12);
+  g.fillRect(0, belkaH, w, 4);
+  return g;
+}
+
 /** Medalion trenera jak pokeball: obrys, czerwień i biel, w środku portret na błękicie. */
 export function medalionPokeball(scene: Phaser.Scene, x: number, y: number, r: number, tlo: number = 0xaed8f5) {
   const g = scene.add.graphics();
