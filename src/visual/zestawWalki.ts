@@ -124,7 +124,15 @@ export function napisTytulowy(scena: Phaser.Scene, x: number, y: number, tekst: 
 
 // ————————————————————————————————————————————————— materiał
 
-/** Tło ekranu: błękit z kropkami (bez belki — tę rysuje scena, jeśli chce). */
+/** Wysokość belki nagłówka i jej oś — te same liczby co w `zestaw.ts`. */
+export const BELKA_H = 48;
+export const BELKA_Y = 25;
+
+/**
+ * Tło ekranu: błękit z kropkami i czerwona belka nagłówka o wysokości
+ * `BELKA_H` — tam, gdzie drewno miało namalowaną belkę, więc ekrany, które
+ * kładą tytuł na `BELKA_Y`, nie muszą nic przesuwać.
+ */
 export function tloDrewna(scena: Phaser.Scene) {
   const w = scena.scale.width;
   const h = scena.scale.height;
@@ -133,6 +141,15 @@ export function tloDrewna(scena: Phaser.Scene) {
   g.fillRect(0, 0, w, h);
   g.fillStyle(0xffffff, 0.55);
   for (let y = 12; y < h; y += 24) for (let x = 12; x < w; x += 24) g.fillCircle(x, y, 3);
+  const pas = BELKA_H - 5;
+  g.fillGradientStyle(0xf2503a, 0xf2503a, 0xc92a09, 0xc92a09, 1);
+  g.fillRect(0, 0, w, pas);
+  g.fillStyle(0xffffff, 0.3);
+  g.fillRect(0, 3, w, 5);
+  g.fillStyle(TUSZ, 1);
+  g.fillRect(0, pas, w, 5);
+  g.fillStyle(0x000000, 0.12);
+  g.fillRect(0, BELKA_H, w, 4);
   return g;
 }
 

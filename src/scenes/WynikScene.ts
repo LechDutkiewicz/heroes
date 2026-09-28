@@ -44,7 +44,7 @@ import {
   stylEtykiety,
   wczytajZestaw,
   wstazka,
-} from '../visual/zestaw';
+} from '../visual/zestawWalki';
 import { ICON, buildIcons } from '../visual/icons';
 import { buildArtefakty, kluczArtefaktu } from '../visual/artefakty';
 import { wersjonujZasoby } from '../visual/zasoby';

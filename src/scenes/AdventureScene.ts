@@ -2119,7 +2119,7 @@ export class AdventureScene extends Phaser.Scene {
     const ikona = this.add.image(16, 16, ICON.sword).setDisplaySize(16, 16).setVisible(false);
     const tekst = this.add
       .text(31, 28, '', {
-        fontFamily: KROJ.tytul,
+        fontFamily: KROJ.tytul, fontStyle: '900',
         fontSize: '13px',
         color: BARWA.krem,
         stroke: BARWA.braz,
@@ -5189,7 +5189,12 @@ export class AdventureScene extends Phaser.Scene {
       17
     )
       .setFontFamily(KROJ.tekst)
+      .setColor('#5b6270')
+      .setStroke(TUSZ_CSS, 0)
+      .setShadow(0, 0, 'rgba(0,0,0,0)', 0)
       .setOrigin(0.5);
+    // Na bieli napis porażki tuszem, nie białym z obrysem.
+    if (!wygrana) napis.setColor(TUSZ_CSS).setStroke(TUSZ_CSS, 0).setShadow(0, 0, 'rgba(0,0,0,0)', 0);
     const baner = this.add
       .container(cx, cy, [cien, deska, rama, napis, pod])
       .setDepth(Z.overlay + 2)
@@ -5635,7 +5640,7 @@ export class AdventureScene extends Phaser.Scene {
     const opcjeNapisy = ['Zapisz i wyjdź', 'Wyjdź', 'Zostań'];
     const ROZMIAR = 15;
     const ODSTEP = 18;
-    const miarka = this.add.text(0, 0, '', { fontFamily: KROJ.tytul, fontSize: `${ROZMIAR}px` });
+    const miarka = this.add.text(0, 0, '', { fontFamily: KROJ.tytul, fontStyle: '900', fontSize: `${ROZMIAR}px` });
     const szerokosci = opcjeNapisy.map((t) => Math.max(120, Math.ceil(miarka.setText(t).width) + 56));
     miarka.destroy();
     const razem = szerokosci.reduce((a, b) => a + b, 0) + ODSTEP * (szerokosci.length - 1);
@@ -6022,7 +6027,7 @@ export class AdventureScene extends Phaser.Scene {
         this.mapaX + this.oknoW / 2,
         this.mapaY + this.oknoH / 2,
         'Przetwarzanie tury…',
-        { fontFamily: KROJ.tytul, fontSize: '20px', color: BARWA.krem, stroke: BARWA.braz, strokeThickness: 4 }
+        { fontFamily: KROJ.tytul, fontStyle: '900', fontSize: '20px', color: BARWA.krem, stroke: BARWA.braz, strokeThickness: 4 }
       )
       .setOrigin(0.5)
       .setDepth(Z.overlay + 1);
