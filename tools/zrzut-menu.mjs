@@ -21,13 +21,13 @@ const BASE = arg('--url', 'http://localhost:4174');
 const DIR = arg('--dir', 'tools/shots');
 const Z_ZAPISEM = process.argv.includes('--z-zapisem');
 
-// Środki desek w układzie płótna — muszą się zgadzać z DESKI/SLUP
-// w src/scenes/MenuScene.ts (x = lewy koniec deski + ok. połowa szerokości).
+// Środki przycisków w układzie płótna — muszą się zgadzać z DESKI/PRZYCISKI_X
+// w src/scenes/MenuScene.ts (x = lewy koniec + połowa szerokości).
 const DESKA = [
-  { x: 260, y: 392 },
-  { x: 250, y: 464 },
-  { x: 250, y: 530 },
-  { x: 250, y: 596 },
+  { x: 228, y: 322 },
+  { x: 228, y: 404 },
+  { x: 228, y: 474 },
+  { x: 228, y: 544 },
 ];
 
 const browser = await chromium.launch({

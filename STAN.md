@@ -2,6 +2,34 @@
 
 Ostatnia aktualizacja: 2026-09-27 (trener zamiast armii: stworek = postać z poziomem, 4 na polu bitwy, trening i Centrum Pokemon).
 
+## Menu główne w stylu gier Pokémon (2026-09-28)
+
+**Co jest.** Ekran tytułowy zamiast baśniowej wioski z drogowskazem: tło to
+miasteczko Boru z nowego miasta (`public/menu/tlo2.jpg`, prompt `menu2-tlo`
+w `tools/PROMPTY-MENU.md`, wzorem kotwica Boru), logo rysowane w kodzie
+(żółte litery Nunito z niebieskim obrysem i czerwoną pigułką z tytułem
+kampanii), przyciski to pigułki walki (pierwszy czerwony, reszta biała,
+nieczynny szary z kłódką, wskazany z żółtą obwódką), z przodu Ela, Janek
+i starter Boru. Gracz i dźwięk to biała pigułka i okrągły przycisk w prawym
+górnym rogu, dymki białe. Okna `menuOkna.ts` (rekordy, autorzy, „Kto gra?")
+to biały panel z czerwoną belką tytułu, wiersze na szarobłękitnym tle,
+misje i profile jako pokeballe. W oknie zapisów cyfry slotów tuszem.
+
+**Decyzje.** Zostało zachowanie drogowskazu: lista z góry na dół, strzałki,
+podmenu przewraca te same przyciski (animacja skali Y). `ozywTloDnia` —
+tylko liście z korony drzewa i ptaki; latarnie, świetliki i woda były
+przyklejone do punktów starego tła. Stare grafiki menu (deski, słup,
+latarnia, sztandar, zwój, trener tyłem) usunięte z `public/menu/`; zostały
+kłódka i deseczka (tej używa jeszcze KampaniaScene) — `menu_wczytaj.py`
+odtworzyłby resztę, ale nie trzeba go puszczać.
+
+**Krytyk (ślepo, nowe vs stare, wzorce: walka, bohater, miasto).** Nowe
+wygrywa wszystkie 4 kryteria. Poprawione po nim: postacie niżej, z cieniem,
+starter nie przy krawędzi; równa szerokość przycisków; większy podpis
+„Wczytaj grę" i podtytuł logo; czerwona belka w oknach; ciemniejsze imiona
+w rekordach. Sondy: `probe-profile` (nowe współrzędne przycisków — także
+w `zrzut-menu.mjs`), `probe-misja` OK. Nowe narzędzie: `tools/zrzut-menu-okna.mjs`.
+
 ## Nowe miasto w stylu gier Pokémon (2026-09-28)
 
 **Co jest.** Ekran miasta narysowany od zera, osobno dla każdej krainy —
