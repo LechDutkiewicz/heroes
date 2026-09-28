@@ -431,9 +431,13 @@ def generujOpenAIZeWzoru(tresc: str, wzor: Path, proporcje: str | None, plik: st
         if not w.exists():
             raise SystemExit(f'Brak wzoru {w} (dla {plik}) — wygeneruj go najpierw.')
     tresc = AKAPIT_CHROMY.sub('Transparent background: only the object itself, nothing around it.', tresc)
+    # Tło panoramy i kotwica to całe obrazy, nie obiekty: kryjące tło, żeby
+    # model nie zostawił przezroczystych dziur w niebie.
+    kryjace = Path(plik).name.startswith(('kotwica', 'tlo-', 'm2-tlo-'))
     pola = {
         'model': MODEL_OPENAI, 'prompt': tresc, 'size': rozmiarOpenAI(proporcje),
-        'quality': JAKOSC_OPENAI, 'background': 'transparent', 'output_format': 'png', 'n': '1',
+        'quality': JAKOSC_OPENAI, 'background': 'opaque' if kryjace else 'transparent',
+        'output_format': 'png', 'n': '1',
     }
     granica = uuid.uuid4().hex
     cialo = bytearray()

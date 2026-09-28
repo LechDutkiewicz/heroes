@@ -628,3 +628,10 @@
 {"czas": "2026-09-28T10:29:55+00:00", "plik": "kotwica-zbocze.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 1812, "wyj": 2022, "usd": 0.0738}
 {"czas": "2026-09-28T10:30:58+00:00", "plik": "kotwica-bor-2.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 1795, "wyj": 2021, "usd": 0.0736}
 {"czas": "2026-09-28T10:31:23+00:00", "plik": "kotwica-zbocze-2.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 1804, "wyj": 2021, "usd": 0.0737}
+{"czas": "2026-09-28T11:15:57+00:00", "plik": "m2-tlo-bor.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 889, "wyj": 1867, "usd": 0.0642}
+{"czas": "2026-09-28T11:16:14+00:00", "plik": "m2-bor-centrum.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 983, "wyj": 1408, "usd": 0.05}
+{"czas": "2026-09-28T11:16:31+00:00", "plik": "m2-bor-ratusz1.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 969, "wyj": 1398, "usd": 0.0496}
+{"czas": "2026-09-28T11:16:46+00:00", "plik": "m2-bor-siedlisko1.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 970, "wyj": 1432, "usd": 0.0507}
+{"czas": "2026-09-28T11:18:31+00:00", "plik": "m2-bor-sala.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 976, "wyj": 1331, "usd": 0.0475}
+{"czas": "2026-09-28T11:18:48+00:00", "plik": "m2-bor-ratusz2.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 963, "wyj": 1459, "usd": 0.0515}
+{"czas": "2026-09-28T11:19:04+00:00", "plik": "m2-bor-ratusz3.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 977, "wyj": 1427, "usd": 0.0505}
