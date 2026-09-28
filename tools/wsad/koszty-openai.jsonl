@@ -623,3 +623,8 @@
 {"czas": "2026-09-28T06:16:04+00:00", "plik": "zima-zamek-las.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 375, "wyj": 1056, "usd": 0.0441}
 {"czas": "2026-09-28T06:16:22+00:00", "plik": "zima-zamek-ogien.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 347, "wyj": 1056, "usd": 0.044}
 {"czas": "2026-09-28T06:16:40+00:00", "plik": "fort.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 1808, "wyj": 1056, "usd": 0.0513}
+{"czas": "2026-09-28T10:29:11+00:00", "plik": "kotwica-bor.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 1793, "wyj": 1989, "usd": 0.0726}
+{"czas": "2026-09-28T10:29:33+00:00", "plik": "kotwica-grota.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 1815, "wyj": 2023, "usd": 0.0738}
+{"czas": "2026-09-28T10:29:55+00:00", "plik": "kotwica-zbocze.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 1812, "wyj": 2022, "usd": 0.0738}
+{"czas": "2026-09-28T10:30:58+00:00", "plik": "kotwica-bor-2.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 1795, "wyj": 2021, "usd": 0.0736}
+{"czas": "2026-09-28T10:31:23+00:00", "plik": "kotwica-zbocze-2.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 1804, "wyj": 2021, "usd": 0.0737}
