@@ -49,6 +49,10 @@ jako `atak`/`obrona` (zapisy graczy).
 | Zamek przeciwnika | Sala (budynek w stylu stadionu z herbem lidera) | 1 obraz + warianty klimatu |
 | Fort w mieście (Palisada, Zapora, Wał) | Żłobek stworków — więcej młodych w rezerwatach | 3 obrazy (frakcje z przemalowania: 1) |
 
+Stan: **fala 2 zakończona** (0,21 USD). Miasteczko z sercem Centrum,
+sala-stadion ze złotą gwiazdą, oba też w zimie; Żłobek w dziupli / nad
+wodą / pod skałą w mieście.
+
 ## Fala 3 — obiekty mapy przygody
 
 | Teraz (Heroes) | Po zmianie (bajka) | Działanie bez zmian |

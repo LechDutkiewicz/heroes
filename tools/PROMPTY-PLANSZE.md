@@ -577,7 +577,8 @@ podmienia je pod tymi samymi kluczami (`ZESTAWY` w `wsad_wczytaj.py`).
 | `zima-kopiec.png`, `zima-kopiec-2.png` | `public/mapa/zima/kopiec*.png` | 37 px |
 | `zima-wiatrak.png` | `public/mapa/zima/wiatrak.png` | 211 px |
 
-<!-- plik: zima-zamek-las.png -->
+(Dawny prompt zimowego zamku — zastąpiony miasteczkiem w sekcji „Fala 2” na końcu pliku.)
+<!-- dawniej: zima-zamek-las.png -->
 ```
 A richly detailed fortified town in deep winter, the player's capital on the
 adventure map, seen from the front and above: thick light grey granite
@@ -2225,4 +2226,69 @@ patches of snow between the trees so the rocks show. Each tree small. Cool
 blue shadows, sunlit snow on the upper-left faces. No snow platform or island
 under it: the irregular foot fades into trodden snow across the whole width
 of the picture. About as wide as tall.
+```
+
+
+## Fala 2 (`PROJEKT-SWIAT.md`) — miasteczko gracza i sala przeciwnika na mapie
+
+Zamek gracza był kamiennym zamkiem z Heroes, a zamek przeciwnika — tym
+samym rysunkiem. Teraz: twoje miasto to rodzinne miasteczko z Centrum
+Pokemon, a miasto przeciwnika to sala (budynek jak stadion) — tam czeka
+lider i odznaka. `wsad_wczytaj.py`: `m-zamek` → `zamek-las` (384 px),
+`m-sala` → `zamek-ogien` (336 px); zimowe pod tymi samymi nazwami w `zima/`.
+
+<!-- plik: m-zamek.png -->
+```
+A small cosy family hometown seen from the front and above: a tight cluster of
+five or six colourful cottages with rounded red, orange and blue roofs,
+chimneys and warm lit windows, gathered around one bigger central building — a
+friendly creature healing centre with a big rounded red-and-cream roof and a
+large pink heart-shaped sign above its wide arched glass doors facing the
+viewer. A little windmill at one side, white picket fences, flower beds,
+cobbled paths and three or four round leafy trees between the houses, a small
+blue banner with a white leaf emblem on a pole. Peaceful village, NOT a
+castle: no stone curtain walls, no battlements, no fortified towers, no gate
+keep. The town fills the frame, chunky and inviting, roughly as wide as tall.
+```
+
+<!-- plik: m-sala.png -->
+```
+A creature battle gym seen from the front and above: one big round
+stadium-like arena building with curved cream-white walls and a broad red band
+around the top, a wide arched main entrance with big double doors facing the
+viewer and a short flight of steps in front, a low domed roof crowned by a
+large round golden badge emblem (a simple star inside a circle), colourful
+triangular pennant flags on poles all around the rim and two tall floodlight
+posts at the sides. Sporty, bright and exciting — a sports stadium for
+creature battles. NOT a castle: no stone walls, no battlements, no towers,
+no portcullis. Fills the frame, slightly wider than tall.
+```
+
+<!-- plik: zima-zamek-las.png -->
+```
+A small cosy family hometown in deep winter seen from the front and above: a
+tight cluster of five or six colourful cottages with rounded red, orange and
+blue roofs, all carrying thick pillows of white snow with icicles on the
+eaves, chimneys with thin smoke and warm yellow light in the windows,
+gathered around one bigger central building — a friendly creature healing
+centre with a big rounded red-and-cream roof under snow and a large pink
+heart-shaped sign above its wide arched glass doors facing the viewer. Snowy
+picket fences, a snowman, a few snow-laden dark fir trees between the houses,
+a small blue banner with a white leaf emblem. No leafy trees, no grass, no
+moss, no green lawns. Peaceful village, NOT a castle: no stone walls, no
+battlements, no fortified towers. Fills the frame, roughly as wide as tall.
+```
+
+<!-- plik: zima-zamek-ogien.png -->
+```
+A creature battle gym in deep winter seen from the front and above: one big
+round stadium-like arena building with curved cream-white walls and a broad
+icy-blue band around the top, a wide arched main entrance with big double
+doors facing the viewer and snowy steps in front, a low domed roof under a
+thick cap of snow crowned by a large round golden badge emblem (a simple star
+inside a circle), icicles along the rim, colourful triangular pennant flags on
+poles and two tall floodlight posts glowing warm. A few snow-laden dark fir
+trees at the sides — no leafy trees, no grass, no moss. NOT a castle: no
+stone walls, no battlements, no towers. Fills the frame, slightly wider than
+tall.
 ```

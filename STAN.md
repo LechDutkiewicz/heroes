@@ -187,8 +187,21 @@ mieście albo kampanii.
   `probe-sloty-bitwa`, `probe-zwis`, `probe-przygoda`, `probe-armia`.
   `probe-fx` jest zepsuta od dawna (woła nieistniejące `scene.resolveHit`);
   `probe-fx`, `probe-dzwiek`, `probe-najechanie` mają na sztywno port 4173.
-- **Plan dalej**: reszta fali 1 z `PROJEKT-SWIAT.md` (słowa: Zapał,
-  Opieka, drużyna/stworek w tekstach), potem fale 2–4.
+- **Fala 2 — miasta na mapie** (2026-09-28). Tekstury `m-zamek-las`
+  (miasto gracza: rodzinne miasteczko z sercem Centrum) i `m-zamek-ogien`
+  (sala przeciwnika: okrągły stadion ze złotą gwiazdą) — pliki
+  `public/mapa/zamek-las.png`, `zamek-ogien.png` i warianty
+  `public/mapa/zima/`. Prompty w `PROMPTY-PLANSZE.md` („Fala 2"), wsad:
+  `wsad_wczytaj.py` (`m-zamek`, `m-sala`). Fort w mieście to Żłobek
+  (`zamki.ts`: „Żłobek w dziupli / nad wodą / pod skałą"; działanie bez
+  zmian, `MNOZNIK_FORTU`), obraz `public/miasto/*-fort.png`, grota
+  i zbocze z `frakcje_przemaluj.py` — UWAGA: ten skrypt przemalowuje też
+  inne budynki frakcji, niechciane zmiany cofnąć `git checkout`. Koszt
+  0,21 USD. Strona z etapami i obrazkami (artefakt „Pracownia") —
+  użytkownik chce ją dostawać po każdym etapie.
+- **Plan dalej**: styl A (ekran walki) na mapę, bohatera, miasto
+  i kampanię — użytkownik zauważył, że drewno i pergamin odstają od walki;
+  potem fale 3–4 z `PROJEKT-SWIAT.md`.
 - **Do zrobienia dalej**: stworki liderów jako osobne typy (frakcje), walki
   z liderami 3 na 3, PC Billa.
 
