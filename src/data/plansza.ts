@@ -24,7 +24,7 @@ import {
 } from './mapa';
 import { FACTIONS, factionById } from './factions';
 import { SLOTY_ARMII, znormalizuj } from './armia';
-import { MAKS_STADA, STARY_STOS, nowyStworek, rozbijStado, stadoZLiczebnosci } from './stworki';
+import { MAKS_STADA, STARY_STOS, przytnijPoziom, nowyStworek, rozbijStado, stadoZLiczebnosci } from './stworki';
 
 /** Dawny dzienny przyrost poziomów 1–6 — w nim plansze podają siłę załóg. */
 const STARY_PRZYROST = [3, 2, 2, 1, 1, 1];
@@ -101,14 +101,19 @@ const NAZWY_BUDYNKU: Record<Surowiec, string> = {
  * Obie straże graniczne są wyraźnie trudniejsze od wszystkiego, co stoi po
  * ich stronie mapy — inaczej podział na pasy przestaje cokolwiek znaczyć.
  */
-const STRAZE: Record<string, { frakcja: string; tiery: number[]; mnoznik: number; stosy: number }> =
-  {
-    slaby: { frakcja: 'grota', tiery: [0, 1], mnoznik: 0.6, stosy: 1 },
-    sredni: { frakcja: 'grota', tiery: [1, 2], mnoznik: 0.85, stosy: 2 },
-    silny: { frakcja: 'zbocze', tiery: [2, 3], mnoznik: 1.1, stosy: 2 },
-    straznik: { frakcja: 'zbocze', tiery: [2, 3], mnoznik: 1.3, stosy: 3 },
-    wodz: { frakcja: 'zbocze', tiery: [4, 5], mnoznik: 1.0, stosy: 3 },
-  };
+const STRAZE: Record<
+  string,
+  { frakcja: string; tiery: number[]; mnoznik: number; stosy: number; ileMin: number; poziomMin: number }
+> = {
+  // `ileMin`/`poziomMin` strojone pomiarem par 5. poziomu: para
+  // dzikich na 2.–3. poziomie zabiera dobrej dwójce ok. połowy życia,
+  // a najkruchszą (Pyroko + Flamir) potrafi pokonać.
+  slaby: { frakcja: 'grota', tiery: [0, 1], mnoznik: 0.6, stosy: 1, ileMin: 2, poziomMin: 2 },
+  sredni: { frakcja: 'grota', tiery: [1, 2], mnoznik: 0.85, stosy: 2, ileMin: 2, poziomMin: 3 },
+  silny: { frakcja: 'zbocze', tiery: [2, 3], mnoznik: 1.1, stosy: 2, ileMin: 3, poziomMin: 4 },
+  straznik: { frakcja: 'zbocze', tiery: [2, 3], mnoznik: 1.3, stosy: 3, ileMin: 3, poziomMin: 4 },
+  wodz: { frakcja: 'zbocze', tiery: [4, 5], mnoznik: 1.0, stosy: 3, ileMin: 2, poziomMin: 5 },
+};
 
 /**
  * Straż na mapie to ZAWSZE jeden gatunek — stado dzikich stworków.
@@ -116,10 +121,13 @@ const STRAZE: Record<string, { frakcja: string; tiery: number[]; mnoznik: number
  * Tak jest w Heroes 3 (włóczące się oddziały nie mieszają gatunków) i tak
  * jest w pokemonach (Onixy chodzą stadem Onixów). Siła straży jest dalej
  * podana w dawnych liczebnościach (`STRAZE`), a na stado — ilu stworków
- * i na jakim poziomie — przelicza ją `stadoZLiczebnosci`. Liczba stworków
- * w stadzie nie przekracza liczby dawnych stosów + 1 ani czterech miejsc na
- * polu bitwy, żeby słaba straż nie była tłumem.
+ * i na jakim poziomie — przelicza ją `stadoZLiczebnosci`, a `ileMin`
+ * i `poziomMin` pilnują, żeby walka 2 na stado nie była formalnością.
+ * Najwyżej trzy stworki (`MAKS_STADA` — tyle staje na polu).
  */
+/** Od tego poziomu stado jednego stworka już jest wyzwaniem — nie dokładamy mu towarzyszy. */
+const POZIOM_SILNEGO_STADA = 8;
+
 function oddzialyStrazy(sila: string, losuj: () => number): Oddzial[] {
   const wzor = STRAZE[sila] ?? STRAZE.slaby;
   const frakcja = factionById(wzor.frakcja) ?? FACTIONS[0];
@@ -128,7 +136,22 @@ function oddzialyStrazy(sila: string, losuj: () => number): Oddzial[] {
   // ±25% siły, żeby dwa te same posterunki nie były identyczne.
   const razem = STARY_STOS[tier] * wzor.mnoznik * wzor.stosy * (0.75 + losuj() * 0.5);
   const stado = stadoZLiczebnosci(tier, razem, Math.min(MAKS_STADA, wzor.stosy + 1));
-  return [{ sprite: u.sprite, nazwa: u.name, frakcja: frakcja.id, tier, ...stado }];
+  // Walka z dzikimi to dwa stworki trenera przeciw stadu. Pojedynczy dziki
+  // na 1. poziomie (słaba straż z dawnej liczebności) padał od jednego
+  // ciosu i walki były formalnością (uwaga z gry, misja 1). Stado ma więc
+  // co najmniej `ileMin` stworków: siła dzieli się między nie (ta sama
+  // reguła co w `stadoZLiczebnosci`), a podłoga `poziomMin` je wzmacnia.
+  // Silne stado (wysoki poziom) zostaje, jakie było — dzielenie jednego
+  // stworka z 16. poziomu na trzech z 3. osłabiało je, a to one pilnują
+  // przejść, które mają poczekać, aż drużyna urośnie.
+  if (stado.ile >= wzor.ileMin || stado.poziom >= POZIOM_SILNEGO_STADA) {
+    return [{ sprite: u.sprite, nazwa: u.name, frakcja: frakcja.id, tier, ...stado }];
+  }
+  const ile = Math.min(MAKS_STADA, wzor.ileMin);
+  const r = razem / STARY_STOS[tier];
+  // Podłoga z losowym +0/+1, żeby dwa słabe stada nie były bliźniakami.
+  const poziom = Math.max(wzor.poziomMin + (losuj() < 0.5 ? 0 : 1), przytnijPoziom(15 * (r / ile) - 10));
+  return [{ sprite: u.sprite, nazwa: u.name, frakcja: frakcja.id, tier, ile, poziom }];
 }
 
 /**
