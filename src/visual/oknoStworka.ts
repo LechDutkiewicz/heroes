@@ -33,7 +33,7 @@ import {
   panelPergaminu,
   stylAtramentu,
   stylEtykiety,
-} from './zestaw';
+} from './zestawWalki';
 
 export interface OpcjeOknaStworka {
   oddzial: Oddzial;
@@ -142,7 +142,7 @@ export function pokazOknoStworka(scena: Phaser.Scene, o: OpcjeOknaStworka): Okno
   // Wiersze statystyk: znak z kompletu mini (atramentem), nazwa, wartość.
   const kx = x + 196;
   let ky = y + 92;
-  const wiersz = (znak: MiniKey, etykieta: string, wartosc: string, barwaZnaku = 0x7a4a1c) => {
+  const wiersz = (znak: MiniKey, etykieta: string, wartosc: string, barwaZnaku = 0x5b6270) => {
     k.add(miniIcon(scena, znak, kx + 9, ky + 9, 18, barwaZnaku));
     k.add(scena.add.text(kx + 24, ky, etykieta, stylEtykiety(12, BARWA.atramentMiekki)).setOrigin(0, 0));
     const t = scena.add.text(kx + 136, ky - 1, wartosc, { ...stylAtramentu(14), wordWrap: { width: x + SZER - 22 - (kx + 136) } });

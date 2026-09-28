@@ -38,7 +38,7 @@ import {
   panelPergaminu,
   stylAtramentu,
   stylEtykiety,
-} from './zestaw';
+} from './zestawWalki';
 
 export interface OpcjeOkna {
   glebia: number;

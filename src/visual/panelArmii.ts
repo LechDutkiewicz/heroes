@@ -49,7 +49,7 @@ import {
   ramaZlota,
   stylAtramentu,
   stylEtykiety,
-} from './zestaw';
+} from './zestawWalki';
 
 /*
  * Materiał paska — runda 2 ślepego porównania z HotA. Krytyk: „paski płaskie,
