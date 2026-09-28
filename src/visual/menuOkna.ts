@@ -1,10 +1,10 @@
 /**
- * Okna menu głównego: zwój z rekordami i zwój z autorami.
+ * Okna menu głównego: rekordy, autorzy i „Kto gra?".
  *
- * Zwój, a nie panel z ramką, bo menu jest ulicą wioski — okno w stylu
- * interfejsu bitwy (mleczna karta z kapsułkami) wyskoczyłoby tu jak
- * reklama z innej gry. Zwój się ROZWIJA (skala Y od środka), więc widać,
- * skąd się wziął; wyskakujący prostokąt nie ma skąd przyjść.
+ * Biały panel z obrysem tuszem, jak każde okno gry od ekranu walki — menu
+ * przestało być baśniową wioską z drogowskazem (styl gier Pokémon), więc
+ * zwój pergaminu wyskakiwałby tu jak reklama z innej gry. Okno nadal się
+ * ROZWIJA (skala Y od środka), więc widać, skąd się wzięło.
  *
  * Moduł nie wie nic o scenie menu poza tym, że dostaje `Phaser.Scene`
  * i krój — dzięki temu te same okna można otworzyć z innego ekranu
@@ -26,26 +26,29 @@ import {
 } from '../data/profile';
 import { listaZapisow } from '../data/zapis';
 import { pytanie } from './oknoZapisu';
+import { KROJ_WALKI, TUSZ, CZERWIEN, ZOLTY, panelBialy, pigulka, pokeball, napisNaPigulce } from './stylWalki';
 
-/** Kroje menu — rejestruje je MenuScene (`wczytajKroje`). */
+/** Kroje menu: Nunito z ekranu walki (rejestruje je `krojWalki`). */
 export const KROJ = {
-  szyld: 'MenuCinzel, Georgia, serif',
-  // Lora ze wspólnego zestawu, a nie Fredoka: podzbiór Fredoki nie ma ą, ć, ę,
-  // ń, ś, ź, ż i te litery wypadały z kroju zapasowego w środku słowa.
-  tekst: 'ZestawLora, Georgia, serif',
+  szyld: KROJ_WALKI,
+  tekst: KROJ_WALKI,
 } as const;
 
-/** Atrament na pergaminie: brąz, nie czerń — czerń na beżu wygląda jak wydruk. */
+/** Tusz na bieli — te same barwy co w oknach mapy i bohatera. */
 export const ATRAMENT = {
-  tytul: '#5e1d0c',
-  naglowek: '#7b3b12',
-  tekst: '#3b2310',
-  blady: '#8a6a48',
+  tytul: '#26262e',
+  naglowek: '#3a6fd8',
+  tekst: '#26262e',
+  blady: '#7a8290',
 } as const;
 
 const SRODEK = { x: 480, y: 336 };
-/** Pole do pisania na pergaminie (bez wałków i przybrudzonego brzegu). */
+/** Pole do pisania w panelu (bez marginesu i obrysu). */
 const POLE = { w: 590, h: 420 };
+/** Cały panel — pole z marginesem na tytuł i przycisk „Zamknij". */
+const PANEL = { w: 660, h: 560 };
+/** Wysokość czerwonej belki z tytułem. */
+const BELKA = 62;
 
 export interface Zwoj {
   zamknij(): void;
@@ -71,37 +74,44 @@ function zwoj(
 ): Zwoj {
   let otwarty = true;
   const cien = scene.add
-    .rectangle(480, 347, 960, 694, 0x120a04, 0)
+    .rectangle(480, 347, 960, 694, TUSZ, 0)
     .setDepth(o.depth)
     .setInteractive();
   scene.tweens.add({ targets: cien, fillAlpha: 0.55, duration: 220 });
 
   const kont = scene.add.container(SRODEK.x, SRODEK.y).setDepth(o.depth + 1);
-  const papier = scene.add.image(0, 0, 'menu-pergamin');
-  // Pergamin przechwytuje kliknięcia — inaczej klik w tekst zamykałby okno
+  const papier = scene.add.graphics();
+  panelBialy(papier, -PANEL.w / 2, -PANEL.h / 2, PANEL.w, PANEL.h, 22, { obrys: 4, cien: 6 });
+  // Belka tytułu: czerwień z pasem tuszu, jak belka u góry ekranów walki,
+  // bohatera i miasta.
+  papier.fillStyle(CZERWIEN, 1);
+  papier.fillRoundedRect(-PANEL.w / 2 + 4, -PANEL.h / 2 + 4, PANEL.w - 8, BELKA - 4, { tl: 18, tr: 18, bl: 0, br: 0 });
+  papier.fillStyle(TUSZ, 1);
+  papier.fillRect(-PANEL.w / 2 + 4, -PANEL.h / 2 + BELKA, PANEL.w - 8, 4);
+  // Panel przechwytuje kliknięcia — inaczej klik w tekst zamykałby okno
   // przez warstwę przyciemnienia pod spodem.
-  papier.setInteractive();
+  papier.setInteractive(new Phaser.Geom.Rectangle(-PANEL.w / 2, -PANEL.h / 2, PANEL.w, PANEL.h), Phaser.Geom.Rectangle.Contains);
   kont.add(papier);
 
   const lewa = -POLE.w / 2;
-  const gora = -POLE.h / 2;
+  // Tytuł na czerwonej belce — treść dostaje całe miejsce pod nią, do „Zamknij".
+  const gora = -PANEL.h / 2 + 12;
   const t = scene.add
     .text(0, gora + 4, tytul, {
       fontFamily: KROJ.szyld,
-      fontSize: '38px',
+      fontSize: '34px',
       fontStyle: '900',
-      color: ATRAMENT.tytul,
+      color: '#ffffff',
     })
     .setOrigin(0.5, 0)
-    .setShadow(0, 1, 'rgba(255,240,200,0.8)', 0, false, true);
+    .setShadow(0, 2, 'rgba(0,0,0,0.35)', 0, false, true);
   kont.add(t);
-  kont.add(ozdobnik(scene, 0, gora + 56, 300));
 
   const wnetrze = scene.add.container(lewa, gora + 72);
   kont.add(wnetrze);
   tresc(wnetrze, POLE.w);
 
-  const zamknij = deseczka(scene, 0, 292, 'Zamknij', () => zamknijOkno());
+  const zamknij = deseczka(scene, 0, PANEL.h / 2 - 34, 'Zamknij', () => zamknijOkno());
   kont.add(zamknij);
 
   // Rozwinięcie: z paska w pełny zwój. Treść wchodzi chwilę później, żeby
@@ -150,41 +160,9 @@ function zwoj(
   };
 }
 
-/** Ozdobnik pod tytułem: dwie kreski rozchodzące się od rombu. */
-function ozdobnik(scene: Phaser.Scene, x: number, y: number, szer: number) {
-  const g = scene.add.graphics();
-  const kol = 0x8a4a1c;
-  for (const s of [-1, 1]) {
-    g.lineStyle(2, kol, 0.9);
-    g.beginPath();
-    g.moveTo(x + s * 12, y);
-    g.lineTo(x + (s * szer) / 2, y);
-    g.strokePath();
-    g.fillStyle(kol, 0.9);
-    g.fillCircle(x + (s * szer) / 2, y, 2.5);
-    g.lineStyle(1, kol, 0.5);
-    g.beginPath();
-    g.moveTo(x + s * 24, y + 5);
-    g.lineTo(x + (s * szer) / 2 - s * 30, y + 5);
-    g.strokePath();
-  }
-  g.fillStyle(kol, 1);
-  g.fillPoints(
-    [
-      new Phaser.Math.Vector2(x, y - 6),
-      new Phaser.Math.Vector2(x + 7, y),
-      new Phaser.Math.Vector2(x, y + 6),
-      new Phaser.Math.Vector2(x - 7, y),
-    ],
-    true
-  );
-  return g;
-}
-
 /**
- * Mała deseczka z napisem — przycisk „Zamknij" w oknie i podpis przełącznika
- * dźwięku. Ten sam materiał co drogowskaz, żeby okno i ulica były z jednej
- * wioski.
+ * Mały przycisk-pigułka z napisem — „Zamknij" w oknie i „Gotowe" przy
+ * wpisywaniu imienia. Wskazany dostaje żółtą obwódkę, jak przyciski walki.
  */
 export function deseczka(
   scene: Phaser.Scene,
@@ -193,33 +171,26 @@ export function deseczka(
   napis: string,
   naKlik?: () => void
 ): Phaser.GameObjects.Container & { ustawNapis(n: string): void } {
-  const zwykla = scene.add.image(0, 0, 'menu-deseczka');
-  const jasna = scene.add.image(0, 0, 'menu-deseczka-jasna').setVisible(false);
-  const t = scene.add
-    .text(0, 1, napis, {
-      fontFamily: KROJ.szyld,
-      fontSize: '16px',
-      fontStyle: '900',
-      color: '#3a1c0a',
-    })
-    .setOrigin(0.5)
-    .setShadow(0, 1, 'rgba(255,226,170,0.7)', 0, false, true);
-  const k = scene.add.container(x, y, [zwykla, jasna, t]) as Phaser.GameObjects.Container & {
+  const W = 168;
+  const H = 40;
+  const g = scene.add.graphics();
+  const rysuj = (wybrana: boolean) => {
+    g.clear();
+    pigulka(g, -W / 2, -H / 2, W, H, 'bialy', { r: H / 2, wybrana });
+  };
+  rysuj(false);
+  const t = napisNaPigulce(
+    scene.add.text(0, 0, napis, { fontFamily: KROJ.szyld, fontSize: '18px', fontStyle: '900' }).setOrigin(0.5),
+    'bialy'
+  );
+  const k = scene.add.container(x, y, [g, t]) as Phaser.GameObjects.Container & {
     ustawNapis(n: string): void;
   };
   k.ustawNapis = (n: string) => t.setText(n);
   if (naKlik) {
-    k.setSize(zwykla.width, zwykla.height).setInteractive({ useHandCursor: true });
-    k.on('pointerover', () => {
-      jasna.setVisible(true);
-      zwykla.setVisible(false);
-      t.setColor('#fff2c4').setStroke('#3a1c0a', 4);
-    });
-    k.on('pointerout', () => {
-      jasna.setVisible(false);
-      zwykla.setVisible(true);
-      t.setColor('#3a1c0a').setStroke('#3a1c0a', 0);
-    });
+    k.setSize(W, H).setInteractive({ useHandCursor: true });
+    k.on('pointerover', () => rysuj(true));
+    k.on('pointerout', () => rysuj(false));
     k.on('pointerdown', () => {
       scene.tweens.add({ targets: k, scaleX: 0.95, scaleY: 0.9, duration: 60, yoyo: true });
       naKlik();
@@ -294,8 +265,8 @@ export function pokazRekordy(
       wiersze.forEach((r, i) => {
         const y = y0 + 24 + i * krok;
         if (i % 2 === 0) {
-          g.fillStyle(0x8a5a2a, 0.09);
-          g.fillRoundedRect(14, y - 2, szer - 28, krok - 2, 6);
+          g.fillStyle(0xeef2f7, 1);
+          g.fillRoundedRect(14, y - 2, szer - 28, krok - 2, 8);
         }
         medal(g, kol.miejsce, y + krok / 2 - 2, i);
         k.add(
@@ -304,11 +275,11 @@ export function pokazRekordy(
               fontFamily: KROJ.szyld,
               fontSize: '14px',
               fontStyle: '900',
-              color: i < 3 ? '#3a1c0a' : ATRAMENT.naglowek,
+              color: i < 3 ? '#26262e' : ATRAMENT.naglowek,
             })
             .setOrigin(0.5)
         );
-        const barwa = r.legenda ? ATRAMENT.blady : ATRAMENT.tekst;
+        const barwa = r.legenda ? '#4a515e' : ATRAMENT.tekst;
         const imie = scene.add
           .text(kol.imie, y + 1, imieTrenera(r.imie), { fontFamily: KROJ.tekst, fontSize: '18px', color: barwa })
           .setOrigin(0, 0);
@@ -318,8 +289,8 @@ export function pokazRekordy(
             scene.add
               .text(kol.imie + imie.width + 8, y + 5, 'legenda', {
                 fontFamily: KROJ.tekst,
-                fontSize: '12px',
-                color: '#a0845f',
+                fontSize: '13px',
+                color: '#7a8290',
               })
               .setOrigin(0, 0)
           );
@@ -334,7 +305,7 @@ export function pokazRekordy(
             .text(kol.punkty, y + 1, r.punkty.toLocaleString('pl-PL'), {
               fontFamily: KROJ.tekst,
               fontSize: '18px',
-              color: r.legenda ? ATRAMENT.blady : '#6a1a08',
+              color: r.legenda ? ATRAMENT.blady : '#c92a09',
             })
             .setOrigin(1, 0)
         );
@@ -363,9 +334,9 @@ export function pokazRekordy(
           scene.add
             .text(x, yK + 42, String(m.nr), {
               fontFamily: KROJ.szyld,
-              fontSize: '15px',
+              fontSize: '12px',
               fontStyle: '900',
-              color: w ? '#fff1c8' : '#9a7a58',
+              color: w ? '#26262e' : '#8b93a0',
             })
             .setOrigin(0.5)
         );
@@ -394,8 +365,8 @@ function medal(g: Phaser.GameObjects.Graphics, x: number, y: number, i: number) 
   ];
   const b = barwy[i];
   if (!b) return;
-  g.fillStyle(0x3a1c0a, 0.35);
-  g.fillCircle(x, y + 1.5, 11);
+  g.fillStyle(TUSZ, 1);
+  g.fillCircle(x, y, 12.5);
   g.fillStyle(b[1], 1);
   g.fillCircle(x, y, 11);
   g.fillStyle(b[0], 1);
@@ -404,23 +375,13 @@ function medal(g: Phaser.GameObjects.Graphics, x: number, y: number, i: number) 
   g.fillEllipse(x - 2, y - 4, 10, 5);
 }
 
-/** Pieczęć misji: czerwony lak, gdy ukończona — pusty odcisk, gdy nie. */
+/** Znak misji: pokeball, gdy ukończona — szary, gdy nie. Numer kładzie się na nim białą plakietką. */
 function pieczec(g: Phaser.GameObjects.Graphics, x: number, y: number, jest: boolean) {
-  if (jest) {
-    g.fillStyle(0x3a0a06, 0.35);
-    g.fillCircle(x, y + 2, 15);
-    g.fillStyle(0x8e1c14, 1);
-    g.fillCircle(x, y, 15);
-    g.fillStyle(0xb8321f, 1);
-    g.fillCircle(x, y - 1, 12);
-    g.fillStyle(0xffffff, 0.25);
-    g.fillEllipse(x - 4, y - 6, 12, 6);
-  } else {
-    g.lineStyle(2, 0x8a6a48, 0.6);
-    g.strokeCircle(x, y, 14);
-    g.lineStyle(1, 0x8a6a48, 0.35);
-    g.strokeCircle(x, y, 10);
-  }
+  pokeball(g, x, y, 16, !jest);
+  g.fillStyle(TUSZ, 1);
+  g.fillCircle(x, y, 9);
+  g.fillStyle(0xffffff, 1);
+  g.fillCircle(x, y, 7);
 }
 
 // ————————————————————————————————————————————————————————— autorzy
@@ -437,7 +398,7 @@ const AUTORZY: [string, string][][] = [
   [
     ['Pomysł i prowadzenie', 'Lech Dutkiewicz'],
     ['Kod i zasady gry', 'Claude Code (Anthropic)'],
-    ['Wioska, trener i budynki', 'obrazy z modeli AI'],
+    ['Miasta, trenerzy i budynki', 'obrazy z modeli AI'],
     ['Stworki', 'Pixmon Index (domena publiczna)'],
     ['Tła bitew', 'Ismael García „scarloxy"'],
   ],
@@ -445,8 +406,8 @@ const AUTORZY: [string, string][][] = [
     ['Odgłosy walki', 'Kenney.nl (CC0)'],
     ['Muzyka bitwy', '„Cynic Battle Loop" (CC0)'],
     ['Muzyka wioski i mapy', 'napisana w kodzie'],
-    ['Logo, drogowskaz i zwój', 'rysowane w kodzie'],
-    ['Silnik i kroje', 'Phaser · Cinzel · Lora'],
+    ['Logo, przyciski i okna', 'rysowane w kodzie'],
+    ['Silnik i krój', 'Phaser · Nunito'],
   ],
 ];
 
@@ -481,7 +442,7 @@ export function pokazAutorow(
         });
       });
       const g = scene.add.graphics();
-      g.lineStyle(1, 0x8a5a2a, 0.35);
+      g.lineStyle(2, 0xd6dbe2, 1);
       g.beginPath();
       g.moveTo(kolW, 8);
       g.lineTo(kolW, 270);
@@ -615,20 +576,20 @@ export function pokazProfile(
     profile.forEach((p, i) => {
       const y = 30 + i * KROK;
       const jest = p.id === aktywny?.id;
-      g.fillStyle(jest ? 0xe9c46a : 0x8a5a2a, jest ? 0.35 : 0.09);
-      g.fillRoundedRect(x0, y, w, H, 8);
+      g.fillStyle(jest ? 0xfff4c2 : 0xeef2f7, 1);
+      g.fillRoundedRect(x0, y, w, H, 10);
       if (jest) {
-        g.lineStyle(2, 0xa0701e, 0.9);
-        g.strokeRoundedRect(x0, y, w, H, 8);
+        g.lineStyle(3, TUSZ, 1);
+        g.strokeRoundedRect(x0, y, w, H, 10);
       }
       pieczec(g, x0 + 24, y + H / 2, true);
       k.add(
         scene.add
           .text(x0 + 24, y + H / 2, p.imie.slice(0, 1).toLocaleUpperCase('pl'), {
             fontFamily: KROJ.szyld,
-            fontSize: '15px',
+            fontSize: '11px',
             fontStyle: '900',
-            color: '#fff1c8',
+            color: '#26262e',
           })
           .setOrigin(0.5)
       );
@@ -639,13 +600,13 @@ export function pokazProfile(
       if (jest) {
         k.add(
           scene.add
-            .text(x0 + w - 44, y + H / 2, 'gra teraz', { fontFamily: KROJ.tekst, fontSize: '13px', fontStyle: 'italic', color: '#7a3a10' })
+            .text(x0 + w - 44, y + H / 2, 'gra teraz', { fontFamily: KROJ.tekst, fontSize: '13px', fontStyle: '800', color: '#c92a09' })
             .setOrigin(1, 0.5)
         );
       }
       const nad = scene.add.graphics().setVisible(false);
-      nad.fillStyle(0xffffff, 0.16);
-      nad.fillRoundedRect(x0, y, w, H, 8);
+      nad.lineStyle(3, ZOLTY, 1);
+      nad.strokeRoundedRect(x0 - 1, y - 1, w + 2, H + 2, 11);
       k.addAt(nad, k.list.indexOf(g) + 1);
       const strefa = scene.add.zone(x0, y, w - 40, H).setOrigin(0).setInteractive({ useHandCursor: true });
       strefa.on('pointerover', () => nad.setVisible(true));
@@ -664,9 +625,9 @@ export function pokazProfile(
       const krzyz = scene.add.graphics();
       const rysujKrzyz = (nad: boolean) => {
         krzyz.clear();
-        krzyz.fillStyle(nad ? 0xa3261b : 0x8a6a48, nad ? 1 : 0.35);
+        krzyz.fillStyle(nad ? CZERWIEN : 0xc9ced6, 1);
         krzyz.fillCircle(kx, ky, 11);
-        krzyz.lineStyle(2.5, nad ? 0xfff1c8 : 0x5e3a1a, 1);
+        krzyz.lineStyle(2.5, nad ? 0xffffff : 0x5b6270, 1);
         krzyz.lineBetween(kx - 4.5, ky - 4.5, kx + 4.5, ky + 4.5);
         krzyz.lineBetween(kx + 4.5, ky - 4.5, kx - 4.5, ky + 4.5);
       };
@@ -700,10 +661,10 @@ export function pokazProfile(
     const y = 30 + profile.length * KROK;
     const pelno = profile.length >= MAKS_PROFILI;
     if (wpisywanie) {
-      g.fillStyle(0xfff6dc, 0.95);
-      g.fillRoundedRect(x0, y, w, H, 8);
-      g.lineStyle(2, 0xa0701e, 1);
-      g.strokeRoundedRect(x0, y, w, H, 8);
+      g.fillStyle(0xffffff, 1);
+      g.fillRoundedRect(x0, y, w, H, 10);
+      g.lineStyle(3, TUSZ, 1);
+      g.strokeRoundedRect(x0, y, w, H, 10);
       const t = imie
         ? scene.add.text(x0 + 16, y + H / 2, imie + (kursor ? '|' : ' '), {
             fontFamily: KROJ.szyld,
@@ -714,7 +675,7 @@ export function pokazProfile(
         : scene.add.text(x0 + 16, y + H / 2, (kursor ? '|' : ' ') + ' np. Ela, Janek, Tata', {
             fontFamily: KROJ.tekst,
             fontSize: '17px',
-            fontStyle: 'italic',
+            fontStyle: '700',
             color: ATRAMENT.blady,
           });
       k.add(t.setOrigin(0, 0.5));
@@ -724,12 +685,12 @@ export function pokazProfile(
           .text(szer / 2, y + H + 6, blad || 'Wpisz imię i naciśnij Enter. Escape — rezygnuję.', {
             fontFamily: KROJ.tekst,
             fontSize: '14px',
-            color: blad ? '#a3261b' : ATRAMENT.blady,
+            color: blad ? '#c92a09' : ATRAMENT.blady,
           })
           .setOrigin(0.5, 0)
       );
     } else {
-      g.lineStyle(1.5, 0x8a5a2a, pelno ? 0.25 : 0.6);
+      g.lineStyle(2, 0x8b93a0, pelno ? 0.35 : 0.9);
       for (let dx = 0; dx < w; dx += 14) g.lineBetween(x0 + dx, y, x0 + Math.min(dx + 7, w), y);
       for (let dx = 0; dx < w; dx += 14) g.lineBetween(x0 + dx, y + H, x0 + Math.min(dx + 7, w), y + H);
       const t = scene.add

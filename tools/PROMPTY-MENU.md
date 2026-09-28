@@ -139,3 +139,20 @@ BLANK face: no letters, no symbols, no paint. No post, no chains, no shadow.
 Background: a single FLAT, UNIFORM magenta fill, RGB 255,0,255, edge to edge.
 Nothing in the board itself may be magenta or pink.
 ```
+
+## Menu w stylu gier Pokémon (2026-09-28)
+
+Stare tło (wioska o zmierzchu z drogowskazem) było baśniowe jak stare miasto.
+Nowe pokazuje miasteczko Boru z nowego miasta (`PROMPTY-MIASTO-2.md`) — z tą
+samą kotwicą jako wzorem, więc menu i miasto są jednym światem. Lewa część
+kadru i pas nieba zostają puste: tam stoją przyciski i logo, po prawej
+na pierwszym planie scena stawia Elę, Janka i startera.
+
+<!-- plik: menu2-tlo.png | styl: brak | proporcje: 3:2 | wzor: kotwica-bor-2.png -->
+```
+A title-screen background for a creature-collecting adventure game, in exactly the same art style, finish, colours and lighting as the attached town image: a bright, cheerful view from a grassy hill over a small forest town in a green valley among giant old trees, warm golden late-afternoon light, a clear blue sky with a few soft white clouds. In the middle distance on the right: the creature healing centre with its big glossy red dome roof and a red-and-white ball emblem, a cream research lab with a leaf-green roof and a small clock tower, a glass greenhouse dome, cosy houses with leaf-green roofs, a winding pale paved path leading down into the town.
+
+Composition for a menu screen: the whole left third of the picture is calm, simple open meadow with soft grass and a few wildflowers, no buildings and no busy detail there (menu buttons will cover it). The top centre is open sky with no trees crossing it (a logo will go there). The bottom right foreground is an open grassy patch at the top of the hill where characters will stand later. Gentle depth, readable and uncluttered.
+
+Clean anime game illustration like official key art of a Pokemon game, smooth soft shading, crisp clean vivid colours, clear air. No sepia, no haze, no medieval or fantasy elements, no heavy outlines, no pixel art, no 3D render look, no photorealism. Horizontal wide image. No text, no logo, no watermark, no user interface, no characters, no people, no creatures.
+```

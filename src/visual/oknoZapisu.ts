@@ -273,7 +273,7 @@ function oknoSlotow(scene: Phaser.Scene, o: OpcjeListy): OknoGracza {
         .text(listaX + 26, wy + WIERSZ / 2, slot === 'auto' ? 'A' : String(slot), {
           fontFamily: KROJ.tytul, fontStyle: '900',
           fontSize: '15px',
-          color: '#ffe9a8',
+          color: '#26262e',
         })
         .setOrigin(0.5);
       const elementy: Phaser.GameObjects.GameObject[] = [tlo, med, nr];

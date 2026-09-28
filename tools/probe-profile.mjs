@@ -40,11 +40,12 @@ const browser = await chromium.launch({
 });
 
 // Środki desek drogowskazu (DESKI/SLUP w MenuScene.ts), jak w zrzut-menu.mjs.
+// Środki przycisków menu (`DESKI` i `PRZYCISKI_X` w MenuScene.ts).
 const DESKA = [
-  { x: 260, y: 392 },
-  { x: 250, y: 464 },
-  { x: 250, y: 530 },
-  { x: 250, y: 596 },
+  { x: 228, y: 322 },
+  { x: 228, y: 404 },
+  { x: 228, y: 474 },
+  { x: 228, y: 544 },
 ];
 
 async function nowaStrona() {

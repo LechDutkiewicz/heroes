@@ -183,6 +183,20 @@ export function ozywTlo(scene: Phaser.Scene) {
 }
 
 /**
+ * Tło menu w dzień (miasteczko Boru w stylu gier Pokémon): bez latarni,
+ * świetlików i błysków stawu starego tła — te były przyklejone do miejsc
+ * na tamtym obrazie. Zostają liście z korony drzewa i ptaki na niebie.
+ */
+export function ozywTloDnia(scene: Phaser.Scene, korona: Phaser.Geom.Rectangle) {
+  const liscie = spadajaceLiscie(scene, korona);
+  const ptaki = stadaPtakow(scene);
+  return () => {
+    liscie.remove();
+    ptaki.remove();
+  };
+}
+
+/**
  * Latarnie oddychają — każda we własnym tempie. Równe tempo wszystkich
  * naraz czyta się jak migający neon, a nie jak płomienie.
  */
@@ -256,9 +270,9 @@ function swietliki(scene: Phaser.Scene) {
  * się w locie. Tweeny zamiast emitera, bo emiter nie umie wahadła — a liść
  * spadający w linii prostej wygląda jak kamyk.
  */
-function spadajaceLiscie(scene: Phaser.Scene) {
+function spadajaceLiscie(scene: Phaser.Scene, korona: Phaser.Geom.Rectangle = KORONA) {
   const jeden = () => {
-    const p = Phaser.Geom.Rectangle.Random(KORONA, new Phaser.Math.Vector2());
+    const p = Phaser.Geom.Rectangle.Random(korona, new Phaser.Math.Vector2());
     const lisc = scene.add
       .image(p.x, p.y, TEX.lisc)
       .setScale(Phaser.Math.FloatBetween(0.55, 0.9))
