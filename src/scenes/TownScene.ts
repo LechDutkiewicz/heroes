@@ -772,7 +772,7 @@ export class TownScene extends Phaser.Scene {
       const straz = (this.zamek.oddzialy ?? []).reduce((a, o) => a + o.ile, 0);
       const w = zywe(this.garnizon).reduce((a, o) => a + o.ile, 0);
       return (
-        `Garnizon zamku: ${w ? `${w} stworków w slotach` : 'sloty puste'}.` +
+        `Stworki w mieście: ${w ? `${w} w slotach` : 'sloty puste'}.` +
         (straz ? ` Broni go też straż miejska (${straz}) — jej nie da się zabrać.` : '')
       );
     });
@@ -785,7 +785,7 @@ export class TownScene extends Phaser.Scene {
       odstep: SLOT_ODSTEP,
       armia: () => this.garnizon,
       aktywny: () => this.zamek.wlasciciel === 'gracz',
-      powodNieaktywny: 'To nie jest twój zamek.',
+      powodNieaktywny: 'To nie jest twoje miasto.',
       gdzie: 'w garnizonie',
       dokad: 'do garnizonu',
     });
@@ -805,8 +805,8 @@ export class TownScene extends Phaser.Scene {
       return im;
     }, () =>
       obecny
-        ? `${this.stan.bohater.imie} jest w zamku — kliknij portret, żeby otworzyć ekran bohatera.`
-        : `${this.stan.bohater.imie} jest poza zamkiem — nowe stworki trafiają do garnizonu. Kliknij portret: ekran bohatera.`
+        ? `${this.stan.bohater.imie} jest w mieście — kliknij portret, żeby otworzyć ekran bohatera.`
+        : `${this.stan.bohater.imie} jest poza miastem — nowe stworki zostają w mieście. Kliknij portret: ekran bohatera.`
     , () => this.otworzBohatera());
     this.bohaterStan = this.plakietkaHerbu(BOHATER_Y);
     this.panel.dodajPasek({
@@ -818,7 +818,7 @@ export class TownScene extends Phaser.Scene {
       armia: () => this.stan.bohater.armia,
       chroniona: true,
       aktywny: () => this.bohaterObecny,
-      powodNieaktywny: 'Bohater jest poza zamkiem. Przyprowadź go, żeby wymieniać stworki z garnizonem.',
+      powodNieaktywny: 'Trener jest poza miastem. Przyprowadź go, żeby wymieniać stworki z tymi w mieście.',
       gdzie: 'u bohatera',
       dokad: 'do bohatera',
     });
@@ -1669,7 +1669,7 @@ export class TownScene extends Phaser.Scene {
     });
     const d = data(this.stan.dzien);
     this.dataTekst.setText(`Tydzień ${d.tydzien}, dzień ${d.dzienTygodnia}`);
-    this.bohaterStan.setText(this.bohaterObecny ? this.stan.bohater.imie : 'poza zamkiem');
+    this.bohaterStan.setText(this.bohaterObecny ? this.stan.bohater.imie : 'poza miastem');
     this.bohaterStan.setColor(this.bohaterObecny ? '#fff4d6' : '#ffb49a');
     // Straż miejska z planszy (`zamek.oddzialy`) broni razem z garnizonem,
     // ale gracz nią nie rozporządza — pokazujemy ją jedną liczbą.

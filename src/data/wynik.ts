@@ -53,7 +53,7 @@ export function przyczynaPorazki(s: StanMapy): WarunekPorazki {
  * („ksiezycowy-kamien"); tu idzie jego nazwa, a surowiec — po polsku.
  */
 export function celSlowami(w: WarunekZwyciestwa): string {
-  if (w.typ === 'zamki') return 'Zdobądź odznaki wszystkich sal przeciwnika — wygraj w każdym jego zamku.';
+  if (w.typ === 'zamki') return 'Zdobądź odznaki wszystkich sal przeciwnika — wygraj w każdej jego sali.';
   if (w.typ === 'artefakt') return `Odnajdź ${artefaktPoId(w.artefakt)?.nazwa ?? nazwaZId(w.artefakt)}.`;
   if (w.typ === 'zbierz') return `Zbierz ${w.ile} ${SUROWIEC_INFO[w.surowiec].dopelniacz}.`;
   return `Pokonaj: ${w.nazwa}.`;
@@ -61,7 +61,7 @@ export function celSlowami(w: WarunekZwyciestwa): string {
 
 export function porazkaSlowami(w: WarunekPorazki): string {
   return w.typ === 'utrata'
-    ? 'Nie oddaj wszystkich swoich zamków.'
+    ? 'Nie oddaj wszystkich swoich miast.'
     : `Zdąż w ${w.dni} dni (${Math.floor(w.dni / 7)} tygodni).`;
 }
 
@@ -78,7 +78,7 @@ const nazwaZId = (id: string) => {
 /** Co poszło nie tak — jedno zdanie, bez obwiniania. */
 export function coSieStalo(p: WarunekPorazki): string {
   return p.typ === 'utrata'
-    ? 'Srebrne płaszcze zajęły twój ostatni zamek.'
+    ? 'Srebrne płaszcze zajęły twoje ostatnie miasto.'
     : `Minęło ${p.dni} dni, a cel misji wciąż czeka.`;
 }
 
@@ -88,7 +88,7 @@ export function coSieStalo(p: WarunekPorazki): string {
  */
 export function rada(p: WarunekPorazki): string {
   return p.typ === 'utrata'
-    ? 'Zostaw w zamku kilka stworków na straży i buduj rezerwaty od pierwszego dnia. Trenuj drużynę w mieście, a zemdlone stworki prowadź do Centrum Pokemon.'
+    ? 'Zostaw w mieście kilka stworków na straży i buduj rezerwaty od pierwszego dnia. Trenuj drużynę w mieście, a zemdlone stworki prowadź do Centrum Pokemon.'
     : 'Nie zbieraj wszystkiego po drodze — idź prosto do celu, a surowce bierz te, które leżą blisko.';
 }
 

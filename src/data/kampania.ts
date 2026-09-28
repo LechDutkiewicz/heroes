@@ -100,7 +100,7 @@ export const KAMPANIA: Kampania = {
       mapa: 'polana',
       opis: [
         'Srebrne płaszcze zajęły stary fort na wschodnim skraju Polany.',
-        'Zbierz stworki, rozbuduj swój zamek i odbij fort, zanim wróg się w nim umocni.',
+        'Zbierz stworki, rozbuduj swoje miasto i odbij fort, zanim wróg się w nim umocni.',
       ],
       zwyciestwo: { typ: 'zamki' },
       porazka: [{ typ: 'utrata' }],
@@ -125,7 +125,7 @@ export const KAMPANIA: Kampania = {
       porazka: [{ typ: 'utrata' }],
       bonusy: [
         { typ: 'surowiec', surowiec: 'jagoda', ile: 10, opis: '10 jagód' },
-        { typ: 'statystyka', atak: 1, opis: '+1 do ataku' },
+        { typ: 'statystyka', atak: 1, opis: '+1 do zapału' },
         { typ: 'oddzial', tier: 2, poziom: 10, opis: 'Nowy stworek: Aquino, poziom 10' },
       ],
       naMapie: { x: 0.348, y: 0.459 },
@@ -146,7 +146,7 @@ export const KAMPANIA: Kampania = {
       bonusy: [
         { typ: 'artefakt', artefakt: 'rower', opis: 'Rower Terenowy' },
         { typ: 'surowiec', surowiec: 'kamien', ile: 6, opis: '6 kamieni ewolucji' },
-        { typ: 'statystyka', obrona: 2, opis: '+2 do obrony' },
+        { typ: 'statystyka', obrona: 2, opis: '+2 do opieki' },
       ],
       naMapie: { x: 0.5971, y: 0.752 },
       epilog: 'Księżycowy Kamień świeci w twojej dłoni. Bez niego twierdze Groty są słabsze niż kiedykolwiek.',
@@ -311,7 +311,7 @@ export function ocenMisje(stan: StanMapy, m: Misja): Rozstrzygniecie {
 /** Warunki misji słowami — dla okna „Warunki misji" i ekranu kampanii. */
 export function opisZwyciestwa(m: Misja): string {
   const z = m.zwyciestwo;
-  if (z.typ === 'zamki') return 'Zdobądź odznaki wszystkich sal przeciwnika — wygraj w każdym jego zamku.';
+  if (z.typ === 'zamki') return 'Zdobądź odznaki wszystkich sal przeciwnika — wygraj w każdej jego sali.';
   if (z.typ === 'artefakt') return `Odnajdź artefakt: ${artefaktPoId(z.artefakt)?.nazwa ?? z.artefakt}.`;
   if (z.typ === 'zbierz') return `Zbierz ${z.ile} × ${z.surowiec}.`;
   return `Pokonaj: ${z.nazwa}.`;
@@ -319,7 +319,7 @@ export function opisZwyciestwa(m: Misja): string {
 
 export function opisPorazki(m: Misja): string {
   return m.porazka
-    .map((w) => (w.typ === 'utrata' ? 'Stracisz swój ostatni zamek.' : `Nie zdążysz w ${w.dni} dni.`))
+    .map((w) => (w.typ === 'utrata' ? 'Stracisz swoje ostatnie miasto.' : `Nie zdążysz w ${w.dni} dni.`))
     .join(' ');
 }
 

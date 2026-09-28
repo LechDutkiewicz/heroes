@@ -139,7 +139,7 @@ const wSlocie = (a: Armia, i: number) => i >= 0 && i < a.length;
  * kazałaby mu najpierw odłożyć coś na bok. W Heroes 3 nie ma slotu na bok.
  */
 export function przenies(a: Armia, z: number, doc: number): Wynik {
-  if (!wSlocie(a, z) || !wSlocie(a, doc)) return zle('Slot poza armią.');
+  if (!wSlocie(a, z) || !wSlocie(a, doc)) return zle('Slot poza drużyną.');
   if (z === doc) return zle('To ten sam slot.');
   const zrodlo = a[z];
   if (!zrodlo) return zle('Pusty slot — nie ma czego przenieść.');
@@ -189,7 +189,7 @@ export function maksPodzialu(a: Armia, z: number, doc: number): number {
  * tędy, więc reguła „nie zostawiaj pustego stosu" jest zapisana raz.
  */
 export function podziel(a: Armia, z: number, doc: number, ile: number): Wynik {
-  if (!wSlocie(a, z) || !wSlocie(a, doc)) return zle('Slot poza armią.');
+  if (!wSlocie(a, z) || !wSlocie(a, doc)) return zle('Slot poza drużyną.');
   if (z === doc) return zle('To ten sam slot.');
   const zrodlo = a[z];
   if (!zrodlo) return zle('Pusty slot — nie ma czego dzielić.');
@@ -285,7 +285,7 @@ const BEZ_ARMII = 'Trener nie może zostać bez ani jednego stworka.';
 /** Przełożenie całego stosu z `za[z]` do `doA[doc]`: przenieś, scal albo zamień. */
 export function przeniesMiedzy(za: Armia, z: number, doA: Armia, doc: number, chronionaZ = false): Wynik {
   if (za === doA) return przenies(za, z, doc);
-  if (!wSlocie(za, z) || !wSlocie(doA, doc)) return zle('Slot poza armią.');
+  if (!wSlocie(za, z) || !wSlocie(doA, doc)) return zle('Slot poza drużyną.');
   const zrodlo = za[z];
   if (!zrodlo) return zle('Pusty slot — nie ma czego przenieść.');
   const cel = doA[doc];
@@ -334,7 +334,7 @@ export function podzielMiedzy(
   chronionaZ = false
 ): Wynik {
   if (za === doA) return podziel(za, z, doc, ile);
-  if (!wSlocie(za, z) || !wSlocie(doA, doc)) return zle('Slot poza armią.');
+  if (!wSlocie(za, z) || !wSlocie(doA, doc)) return zle('Slot poza drużyną.');
   const zrodlo = za[z];
   if (!zrodlo) return zle('Pusty slot — nie ma czego dzielić.');
   const cel = doA[doc];
@@ -356,7 +356,7 @@ export function podzielMiedzy(
  * wolno zwolnić ostatniego stosu (ta sama zasada co przy przenoszeniu).
  */
 export function zwolnij(a: Armia, i: number, chroniona = false): Wynik {
-  if (!wSlocie(a, i)) return zle('Slot poza armią.');
+  if (!wSlocie(a, i)) return zle('Slot poza drużyną.');
   const o = a[i];
   if (!o) return zle('Pusty slot — nie ma kogo zwolnić.');
   if (chroniona && ostatniStos(a)) return zle(BEZ_ARMII);

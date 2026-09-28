@@ -34,8 +34,12 @@ karta stworka, pasek ataków, kolejka tur i przyciski w zestawie
 Stan: ikony (rękawica, kula energii, bańka, gwiazdki, but sportowy)
 zrobione. Ekran walki najpierw poszedł w drewno i pergamin, a po teście
 użytkownika — w styl z gier Pokémon (makieta A: belka-pokeball, białe
-panele, pigułki; `stylWalki.ts`, `hudWalki.ts`). Zostały słowa: Zapał
-i Opieka bohatera, „armia/oddział/zamek" w tekstach.
+panele, pigułki; `stylWalki.ts`, `hudWalki.ts`). Słowa też zrobione:
+Zapał i Opieka trenera (malowane ikony megafonu i serca z plastrem,
+`public/kampania/ikona-zapal.png`, `ikona-opieka.png`), „miasto" i „sala"
+zamiast „zamku", „drużyna" zamiast „armii", znak ostrzeżenia zamiast
+czaszki w warunkach porażki. **Fala 1 zakończona.** W kodzie pola zostały
+jako `atak`/`obrona` (zapisy graczy).
 
 ## Fala 2 — zamki na mapie (najbardziej widoczne)
 

@@ -7,11 +7,13 @@ alfa) leżą w `tools/wsad/ikona-*.png`. Każda ikona przechodzi przez tę samą
 i kadr 128 × 128 — więc z różnych źródeł wychodzi jeden komplet.
 
     python3 tools/kampania_ikony.py     # → public/kampania/ikona-*.png
+    python3 tools/kampania_ikony.py zapal opieka   # tylko wybrane
 
 Scena czyta je jako `k-ikona-<nazwa>`: gwiazda, czaszka, klepsydra i sakwa
 w wierszach zwoju misji, miecz, tarcza i rower w kartach nagród.
 """
 
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -20,11 +22,12 @@ from scipy import ndimage
 
 from kampania_postacie import CEL, W, gotowa
 
-IKONY = ('gwiazda', 'czaszka', 'klepsydra', 'sakwa', 'miecz', 'tarcza', 'rower')
+IKONY = ('gwiazda', 'czaszka', 'klepsydra', 'sakwa', 'miecz', 'tarcza', 'rower', 'zapal', 'opieka', 'uwaga')
 
 
 def main():
-    for nazwa in IKONY:
+    # Z nazwami w argumentach — tylko te ikony (reszta zostaje nietknięta).
+    for nazwa in sys.argv[1:] or IKONY:
         zrodlo = Path(W) / f'ikona-{nazwa}.png'
         if not zrodlo.exists():
             print(f'  brak {zrodlo.name} — zostaje stara ikona')

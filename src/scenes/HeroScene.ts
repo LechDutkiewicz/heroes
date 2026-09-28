@@ -200,7 +200,7 @@ export class HeroScene extends Phaser.Scene {
     // Te same klucze, co w ekranie kampanii — jeśli tam już są, nie idą drugi raz.
     this.load.image(`bh-postac-${kto}`, `${b}bohater/postac-${kto}.png`);
     if (!this.textures.exists(`k-glowa-${kto}`)) this.load.image(`k-glowa-${kto}`, `${b}kampania/glowa-${kto}.png`);
-    for (const n of ['miecz', 'tarcza', 'buty', 'gwiazda']) {
+    for (const n of ['zapal', 'opieka', 'buty', 'gwiazda']) {
       if (!this.textures.exists(`k-ikona-${n}`)) this.load.image(`k-ikona-${n}`, `${b}kampania/ikona-${n}.png`);
     }
     for (const a of ARTEFAKTY) this.load.image(`bh-artefakt-${a.id}`, `${b}bohater/artefakt-${a.id}.png`);
@@ -353,8 +353,8 @@ export class HeroScene extends Phaser.Scene {
     const bonus = bonusPoziomu(poziom(b.doswiadczenie));
     const ruch = ruchNaDzis(this.stan);
     const staty: Array<{ klucz: string; nazwa: string; ikona: string; wartosc: number; dodatek: number }> = [
-      { klucz: 'atak', nazwa: 'Atak', ikona: 'k-ikona-miecz', wartosc: s.atak, dodatek: s.atak - b.atak },
-      { klucz: 'obrona', nazwa: 'Obrona', ikona: 'k-ikona-tarcza', wartosc: s.obrona, dodatek: s.obrona - b.obrona },
+      { klucz: 'atak', nazwa: 'Zapał', ikona: 'k-ikona-zapal', wartosc: s.atak, dodatek: s.atak - b.atak },
+      { klucz: 'obrona', nazwa: 'Opieka', ikona: 'k-ikona-opieka', wartosc: s.obrona, dodatek: s.obrona - b.obrona },
       { klucz: 'ruch', nazwa: 'Ruch', ikona: 'k-ikona-buty', wartosc: ruch, dodatek: ruch - b.ruchMax },
     ];
     const kol = (w - 40) / 3;
@@ -500,8 +500,8 @@ export class HeroScene extends Phaser.Scene {
       suma.ruch += a.ruch ?? 0;
     }
     const co = [
-      suma.atak ? `+${suma.atak} ataku` : '',
-      suma.obrona ? `+${suma.obrona} obrony` : '',
+      suma.atak ? `+${suma.atak} zapału` : '',
+      suma.obrona ? `+${suma.obrona} opieki` : '',
       suma.ruch ? `+${suma.ruch} ruchu` : '',
     ].filter(Boolean);
     const dy = L.y + L.h - (co.length ? 40 : 28);
@@ -646,7 +646,7 @@ export class HeroScene extends Phaser.Scene {
     const ile = zywe(a).length;
     const omdlale = zywe(a).filter((o) => o.omdlaly).length;
     return (
-      `${this.stan.bohater.imie} ma w drużynie ${ile} ${ile === 1 ? 'stworka' : 'stworków'}. Do bitwy idą cztery pierwsze.` +
+      `${this.stan.bohater.imie} ma w drużynie ${ile} ${ile === 1 ? 'stworka' : 'stworków'}. Do walki staje dwójka — przed bitwą wybierasz którą.` +
       (omdlale ? ` Zemdlone: ${omdlale} (obudzi je miasto).` : '')
     );
   }
@@ -775,7 +775,7 @@ export class HeroScene extends Phaser.Scene {
       ikona: 'k-ikona-gwiazda',
       tresc:
         `Do poziomu ${p.poziom + 1} brakuje ${p.doAwansu - p.wPoziomie} punktów.\n` +
-        'Doświadczenie dają wygrane bitwy, skrzynie i drzewa wiedzy. Awans podnosi atak albo obronę i pozwala wybrać umiejętność.' +
+        'Doświadczenie dają wygrane bitwy, skrzynie i drzewa wiedzy. Awans podnosi zapał albo opiekę i pozwala wybrać umiejętność.' +
         (nauka ? `\nNauka: +${Math.round(nauka * 100)}% doświadczenia.` : ''),
     };
   }
@@ -802,9 +802,9 @@ export class HeroScene extends Phaser.Scene {
       ].filter(Boolean);
       return {
         klucz,
-        tytul: atak ? 'Atak' : 'Obrona',
+        tytul: atak ? 'Zapał' : 'Opieka',
         podtytul: `razem ${wartosc}`,
-        ikona: atak ? 'k-ikona-miecz' : 'k-ikona-tarcza',
+        ikona: atak ? 'k-ikona-zapal' : 'k-ikona-opieka',
         tresc:
           (atak
             ? `Każdy twój stworek zadaje w bitwie o ${proc}% więcej obrażeń.`
@@ -864,7 +864,7 @@ export class HeroScene extends Phaser.Scene {
       tresc:
         'Kliknij stworka, potem inny slot — przeniesiesz go albo zamienisz miejscami. ' +
         'Możesz też przeciągnąć. Liczba pod portretem to poziom stworka. ' +
-        'Do bitwy idą cztery pierwsze sprawne stworki — ustaw na początku tych, którzy mają walczyć (mają złoty róg). ' +
+        'Do walki staje dwójka: przed bitwą wybierasz, które stworki — domyślnie dwa pierwsze sprawne (mają złoty róg). ' +
         `Prawy klik albo drugi klik: opis stworka.\n\n${b.imie} nie może zostać bez ani jednego stworka.`,
     };
   }
@@ -883,8 +883,8 @@ export class HeroScene extends Phaser.Scene {
 
   private opisArtefaktu(a: Artefakt, ma: boolean, czesc?: string): Opis {
     const co = [
-      a.atak ? `+${a.atak} do ataku` : '',
-      a.obrona ? `+${a.obrona} do obrony` : '',
+      a.atak ? `+${a.atak} do zapału` : '',
+      a.obrona ? `+${a.obrona} do opieki` : '',
       a.ruch ? `+${a.ruch} punktów ruchu na dzień` : '',
     ].filter(Boolean);
     const klasa = { drobny: 'artefakt drobny', znaczny: 'artefakt znaczny', relikt: 'relikt', misja: 'cel misji' }[a.klasa];

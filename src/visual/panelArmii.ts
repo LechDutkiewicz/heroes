@@ -383,13 +383,13 @@ export class PanelArmii {
   podziel() {
     if (this.oknoOtwarte) return;
     if (!this.wybor) {
-      this.o.powiedz('Najpierw kliknij oddział, który chcesz podzielić.');
+      this.o.powiedz('Najpierw kliknij stado, które chcesz podzielić.');
       return;
     }
     this.trybPodzialu = !this.trybPodzialu;
     this.o.powiedz(
       this.trybPodzialu
-        ? 'Kliknij pusty slot (albo slot z tym samym stworkiem) — tam przejdzie część oddziału.'
+        ? 'Kliknij pusty slot (albo slot z tym samym stworkiem) — tam przejdzie część stada.'
         : 'Podział odwołany.'
     );
   }
