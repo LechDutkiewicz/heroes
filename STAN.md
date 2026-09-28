@@ -240,6 +240,13 @@ mieście albo kampanii.
   (warunki, starter, awans, skrzynie, zapis) jeszcze na pergaminie — następny
   krok. Ślepe porównanie: nowy HUD wygrywa we wszystkich 4 kryteriach, uwagi
   z rundy 1 poprawione. `probe-profile` poprawiona pod okno startera (#24).
+  Okna na mapie przeszły przez `visual/zestawWalki.ts` — to samo API co
+  `zestaw.ts` (panelPergaminu, wstazka, Przycisk, stylEtykiety…), ale biel,
+  tusz i pigułki: ekran przechodzi na nowy wygląd zmianą importu. Tak samo
+  pójdą miasto, kampania i menu. Karty awansu i baner końca poprawione ręcznie
+  (miały własne barwy drewna). Ekran bohatera: bez miniatury trenera w rzędzie
+  drużyny (uwaga użytkownika — trener jest na dużej lalce). `probe-lot`
+  (falowanie latających) pada też na czystej gałęzi — nie od tego.
 - **Plan dalej**: styl A (ekran walki) na mapę, bohatera, miasto
   i kampanię — użytkownik zauważył, że drewno i pergamin odstają od walki;
   potem fale 3–4 z `PROJEKT-SWIAT.md`.

@@ -63,6 +63,7 @@ import {
   medalionPokeball,
   panelBialy,
   pigulka,
+  napisNaPigulce,
   stylWalki,
   tloEkranu,
   type KolorPigulki,
@@ -95,18 +96,16 @@ import {
   Przycisk,
   cienPanelu,
   krojeZestawu,
-  latki,
   medalion,
   napisNaDrewnie,
   napisTytulowy,
   ozdobnik,
   panelPergaminu,
-  ramaZlota,
   stylAtramentu,
   stylEtykiety,
   wczytajZestaw,
   wstazka,
-} from '../visual/zestaw';
+} from '../visual/zestawWalki';
 import { ICON, buildIcons } from '../visual/icons';
 import {
   GORA,
@@ -4864,34 +4863,31 @@ export class AdventureScene extends Phaser.Scene {
       // dostaje wstęgę z laku, ulepszenie — zieloną: gracz ma widzieć różnicę
       // „dokładam coś" kontra „podbijam coś", zanim przeczyta obie karty.
       const g = this.add.graphics().setDepth(Z.overlay + 2);
-      g.fillStyle(0x8a5a2a, 0.12);
-      g.fillRect(kx, kartaY, kartaW, kartaH);
-      ramaZlota(this, kx, kartaY, kartaW, kartaH, false).setDepth(Z.overlay + 2);
-      g.fillStyle(oferta.nowa ? BARWA.lak : 0x3f7a42, 1);
-      g.fillRect(kx + 10, kartaY + 9, kartaW - 20, 22);
-      g.fillStyle(0xffffff, 0.14);
-      g.fillRect(kx + 10, kartaY + 11, kartaW - 20, 3);
+      panelBialy(g, kx, kartaY, kartaW, kartaH, 14, { obrys: 3, cien: 3, wypelnienie: 0xf4f8fd });
+      const znak = this.add
+        .text(kx + kartaW / 2, kartaY + 1, oferta.nowa ? 'NOWA' : 'ULEPSZENIE', stylWalki(12, '#ffffff'))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      const zw = znak.width + 26;
+      pigulka(g, kx + kartaW / 2 - zw / 2, kartaY - 11, zw, 24, oferta.nowa ? 'czerwony' : 'zielony');
+      napisNaPigulce(znak, oferta.nowa ? 'czerwony' : 'zielony');
       this.add
-        .text(kx + kartaW / 2, kartaY + 20, oferta.nowa ? 'NOWA' : 'ULEPSZENIE', stylEtykiety(12, '#fff4dc'))
+        .text(kx + kartaW / 2, kartaY + 34, u.nazwa, stylEtykiety(20, BARWA.atrament))
         .setOrigin(0.5)
         .setDepth(Z.overlay + 3);
       this.add
-        .text(kx + kartaW / 2, kartaY + 50, u.nazwa, stylEtykiety(20, BARWA.atrament))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 3);
-      this.add
-        .text(kx + kartaW / 2, kartaY + 72, POZIOMY[oferta.poziom - 1], {
+        .text(kx + kartaW / 2, kartaY + 56, POZIOMY[oferta.poziom - 1], {
           ...stylAtramentu(13, 'miekki'),
           fontFamily: KROJ.kursywa,
         })
         .setOrigin(0.5)
         .setDepth(Z.overlay + 3);
       this.add
-        .text(kx + kartaW / 2, kartaY + 96, opisWartosci(u, oferta.poziom), stylEtykiety(18, BARWA.atramentZielony))
+        .text(kx + kartaW / 2, kartaY + 80, opisWartosci(u, oferta.poziom), stylEtykiety(18, BARWA.atramentZielony))
         .setOrigin(0.5)
         .setDepth(Z.overlay + 3);
       this.add
-        .text(kx + kartaW / 2, kartaY + 128, u.opis, { ...stylAtramentu(13, 'zwykly', kartaW - 24), align: 'center' })
+        .text(kx + kartaW / 2, kartaY + 120, u.opis, { ...stylAtramentu(13, 'zwykly', kartaW - 24), align: 'center' })
         .setOrigin(0.5)
         .setDepth(Z.overlay + 3);
       // Dwie karty to dwie równorzędne decyzje — obie tabliczki drewniane.
@@ -5054,8 +5050,10 @@ export class AdventureScene extends Phaser.Scene {
     const szer = 520;
     const wys = 128;
     const cien = cienPanelu(this, -szer / 2, -wys / 2, szer, wys);
-    const deska = latki(this, 'z-tabliczka-drewno', -szer / 2, -wys / 2, szer, wys, 40, 40, 30, 30);
-    const rama = ramaZlota(this, -szer / 2, -wys / 2, szer, wys, true);
+    const deska = this.add.graphics();
+    panelBialy(deska, -szer / 2, -wys / 2, szer, wys, 22, { obrys: 4, cien: 0 });
+    const rama = this.add.graphics();
+    pigulka(rama, -szer / 2 + 14, -wys / 2 + 8, szer - 28, 10, wygrana ? 'czerwony' : 'szary', { r: 5, cien: false });
     const napis = wygrana
       ? napisTytulowy(this, 0, -16, 'Zwycięstwo!', 44)
       : napisNaDrewnie(this, 0, -16, 'Koniec wyprawy', 40).setOrigin(0.5);
@@ -5077,7 +5075,6 @@ export class AdventureScene extends Phaser.Scene {
       .setDepth(Z.overlay + 2)
       .setScale(0.4)
       .setAlpha(0);
-    if (!wygrana) deska.setTint(0xb0a8b8);
     this.tweens.add({ targets: baner, scale: 1, alpha: 1, duration: 520, ease: E.out });
 
     if (wygrana) {
@@ -5306,7 +5303,7 @@ export class AdventureScene extends Phaser.Scene {
     const wierszWarunku = (obrazek: Obrazek, etykieta: string, barwa: string, zdanie: string) => {
       const x0 = -wnetrze / 2;
       const pas = this.add.graphics();
-      pas.fillStyle(0x8a5a2a, 0.09);
+      pas.fillStyle(0xeef2f7, 1);
       pas.fillRoundedRect(x0, y + 4, wnetrze, 58, 10);
       const md = medalion(this, x0 + 34, y + 33, 29, BARWA.papier);
       const et = this.add.text(x0 + 76, y + 20, etykieta, stylEtykiety(15, barwa)).setOrigin(0, 0.5);
