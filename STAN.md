@@ -247,6 +247,13 @@ mieście albo kampanii.
   (miały własne barwy drewna). Ekran bohatera: bez miniatury trenera w rzędzie
   drużyny (uwaga użytkownika — trener jest na dużej lalce). `probe-lot`
   (falowanie latających) pada też na czystej gałęzi — nie od tego.
+- **Styl A w mieście** (2026-09-28). `TownScene` importuje `zestawWalki`
+  (okna, karta budynku, lista budowy przechodzą same), `tloEkranu` z belką,
+  panorama w białej ramie, blok drużyny biały z pigułkami W MIEŚCIE /
+  DRUŻYNA (uwaga krytyka: rząd garnizonu nie miał podpisu), `PanelArmii`
+  `styl: 'walka'`, rezerwaty na białych płytkach. Lista budowy: opis nie
+  wchodzi już pod ceny (Nunito jest szerszy od Lory — schodzi o piksel,
+  potem łamie). Ślepe porównanie: nowe miasto wygrywa we wszystkich 4.
 - **Plan dalej**: styl A (ekran walki) na mapę, bohatera, miasto
   i kampanię — użytkownik zauważył, że drewno i pergamin odstają od walki;
   potem fale 3–4 z `PROJEKT-SWIAT.md`.

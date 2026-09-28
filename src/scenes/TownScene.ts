@@ -29,7 +29,7 @@ import { MNOZNIK_FORTU } from '../data/zasady-h3';
 import { POZIOM_MLODEGO, napisPoziomu, nowyStworek, obudz } from '../data/stworki';
 import { FACTIONS, factionById } from '../data/factions';
 import { type Armia, dolacz, znormalizuj, zywe } from '../data/armia';
-import { PanelArmii, blokArmii, listwaArmii, wnekaHerbu } from '../visual/panelArmii';
+import { PanelArmii } from '../visual/panelArmii';
 import { zapisz } from '../dev/dziennik';
 import { C, T, Z } from '../visual/theme';
 import { mix } from '../visual/hud';
@@ -38,18 +38,16 @@ import {
   BARWA,
   KROJ,
   Przycisk,
-  cienPanelu,
   krojeZestawu,
   medalion,
-  napisNaDrewnie,
   ozdobnik,
   panelPergaminu,
   ramaZlota,
   stylAtramentu,
   stylEtykiety,
-  tloDrewna,
   wczytajZestaw,
-} from '../visual/zestaw';
+} from '../visual/zestawWalki';
+import { napisNaPigulce, panelBialy, pigulka, tloEkranu } from '../visual/stylWalki';
 import { wersjonujZasoby } from '../visual/zasoby';
 import {
   MUZYKA_MIASTO,
@@ -351,9 +349,12 @@ export class TownScene extends Phaser.Scene {
    * między złotem a krajobrazem nie ma szpary.
    */
   private rysujRame() {
-    tloDrewna(this).setDepth(Z.sky);
-    cienPanelu(this, OKNO_X, OKNO_Y, OKNO_SZ, OKNO_WYS, 0.8).setDepth(Z.sky);
-    ramaZlota(this, OKNO_X, OKNO_Y, OKNO_SZ, OKNO_WYS, true).setDepth(Z.hud);
+    // Tło i belka jak na mapie i w walce (`stylWalki.ts`), panorama w białej
+    // ramie z obrysem tuszem.
+    tloEkranu(this, Z.sky, 36);
+    const rama = this.add.graphics().setDepth(Z.sky);
+    panelBialy(rama, OKNO_X - 7, OKNO_Y - 5, OKNO_SZ + 14, OKNO_WYS + 12, 14, { obrys: 3, cien: 4 });
+    ramaZlota(this, OKNO_X - 1, OKNO_Y - 1, OKNO_SZ + 2, OKNO_WYS + 2, false).setDepth(Z.hud);
   }
 
   private rysujPanorame() {
@@ -713,26 +714,29 @@ export class TownScene extends Phaser.Scene {
    * pod panelem — tu belka jest jedynym wolnym miejscem.
    */
   private rysujPasekGorny() {
-    const nazwa = napisNaDrewnie(this, MARGINES + 6, 20, this.zamek.nazwa, 19)
+    const nazwa = this.add
+      .text(MARGINES + 8, 15, this.zamek.nazwa, { fontFamily: KROJ.tytul, fontSize: '19px', fontStyle: '900', color: '#ffffff' })
+      .setShadow(0, 2, 'rgba(0,0,0,0.35)', 0, false, true)
       .setOrigin(0, 0.5)
       .setDepth(Z.hud + 1);
     const motto = this.add
-      .text(nazwa.x + nazwa.width + 14, 21, `„${this.profil.motto}"`, {
+      .text(nazwa.x + nazwa.width + 14, 16, `„${this.profil.motto}"`, {
         fontFamily: KROJ.kursywa,
         fontSize: '14px',
-        color: BARWA.krem,
-        stroke: BARWA.braz,
-        strokeThickness: 3,
+        fontStyle: 'italic 800',
+        color: '#ffffff',
       })
+      .setShadow(0, 1, 'rgba(0,0,0,0.3)', 0, false, true)
       .setOrigin(0, 0.5)
-      .setAlpha(0.82)
       .setDepth(Z.hud + 1);
     // Szerokość nazwy zależy od kroju — po jego dojściu motto dosuwa się.
     void krojeZestawu().then(() => {
       if (motto.active) motto.setX(nazwa.x + nazwa.width + 14);
     });
 
-    this.dataTekst = napisNaDrewnie(this, OKNO_W - MARGINES - 6, 20, '', 15)
+    this.dataTekst = this.add
+      .text(OKNO_W - MARGINES - 8, 15, '', { fontFamily: KROJ.tytul, fontSize: '15px', fontStyle: '900', color: '#ffffff' })
+      .setShadow(0, 2, 'rgba(0,0,0,0.35)', 0, false, true)
       .setOrigin(1, 0.5)
       .setDepth(Z.hud + 1);
   }
@@ -752,14 +756,26 @@ export class TownScene extends Phaser.Scene {
   private rysujPasekArmii() {
     this.panel = new PanelArmii(this, {
       glebia: Z.hud + 1,
+      styl: 'walka',
       powiedz: (t) => this.komunikat.setText(t),
       poZmianie: (opis) => {
         zapisz('armia', `miasto: ${opis}`);
         this.odswiez();
       },
     });
-    blokArmii(this, BLOK_X, BLOK_Y, BLOK_W, BLOK_H).forEach((o) => o.setDepth(Z.hud));
-    listwaArmii(this, BLOK_X + 6, GARNIZON_Y + SLOT + 9, BLOK_W - 12).setDepth(Z.hud);
+    const blok = this.add.graphics().setDepth(Z.hud);
+    panelBialy(blok, BLOK_X, BLOK_Y, BLOK_W, BLOK_H, 16);
+    blok.fillStyle(0xdfe4ea, 1);
+    blok.fillRoundedRect(BLOK_X + 12, GARNIZON_Y + SLOT + 7, BLOK_W - 24, 4, 2);
+    // Podpisy rzędów — pigułki jak DRUŻYNA / DZIKIE w walce.
+    const podpis = (x: number, y: number, tekst: string, kolor: 'niebieski' | 'zielony') => {
+      const t = this.add.text(0, 0, tekst, { fontFamily: KROJ.tytul, fontSize: '11px', fontStyle: '900', color: '#ffffff' }).setDepth(Z.hud + 4);
+      const w = t.width + 16;
+      pigulka(blok, x, y - 10, w, 20, kolor, { r: 10, cien: false });
+      napisNaPigulce(t.setOrigin(0.5).setPosition(x + w / 2, y - 1), kolor);
+    };
+    podpis(RZAD_X + 4, BLOK_Y, 'W MIEŚCIE', 'zielony');
+    podpis(RZAD_X + 4, BOHATER_Y - 9, 'DRUŻYNA', 'niebieski');
 
     // --- garnizon: herb miasta (najlepszy ratusz) ---
     this.herb(GARNIZON_Y, () => {
@@ -831,7 +847,7 @@ export class TownScene extends Phaser.Scene {
     const podzielW = 86;
     panelPergaminu(this, PRAWA_X, y, PRAWA_SZ, h).forEach((c) => c.setDepth(Z.hud));
     this.komunikat = this.add
-      .text(PRAWA_X + 9, y + h / 2, '', { ...stylAtramentu(12), lineSpacing: 0 })
+      .text(PRAWA_X + 9, y + h / 2, '', { ...stylAtramentu(13), lineSpacing: -1 })
       .setOrigin(0, 0.5)
       .setDepth(Z.hud + 1)
       .setWordWrapWidth(PRAWA_SZ - podzielW - 22);
@@ -839,9 +855,9 @@ export class TownScene extends Phaser.Scene {
     const k = this.komunikat;
     const zwykly = k.setText.bind(k);
     k.setText = ((t: string | string[]) => {
-      k.setFontSize(12);
+      k.setFontSize(13);
       zwykly(t);
-      for (const rozmiar of [11, 10]) {
+      for (const rozmiar of [12, 11, 10]) {
         if (k.height <= h - 4) break;
         k.setFontSize(rozmiar);
       }
@@ -899,7 +915,7 @@ export class TownScene extends Phaser.Scene {
     opis: () => string,
     akcja?: () => void
   ) {
-    wnekaHerbu(this, HERB_X, y, SLOT, SLOT, Z.hud + 1);
+    panelBialy(this.add.graphics().setDepth(Z.hud + 1), HERB_X, y, SLOT, SLOT, 12, { obrys: 3, cien: 3, wypelnienie: 0xcfe6fb });
     obrazek()?.setDepth(Z.hud + 3);
     const blask = this.add.rectangle(HERB_X, y, SLOT, SLOT, 0xfff3c8, 0).setOrigin(0).setDepth(Z.hud + 5);
     this.add
@@ -928,9 +944,9 @@ export class TownScene extends Phaser.Scene {
       .text(HERB_X + SLOT / 2, y + SLOT - 4, '', {
         fontFamily: KROJ.tekst,
         fontSize: '11px',
-        fontStyle: 'bold',
-        color: '#fff4d6',
-        backgroundColor: '#1a0c03d0',
+        fontStyle: '900',
+        color: '#ffffff',
+        backgroundColor: '#26262ee0',
         padding: { x: 4, y: 1 },
       })
       .setOrigin(0.5, 1)
@@ -1003,12 +1019,15 @@ export class TownScene extends Phaser.Scene {
       const ile = this.zamek.dostepne?.[i] ?? 0;
       if (jest && !maGatunek(this.stan, this.frakcja.units[i].sprite)) czeka += Math.floor(ile);
       k.g.clear();
-      k.g.fillStyle(0x2a1a0c, jest ? 0.85 : 0.25);
-      k.g.fillRoundedRect(k.cx - k.bok / 2, k.gy, k.bok, k.bok, 3);
-      k.g.lineStyle(1.2, jest ? C.goldDeep : BARWA.kreska, jest ? 1 : 0.5);
-      k.g.strokeRoundedRect(k.cx - k.bok / 2, k.gy, k.bok, k.bok, 3);
+      if (jest) panelBialy(k.g, k.cx - k.bok / 2, k.gy, k.bok, k.bok, 9, { obrys: 2.5, cien: 2, wypelnienie: 0xeaf4ff });
+      else {
+        k.g.fillStyle(0xb9c0c9, 1);
+        k.g.fillRoundedRect(k.cx - k.bok / 2, k.gy, k.bok, k.bok, 9);
+        k.g.fillStyle(0xe6eaf0, 1);
+        k.g.fillRoundedRect(k.cx - k.bok / 2 + 2, k.gy + 2, k.bok - 4, k.bok - 4, 7);
+      }
       if (jest) k.im.clearTint().setAlpha(1);
-      else k.im.setTint(0x3a2414).setAlpha(0.35);
+      else k.im.setTint(0x8b93a0).setAlpha(0.35);
       // Całe stworki czekają, ułamek to „za ile dni następny".
       const cale = Math.floor(ile);
       const zaDni = Math.ceil((1 - (ile - cale)) / Math.max(1e-6, dzienny[i]) - 1e-6);
@@ -1350,7 +1369,7 @@ export class TownScene extends Phaser.Scene {
         rzad.fillRoundedRect(rx, y, rw, rh, 5);
       }
       const podswietlenie = this.add.graphics().setDepth(Z.overlay + 2).setVisible(false);
-      podswietlenie.fillStyle(0xffe9a8, 0.45);
+      podswietlenie.fillStyle(0xffe27a, 0.45);
       podswietlenie.fillRoundedRect(rx, y, rw, rh, 5);
       doZamkniecia.push(rzad, podswietlenie);
       if (dostepny) doZamkniecia.push(ramaZlota(this, rx + 5, y + 5, rw - 10, rh - 10, false).setDepth(Z.overlay + 2));
@@ -1364,26 +1383,36 @@ export class TownScene extends Phaser.Scene {
       const mx = rx + 16;
       const my = y + (rh - bok) / 2;
       const ramka = this.add.graphics().setDepth(Z.overlay + 3);
-      ramka.fillStyle(0xf8ecd0, 1);
+      ramka.fillStyle(0xeaf4ff, 1);
       ramka.fillRect(mx, my, bok, bok);
       const mini = this.add
         .image(mx + bok / 2, my + bok / 2, `t-${this.profil.frakcja}-${b.id}`)
         .setDepth(Z.overlay + 4);
       mini.setScale(Math.min((bok - 4) / mini.width, (bok - 4) / mini.height));
       // Postawione są wyszarzone — od razu widać, co jest już załatwione.
-      if (stoi) mini.setTint(0xa89a88);
+      if (stoi) mini.setTint(0x9aa2ae);
       doZamkniecia.push(ramka, mini, ramaZlota(this, mx, my, bok, bok, false).setDepth(Z.overlay + 5));
 
       const tekstX = mx + bok + 16;
       const barwaNazwy = dostepny ? BARWA.atrament : BARWA.atramentMiekki;
       const barwaStanu = stoi ? 'zielony' : !mozna ? 'czerwony' : 'miekki';
+      // Opis kończy się przed kolumnami ceny — gdy się nie mieści, schodzi
+      // o piksel, a na końcu łamie w dwa wiersze.
+      const cenaOd = stoi ? rx + rw - 16 : rx + rw - 16 - 78 * Object.keys(b.koszt).length;
+      const maksW = cenaOd - tekstX - 8;
+      const opis = this.add
+        .text(tekstX, y + 28, this.wiersz(b, stoi, mozna, stac, juzBudowano), stylAtramentu(12, barwaStanu))
+        .setDepth(Z.overlay + 3);
+      for (const r of [11, 10]) {
+        if (opis.width <= maksW) break;
+        opis.setFontSize(r);
+      }
+      if (opis.width > maksW) opis.setWordWrapWidth(maksW).setLineSpacing(-2).setY(y + 25);
       doZamkniecia.push(
         this.add
           .text(tekstX, y + 7, b.nazwa, stylEtykiety(15, barwaNazwy))
           .setDepth(Z.overlay + 3),
-        this.add
-          .text(tekstX, y + 28, this.wiersz(b, stoi, mozna, stac, juzBudowano), stylAtramentu(12, barwaStanu))
-          .setDepth(Z.overlay + 3)
+        opis
       );
 
       // Cena po prawej, ikonami — czytelna, zanim dziecko przeczyta nazwy.
