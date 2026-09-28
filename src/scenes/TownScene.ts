@@ -554,11 +554,14 @@ export class TownScene extends Phaser.Scene {
    */
   private zaroslaPrzyPodstawie(im: Phaser.GameObjects.Image, gleboko: number) {
     const szer = im.displayWidth * SZEROKOSC_BRYLY;
-    const pasmo = Math.max(6, szer * 0.13);
+    // Nowe bryły mają własny skrawek gruntu (płotek, próg, brzeg stawu) —
+    // szeroki pas panoramy robił z niego półprzezroczystą mgłę, więc zostaje
+    // tylko cienka kreska przy samej krawędzi.
+    const pasmo = Math.max(4, szer * 0.045);
     const lewo = im.x - szer * 0.56;
     const szerokosc = szer * 1.12;
     const warstwy: Phaser.GameObjects.Image[] = [];
-    const krycie = [0.45, 0.75, 1];
+    const krycie = [0.35, 0.6, 0.85];
     for (let i = 0; i < krycie.length; i++) {
       const wysPasa = pasmo / krycie.length;
       const y = im.y - pasmo + i * wysPasa;

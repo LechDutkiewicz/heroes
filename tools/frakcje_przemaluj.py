@@ -118,7 +118,10 @@ def kopalnie():
 
 
 if __name__ == '__main__':
-    for frakcja, stopnie in RAMPY.items():
+    # Nowe miasto (`tools/miasto2_wczytaj.py`) ma własne rysunki każdej
+    # krainy — przemalowanie Boru nadpisałoby je starymi bryłami.
+    nowe = (KORZEN / 'tools' / 'wsad' / 'm2-tlo-grota.png').exists()
+    for frakcja, stopnie in ({} if nowe else RAMPY).items():
         for id_ in BUDYNKI:
             zrodlo = MIASTO / f'bor-{id_}.png'
             przemaluj(Image.open(zrodlo), stopnie).save(MIASTO / f'{frakcja}-{id_}.png')

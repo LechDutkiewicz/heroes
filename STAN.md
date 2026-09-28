@@ -2,6 +2,53 @@
 
 Ostatnia aktualizacja: 2026-09-27 (trener zamiast armii: stworek = postać z poziomem, 4 na polu bitwy, trening i Centrum Pokemon).
 
+## Nowe miasto w stylu gier Pokémon (2026-09-28)
+
+**Co jest.** Ekran miasta narysowany od zera, osobno dla każdej krainy —
+wcześniej tylko Bór miał własne bryły, a Grota i Zbocze dostawały je
+przemalowane (`frakcje_przemaluj.py`), więc były tym samym miastem w innym
+odcieniu. Teraz: Bór to słoneczne miasteczko wśród wielkich drzew (zielone
+dachy), Grota — nabrzeże pod klifem z jaskinią o zmierzchu (granatowe dachy,
+świecące okna, kryształy), Zbocze — tarasy z gorącymi źródłami pod wulkanem
+(pomarańczowe dachy, bazalt, para). W każdym Centrum Pokémon z czerwoną kopułą,
+boisko sali, żłobek z jajem, laboratorium zamiast ratusza (3 stopnie) i
+rezerwaty jako kawałki natury (staw, strumień, gniazdo ogniskowe, grota
+z kryształami, pole grzybów, pole bazaltu, komin wulkanu…).
+
+**Jak powstało.** `tools/PROMPTY-MIASTO-2.md`: najpierw trzy kotwice stylu
+(`kotwica-bor-2`, `kotwica-grota`, `kotwica-zbocze-2` — komplet wybrany przez
+użytkownika), potem tła `m2-tlo-*` i bryły `m2-<kraina>-<id>` (51 plików,
+gpt-image-1.5 medium). Do gry wczytuje je `tools/miasto2_wczytaj.py`; stare
+`wsad_wczytaj.miasto()` i `frakcje_przemaluj.py` same się teraz pomijają,
+żeby nie nadpisać nowego miasta. Koszt nowego miasta: $3.61 (budżet
+przekroczony za zgodą użytkownika do ~$5; razem wydane $33.99).
+
+**Decyzje i powody.**
+- Domy (Centrum, laboratorium, żłobek) idą z KOTWICĄ jako wzorem, a rezerwaty,
+  boisko i farmy — z TŁEM krainy. Z kotwicą model przerysowywał jej domy
+  i zamiast stawu czy boiska wychodził kolejny domek (odrzuty w historii).
+- Płaskie obiekty (rezerwaty, farma) mają limit szerokości 0,9 wysokości
+  z `BUDYNKI`, boisko 1,35 — przy samej wysokości wychodziły o połowę szersze
+  od domów i nachodziły na sąsiadów.
+- Wczytywacz utwardza alfę (`twardaAlfa`): model maluje brzegi mgiełką, która
+  leżała na panoramie mleczną otoczką — krytyk wskazał to jako usterkę nr 1.
+- Pas panoramy nakładany na podstawę bryły (`zaroslaPrzyPodstawie`) jest dużo
+  cieńszy: szeroki robił z płotków i progów nowych brył półprzezroczystą mgłę.
+- Nazwy: ratusz → Laboratorium / Duże laboratorium (Grota: Obserwatorium) /
+  Instytut; budynki specjalne → Farma Jagód, Kopalnia Kryształów, Pracownia
+  Kamieni. Sala przesunięta na x 0,45 (nachodziła na gorące źródło Zbocza).
+
+**Krytyk (ślepo, nowe vs stare, wzorce: ekran walki i bohatera).** Nowe wygrywa
+spójność, klimat Pokémon i czytelność; stare wygrało tylko wtopienie w teren.
+Poprawione po nim: otoczka stawu, szklany szkielet przy laboratorium,
+półprzezroczyste płotki.
+
+**Zostało.** Część brył stoi na wyraźnych „podstawkach" (boisko, grota
+z kryształami, pole bazaltu) — do ewentualnej poprawki razem z wątkiem
+o naklejkach na mapie przygody. Motta krain nadal baśniowe. Znak z lampką
+przy placu, na który stać (`znak-*.png`), jest stary. Pokémart (sklep
+z przedmiotami zamiast gildii magów) — użytkownik chce go później.
+
 ## Trener zamiast armii — etapy 1 i 2 (2026-09-27)
 
 Uwaga z rozgrywki: mechanika 1:1 z Heroes 3 nie pasuje do lore pokemonów
