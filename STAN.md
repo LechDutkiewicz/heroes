@@ -197,7 +197,9 @@ mieście albo kampanii.
   zmian, `MNOZNIK_FORTU`), obraz `public/miasto/*-fort.png`, grota
   i zbocze z `frakcje_przemaluj.py` — UWAGA: ten skrypt przemalowuje też
   inne budynki frakcji, niechciane zmiany cofnąć `git checkout`. Koszt
-  0,21 USD. Strona z etapami i obrazkami (artefakt „Pracownia") —
+  0,21 USD. Jasny „talerz" trawy pod miasteczkiem wyglądał jak naklejka —
+  `tools/wtop_podstawe.py` blednie go ku krawędzi i przyciemnia do trawy
+  mapy (szerokość zaniku 60). Reszta obiektów mapy: osobny wątek. Strona z etapami i obrazkami (artefakt „Pracownia") —
   użytkownik chce ją dostawać po każdym etapie.
 - **Plan dalej**: styl A (ekran walki) na mapę, bohatera, miasto
   i kampanię — użytkownik zauważył, że drewno i pergamin odstają od walki;
