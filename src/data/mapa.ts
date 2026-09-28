@@ -530,6 +530,8 @@ export interface Oddzial {
    * i tak go nie ruszy, dopóki flaga stoi.
    */
   bezEwolucji?: boolean;
+  /** Pierwszy stworek trenera — ma wyrównane statystyki startera (`startery.ts`). */
+  starter?: boolean;
 }
 
 export interface Bohater {
@@ -681,6 +683,11 @@ export interface StanMapy {
    * a okno ma wyskoczyć raz — na starcie misji, nie po każdym powrocie.
    */
   warunkiPokazane?: boolean;
+  /**
+   * Trener jeszcze nie wybrał startera: drużyna jest pusta, a mapa na starcie
+   * pokazuje okno wyboru (`startery.ts`). Poziom — z bonusu misji.
+   */
+  starter?: { poziom: number };
   /**
    * Jak gra przeciwnik na tej planszy (z `USTAWIENIA` planszy): `aktywny` —
    * pełna tura, bohater wyrusza po mapie; `obronca` — bohater zostaje w zamku,

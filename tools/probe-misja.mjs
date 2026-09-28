@@ -90,7 +90,18 @@ await page.evaluate((k) => localStorage.removeItem(k), KLUCZ_REKORDOW);
 
 // ————————————————————————————————————————————— start misji 1
 console.log('\n=== start misji 1 przez rozpocznijMisje ===');
-await startMisji(page, 'pierwsze-kroki', { trener: 'Janek', bonus: 0 });
+await startMisji(page, 'pierwsze-kroki', { trener: 'Janek', bonus: 0 }, { starter: null });
+// Nowa kampania: najpierw okno startera, warunki misji dopiero po wyborze.
+await page.waitForFunction(() => !!window.__game.scene.getScene('adventure').oknoStartera, null, { timeout: 60000 });
+const przedWyborem = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  return { zajety: s.zajety, druzyna: s.stan.bohater.armia.filter(Boolean).length };
+});
+sprawdz('okno startera na starcie, drużyna pusta, mapa zablokowana', przedWyborem.zajety && przedWyborem.druzyna === 0, JSON.stringify(przedWyborem));
+await page.evaluate(() => window.__game.scene.getScene('adventure').oknoStartera.wybierz(1));
+await page.waitForFunction(() => !window.__game.scene.getScene('adventure').oknoStartera, null, { timeout: 60000 });
+const poWyborze = await page.evaluate(() => window.__game.scene.getScene('adventure').stan.bohater.armia.filter(Boolean).map((o) => [o.nazwa, o.starter]));
+sprawdz('wybrany starter w drużynie', poWyborze.length === 1 && poWyborze[0][1] === true, JSON.stringify(poWyborze));
 let st = await stanMapy();
 sprawdz('mapa niesie misję', st.misja === 'pierwsze-kroki', st.misja);
 await czekajNaNapis(page, 'adventure', 'Pierwsze kroki');
@@ -246,6 +257,10 @@ await scena(page, 'adventure');
 await page.waitForTimeout(500);
 st = await stanMapy();
 sprawdz('„Zagraj jeszcze raz" daje świeżą planszę', !st.misja && st.dzien === 1 && st.mojeZamki === 1);
+await page.waitForFunction(() => !!window.__game.scene.getScene('adventure').oknoStartera, null, { timeout: 60000 }).catch(() => {});
+sprawdz('nowa gra pojedyncza zaczyna się od wyboru startera', await page.evaluate(() => !!window.__game.scene.getScene('adventure').oknoStartera));
+await page.evaluate(() => window.__game.scene.getScene('adventure').oknoStartera?.wybierz(0));
+await page.waitForFunction(() => !window.__game.scene.getScene('adventure').zajety, null, { timeout: 60000 });
 
 await klikPrzycisk(page, 'adventure', 'Menu');
 await page.waitForTimeout(500);

@@ -201,6 +201,23 @@ mieście albo kampanii.
   `tools/wtop_podstawe.py` blednie go ku krawędzi i przyciemnia do trawy
   mapy (szerokość zaniku 60). Reszta obiektów mapy: osobny wątek. Strona z etapami i obrazkami (artefakt „Pracownia") —
   użytkownik chce ją dostawać po każdym etapie.
+- **Starter na start** (2026-09-28, uwaga z gry: z czwórką na start
+  rezerwaty w mieście nie miały sensu). Nowa gra — misja 1 kampanii
+  (`rozpocznijMisje` bez drużyny) i pojedyncza mapa z menu / „Zagraj jeszcze
+  raz" — to `planszaPrzygody(id, { starter: { poziom } })`: pusta drużyna,
+  okno „Wybierz startera" na mapie (`AdventureScene.pokazStartera`, klawisze
+  1–3, sondy: `scene.oknoStartera.wybierz(i)`), miasto tylko z ratuszem,
+  skarbiec +20 pokeballi (rezerwat i pierwszy stworek pierwszego dnia albo
+  droższy gatunek dzień później), rywal zaczyna dwójką. Bez opcji start jest
+  dawny (czwórka) — tak wchodzą `?ekran=mapa` i sondy. Startery
+  (`data/startery.ts`): Pyroko, Glacyn, Bazalt — najniższe stworki trzech
+  krain, z WŁASNYMI HP/atakiem (flaga `Oddzial.starter`, `defStworka`),
+  wyrównanymi miarą z `tools/probe-startery.ts`; gatunek z rezerwatu bez
+  zmian. Bonus misji 1 „Nowy stworek: Flamir" zastąpiony „Silniejszy starter
+  +3 poz.". AI (`najsilniejsiNaPrzod`) liczy strzelca ×1,5 — wcześniej
+  trzymało Flamira na ławce. Symulacja misji 1 (`STARTER=0|1|2`): wygrana
+  dnia 23 / 30 / 30 (próg 32); Pyroko szybciej, bo jego rezerwat odpada
+  i autopilot wydaje na trening.
 - **Plan dalej**: styl A (ekran walki) na mapę, bohatera, miasto
   i kampanię — użytkownik zauważył, że drewno i pergamin odstają od walki;
   potem fale 3–4 z `PROJEKT-SWIAT.md`.

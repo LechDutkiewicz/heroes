@@ -38,6 +38,7 @@ import {
 } from '../src/data/kampania';
 import { bohaterDoPrzeniesienia, druzynaDoPrzeniesienia, rozpocznijMisje } from '../src/data/kampania-start';
 import type { Oddzial } from '../src/data/mapa';
+import { wybierzStartera } from '../src/data/startery';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 declare const process: { env: Record<string, string | undefined>; exitCode?: number };
@@ -120,6 +121,8 @@ function przebieg(m: Misja, graj: boolean, ziarno: number, horyzont: number): Wy
     m,
     0
   );
+  // Nowa gra zaczyna się od startera: `STARTER=0|1|2`, domyślnie na zmianę.
+  if (s.starter) wybierzStartera(s, process.env.STARTER !== undefined ? Number(process.env.STARTER) : ziarno % 3);
   if (WROG) s.wrogTryb = WROG;
   if (NATARCIE) s.dzienNatarcia = NATARCIE;
   const zamekWroga = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'wrog')!;
