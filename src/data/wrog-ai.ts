@@ -74,7 +74,7 @@ import {
   type Wlasciciel,
 } from './mapa';
 import { SLOTY_ARMII, dolacz, zywe } from './armia';
-import { NA_POLU, NA_POLU_DZIKIE, makeRng } from './battle';
+import { NA_POLU, makeRng } from './battle';
 import { factionById } from './factions';
 import { jednostkiBitwy, najsilniejsiNaPrzod, nowyStworek, rozegrajBitwe, rozliczDruzyne } from './stworki';
 import { moznaBudowac, profilZamku } from './zamki';
@@ -524,7 +524,7 @@ function celMisji(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefined
     }
     const straz = strzezoneProzez(widok, o.x, o.y);
     if (straz && !wygramy(armia, straz.oddzialy ?? [], ziarno, naPoluPrzeciw(straz))) continue;
-    if (o.rodzaj === 'zamek' && !wygramy(armia, obroncyZamku(o), ziarno, NA_POLU_DZIKIE)) continue;
+    if (o.rodzaj === 'zamek' && !wygramy(armia, obroncyZamku(o), ziarno, naPoluPrzeciw(o))) continue;
     return { kroki };
   }
   return undefined;
@@ -552,7 +552,7 @@ function celNatarcia(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefi
     if (!kroki || kroki.length === 0) continue;
     const straz = strzezoneProzez(widok, z.x, z.y);
     if (straz && !wygramy(armia, straz.oddzialy ?? [], ziarno, naPoluPrzeciw(straz))) continue;
-    if (!wygramy(armia, obroncyZamku(z), ziarno, NA_POLU_DZIKIE)) continue;
+    if (!wygramy(armia, obroncyZamku(z), ziarno, naPoluPrzeciw(z))) continue;
     return { kroki };
   }
   return undefined;

@@ -1614,8 +1614,8 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
 
 /**
  * Obrońcy zamku w kolejności, w jakiej stają do bitwy: najsilniejsi pierwsi.
- * Na polu staje najwyżej trzech (`NA_POLU_DZIKIE`) — straż z planszy
- * i garnizon razem potrafią mieć więcej, więc bronią najmocniejsi, a nie ci,
+ * Na polu stają dwaj (`NA_POLU` — sala i miasto to walka trenerów) — straż
+ * z planszy i garnizon razem mają więcej, więc bronią najmocniejsi, a nie ci,
  * którzy akurat stoją na początku listy. Stworki się nie łączą: dwa
  * Glacyny na różnych poziomach to dwie różne postacie.
  */
@@ -1890,12 +1890,14 @@ export const RYWAL_ID = -1;
 
 /**
  * Ilu stworków PRZECIWNIKA staje na polu w walce z tym obiektem. Trener
- * (gracz, AI) wystawia zawsze dwa (`NA_POLU`); rywal też dwa, a dzikie
- * stado i obrońcy miasta — do trzech (`NA_POLU_DZIKIE`). Ta sama liczba
- * dla sceny, AI i autopilota.
+ * (gracz, AI) wystawia zawsze dwa (`NA_POLU`); rywal i zamek (sala, miasto —
+ * walka z trenerem) też dwa, a dzikie stado do trzech (`NA_POLU_DZIKIE`).
+ * Zamek miał kiedyś trzech obrońców na polu — z rozgrywki: „trenerzy mieli
+ * walczyć 2 na 2", a lider sali wystawiał trzy stworki. Ta sama liczba dla
+ * sceny, AI i autopilota.
  */
 export function naPoluPrzeciw(o: Pick<Obiekt, 'rodzaj' | 'id'> | undefined): number {
-  return o?.id === RYWAL_ID ? NA_POLU : NA_POLU_DZIKIE;
+  return o?.id === RYWAL_ID || o?.rodzaj === 'zamek' ? NA_POLU : NA_POLU_DZIKIE;
 }
 
 /** Czy trener strony `kto` jest w grze — ma zamek (salę) albo drużynę. */
