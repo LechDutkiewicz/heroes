@@ -196,6 +196,9 @@ async function zacznijMisje1(page, strzalka, nagroda) {
   await page.waitForTimeout(200);
   await page.keyboard.press('Enter');
   await scena(page, 'adventure');
+  // Nowa kampania zaczyna się od wyboru startera (`startery.ts`).
+  await page.waitForFunction(() => !!window.__game.scene.getScene('adventure').oknoStartera, null, { timeout: 60000 });
+  await page.evaluate(() => window.__game.scene.getScene('adventure').oknoStartera.wybierz(0));
   await czekajNaNapis(page, 'adventure', 'Do dzieła!');
   await klikPrzycisk(page, 'adventure', 'Do dzieła!');
   await page.waitForTimeout(400);
