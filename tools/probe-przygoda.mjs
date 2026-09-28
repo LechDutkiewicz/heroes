@@ -196,10 +196,10 @@ sprawdz(`artefakt ląduje u bohatera (${artefakt.nazwa})`, poArtefakcie.ile === 
 
 // --- bitwa ---
 console.log('\n=== bitwa ===');
-// Z dzikim stadem walczy się 1 na 1 (`NA_POLU_DZIKIE`); reszta czeka w pokeballach.
-const { NA_POLU } = await page.evaluate(async () => {
+// Trener wystawia dwa stworki (`NA_POLU`), dzikie stado — do trzech (`NA_POLU_DZIKIE`).
+const { NA_POLU, NA_POLU_DZIKIE } = await page.evaluate(async () => {
   const b = await import('/src/data/battle.ts');
-  return { NA_POLU: b.NA_POLU_DZIKIE };
+  return { NA_POLU: b.NA_POLU, NA_POLU_DZIKIE: b.NA_POLU_DZIKIE };
 });
 const bitwa = await page.evaluate(async (naPolu) => {
   const s = window.__game.scene.getScene('adventure');
@@ -215,8 +215,8 @@ const bitwa = await page.evaluate(async (naPolu) => {
   s.idz([{ x: o.x, y: o.y, koszt: 100 }]);
   const stado = (o.oddzialy ?? []).reduce((a, x) => a + (x.omdlaly ? 0 : x.ile), 0);
   const sprawni = b.armia.filter((x) => x && !x.omdlaly && x.ile > 0).length;
-  return { nazwa: o.nazwa, id: o.id, wrog: Math.min(naPolu, stado), gracz: Math.min(naPolu, sprawni) };
-}, NA_POLU);
+  return { nazwa: o.nazwa, id: o.id, wrog: Math.min(naPolu.dzikie, stado), gracz: Math.min(naPolu.trener, sprawni) };
+}, { trener: NA_POLU, dzikie: NA_POLU_DZIKIE });
 await page.waitForTimeout(1400);
 await scena('battle');
 await page.evaluate(() => window.__game.scene.getScene('battle').wyborSkladu?.zatwierdz());
@@ -255,9 +255,7 @@ const koniec = await page.evaluate(() => {
   const nasi = s.units.filter((u) => u.side === 'player');
   const padl = nasi[nasi.length - 1];
   window.__zemdlony = null;
-  // Pada ten na polu, o ile ktoś jeszcze czeka w pokeballu — drużyna nie
-  // może paść cała, bo wtedy nie ma wygranej.
-  if (nasi.length + s.battle.rezerwa.player.length > 1 && padl) {
+  if (nasi.length > 1 && padl) {
     const i = [...s.slotyZMapy.entries()].find(([, id]) => id === padl.id)?.[0];
     window.__zemdlony = i !== undefined ? s.zPrzygody.gracz[i]?.slot ?? null : null;
     padl.count = 0;
@@ -307,9 +305,8 @@ sprawdz('doświadczenie za wygraną wpłynęło', poBitwie.dosw > poWyborze.dosw
   if (typeof z === 'number') {
     sprawdz('stworek, który padł, zostaje w slocie jako zemdlony', d[z]?.omdlaly === true, JSON.stringify(d[z]));
     sprawdz('zemdlony nie dostaje doświadczenia', d[z]?.dosw === d[z]?.przed, JSON.stringify(d[z]));
-    // Walczy cała drużyna — na polu po jednym, reszta w pokeballach — więc
-    // doświadczenie dostają wszyscy, którzy nie zemdleli.
-    const walczacy = d.map((o, i) => ({ o, i })).filter(({ o, i }) => o && i !== z);
+    // Walczy dwójka — doświadczenie dostaje ten, kto z niej nie zemdlał.
+    const walczacy = d.map((o, i) => ({ o, i })).filter(({ o, i }) => o && i !== z).slice(0, NA_POLU - 1);
     sprawdz(
       'zwycięzcy zbierają doświadczenie stworków',
       walczacy.length > 0 && walczacy.every(({ o }) => !o.omdlaly && o.dosw > (o.przed ?? 0)),
@@ -571,7 +568,7 @@ if (drugi) {
     // stworki z obu — czyli więcej niż dwie strony po NA_POLU.
     sprawdz(
       'druga bitwa nie dziedziczy stworków z pierwszej',
-      swiezo.oddzialy > 0 && swiezo.oddzialy <= 2 * NA_POLU,
+      swiezo.oddzialy > 0 && swiezo.oddzialy <= NA_POLU + NA_POLU_DZIKIE,
       `${swiezo.oddzialy} stworków`
     );
   }

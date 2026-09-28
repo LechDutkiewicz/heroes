@@ -37,6 +37,9 @@ const straznik = bor.find((u) => u.ability === 'guardian')!;
 function para(a: UnitDef, cel: UnitDef): { b: Battle; x: SimUnit; y: SimUnit } {
   const b = createBattle({ units: [a] }, { units: [{ ...cel, hp: cel.hp * 20 }] });
   const [x, y] = b.units;
+  // Specjalne są gotowe dopiero po zwykłym ciosie — tu badamy same efekty,
+  // więc napastnik jest już „naładowany" (ładowanie sprawdza `probe-sklad-walki.ts`).
+  x.naladowany = true;
   x.col = 4;
   x.row = 3;
   y.col = 5;
@@ -127,7 +130,9 @@ console.log('--- maszyna ---');
       });
     });
   }
-  sprawdz('maszyna używa ataków specjalnych', specjalne > wszystkie * 0.3, `${specjalne} z ${wszystkie} PP`);
+  // Próg 20%: specjalne ładują się pierwszym zwykłym ciosem, więc część
+  // krótkich walk kończy się, zanim stworek w ogóle może ich użyć.
+  sprawdz('maszyna używa ataków specjalnych', specjalne > wszystkie * 0.2, `${specjalne} z ${wszystkie} PP`);
   sprawdz('żadna bitwa nie kończy się remisem', remisy === 0, `${remisy}`);
 }
 

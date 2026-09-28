@@ -17,8 +17,11 @@ import { KROJ } from './zestaw';
 import { C, H, body } from './theme';
 
 export interface PasekAtakow {
-  /** Rysuje przyciski dla stworka: jego ataki, pozostałe PP i wybrany atak. */
-  pokaz(def: UnitDef, pp: readonly (number | null)[], wybrany: number): void;
+  /**
+   * Rysuje przyciski dla stworka: jego ataki, pozostałe PP i wybrany atak.
+   * `naladowany` — czy zadał już zwykły cios (dopiero wtedy specjalne są gotowe).
+   */
+  pokaz(def: UnitDef, pp: readonly (number | null)[], wybrany: number, naladowany: boolean): void;
   setVisible(visible: boolean): void;
 }
 
@@ -130,7 +133,7 @@ export function createPasekAtakow(
   });
 
   return {
-    pokaz(def, ppJednostki, wybrany) {
+    pokaz(def, ppJednostki, wybrany, naladowany) {
       const ataki = atakiStworka(def);
       przyciski.forEach((p, i) => {
         const a = ataki[i];
@@ -139,6 +142,11 @@ export function createPasekAtakow(
           return;
         }
         const zostalo = ppJednostki[i];
+        // Specjalne ładują się zwykłym ciosem — do tego czasu zablokowane.
+        if (i > 0 && !naladowany && (zostalo === null || zostalo === undefined || zostalo > 0)) {
+          p.rysuj('zablokowany', a.nazwa, 'po 1. ciosie');
+          return;
+        }
         if (a.pp === null || zostalo === null || zostalo === undefined) {
           p.rysuj(i === wybrany ? 'wybrany' : 'gotowy', a.nazwa, '∞');
           return;

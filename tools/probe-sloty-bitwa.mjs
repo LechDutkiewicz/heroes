@@ -53,8 +53,7 @@ await page.waitForTimeout(700);
 
 // Drużyna z dziurami: sloty 0, 2, 3, 4, 6. Slot 0 i 6 to ten sam gatunek na
 // różnych poziomach (dwie postacie), slot 2 jest zemdlony. Do bitwy idą
-// wszystkie SPRAWNE sloty po kolei: 0 na pole (z dzikim 1 na 1), a 3, 4, 6
-// czekają w pokeballach.
+// dwa pierwsze SPRAWNE sloty: 0 i 3 (reszta w tej walce nie walczy).
 const ukladPrzed = await page.evaluate(() => {
   const s = window.__game.scene.getScene('adventure');
   const wzory = s.stan.bohater.armia.filter(Boolean).map((o) => ({ ...o }));
@@ -80,7 +79,7 @@ await page.waitForTimeout(1400);
 await scena('battle');
 await page.waitForTimeout(400);
 
-// Okno „Kto zaczyna?" — zostawiamy domyślny wybór (pierwszy sprawny).
+// Okno „Kto walczy?" — zostawiamy domyślny wybór (dwa pierwsze sprawne).
 await page.evaluate(() => window.__game.scene.getScene('battle').wyborSkladu?.zatwierdz());
 await page.waitForTimeout(300);
 const naPlanszy = await page.evaluate(() => {
@@ -89,21 +88,20 @@ const naPlanszy = await page.evaluate(() => {
     .filter((u) => u.side === 'player')
     .slice()
     .sort((a, b) => a.row - b.row);
-  const czekaja = s.battle.rezerwa.player;
   return {
-    kolejnosc: [...nasi, ...czekaja].map((u) => ({ n: u.def.name, p: u.def.poziom })),
+    kolejnosc: nasi.map((u) => ({ n: u.def.name, p: u.def.poziom })),
     naPolu: nasi.length,
     rzedy: nasi.map((u) => u.row),
     wrogRzedy: s.units.filter((u) => u.side === 'enemy').map((u) => u.row).sort((a, b) => a - b),
   };
 });
-const oczekiwana = [0, 3, 4, 6].map((i) => ukladPrzed[i]);
+const oczekiwana = [0, 3].map((i) => ukladPrzed[i]);
 sprawdz(
-  'do bitwy idą wszyscy sprawni w kolejności slotów (pierwszy na polu, reszta w pokeballach)',
+  'do bitwy idą dwa pierwsze sprawne stworki, w kolejności slotów',
   JSON.stringify(naPlanszy.kolejnosc.map((u) => [u.n, u.p])) === JSON.stringify(oczekiwana.map((u) => [u.n, u.p])),
   naPlanszy.kolejnosc.map((u) => `${u.n}@${u.p}`).join(', ')
 );
-sprawdz('z dzikim na polu stoi jeden', naPlanszy.naPolu === 1, String(naPlanszy.naPolu));
+sprawdz('trener wystawia dwa stworki', naPlanszy.naPolu === 2, String(naPlanszy.naPolu));
 const zPrzerwa = (r) => r.every((x, i) => i === 0 || x - r[i - 1] >= 2);
 sprawdz('między naszymi stworkami zawsze wolne pole', zPrzerwa(naPlanszy.rzedy), naPlanszy.rzedy.join(', '));
 sprawdz('między stworkami przeciwnika też', zPrzerwa(naPlanszy.wrogRzedy), naPlanszy.wrogRzedy.join(', '));
@@ -120,11 +118,11 @@ sprawdz(
   JSON.stringify(po.map((o) => o?.n ?? null))
 );
 sprawdz('zemdlony został zemdlony i nic nie dostał', po[2]?.z === true && po[2]?.p === 9);
-sprawdz('walczący nie zemdleli (wygrana od ręki)', [0, 3, 4, 6].every((i) => po[i] && !po[i].z));
+sprawdz('nikt sprawny nie zemdlał (wygrana od ręki, reszta nie walczyła)', [0, 3, 4, 6].every((i) => po[i] && !po[i].z));
 sprawdz(
-  'walczący zebrali doświadczenie',
-  [0, 3, 4, 6].every((i) => po[i].d > 5 * ukladPrzed[i].p * (ukladPrzed[i].p - 1)),
-  [0, 3, 4, 6].map((i) => `${po[i].n}: poz. ${ukladPrzed[i].p}→${po[i].p}`).join(', ')
+  'walcząca dwójka zebrała doświadczenie',
+  [0, 3].every((i) => po[i].d > 5 * ukladPrzed[i].p * (ukladPrzed[i].p - 1)),
+  [0, 3].map((i) => `${po[i].n}: poz. ${ukladPrzed[i].p}→${po[i].p}`).join(', ')
 );
 
 sprawdz('bez błędów JS', bledyJs.length === 0, bledyJs.slice(0, 2).join(' | '));
