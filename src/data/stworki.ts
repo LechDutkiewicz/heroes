@@ -2,7 +2,7 @@ import type { UnitDef } from './units';
 import { factionById } from './factions';
 import { etapStworka, liniaStworka, nastepnyEtap, progEwolucji } from './ewolucje';
 import type { Oddzial } from './mapa';
-import { NA_POLU, createBattle, runBattle, type Battle, type Outcome } from './battle';
+import { NA_POLU, NA_POLU_DZIKIE, createBattle, runBattle, type Battle, type Outcome } from './battle';
 
 /**
  * Stworek jako POSTAĆ, nie jako stos — wszystko, co z tego wynika dla liczb.
@@ -90,28 +90,26 @@ export function defStworka(o: Pick<Oddzial, 'frakcja' | 'tier' | 'sprite' | 'naz
   };
 }
 
-/**
- * Najwięcej stworków po jednej stronie bitwy — na polu (`NA_POLU`) i w
- * pokeballach razem. Drużyna ma siedem slotów; do walki idą wszyscy sprawni,
- * po kolei (zmiennicy wchodzą po zemdlonych).
- */
-export const MAKS_W_BITWIE = 7;
-/** Największe stado dzikich — tylu stworków najwyżej staje w kolejce do walki z trenerem. */
-export const MAKS_STADA = 4;
+/** Największe stado dzikich — tyle stworków staje na polu (`NA_POLU_DZIKIE`). */
+export const MAKS_STADA = NA_POLU_DZIKIE;
 
 /**
  * Oddziały z mapy → jednostki bitwy. Stado rozpada się na osobne stworki,
- * zemdlone zostają poza bitwą, a reszta idzie w kolejności slotów: pierwsi
- * `NA_POLU` na pole, dalsi czekają w pokeballach jako zmiennicy. Wynik ma przy każdej jednostce indeks wpisu,
- * z którego pochodzi — po bitwie trzeba wiedzieć, KTÓRY stworek zemdlał.
+ * zemdlone zostają poza bitwą, a do walki idą pierwsi `maks` w kolejności
+ * slotów — trener wystawia dwóch (`NA_POLU`), dzikie stado i obrońcy miasta
+ * do trzech. Wynik ma przy każdej jednostce indeks wpisu, z którego
+ * pochodzi — po bitwie trzeba wiedzieć, KTÓRY stworek zemdlał.
  */
-export function jednostkiBitwy(oddzialy: readonly (Oddzial | null | undefined)[]): { def: UnitDef; skad: number }[] {
+export function jednostkiBitwy(
+  oddzialy: readonly (Oddzial | null | undefined)[],
+  maks: number = NA_POLU
+): { def: UnitDef; skad: number }[] {
   const wynik: { def: UnitDef; skad: number }[] = [];
   oddzialy.forEach((o, skad) => {
     if (!o || o.omdlaly || o.ile <= 0) return;
     const def = defStworka(o);
     if (!def) return;
-    for (let i = 0; i < o.ile && wynik.length < MAKS_W_BITWIE; i++) wynik.push({ def, skad });
+    for (let i = 0; i < o.ile && wynik.length < maks; i++) wynik.push({ def, skad });
   });
   return wynik;
 }
@@ -134,10 +132,10 @@ export function najsilniejsiNaPrzod(armia: (Oddzial | null)[]) {
  * grup to iloczyn sumy życia i sumy ataku (prawo Lanchestera), więc siłą
  * grupy jest pierwiastek z tego iloczynu.
  */
-export function silaGrupy(oddzialy: readonly (Oddzial | null | undefined)[]): number {
+export function silaGrupy(oddzialy: readonly (Oddzial | null | undefined)[], maks: number = NA_POLU): number {
   let hp = 0;
   let atk = 0;
-  for (const { def } of jednostkiBitwy(oddzialy)) {
+  for (const { def } of jednostkiBitwy(oddzialy, maks)) {
     hp += def.hp;
     atk += def.atk * (def.ability === 'double' ? 2 : 1);
   }
@@ -287,7 +285,8 @@ export function rozegrajBitwe(
   obrona: readonly (Oddzial | null | undefined)[],
   rng: () => number,
   bonusGracza?: Battle['bonusGracza'],
-  naPolu: number = NA_POLU
+  /** ilu obrońców staje na polu: 2 — trener, 3 — dzikie stado albo miasto */
+  naPoluObrony: number = NA_POLU
 ): {
   outcome: Outcome;
   ocalaliAtak: number[];
@@ -296,18 +295,20 @@ export function rozegrajBitwe(
   pokonaniObrona: { poziom: number; tier: number }[];
 } {
   const lewa = jednostkiBitwy(atak);
-  const prawa = jednostkiBitwy(obrona);
-  const bitwa = createBattle({ units: lewa.map((j) => j.def) }, { units: prawa.map((j) => j.def) }, [], rng, naPolu);
+  const prawa = jednostkiBitwy(obrona, naPoluObrony);
+  const bitwa = createBattle(
+    { units: lewa.map((j) => j.def) },
+    { units: prawa.map((j) => j.def) },
+    [],
+    rng,
+    NA_POLU,
+    naPoluObrony
+  );
   bitwa.bonusGracza = bonusGracza;
   const { outcome } = runBattle(bitwa);
-  // Na nogach: kto stoi na polu i kto nie zdążył wyjść z pokeballa.
-  const zywi = new Set(
-    [...bitwa.units, ...(bitwa.rezerwa?.player ?? []), ...(bitwa.rezerwa?.enemy ?? [])]
-      .filter((u) => u.count > 0)
-      .map((u) => u.id)
-  );
+  const zywi = new Set(bitwa.units.filter((u) => u.count > 0).map((u) => u.id));
   const policz = (lista: typeof lewa, zrodlo: readonly (Oddzial | null | undefined)[], offset: number) => {
-    // Kto nie stanął do walki (zemdlony, ponad siedmiu na pole), zostaje,
+    // Kto nie stanął do walki (zemdlony, poza dwójką trenera), zostaje,
     // jaki był — odejmujemy tylko tych, którzy padli na polu.
     const ocalali = zrodlo.map((o) => (o && o.ile > 0 ? o.ile : 0));
     const pokonani: { poziom: number; tier: number }[] = [];

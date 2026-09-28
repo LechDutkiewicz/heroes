@@ -17,7 +17,7 @@
  * Wszystko tu jest czystą funkcją stanu bitwy — scena tylko odgrywa.
  */
 import { fullHp } from './units';
-import { SILA_ELIKSIRU, total, wejdzZmiennik, type Battle, type SimUnit } from './battle';
+import { SILA_ELIKSIRU, total, type Battle, type SimUnit } from './battle';
 
 export type Przedmiot = 'mikstura' | 'eliksir' | 'pokeball';
 
@@ -67,9 +67,7 @@ export function szansaZlapania(u: SimUnit): number {
 }
 
 /** Zdejmuje złapanego stworka z pola — dla bitwy liczy się jak pokonany. */
-export function zlap(b: Battle, u: SimUnit): SimUnit | undefined {
+export function zlap(b: Battle, u: SimUnit) {
   b.units = b.units.filter((x) => x.id !== u.id);
   b.roundQueue = b.roundQueue.filter((id) => id !== u.id);
-  // Następny dziki ze stada wskakuje na miejsce złapanego.
-  return wejdzZmiennik(b, u.side);
 }

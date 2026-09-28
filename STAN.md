@@ -134,21 +134,20 @@ mieście albo kampanii.
   nagroda kampanii za posiadany gatunek = +2 poziomy, autopilot i AI
   gracza nie werbują drugiego (`maGatunek`). Skutek: m1 wygrywana dnia ~30
   (zaakceptowane, próg symulacji 32). Sonda: `tools/probe-gatunek.ts`.
-- **Walki 1 na 1 i 2 na 2 z wymianą** (uwaga z rozgrywki: w bajce walczy
-  się jeden na jednego, czasem dwa na dwa). `battle.ts`: pole 8 × 5,
-  `NA_POLU = 2`, `NA_POLU_DZIKIE = 1`, `createBattle(…, naPolu)` stawia
-  pierwszych na polu, resztę w `Battle.rezerwa` (identyfikatory dla
-  wszystkich, po kolei — po nich `rozegrajBitwe` odtwarza, kto zemdlał).
-  Po zemdlonym `wejdzZmiennik` wpuszcza następnego (zdarzenie `wejscie`
-  w dzienniku, wolne pole przy krawędzi z przerwą od swoich); także po
-  złapanym dzikim (`zlap`). Zmiennik rusza się od następnej rundy. Do walki
-  idzie cała drużyna (`MAKS_W_BITWIE = 7`); stada dzikich dalej najwyżej
-  4 (`MAKS_STADA`). Kto walczy ile: `naPoluPrzeciw(obiekt)` w `mapa.ts` —
-  scena, AI i autopilot liczą to samo. Okno „Kto zaczyna?" wybiera start,
-  reszta wchodzi w kolejności slotów. Koniec walki liczy także czekających
-  w pokeballach (`sprawnych`). Symulacja (3 przebiegi, bez błędów progów):
-  m1 d24, m2 d40, m3 d5, m4 d22. Sonda: `tools/probe-zmiennicy.ts`, zrzuty:
-  `tools/zrzut-walka.mjs`.
+- **Skład walki: 2 stworki trenera, do 3 dzikich** (druga decyzja
+  użytkownika, po teście 1 na 1 z wymianą: „kompromis z 7 do 1:1 za duży").
+  `battle.ts`: pole 8 × 5, `NA_POLU = 2` (gracz, AI, rywal), `NA_POLU_DZIKIE
+  = 3` (dzikie stado, obrońcy miasta), `createBattle(…, naPolu, naPoluPrawa)`.
+  Bez wymiany z pokeballi: kto się nie zmieścił, nie walczy (nie mdleje, nie
+  dostaje EXP). Okno „Kto walczy?" wybiera dwójkę, gdy sprawnych jest
+  więcej. `naPoluPrzeciw(obiekt)` w `mapa.ts` — limit przeciwnika, ten sam
+  dla sceny, AI i autopilota; `jednostkiBitwy(lista, maks)`. Stada dzikich
+  najwyżej 3 (`MAKS_STADA`). Wersja z wymianą (#17) była w grze jeden dzień.
+- **Ładowanie ataków specjalnych** (uwaga: drugi atak od pierwszej tury
+  robił z wczesnych walk formalność). `SimUnit.naladowany` — ustawia go
+  zwykły cios stworka (odwet się nie liczy); `atakDostepny` blokuje ataki
+  1 i 2 do tego czasu, pasek pokazuje „po 1. ciosie". Sonda:
+  `tools/probe-sklad-walki.ts`.
 - **Ekran walki na zestawie** (uwaga użytkownika: „długo niedotykany i ze
   starej wersji"). Tło z drewna z belką (`drawBackground`), złota rama
   planszy (`drawFrame`), cienka ciemna siatka zamiast szklanych kafli,
@@ -163,7 +162,7 @@ mieście albo kampanii.
   energii, bańka, gwiazdki omdlenia, but sportowy — klucze `ICON.*` zostały.
   Uwaga: maska geometryczna w Phaserze 4 nie przycina obrazka terenu —
   `drawTerrain` przycina go `setCrop`.
-- **Sondy dostosowane** do 1 na 1 i do zasady gatunku: `probe-plecak`,
+- **Sondy dostosowane** do dwójki trenera i do zasady gatunku: `probe-plecak`,
   `probe-sloty-bitwa`, `probe-zwis`, `probe-przygoda`, `probe-armia`.
   `probe-fx` jest zepsuta od dawna (woła nieistniejące `scene.resolveHit`);
   `probe-fx`, `probe-dzwiek`, `probe-najechanie` mają na sztywno port 4173.

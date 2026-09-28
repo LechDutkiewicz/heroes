@@ -1,14 +1,14 @@
-// Zrzuty ekranu walki (bitwa pokazowa): start tury gracza i wejście
-// zmiennika po zemdlonym wrogu.
+// Zrzuty ekranu walki (bitwa pokazowa): start tury gracza i stan po
+// zemdleniu jednego wroga. `--naPolu` — ilu wrogów (1–3); gracz ma zawsze dwa.
 //
-//   node tools/zrzut-walka.mjs [--url http://localhost:5210/] [--out tools/shots] [--naPolu 1|2] [--seed 7]
+//   node tools/zrzut-walka.mjs [--url http://localhost:5210/] [--out tools/shots] [--naPolu 1|2|3] [--seed 7]
 import { chromium } from 'playwright';
 import { mkdir } from 'node:fs/promises';
 
 const arg = (n, d) => (process.argv.indexOf(n) > 0 ? process.argv[process.argv.indexOf(n) + 1] : d);
 const URL = arg('--url', 'http://localhost:5210/');
 const OUT = arg('--out', 'tools/shots');
-const NA_POLU = arg('--naPolu', '2');
+const NA_POLU = arg('--naPolu', '3');
 const SEED = arg('--seed', '7');
 await mkdir(OUT, { recursive: true });
 
@@ -26,9 +26,9 @@ await page.waitForFunction(
   { timeout: 300000 }
 );
 await page.waitForTimeout(700);
-const nazwa = `walka-${NA_POLU}na${NA_POLU}`;
+const nazwa = `walka-2na${NA_POLU}`;
 await page.locator('canvas').screenshot({ path: `${OUT}/${nazwa}-start.png` });
-// Zwal jednego wroga, żeby zobaczyć wejście zmiennika.
+// Zwal jednego wroga, żeby zobaczyć omdlenie i drużyny pod planszą.
 await page.evaluate(() => {
   const s = window.__game.scene.getScene('battle');
   const a = s.activeUnit();
@@ -41,7 +41,7 @@ await page.evaluate(() => {
 await page.waitForFunction(
   () => {
     const s = window.__game.scene.getScene('battle');
-    return s.units.filter((u) => u.side === 'enemy').every((u) => u.container.visible && u.container.alpha > 0.95);
+    return !s.busy || s.gameOver;
   },
   null,
   { timeout: 300000 }
