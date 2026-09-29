@@ -529,6 +529,8 @@ NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 #: Najtrudniejsza misja: przeciwnik naciera od osiemnastego dnia i od początku
 #: wie, gdzie stoi zamek gracza; obie twierdze mają załogę z czterech poziomów.
 USTAWIENIA = {
+    # Mapa świata w stylu Pokémon: las i skały z klocków (`src/data/klocki.ts`).
+    'klocki': 'zima',
     'wrog': 'aktywny',
     'natarcie': True,
     'dzienNatarcia': 21,

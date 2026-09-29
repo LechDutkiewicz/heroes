@@ -274,7 +274,13 @@ class Generator:
         return [y for y in range(od, do + 1) if all(mapa[y][x] in PRZEJEZDNE for x in range(a0, a1 + 1))]
 
     def trasa(self, mapa, skad, dokad):
-        """Najtańsza trasa Dijkstrą po ośmiu kierunkach."""
+        """Najtańsza trasa Dijkstrą po ośmiu kierunkach.
+
+        Pola z `self.zakaz_drog` (bryły miast i boki ich wejść) są dla drogi
+        zamknięte — droga dochodzi do bramy miasta od dołu, a nie biegnie
+        pod budynkiem (zgłoszenie gracza: „wioska jest nałożona na drogę").
+        """
+        zakaz = getattr(self, 'zakaz_drog', frozenset())
         kolejka = [(0, skad, None)]
         skady = {}
         koszty = {skad: 0}
@@ -294,7 +300,7 @@ class Generator:
                     if not (0 <= nx < self.BOK and 0 <= ny < self.BOK):
                         continue
                     c = self.koszt_drogi[mapa[ny][nx]]
-                    if c is None:
+                    if c is None or ((nx, ny) in zakaz and (nx, ny) != dokad):
                         continue
                     nk = k + c * (1.41 if dx and dy else 1)
                     if nk < koszty.get((nx, ny), 1e9):
@@ -374,6 +380,13 @@ class Generator:
                     if self.w(x + dx, y + dy) and mapa[y + dy][x + dx] in '#~':
                         mapa[y + dy][x + dx] = '.'
 
+        # Miasto (bryła 3 × 2 NAD polem wejścia, patrz `BRYLA` w grze) i pola
+        # obok wejścia są dla dróg zamknięte: droga wchodzi w bramę od dołu.
+        self.zakaz_drog = frozenset(
+            (x + dx, y + dy)
+            for nazwa, (x, y) in k.PUNKTY.items() if nazwa.startswith('zamek')
+            for dx, dy in [(-1, -2), (0, -2), (1, -2), (-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0)]
+        )
         for szlak in k.SZLAKI:
             for a, b in zip(szlak, szlak[1:]):
                 droga = self.trasa(mapa, k.PUNKTY[a], k.PUNKTY[b])
@@ -658,6 +671,12 @@ class Generator:
                         and len(zajmowane) > 1
                         and any(
                             abs(bx - ox) + abs(by - oy) <= 1
+                            # `ODSTEP_NAD_BRYLA`: także pole nad murem i skosy
+                            # (w obie strony — obiekt mógł stanąć pierwszy).
+                            or (
+                                getattr(self.k, 'ODSTEP_NAD_BRYLA', False)
+                                and ((ox == bx and oy == by - 2) or (abs(ox - bx) == 1 and oy == by - 1))
+                            )
                             for bx, by in zajmowane[1:]
                             for (ox, oy), _ in obiekty
                         )
@@ -676,7 +695,15 @@ class Generator:
             # czegokolwiek skasowałoby ten mur.
             for bx, by in self.pola_bryly(wpis[0], wpis[1], pole):
                 zajete.append((bx, by))
-                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                # `ODSTEP_NAD_BRYLA` (per plansza, mapa świata w stylu Pokémon):
+                # rysunek budowli od frontu sięga pole wyżej niż jej mur, więc
+                # wolne zostaje też pole nad murem i skosy (Polana: „bardzo
+                # dużo rzeczy koło siebie — automat, stos pokeballi, farma").
+                # Bez ustawienia — jak dotąd (inne plansze nie przetasowane).
+                obok = ((1, 0), (-1, 0), (0, 1), (0, -1))
+                if getattr(self.k, 'ODSTEP_NAD_BRYLA', False):
+                    obok += ((0, -2), (1, -1), (-1, -1))
+                for dx, dy in obok:
                     zajete.append((bx + dx, by + dy))
             obiekty.append((pole, wpis))
             pola.append(pole)

@@ -71,10 +71,10 @@ export const TEREN = [
   'TTTT#####ss=....~~~ssss=.sss####ssssjj..jjjjs...~~~~..~.ssTs#.##.jjjTTTT',
   '#########ss==.........=.....####sssss...ssss.TT.ssss..~ssTTT...sjssTTTTT',
   '#########ssss=.......=.##...###sssss.....sssTTT~ssss~...TTTT..ssssssTTTT',
-  '#########sss=========..##.s..##sssss.....ssTTTTssss.s...TTTT...jssssTTTT',
-  '#########ss=s=.....=......s.s.#.ssss....ss..TT#sss......sTT.s...jsssTTTT',
+  '#########ssss========..##.s..##sssss.....ssTTTTssss.s...TTTT...jssssTTTT',
+  '#########sss==.....=......s.s.#.ssss....ss..TT#sss......sTT.s...jsssTTTT',
   '###ssssss=====TTTsTT=..TTTs.s..sssssTs......#.##ss.....ssTTssssjjjjjTTTT',
-  '###sss===ssss=TTTsTTs..TTTss.s..sssTTT.......##....s.sssTTTTssssjjjjTTTT',
+  '###sss===ss=s=TTTsTTs..TTTss.s..sssTTT.......##....s.sssTTTTssssjjjjTTTT',
   '###s==sssTTs=s====ssssTTsssss....sssTTT.....#####..s.sTTTTTTTsssjjjjTTTT',
   '##########Ts=#####=s.sTTssss.#..#ssssTTT...#####.#.ssTTTTTTTTsssjjjTTTTT',
   '###########s=###ssT==s##Tsss#..#sTTsTTTT...TTT#TTTTTTTTTTTTTsssssTTTTTTT',
@@ -362,6 +362,7 @@ export const ROZSTAWIENIE: Array<{
 
 /** Ustawienia misji na tej planszy — patrz `UstawieniaPlanszy` w `src/data/mapy.ts`. */
 export const USTAWIENIA = {
+  "klocki": "zima",
   "wrog": "aktywny",
   "natarcie": true,
   "dzienNatarcia": 21,

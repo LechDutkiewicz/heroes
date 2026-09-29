@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { pelnyPlecak, plecakBohatera, type Plecak } from '../data/przedmioty';
 import { kluczPortretuPanelu, spriteDoPortretow, wczytajPortrety } from '../visual/portrety';
 import { ZESTAWY_KLIMATU } from '../data/zestawy-klimatu';
+import { NAZWY_KLOCKOW, ulozKlocki } from '../data/klocki';
 import {
   ARTEFAKTY,
   BUDOWLE,
@@ -223,6 +224,8 @@ const KLUCZ_WYNIKU = 'wynik-bitwy';
 const KLUCZ_TLA = 'tlo-planszy';
 /** Zestaw klimatu, z którego wczytano sprite'y `m-…` — patrz `preload`. */
 const KLUCZ_ZESTAWU = 'zestaw-planszy';
+/** Zestaw klocków wczytany ostatnio (`USTAWIENIA.klocki`). */
+const KLUCZ_KLOCKOW = 'zestaw-klockow';
 /** Plik, z którego wczytano arkusz `bohater` (Janek albo Ela) — patrz `preload`. */
 const KLUCZ_ARKUSZA = 'arkusz-bohatera';
 /** Tekstura miękkiego cienia kontaktowego — patrz `zbudujCien`. */
@@ -615,7 +618,13 @@ export class AdventureScene extends Phaser.Scene {
       }
       this.registry.set(KLUCZ_ZESTAWU, zestaw);
     }
-    const zKlimatu = new Set(ZESTAWY_KLIMATU[zestaw] ?? []);
+    // Plansza z klockami (`USTAWIENIA.klocki`) bierze z zestawu klimatu tylko
+    // krzaki i stosy znajdźek — obiekty są wszędzie te same, nowe (rzut od
+    // frontu), a stare zimowe i bagienne wersje były w baśniowym stylu.
+    const zKlockami = !!planszaPoId(this.wczytajStan().mapa).modul.USTAWIENIA?.klocki;
+    const zKlimatu = new Set(
+      (ZESTAWY_KLIMATU[zestaw] ?? []).filter((n) => !zKlockami || n.startsWith('stos-') || n.startsWith('krzak'))
+    );
     this.load.image('plansza-0', `${tlo}plansza-0.jpg`);
     this.load.image('woda-maska', `${tlo}woda-maska.png`);
     this.load.image('woda-zmarszczki', `${b}mapa/woda-zmarszczki.png`);
@@ -690,6 +699,14 @@ export class AdventureScene extends Phaser.Scene {
       if (n.startsWith('stos-') || n.startsWith('gora-'))
         this.load.image(`m-${n}`, `${b}mapa/${zestaw}/${n}.png`);
     }
+    // Klocki terenu (`src/data/klocki.ts`): las i skały z bloków o stałym obrysie.
+    const klocki = planszaPoId(this.wczytajStan().mapa).modul.USTAWIENIA?.klocki;
+    if (klocki)
+      for (const n of NAZWY_KLOCKOW) {
+        if (this.textures.exists(`k-${n}`) && this.registry.get(KLUCZ_KLOCKOW) !== klocki) this.textures.remove(`k-${n}`);
+        this.load.image(`k-${n}`, `${b}mapa/klocki/${klocki}/${n}.png`);
+      }
+    if (klocki) this.registry.set(KLUCZ_KLOCKOW, klocki);
     const stan = this.wczytajStan();
     const potrzebne = new Set<string>();
     for (const o of zywe(stan.bohater.armia)) potrzebne.add(o.sprite);
@@ -2044,6 +2061,11 @@ export class AdventureScene extends Phaser.Scene {
 
     this.rysujPrzeszkody();
     this.rysujOzdoby();
+    // Klocki terenu: kontener świata rysuje w kolejności dodania, więc klocki
+    // i krzaki układamy po głębi (stabilnie) — bliższy rząd zasłania dalszy,
+    // a krzak za lasem chowa się pod koronami, zamiast leżeć na nich.
+    if (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.klocki)
+      (this.swiat.list as Phaser.GameObjects.Image[]).sort((a, b) => a.depth - b.depth);
     this.warstwaTrasy = this.add.graphics().setDepth(this.stan.wys + 1);
     this.swiat.add(this.warstwaTrasy);
     this.rysujObiekty();
@@ -2320,6 +2342,10 @@ export class AdventureScene extends Phaser.Scene {
    * sąsiednią i nie było widać, gdzie jedna się kończy.
    */
   private rysujPrzeszkody() {
+    if (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.klocki) {
+      this.rysujKlocki();
+      return;
+    }
     const zajete = new Set<string>();
     const takiSam = (x: number, y: number, t: string) =>
       x >= 0 &&
@@ -2462,6 +2488,33 @@ export class AdventureScene extends Phaser.Scene {
       }
     }
     wstawGory();
+  }
+
+  /**
+   * Las i skały z klocków (`ulozKlocki`): każdy klocek stoi spodem dokładnie
+   * na swoich polach — szerokość rysunku to szerokość obrysu (z odrobiną
+   * zakładki, żeby sąsiednie klocki się zazębiały), a nad obrysem rysunek
+   * wystaje tylko do tyłu. Głębia z dolnego rzędu, jak u obiektów.
+   */
+  private rysujKlocki() {
+    // Zakładka: klocek jest szerszy od obrysu, więc sąsiednie klocki
+    // zazębiają się koronami i zboczami w zwartą masę (przy 1,12 las był
+    // rzędami kępek z trawą między nimi — „sad", nie las).
+    const ZAKLADKA: Record<string, number> = { las: 1.42, skaly: 1.3 };
+    for (const k of ulozKlocki(this.stan.teren, 7)) {
+      const zakladka = ZAKLADKA[k.teren];
+      const klucz = `k-${k.nazwa}`;
+      if (!this.textures.exists(klucz)) continue;
+      const dol = (k.y + k.glab) * KAFEL;
+      const im = this.add
+        .image((k.x + k.szer / 2) * KAFEL, dol + KAFEL * 0.08, klucz)
+        .setOrigin(0.5, 1)
+        // Odbicie z położenia: te same klocki obok siebie nie są klonami.
+        .setFlipX(this.wariant(k.x, k.y, 2) === 1)
+        .setDepth(k.y + k.glab - 1 + 0.45);
+      im.setScale((k.szer * KAFEL * zakladka) / im.width);
+      this.swiat.add(im);
+    }
   }
 
   private rysujOzdoby() {

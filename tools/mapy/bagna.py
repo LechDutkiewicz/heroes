@@ -640,6 +640,8 @@ NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 #: Przeciwnik gra pełną turę — to on jest powodem, żeby się spieszyć, obok
 #: terminu. Warownia jak Grota na Dwóch Dolinach.
 USTAWIENIA = {
+    # Mapa świata w stylu Pokémon: las i skały z klocków (`src/data/klocki.ts`).
+    'klocki': 'bagno',
     'wrog': 'aktywny',
     'nazwyZamkowWroga': ['Warownia na Grobli'],
     # Zestaw sprite'ów klimatu dla sceny (`public/mapa/bagno/`) — patrz STAN.md.

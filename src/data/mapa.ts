@@ -303,7 +303,8 @@ export const BUDOWLE: Record<string, Budowla> = {
     nazwa: 'Gniazdo z Jajami',
     opis: 'Zajęte przysyła młode stworki do twojego zamku',
     plik: 'gniazdo',
-    wys: 1.4,
+    // Mapa świata w stylu Pokémon: „kosz z jajkami wydaje się za duży”.
+    wys: 1.1,
     efekt: { typ: 'gniazdo' },
   },
   'osrodek-ewolucji': {
