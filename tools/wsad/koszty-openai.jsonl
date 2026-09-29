@@ -693,3 +693,8 @@
 {"czas": "2026-09-28T11:45:01+00:00", "plik": "m2-bor-ratusz2.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 985, "wyj": 1434, "usd": 0.0508}
 {"czas": "2026-09-28T11:45:17+00:00", "plik": "m2-bor-siedlisko3.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 955, "wyj": 1450, "usd": 0.0512}
 {"czas": "2026-09-28T11:57:31+00:00", "plik": "menu2-tlo.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 990, "wyj": 2005, "usd": 0.0691}
+{"czas": "2026-09-29T04:19:19+00:00", "plik": "m2-bor-sklep.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 1011, "wyj": 1412, "usd": 0.0502}
+{"czas": "2026-09-29T04:19:36+00:00", "plik": "m2-grota-sklep.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 1022, "wyj": 1438, "usd": 0.0511}
+{"czas": "2026-09-29T04:19:51+00:00", "plik": "m2-zbocze-sklep.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 1026, "wyj": 1429, "usd": 0.0509}
+{"czas": "2026-09-29T04:20:03+00:00", "plik": "przedmiot-super-mikstura.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 314, "wyj": 1371, "usd": 0.0454}
+{"czas": "2026-09-29T04:20:15+00:00", "plik": "przedmiot-tarcza.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 297, "wyj": 1366, "usd": 0.0452}

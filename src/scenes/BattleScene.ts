@@ -13,14 +13,22 @@ import { createPasekAtakow, type PasekAtakow } from '../visual/pasekAtakow';
 import {
   KOSZT_RZUTU,
   PLECAK_NA_BITWE,
+  PRZEDMIOTY,
+  PRZEDMIOTY_PLECAKA,
   moznaLeczyc,
+  moznaOslonic,
   moznaWzmocnic,
+  pelnyPlecak,
   szansaZlapania,
   uzyjEliksiru,
   uzyjMikstury,
+  uzyjTarczy,
   zlap,
   LECZENIE_MIKSTURY,
+  LECZENIE_SUPER_MIKSTURY,
   SILA_ELIKSIRU,
+  SILA_TARCZY,
+  type Plecak,
   type Przedmiot,
 } from '../data/przedmioty';
 import { pokazPlecak, type WierszPlecaka } from '../visual/oknoPlecaka';
@@ -98,6 +106,8 @@ interface DaneZPrzygody {
   };
   /** Lider sali po drugiej stronie pola (etap 6): imię i portret (ścieżka w `public/`). */
   przeciwnik?: { imie: string; portret: string };
+  /** Plecak trenera (zapas z Pokémartu) — co zostanie, wraca na mapę. */
+  plecak?: Plecak;
   /**
    * Ilu stworków PRZECIWNIKA staje na polu: 2 — rywal, do 3 — dzikie stado
    * i obrońcy miasta (`naPoluPrzeciw`). Gracz wystawia zawsze dwa (`NA_POLU`).
@@ -399,7 +409,8 @@ export class BattleScene extends Phaser.Scene {
     this.wybranyAtak = 0;
     this.prognozaDla = null;
     this.pasekAtakow = undefined;
-    this.plecak = { ...PLECAK_NA_BITWE };
+    // Z mapy przychodzi zapas trenera; bitwa pokazowa dostaje wszystkiego po trochu.
+    this.plecak = pelnyPlecak(this.zPrzygody?.plecak ?? PLECAK_NA_BITWE);
     const tr = this.zPrzygody?.trener;
     // Bitwa pokazowa (bez mapy) też ma plecak — łapanie tylko „na niby".
     this.pokeballe = tr?.pokeballe ?? 50;
@@ -442,7 +453,7 @@ export class BattleScene extends Phaser.Scene {
   private prognozaDla: { a: Unit; t: Unit } | null = null;
   private waitButton!: HudButton;
   /** Plecak trenera (`przedmioty.ts`): co zostało na tę bitwę. */
-  private plecak = { ...PLECAK_NA_BITWE };
+  private plecak: Plecak = pelnyPlecak(PLECAK_NA_BITWE);
   private pokeballe = 0;
   private wolneSloty = 0;
   private dzikie = false;
@@ -522,8 +533,10 @@ export class BattleScene extends Phaser.Scene {
     for (const kto of ['janek', 'ela']) {
       this.load.image(`tr-glowa-${kto}`, `${import.meta.env.BASE_URL}kampania/glowa-${kto}.png`);
     }
-    this.load.image('przedmiot-mikstura', `${import.meta.env.BASE_URL}bohater/przedmiot-mikstura.png`);
-    this.load.image('przedmiot-eliksir', `${import.meta.env.BASE_URL}bohater/przedmiot-eliksir.png`);
+    for (const k of PRZEDMIOTY_PLECAKA) {
+      const tex = PRZEDMIOTY[k].tekstura;
+      this.load.image(tex, `${import.meta.env.BASE_URL}bohater/${tex}.png`);
+    }
     this.load.image('przedmiot-pokeball', `${import.meta.env.BASE_URL}kampania/ikona-pokeball.png`);
     const p = this.zPrzygody?.przeciwnik;
     if (p) this.load.image(`przeciwnik-${p.portret}`, `${import.meta.env.BASE_URL}${p.portret}`);
@@ -1776,12 +1789,13 @@ export class BattleScene extends Phaser.Scene {
   private blokadaPrzedmiotu(co: Przedmiot): string | null {
     if (this.przedmiotWRundzie === this.battle.round) return 'już sięgałeś do plecaka w tej rundzie';
     const swoi = this.units.filter((u) => u.side === 'player');
-    if (co === 'mikstura') {
-      if (this.plecak.mikstura <= 0) return 'mikstury się skończyły';
+    if (co !== 'pokeball' && this.plecak[co] <= 0) return 'brak w plecaku — kupisz w Pokémarcie';
+    if (co === 'mikstura' || co === 'superMikstura') {
       if (!swoi.some(moznaLeczyc)) return 'nikt nie jest ranny';
     } else if (co === 'eliksir') {
-      if (this.plecak.eliksir <= 0) return 'eliksir już wypity';
       if (!swoi.some(moznaWzmocnic)) return 'wszyscy już po eliksirze';
+    } else if (co === 'tarcza') {
+      if (!swoi.some(moznaOslonic)) return 'wszyscy już mają tarczę';
     } else {
       if (!this.dzikie) return 'stworków innego trenera nie wolno łapać';
       if (!this.units.some((u) => this.celPrzedmiotu('pokeball', u))) return 'masz już każdy z tych gatunków';
@@ -1795,7 +1809,8 @@ export class BattleScene extends Phaser.Scene {
   private celPrzedmiotu(co: Przedmiot, u: Unit): boolean {
     if (co === 'pokeball') return u.side === 'enemy' && !this.posiadaneGatunki.has(gatunek(u.def.sprite));
     if (u.side !== 'player') return false;
-    return co === 'mikstura' ? moznaLeczyc(u) : moznaWzmocnic(u);
+    if (co === 'mikstura' || co === 'superMikstura') return moznaLeczyc(u);
+    return co === 'tarcza' ? moznaOslonic(u) : moznaWzmocnic(u);
   }
 
   private otworzPlecak() {
@@ -1803,8 +1818,12 @@ export class BattleScene extends Phaser.Scene {
     if (this.oknoPlecaka || this.gameOver || this.busy || !a || a.side !== 'player') return;
     this.anulujCelowanie(false);
     const wiersze: WierszPlecaka[] = [
-      { co: 'mikstura', tekstura: 'przedmiot-mikstura', ile: `× ${this.plecak.mikstura}`, blokada: null },
-      { co: 'eliksir', tekstura: 'przedmiot-eliksir', ile: `× ${this.plecak.eliksir}`, blokada: null },
+      ...PRZEDMIOTY_PLECAKA.map((co) => ({
+        co,
+        tekstura: PRZEDMIOTY[co].tekstura,
+        ile: `× ${this.plecak[co]}`,
+        blokada: null,
+      })),
       {
         co: 'pokeball',
         tekstura: 'przedmiot-pokeball',
@@ -1845,9 +1864,9 @@ export class BattleScene extends Phaser.Scene {
     this.turnText.setText(
       co === 'pokeball'
         ? 'Rzuć pokeball: kliknij dzikiego stworka  ·  Esc — anuluj'
-        : co === 'mikstura'
-          ? 'Mikstura: kliknij swojego rannego stworka  ·  Esc — anuluj'
-          : 'Eliksir siły: kliknij swojego stworka  ·  Esc — anuluj'
+        : co === 'mikstura' || co === 'superMikstura'
+          ? `${PRZEDMIOTY[co].nazwa}: kliknij swojego rannego stworka  ·  Esc — anuluj`
+          : `${PRZEDMIOTY[co].nazwa}: kliknij swojego stworka  ·  Esc — anuluj`
     );
   }
 
@@ -1868,9 +1887,15 @@ export class BattleScene extends Phaser.Scene {
       this.forecast.hide();
       return;
     }
-    if (co === 'mikstura') {
-      const ile = Math.min(fullHp(u.def) - total(u), Math.round(fullHp(u.def) * LECZENIE_MIKSTURY));
-      this.forecast.show(`Mikstura: +${ile} życia dla ${u.def.name}`, false);
+    if (co === 'mikstura' || co === 'superMikstura') {
+      const ulamek = co === 'mikstura' ? LECZENIE_MIKSTURY : LECZENIE_SUPER_MIKSTURY;
+      const ile = Math.min(fullHp(u.def) - total(u), Math.round(fullHp(u.def) * ulamek));
+      this.forecast.show(`${PRZEDMIOTY[co].nazwa}: +${ile} życia dla ${u.def.name}`, false);
+    } else if (co === 'tarcza') {
+      this.forecast.show(
+        `Tarcza: ciosy w ${u.def.name} słabną do ${Math.round(SILA_TARCZY * 100)}% do końca bitwy`,
+        false
+      );
     } else if (co === 'eliksir') {
       const atk = stackAtk(u.def, u);
       this.forecast.show(
@@ -1895,13 +1920,19 @@ export class BattleScene extends Phaser.Scene {
       this.rzucPokeball(u);
       return;
     }
-    if (co === 'mikstura') {
-      this.plecak.mikstura--;
-      const ile = uzyjMikstury(u);
+    if (co === 'mikstura' || co === 'superMikstura') {
+      this.plecak[co]--;
+      const ile = uzyjMikstury(u, co === 'mikstura' ? LECZENIE_MIKSTURY : LECZENIE_SUPER_MIKSTURY);
       this.refreshStack(u);
       this.rysujDruzyny();
       flashTarget(this, u.view.sprite, C.hpHigh);
       this.floatText(u, `+${ile} życia`, '#b9f6ca', -52, ICON.star, 19);
+    } else if (co === 'tarcza') {
+      this.plecak.tarcza--;
+      uzyjTarczy(u);
+      this.refreshStack(u);
+      flashTarget(this, u.view.sprite, 0x6fd58e);
+      this.floatText(u, 'Tarcza!', '#b9f6ca', -52, ICON.shield, 19);
     } else {
       this.plecak.eliksir--;
       uzyjEliksiru(u);
@@ -2491,6 +2522,8 @@ export class BattleScene extends Phaser.Scene {
       wrogOcalali,
       zlapani,
       wydanePokeballe: this.wydanePokeballe,
+      // Plecak po bitwie: zużyte przedmioty nie wracają (`przedmioty.ts`).
+      plecak: { ...this.plecak },
     });
     // Chwila na przeczytanie ekranu końca, dopiero potem powrót.
     this.time.delayedCall(2600, () => this.scene.start(this.zPrzygody!.powrot ?? 'adventure'));

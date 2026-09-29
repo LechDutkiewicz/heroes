@@ -217,7 +217,7 @@ export interface PostepKampanii {
 /** To, co z bohatera przechodzi dalej. Pozycja i ruch — nie; drużyna osobno (`druzyna`). */
 export type BohaterPrzenoszony = Pick<
   Bohater,
-  'imie' | 'atak' | 'obrona' | 'artefakty' | 'doswiadczenie' | 'umiejetnosci' | 'poziomOdebrany'
+  'imie' | 'atak' | 'obrona' | 'artefakty' | 'plecak' | 'doswiadczenie' | 'umiejetnosci' | 'poziomOdebrany'
 >;
 
 /**

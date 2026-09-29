@@ -63,9 +63,10 @@ const leczenie = await page.evaluate(() => {
   const s = window.__game.scene.getScene('battle');
   const swoj = s.units.find((u) => u.side === 'player');
   const przed = swoj.topHp;
+  const mikstPrzed = s.plecak.mikstura;
   s.wybierzPrzedmiot('mikstura');
   s.uzyjNa(swoj);
-  return { przed, po: swoj.topHp, mikstur: s.plecak.mikstura };
+  return { przed, po: swoj.topHp, mikstPrzed, mikstur: s.plecak.mikstura };
 });
 await page.evaluate(() => {
   const s = window.__game.scene.getScene('battle');
@@ -96,12 +97,16 @@ const po = await page.evaluate(() => {
     pb: st.skarbiec.pokeball,
     druzyna: st.bohater.armia.filter(Boolean).length,
     zemdleni: st.bohater.armia.filter((o) => o?.omdlaly).length,
+    plecakMikstur: st.bohater.plecak?.mikstura,
   };
 });
 const zle = [];
 if (!okno) zle.push('brak okna „Kto walczy?" przy sześciu stworkach');
 if (naPolu !== 2) zle.push(`na polu ${naPolu} stworków gracza zamiast 2`);
-if (!(leczenie.po > leczenie.przed && leczenie.mikstur === 1)) zle.push(`mikstura nie działa: ${JSON.stringify(leczenie)}`);
+// Plecak z mapy (Pokémart): nowa gra ma jedną miksturę — po użyciu zero.
+if (!(leczenie.po > leczenie.przed && leczenie.mikstPrzed === 1 && leczenie.mikstur === 0))
+  zle.push(`mikstura nie działa: ${JSON.stringify(leczenie)}`);
+if (po.plecakMikstur !== 0) zle.push(`zużyta mikstura wróciła do plecaka na mapie: ${po.plecakMikstur}`);
 if (zlapanych !== 1) zle.push(`złapanych w bitwie: ${zlapanych}`);
 if (po.druzyna !== 7) zle.push(`drużyna po bitwie: ${po.druzyna} (oczekiwane 7 — złapany dołączył)`);
 if (po.pb !== przed.pb - 10) zle.push(`pokeballe ${przed.pb} → ${po.pb}, oczekiwane −10`);

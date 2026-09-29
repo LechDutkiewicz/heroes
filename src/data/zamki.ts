@@ -1,5 +1,6 @@
 import type { Skarbiec, Surowiec } from './mapa';
 import { MNOZNIK_FORTU, naPokeballe } from './zasady-h3';
+import { MAKS_W_PLECAKU, SKLEP, plecakBohatera, type PrzedmiotPlecaka } from './przedmioty';
 
 /**
  * Zamki: budynki, ich koszty, warunki i ekonomia.
@@ -21,7 +22,7 @@ import { MNOZNIK_FORTU, naPokeballe } from './zasady-h3';
  * i ciężka), Grota siedzi pośrodku i najtaniej stawia ratusze (gra ekonomią).
  */
 
-export type RodzajBudynku = 'ratusz' | 'fort' | 'siedlisko' | 'specjalny' | 'centrum' | 'sala';
+export type RodzajBudynku = 'ratusz' | 'fort' | 'siedlisko' | 'specjalny' | 'centrum' | 'sala' | 'sklep';
 
 export interface Budynek {
   id: string;
@@ -111,6 +112,12 @@ const SZKIELET: Szkielet[] = [
   { id: 'siedlisko5', rodzaj: 'siedlisko', poziom: 4, wymaga: ['fort', 'siedlisko3'], x: 0.83, y: 0.2, skala: 0.85 },
   { id: 'siedlisko6', rodzaj: 'siedlisko', poziom: 5, wymaga: ['ratusz2', 'siedlisko5'], x: 0.36, y: 0.04, skala: 1.0 },
   { id: 'specjalny', rodzaj: 'specjalny', wymaga: ['ratusz2'], x: 0.62, y: 1.0, skala: 0.55 },
+  // Pokémart — gildia magów z Heroes: trzy stopnie, każdy wyższy daje lepszy
+  // towar do plecaka (`SKLEP` w przedmioty.ts). Jak ratusz: jeden budynek
+  // w jednym miejscu panoramy, widać najwyższy postawiony stopień.
+  { id: 'sklep1', rodzaj: 'sklep', wymaga: [], x: 0.11, y: 0.3, skala: 0.8 },
+  { id: 'sklep2', rodzaj: 'sklep', wymaga: ['sklep1'], x: 0.11, y: 0.3, skala: 0.8 },
+  { id: 'sklep3', rodzaj: 'sklep', wymaga: ['sklep2', 'ratusz2'], x: 0.11, y: 0.3, skala: 0.8 },
 ];
 
 /**
@@ -151,6 +158,12 @@ const CENY: Record<string, Partial<Skarbiec>> = {
   siedlisko5: { pokeball: 75, odlamek: 8 },
   siedlisko6: { pokeball: 120, odlamek: 15 },
   specjalny: { pokeball: 60, odlamek: 3 },
+  // Jak gildia magów w Heroes 3 (1000 / 1000 / 1000 złota + surowce),
+  // przeliczone na pokeballe: pierwszy stopień tani, żeby sklep otwierał
+  // się w pierwszym tygodniu.
+  sklep1: { pokeball: 25 },
+  sklep2: { pokeball: 60, jagoda: 5 },
+  sklep3: { pokeball: 110, odlamek: 6 },
 };
 
 /**
@@ -200,6 +213,9 @@ const NAZWY: Record<string, Record<string, [string, string]>> = {
     siedlisko5: ['Zielona Kopuła', 'Verdiko rosną w cieniu koron.'],
     siedlisko6: ['Prastare Drzewo', 'Silvena budzi się raz na jakiś czas.'],
     specjalny: ['Farma Jagód', 'Codziennie dokłada jagody i odłamek.'],
+    sklep1: ['Pokémart', 'Mikstury na drogę. Kliknij, żeby kupić.'],
+    sklep2: ['Duży Pokémart', 'Do tego Super mikstury i Eliksiry siły.'],
+    sklep3: ['Wielki Pokémart', 'Do tego Tarcze dla stworków.'],
   },
   grota: {
     ratusz1: ['Laboratorium', 'Profesor codziennie oddaje pokeballe wyłowione z jeziora.'],
@@ -213,6 +229,9 @@ const NAZWY: Record<string, Record<string, [string, string]>> = {
     siedlisko5: ['Podziemne Jezioro', 'Aquatory nie znoszą światła.'],
     siedlisko6: ['Krater', 'Vulkarony budzą się w gorącu.'],
     specjalny: ['Kopalnia Kryształów', 'Codziennie dokłada dwa odłamki.'],
+    sklep1: ['Pokémart', 'Mikstury na drogę. Kliknij, żeby kupić.'],
+    sklep2: ['Duży Pokémart', 'Do tego Super mikstury i Eliksiry siły.'],
+    sklep3: ['Wielki Pokémart', 'Do tego Tarcze dla stworków.'],
   },
   zbocze: {
     ratusz1: ['Laboratorium', 'Profesor codziennie oddaje pokeballe wygrzebane z popiołu.'],
@@ -226,6 +245,9 @@ const NAZWY: Record<string, Record<string, [string, string]>> = {
     siedlisko5: ['Osuwisko', 'Lawiny czekają na pierwszy ruch.'],
     siedlisko6: ['Komin Wulkanu', 'Sadziny schodzą tylko na wojnę.'],
     specjalny: ['Pracownia Kamieni', 'Codziennie dokłada odłamek i kamień ewolucji.'],
+    sklep1: ['Pokémart', 'Mikstury na drogę. Kliknij, żeby kupić.'],
+    sklep2: ['Duży Pokémart', 'Do tego Super mikstury i Eliksiry siły.'],
+    sklep3: ['Wielki Pokémart', 'Do tego Tarcze dla stworków.'],
   },
 };
 
@@ -311,6 +333,34 @@ export const ZAMKI: Record<string, ProfilZamku> = {
 };
 
 export const profilZamku = (frakcja: string) => ZAMKI[frakcja] ?? ZAMKI.bor;
+
+/** Stopień Pokémartu w zamku (0 — nie ma sklepu). */
+export function stopienSklepu(postawione: readonly string[]): 0 | 1 | 2 | 3 {
+  return postawione.includes('sklep3') ? 3 : postawione.includes('sklep2') ? 2 : postawione.includes('sklep1') ? 1 : 0;
+}
+
+/**
+ * Zakup w Pokémarcie: jedna sztuka do plecaka trenera. Wolno, gdy zamek jest
+ * nasz, trener w nim stoi, sklep ma dość wysoki stopień, plecak nie jest
+ * pełny i stać nas. Zwraca powód odmowy albo null.
+ */
+export function kupWPokemarcie(
+  skarbiec: Skarbiec,
+  bohater: { plecak?: Partial<Record<PrzedmiotPlecaka, number>> },
+  postawione: readonly string[],
+  k: PrzedmiotPlecaka,
+  trenerWMiescie: boolean
+): string | null {
+  const plecak = plecakBohatera(bohater);
+  const towar = SKLEP[k];
+  if (!trenerWMiescie) return 'Trener musi być w mieście.';
+  if (stopienSklepu(postawione) < towar.poziom) return 'Za mały sklep.';
+  if (plecak[k] >= MAKS_W_PLECAKU) return 'Plecak pełny.';
+  if (!stacNas(skarbiec, towar.cena)) return 'Nie stać cię.';
+  for (const [co, ile] of Object.entries(towar.cena)) skarbiec[co as Surowiec] -= ile;
+  plecak[k]++;
+  return null;
+}
 
 /** Czy stać nas na budynek. */
 export function stacNas(skarbiec: Skarbiec, koszt: Partial<Skarbiec>) {

@@ -26,6 +26,8 @@ import { atakiStworka, type Atak } from './ataki';
 
 /** Mnożnik ataku po Eliksirze siły — tu, a nie w `przedmioty.ts`, żeby nie zapętlić importów. */
 export const SILA_ELIKSIRU = 1.5;
+/** Tarcza z plecaka: ciosy w stworka słabną do 2/3 (`przedmioty.ts`). */
+export const SILA_TARCZY = 0.67;
 
 /**
  * Pole walki z bajki: mała arena, nie pole bitwy dwóch armii. Walczy jeden
@@ -82,6 +84,8 @@ export interface SimUnit extends Cell {
   pp: (number | null)[];
   /** wypił Eliksir siły (`przedmioty.ts`) — bije mocniej do końca bitwy */
   eliksir?: boolean;
+  /** dostał Tarczę (`przedmioty.ts`) — ciosy w niego słabną do końca bitwy */
+  tarcza?: boolean;
   /**
    * Zadał już w tej bitwie zwykły cios — dopiero wtedy ataki specjalne są
    * gotowe (`atakDostepny`). Bez tego specjalny od pierwszej tury wystarczał
@@ -312,7 +316,7 @@ export function damageOf(b: Battle, attacker: SimUnit, target: SimUnit, atak = 0
   const tooFar =
     attacker.def.shooter && !pinned && hexDistance(attacker, target) > attacker.def.shootRange;
   const penalty = pinned || tooFar ? HALF_DAMAGE : 1;
-  const guard = target.defending ? GUARD_REDUCTION : 1;
+  const guard = (target.defending ? GUARD_REDUCTION : 1) * (target.tarcza ? SILA_TARCZY : 1);
   const base = stackAtk(attacker.def, attacker) * (attacker.eliksir ? SILA_ELIKSIRU : 1);
   const bonus = bonusUmiejetnosci(b, attacker, target);
   const value = Math.max(1, Math.round(base * moc * typeMult * penalty * guard * bonus));
