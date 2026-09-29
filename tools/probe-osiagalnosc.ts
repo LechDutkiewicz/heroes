@@ -336,11 +336,13 @@ function rysunkiPrzeszkod(s: StanMapy): Rysunek[] {
       if (!obrazy.has(plik)) obrazy.set(plik, existsSync(plik) ? wczytajPng(plik) : { w: 0, h: 0, alfa: new Uint8Array() });
       const ob = obrazy.get(plik)!;
       if (!ob.w) continue;
+      const skala = 0.92 + wariant(k.y, k.x, 9) / 100;
+      const przesun = ((wariant(k.x + 3, k.y, 3) - 1) / 1) * KAFEL * 0.05;
       wynik.push({
         obraz: ob,
-        x: (k.x + k.szer / 2) * KAFEL,
+        x: (k.x + k.szer / 2) * KAFEL + przesun,
         y: (k.y + k.glab) * KAFEL + KAFEL * 0.08,
-        skala: (k.szer * KAFEL * ZAKLADKA[k.teren]) / ob.w,
+        skala: (k.szer * KAFEL * ZAKLADKA[k.teren] * skala) / ob.w,
         odbij: wariant(k.x, k.y, 2) === 1,
       });
     }

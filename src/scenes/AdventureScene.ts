@@ -2506,13 +2506,28 @@ export class AdventureScene extends Phaser.Scene {
       const klucz = `k-${k.nazwa}`;
       if (!this.textures.exists(klucz)) continue;
       const dol = (k.y + k.glab) * KAFEL;
+      // Krytyk (ślepe porównanie): „ten sam klocek w sztywnych rzędach,
+      // dolne krawędzie jak od linijki". Skala −8…0% i przesunięcie w bok
+      // o ułamek pola z położenia — rzędy się rozchodzą, obrys zostaje.
+      const skala = 0.92 + this.wariant(k.y, k.x, 9) / 100;
+      const przesun = ((this.wariant(k.x + 3, k.y, 3) - 1) / 1) * KAFEL * 0.05;
+      const cx = (k.x + k.szer / 2) * KAFEL + przesun;
+      const szer = k.szer * KAFEL * zakladka * skala;
+      // Miękki cień u podstawy — klocek stoi na ziemi, nie leży na niej.
+      this.swiat.add(
+        this.add
+          .image(cx + szer * 0.04, dol - KAFEL * 0.12, CIEN_KONTAKTOWY)
+          .setDisplaySize(szer * 0.95, KAFEL * (0.5 + k.glab * 0.25))
+          .setAlpha(KRYCIE_CIENIA * 0.7)
+          .setDepth(k.y + k.glab - 1 + 0.4)
+      );
       const im = this.add
-        .image((k.x + k.szer / 2) * KAFEL, dol + KAFEL * 0.08, klucz)
+        .image(cx, dol + KAFEL * 0.08, klucz)
         .setOrigin(0.5, 1)
         // Odbicie z położenia: te same klocki obok siebie nie są klonami.
         .setFlipX(this.wariant(k.x, k.y, 2) === 1)
         .setDepth(k.y + k.glab - 1 + 0.45);
-      im.setScale((k.szer * KAFEL * zakladka) / im.width);
+      im.setScale(szer / im.width);
       this.swiat.add(im);
     }
   }

@@ -2566,3 +2566,39 @@ po `kosztPola === null` i klik milczał). Polana: kopalnia (19,30) na starcie �
 trasa do Sporexa przy moście (16,25), zrzut `tools/blind/klik-strazony.png`.
 Uwaga: serwer na portach 5200–5229 nie obserwuje plików — po zmianie kodu
 trzeba go zrestartować, inaczej sondy i zrzuty idą na starej wersji.
+
+## Mapa świata w stylu Pokémon (PR #34, 2026-09-29)
+
+**Co działa.** Wszystkie cztery plansze (`USTAWIENIA.klocki`: Polana i Dwie
+Doliny — `trawa`, Bagna — `bagno`, Twierdza — `zima`) mają las i skały
+z KLOCKÓW jak w Heroes 3 (`src/data/klocki.ts`): każde pole lasu/skał należy
+do dokładnie jednego klocka o stałym obrysie (z `def_bodies` HoMM3: góra 3×2
+i 5×3, skała 1×1 i 2×1, drzewo 1×1, kępy 2×1, 2×2, 3×2, 3×3), układanego
+zachłannie od największego. Spód rysunku stoi na polach obrysu, nad nimi
+rysunek wystaje tylko do tyłu; zakładka 1,42 (las) / 1,3 (skały), lekka
+losowość skali i cień u podstawy. Tło pod klockami płaskie (`render_mapa`
+w trybie klocków: trawa pod lasem, ubita ziemia pod skałami, bez reliefu,
+skarp i starych naklejek poza kwiatami). Obiekty w rzucie od frontu
+(`m3f-*`, kamera jak w HoMM3), kopalnie ze zboczem góry za plecami.
+Proporcje jak w HoMM3: bohater 1,6 pola, miasto 4, znajdźki 0,9. Zajęte
+kopalnie, gniazda i miasta mają falującą chorągiew trenera
+(`rysujProporzec`, `FLAGA_BUDOWLI`). Droga dochodzi do bramy miasta od dołu
+(`zakaz_drog` w generatorze). Ślepe porównania: obiekty wtopione (7 vs 3),
+klocki vs malowane kępy (7/6/7/5/7 vs 4/4/5/5/6).
+
+**Pliki.** Prompty: `tools/PROMPTY-MAPA-3.md` (etapy A–C), wczytywanie:
+`tools/mapa3_wczytaj.py` (`m3f-` > `m3b-` > `m3-`, klocki `m3k-<zestaw>-*`
+→ `public/mapa/klocki/<zestaw>/`), `tools/osadz_podstawke.py` (wtapianie
+podstawek, czyszczenie jasnych obwódek). Sonda `probe-osiagalnosc.ts` zna
+klocki (kopia rozstawienia z `rysujKlocki` — zmiana jednego wymaga drugiego).
+
+**Decyzje.** Na planszach z klockami zestaw klimatu podmienia tylko krzaki
+i stosy znajdźek — obiekty są wszędzie te same (stare zimowe/bagienne były
+baśniowe). Odstęp nad murem budowli (`ODSTEP_NAD_BRYLA`) tylko na Polanie:
+globalnie przetasowywał wszystkie plansze, a Dwie Doliny się nie
+generowały.
+
+**Zostało.** Most (stary drewniany), ścisk znajdźek i drobnych obiektów na
+dużych planszach, kopalnie nie dosunięte do klocków gór (generator nie wie
+o sąsiedztwie), krzaki bagna/zimy ze starego zestawu. Koszt grafik mapy
+~$7,3 z zatwierdzonych $10.
