@@ -582,7 +582,7 @@ USTAWIENIA = {
     # mniejszy od chaty obok — skala się nie trzyma". Zamek o jedną szóstą
     # niżej (dalej największy w kadrze), budowle o 30% wyżej: wiatrak nad
     # spichlerzem, jak w HotA (młyn ≈ 3 pola, zamek ≈ 4,5).
-    'skalaZamku': 1.5,
+    'skalaZamku': 1.15,
     'skalaBudowli': 1.3,
     # Runda 9 (HotA): „świerki w prawej dolnej ćwiartce wyższe od zamku i młyna
     # — drzewa do skali kafla". Kępy boru (nowe rysunki: zwarty masyw małych

@@ -74,8 +74,13 @@ export const KAFEL_EKRAN = KAFEL * ZOOM_MAPY;
  * w bitwie (przemalowany, `stworekNaMape` w scenie mapy), bez osobnej figury
  * mapowej, a jego skala idzie z masy sylwetki (`MASA_STRAZNIKA` niżej).
  * Bohater, proporzec i znajdźki — jak w rundach powyżej.
+ *
+ * Mapa świata w stylu Pokémon: „bohater większy niż miasto”. Proporcje jak
+ * w HoMM3 (homm3tools, `def_bodies`: miasto 5×3 pola, kopalnia 3×1–2,
+ * surowiec 1): miasto ≈ 2,5 bohatera, kopalnia ≈ 1,4, wiatrak i wieża
+ * ≈ 1,5–1,8, surowiec ≈ pół bohatera. Bohater 1,9 → 1,6 pola.
  */
-export const WYS_BOHATERA = 1.9;
+export const WYS_BOHATERA = 1.6;
 /**
  * Strażnik na mapie: skala z MASY sylwetki, nie z wysokości. Runda 3 wzorca
  * „stwory na mapie": 1,2 pola wysokości robiło ze smoka Cyndera górę; runda
@@ -97,6 +102,11 @@ export const SZER_STRAZNIKA_MAX = 1.4;
  * flagi nad koniem — tu po proporcu nad głową.
  */
 export const PROPORZEC = { ponadGlowe: 0.4, dlugosc: 0.8, wysokosc: 0.45 };
+/**
+ * Chorągiew zajętej budowli (kopalnia, miasto, siedlisko) — ten sam płat co
+ * proporzec bohatera, w polach: drzewce `drzewce`, płat × `plat`.
+ */
+export const FLAGA_BUDOWLI = { drzewce: 0.95, plat: 0.85 };
 
 /**
  * Jak stworki-strażnicy siadają w oświetleniu planszy (runda 3: „cieniowane
@@ -154,8 +164,10 @@ export const BOHATER_NA_MAPIE = { nasycenie: 1, swiatlo: 0.16, podcien: 0.2, kra
 export const ZNAJDZKI_NA_MAPIE = {
   // Stworki runda 6: 0,62 → 0,58 i przygaszanie przy strażniku z 3 do 4,5
   // pola („stwory kolorem i kształtem prawie jak kryształy obok").
-  wys: 0.58,
-  szerMax: 0.9,
+  // Mapa świata w stylu Pokémon (proporcje HoMM3: surowiec ≈ ¾ pola, pół
+  // bohatera): 0,58 → 0,8 — „jagody i kryształki bywają bardzo małe”.
+  wys: 0.8,
+  szerMax: 1.15,
   nasycenie: 0.55,
   kontrast: 0.82,
   jasnosc: 0.94,

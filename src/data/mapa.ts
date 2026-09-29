@@ -271,7 +271,7 @@ export const BUDOWLE: Record<string, Budowla> = {
     nazwa: 'Punkt Widokowy',
     opis: `Odsłania mapę na ${OBSERWATORIUM_PROMIEN} pól wokół`,
     plik: 'wieza-obserwacyjna',
-    wys: 2.6,
+    wys: 2.9,
     efekt: { typ: 'odslona' },
   },
   ranczo: {
@@ -319,7 +319,7 @@ export const BUDOWLE: Record<string, Budowla> = {
     nazwa: 'Wiatrak Prądu',
     opis: 'Garść surowca — raz na tydzień',
     plik: 'wiatrak',
-    wys: 2.2,
+    wys: 2.4,
     efekt: { typ: 'surowce' },
     odnowa: WIATRAK_ODNOWA,
   },

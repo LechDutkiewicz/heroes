@@ -416,7 +416,7 @@ export const USTAWIENIA = {
   "osadzZnajdzki": 0.2,
   "skalaStrazy": 1.0,
   "bezOzdobTrawy": true,
-  "skalaZamku": 1.5,
+  "skalaZamku": 1.15,
   "skalaBudowli": 1.3,
   "skalaKepLasu": 0.76,
   "cienBudowli": {

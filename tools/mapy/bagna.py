@@ -693,7 +693,7 @@ USTAWIENIA = {
     # chaty"): budowle o ton mniejsze, zamek o jedną trzecią większy — zamek
     # ma być największą budowlą w kadrze, jak miasto na mapie Heroes 3.
     'skalaBudowli': 1.05,
-    'skalaZamku': 1.35,
+    'skalaZamku': 1.05,
     'obrysObiektow': 0.55,
     # Runda 6 („turkusowa, czysta woda — tropikalna zatoka"): tafla w shaderze
     # mętna, oliwkowo-brunatna, bez białej piany i z przygaszonymi iskrami.

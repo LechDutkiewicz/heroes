@@ -318,7 +318,7 @@ export const USTAWIENIA = {
     }
   ],
   "skalaBudowli": 1.05,
-  "skalaZamku": 1.35,
+  "skalaZamku": 1.05,
   "obrysObiektow": 0.55,
   "wodaBarwy": {
     "plytka": [
