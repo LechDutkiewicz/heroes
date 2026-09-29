@@ -10,7 +10,9 @@ obiekt po obiekcie.
     python3 tools/mapa3_wczytaj.py
 """
 
-from wsad_wczytaj import BUDOWLE, MAPA, OBIEKTY, WSAD, ZESTAWY, dopasuj, ostrzezOTle, wczytaj
+from PIL import Image
+
+from wsad_wczytaj import BUDOWLE, MAPA, OBIEKTY, TEREN, WSAD, ZESTAWY, dopasuj, ostrzezOTle, wczytaj
 
 #: Nazwa sprite'a → wysokość w pliku (z tabel starego wczytywacza).
 WYSOKOSCI = dict(BUDOWLE)
@@ -34,6 +36,12 @@ def main() -> None:
             im = dopasuj(wczytaj(f'm3-{zestaw}-{nazwa}'), wys)
             im.save(MAPA / zestaw / f'{nazwa}.png')
             print(f'  {zestaw}/{nazwa}.png  {im.width} × {im.height}')
+    # Tekstury terenu: kryjące, 768 × 768 jak w starym wczytywaczu — resztę
+    # (kafelkowanie, maski, brzegi) robi `render_mapa.py`.
+    for zrodlo in sorted(WSAD.glob('m3-teren-*.png')):
+        nazwa = zrodlo.stem[3:]
+        Image.open(zrodlo).convert('RGB').resize((768, 768), Image.LANCZOS).save(TEREN / f'{nazwa}.png')
+        print(f'  teren/{nazwa}.png  768 × 768')
 
 
 if __name__ == '__main__':

@@ -144,3 +144,123 @@ A small bright trainer town packed together as one map landmark: a creature heal
 ```
 A creature battle gym: a large modern stadium hall with a big arched orange-red roof, a large golden star emblem above the wide entrance, white pillars and wide front steps. Single map object only, painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera as the objects in it. Only the object itself and the little bit of ground right under it (a doorstep, paving, a sandy spot); no lawn around it, no base, no pedestal, no cast shadow. Transparent background around it, a clear margin on all four sides, nothing cropped by the edges. It must read clearly when scaled down to 100 pixels tall. Clean anime game illustration like official Pokemon game art, smooth soft shading, crisp clean vivid colours, simple rounded shapes. No medieval or fantasy elements, no castles, no stone towers, no wagons, no treasure chests, no thatch, no banners, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no letters, no logo, no watermark, no user interface, no characters, no people, no creatures.
 ```
+
+
+## Teren — próbka na Polanie (etap B)
+
+Tekstury `m3-teren-*` (kryjące, kafelkowane przez `render_mapa.py`) i rysunki zestawu `polana` (`m3-polana-*`). Wzorem kotwica mapy 2.
+
+<!-- plik: m3-teren-trawa.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+Fresh bright green meadow grass, short and even, with soft lighter and darker green patches and a few tiny white and yellow flowers. Seamless tileable top-down terrain texture for the overworld map of a bright modern creature-collecting adventure game, in exactly the same clean anime finish and fresh colours as the attached map image. Flat overhead view of the ground only, edges matching on all four sides so it can be tiled without visible seams, even soft light with no directional shadows, simple shapes and very little texture noise. No objects, no rocks, no trees, no paths, no buildings, no characters, no vignette, no border, no text.
+```
+
+<!-- plik: m3-teren-trawa-2.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+Fresh bright green meadow grass, short and even, painted anew with different soft light and dark green patches and a few tiny clover leaves. Seamless tileable top-down terrain texture for the overworld map of a bright modern creature-collecting adventure game, in exactly the same clean anime finish and fresh colours as the attached map image. Flat overhead view of the ground only, edges matching on all four sides so it can be tiled without visible seams, even soft light with no directional shadows, simple shapes and very little texture noise. No objects, no rocks, no trees, no paths, no buildings, no characters, no vignette, no border, no text.
+```
+
+<!-- plik: m3-teren-trawa-3.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+Fresh bright green meadow grass with a few slightly taller darker grass tufts spread evenly, soft and clean. Seamless tileable top-down terrain texture for the overworld map of a bright modern creature-collecting adventure game, in exactly the same clean anime finish and fresh colours as the attached map image. Flat overhead view of the ground only, edges matching on all four sides so it can be tiled without visible seams, even soft light with no directional shadows, simple shapes and very little texture noise. No objects, no rocks, no trees, no paths, no buildings, no characters, no vignette, no border, no text.
+```
+
+<!-- plik: m3-teren-droga-polana.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+A pale warm sandy dirt road surface, smooth and packed, with a few tiny pebbles and faint soft tyre-like tracks, clean and light. Seamless tileable top-down terrain texture for the overworld map of a bright modern creature-collecting adventure game, in exactly the same clean anime finish and fresh colours as the attached map image. Flat overhead view of the ground only, edges matching on all four sides so it can be tiled without visible seams, even soft light with no directional shadows, simple shapes and very little texture noise. No objects, no rocks, no trees, no paths, no buildings, no characters, no vignette, no border, no text.
+```
+
+<!-- plik: m3-teren-ziemia-drobna.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+Warm light brown packed earth with fine sand and a few tiny pebbles, soft and clean. Seamless tileable top-down terrain texture for the overworld map of a bright modern creature-collecting adventure game, in exactly the same clean anime finish and fresh colours as the attached map image. Flat overhead view of the ground only, edges matching on all four sides so it can be tiled without visible seams, even soft light with no directional shadows, simple shapes and very little texture noise. No objects, no rocks, no trees, no paths, no buildings, no characters, no vignette, no border, no text.
+```
+
+<!-- plik: m3-teren-ziemia.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+Warm brown packed earth with soft lighter sandy patches and a few small pebbles, clean and simple. Seamless tileable top-down terrain texture for the overworld map of a bright modern creature-collecting adventure game, in exactly the same clean anime finish and fresh colours as the attached map image. Flat overhead view of the ground only, edges matching on all four sides so it can be tiled without visible seams, even soft light with no directional shadows, simple shapes and very little texture noise. No objects, no rocks, no trees, no paths, no buildings, no characters, no vignette, no border, no text.
+```
+
+<!-- plik: m3-polana-kepa-las-1.png | styl: brak | proporcje: 3:2 | wzor: kotwica-mapa-2.png -->
+```
+A dense block of bright overworld forest: about ten round-crowned leafy trees and three neat pine trees packed tightly together, crowns overlapping into one solid wall of fresh green with soft shade inside, several rows deep, the back row taller. A bit wider than tall; the row of trunks and low bushes at the bottom spreads across the whole width so pieces placed side by side join into one continuous forest. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-kepa-las-2.png | styl: brak | proporcje: 3:2 | wzor: kotwica-mapa-2.png -->
+```
+A thick clump of bright overworld forest: eight to ten big round leafy trees of slightly different fresh greens packed together into one billowing canopy, two neat pines at the back, low round bushes along the bottom. One solid block of forest with no gaps. A bit wider than tall; the bushes spread across the whole width. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-kepa-las-3.png | styl: brak | proporcje: 3:2 | wzor: kotwica-mapa-2.png -->
+```
+A dense stand of neat bright green pine trees of uneven heights crowded together in several rows, soft rounded tiers of branches, a couple of round leafy trees at the front, low bushes along the bottom. One solid block of forest. A bit wider than tall; the bottom spreads across the whole width. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-kepa-las-4.png | styl: brak | proporcje: 3:2 | wzor: kotwica-mapa-2.png -->
+```
+A cheerful block of mixed overworld forest: round leafy trees in fresh and yellow-greens, a few neat pines, one small tree with pink blossoms, all packed together into one solid canopy with low bushes and a few flowers along the bottom. A bit wider than tall; the bottom spreads across the whole width. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-drzewo.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+A single big round leafy tree: a broad billowing crown of fresh green leaves in soft round clusters, a straight brown trunk, a small round bush at its foot. About as wide as tall. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-drzewo-b.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+A single medium round leafy tree with a lighter yellow-green crown in soft round clusters and a slim brown trunk, a few flowers at its foot. About as wide as tall. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-sosna.png | styl: brak | proporcje: 2:3 | wzor: kotwica-mapa-2.png -->
+```
+A single neat pine tree: a pointed crown of soft rounded tiers of fresh dark green branches, a short straight brown trunk. Much taller than wide. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-sosna-b.png | styl: brak | proporcje: 2:3 | wzor: kotwica-mapa-2.png -->
+```
+A single slightly smaller neat pine tree with a fuller rounded crown of soft green tiers and a short brown trunk. Taller than wide. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-sosna-mala.png | styl: brak | proporcje: 2:3 | wzor: kotwica-mapa-2.png -->
+```
+A single small young pine tree with three soft rounded tiers of fresh green branches. Taller than wide. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-krzak.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+A single round bright green bush with a few small white flowers. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-krzak-2.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+A small cluster of two round bright green bushes with a few tiny berries. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-kepa-skaly-1.png | styl: brak | proporcje: 3:2 | wzor: kotwica-mapa-2.png -->
+```
+A grassy hill block of the overworld: a raised plateau of fresh green grass with a steep smooth cliff face of warm beige-grey rounded rock on the front, a few round bushes on top. Clearly an impassable ledge, not a pile of boulders. Wider than tall; the foot of the cliff spreads across the whole width so pieces placed side by side join into one continuous ridge. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-kepa-skaly-2.png | styl: brak | proporcje: 3:2 | wzor: kotwica-mapa-2.png -->
+```
+A long grassy ridge of the overworld: a raised green plateau with a stepped cliff of smooth warm beige-grey rock layers on the front, a small pine and a bush on top. Wider than tall; the foot spreads across the whole width. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-kepa-skaly-3.png | styl: brak | proporcje: 3:2 | wzor: kotwica-mapa-2.png -->
+```
+A rounded rocky hill of the overworld: two soft rounded grassy tops above smooth warm beige-grey rock cliffs with gentle ledges, a few flowers. Wider than tall; the foot spreads across the whole width. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-kepa-skaly-4.png | styl: brak | proporcje: 3:2 | wzor: kotwica-mapa-2.png -->
+```
+A tall grassy cliff block of the overworld: a high green plateau with a sheer smooth warm beige-grey rock wall and a tiny waterfall trickle, bushes on the rim. Wider than tall; the foot spreads across the whole width. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-skala.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+A single smooth rounded warm grey boulder with a little grass tuft at its foot. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
+
+<!-- plik: m3-polana-kopiec.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+A small low mound of two smooth rounded grey stones with grass tufts. Painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera. Transparent background, a clear margin on all four sides, nothing cropped. Clean anime game illustration like the overworld of a modern Pokemon game: smooth soft shading, crisp clean vivid colours, simple rounded shapes, very little texture noise. No dark gloomy colours, no jagged shapes, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no characters, no creatures, no buildings.
+```
