@@ -168,11 +168,13 @@ export const ZNAJDZKI_NA_MAPIE = {
   // bohatera): 0,58 → 0,8 — „jagody i kryształki bywają bardzo małe”.
   wys: 0.8,
   szerMax: 1.15,
-  nasycenie: 0.55,
-  kontrast: 0.82,
-  jasnosc: 0.94,
+  // Mapa świata w stylu Pokémon: łup malowany jasno jak nowe obiekty —
+  // przygaszanie (0,55 / 0,82 / 0,94) robiło z niego „ciemne, obce" plamy.
+  nasycenie: 1,
+  kontrast: 1,
+  jasnosc: 1,
   obrys: 0.35,
-  przyStrazniku: { pola: 4.5, roznica: 42, nasycenie: 0.25, jasnosc: 0.86 },
+  przyStrazniku: { pola: 4.5, roznica: 42, nasycenie: 0.7, jasnosc: 0.95 },
 };
 
 export const PANEL_W = 250;

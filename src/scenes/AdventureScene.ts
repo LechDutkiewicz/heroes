@@ -670,6 +670,7 @@ export class AdventureScene extends Phaser.Scene {
       // (`BUDOWLE`), więc dodanie budowli nie wymaga dopisywania jej tutaj.
       ...Object.values(BUDOWLE).map((b) => b.plik),
       'skrzynia',
+      'artefakt',
       'zamek-las',
       'zamek-ogien',
       // Strażnice i namioty w obu barwach kluczy. Pliki robi
@@ -2542,7 +2543,7 @@ export class AdventureScene extends Phaser.Scene {
     // być drobiazgiem przy gruncie, nie drugą figurą.
     const znajdzki = this.znajdzki();
     if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: this.wysZnajdzki('m-skrzynia', 1.05) };
-    if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: this.wysZnajdzki('m-kamien-ewolucji') };
+    if (o.rodzaj === 'artefakt') return { klucz: 'm-artefakt', wys: this.wysZnajdzki('m-artefakt') };
     if (o.rodzaj === 'potwor') {
       // Strażnik ma mieć `MASA_STRAZNIKA` pola² WIDOCZNEJ sylwetki (pierwiastek
       // z pola powierzchni), a nie stałą wysokość: przy jednej wysokości

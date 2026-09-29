@@ -698,7 +698,8 @@ ZESTAWY = {
         # Polana, runda 5 (HotA): stosy surowców na łące zamiast ikon z paska.
         # Scena rysuje je na pół pola (`USTAWIENIA.znajdzki`), plik dwa razy
         # większy — przy dużym zmniejszeniu w scenie krawędzie migotały.
-        'stos-pokeball': 48, 'stos-jagody': 48, 'stos-odlamki': 48, 'stos-kamien-ewolucji': 48,
+        # Mapa świata w stylu Pokémon: 96 px — znajdźki mają teraz 0,8 pola.
+        'stos-pokeball': 96, 'stos-jagody': 96, 'stos-odlamki': 96, 'stos-kamien-ewolucji': 96,
         # Polana, runda 6: dwa RÓŻNE nieregularne krzewy zamiast jednej
         # okrągłej kuli z jagodami na co trzecim polu łąki.
         'krzak': 84, 'krzak-2': 84,

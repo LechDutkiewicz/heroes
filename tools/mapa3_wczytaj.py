@@ -19,6 +19,9 @@ WYSOKOSCI = dict(BUDOWLE)
 for cele in OBIEKTY.values():
     for nazwa, wys, *_ in cele:
         WYSOKOSCI.setdefault(nazwa, wys)
+# Artefakt na mapie (osobny plik — `kamien-ewolucji.png` to też ikona
+# paska surowców): 0,8 pola jak stosy, 80 px.
+WYSOKOSCI['artefakt'] = 80
 
 
 def main() -> None:
