@@ -698,3 +698,9 @@
 {"czas": "2026-09-29T04:19:51+00:00", "plik": "m2-zbocze-sklep.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 1026, "wyj": 1429, "usd": 0.0509}
 {"czas": "2026-09-29T04:20:03+00:00", "plik": "przedmiot-super-mikstura.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 314, "wyj": 1371, "usd": 0.0454}
 {"czas": "2026-09-29T04:20:15+00:00", "plik": "przedmiot-tarcza.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 297, "wyj": 1366, "usd": 0.0452}
+{"czas": "2026-09-29T05:24:34+00:00", "plik": "kotwica-mapa-2.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 1721, "wyj": 2012, "usd": 0.073}
+{"czas": "2026-09-29T05:24:55+00:00", "plik": "kotwica-teren-2.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 1596, "wyj": 2034, "usd": 0.0731}
+{"czas": "2026-09-29T06:36:06+00:00", "plik": "m3-woz.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 925, "wyj": 1412, "usd": 0.0498}
+{"czas": "2026-09-29T06:36:22+00:00", "plik": "m3-kamienna-wieza.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 932, "wyj": 1392, "usd": 0.0492}
+{"czas": "2026-09-29T06:36:38+00:00", "plik": "m3-skrzynia.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 910, "wyj": 1314, "usd": 0.0466}
+{"czas": "2026-09-29T06:36:54+00:00", "plik": "m3-zrodlo.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 917, "wyj": 1422, "usd": 0.0501}
