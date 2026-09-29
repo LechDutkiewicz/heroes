@@ -165,9 +165,10 @@ export const ZNAJDZKI_NA_MAPIE = {
   // Stworki runda 6: 0,62 → 0,58 i przygaszanie przy strażniku z 3 do 4,5
   // pola („stwory kolorem i kształtem prawie jak kryształy obok").
   // Mapa świata w stylu Pokémon (proporcje HoMM3: surowiec ≈ ¾ pola, pół
-  // bohatera): 0,58 → 0,8 — „jagody i kryształki bywają bardzo małe”.
-  wys: 0.8,
-  szerMax: 1.15,
+  // bohatera): 0,58 → 0,9 — „jagody i kryształki bywają bardzo małe”;
+  // bez podstawek (ślepe porównanie) giną w trawie przy 0,8.
+  wys: 0.9,
+  szerMax: 1.25,
   // Mapa świata w stylu Pokémon: łup malowany jasno jak nowe obiekty —
   // przygaszanie (0,55 / 0,82 / 0,94) robiło z niego „ciemne, obce" plamy.
   nasycenie: 1,

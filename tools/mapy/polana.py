@@ -553,7 +553,9 @@ USTAWIENIA = {
     'znajdzki': 0.68,
     # …i ciemny obrys pod wszystkim, co da się podnieść albo odwiedzić —
     # drzewa, krzaki i naklejki łąki go nie mają.
-    'obrysObiektow': 0.35,
+    # Mapa świata w stylu Pokémon: bez ciemnego obrysu — obiekty mają
+    # wtopione podstawki (`osadz_podstawke.py`), a obrys robił z nich naklejki.
+    'obrysObiektow': 0,
     # Stwory na mapie, runda 7: strażnik „odrobinę za mały przy moście".
     'skalaStrazy': 1.1,
     # Runda 6 (HotA): „zamek, młyn i most zajmują po kilka kafli". Budowle

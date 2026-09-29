@@ -12,6 +12,7 @@ obiekt po obiekcie.
 
 from PIL import Image
 
+from osadz_podstawke import oczysc_brzeg, osadz
 from wsad_wczytaj import BUDOWLE, MAPA, OBIEKTY, TEREN, WSAD, ZESTAWY, dopasuj, ostrzezOTle, wczytaj
 
 #: Nazwa sprite'a → wysokość w pliku (z tabel starego wczytywacza).
@@ -26,17 +27,30 @@ WYSOKOSCI['artefakt'] = 80
 
 def main() -> None:
     for nazwa, wys in WYSOKOSCI.items():
-        if not (WSAD / f'm3-{nazwa}.png').exists():
+        # `m3b-` — ten sam obiekt przemalowany bez podstawki gruntu (teren
+        # planszy dochodzi wprost do budynku); wtedy tylko czyszczony brzeg.
+        # Bez niego: `m3-` z podstawką wtopioną w teren (`osadz_podstawke.py`).
+        if (WSAD / f'm3b-{nazwa}.png').exists():
+            im = dopasuj(oczysc_brzeg(wczytaj(f'm3b-{nazwa}')), wys)
+        elif (WSAD / f'm3-{nazwa}.png').exists():
+            im = dopasuj(osadz(wczytaj(f'm3-{nazwa}')), wys)
+        else:
             continue
-        im = dopasuj(wczytaj(f'm3-{nazwa}'), wys)
         ostrzezOTle(nazwa, im)
         im.save(MAPA / f'{nazwa}.png')
         print(f'  {nazwa}.png  {im.width} × {im.height}')
     for zestaw, pliki in ZESTAWY.items():
         for nazwa, wys in pliki.items():
-            if not (WSAD / f'm3-{zestaw}-{nazwa}.png').exists():
+            # Jak wyżej: `m3b-` (bez podstawki) przed `m3-`. Stosy surowców
+            # z `m3-` mają podstawkę jak obiekty; drzewa, krzaki i kępy tylko
+            # czyszczony brzeg (jasna obwódka po wycięciu tła).
+            if (WSAD / f'm3b-{zestaw}-{nazwa}.png').exists():
+                im = dopasuj(oczysc_brzeg(wczytaj(f'm3b-{zestaw}-{nazwa}')), wys)
+            elif (WSAD / f'm3-{zestaw}-{nazwa}.png').exists():
+                zrodlo = wczytaj(f'm3-{zestaw}-{nazwa}')
+                im = dopasuj(osadz(zrodlo) if nazwa.startswith('stos-') else oczysc_brzeg(zrodlo), wys)
+            else:
                 continue
-            im = dopasuj(wczytaj(f'm3-{zestaw}-{nazwa}'), wys)
             im.save(MAPA / zestaw / f'{nazwa}.png')
             print(f'  {zestaw}/{nazwa}.png  {im.width} × {im.height}')
     # Tekstury terenu: kryjące, 768 × 768 jak w starym wczytywaczu — resztę

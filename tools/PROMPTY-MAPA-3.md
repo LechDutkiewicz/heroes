@@ -294,3 +294,138 @@ A small heap of four smooth rounded glowing evolution stones, one red, one blue,
 ```
 One single smooth rounded glowing moon-white evolution stone with a soft rainbow shimmer, resting on a tiny tuft of grass, with small sparkles around it. Single small pickup item for a game map, painted in exactly the same clean anime finish, colours and light as the attached map image, and seen from the same high three-quarter top-down camera as the objects in it. Bright, saturated, cheerful colours and a light, sunny feel — nothing dark or muddy. Only the item and the tiny bit of ground right under it; no base, no pedestal, no cast shadow. The item fills most of the image. Transparent background around it, a clear margin on all four sides, nothing cropped by the edges. It must read clearly when scaled down to 40 pixels tall. Clean anime game illustration like official Pokemon game art, smooth soft shading, crisp clean vivid colours, simple rounded shapes, a thin dark outline. No medieval or fantasy elements, no treasure chests, no sacks, no gold coins, no pixel art, no 3D render look, no photorealism. No text, no letters, no logo, no watermark, no user interface, no characters, no people, no creatures.
 ```
+
+
+## Obiekty bez podstawki
+
+Pliki `m3b-<nazwa>.png`: te same obiekty, przemalowane z oryginałem jako wzorem, bez podstawki gruntu — teren planszy dochodzi wprost do budynku. `tools/mapa3_wczytaj.py` bierze je zamiast `m3-<nazwa>.png`.
+
+<!-- plik: m3b-woz.png | styl: brak | proporcje: 1:1 | wzor: m3-woz.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-wieza-obserwacyjna.png | styl: brak | proporcje: 1:1 | wzor: m3-wieza-obserwacyjna.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-gniazdo.png | styl: brak | proporcje: 1:1 | wzor: m3-gniazdo.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-oboz-treningowy.png | styl: brak | proporcje: 1:1 | wzor: m3-oboz-treningowy.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-chata-jasnowidza.png | styl: brak | proporcje: 1:1 | wzor: m3-chata-jasnowidza.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-chatka.png | styl: brak | proporcje: 1:1 | wzor: m3-chatka.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-drzewo-wiedzy.png | styl: brak | proporcje: 1:1 | wzor: m3-drzewo-wiedzy.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-kamienna-wieza.png | styl: brak | proporcje: 1:1 | wzor: m3-kamienna-wieza.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-kopalnia-odlamek.png | styl: brak | proporcje: 1:1 | wzor: m3-kopalnia-odlamek.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-kopalnia-pokeball.png | styl: brak | proporcje: 1:1 | wzor: m3-kopalnia-pokeball.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-namiot-klucznika.png | styl: brak | proporcje: 1:1 | wzor: m3-namiot-klucznika.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-ognisko.png | styl: brak | proporcje: 1:1 | wzor: m3-ognisko.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-osrodek-ewolucji.png | styl: brak | proporcje: 1:1 | wzor: m3-osrodek-ewolucji.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-portal.png | styl: brak | proporcje: 1:1 | wzor: m3-portal.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-ranczo.png | styl: brak | proporcje: 1:1 | wzor: m3-ranczo.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-skrzynia.png | styl: brak | proporcje: 1:1 | wzor: m3-skrzynia.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-straznica.png | styl: brak | proporcje: 1:1 | wzor: m3-straznica.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-wiatrak.png | styl: brak | proporcje: 1:1 | wzor: m3-wiatrak.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-zamek-ogien.png | styl: brak | proporcje: 1:1 | wzor: m3-zamek-ogien.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-zrodlo.png | styl: brak | proporcje: 1:1 | wzor: m3-zrodlo.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-polana-kopiec.png | styl: brak | proporcje: 1:1 | wzor: m3-polana-kopiec.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-polana-krzak.png | styl: brak | proporcje: 1:1 | wzor: m3-polana-krzak.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-polana-stos-jagody.png | styl: brak | proporcje: 1:1 | wzor: m3-polana-stos-jagody.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-polana-stos-kamien-ewolucji.png | styl: brak | proporcje: 1:1 | wzor: m3-polana-stos-kamien-ewolucji.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-polana-stos-odlamki.png | styl: brak | proporcje: 1:1 | wzor: m3-polana-stos-odlamki.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```
+
+<!-- plik: m3b-polana-stos-pokeball.png | styl: brak | proporcje: 1:1 | wzor: m3-polana-stos-pokeball.png -->
+```
+Repaint exactly this same map object from the attached image: the same object, the same design, colours, proportions, camera angle and clean anime finish — change nothing about the object itself. The ONLY change: remove the round patch of ground, sand, paving, grass or pad it stands on. No ground at all: the object stands directly on nothing, with a fully transparent background right up to its walls, wheels, legs and base, so it can be placed onto any painted terrain. Keep only the object's own solid parts (a doorstep or steps attached to it are fine). Transparent background, clear margin on all sides, nothing cropped. No cast shadow, no glow, no outline around the silhouette, no text.
+```

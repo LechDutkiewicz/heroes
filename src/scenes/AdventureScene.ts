@@ -933,12 +933,14 @@ export class AdventureScene extends Phaser.Scene {
         KAFEL * 0.34
       ) * mnoznikSzer;
     const wysC = Math.max(szer * 0.36, KAFEL * 0.14);
-    // Środek plamy trochę w prawo i w dół od środka podstawy: rysunek zasłania
-    // jej lewą-górną część, spod niego wychodzi prawy-dolny sierp — tak jak
-    // w Heroes 3. Plama dokładnie pod spodem chowała się pod rysunkiem cała.
+    // Środek plamy trochę w prawo od środka podstawy i NAD jej dolnym
+    // brzegiem: rysunek zasłania lewą-górną część, spod niego wychodzi
+    // prawy-dolny sierp — tak jak w Heroes 3. Mapa świata w stylu Pokémon:
+    // obiekty bez podstawki stoją wprost na trawie, a plama zsunięta pod
+    // spód (+0,2) odklejała się od nich — budynek wisiał nad własnym cieniem.
     return this.naSniegu(
       this.add
-        .image(x + srodek + szer * 0.14, spod + wysC * 0.2, CIEN_KONTAKTOWY)
+        .image(x + srodek + szer * 0.1, spod - wysC * 0.12, CIEN_KONTAKTOWY)
         .setDisplaySize(szer, wysC)
         .setAlpha(krycie)
     );
@@ -2480,15 +2482,28 @@ export class AdventureScene extends Phaser.Scene {
         // sprite'y dokładały drugą warstwę kwiatków — w dodatku rysowanych
         // inną techniką. Zostaje krzak: ma własną bryłę i cień, czyli daje
         // to, czego płaska tekstura dać nie może.
-        if (h > 2) continue;
+        if (h > 1) continue;
+        // Mapa świata w stylu Pokémon (krytyk: „ta sama kulka co trzecie pole,
+        // rozsiana jak wypełniacz — naklejki na łące"): krzak rośnie tylko
+        // przy krawędzi — lasu, skał, wody, drogi albo obiektu — więc
+        // krzaki zbierają się w kępy wzdłuż brzegów, a otwarta łąka zostaje
+        // łąką. Wielkość i odbicie z drugiego losowania, nie z tego samego `h`.
+        let przyKrawedzi = false;
+        for (let dy = -1; dy <= 1 && !przyKrawedzi; dy++)
+          for (let dx = -1; dx <= 1 && !przyKrawedzi; dx++) {
+            const t = this.stan.teren[y + dy]?.[x + dx];
+            if (t !== undefined && (t !== 'trawa' || obiektNa(this.stan, x + dx, y + dy))) przyKrawedzi = true;
+          }
+        if (!przyKrawedzi) continue;
+        const los = this.wariant(x * 13 + 5, y * 7 + 3, 100) / 100;
         const { x: ex, y: ey } = this.naEkran(x, y);
         this.element(
           ['m-krzak', 'm-krzak-2', 'm-krzak'][h],
           ex + ((h - 1) * KAFEL) / 5,
           ey + KAFEL * (0.2 + h * 0.07),
-          0.42 + h * 0.05,
+          0.34 + los * 0.18,
           y - 0.5,
-          x + y
+          x + y + Math.round(los * 3)
         );
       }
     }
@@ -2744,10 +2759,15 @@ export class AdventureScene extends Phaser.Scene {
       // Artefakt pulsuje — to jedyny obiekt, którego nie da się pomylić
       // z surowcem samym kształtem, więc dostaje własny sygnał.
       if (o.rodzaj === 'artefakt') {
+        // Mapa świata w stylu Pokémon: pulsuje wielkością, nie kryciem —
+        // przy 50% krycia biały kamień był „duchem” na trawie (krytyk).
+        const s0 = im.scaleX;
         this.tweens.add({
           targets: im,
-          alpha: { from: 1, to: 0.5 },
+          scaleX: s0 * 1.08,
+          scaleY: s0 * 1.08,
           duration: 900,
+          ease: 'Sine.easeInOut',
           yoyo: true,
           repeat: -1,
         });
