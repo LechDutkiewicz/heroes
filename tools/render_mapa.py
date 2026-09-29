@@ -172,6 +172,35 @@ def ustaw(mapa_id: str):
     tlo = getattr(k, 'TLO', None)
     if tlo is not None:
         RYSUNEK = tlo(RYSUNEK)
+    # Mapa świata w stylu Pokémon: las i skały stoją w scenie jako klocki
+    # (`src/data/klocki.ts`, `USTAWIENIA.klocki`), więc tło jest pod nimi
+    # PŁASKIE — trawa pod lasem, ubita ziemia pod skałami (na śniegu śnieg).
+    # Malowane korony lasu, skarpy i relief skał wylewały się poza pola,
+    # które naprawdę blokują — to z nich brały się drzewa na trawie i rzece.
+    klocki = getattr(k, 'USTAWIENIA', {}).get('klocki')
+    if klocki:
+        pod_skaly = '.' if klocki == 'zima' else 'j'
+        if klocki == 'zima':
+            RYSUNEK = [w.replace('T', '.').replace('#', pod_skaly) for w in RYSUNEK]
+        else:
+            # Pod lasem ciemniejsza trawa (ściółka) — prześwity między
+            # koronami nie świecą jasną łąką.
+            RYSUNEK = [w.replace('#', pod_skaly) for w in RYSUNEK]
+            TEKSTURY = {**TEKSTURY, 'las': ['trawa-3', 'trawa']}
+            BARWY = {**BARWY, 'las': {'nasycenie': 0.8, 'barwa': (40, 80, 36), 'moc': 0.3, 'jasnosc': 0.6}}
+        RZEZBA = None
+        EFEKTY = EFEKTY - {'relief', 'relief_sniezny'}
+        # Z naklejek zostają kwiaty i paprocie; kamyki, głazy, pniaki i grzyby
+        # to stary, ciemny styl (zgłoszenie: „drobne ciemne skałki") — skały
+        # są teraz klockami.
+        # Jałowa ziemia: ubita ziemia zamiast szarej spękanej płyty.
+        if 'jalowa' not in TEKSTURY:
+            TEKSTURY = {**TEKSTURY, 'jalowa': ['ziemia-drobna', 'ziemia']}
+            # Na śniegu zmarzlina: szarobrązowa, nie piaskowa.
+            if klocki == 'zima':
+                BARWY = {**BARWY, 'jalowa': {'nasycenie': 0.35, 'barwa': (120, 118, 122), 'moc': 0.2, 'jasnosc': 0.92}}
+        ZOSTAJA = {'kwiaty-2', 'kepa-kwiatow', 'paproc', 'kwiaty-1'}
+        NAKLEJKI = [(pl, zn, g) for pl, zn, g in NAKLEJKI if set(pl) <= ZOSTAJA]
     WYS, SZER = len(RYSUNEK), len(RYSUNEK[0])
     W, H = SZER * KAFEL, WYS * KAFEL
 

@@ -529,6 +529,8 @@ NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 #: Najtrudniejsza misja: przeciwnik naciera od osiemnastego dnia i od początku
 #: wie, gdzie stoi zamek gracza; obie twierdze mają załogę z czterech poziomów.
 USTAWIENIA = {
+    # Mapa świata w stylu Pokémon: las i skały z klocków (`src/data/klocki.ts`).
+    'klocki': 'zima',
     'wrog': 'aktywny',
     'natarcie': True,
     'dzienNatarcia': 21,
@@ -582,7 +584,7 @@ USTAWIENIA = {
     # mniejszy od chaty obok — skala się nie trzyma". Zamek o jedną szóstą
     # niżej (dalej największy w kadrze), budowle o 30% wyżej: wiatrak nad
     # spichlerzem, jak w HotA (młyn ≈ 3 pola, zamek ≈ 4,5).
-    'skalaZamku': 1.5,
+    'skalaZamku': 1.15,
     'skalaBudowli': 1.3,
     # Runda 9 (HotA): „świerki w prawej dolnej ćwiartce wyższe od zamku i młyna
     # — drzewa do skali kafla". Kępy boru (nowe rysunki: zwarty masyw małych

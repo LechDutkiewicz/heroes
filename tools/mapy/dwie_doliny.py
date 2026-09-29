@@ -198,6 +198,11 @@ NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 #: przy grze normalnej). Natarcie od dnia 40 i mocniejsza załoga zamku dają
 #: czas na szukanie kluczy; bierny gracz dalej przegrywa, tylko później.
 USTAWIENIA = {
+    # Mapa świata w stylu Pokémon: las i skały z klocków (`src/data/klocki.ts`).
+    'klocki': 'trawa',
+    # Krzaki i stosy znajdźek z zestawu Polany (ta sama łąka).
+    'zestaw': 'polana',
+    'znajdzki': 0.68,
     'dzienNatarcia': 40,
     'garnizonGracza': {'poziomy': [0, 1, 2], 'tygodnie': 5},
 }

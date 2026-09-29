@@ -36,6 +36,12 @@ export interface WpisRozstawienia {
  */
 export interface UstawieniaPlanszy {
   /**
+   * Mapa świata w stylu Pokémon: las i skały z klocków (`src/data/klocki.ts`)
+   * z `public/mapa/klocki/<klocki>/` — `trawa`, `bagno` albo `zima`. Kępy,
+   * pojedyncze drzewa i ręczne masywy wtedy nie są rysowane.
+   */
+  klocki?: string;
+  /**
    * `aktywny` — przeciwnik gra pełną turę i wyrusza bohaterem; `obronca` —
    * bohater wroga zostaje w zamku, a przeciwnik co dzień werbuje do załogi
    * (misja samouczkowa: fort „umacnia się", ale nikt nie napada na gracza).

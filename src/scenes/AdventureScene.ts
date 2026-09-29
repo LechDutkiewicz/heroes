@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { pelnyPlecak, plecakBohatera, type Plecak } from '../data/przedmioty';
 import { kluczPortretuPanelu, spriteDoPortretow, wczytajPortrety } from '../visual/portrety';
 import { ZESTAWY_KLIMATU } from '../data/zestawy-klimatu';
+import { NAZWY_KLOCKOW, ulozKlocki } from '../data/klocki';
 import {
   ARTEFAKTY,
   BUDOWLE,
@@ -117,6 +118,7 @@ import {
   PANEL_W,
   PASEK_H,
   PROPORZEC,
+  FLAGA_BUDOWLI,
   RAMA_MAPY_H,
   RAMA_MAPY_W,
   BOHATER_NA_MAPIE,
@@ -222,6 +224,8 @@ const KLUCZ_WYNIKU = 'wynik-bitwy';
 const KLUCZ_TLA = 'tlo-planszy';
 /** Zestaw klimatu, z którego wczytano sprite'y `m-…` — patrz `preload`. */
 const KLUCZ_ZESTAWU = 'zestaw-planszy';
+/** Zestaw klocków wczytany ostatnio (`USTAWIENIA.klocki`). */
+const KLUCZ_KLOCKOW = 'zestaw-klockow';
 /** Plik, z którego wczytano arkusz `bohater` (Janek albo Ela) — patrz `preload`. */
 const KLUCZ_ARKUSZA = 'arkusz-bohatera';
 /** Tekstura miękkiego cienia kontaktowego — patrz `zbudujCien`. */
@@ -529,6 +533,8 @@ export class AdventureScene extends Phaser.Scene {
   private sylwetka?: SylwetkaBohatera;
   /** Proporzec gracza nad bohaterem i jego klatka falowania — `rysujBohatera`. */
   private proporzec?: Phaser.GameObjects.Image;
+  /** Chorągwie zajętych budowli — falują razem z proporcem (`ozywBohatera`). */
+  private flagiBudowli: Phaser.GameObjects.Image[] = [];
   private klatkaProporca = 0;
   private proporzecOrigin = { x: 0, y: 1 };
   /** Kopie klatki bohatera jako ciemny obrys — `rysujBohatera`. */
@@ -612,7 +618,13 @@ export class AdventureScene extends Phaser.Scene {
       }
       this.registry.set(KLUCZ_ZESTAWU, zestaw);
     }
-    const zKlimatu = new Set(ZESTAWY_KLIMATU[zestaw] ?? []);
+    // Plansza z klockami (`USTAWIENIA.klocki`) bierze z zestawu klimatu tylko
+    // krzaki i stosy znajdźek — obiekty są wszędzie te same, nowe (rzut od
+    // frontu), a stare zimowe i bagienne wersje były w baśniowym stylu.
+    const zKlockami = !!planszaPoId(this.wczytajStan().mapa).modul.USTAWIENIA?.klocki;
+    const zKlimatu = new Set(
+      (ZESTAWY_KLIMATU[zestaw] ?? []).filter((n) => !zKlockami || n.startsWith('stos-') || n.startsWith('krzak'))
+    );
     this.load.image('plansza-0', `${tlo}plansza-0.jpg`);
     this.load.image('woda-maska', `${tlo}woda-maska.png`);
     this.load.image('woda-zmarszczki', `${b}mapa/woda-zmarszczki.png`);
@@ -667,6 +679,7 @@ export class AdventureScene extends Phaser.Scene {
       // (`BUDOWLE`), więc dodanie budowli nie wymaga dopisywania jej tutaj.
       ...Object.values(BUDOWLE).map((b) => b.plik),
       'skrzynia',
+      'artefakt',
       'zamek-las',
       'zamek-ogien',
       // Strażnice i namioty w obu barwach kluczy. Pliki robi
@@ -686,6 +699,14 @@ export class AdventureScene extends Phaser.Scene {
       if (n.startsWith('stos-') || n.startsWith('gora-'))
         this.load.image(`m-${n}`, `${b}mapa/${zestaw}/${n}.png`);
     }
+    // Klocki terenu (`src/data/klocki.ts`): las i skały z bloków o stałym obrysie.
+    const klocki = planszaPoId(this.wczytajStan().mapa).modul.USTAWIENIA?.klocki;
+    if (klocki)
+      for (const n of NAZWY_KLOCKOW) {
+        if (this.textures.exists(`k-${n}`) && this.registry.get(KLUCZ_KLOCKOW) !== klocki) this.textures.remove(`k-${n}`);
+        this.load.image(`k-${n}`, `${b}mapa/klocki/${klocki}/${n}.png`);
+      }
+    if (klocki) this.registry.set(KLUCZ_KLOCKOW, klocki);
     const stan = this.wczytajStan();
     const potrzebne = new Set<string>();
     for (const o of zywe(stan.bohater.armia)) potrzebne.add(o.sprite);
@@ -766,6 +787,7 @@ export class AdventureScene extends Phaser.Scene {
     this.podpisy = {};
     this.dochody = {};
     this.ikonyObiektow = {};
+    this.flagiBudowli = [];
     this.trafienia = [];
     this.ozywienia.clear();
     this.ruchomeStraze.clear();
@@ -928,12 +950,14 @@ export class AdventureScene extends Phaser.Scene {
         KAFEL * 0.34
       ) * mnoznikSzer;
     const wysC = Math.max(szer * 0.36, KAFEL * 0.14);
-    // Środek plamy trochę w prawo i w dół od środka podstawy: rysunek zasłania
-    // jej lewą-górną część, spod niego wychodzi prawy-dolny sierp — tak jak
-    // w Heroes 3. Plama dokładnie pod spodem chowała się pod rysunkiem cała.
+    // Środek plamy trochę w prawo od środka podstawy i NAD jej dolnym
+    // brzegiem: rysunek zasłania lewą-górną część, spod niego wychodzi
+    // prawy-dolny sierp — tak jak w Heroes 3. Mapa świata w stylu Pokémon:
+    // obiekty bez podstawki stoją wprost na trawie, a plama zsunięta pod
+    // spód (+0,2) odklejała się od nich — budynek wisiał nad własnym cieniem.
     return this.naSniegu(
       this.add
-        .image(x + srodek + szer * 0.14, spod + wysC * 0.2, CIEN_KONTAKTOWY)
+        .image(x + srodek + szer * 0.1, spod - wysC * 0.12, CIEN_KONTAKTOWY)
         .setDisplaySize(szer, wysC)
         .setAlpha(krycie)
     );
@@ -2037,6 +2061,11 @@ export class AdventureScene extends Phaser.Scene {
 
     this.rysujPrzeszkody();
     this.rysujOzdoby();
+    // Klocki terenu: kontener świata rysuje w kolejności dodania, więc klocki
+    // i krzaki układamy po głębi (stabilnie) — bliższy rząd zasłania dalszy,
+    // a krzak za lasem chowa się pod koronami, zamiast leżeć na nich.
+    if (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.klocki)
+      (this.swiat.list as Phaser.GameObjects.Image[]).sort((a, b) => a.depth - b.depth);
     this.warstwaTrasy = this.add.graphics().setDepth(this.stan.wys + 1);
     this.swiat.add(this.warstwaTrasy);
     this.rysujObiekty();
@@ -2313,6 +2342,10 @@ export class AdventureScene extends Phaser.Scene {
    * sąsiednią i nie było widać, gdzie jedna się kończy.
    */
   private rysujPrzeszkody() {
+    if (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.klocki) {
+      this.rysujKlocki();
+      return;
+    }
     const zajete = new Set<string>();
     const takiSam = (x: number, y: number, t: string) =>
       x >= 0 &&
@@ -2457,6 +2490,48 @@ export class AdventureScene extends Phaser.Scene {
     wstawGory();
   }
 
+  /**
+   * Las i skały z klocków (`ulozKlocki`): każdy klocek stoi spodem dokładnie
+   * na swoich polach — szerokość rysunku to szerokość obrysu (z odrobiną
+   * zakładki, żeby sąsiednie klocki się zazębiały), a nad obrysem rysunek
+   * wystaje tylko do tyłu. Głębia z dolnego rzędu, jak u obiektów.
+   */
+  private rysujKlocki() {
+    // Zakładka: klocek jest szerszy od obrysu, więc sąsiednie klocki
+    // zazębiają się koronami i zboczami w zwartą masę (przy 1,12 las był
+    // rzędami kępek z trawą między nimi — „sad", nie las).
+    const ZAKLADKA: Record<string, number> = { las: 1.42, skaly: 1.3 };
+    for (const k of ulozKlocki(this.stan.teren, 7)) {
+      const zakladka = ZAKLADKA[k.teren];
+      const klucz = `k-${k.nazwa}`;
+      if (!this.textures.exists(klucz)) continue;
+      const dol = (k.y + k.glab) * KAFEL;
+      // Krytyk (ślepe porównanie): „ten sam klocek w sztywnych rzędach,
+      // dolne krawędzie jak od linijki". Skala −8…0% i przesunięcie w bok
+      // o ułamek pola z położenia — rzędy się rozchodzą, obrys zostaje.
+      const skala = 0.92 + this.wariant(k.y, k.x, 9) / 100;
+      const przesun = ((this.wariant(k.x + 3, k.y, 3) - 1) / 1) * KAFEL * 0.05;
+      const cx = (k.x + k.szer / 2) * KAFEL + przesun;
+      const szer = k.szer * KAFEL * zakladka * skala;
+      // Miękki cień u podstawy — klocek stoi na ziemi, nie leży na niej.
+      this.swiat.add(
+        this.add
+          .image(cx + szer * 0.04, dol - KAFEL * 0.12, CIEN_KONTAKTOWY)
+          .setDisplaySize(szer * 0.95, KAFEL * (0.5 + k.glab * 0.25))
+          .setAlpha(KRYCIE_CIENIA * 0.7)
+          .setDepth(k.y + k.glab - 1 + 0.4)
+      );
+      const im = this.add
+        .image(cx, dol + KAFEL * 0.08, klucz)
+        .setOrigin(0.5, 1)
+        // Odbicie z położenia: te same klocki obok siebie nie są klonami.
+        .setFlipX(this.wariant(k.x, k.y, 2) === 1)
+        .setDepth(k.y + k.glab - 1 + 0.45);
+      im.setScale(szer / im.width);
+      this.swiat.add(im);
+    }
+  }
+
   private rysujOzdoby() {
     // `USTAWIENIA.bezOzdobTrawy` (per plansza; Twierdza, runda 10): krzak
     // zestawu `zima` to zaspa, a łąka Twierdzy to teraz tundra — co trzecie
@@ -2475,15 +2550,28 @@ export class AdventureScene extends Phaser.Scene {
         // sprite'y dokładały drugą warstwę kwiatków — w dodatku rysowanych
         // inną techniką. Zostaje krzak: ma własną bryłę i cień, czyli daje
         // to, czego płaska tekstura dać nie może.
-        if (h > 2) continue;
+        if (h > 1) continue;
+        // Mapa świata w stylu Pokémon (krytyk: „ta sama kulka co trzecie pole,
+        // rozsiana jak wypełniacz — naklejki na łące"): krzak rośnie tylko
+        // przy krawędzi — lasu, skał, wody, drogi albo obiektu — więc
+        // krzaki zbierają się w kępy wzdłuż brzegów, a otwarta łąka zostaje
+        // łąką. Wielkość i odbicie z drugiego losowania, nie z tego samego `h`.
+        let przyKrawedzi = false;
+        for (let dy = -1; dy <= 1 && !przyKrawedzi; dy++)
+          for (let dx = -1; dx <= 1 && !przyKrawedzi; dx++) {
+            const t = this.stan.teren[y + dy]?.[x + dx];
+            if (t !== undefined && (t !== 'trawa' || obiektNa(this.stan, x + dx, y + dy))) przyKrawedzi = true;
+          }
+        if (!przyKrawedzi) continue;
+        const los = this.wariant(x * 13 + 5, y * 7 + 3, 100) / 100;
         const { x: ex, y: ey } = this.naEkran(x, y);
         this.element(
           ['m-krzak', 'm-krzak-2', 'm-krzak'][h],
           ex + ((h - 1) * KAFEL) / 5,
           ey + KAFEL * (0.2 + h * 0.07),
-          0.42 + h * 0.05,
+          0.34 + los * 0.18,
           y - 0.5,
-          x + y
+          x + y + Math.round(los * 3)
         );
       }
     }
@@ -2507,7 +2595,7 @@ export class AdventureScene extends Phaser.Scene {
         klucz: o.wlasciciel === 'gracz' ? 'm-zamek-las' : 'm-zamek-ogien',
         // `USTAWIENIA.skalaZamku` (per plansza; Bagna, runda 9: „zamek
         // wielkości chaty"). Brak = 1.
-        wys: KAFEL * (bryla ? 3.1 : 1.9) * (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaZamku ?? 1),
+        wys: KAFEL * (bryla ? 4.0 : 1.9) * (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaZamku ?? 1),
       };
     if (o.rodzaj === 'kopalnia')
       return {
@@ -2538,7 +2626,7 @@ export class AdventureScene extends Phaser.Scene {
     // być drobiazgiem przy gruncie, nie drugą figurą.
     const znajdzki = this.znajdzki();
     if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: this.wysZnajdzki('m-skrzynia', 1.05) };
-    if (o.rodzaj === 'artefakt') return { klucz: 'm-kamien-ewolucji', wys: this.wysZnajdzki('m-kamien-ewolucji') };
+    if (o.rodzaj === 'artefakt') return { klucz: 'm-artefakt', wys: this.wysZnajdzki('m-artefakt') };
     if (o.rodzaj === 'potwor') {
       // Strażnik ma mieć `MASA_STRAZNIKA` pola² WIDOCZNEJ sylwetki (pierwiastek
       // z pola powierzchni), a nie stałą wysokość: przy jednej wysokości
@@ -2739,10 +2827,15 @@ export class AdventureScene extends Phaser.Scene {
       // Artefakt pulsuje — to jedyny obiekt, którego nie da się pomylić
       // z surowcem samym kształtem, więc dostaje własny sygnał.
       if (o.rodzaj === 'artefakt') {
+        // Mapa świata w stylu Pokémon: pulsuje wielkością, nie kryciem —
+        // przy 50% krycia biały kamień był „duchem” na trawie (krytyk).
+        const s0 = im.scaleX;
         this.tweens.add({
           targets: im,
-          alpha: { from: 1, to: 0.5 },
+          scaleX: s0 * 1.08,
+          scaleY: s0 * 1.08,
           duration: 900,
+          ease: 'Sine.easeInOut',
           yoyo: true,
           repeat: -1,
         });
@@ -2756,15 +2849,18 @@ export class AdventureScene extends Phaser.Scene {
         o.rodzaj === 'zamek' ||
         budowlaPoId(o.budynek)?.efekt.typ === 'gniazdo';
       if (doZajecia) {
-        // Kolor chorągwi: przeciwnika (foe), nasza (ally) — a dla zamku, który
-        // nie ma jeszcze właściciela, foe, bo broni go garnizon tak samo jak
-        // wcześniej broniło "nie nasze".
-        const f = this.chorag(o.wlasciciel === 'gracz' ? C.ally : C.foe);
+        // Zajęte budowle niosą tę samą falującą chorągiew co trener (w HoMM3
+        // flaga gracza łopocze na kopalni, mieście i siedlisku). Barwa: nasza
+        // (ally) albo przeciwnika (foe) — a zamek bez właściciela też foe,
+        // bo broni go garnizon. Drzewce wbite w bryłę na ~60% wysokości
+        // rysunku, przy prawym boku, płat wystaje ponad dach.
+        const f = this.flagaBudowli(o.wlasciciel === 'gracz' ? 'gracz' : 'wrog');
         f.setVisible(!!o.wlasciciel || o.rodzaj === 'zamek');
-        // Chorągiew ma stać na budowli, a nie na wolnym polu przed nią.
-        // Odkąd bryła przeniosła się o pole wyżej, flaga musi pójść za nią —
-        // inaczej wygląda, jakby ktoś wbił maszt na środku placu.
-        if (bryla) f.setY(-KAFEL * (0.5 + wys / KAFEL / 2));
+        const podstawa = bryla ? -KAFEL * 0.5 : KAFEL * 0.46;
+        const szerRys = wys * (im.width / Math.max(1, im.height));
+        f.setPosition(szerRys * 0.16, podstawa - wys * 0.6);
+        f.setData('faza', (o.x * 3 + o.y) % KLATKI_PROPORCA);
+        this.flagiBudowli.push(f);
         kont.add(f);
         kont.setData('flaga', f);
       }
@@ -2928,15 +3024,10 @@ export class AdventureScene extends Phaser.Scene {
     }
   }
 
-  private chorag(barwa: number) {
-    const g = this.add.graphics();
-    g.lineStyle(2.5, C.shadow, 0.75);
-    g.lineBetween(-2, -KAFEL * 0.66, -2, -KAFEL * 0.28);
-    g.fillStyle(barwa, 1);
-    g.fillTriangle(-1, -KAFEL * 0.64, 17, -KAFEL * 0.56, -1, -KAFEL * 0.46);
-    g.lineStyle(1.5, C.white, 0.6);
-    g.strokeTriangle(-1, -KAFEL * 0.64, 17, -KAFEL * 0.56, -1, -KAFEL * 0.46);
-    return g;
+  /** Chorągiew zajętej budowli: arkusz `t-flaga-<kto>-<klatka>` (`rysujProporzec`). */
+  private flagaBudowli(kto: 'gracz' | 'wrog') {
+    const origin = this.rysujProporzec(`t-flaga-${kto}`, FLAGA_BUDOWLI.drzewce * KAFEL, kto === 'gracz' ? C.ally : C.foe, FLAGA_BUDOWLI.plat);
+    return this.add.image(0, 0, `t-flaga-${kto}-0`).setOrigin(origin.x, origin.y).setScale(0.5).setData('kto', kto);
   }
 
   private rysujBohatera() {
@@ -3059,9 +3150,12 @@ export class AdventureScene extends Phaser.Scene {
     const klatka = this.bohaterSprite.frame.name;
     for (const o of this.obrysBohatera) if (o.frame.name !== klatka) o.setFrame(klatka);
     const f = Math.floor(czas / 150) % KLATKI_PROPORCA;
-    if (this.proporzec && this.klatkaProporca !== f) {
+    if (this.klatkaProporca !== f) {
       this.klatkaProporca = f;
-      this.proporzec.setTexture(`t-proporzec-${f}`);
+      this.proporzec?.setTexture(`t-proporzec-${f}`);
+      for (const fl of this.flagiBudowli)
+        if (fl.active && fl.visible)
+          fl.setTexture(`t-flaga-${fl.getData('kto')}-${(f + (fl.getData('faza') as number)) % KLATKI_PROPORCA}`);
     }
   }
 
@@ -3076,30 +3170,29 @@ export class AdventureScene extends Phaser.Scene {
    * góra) i ciemniejszymi w dolinach fali; na płacie biały znak pokeballa —
    * herb gracza. Drzewce drewniane ze złotą gałką.
    */
-  private zbudujProporzec(s: SylwetkaBohatera) {
+  private rysujProporzec(prefiks: string, drzewce: number, barwa: number, skalaPlata = 1) {
     const R = 2;
     const pad = 6;
-    const L = PROPORZEC.dlugosc * KAFEL;
-    const Hc = PROPORZEC.wysokosc * KAFEL;
-    const drzewce = s.stopy - s.glowa + PROPORZEC.ponadGlowe * KAFEL;
+    const L = PROPORZEC.dlugosc * KAFEL * skalaPlata;
+    const Hc = PROPORZEC.wysokosc * KAFEL * skalaPlata;
     const Ww = pad + L + pad;
     const Hw = pad + drzewce + pad;
-    this.proporzecOrigin = { x: pad / Ww, y: (pad + drzewce) / Hw };
+    const origin = { x: pad / Ww, y: (pad + drzewce) / Hw };
     const hex = (v: number, k: number) => {
       const r = Math.min(255, Math.round(((v >> 16) & 255) * k));
       const g = Math.min(255, Math.round(((v >> 8) & 255) * k));
       const b = Math.min(255, Math.round((v & 255) * k));
       return `rgb(${r},${g},${b})`;
     };
-    const klucz = `t-proporzec-${KLATKI_PROPORCA - 1}`;
+    const klucz = `${prefiks}-${KLATKI_PROPORCA - 1}`;
     const juzJest =
       this.textures.exists(klucz) &&
       this.textures.get(klucz).getSourceImage().height === Math.ceil(Hw * R);
     for (let f = 0; f < KLATKI_PROPORCA && !juzJest; f++) {
-      const kl = `t-proporzec-${f}`;
+      const kl = `${prefiks}-${f}`;
       if (this.textures.exists(kl)) this.textures.remove(kl);
       const t = this.textures.createCanvas(kl, Math.ceil(Ww * R), Math.ceil(Hw * R));
-      if (!t) return;
+      if (!t) return origin;
       const ctx = t.getContext();
       ctx.scale(R, R);
       const faza = (f / KLATKI_PROPORCA) * Math.PI * 2;
@@ -3147,9 +3240,9 @@ export class AdventureScene extends Phaser.Scene {
       // Płat: kolor gracza, fałdy, światło z góry, obrys.
       // Barwa gracza pogłębiona (mniej czerwieni i zieleni): jasny błękit
       // `C.ally` ginął przy rzece i na śniegu.
-      const ra = (C.ally >> 16) & 255;
-      const ga = (C.ally >> 8) & 255;
-      const ba = C.ally & 255;
+      const ra = (barwa >> 16) & 255;
+      const ga = (barwa >> 8) & 255;
+      const ba = barwa & 255;
       platSciezka();
       ctx.fillStyle = `rgb(${Math.round(ra * 0.55)},${Math.round(ga * 0.62)},${Math.round(ba * 0.95)})`;
       ctx.fill();
@@ -3217,6 +3310,22 @@ export class AdventureScene extends Phaser.Scene {
       ctx.stroke();
       t.refresh();
     }
+    return origin;
+  }
+
+  private zbudujProporzec(s: SylwetkaBohatera) {
+    const R = 2;
+    this.proporzecOrigin = this.rysujProporzec(
+      't-proporzec',
+      s.stopy - s.glowa + PROPORZEC.ponadGlowe * KAFEL,
+      C.ally
+    );
+    const hex = (v: number, k: number) => {
+      const r = Math.min(255, Math.round(((v >> 16) & 255) * k));
+      const g = Math.min(255, Math.round(((v >> 8) & 255) * k));
+      const b = Math.min(255, Math.round((v & 255) * k));
+      return `rgb(${r},${g},${b})`;
+    };
 
     if (!this.textures.exists('t-podstawa-bohatera')) {
       // Stworki runda 4: bohater 1,8 pola — pierścień węższy za nim.
@@ -4263,7 +4372,7 @@ export class AdventureScene extends Phaser.Scene {
       if (b.efekt.typ === 'gniazdo' && o.wlasciciel === 'gracz') return `${b.nazwa} — twoje\n${b.opis}`;
       return `${b.nazwa}\n${b.opis}`;
     }
-    if (o.rodzaj === 'skrzynia') return 'Skrzynia\nW środku pokeballe albo doświadczenie.';
+    if (o.rodzaj === 'skrzynia') return 'Zgubiony plecak\nW środku pokeballe albo doświadczenie.';
     if (o.rodzaj === 'artefakt') return `${o.nazwa}\nArtefakt — wzmacnia bohatera na stałe.`;
     return `${o.nazwa}\n+${o.ile} ${SUROWIEC_INFO[o.surowiec ?? 'pokeball'].dopelniacz}`;
   }
@@ -4601,16 +4710,16 @@ export class AdventureScene extends Phaser.Scene {
   }
 
   private podnies(o: Obiekt) {
-    const flaga = this.ikonyObiektow[o.id]?.getData('flaga') as
-      | Phaser.GameObjects.Graphics
-      | undefined;
+    const flaga = this.ikonyObiektow[o.id]?.getData('flaga') as Phaser.GameObjects.Image | undefined;
     if (!flaga) return;
-    flaga.setVisible(true).setAlpha(0).setScale(0.6, 0.6);
+    const kto = o.wlasciciel === 'wrog' ? 'wrog' : 'gracz';
+    flaga.setData('kto', kto).setTexture(`t-flaga-${kto}-0`);
+    flaga.setVisible(true).setAlpha(0).setScale(0.3);
     this.tweens.add({
       targets: flaga,
       alpha: 1,
-      scaleX: 1,
-      scaleY: 1,
+      scaleX: 0.5,
+      scaleY: 0.5,
       duration: 420,
       ease: E.out,
     });
@@ -4636,7 +4745,7 @@ export class AdventureScene extends Phaser.Scene {
     const skrzynia = this.add.image(cx, gora + 44, 'm-skrzynia').setDepth(Z.overlay + 2);
     skrzynia.setScale(64 / Math.max(skrzynia.width, skrzynia.height));
     this.add
-      .text(cx, gora + 92, 'Skrzynia! Co wolisz?', stylEtykiety(22))
+      .text(cx, gora + 92, 'Zgubiony plecak! Co wolisz?', stylEtykiety(22))
       .setOrigin(0.5)
       .setDepth(Z.overlay + 2);
 

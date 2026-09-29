@@ -56,9 +56,9 @@ export const TEREN = [
   'TT..######.=TT===============bb..bbbbbbbbbbb~~~~~~~TTT',
   'TTT.........==.bbb~~.bbbbbbbbb..bbbbbb~~bbbb~b~b~bbTTT',
   'TTT..........=.bbb~~.b.bbbbbbb...TTb~~~~bbbbbb~b~bbTTT',
-  'TTT........===bbbb~~.bbTTTbbb...TTT~b~bbbbbbbbbbbbbbTT',
-  'TTTTbbbb..=..=.~~b~~...TTTb~~....TTbb~bbbb~~~bbbbbbTTT',
-  'TTTTbbbbb.....=~~bb~~...TTT~~~...bb~bbbbbbb~~~bbb..TTT',
+  'TTT.........==bbbb~~.bbTTTbbb...TTT~b~bbbbbbbbbbbbbbTT',
+  'TTTTbbbb..=.==.~~b~~...TTTb~~....TTbb~bbbb~~~bbbbbbTTT',
+  'TTTTbbbbb..=..=~~bb~~...TTT~~~...bb~bbbbbbb~~~bbb..TTT',
   'TTTT#####.....=####~~.bbbbT~~~~..bbbbbbbbTTT~bbbTTTTTT',
   'TTTT#####~~..=.####~~.bbbbb~TT.TTTTTbbbbbTTTT~TTTTTTTT',
   'TTTT#####~~b.=.#####~~bbbTTTTTTTTTTTTbbbTTTTTTTTTTTTTT',
@@ -254,6 +254,7 @@ export const ROZSTAWIENIE: Array<{
 
 /** Ustawienia misji na tej planszy — patrz `UstawieniaPlanszy` w `src/data/mapy.ts`. */
 export const USTAWIENIA = {
+  "klocki": "bagno",
   "wrog": "aktywny",
   "nazwyZamkowWroga": [
     "Warownia na Grobli"
@@ -318,7 +319,7 @@ export const USTAWIENIA = {
     }
   ],
   "skalaBudowli": 1.05,
-  "skalaZamku": 1.35,
+  "skalaZamku": 1.05,
   "obrysObiektow": 0.55,
   "wodaBarwy": {
     "plytka": [

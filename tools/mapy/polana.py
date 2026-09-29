@@ -392,10 +392,13 @@ PIERWSZY_EKRAN_DOM = [
     ([(12, 33), (11, 33), (13, 33)], ('kopalnia', 'jagoda')),
     ([(7, 33), (8, 33), (7, 32)], ('budynek', 'wiatrak')),
     ([(15, 33), (14, 34), (15, 32)], ('budynek', 'oboz-treningowy')),
-    ([(13, 30), (14, 30), (12, 31)], ('budynek', 'zrodlo')),
+    # Mapa świata w stylu Pokémon: automat i stos pokeballi odsunięte od farmy
+    # — rysunek farmy od frontu sięga pole nad mur (zgłoszenie: „bardzo dużo
+    # rzeczy koło siebie — automat, obok stos pokeballi, plac z krzakami").
+    ([(14, 29), (4, 29), (7, 29), (14, 28)], ('budynek', 'zrodlo')),
     ([(5, 28), (6, 28), (6, 29)], ('budynek', 'ognisko')),
     ([(11, 27), (10, 28)], ('surowiec', 'odlamek')),
-    ([(14, 31), (14, 32)], ('surowiec', 'pokeball')),
+    ([(14, 30), (13, 29)], ('surowiec', 'pokeball')),
     ([(6, 30), (5, 30), (6, 31)], ('surowiec', 'jagoda')),
     ([(11, 29), (10, 28)], ('surowiec', 'kamien')),
     ([(14, 27), (13, 26)], ('skrzynia', None)),
@@ -534,6 +537,8 @@ NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 #: werbuje do załogi tyle, ile daje mu jedno siedlisko i ratusz, więc zwlekanie
 #: kosztuje, jak mówi opis misji.
 USTAWIENIA = {
+    # Mapa świata w stylu Pokémon: las i skały z klocków (`src/data/klocki.ts`).
+    'klocki': 'trawa',
     'wrog': 'obronca',
     'nazwyZamkowWroga': ['Stary Fort'],
     'budynkiWroga': ['ratusz1', 'siedlisko1'],
@@ -553,7 +558,9 @@ USTAWIENIA = {
     'znajdzki': 0.68,
     # …i ciemny obrys pod wszystkim, co da się podnieść albo odwiedzić —
     # drzewa, krzaki i naklejki łąki go nie mają.
-    'obrysObiektow': 0.35,
+    # Mapa świata w stylu Pokémon: bez ciemnego obrysu — obiekty mają
+    # wtopione podstawki (`osadz_podstawke.py`), a obrys robił z nich naklejki.
+    'obrysObiektow': 0,
     # Stwory na mapie, runda 7: strażnik „odrobinę za mały przy moście".
     'skalaStrazy': 1.1,
     # Runda 6 (HotA): „zamek, młyn i most zajmują po kilka kafli". Budowle
@@ -605,6 +612,9 @@ RZEZBA = {'pagorki': 0.6, 'czolo': 0.4}
 
 #: Przejezdne pola, do których nie da się dojść, zarastają lasem (patrz silnik).
 ZASYP_ODCIETE = True
+
+#: Mapa świata w stylu Pokémon: pole nad murem budowli wolne (patrz silnik).
+ODSTEP_NAD_BRYLA = True
 
 #: Plac wokół zamków wolny od innych budowli (patrz silnik).
 ODSTEP_OD_ZAMKOW = 1

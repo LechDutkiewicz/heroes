@@ -246,14 +246,14 @@ export const BUDOWLE: Record<string, Budowla> = {
     efekt: { typ: 'staty', atak: BUDOWLA_STATYSTYKA },
   },
   'kamienna-wieza': {
-    nazwa: 'Kamienna Wieża',
+    nazwa: 'Dojo',
     opis: `+${BUDOWLA_STATYSTYKA} do opieki, raz na zawsze`,
     plik: 'kamienna-wieza',
     wys: 2.0,
     efekt: { typ: 'staty', obrona: BUDOWLA_STATYSTYKA },
   },
   arena: {
-    nazwa: 'Arena',
+    nazwa: 'Stadion',
     opis: `Wybór: +${ARENA_BONUS} zapału albo +${ARENA_BONUS} opieki`,
     plik: 'arena',
     wys: 1.5,
@@ -261,17 +261,17 @@ export const BUDOWLE: Record<string, Budowla> = {
     efekt: { typ: 'arena' },
   },
   'drzewo-wiedzy': {
-    nazwa: 'Drzewo Wiedzy',
+    nazwa: 'Laboratorium Profesora',
     opis: 'Doświadczenie na cały następny poziom',
     plik: 'drzewo-wiedzy',
     wys: 2.4,
     efekt: { typ: 'doswiadczenie' },
   },
   'wieza-obserwacyjna': {
-    nazwa: 'Wieża Obserwacyjna',
+    nazwa: 'Punkt Widokowy',
     opis: `Odsłania mapę na ${OBSERWATORIUM_PROMIEN} pól wokół`,
     plik: 'wieza-obserwacyjna',
-    wys: 2.6,
+    wys: 2.9,
     efekt: { typ: 'odslona' },
   },
   ranczo: {
@@ -284,26 +284,27 @@ export const BUDOWLE: Record<string, Budowla> = {
     odnowa: STAJNIA_ODNOWA,
   },
   zrodlo: {
-    nazwa: 'Źródło Mocy',
-    opis: 'Odnawia punkty ruchu — raz dziennie',
+    nazwa: 'Automat z Napojami',
+    opis: 'Zimny napój odnawia punkty ruchu — raz dziennie',
     plik: 'zrodlo',
     wys: 1.1,
     efekt: { typ: 'zrodlo' },
     odnowa: 1,
   },
   portal: {
-    nazwa: 'Portal',
-    opis: 'Przenosi do bliźniaczego portalu',
+    nazwa: 'Stacja Kolejki',
+    opis: 'Zawozi do drugiej stacji kolejki',
     plik: 'portal',
     wys: 1.8,
     efekt: { typ: 'portal' },
     odnowa: 0,
   },
   gniazdo: {
-    nazwa: 'Gniazdo',
+    nazwa: 'Gniazdo z Jajami',
     opis: 'Zajęte przysyła młode stworki do twojego zamku',
     plik: 'gniazdo',
-    wys: 1.4,
+    // Mapa świata w stylu Pokémon: „kosz z jajkami wydaje się za duży”.
+    wys: 1.1,
     efekt: { typ: 'gniazdo' },
   },
   'osrodek-ewolucji': {
@@ -316,16 +317,16 @@ export const BUDOWLE: Record<string, Budowla> = {
     odnowa: 0,
   },
   wiatrak: {
-    nazwa: 'Wiatrak',
+    nazwa: 'Wiatrak Prądu',
     opis: 'Garść surowca — raz na tydzień',
     plik: 'wiatrak',
-    wys: 2.2,
+    wys: 2.4,
     efekt: { typ: 'surowce' },
     odnowa: WIATRAK_ODNOWA,
   },
   ognisko: {
-    nazwa: 'Ognisko',
-    opis: 'Pokeballe i surowiec po wędrowcach',
+    nazwa: 'Obozowisko',
+    opis: 'Pokeballe i surowiec po obozowiczach',
     plik: 'ognisko',
     wys: 0.9,
     efekt: { typ: 'surowce' },
@@ -333,7 +334,7 @@ export const BUDOWLE: Record<string, Budowla> = {
     pokeballe: OGNISKO_POKEBALLE,
   },
   chatka: {
-    nazwa: 'Chatka Skrzata',
+    nazwa: 'Domek na Drzewie',
     opis: 'Garść surowca ze schowka',
     plik: 'chatka',
     wys: 1.2,
@@ -341,8 +342,8 @@ export const BUDOWLE: Record<string, Budowla> = {
     znika: true,
   },
   woz: {
-    nazwa: 'Wóz Kupca',
-    opis: 'Porzucony ładunek: surowce albo artefakt',
+    nazwa: 'Wędrowny Sklepik',
+    opis: 'Sprzedawca zostawił prezent: surowce albo artefakt',
     plik: 'woz',
     wys: 1.3,
     efekt: { typ: 'surowce' },
@@ -1493,7 +1494,7 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
     const z = o.zadanie;
     if (!z) return { opis: 'Chata jest pusta.' };
     if (o.spelnione) {
-      return { opis: 'Jasnowidz już ci pomógł.\nNie ma dla ciebie nic więcej.' };
+      return { opis: 'Badaczka już ci pomogła.\nNie ma dla ciebie nic więcej.' };
     }
     const mamy = skarbiec[z.surowiec];
     if (mamy < z.ile) {
@@ -1502,7 +1503,7 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
       // miejsce po raz drugi. Mówimy więc wprost, czego brakuje i ile.
       return {
         opis:
-          `Jasnowidz prosi o ${z.ile} ${SUROWIEC_INFO[z.surowiec].dopelniacz}.\n` +
+          `Badaczka prosi o ${z.ile} ${SUROWIEC_INFO[z.surowiec].dopelniacz}.\n` +
           `Masz ${mamy}. Wróć, gdy uzbierasz resztę.`,
       };
     }
@@ -1515,7 +1516,7 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
     return {
       opis:
         `Oddajesz ${z.ile} ${SUROWIEC_INFO[z.surowiec].dopelniacz}.\n` +
-        (a ? `Jasnowidz daje w zamian: ${a.nazwa}` : `Jasnowidz dzieli się wiedzą: +${dosw} doświadczenia`),
+        (a ? `Badaczka daje w zamian: ${a.nazwa}` : `Badaczka dzieli się wiedzą: +${dosw} doświadczenia`),
     };
   }
 

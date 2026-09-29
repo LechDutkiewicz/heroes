@@ -37,6 +37,7 @@
 // raz — bez pól przykrytych w co najmniej `PROG_ZASLONY`. Obiekt osiągalny
 // zasadami, a nieosiągalny tak, to przejście schowane pod górą albo lasem.
 
+import { ulozKlocki } from '../src/data/klocki';
 import {
   TEREN_INFO,
   Z_SASIEDNIEGO_POLA,
@@ -327,6 +328,26 @@ function rysunkiPrzeszkod(s: StanMapy): Rysunek[] {
     return obrazy.get(plik)!;
   };
   const wynik: Rysunek[] = [];
+  // Klocki terenu (`USTAWIENIA.klocki`) — kopia `rysujKlocki` sceny.
+  if (ust.klocki) {
+    const ZAKLADKA: Record<string, number> = { las: 1.42, skaly: 1.3 };
+    for (const k of ulozKlocki(s.teren, 7)) {
+      const plik = `public/mapa/klocki/${ust.klocki}/${k.nazwa}.png`;
+      if (!obrazy.has(plik)) obrazy.set(plik, existsSync(plik) ? wczytajPng(plik) : { w: 0, h: 0, alfa: new Uint8Array() });
+      const ob = obrazy.get(plik)!;
+      if (!ob.w) continue;
+      const skala = 0.92 + wariant(k.y, k.x, 9) / 100;
+      const przesun = ((wariant(k.x + 3, k.y, 3) - 1) / 1) * KAFEL * 0.05;
+      wynik.push({
+        obraz: ob,
+        x: (k.x + k.szer / 2) * KAFEL + przesun,
+        y: (k.y + k.glab) * KAFEL + KAFEL * 0.08,
+        skala: (k.szer * KAFEL * ZAKLADKA[k.teren] * skala) / ob.w,
+        odbij: wariant(k.x, k.y, 2) === 1,
+      });
+    }
+    return wynik;
+  }
   const zajete = new Set<string>();
   const takiSam = (x: number, y: number, t: string) =>
     x >= 0 && y >= 0 && x < s.szer && y < s.wys && s.teren[y][x] === t && !zajete.has(K(x, y));

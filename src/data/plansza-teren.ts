@@ -73,8 +73,8 @@ export const TEREN = [
   '.....#.T.TTTT....TTTTTTT=.......TT.TT..TTTTT.......~~~~~~~~~~~~~=TT.T...',
   '........TT=.T...TTTTTTTT=........TTTT...TTTT.........~~~~~~~~~~~=TTT....',
   'T.......TTT=.TT.TTTT..TT=........TTT.....TT.........~~~~~~~~.~.=TTT.T...',
-  'TTT.T..T===T=..TT.TT..==........TTTTT#.#.......~..~~~~~~~~~...=.TTT.....',
-  'TTT.TT......=TTTTTTT.=..........TTTT####...T.T.T.~~~~~~~~~~..=..TTTT....',
+  'TTT.T..T=.=T=..TT.TT..==........TTTTT#.#.......~..~~~~~~~~~...=.TTT.....',
+  'TTT.TT...=..=TTTTTTT.=..........TTTT####...T.T.T.~~~~~~~~~~..=..TTTT....',
   'TT..........T=T.TTTT=............TT######...TTT~~.~~~~~~~~~.=...TTTT....',
   '.T.T.T...TTTTT=TT=T=..........TTTTTT.#.#....TTTT~~~~~~~~~~~....T.TTTT...',
   '....TTTTTTTT..T==T=T.TT.....TTTTTTTT..##......TTT~TT~~~~~~~~..T.TTTTT...',
@@ -380,6 +380,9 @@ export const ROZSTAWIENIE: Array<{
 
 /** Ustawienia misji na tej planszy — patrz `UstawieniaPlanszy` w `src/data/mapy.ts`. */
 export const USTAWIENIA = {
+  "klocki": "trawa",
+  "zestaw": "polana",
+  "znajdzki": 0.68,
   "dzienNatarcia": 40,
   "garnizonGracza": {
     "poziomy": [
