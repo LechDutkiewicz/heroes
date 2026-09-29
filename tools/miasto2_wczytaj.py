@@ -39,8 +39,18 @@ def twardaAlfa(im: Image.Image) -> Image.Image:
     return Image.fromarray(tab.astype(np.uint8), 'RGBA')
 
 
+#: Pokémart ma jeden rysunek na krainę, a trzy stopnie w grze — wyższy
+#: stopień to ten sam sklep, tylko większy (jak ratusze różnią się wielkością).
+SKLEP = {'sklep1': 250, 'sklep2': 280, 'sklep3': 310}
+
+
 def main() -> None:
     for f in KRAINY:
+        if (WSAD / f'm2-{f}-sklep.png').exists():
+            surowy = twardaAlfa(wczytaj(f'm2-{f}-sklep'))
+            for nazwa, wys in SKLEP.items():
+                dopasuj(surowy, wys).save(MIASTO / f'{f}-{nazwa}.png')
+            print(f'  {f}-sklep1..3.png')
         zrodlo = WSAD / f'm2-tlo-{f}.png'
         if zrodlo.exists():
             im = Image.open(zrodlo).convert('RGB')

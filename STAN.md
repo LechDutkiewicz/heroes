@@ -2,6 +2,44 @@
 
 Ostatnia aktualizacja: 2026-09-27 (trener zamiast armii: stworek = postać z poziomem, 4 na polu bitwy, trening i Centrum Pokemon).
 
+## Pokémart — sklep z przedmiotami zamiast gildii magów (2026-09-29)
+
+**Co jest.** Plecak trenera przestał się napełniać sam przed każdą bitwą —
+to teraz ZAPAS (`Bohater.plecak`, `przedmioty.ts`): nowa gra daje jedną
+miksturę, zużyte znika, resztę kupuje się w Pokémarcie. Pokémart to budynek
+miasta w trzech stopniach (`sklep1–3` w `zamki.ts`, jak ratusz: jedno miejsce
+na panoramie, widać najwyższy stopień, na liście budowy tylko następny):
+I — Mikstura (½ życia), II — Super mikstura (całe życie) i Eliksir siły,
+III — Tarcza (ciosy w stworka ×0,67, `SILA_TARCZY` w `battle.ts`). Najwyżej
+5 sztuk jednego przedmiotu. Kupuje się tylko, gdy trener jest w mieście
+(`kupWPokemarcie`). Plecak przechodzi do następnej misji kampanii.
+Przeciwnik sklepu nie buduje (nie używa przedmiotów).
+
+**Grafika.** Pokémart z niebieskim dachem dla każdej krainy
+(`m2-<kraina>-sklep`, `PROMPTY-MIASTO-2.md`; jeden rysunek → sklep1–3
+w trzech wielkościach, `miasto2_wczytaj.py`) i ikony Super mikstury oraz
+Tarczy (`PROMPTY-BOHATER.md`, `rywal_wczytaj.py`). Koszt: $0.24 (razem $34.30).
+
+**Decyzje.** Stary zapis bez plecaka dostaje dwie mikstury i eliksir (tyle,
+ile wcześniej miał na każdą bitwę). Bitwa pokazowa (bez mapy) ma wszystkiego
+po trochu. Autopilot i symulacje nie używają przedmiotów, więc balans misji
+się nie zmienia; dla gracza grającego ręcznie bitwy są trochę trudniejsze,
+dopóki nie postawi sklepu (pierwszy stopień: 25 pokeballi).
+
+**Krytyk.** Wygląd — ta sama gra (zaliczone); czytelność dla dziecka
+początkowo oblana: licznik „×0" wyglądał jak wyłączony przycisk, blokada
+„od stopnia III" bez kłódki i bez „co zrobić", opisy z „×1,5" i „1/3",
+budynek za drzewem. Poprawione: „masz 1 z 5", kłódka + „Rozbuduj sklep",
+opisy słowami, większy podtytuł, budynek przesunięty.
+
+**Sondy.** Nowa `tools/probe-sklep.ts` (zakupy, stopnie, limit, stary zapis,
+kampania, tarcza, AI). `probe-plecak` sprawdza teraz zapas z mapy (mikstura
+1 → 0 i zostaje 0 po bitwie). `zrzut-miasto.mjs`: `--budynki sklep`,
+`--sklep`, `--lista`.
+
+**Zostało.** Ekran bohatera nie pokazuje plecaka (widać go w bitwie
+i w sklepie).
+
 ## Uwagi z rozgrywki misji 1 (2026-09-28)
 
 **Trener chodził w bok tyłem.** Wsady `bohater-prawo.png` i `bohaterka-prawo.png`

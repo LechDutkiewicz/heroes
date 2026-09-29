@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { pelnyPlecak, plecakBohatera, type Plecak } from '../data/przedmioty';
 import { kluczPortretuPanelu, spriteDoPortretow, wczytajPortrety } from '../visual/portrety';
 import { ZESTAWY_KLIMATU } from '../data/zestawy-klimatu';
 import {
@@ -5072,6 +5073,8 @@ export class AdventureScene extends Phaser.Scene {
         // Zamku bronią straż i garnizon naraz (`obroncyZamku`).
         wrog: o.rodzaj === 'zamek' ? obroncyZamku(o) : (o.oddzialy ?? []),
         oObiekt: o.id,
+        // Zapas z Pokémartu — co zostanie po bitwie, wraca w wyniku.
+        plecak: { ...plecakBohatera(this.stan.bohater) },
         // Dzikie: jeden na jednego; rywal, sale i miasta: dwa na dwa.
         naPolu: naPoluPrzeciw(o),
         powrot: 'adventure',
@@ -5709,10 +5712,13 @@ export class AdventureScene extends Phaser.Scene {
           wrogOcalali?: number[];
           zlapani?: Array<Oddzial & { skad: number }>;
           wydanePokeballe?: number;
+          plecak?: Plecak;
         }
       | undefined;
     if (!wynik) return;
     this.registry.remove(KLUCZ_WYNIKU);
+    // Co trener zużył z plecaka, tego już nie ma (`przedmioty.ts`).
+    if (wynik.plecak) this.stan.bohater.plecak = pelnyPlecak(wynik.plecak);
     const o = this.stan.obiekty.find((x) => x.id === wynik.oObiekt);
 
     // Stworki wracają do swoich slotów — to te same postacie, więc nie

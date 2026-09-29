@@ -26,6 +26,8 @@ const BUDYNKI = arg('--budynki', 'wszystkie');
 const POSTAWIONE = {
   wszystkie: ['ratusz1', 'ratusz2', 'fort', 'siedlisko1', 'siedlisko2', 'siedlisko3', 'siedlisko5'],
   start: ['ratusz1', 'siedlisko1', 'siedlisko2'],
+  // Pokémart na drugim stopniu — do zrzutu sklepu (`--sklep`).
+  sklep: ['ratusz1', 'ratusz2', 'fort', 'siedlisko1', 'siedlisko2', 'siedlisko3', 'siedlisko5', 'sklep1', 'sklep2'],
 };
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
@@ -75,6 +77,16 @@ if (KARTA) {
     if (id === 'sala') t.panel.wybor = { pasek: t.panel.paski[1], slot: 0 };
     t.pokazBudynek(t.profil.stale.find((b) => b.id === id));
   }, KARTA);
+  await page.waitForTimeout(600);
+}
+// `--lista` — zrzut z otwartą listą budowy.
+if (process.argv.includes('--lista')) {
+  await page.evaluate(() => window.__game.scene.getScene('zamek').pokazListeBudowy());
+  await page.waitForTimeout(600);
+}
+// `--sklep` — zrzut z otwartym oknem Pokémartu.
+if (process.argv.includes('--sklep')) {
+  await page.evaluate(() => window.__game.scene.getScene('zamek').pokazSklep());
   await page.waitForTimeout(600);
 }
 await page.locator('canvas').screenshot({ path: OUT });

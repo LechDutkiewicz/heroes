@@ -355,6 +355,29 @@ simple silhouette readable at 24 pixels, painted soft storybook style with
 glossy highlights. No text, no letters, no hand, no background.
 ```
 
+<!-- plik: przedmiot-super-mikstura.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object: a single small SUPER healing potion spray bottle
+seen from the front, centered and filling the square frame. A chubby round
+glass flask filled with glowing sky-blue liquid, a white rounded cap on top
+with a short nozzle, a bold golden ring around the neck and a little white
+plus sign painted on the glass, slightly bigger and grander than an ordinary
+potion. Warm glossy reflections on the glass. Chunky, bold, simple silhouette
+readable at 24 pixels, painted soft storybook style with glossy highlights.
+No text, no letters, no hand, no background.
+```
+
+<!-- plik: przedmiot-tarcza.png | styl: obiekt | proporcje: 1:1 -->
+```
+Game UI icon, not a map object: a single small protective spray bottle seen
+from the front, centered and filling the square frame. A squat glass bottle
+filled with glowing mint-green liquid, a white rounded cap with a short
+nozzle, and a small round silver shield emblem with a green leaf painted on
+the glass. Warm glossy reflections on the glass. Chunky, bold, simple
+silhouette readable at 24 pixels, painted soft storybook style with glossy
+highlights. No text, no letters, no hand, no background.
+```
+
 ## 6. Liderzy sal (etap 6)
 
 Każda sala (zamek przeciwnika) ma lidera — jak w serialu. Portret do

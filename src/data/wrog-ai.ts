@@ -683,7 +683,8 @@ function rozbudujIWerbuj(s: StanMapy, kto: Wlasciciel) {
   // która chce wroga aktywnego, ale o z góry znanym tempie wzrostu armii.
   const buduje = !(kto === 'wrog' && (s.wrogTryb === 'obronca' || s.wrogBuduje === false));
   const kandydaci = profil.budynki
-    .filter((b) => buduje && !postawione.includes(b.id) && moznaBudowac(b, postawione))
+    // Pokémart nie: przeciwnik nie sięga do plecaka, sklep byłby wyrzuconym groszem.
+    .filter((b) => buduje && !b.id.startsWith('sklep') && !postawione.includes(b.id) && moznaBudowac(b, postawione))
     .sort((a, b) => priorytetBudowy(a.id) - priorytetBudowy(b.id));
   for (const b of kandydaci) {
     if (zbuduj(s, zamek, b.id, kto).ok) break; // jeden budynek dziennie

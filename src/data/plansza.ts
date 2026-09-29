@@ -1,3 +1,4 @@
+import { PLECAK_STARTOWY } from './przedmioty';
 import { planszaPoId } from './mapy';
 import {
   CHATKA_ILE,
@@ -499,6 +500,8 @@ export function planszaPrzygody(mapaId?: string, opcje: OpcjeStartu = {}): StanM
       obrona: 1,
       armia,
       artefakty: [],
+      // Jedna mikstura na drogę — resztę kupuje się w Pokémarcie.
+      plecak: { ...PLECAK_STARTOWY },
       doswiadczenie: 0,
     },
     // Skarbiec startowy: tyle, żeby dało się w pierwszym tygodniu podjąć jedną

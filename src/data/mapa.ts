@@ -40,6 +40,7 @@ import {
   skalaPoziomu,
 } from './stworki';
 import type { Armia, Slot } from './armia';
+import type { Plecak } from './przedmioty';
 import { NA_POLU, NA_POLU_DZIKIE } from './battle';
 import { efekt } from './umiejetnosci';
 
@@ -551,6 +552,11 @@ export interface Bohater {
   armia: Armia;
   /** Zebrane artefakty (identyfikatory z `ARTEFAKTY`). */
   artefakty: string[];
+  /**
+   * Plecak trenera: zapas przedmiotów na bitwy (`przedmioty.ts`), kupowany
+   * w Pokémarcie. Brak w starych zapisach — patrz `plecakBohatera`.
+   */
+  plecak?: Plecak;
   doswiadczenie: number;
   /**
    * Drugorzędne umiejętności: identyfikator z `UMIEJETNOSCI` → poziom 1-3.

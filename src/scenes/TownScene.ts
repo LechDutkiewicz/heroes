@@ -23,8 +23,18 @@ import {
   profilZamku,
   przyrostZamku,
   stacNas,
+  kupWPokemarcie,
+  stopienSklepu,
   type Budynek,
 } from '../data/zamki';
+import {
+  MAKS_W_PLECAKU,
+  PRZEDMIOTY,
+  PRZEDMIOTY_PLECAKA,
+  SKLEP,
+  plecakBohatera,
+  type PrzedmiotPlecaka,
+} from '../data/przedmioty';
 import { MNOZNIK_FORTU } from '../data/zasady-h3';
 import { POZIOM_MLODEGO, napisPoziomu, nowyStworek, obudz } from '../data/stworki';
 import { FACTIONS, factionById } from '../data/factions';
@@ -47,7 +57,7 @@ import {
   stylEtykiety,
   wczytajZestaw,
 } from '../visual/zestawWalki';
-import { napisNaPigulce, panelBialy, pigulka, tloEkranu } from '../visual/stylWalki';
+import { TUSZ, napisNaPigulce, panelBialy, pigulka, stylWalki, tloEkranu } from '../visual/stylWalki';
 import { wersjonujZasoby } from '../visual/zasoby';
 import {
   MUZYKA_MIASTO,
@@ -270,10 +280,13 @@ export class TownScene extends Phaser.Scene {
     for (const f of ['bor', 'grota', 'zbocze']) {
       this.load.image(`t-tlo-${f}`, `${b}miasto/tlo-${f}.png`);
       this.load.image(`t-znak-${f}`, `${b}miasto/znak-${f}.png`);
-      // Bryły Groty i Zbocza to przemalowany komplet Boru
-      // (`tools/frakcje_przemaluj.py`): ratusz jest ratuszem w każdym mieście,
-      // różnić ma je klimat, a jedno źródło trzyma spójną kreskę.
+      // Każda kraina ma własne bryły (`tools/miasto2_wczytaj.py`).
       for (const id of BUDYNKI_ID) this.load.image(`t-${f}-${id}`, `${b}miasto/${f}-${id}.png`);
+    }
+    // Towar Pokémartu — te same ikony co w plecaku w bitwie.
+    for (const k of PRZEDMIOTY_PLECAKA) {
+      const tex = PRZEDMIOTY[k].tekstura;
+      if (!this.textures.exists(tex)) this.load.image(tex, `${b}bohater/${tex}.png`);
     }
   }
 
@@ -403,8 +416,12 @@ export class TownScene extends Phaser.Scene {
     // jak usterka, a rozbudowę i tak otwiera się kliknięciem w ten, który stoi.
     const najlepszyRatusz =
       ['ratusz3', 'ratusz2', 'ratusz1'].find((r) => postawione.includes(r)) ?? 'ratusz1';
+    // Pokémart tak samo: trzy stopnie w jednym miejscu, widać najwyższy.
+    const najlepszySklep = ['sklep3', 'sklep2', 'sklep1'].find((r) => postawione.includes(r));
     const widoczne = this.profil.budynki.filter(
-      (b) => !b.id.startsWith('ratusz') || b.id === najlepszyRatusz
+      (b) =>
+        (!b.id.startsWith('ratusz') || b.id === najlepszyRatusz) &&
+        (!b.id.startsWith('sklep') || b.id === najlepszySklep)
     );
 
     // Centrum Pokemon i Sala treningowa stoją zawsze — nie buduje się ich.
@@ -1177,6 +1194,8 @@ export class TownScene extends Phaser.Scene {
     // wejściem do rozbudowy całego miasta. Karta „już stoi" nie mówiłaby tu
     // nic, a ratusz jest jedynym budynkiem, który stoi zawsze.
     if (b.rodzaj === 'ratusz') return this.pokazListeBudowy();
+    // Postawiony Pokémart otwiera sklep, a nie kartę budynku.
+    if (b.rodzaj === 'sklep' && (this.zamek.postawione ?? []).includes(b.id)) return this.pokazSklep();
     this.wybrany = b;
     this.karta.setVisible(true);
     this.kartaPrzycisk.kontener.setVisible(true);
@@ -1296,19 +1315,205 @@ export class TownScene extends Phaser.Scene {
    * z warunkiem wypisanym przy zablokowanych. Ośmiolatek musi widzieć, że
    * gdzieś dalej jest Prastare Drzewo — inaczej nie ma po co oszczędzać.
    */
+  /**
+   * Pokémart — gildia magów z Heroes 3 w wersji z gier Pokémon: nie uczy
+   * czarów, tylko sprzedaje przedmioty do plecaka trenera. Wyższy stopień
+   * sklepu to lepszy towar (`SKLEP` w przedmioty.ts). Kupuje się tylko, gdy
+   * trener jest w mieście — plecak nosi on, a nie zamek.
+   */
+  private pokazSklep() {
+    const stopien = stopienSklepu(this.zamek.postawione ?? []);
+    const plecak = plecakBohatera(this.stan.bohater);
+    const nasz = this.zamek.wlasciciel === 'gracz';
+    const szer = 660;
+    const wysWiersza = 72;
+    const BELKA = 56;
+    const wys = BELKA + 40 + PRZEDMIOTY_PLECAKA.length * wysWiersza + 70;
+    const cx = OKNO_W / 2;
+    const cy = OKNO_H / 2;
+    const lewo = cx - szer / 2;
+    const gora = cy - wys / 2;
+    const warstwa: Phaser.GameObjects.GameObject[] = [];
+    const G = Z.overlay;
+    const zamknij = () => {
+      for (const o of warstwa) {
+        this.tweens.killTweensOf(o);
+        o.destroy();
+      }
+      warstwa.length = 0;
+    };
+
+    const zaslona = this.add.rectangle(0, 0, OKNO_W, OKNO_H, C.shadow, 0.62).setOrigin(0, 0).setDepth(G).setInteractive();
+    zaslona.on('pointerdown', () => zamknij());
+    const panel = this.add.graphics().setDepth(G + 1);
+    panelBialy(panel, lewo, gora, szer, wys, 20, { obrys: 4, cien: 6 });
+    // Belka jak w grach: niebieska, bo Pokémart ma niebieski dach — czerwień
+    // należy do Centrum.
+    panel.fillStyle(0x3a7ad8, 1);
+    panel.fillRoundedRect(lewo + 4, gora + 4, szer - 8, BELKA - 4, { tl: 16, tr: 16, bl: 0, br: 0 });
+    panel.fillStyle(TUSZ, 1);
+    panel.fillRect(lewo + 4, gora + BELKA, szer - 8, 4);
+    panel.setInteractive(new Phaser.Geom.Rectangle(lewo, gora, szer, wys), Phaser.Geom.Rectangle.Contains);
+    warstwa.push(zaslona, panel);
+    warstwa.push(
+      this.add
+        .text(cx, gora + BELKA / 2 + 2, 'Pokémart', stylWalki(26, '#ffffff'))
+        .setOrigin(0.5)
+        .setShadow(0, 2, 'rgba(0,0,0,0.35)', 0, false, true)
+        .setDepth(G + 2),
+      this.add
+        .text(
+          cx,
+          gora + BELKA + 22,
+          !nasz
+            ? 'To nie twoje miasto — tu nic nie kupisz.'
+            : this.bohaterObecny
+              ? 'Kup przedmioty do plecaka — przydadzą się w bitwie.'
+              : 'Trener musi być w mieście, żeby robić zakupy.',
+          stylWalki(16, this.bohaterObecny && nasz ? '#26262e' : '#c92a09', 800)
+        )
+        .setOrigin(0.5)
+        .setDepth(G + 2)
+    );
+
+    PRZEDMIOTY_PLECAKA.forEach((k: PrzedmiotPlecaka, i) => {
+      const y = gora + BELKA + 44 + i * wysWiersza;
+      const rx = lewo + 18;
+      const rw = szer - 36;
+      const rh = wysWiersza - 8;
+      const towar = SKLEP[k];
+      const dostepny = stopien >= towar.poziom;
+      const ma = plecak[k];
+      const stac = stacNas(this.stan.skarbiec, towar.cena);
+      const g = this.add.graphics().setDepth(G + 2);
+      g.fillStyle(dostepny ? 0xeef2f7 : 0xf4f5f7, 1);
+      g.fillRoundedRect(rx, y, rw, rh, 12);
+      // Ikona na białym krążku z obrysem, jak medaliony stworków.
+      g.fillStyle(TUSZ, 1);
+      g.fillCircle(rx + 36, y + rh / 2, 26);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(rx + 36, y + rh / 2, 23);
+      const ikona = this.add.image(rx + 36, y + rh / 2, PRZEDMIOTY[k].tekstura).setDepth(G + 3);
+      ikona.setScale(40 / Math.max(ikona.width, ikona.height));
+      if (!dostepny) ikona.setTint(0xb9c0c9);
+      const barwa = dostepny ? '#26262e' : '#9aa1ad';
+      warstwa.push(
+        g,
+        ikona,
+        this.add.text(rx + 72, y + 9, PRZEDMIOTY[k].nazwa, stylWalki(18, barwa)).setDepth(G + 3),
+        this.add
+          .text(rx + 72, y + 34, PRZEDMIOTY[k].opis, stylWalki(13, dostepny ? '#5b6270' : '#9aa1ad', 700))
+          .setWordWrapWidth(270)
+          .setDepth(G + 3)
+      );
+      // Ile już jest w plecaku i ile się mieści — słowami, nie samą liczbą:
+      // szara pigułka „×0" czytała się jak wyłączony przycisk.
+      warstwa.push(
+        this.add
+          .text(rx + 372, y + rh / 2 - 10, 'masz', stylWalki(12, '#7a8290', 800))
+          .setOrigin(0.5)
+          .setDepth(G + 3),
+        this.add
+          .text(rx + 372, y + rh / 2 + 9, `${ma} z ${MAKS_W_PLECAKU}`, stylWalki(16, ma > 0 ? '#26262e' : '#9aa1ad'))
+          .setOrigin(0.5)
+          .setDepth(G + 3)
+      );
+
+      if (!dostepny) {
+        // Zablokowany towar: kłódka i co zrobić, a nie „od stopnia III".
+        const kl = this.add.graphics().setDepth(G + 3);
+        const kx = rx + rw - 150;
+        const ky = y + rh / 2;
+        kl.lineStyle(3, 0x8b93a0, 1);
+        kl.strokeRoundedRect(kx - 6, ky - 13, 12, 12, 5);
+        kl.fillStyle(0x8b93a0, 1);
+        kl.fillRoundedRect(kx - 9, ky - 5, 18, 14, 3);
+        warstwa.push(
+          kl,
+          this.add
+            .text(kx + 16, ky, `Rozbuduj sklep\ndo stopnia ${'I'.repeat(towar.poziom)}`, stylWalki(13, '#5b6270', 800))
+            .setOrigin(0, 0.5)
+            .setLineSpacing(-2)
+            .setDepth(G + 3)
+        );
+        return;
+      }
+      // Cena ikonami surowców, jak na liście budowy.
+      let x = rx + 402;
+      for (const [co, ilePkt] of Object.entries(towar.cena)) {
+        const s = co as Surowiec;
+        const brak = this.stan.skarbiec[s] < ilePkt;
+        const im = this.add.image(x + 10, y + rh / 2, `m-${SUROWIEC_INFO[s].ikona}`).setDisplaySize(20, 20).setDepth(G + 3);
+        const tx = this.add
+          .text(x + 23, y + rh / 2, String(ilePkt), stylWalki(15, brak ? '#c92a09' : '#26262e'))
+          .setOrigin(0, 0.5)
+          .setDepth(G + 3);
+        warstwa.push(im, tx);
+        x += 32 + tx.width;
+      }
+      const pelny = ma >= MAKS_W_PLECAKU;
+      const kupno = new Przycisk(this, {
+        x: rx + rw - 48,
+        y: y + rh / 2,
+        w: 84,
+        h: 38,
+        tekst: pelny ? 'Pełno' : 'Kup',
+        rozmiar: 15,
+        glowny: !pelny && stac,
+        glebia: G + 4,
+        akcja: () => {
+          if (!this.kupPrzedmiot(k)) return;
+          zamknij();
+          this.pokazSklep();
+        },
+      });
+      kupno.ustaw(nasz && this.bohaterObecny && stac && !pelny);
+      warstwa.push(kupno.kontener);
+    });
+
+    const zamknijPrzycisk = new Przycisk(this, {
+      x: cx,
+      y: gora + wys - 34,
+      w: 200,
+      h: 42,
+      tekst: 'Zamknij',
+      rozmiar: 15,
+      glebia: G + 4,
+      akcja: () => zamknij(),
+    });
+    warstwa.push(zamknijPrzycisk.kontener);
+  }
+
+  /** Kupno jednej sztuki do plecaka trenera (`kupWPokemarcie`). */
+  private kupPrzedmiot(k: PrzedmiotPlecaka): boolean {
+    if (this.zamek.wlasciciel !== 'gracz') return false;
+    const blad = kupWPokemarcie(this.stan.skarbiec, this.stan.bohater, this.zamek.postawione ?? [], k, this.bohaterObecny);
+    if (blad) {
+      this.komunikat.setText(`Pokémart: ${blad}`);
+      return false;
+    }
+    this.komunikat.setText(`Pokémart: ${PRZEDMIOTY[k].nazwa} w plecaku (× ${plecakBohatera(this.stan.bohater)[k]}).`);
+    this.odswiez();
+    return true;
+  }
+
   private pokazListeBudowy() {
     const postawione = this.zamek.postawione ?? [];
     // Trzy ratusze to jeden budynek w trzech stopniach: na liście ma być
     // najbliższy stopień, a nie trzy wiersze, z których dwa są bez sensu.
     const najblizszyRatusz =
       ['ratusz1', 'ratusz2', 'ratusz3'].find((r) => !postawione.includes(r)) ?? 'ratusz3';
+    const najblizszySklep = ['sklep1', 'sklep2', 'sklep3'].find((r) => !postawione.includes(r)) ?? 'sklep3';
     const wiersze = this.profil.budynki.filter(
-      (b) => !b.id.startsWith('ratusz') || b.id === najblizszyRatusz
+      (b) =>
+        (!b.id.startsWith('ratusz') || b.id === najblizszyRatusz) &&
+        (!b.id.startsWith('sklep') || b.id === najblizszySklep)
     );
 
     // Okno jak wszystkie okna mapy: przyciemnienie i pergamin w złotej ramie.
     const szer = 700;
-    const wysWiersza = 58;
+    // Dziesięć wierszy (z Pokémartem) musi zmieścić się w oknie gry.
+    const wysWiersza = 54;
     // 70 na tytuł z ozdobnikiem u góry, 66 na przycisk u dołu — bez tego
     // zapasu „Zamknij" nachodził na ostatni wiersz.
     const wys = 70 + wiersze.length * wysWiersza + 66;
@@ -1515,6 +1720,12 @@ export class TownScene extends Phaser.Scene {
           ? `Daje ${b.dochod} pokeballi dziennie.`
           : `Teraz ${teraz} pokeballi dziennie, po rozbudowie ${b.dochod}.`
       );
+    }
+
+    if (b.rodzaj === 'sklep') {
+      const stopien = Number(b.id.slice(-1));
+      const towar = PRZEDMIOTY_PLECAKA.filter((k) => SKLEP[k].poziom === stopien).map((k) => PRZEDMIOTY[k].nazwa);
+      if (towar.length) wiersze.push(`W sklepie: ${towar.join(', ')}.`);
     }
 
     if (b.rodzaj === 'fort') {
@@ -1730,6 +1941,9 @@ const BUDYNKI_ID = [
   'siedlisko5',
   'siedlisko6',
   'specjalny',
+  'sklep1',
+  'sklep2',
+  'sklep3',
   // Etap 6: stoją od początku (`ProfilZamku.stale`).
   'centrum',
   'sala',
