@@ -303,7 +303,7 @@ export function planszaPrzygody(mapaId?: string, opcje: OpcjeStartu = {}): StanM
       obiekty.push({
         ...wspolne,
         rodzaj: 'skrzynia',
-        nazwa: 'Skrzynia',
+        nazwa: 'Zgubiony plecak',
         wariant: Math.floor(losuj() * 3),
         artefakt: artefakt ? ARTEFAKTY_LOSOWE[Math.floor(losuj() * ARTEFAKTY_LOSOWE.length)].id : undefined,
       });
@@ -352,7 +352,7 @@ export function planszaPrzygody(mapaId?: string, opcje: OpcjeStartu = {}): StanM
       obiekty.push({
         ...wspolne,
         rodzaj: 'jasnowidz',
-        nazwa: 'Chata Jasnowidza',
+        nazwa: 'Namiot Badaczki',
         zadanie: { surowiec: 'kamien', ile },
         nagroda: { artefakt: a.id },
       });
@@ -363,7 +363,7 @@ export function planszaPrzygody(mapaId?: string, opcje: OpcjeStartu = {}): StanM
       obiekty.push({
         ...wspolne,
         rodzaj: 'straznica',
-        nazwa: wpis.nazwa ?? `Strażnica (${KLUCZE[k].nazwa})`,
+        nazwa: wpis.nazwa ?? `Szlaban strażnika (${KLUCZE[k].nazwa})`,
         klucz: k,
       });
     } else if (wpis.rodzaj === 'namiot') {
@@ -371,7 +371,7 @@ export function planszaPrzygody(mapaId?: string, opcje: OpcjeStartu = {}): StanM
       obiekty.push({
         ...wspolne,
         rodzaj: 'namiot',
-        nazwa: wpis.nazwa ?? `Namiot klucznika (${KLUCZE[k].nazwa})`,
+        nazwa: wpis.nazwa ?? `Budka strażnika (${KLUCZE[k].nazwa})`,
         klucz: k,
       });
     } else if (wpis.rodzaj === 'potwor') {

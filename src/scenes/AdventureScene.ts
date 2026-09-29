@@ -4263,7 +4263,7 @@ export class AdventureScene extends Phaser.Scene {
       if (b.efekt.typ === 'gniazdo' && o.wlasciciel === 'gracz') return `${b.nazwa} — twoje\n${b.opis}`;
       return `${b.nazwa}\n${b.opis}`;
     }
-    if (o.rodzaj === 'skrzynia') return 'Skrzynia\nW środku pokeballe albo doświadczenie.';
+    if (o.rodzaj === 'skrzynia') return 'Zgubiony plecak\nW środku pokeballe albo doświadczenie.';
     if (o.rodzaj === 'artefakt') return `${o.nazwa}\nArtefakt — wzmacnia bohatera na stałe.`;
     return `${o.nazwa}\n+${o.ile} ${SUROWIEC_INFO[o.surowiec ?? 'pokeball'].dopelniacz}`;
   }
@@ -4636,7 +4636,7 @@ export class AdventureScene extends Phaser.Scene {
     const skrzynia = this.add.image(cx, gora + 44, 'm-skrzynia').setDepth(Z.overlay + 2);
     skrzynia.setScale(64 / Math.max(skrzynia.width, skrzynia.height));
     this.add
-      .text(cx, gora + 92, 'Skrzynia! Co wolisz?', stylEtykiety(22))
+      .text(cx, gora + 92, 'Zgubiony plecak! Co wolisz?', stylEtykiety(22))
       .setOrigin(0.5)
       .setDepth(Z.overlay + 2);
 
