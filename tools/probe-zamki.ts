@@ -21,7 +21,7 @@ import {
   zaplac,
   type Budynek,
 } from '../src/data/zamki';
-import type { Skarbiec } from '../src/data/mapa';
+import { TRENINGI_ZA_ZLOBEK, treningiNaTydzien, type Skarbiec } from '../src/data/mapa';
 
 let bledy = 0;
 const sprawdz = (co: string, ok: boolean, szczegol = '') => {
@@ -65,18 +65,19 @@ for (const [id, profil] of Object.entries(ZAMKI)) {
     siedliska.map((b) => suma(b.koszt)).join(' < ')
   );
 
-  // --- fort naprawdę zmienia przyrost ---
+  // --- Żłobek (fort) dokłada treningi pełną liczbą, przyrostu nie rusza ---
   const bazowy = [3, 2, 2, 1, 1, 1];
   const wszystkie = profil.budynki.map((b) => b.id);
-  const bezFortu = przyrostZamku(
-    wszystkie.filter((x) => x !== 'fort'),
-    bazowy
-  );
-  const zFortem = przyrostZamku(wszystkie, bazowy);
+  const bezFortu = wszystkie.filter((x) => x !== 'fort');
   sprawdz(
-    'fort podnosi przyrost we wszystkich siedliskach',
-    zFortem.every((x, i) => x > bezFortu[i]),
-    `${bezFortu.join(',')} → ${zFortem.join(',')}`
+    'Żłobek nie zmienia przyrostu młodych',
+    przyrostZamku(wszystkie, bazowy).join(',') === przyrostZamku(bezFortu, bazowy).join(',')
+  );
+  const rez = wszystkie.filter((x) => x.startsWith('siedlisko')).length;
+  sprawdz(
+    'Żłobek: +TRENINGI_ZA_ZLOBEK treningów z każdego rezerwatu',
+    treningiNaTydzien(wszystkie) - treningiNaTydzien(bezFortu) === rez * TRENINGI_ZA_ZLOBEK,
+    `${treningiNaTydzien(bezFortu)} → ${treningiNaTydzien(wszystkie)}`
   );
 
   // --- niepostawione siedlisko nie daje nic ---

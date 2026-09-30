@@ -248,9 +248,10 @@ const zasady = await page.evaluate(async () => {
   const m = await import('/src/data/mapa.ts');
   return { przyrost: m.PRZYROST_ODDZIALU, koszt: m.KOSZT_ODDZIALU, maks: m.MAKS_CZEKA };
 });
+// Żłobek (fort) nie mnoży już przyrostu — dokłada treningi pełną liczbą.
 sprawdz(
-  `fort podniósł przyrost powyżej gołej tabeli (${zasady.przyrost[0].toFixed(2)} i ${zasady.przyrost[1].toFixed(2)} na dzień)`,
-  jutro.po[0] - jutro.przed[0] > zasady.przyrost[0] + 1e-9 && jutro.po[1] - jutro.przed[1] > zasady.przyrost[1] + 1e-9,
+  `przyrost młodych jak w tabeli, bez mnożnika (${zasady.przyrost[0].toFixed(2)} i ${zasady.przyrost[1].toFixed(2)} na dzień)`,
+  Math.abs(jutro.po[0] - jutro.przed[0] - zasady.przyrost[0]) < 1e-9 || jutro.po[0] === zasady.maks,
   `+${(jutro.po[0] - jutro.przed[0]).toFixed(3)}, +${(jutro.po[1] - jutro.przed[1]).toFixed(3)}`
 );
 sprawdz('w rezerwacie czeka najwyżej MAKS_CZEKA', jutro.po.every((x) => x <= zasady.maks), jutro.po.join(','));
