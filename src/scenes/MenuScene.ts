@@ -677,7 +677,10 @@ export class MenuScene extends Phaser.Scene {
     usunPostep();
     // Autozapis to „bieżąca gra" — po nowym starcie nie może nią zostać
     // misja ze starej kampanii. Zapisy w slotach zostają: to wybór gracza.
-    if (listaZapisow()[0]?.misja) usunZapis('auto');
+    if (listaZapisow()[0]?.misja) {
+      usunZapis('auto');
+      usunZapis('bitwa');
+    }
     this.registry.remove('kampania-widziane');
     this.idz('kampania');
   }

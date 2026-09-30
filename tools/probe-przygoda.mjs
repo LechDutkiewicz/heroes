@@ -382,13 +382,25 @@ const doZamku = await page.evaluate(() => {
 await page.waitForTimeout(1400);
 await scena('zamek');
 sprawdz(`wejście do zamku (${doZamku.nazwa}) otwiera ekran miasta`, true);
-const poCentrum = await page.evaluate(() =>
+// Wejście do miasta już nie budzi za darmo — ratuje Centrum, za jagody
+// (`centrum.ts`, zgłoszenie gracza: „odratowanie powinno coś kosztować").
+const poWejsciu = await page.evaluate(() =>
   window.__game.scene.getScene('zamek').stan.bohater.armia.filter((o) => o?.omdlaly).length
 );
+sprawdz('samo wejście do miasta nie budzi zemdlonych', poWejsciu === doZamku.zemdlonych, `${doZamku.zemdlonych} → ${poWejsciu}`);
+const poCentrum = await page.evaluate(() => {
+  const t = window.__game.scene.getScene('zamek');
+  t.stan.skarbiec.jagoda = 50;
+  const przed = t.stan.skarbiec.jagoda;
+  const centrum = t.profil.stale.find((b) => b.rodzaj === 'centrum');
+  t.pokazBudynek(centrum);
+  t.dzialaj();
+  return { zemdlonych: t.stan.bohater.armia.filter((o) => o?.omdlaly).length, jagody: przed - t.stan.skarbiec.jagoda };
+});
 sprawdz(
-  'Centrum Pokemon we własnym zamku budzi zemdlone stworki',
-  doZamku.zemdlonych > 0 && poCentrum === 0,
-  `zemdlonych ${doZamku.zemdlonych} → ${poCentrum}`
+  'Centrum Pokemon za jagody budzi zemdlone stworki',
+  doZamku.zemdlonych > 0 && poCentrum.zemdlonych === 0 && poCentrum.jagody > 0,
+  `zemdlonych ${doZamku.zemdlonych} → ${poCentrum.zemdlonych}, jagód ${poCentrum.jagody}`
 );
 
 const werbunek = await page.evaluate(async () => {

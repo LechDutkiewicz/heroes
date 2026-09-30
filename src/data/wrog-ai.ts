@@ -76,7 +76,7 @@ import {
 import { SLOTY_ARMII, dolacz, zywe } from './armia';
 import { NA_POLU, makeRng } from './battle';
 import { factionById } from './factions';
-import { jednostkiBitwy, najsilniejsiNaPrzod, nowyStworek, rozegrajBitwe, rozliczDruzyne } from './stworki';
+import { jednostkiBitwy, ktosNaNogach, najsilniejsiNaPrzod, nowyStworek, rozegrajBitwe, rozliczDruzyne } from './stworki';
 import { moznaBudowac, profilZamku } from './zamki';
 
 /** Widok mapy z perspektywy `kto`: to samo `s`, inny bohater na czele. */
@@ -363,7 +363,10 @@ function znajdzCel(s: StanMapy, kto: Wlasciciel, ziarno: number): Cel | undefine
   const drugi: Wlasciciel = kto === 'gracz' ? 'wrog' : 'gracz';
   const rywal = bohaterOf(s, drugi);
   const wolno = kto === 'gracz' || s.dzien >= (s.dzienNatarcia ?? DZIEN_PIERWSZEGO_NATARCIA);
-  if (wolno && trenerWGrze(s, drugi) && mgla[rywal.y]?.[rywal.x]) {
+  // Trenera, któremu nikt nie stoi na nogach, się nie wyzywa — i sam też
+  // nie wyzywa (zgłoszenie gracza: zemdlona drużyna nie atakuje bohatera).
+  const obajGotowi = ktosNaNogach(rywal.armia) && ktosNaNogach(bohater.armia);
+  if (wolno && obajGotowi && trenerWGrze(s, drugi) && mgla[rywal.y]?.[rywal.x]) {
     const kroki = trasa(widok, rywal.x, rywal.y);
     if (kroki?.length && wygramy(zywe(bohater.armia), zywe(rywal.armia), ziarno, NA_POLU)) {
       const koszt = kroki.reduce((a, k) => a + k.koszt, 0);
@@ -598,7 +601,10 @@ function ruszSie(s: StanMapy, kto: Wlasciciel, ziarno: number) {
       const k = cel.kroki[i];
       // Rywal na następnym polu — pojedynek z sąsiedniego pola, koniec marszu.
       if (rywalNa(s, k.x, k.y, kto)) {
-        pojedynek(s, kto, ziarno);
+        // Z zemdloną drużyną (którejkolwiek strony) nie ma pojedynku —
+        // marsz po prostu staje przed rywalem.
+        if (ktosNaNogach(bohater.armia) && ktosNaNogach(bohaterOf(s, kto === 'gracz' ? 'wrog' : 'gracz').armia))
+          pojedynek(s, kto, ziarno);
         lepkiCel.delete(bohater);
         return;
       }

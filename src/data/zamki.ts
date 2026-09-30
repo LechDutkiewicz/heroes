@@ -278,7 +278,7 @@ const STALE: Array<Pick<Budynek, 'id' | 'rodzaj' | 'nazwa' | 'opis' | 'x' | 'y' 
     id: 'centrum',
     rodzaj: 'centrum',
     nazwa: 'Centrum Pokemon',
-    opis: 'Tu zemdlone stworki wracają do sił — wystarczy, że trener wejdzie do miasta.',
+    opis: 'Tu zemdlone stworki wracają do sił za jagody: jedna jagoda za każde trzy poziomy stworka. Garnizon miasta wstaje za darmo.',
     x: 0.88,
     y: 0.86,
     skala: 0.45,

@@ -2011,7 +2011,10 @@ export class KampaniaScene extends Phaser.Scene {
     const tak = tabliczka(this, EKRAN_W / 2 - 96, y + h - 40, 170, 44, 'Tak, od nowa', false, 16, () => {
       usunPostep();
       // Autozapis misji ze starej kampanii nie może zostać „bieżącą grą".
-      if (listaZapisow()[0]?.misja) usunZapis('auto');
+      if (listaZapisow()[0]?.misja) {
+      usunZapis('auto');
+      usunZapis('bitwa');
+    }
       this.registry.remove('kampania-widziane');
       this.scene.restart();
     });

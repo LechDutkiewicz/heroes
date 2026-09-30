@@ -100,8 +100,10 @@ console.log('\n=== rywal wyzywa gracza w swojej turze ===');
   const p = s.pojedynki?.[0];
   sprawdz('pojedynek się odbył', !!p && p.wyzywajacy === 'wrog', JSON.stringify(s.pojedynki));
   sprawdz('silniejszy rywal wygrywa', p?.zwyciezca === 'wrog');
-  sprawdz('gracz płaci i wraca do Centrum z obudzoną drużyną',
-    s.skarbiec.pokeball === 80 && s.bohater.x === z.x && s.bohater.y === z.y && !s.bohater.armia.some((o) => o?.omdlaly));
+  // Porażka nie teleportuje do miasta i nie budzi drużyny (zgłoszenie
+  // gracza): gracz płaci, zostaje obok rywala, zemdlonych ratuje w Centrum.
+  sprawdz('gracz płaci, zostaje na miejscu z zemdloną drużyną',
+    s.skarbiec.pokeball === 80 && (s.bohater.x !== z.x || s.bohater.y !== z.y) && s.bohater.armia.some((o) => o?.omdlaly));
   sprawdz('drużyna rywala zebrała doświadczenie', (s.wrogBohater.armia[0]?.dosw ?? 0) > 5 * 40 * 39);
 }
 {

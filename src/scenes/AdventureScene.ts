@@ -54,6 +54,7 @@ import {
   type Pytanie,
   type StanMapy,
   type WyborSkrzyni,
+  polePoUcieczce,
 } from '../data/mapa';
 import { planszaPrzygody } from '../data/plansza';
 import { ALL_SPRITES, factionById } from '../data/factions';
@@ -78,8 +79,9 @@ import type { PoseName } from '../visual/unitView';
 import { planszaPoId } from '../data/mapy';
 import { turaWroga } from '../data/wrog-ai';
 import { SLOTY_ARMII, zywe } from '../data/armia';
-import { doswDoPoziomu, gatunek, ktosNaNogach, napisPoziomu, obudz, rozdajDosw } from '../data/stworki';
-import { autozapis, nazwaSlotu } from '../data/zapis';
+import { doswDoPoziomu, gatunek, ktosNaNogach, napisPoziomu } from '../data/stworki';
+import { DOSW_BOHATERA_ZA_WALKE, awanseZWierszy, rozliczDruzyne } from '../data/podsumowanie';
+import { autozapis, autozapisPrzedWalka, nazwaSlotu } from '../data/zapis';
 import { pokazWczytanie, pokazZapis } from '../visual/oknoZapisu';
 import { KAMPANIA, misjaPoId, wczytajPostep } from '../data/kampania';
 import { celSlowami, coSieStalo, ocenGre, przyczynaPorazki, warunkiGry } from '../data/wynik';
@@ -218,7 +220,8 @@ type SylwetkaBohatera = { skala: number; kotwica: number; stopy: number; glowa: 
 /** Klucze, pod którymi stan przeżywa przejście do bitwy i z powrotem. */
 const KLUCZ_STANU = 'stan-mapy';
 /** Skład armii sprzed bitwy (slot → liczebność) — z niego Uzdrowiciel liczy straty. */
-const KLUCZ_PRZED_BITWA = 'armia-przed-bitwa';
+/** Pole, z którego trener wszedł tam, gdzie zaczęła się walka — dokąd cofa się po porażce. */
+const KLUCZ_UCIECZKI = 'pole-ucieczki';
 const KLUCZ_WYNIKU = 'wynik-bitwy';
 /** Katalog tła, z którego wczytano `plansza-0` — patrz `preload`. */
 const KLUCZ_TLA = 'tlo-planszy';
@@ -536,6 +539,8 @@ export class AdventureScene extends Phaser.Scene {
   /** Chorągwie zajętych budowli — falują razem z proporcem (`ozywBohatera`). */
   private flagiBudowli: Phaser.GameObjects.Image[] = [];
   private klatkaProporca = 0;
+  /** Pole przed ostatnim krokiem — dokąd trener cofa się po przegranej walce. */
+  private poprzedniePole?: { x: number; y: number };
   private proporzecOrigin = { x: 0, y: 1 };
   /** Kopie klatki bohatera jako ciemny obrys — `rysujBohatera`. */
   private obrysBohatera: Phaser.GameObjects.Sprite[] = [];
@@ -4617,6 +4622,7 @@ export class AdventureScene extends Phaser.Scene {
         this.bohaterSprite.play(`chod-${kier}`);
       }
       this.stan.bohater.ruch -= k.koszt;
+      this.poprzedniePole = { x: this.stan.bohater.x, y: this.stan.bohater.y };
       this.stan.bohater.x = k.x;
       this.stan.bohater.y = k.y;
       if (odslon(this.stan) > 0) this.malujMgle();
@@ -4993,25 +4999,7 @@ export class AdventureScene extends Phaser.Scene {
     this.scene.start('bohater');
   }
 
-  /**
-   * Uzdrowiciel: część stworków zemdlonych w tej bitwie od razu wraca do
-   * siebie po wygranej. Liczymy tylko tych, którzy zemdleli TERAZ — kto
-   * ruszał do boju już zemdlony (wcale nie walczył), czeka na Centrum.
-   * Zaokrąglenie w górę: przy jednym zemdlonym nawet pierwszy stopień
-   * umiejętności coś daje, a nie jest pustym wpisem w karcie bohatera.
-   */
-  private uzdrowiciel(): number {
-    const odsetek = efekt(this.stan.bohater, 'leczenie');
-    const przed = this.registry.get(KLUCZ_PRZED_BITWA) as Array<{ slot: number }> | undefined;
-    this.registry.remove(KLUCZ_PRZED_BITWA);
-    if (odsetek <= 0 || !przed) return 0;
-    const zemdleli = przed
-      .map((w) => this.stan.bohater.armia[w.slot])
-      .filter((o): o is Oddzial => !!o?.omdlaly);
-    const wraca = Math.ceil(zemdleli.length * odsetek);
-    zemdleli.slice(0, wraca).forEach((o) => delete o.omdlaly);
-    return Math.min(wraca, zemdleli.length);
-  }
+
 
   /**
    * Okno awansu: co dał poziom i JAKĄ UMIEJĘTNOŚĆ wybierasz.
@@ -5149,26 +5137,23 @@ export class AdventureScene extends Phaser.Scene {
     // Wszyscy zemdleni: nie ma kim walczyć. Bitwa bez ani jednego stworka
     // byłaby przegrana, zanim się zaczęła — mówimy wprost, co zrobić.
     if (!ktosNaNogach(this.stan.bohater.armia)) {
-      this.napisUlotny('Twoje stworki są zemdlone.\nOdpocznijcie w mieście.');
+      this.napisUlotny('Twoje stworki są zemdlone.\nOdratujesz je w Centrum Pokemon.');
       return;
     }
     this.zajety = true;
     stopMusic(this);
     stopAmbient(this);
-    // Skład PRZED bitwą: Uzdrowiciel liczy straty, a te znamy tylko przez
-    // porównanie z tym, co ruszyło do boju. Wynik bitwy zna wyłącznie
-    // ocalałych.
-    this.registry.set(
-      KLUCZ_PRZED_BITWA,
-      this.stan.bohater.armia
-        .map((od, slot) => (od && od.ile > 0 && !od.omdlaly ? { slot } : null))
-        .filter(Boolean)
-    );
+    // Dokąd trener cofnie się po porażce (`polePoUcieczce`).
+    this.registry.set(KLUCZ_UCIECZKI, this.poprzedniePole ?? null);
     // Walka w sali: najpierw lider wita trenera (etap 6), jak w serialu.
     const sala = o.rodzaj === 'zamek' && o.wlasciciel !== 'gracz' && o.frakcjaZamku !== 'bor';
     if (sala) this.kartaLidera(odznakaSali(o.nazwa), liderSali(o.nazwa), liderSali(o.nazwa).powitanie, 2100);
     else this.napisUlotny(`${o.nazwa}\nDo boju!`);
     this.registry.set(KLUCZ_STANU, this.stan);
+    // Autozapis przed walką (jak „battle" w HotA): gdy walka okazała się za
+    // trudna, gracz wczytuje stan sprzed niej. Ekran podsumowania walki ma
+    // też „Jeszcze raz" — to ten sam pomysł bez wychodzenia z walki.
+    autozapisPrzedWalka(this.stan);
     this.time.delayedCall(sala ? 2200 : 750, () => {
       this.scene.start('battle', {
         // Każdy stos jedzie do bitwy ZE SWOIM numerem slotu. Bez tego wynik
@@ -5831,28 +5816,14 @@ export class AdventureScene extends Phaser.Scene {
     const o = this.stan.obiekty.find((x) => x.id === wynik.oObiekt);
 
     // Stworki wracają do swoich slotów — to te same postacie, więc nie
-    // składamy drużyny od nowa, tylko zaznaczamy, kto zemdlał. Bitwa oddaje
-    // każdy wpis z numerem slotu i liczbą stojących na nogach (0 albo 1).
-    let awanse: { nazwa: string; poziom: number; ewolucja?: { z: string; na: string } }[] = [];
-    if (wynik.armia) {
-      const ocalali = this.stan.bohater.armia.map(() => 1);
-      const walczyli = this.stan.bohater.armia.map(() => false);
-      for (const od of wynik.armia) {
-        const slot = typeof od.slot === 'number' ? od.slot : -1;
-        if (slot < 0 || slot >= SLOTY_ARMII || !this.stan.bohater.armia[slot]) continue;
-        walczyli[slot] = true;
-        ocalali[slot] = od.ile > 0 ? 1 : 0;
-      }
-      this.stan.bohater.armia.forEach((o, i) => {
-        if (o && walczyli[i] && ocalali[i] <= 0) o.omdlaly = true;
-      });
-      if (wynik.wygrana) {
-        awanse = rozdajDosw(
-          this.stan.bohater.armia.map((o, i) => (walczyli[i] ? o : null)),
-          wynik.pokonani ?? []
-        );
-      }
-    }
+    // składamy drużyny od nowa, tylko zaznaczamy, kto zemdlał, rozdajemy
+    // doświadczenie i (Uzdrowiciel) stawiamy część zemdlonych na nogi.
+    // Ta sama funkcja liczy podgląd na ekranie podsumowania walki.
+    const wiersze = wynik.armia
+      ? rozliczDruzyne(this.stan.bohater.armia, wynik, wynik.wygrana ? efekt(this.stan.bohater, 'leczenie') : 0)
+      : [];
+    const awanse = awanseZWierszy(wiersze, this.stan.bohater.armia);
+    const wyleczeni = wiersze.filter((w) => w.uzdrowiony).length;
 
     // Pokeballe rzucone w bitwie i złapane dzikie stworki (etap 5). Złapany
     // dołącza do drużyny w pierwszym wolnym slocie — bitwa pozwalała rzucać
@@ -5909,8 +5880,7 @@ export class AdventureScene extends Phaser.Scene {
       } else if (o) {
         o.zebrany = true;
       }
-      const wyleczeni = this.uzdrowiciel();
-      const nagroda = Math.round(80 * (1 + efekt(this.stan.bohater, 'nauka')));
+      const nagroda = Math.round(DOSW_BOHATERA_ZA_WALKE * (1 + efekt(this.stan.bohater, 'nauka')));
       const poziomPrzed = poziom(this.stan.bohater.doswiadczenie);
       this.stan.bohater.doswiadczenie += nagroda;
       const poziomPo = poziom(this.stan.bohater.doswiadczenie);
@@ -5973,21 +5943,35 @@ export class AdventureScene extends Phaser.Scene {
       // rozstrzygnięcie po każdym zdarzeniu, także po powrocie z bitwy.
 
     } else {
-      // Przegrana nie kończy gry: bohater wraca do zamku i traci resztę dnia.
-      // Dla ośmiolatka „przegrałeś, zacznij od nowa" to koniec zabawy.
-      const zamek = this.stan.obiekty.find((x) => x.rodzaj === 'zamek' && x.wlasciciel === 'gracz');
-      if (zamek) {
-        this.stan.bohater.x = zamek.x;
-        this.stan.bohater.y = zamek.y;
-      }
-      this.stan.bohater.ruch = 0;
-      // W zamku jest Centrum Pokemon: zemdlone stworki wstają od razu, tak
-      // jak w grach trener budzi się w ostatnim odwiedzonym Centrum.
-      const obudzeni = zamek ? obudz(this.stan.bohater.armia) : 0;
-      this.time.delayedCall(400, () =>
-        this.napisUlotny(obudzeni ? 'Porażka.\nWracasz do Centrum Pokemon.' : 'Porażka.\nWracasz do miasta.')
-      );
+      // Przegrana nie kończy gry i nie teleportuje do miasta: trener ustępuje
+      // pola (`polePoUcieczce`), a zemdlone stworki ratuje w Centrum za jagody.
+      // Bez sprawnych stworków może chodzić i zbierać, ale niczego nie zajmie
+      // ani nikogo nie zaatakuje (`odwiedz`, `zacznijBitwe`).
+      this.uciekniPoPorazce();
+      this.time.delayedCall(400, () => this.napisUlotny(this.napisPorazki()));
     }
+  }
+
+  /** Cofnięcie o pole po przegranej (`polePoUcieczce`). */
+  private uciekniPoPorazce() {
+    const skad = this.registry.get(KLUCZ_UCIECZKI) as { x: number; y: number } | null | undefined;
+    this.registry.remove(KLUCZ_UCIECZKI);
+    const cel = polePoUcieczce(this.stan, skad);
+    if (!cel) return;
+    this.stan.bohater.x = cel.x;
+    this.stan.bohater.y = cel.y;
+  }
+
+  /** Napis po przegranej: co się stało i co teraz zrobić. */
+  private napisPorazki(przedtem: string[] = []) {
+    const nikt = !ktosNaNogach(this.stan.bohater.armia);
+    return [
+      ...przedtem,
+      'Porażka — cofasz się.',
+      nikt
+        ? 'Stworki są zemdlone: odratujesz je w Centrum Pokemon.'
+        : 'Zemdlone stworki odratujesz w Centrum Pokemon.',
+    ].join('\n');
   }
 
   /**
@@ -6007,7 +5991,6 @@ export class AdventureScene extends Phaser.Scene {
     });
     const imie = r.imie;
     if (wygrana) {
-      this.uzdrowiciel();
       const nagroda = rozliczPojedynek(this.stan, 'gracz');
       this.time.delayedCall(900, () =>
         this.napisUlotny(
@@ -6023,13 +6006,11 @@ export class AdventureScene extends Phaser.Scene {
         )
       );
     } else {
-      this.registry.remove(KLUCZ_PRZED_BITWA);
       const nagroda = rozliczPojedynek(this.stan, 'wrog');
+      this.registry.remove(KLUCZ_UCIECZKI);
       this.time.delayedCall(400, () =>
         this.napisUlotny(
-          [`${imie} wygrywa pojedynek.`, nagroda ? `Płacisz nagrodę: ${nagroda} pokeballi` : '', 'Wracasz do Centrum Pokemon.']
-            .filter(Boolean)
-            .join('\n')
+          this.napisPorazki([`${imie} wygrywa pojedynek.`, nagroda ? `Płacisz nagrodę: ${nagroda} pokeballi` : ''].filter(Boolean))
         )
       );
     }

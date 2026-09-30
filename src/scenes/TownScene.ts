@@ -37,6 +37,7 @@ import {
 } from '../data/przedmioty';
 import { MNOZNIK_FORTU } from '../data/zasady-h3';
 import { POZIOM_MLODEGO, napisPoziomu, nowyStworek, obudz } from '../data/stworki';
+import { kosztWszystkich, ratuj, zemdleni } from '../data/centrum';
 import { FACTIONS, factionById } from '../data/factions';
 import { type Armia, dolacz, znormalizuj, zywe } from '../data/armia';
 import { PanelArmii } from '../visual/panelArmii';
@@ -1215,13 +1216,22 @@ export class TownScene extends Phaser.Scene {
       this.pokazKoszt({});
       const nasz = this.zamek.wlasciciel === 'gracz';
       if (b.rodzaj === 'centrum') {
-        // Zemdleni w garnizonie (i w drużynie, gdy trener jest w mieście).
-        const zemdleni = [...(this.bohaterObecny ? this.stan.bohater.armia : []), ...(this.zamek.garnizon ?? [])].filter(
-          (o) => o?.omdlaly
-        ).length;
-        this.kartaOpis.setText(`${b.opis}\n\n${zemdleni ? `Zemdlonych: ${zemdleni}.` : 'Wszyscy są w formie.'}`);
-        this.kartaPrzycisk.setLabel(zemdleni ? 'Obudź' : 'Wszyscy zdrowi');
-        this.kartaPrzycisk.ustaw(nasz && zemdleni > 0);
+        // Drużyna trenera (gdy jest w mieście) — za jagody (`centrum.ts`);
+        // garnizon — za darmo.
+        const druzyna = this.bohaterObecny ? zemdleni(this.stan.bohater.armia) : [];
+        const koszt = this.bohaterObecny ? kosztWszystkich(this.stan.bohater.armia) : 0;
+        const garnizon = (this.zamek.garnizon ?? []).filter((o) => o?.omdlaly).length;
+        const linie = [
+          druzyna.length
+            ? `Zemdlonych w drużynie: ${druzyna.length} — odratowanie ${koszt} ${koszt === 1 ? 'jagoda' : koszt < 5 ? 'jagody' : 'jagód'}.`
+            : '',
+          garnizon ? `Garnizon: ${garnizon} wstanie za darmo.` : '',
+          !druzyna.length && !garnizon ? 'Wszyscy są w formie.' : '',
+        ].filter(Boolean);
+        this.kartaOpis.setText(`${b.opis}\n\n${linie.join('\n')}`);
+        if (druzyna.length) this.pokazKoszt({ jagoda: koszt });
+        this.kartaPrzycisk.setLabel(druzyna.length || garnizon ? 'Odratuj' : 'Wszyscy zdrowi');
+        this.kartaPrzycisk.ustaw(nasz && druzyna.length + garnizon > 0);
       } else {
         const o = this.panel.wybranyStworek;
         this.kartaOpis.setText(
@@ -1796,8 +1806,15 @@ export class TownScene extends Phaser.Scene {
       return;
     }
     if (b.rodzaj === 'centrum') {
-      const ile = (this.bohaterObecny ? obudz(this.stan.bohater.armia) : 0) + obudz(this.zamek.garnizon ?? []);
-      this.komunikat.setText(ile ? `Centrum Pokemon: ${ile} × znów w formie!` : 'Centrum Pokemon: wszyscy są w formie.');
+      const w = this.bohaterObecny ? ratuj(this.stan.bohater.armia, this.stan.skarbiec) : undefined;
+      const g = obudz(this.zamek.garnizon ?? []);
+      const napis = [
+        w?.zaDarmo ? 'Centrum pomaga za darmo: jeden stworek wraca do sił.' : '',
+        w && !w.zaDarmo && w.odratowani ? `Odratowani: ${w.odratowani} za ${w.jagody} jag.` : '',
+        g ? `Garnizon: ${g} × znów w formie.` : '',
+        w?.zostalo ? `Nie starczyło jagód dla ${w.zostalo}.` : '',
+      ].filter(Boolean);
+      this.komunikat.setText(napis.length ? `Centrum Pokemon: ${napis.join(' ')}` : 'Centrum Pokemon: wszyscy są w formie.');
       this.odswiez();
       return;
     }

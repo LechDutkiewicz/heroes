@@ -2602,3 +2602,38 @@ generowały.
 dużych planszach, kopalnie nie dosunięte do klocków gór (generator nie wie
 o sąsiedztwie), krzaki bagna/zimy ze starego zestawu. Koszt grafik mapy
 ~$7,3 z zatwierdzonych $10.
+
+## Po walce: podsumowanie, autozapisy, porażka, Centrum za jagody (2026-09-30)
+
+**Co działa.** Po każdej walce okno podsumowania jak w Heroes 3
+(`src/visual/podsumowanieWalki.ts`): pokonani przeciwnicy z portretami,
+złapani, doświadczenie trenera (i czy awansuje), każdy stworek z poziomem,
+zdobytym doświadczeniem, awansem/ewolucją albo „zemdlał". „Jeszcze raz"
+rozgrywa tę samą walkę od początku (`BattleScene.daneStartowe`, wynik z
+rejestru znika), „Dalej" wraca na mapę. Podgląd liczy ta sama funkcja co
+mapa (`rozliczDruzyne` w `src/data/podsumowanie.ts`) na kopii drużyny.
+Sondy (`rozstrzygnijNatychmiast`) idą prosto na mapę, bez okna.
+
+Autozapisy: `auto` na koniec tury (jak było) i nowy `bitwa` — „Autozapis
+przed walką" (`autozapisPrzedWalka` w `zacznijBitwe`), jak „battle" w HotA.
+
+Porażka nie teleportuje do miasta: trener cofa się na pole, z którego
+przyszedł (`polePoUcieczce`), stworki zostają zemdlone. Trener bez nikogo
+na nogach chodzi i zbiera, ale nie zajmie kopalni, gniazda ani miasta
+(`ZEMDLENI_NIE_ZAJMUJA` w `odwiedz`) i nie zaczyna walki; AI nie wyzywa
+na pojedynek trenera z zemdloną drużyną (i sama z taką nie wyzywa).
+Przegrany pojedynek gracza: płaci nagrodę i zostaje na miejscu.
+
+Centrum Pokemon ratuje drużynę za jagody: jagoda za każde rozpoczęte trzy
+poziomy (`src/data/centrum.ts`), od najtańszego; garnizon wstaje za darmo.
+Wejście do miasta i nowy tydzień nie budzą już drużyny gracza za darmo
+(AI dalej tak, bo nie liczy jagód). Gdy wszyscy leżą, a jagód nie ma na
+nikogo, Centrum stawia jednego za darmo — porażka nie zamyka gry.
+
+Uzdrowiciel zostaje: z ceną w Centrum znów ma sens (część zemdlonych wstaje
+po wygranej bez płacenia) — liczy go `rozliczDruzyne`.
+
+**Sondy.** Nowa `tools/probe-porazka.ts`; `probe-przygoda.mjs` (Centrum
+za jagody) i `probe-pojedynki.ts` (porażka bez teleportu) zaktualizowane.
+`probe-bohater.mjs` (klik w bohatera na mapie) pada już na bazie — do
+sprawdzenia osobno.
