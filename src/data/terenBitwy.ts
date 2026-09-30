@@ -22,15 +22,35 @@ export interface OpisTerenuBitwy {
 
 const DRZEWA = (z: string) => [`${z}/las-1x1-a`, `${z}/las-1x1-b`];
 const SKALA = (z: string) => [`${z}/skala-1x1`];
+const P = (...n: string[]) => n.map((x) => `przeszkoda-${x}`);
 
+// Każdy obrazek najwyżej raz na polu (`scatterObstacles` losuje bez
+// powtórzeń) — gracz: „3 razy ta sama skała", „to samo drzewo dwa razy,
+// raz mniejsze". Zestawy mają co najmniej tyle obrazków, ile przeszkód
+// może stanąć (OBSTACLES_MAX).
 export const TERENY_BITWY: Record<TerenBitwy, OpisTerenuBitwy> = {
-  laka: { key: 'laka', label: 'Łąka', obstacles: [...DRZEWA('trawa'), ...DRZEWA('trawa'), ...SKALA('trawa')] },
-  las: { key: 'las', label: 'Leśna polana', obstacles: [...DRZEWA('trawa'), ...DRZEWA('trawa'), ...SKALA('trawa')] },
-  piasek: { key: 'piasek', label: 'Plaża', obstacles: ['przeszkoda-palma', 'przeszkoda-palma', ...SKALA('trawa')] },
-  ziemia: { key: 'ziemia', label: 'Pustkowie', obstacles: ['przeszkoda-krzak-suchy', ...SKALA('trawa'), ...SKALA('trawa')] },
-  bagno: { key: 'bagno', label: 'Bagno', obstacles: [...DRZEWA('bagno'), ...DRZEWA('bagno'), ...SKALA('bagno')] },
-  snieg: { key: 'snieg', label: 'Śnieżne pole', obstacles: [...DRZEWA('zima'), ...DRZEWA('zima'), ...SKALA('zima')] },
+  laka: { key: 'laka', label: 'Łąka', obstacles: [...DRZEWA('trawa'), ...SKALA('trawa'), ...P('kloda', 'pniak', 'krzak-kwiaty')] },
+  las: {
+    key: 'las',
+    label: 'Leśna polana',
+    obstacles: [...DRZEWA('trawa'), ...P('paproc', 'pien-grzyby', 'glaz-mech', 'pniak')],
+  },
+  piasek: {
+    key: 'piasek',
+    label: 'Plaża',
+    obstacles: [...P('palma', 'muszla', 'drewno-wyrzucone', 'kamienie-plaza'), ...SKALA('trawa')],
+  },
+  ziemia: {
+    key: 'ziemia',
+    label: 'Pustkowie',
+    obstacles: [...P('krzak-suchy', 'kaktus', 'suche-drzewo', 'glaz-pekniety'), ...SKALA('trawa')],
+  },
+  bagno: { key: 'bagno', label: 'Bagno', obstacles: [...DRZEWA('bagno'), ...SKALA('bagno'), ...P('trzciny', 'pniak-bagno', 'grzyby-bagno')] },
+  snieg: { key: 'snieg', label: 'Śnieżne pole', obstacles: [...DRZEWA('zima'), ...SKALA('zima'), ...P('lod', 'balwan', 'krzak-szron')] },
 };
+
+/** Wysokie przeszkody (drzewa, palma, kaktus, trzciny) — reszta to niskie kępy i głazy. */
+export const wysokaPrzeszkoda = (kind: string) => /(las-|palma|kaktus|suche-drzewo|trzciny|pien-grzyby|lod|balwan)/.test(kind);
 
 /** Wszystkie pliki przeszkód (do wczytania w scenie bitwy). */
 export const PRZESZKODY_BITWY = [...new Set(Object.values(TERENY_BITWY).flatMap((t) => t.obstacles))];

@@ -130,7 +130,7 @@ import { RYWAL_ID, poziom, type StanMapy } from '../data/mapa';
 import { DOSW_BOHATERA_ZA_WALKE, type WynikDruzyny, rozliczDruzyne } from '../data/podsumowanie';
 import { efekt } from '../data/umiejetnosci';
 import { nazwaTrzeciego } from '../data/ataki';
-import { PRZESZKODY_BITWY, TERENY_BITWY, type OpisTerenuBitwy, type TerenBitwy } from '../data/terenBitwy';
+import { PRZESZKODY_BITWY, TERENY_BITWY, wysokaPrzeszkoda, type OpisTerenuBitwy, type TerenBitwy } from '../data/terenBitwy';
 import { pokazPodsumowanieWalki } from '../visual/podsumowanieWalki';
 import {
   GUARD_REDUCTION,
@@ -310,8 +310,8 @@ const CARD_RIGHT_X = BOARD_X + BOARD_W - CARD_W - 10;
  */
 const TERRAINS = Object.values(TERENY_BITWY);
 
-/** Drobne przeszkody (skały, suche krzaki) rysujemy mniej niż drzewa. */
-const isSmallObstacle = (kind: string) => /(skala|krzak)/.test(kind);
+/** Drobne przeszkody (skały, krzaki, pnie) rysujemy mniej niż drzewa. */
+const isSmallObstacle = (kind: string) => !wysokaPrzeszkoda(kind);
 
 /** Klucz tekstury przeszkody: klocek mapy (`zestaw/plik`) albo plik z `terrain/obstacles/`. */
 const kluczPrzeszkody = (kind: string) => (kind.includes('/') ? `k-${kind.replace('/', '-')}` : kind);
@@ -665,7 +665,12 @@ export class BattleScene extends Phaser.Scene {
     // a zgłoszenie błędu było wtedy tylko opowieścią. Efekty wizualne dalej
     // mogą losować swobodnie — one na przebieg walki nie wpływają.
     // Teren z mapy (`terenBitwy`); bez mapy — losowy, jak dotąd.
-    this.terrain = (this.zPrzygody?.teren && TERENY_BITWY[this.zPrzygody.teren]) || Phaser.Math.RND.pick(TERRAINS);
+    // `?teren=snieg` — pokazowa bitwa na zadanym terenie (zrzuty, podgląd).
+    const terenZAdresu = new URLSearchParams(location.search).get('teren') as TerenBitwy | null;
+    this.terrain =
+      (this.zPrzygody?.teren && TERENY_BITWY[this.zPrzygody.teren]) ||
+      (terenZAdresu && TERENY_BITWY[terenZAdresu]) ||
+      Phaser.Math.RND.pick(TERRAINS);
     this.drawArmies();
     this.applyHarnessParams();
     // Ikony muszą istnieć, zanim cokolwiek po nie sięgnie — rysują się do
@@ -806,9 +811,13 @@ export class BattleScene extends Phaser.Scene {
       else this.obstacles.delete(key);
     }
 
+    // Bez powtórzeń: talia obrazków terenu, tasowana od nowa dopiero, gdy
+    // przeszkód jest więcej niż obrazków.
+    let talia: string[] = [];
     for (const cell of placed) {
       const { x, y } = this.cellToXY(cell.col, cell.row);
-      const kind = Phaser.Math.RND.pick(this.terrain.obstacles);
+      if (!talia.length) talia = Phaser.Math.RND.shuffle([...this.terrain.obstacles]);
+      const kind = talia.pop()!;
       // Podstawa ma stanąć na środku hexa, a korona wystawać ponad niego.
       // Drzewo trzyma się pnia u dołu, płaska kępa czy pagórek siedzą środkiem
       // na polu — stąd różne punkty zaczepienia.

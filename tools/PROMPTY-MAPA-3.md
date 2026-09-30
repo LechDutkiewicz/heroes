@@ -759,3 +759,99 @@ One single palm tree with a curved trunk and a bright green crown, standing on a
 ```
 One single dry thorny bush with a few brown leaves and small rocks at its base, for a rough dry highland. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
 ```
+
+
+### Przeszkody walki — więcej wariantów (runda 2)
+
+Po uwadze gracza: „te same skały 3 razy". Każdy teren dostaje po trzy nowe
+przeszkody; w jednej bitwie obrazek się nie powtarza.
+
+<!-- plik: przeszkoda-kloda.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single fallen tree log lying on its side with patches of green moss and a small sprout, on a tiny patch of grass. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-pniak.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single cut tree stump with visible rings on top, roots spreading into a tiny patch of grass, two small mushrooms at its base. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-krzak-kwiaty.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single round leafy bush covered with small pink and yellow flowers, on a tiny patch of grass. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-paproc.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single lush clump of large green fern fronds with a few small forest plants, on a tiny patch of dark forest soil. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-pien-grzyby.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single old hollow tree trunk piece standing upright, covered with moss and a cluster of orange shelf mushrooms, on a tiny patch of forest soil. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-glaz-mech.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single rounded boulder heavily covered with green moss and small ferns around its base, on a tiny patch of forest floor. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-muszla.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single big spiral seashell, pale pink and cream, half buried in a tiny patch of sand with a small starfish next to it. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-drewno-wyrzucone.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single piece of bleached driftwood, twisted and smooth, lying on a tiny patch of sand with a bit of seaweed. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-kamienie-plaza.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single small pile of smooth grey beach rocks with a tiny tide pool and a red crab shell, on a tiny patch of wet sand. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-kaktus.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single tall green saguaro-like cactus with two arms and a small pink flower on top, on a tiny patch of dry brown earth. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-suche-drzewo.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single small dead leafless tree with twisted grey branches, on a tiny patch of cracked dry earth with a few pebbles. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-glaz-pekniety.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single large reddish brown boulder split by a crack, with a few smaller stones around it, on a tiny patch of dry earth. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-trzciny.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single dense clump of tall cattail reeds with brown tops and long green leaves, growing from a tiny patch of murky swamp water. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-pniak-bagno.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single old rotting tree stump covered in dark green moss and hanging vines, standing in a tiny puddle of murky swamp water. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-grzyby-bagno.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single cluster of three big purple and teal glowing mushrooms of different sizes, on a tiny patch of wet mossy ground. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-lod.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single jagged block of blue ice crystals sticking up from a tiny patch of snow, shiny and translucent. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-balwan.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single cheerful snowman made of three snowballs with a carrot nose, pebble eyes and a red scarf, on a tiny patch of snow. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-krzak-szron.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single low bush covered with white frost and a cap of snow, with a few red winter berries, on a tiny patch of snow. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
