@@ -5807,12 +5807,18 @@ export class AdventureScene extends Phaser.Scene {
           zlapani?: Array<Oddzial & { skad: number }>;
           wydanePokeballe?: number;
           plecak?: Plecak;
+          nauczeni?: number[];
         }
       | undefined;
     if (!wynik) return;
     this.registry.remove(KLUCZ_WYNIKU);
     // Co trener zużył z plecaka, tego już nie ma (`przedmioty.ts`).
     if (wynik.plecak) this.stan.bohater.plecak = pelnyPlecak(wynik.plecak);
+    // Dysk TM: atak ostateczny zostaje na zawsze (`przedmioty.ts`).
+    for (const slot of wynik.nauczeni ?? []) {
+      const o = this.stan.bohater.armia[slot];
+      if (o) o.tm = true;
+    }
     const o = this.stan.obiekty.find((x) => x.id === wynik.oObiekt);
 
     // Stworki wracają do swoich slotów — to te same postacie, więc nie

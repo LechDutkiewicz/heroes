@@ -28,6 +28,11 @@ import { atakiStworka, type Atak } from './ataki';
 export const SILA_ELIKSIRU = 1.5;
 /** Tarcza z plecaka: ciosy w stworka słabną do 2/3 (`przedmioty.ts`). */
 export const SILA_TARCZY = 0.67;
+/**
+ * Mega ewolucja (Kamień Mega, `przedmioty.ts`): stworek do końca bitwy bije
+ * o tyle mocniej i o tyle mniej obrywa. Raz na bitwę, jak w grach.
+ */
+export const SILA_MEGA = 1.3;
 
 /**
  * Pole walki z bajki: mała arena, nie pole bitwy dwóch armii. Walczy jeden
@@ -86,6 +91,8 @@ export interface SimUnit extends Cell {
   eliksir?: boolean;
   /** dostał Tarczę (`przedmioty.ts`) — ciosy w niego słabną do końca bitwy */
   tarcza?: boolean;
+  /** mega ewolucja (Kamień Mega) — silniejszy i twardszy do końca bitwy */
+  mega?: boolean;
   /**
    * Zadał już w tej bitwie zwykły cios — dopiero wtedy ataki specjalne są
    * gotowe (`atakDostepny`). Bez tego specjalny od pierwszej tury wystarczał
@@ -316,8 +323,10 @@ export function damageOf(b: Battle, attacker: SimUnit, target: SimUnit, atak = 0
   const tooFar =
     attacker.def.shooter && !pinned && hexDistance(attacker, target) > attacker.def.shootRange;
   const penalty = pinned || tooFar ? HALF_DAMAGE : 1;
-  const guard = (target.defending ? GUARD_REDUCTION : 1) * (target.tarcza ? SILA_TARCZY : 1);
-  const base = stackAtk(attacker.def, attacker) * (attacker.eliksir ? SILA_ELIKSIRU : 1);
+  const guard =
+    (target.defending ? GUARD_REDUCTION : 1) * (target.tarcza ? SILA_TARCZY : 1) * (target.mega ? 1 / SILA_MEGA : 1);
+  const base =
+    stackAtk(attacker.def, attacker) * (attacker.eliksir ? SILA_ELIKSIRU : 1) * (attacker.mega ? SILA_MEGA : 1);
   const bonus = bonusUmiejetnosci(b, attacker, target);
   const value = Math.max(1, Math.round(base * moc * typeMult * penalty * guard * bonus));
   return {

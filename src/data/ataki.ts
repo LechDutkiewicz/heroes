@@ -53,7 +53,7 @@ const NAZWY: Record<ElementType, { wrecz: [string, string, string]; dystans: [st
 export const ETAP_TRZECIEGO = 1;
 
 /** Ataki stworka w kolejności przycisków: zwykły, specjalny, (ostateczny). */
-export function atakiStworka(def: Pick<UnitDef, 'type' | 'shooter' | 'ability' | 'etap'>): Atak[] {
+export function atakiStworka(def: Pick<UnitDef, 'type' | 'shooter' | 'ability' | 'etap' | 'tm'>): Atak[] {
   const n = NAZWY[def.type][def.shooter ? 'dystans' : 'wrecz'];
   const ataki: Atak[] = [{ nazwa: n[0], moc: 1, pp: null, opis: def.shooter ? 'strzał bez limitu' : 'cios bez limitu' }];
   if (def.ability === 'double') {
@@ -69,7 +69,7 @@ export function atakiStworka(def: Pick<UnitDef, 'type' | 'shooter' | 'ability' |
   } else {
     ataki.push({ nazwa: n[1], moc: MOC_SPECJALNEGO, pp: PP_SPECJALNEGO, opis: `siła ×${MOC_SPECJALNEGO}` });
   }
-  if ((def.etap ?? 0) >= ETAP_TRZECIEGO) {
+  if ((def.etap ?? 0) >= ETAP_TRZECIEGO || def.tm) {
     ataki.push({
       nazwa: n[2],
       moc: MOC_OSTATECZNEGO,
@@ -90,7 +90,7 @@ export function nazwaTrzeciego(def: Pick<UnitDef, 'type' | 'shooter'>): string {
  * Ataki jednym zdaniem — do okna stworka poza bitwą: „Pnącze · Bicz
  * z pnączy (2 na bitwę) · po ewolucji: Burza liści".
  */
-export function opisAtakow(def: Pick<UnitDef, 'type' | 'shooter' | 'ability' | 'etap'>): string {
+export function opisAtakow(def: Pick<UnitDef, 'type' | 'shooter' | 'ability' | 'etap' | 'tm'>): string {
   const ataki = atakiStworka(def);
   const czesci = ataki.map((a) => (a.pp === null ? a.nazwa : `${a.nazwa} (${a.pp} na bitwę)`));
   if (ataki.length < 3) czesci.push(`po ewolucji: ${nazwaTrzeciego(def)}`);

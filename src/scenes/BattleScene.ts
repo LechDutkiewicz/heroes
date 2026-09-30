@@ -16,13 +16,19 @@ import {
   PRZEDMIOTY,
   PRZEDMIOTY_PLECAKA,
   moznaLeczyc,
+  moznaMega,
+  moznaNauczyc,
+  moznaOdnowic,
   moznaOslonic,
   moznaWzmocnic,
   pelnyPlecak,
   szansaZlapania,
   uzyjEliksiru,
+  uzyjEteru,
+  uzyjMega,
   uzyjMikstury,
   uzyjTarczy,
+  uzyjTM,
   zlap,
   LECZENIE_MIKSTURY,
   LECZENIE_SUPER_MIKSTURY,
@@ -121,6 +127,7 @@ import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
 import { RYWAL_ID, poziom, type StanMapy } from '../data/mapa';
 import { DOSW_BOHATERA_ZA_WALKE, type WynikDruzyny, rozliczDruzyne } from '../data/podsumowanie';
 import { efekt } from '../data/umiejetnosci';
+import { nazwaTrzeciego } from '../data/ataki';
 import { pokazPodsumowanieWalki } from '../visual/podsumowanieWalki';
 import {
   GUARD_REDUCTION,
@@ -422,6 +429,8 @@ export class BattleScene extends Phaser.Scene {
     this.dzikie = tr?.dzikie ?? !this.zPrzygody;
     this.posiadaneGatunki = new Set(tr?.posiadane ?? []);
     this.przedmiotWRundzie = 0;
+    this.megaWBitwie = false;
+    this.nauczeni = [];
     this.celowanie = null;
     this.oknoPlecaka = undefined;
     this.plecakButton = undefined;
@@ -465,6 +474,10 @@ export class BattleScene extends Phaser.Scene {
   private posiadaneGatunki = new Set<string>();
   /** Runda, w której trener ostatnio sięgnął do plecaka — raz na rundę. */
   private przedmiotWRundzie = 0;
+  /** Kamień Mega użyty w tej bitwie — mega ewolucja raz na bitwę, jak w grach. */
+  private megaWBitwie = false;
+  /** Sloty drużyny, które w tej bitwie nauczyły się ataku z Dysku TM (na stałe). */
+  private nauczeni: number[] = [];
   /** Przedmiot czekający na wskazanie celu. */
   private celowanie: Przedmiot | null = null;
   private oknoPlecaka?: Phaser.GameObjects.Container;
@@ -1808,6 +1821,13 @@ export class BattleScene extends Phaser.Scene {
       if (!swoi.some(moznaWzmocnic)) return 'wszyscy już po eliksirze';
     } else if (co === 'tarcza') {
       if (!swoi.some(moznaOslonic)) return 'wszyscy już mają tarczę';
+    } else if (co === 'eter') {
+      if (!swoi.some(moznaOdnowic)) return 'nikt nie zużył ataków specjalnych';
+    } else if (co === 'tm') {
+      if (!swoi.some(moznaNauczyc)) return 'wszyscy już znają atak ostateczny';
+    } else if (co === 'mega') {
+      if (this.megaWBitwie) return 'mega ewolucja tylko raz na bitwę';
+      if (!swoi.some(moznaMega)) return 'mega ewolucja tylko dla stworka po ewolucji';
     } else {
       if (!this.dzikie) return 'stworków innego trenera nie wolno łapać';
       if (!this.units.some((u) => this.celPrzedmiotu('pokeball', u))) return 'masz już każdy z tych gatunków';
@@ -1822,6 +1842,9 @@ export class BattleScene extends Phaser.Scene {
     if (co === 'pokeball') return u.side === 'enemy' && !this.posiadaneGatunki.has(gatunek(u.def.sprite));
     if (u.side !== 'player') return false;
     if (co === 'mikstura' || co === 'superMikstura') return moznaLeczyc(u);
+    if (co === 'eter') return moznaOdnowic(u);
+    if (co === 'tm') return moznaNauczyc(u);
+    if (co === 'mega') return moznaMega(u);
     return co === 'tarcza' ? moznaOslonic(u) : moznaWzmocnic(u);
   }
 
@@ -1914,6 +1937,12 @@ export class BattleScene extends Phaser.Scene {
         `Eliksir siły: ${u.def.name} bije mocniej — atak ${atk} → ${Math.round(atk * SILA_ELIKSIRU)}`,
         false
       );
+    } else if (co === 'eter') {
+      this.forecast.show(`Eter: ${u.def.name} odzyskuje ataki specjalne`, false);
+    } else if (co === 'tm') {
+      this.forecast.show(`Dysk TM: ${u.def.name} na zawsze uczy się ataku ${nazwaTrzeciego(u.def)}`, false);
+    } else if (co === 'mega') {
+      this.forecast.show(`Kamień Mega: ${u.def.name} mega ewoluuje — silniejszy i twardszy do końca bitwy`, false);
     } else {
       const s = Math.round(szansaZlapania(u) * 100);
       this.forecast.show(
@@ -1945,6 +1974,29 @@ export class BattleScene extends Phaser.Scene {
       this.refreshStack(u);
       flashTarget(this, u.view.sprite, 0x6fd58e);
       this.floatText(u, 'Tarcza!', '#b9f6ca', -52, ICON.shield, 19);
+    } else if (co === 'eter') {
+      this.plecak.eter--;
+      uzyjEteru(u);
+      flashTarget(this, u.view.sprite, 0x6aa9f5);
+      this.floatText(u, 'Ataki odnowione!', '#bde0ff', -52, ICON.star, 19);
+    } else if (co === 'tm') {
+      this.plecak.tm--;
+      uzyjTM(u);
+      // `slotyZMapy`: indeks wpisu z mapy → id jednostki; szukamy odwrotnie.
+      const skad = [...this.slotyZMapy].find(([, id]) => id === u.id)?.[0];
+      const slot = skad === undefined ? undefined : this.zPrzygody?.gracz[skad]?.slot;
+      if (typeof slot === 'number') this.nauczeni.push(slot);
+      flashTarget(this, u.view.sprite, 0xb07cff);
+      this.floatText(u, `Nowy atak: ${nazwaTrzeciego(u.def)}!`, '#e2ccff', -52, ICON.star, 19);
+    } else if (co === 'mega') {
+      this.plecak.mega--;
+      this.megaWBitwie = true;
+      uzyjMega(u);
+      // Mega ewolucja: stworek rośnie i dostaje tęczową poświatę.
+      const sp = u.view.sprite;
+      this.tweens.add({ targets: sp, scaleX: sp.scaleX * 1.18, scaleY: sp.scaleY * 1.18, duration: 450, ease: 'Back.easeOut' });
+      flashTarget(this, sp, 0xffd43b);
+      this.floatText(u, 'Mega ewolucja!', '#ffe27a', -60, ICON.star, 21);
     } else {
       this.plecak.eliksir--;
       uzyjEliksiru(u);
@@ -2536,6 +2588,8 @@ export class BattleScene extends Phaser.Scene {
       wydanePokeballe: this.wydanePokeballe,
       // Plecak po bitwie: zużyte przedmioty nie wracają (`przedmioty.ts`).
       plecak: { ...this.plecak },
+      // Dysk TM uczy na stałe — także gdy walka przegrana.
+      nauczeni: [...this.nauczeni],
     };
     this.registry.set('wynik-bitwy', wynik);
     const powrot = () => this.scene.start(this.zPrzygody!.powrot ?? 'adventure');

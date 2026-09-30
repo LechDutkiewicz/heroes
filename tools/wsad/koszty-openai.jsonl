@@ -849,3 +849,6 @@
 {"czas": "2026-09-30T08:54:48+00:00", "plik": "m2-bor-sklep3.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 796, "wyj": 1932, "usd": 0.0658}
 {"czas": "2026-09-30T08:54:48+00:00", "plik": "m2-grota-sklep3.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 796, "wyj": 1949, "usd": 0.0663}
 {"czas": "2026-09-30T08:54:49+00:00", "plik": "m2-zbocze-sklep3.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 796, "wyj": 1953, "usd": 0.0665}
+{"czas": "2026-09-30T09:08:08+00:00", "plik": "przedmiot-eter.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 526, "wyj": 1377, "usd": 0.0467}
+{"czas": "2026-09-30T09:08:10+00:00", "plik": "przedmiot-tm.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 522, "wyj": 1384, "usd": 0.0469}
+{"czas": "2026-09-30T09:08:11+00:00", "plik": "przedmiot-mega.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 523, "wyj": 1351, "usd": 0.0458}
