@@ -2662,3 +2662,14 @@ lewej, tło wiersza w barwie poziomu), plecak w bitwie ma przy ikonie
 pigułkę poziomu (`src/visual/poziomPrzedmiotu.ts`). Barwy z pokeballi:
 I czerwień (Poké Ball), II niebieski (Great Ball), III złoto na czerni
 (Ultra Ball). `PRZEDMIOTY_PLECAKA` ułożone wg poziomu.
+
+## Panel budowy jak ratusz w Heroes 3 (2026-09-30)
+
+Zgłoszenie: lista budowy mało czytelna. `pokazListeBudowy` to teraz siatka
+5 × n kart z rysunkiem budynku, nazwą i paskiem stanu w barwach HoMM3:
+zielony — można, złoty — stoi, czerwony — brak surowców, szary — „Najpierw:
+<budynek>" albo „Jutro". Najechanie pokazuje opis i cenę w pasku na dole,
+klik otwiera okienko z rysunkiem, opisem, ceną i „Zbuduj"/„Rozbuduj" (budowa
+dopiero po potwierdzeniu). Ślepy krytyk: nowy panel wygrywa 8/9/9/8 z 5/5/3/6.
+`probe-miasto.mjs` klika kartę, potem „Zbuduj"; `zrzut-miasto.mjs` ma
+`--najedz x,y` i `--klik x,y`.
