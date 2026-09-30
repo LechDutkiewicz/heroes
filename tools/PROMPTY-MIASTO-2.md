@@ -380,3 +380,38 @@ A creature item shop: a friendly one-storey corner shop with a big glossy BLUE r
 ```
 A creature item shop: a friendly one-storey corner shop with a big glossy BLUE roof, a wide glass shop window and glass sliding door, a white sign panel above the door with a simple blue-and-white ball emblem (no letters), a small striped blue awning, a couple of crates of potions and red-and-white capture balls by the door. It must read at a glance as the shop, next to the red-domed healing centre. No egg and no egg-shaped sign. Single building only, for Zbocze Popielne, the hot-spring town at the foot of a volcano: white and sand plaster walls on dark basalt stone bases, windows glowing warm, golden late-afternoon light. Exactly the same art style, finish, colours and lighting as the attached town image, and the same camera as its buildings: a low, slightly elevated front three-quarter view, looking at the front of the building from a little above. Warm light from the upper right. Only the building and the little bit of ground that belongs to it (a doorstep, a paved step); no lawn around it, no base, no pedestal, no cast shadow. Transparent background, a clear margin on all four sides, nothing cropped by the edges. The silhouette must read clearly at 200 pixels tall. Clean anime game illustration like official Pokemon game art, smooth soft shading, crisp clean vivid colours. No thatch, no moss, no rustic logs, no banners, no medieval or fantasy elements, no heavy outlines, no pixel art, no 3D render look, no photorealism. No text, no letters, no logo, no watermark, no user interface, no characters, no people, no creatures.
 ```
+
+
+## Pokémart rośnie piętrami (jak gildia magów)
+
+Stopień II i III to ten sam sklep z dostawionym piętrem — jak gildia magów w Heroes, która przy każdym poziomie dostaje piętro. `m2-<frakcja>-sklep2.png` z `m2-<frakcja>-sklep.png` jako wzorem, `sklep3` ze `sklep2`. Wczytuje `miasto2_wczytaj.py`.
+
+<!-- plik: m2-bor-sklep2.png | styl: brak | proporcje: 2:3 | wzor: m2-bor-sklep.png -->
+```
+Repaint exactly this same shop building from the attached image, with the same design, colours, camera, light and art style, but EXTENDED: add a second storey on top of it, a new floor with its own windows and a small balcony, and move the big glossy BLUE roof up on top of the new floor. The ground floor with the shop window, door, sign and crates stays exactly as it is. The building gets taller, not wider. Single building only, transparent background, no ground around it, nothing cropped, no text, no letters.
+```
+
+<!-- plik: m2-bor-sklep3.png | styl: brak | proporcje: 2:3 | wzor: m2-bor-sklep2.png -->
+```
+Repaint exactly this same two-storey shop building from the attached image, with the same design, colours, camera, light and art style, but EXTENDED once more: add a third storey on top, a slimmer top floor like a small tower with round windows and a rooftop sign with the blue-and-white ball emblem (no letters), with the glossy BLUE roof on top of it. The two lower floors stay exactly as they are. The building gets taller, not wider. Single building only, transparent background, no ground around it, nothing cropped, no text, no letters.
+```
+
+<!-- plik: m2-grota-sklep2.png | styl: brak | proporcje: 2:3 | wzor: m2-grota-sklep.png -->
+```
+Repaint exactly this same shop building from the attached image, with the same design, colours, camera, light and art style, but EXTENDED: add a second storey on top of it, a new floor with its own windows and a small balcony, and move the big glossy BLUE roof up on top of the new floor. The ground floor with the shop window, door, sign and crates stays exactly as it is. The building gets taller, not wider. Single building only, transparent background, no ground around it, nothing cropped, no text, no letters.
+```
+
+<!-- plik: m2-grota-sklep3.png | styl: brak | proporcje: 2:3 | wzor: m2-grota-sklep2.png -->
+```
+Repaint exactly this same two-storey shop building from the attached image, with the same design, colours, camera, light and art style, but EXTENDED once more: add a third storey on top, a slimmer top floor like a small tower with round windows and a rooftop sign with the blue-and-white ball emblem (no letters), with the glossy BLUE roof on top of it. The two lower floors stay exactly as they are. The building gets taller, not wider. Single building only, transparent background, no ground around it, nothing cropped, no text, no letters.
+```
+
+<!-- plik: m2-zbocze-sklep2.png | styl: brak | proporcje: 2:3 | wzor: m2-zbocze-sklep.png -->
+```
+Repaint exactly this same shop building from the attached image, with the same design, colours, camera, light and art style, but EXTENDED: add a second storey on top of it, a new floor with its own windows and a small balcony, and move the big glossy BLUE roof up on top of the new floor. The ground floor with the shop window, door, sign and crates stays exactly as it is. The building gets taller, not wider. Single building only, transparent background, no ground around it, nothing cropped, no text, no letters.
+```
+
+<!-- plik: m2-zbocze-sklep3.png | styl: brak | proporcje: 2:3 | wzor: m2-zbocze-sklep2.png -->
+```
+Repaint exactly this same two-storey shop building from the attached image, with the same design, colours, camera, light and art style, but EXTENDED once more: add a third storey on top, a slimmer top floor like a small tower with round windows and a rooftop sign with the blue-and-white ball emblem (no letters), with the glossy BLUE roof on top of it. The two lower floors stay exactly as they are. The building gets taller, not wider. Single building only, transparent background, no ground around it, nothing cropped, no text, no letters.
+```
