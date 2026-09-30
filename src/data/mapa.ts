@@ -14,7 +14,6 @@ import {
   STAJNIA_DNI,
   STAJNIA_ODNOWA,
   WIATRAK_ODNOWA,
-  MNOZNIK_FORTU,
   naPokeballe,
 } from './zasady-h3';
 import {
@@ -486,8 +485,8 @@ export const KOSZT_ODDZIALU = [
 ];
 /**
  * Dzienny przyrost rezerwatu: co ile dni pojawia się nowy młody stworek
- * danego poziomu (drobnica co 3 dni, czempion co 9). Fort mnoży to przez
- * `MNOZNIK_FORTU`. Ułamki się sumują, w mieście widać część całkowitą.
+ * danego poziomu (drobnica co 3 dni, czempion co 9). Ułamki się sumują,
+ * w mieście widać część całkowitą.
  */
 export const PRZYROST_ODDZIALU = [1 / 3, 1 / 4, 1 / 5, 1 / 6, 1 / 7, 1 / 9];
 /**
@@ -1886,11 +1885,12 @@ export function zbuduj(s: StanMapy, zamek: Obiekt, id: string, kto: Wlasciciel =
  * trenowanie słabszych stworków jest tańsze i drużyna sama się wyrównuje.
  */
 export const TRENINGI_ZA_REZERWAT = 3;
+/** Żłobek (fort): tyle treningów więcej na tydzień z każdego rezerwatu — pełną liczbą, jak w Heroes 3. */
+export const TRENINGI_ZA_ZLOBEK = 2;
 
 export function treningiNaTydzien(postawione: string[]) {
   const rezerwaty = postawione.filter((id) => id.startsWith('siedlisko')).length;
-  const mn = postawione.includes('fort') ? MNOZNIK_FORTU : 1;
-  return Math.round(rezerwaty * TRENINGI_ZA_REZERWAT * mn);
+  return rezerwaty * (TRENINGI_ZA_REZERWAT + (postawione.includes('fort') ? TRENINGI_ZA_ZLOBEK : 0));
 }
 
 export const kosztTreningu = (o: Pick<Oddzial, 'poziom'>) => Math.round(3 + 1.5 * o.poziom);

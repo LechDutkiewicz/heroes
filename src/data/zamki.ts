@@ -1,5 +1,5 @@
 import type { Skarbiec, Surowiec } from './mapa';
-import { MNOZNIK_FORTU, naPokeballe } from './zasady-h3';
+import { naPokeballe } from './zasady-h3';
 import { MAKS_W_PLECAKU, SKLEP, plecakBohatera, type PrzedmiotPlecaka } from './przedmioty';
 
 /**
@@ -205,7 +205,7 @@ const NAZWY: Record<string, Record<string, [string, string]>> = {
     ratusz1: ['Laboratorium', 'Profesor codziennie oddaje pokeballe znalezione w lesie.'],
     ratusz2: ['Duże laboratorium', 'Więcej badaczy, więcej pokeballi.'],
     ratusz3: ['Instytut Boru', 'Cały las pracuje na twoją drużynę.'],
-    fort: ['Żłobek pod drzewami', 'Żłobek stworków: więcej młodych wykluwa się w każdym gnieździe.'],
+    fort: ['Żłobek pod drzewami', 'Żłobek stworków: w każdym rezerwacie więcej treningów co tydzień.'],
     siedlisko1: ['Gniazdo Iskier', 'Tu wykluwają się Pyroko.'],
     siedlisko2: ['Suchy Konar', 'Flamiry lubią ciepłe drewno.'],
     siedlisko3: ['Rosista Kotlina', 'Aquino potrzebują mgły.'],
@@ -221,7 +221,7 @@ const NAZWY: Record<string, Record<string, [string, string]>> = {
     ratusz1: ['Laboratorium', 'Profesor codziennie oddaje pokeballe wyłowione z jeziora.'],
     ratusz2: ['Obserwatorium', 'Więcej badaczy, więcej pokeballi.'],
     ratusz3: ['Instytut Księżycowy', 'Jezioro i jaskinia oddają wszystko, co połknęły.'],
-    fort: ['Żłobek nad wodą', 'Żłobek stworków: więcej młodych wykluwa się w każdym gnieździe.'],
+    fort: ['Żłobek nad wodą', 'Żłobek stworków: w każdym rezerwacie więcej treningów co tydzień.'],
     siedlisko1: ['Lodowa Nisza', 'Glacyny lubią zimno.'],
     siedlisko2: ['Zarodnikowa Komora', 'Sporeksy mnożą się w ciemności.'],
     siedlisko3: ['Ciepły Komin', 'Cindro grzeje się przy szczelinie.'],
@@ -237,7 +237,7 @@ const NAZWY: Record<string, Record<string, [string, string]>> = {
     ratusz1: ['Laboratorium', 'Profesor codziennie oddaje pokeballe wygrzebane z popiołu.'],
     ratusz2: ['Duże laboratorium', 'Więcej badaczy, więcej pokeballi.'],
     ratusz3: ['Instytut Wulkanu', 'Popiół zamienia się w bogactwo.'],
-    fort: ['Żłobek przy źródłach', 'Żłobek stworków: więcej młodych wykluwa się w każdym gnieździe.'],
+    fort: ['Żłobek przy źródłach', 'Żłobek stworków: w każdym rezerwacie więcej treningów co tydzień.'],
     siedlisko1: ['Bazaltowy Próg', 'Bazalty stygną tu latami.'],
     siedlisko2: ['Gorące Źródło', 'Ashko wygrzewają się w parze.'],
     siedlisko3: ['Obsydianowy Zwał', 'Obsydiany trzeba wykuć.'],
@@ -377,17 +377,15 @@ export function zaplac(skarbiec: Skarbiec, koszt: Partial<Skarbiec>) {
 }
 
 /**
- * Dzienny przyrost rezerwatów w zamku. Fort podnosi go wszędzie o połowę —
- * to jedyny budynek, który działa na całe miasto naraz, i dlatego jest
- * najciekawszą decyzją: brać go zamiast kolejnego siedliska czy po nim.
+ * Dzienny przyrost rezerwatów w zamku. Żłobek (fort) go nie zmienia — dokłada
+ * treningi (`treningiNaTydzien` w mapa.ts), patrz `zasady-h3.ts`.
  */
 export function przyrostZamku(postawione: string[], bazowy: number[]) {
-  const mnoznik = postawione.includes('fort') ? MNOZNIK_FORTU : 1;
   // Bez zaokrąglania: przyrost rezerwatu to ułamek stworka dziennie
   // (`PRZYROST_ODDZIALU`), a ułamki sumują się w `dostepne`.
   return bazowy.map((ile, poziom) => {
     const jest = postawione.includes(`siedlisko${poziom + 1}`);
-    return jest ? ile * mnoznik : 0;
+    return jest ? ile : 0;
   });
 }
 

@@ -2703,3 +2703,11 @@ niskie: `wysokaPrzeszkoda` w `terenBitwy.ts`. `?ekran=bitwa&teren=<teren>`
 - `MAKS_PODGLADOW` w deployu 5 → 3.
 Historii gita nie ruszaliśmy (pakiet 1,36 GB) — to wymagałoby force-pusha
 na domyślnej gałęzi, tylko za zgodą.
+
+## Żłobek daje treningi pełną liczbą (2026-09-30)
+
+Gracz: „jak wykorzystać 4,1 treningu?" (karta pokazywała 6,1 młodych na
+tydzień zamiast 4,1 — mnożnik ×1,5 przyrostu). W HoMM3 fort dokłada całe
+jednostki. Żłobek (`fort`) nie rusza już przyrostu młodych (i tak każdego
+gatunku bierze się jednego), tylko dokłada `TRENINGI_ZA_ZLOBEK = 2`
+treningi na tydzień z każdego rezerwatu (3 → 5). `MNOZNIK_FORTU` usunięty.

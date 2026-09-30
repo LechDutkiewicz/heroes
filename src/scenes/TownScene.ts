@@ -13,6 +13,8 @@ import {
   treningiZamku,
   trenuj,
   TRENINGI_ZA_REZERWAT,
+  TRENINGI_ZA_ZLOBEK,
+  treningiNaTydzien,
   type Obiekt,
   type StanMapy,
   type Surowiec,
@@ -35,7 +37,6 @@ import {
   plecakBohatera,
   type PrzedmiotPlecaka,
 } from '../data/przedmioty';
-import { MNOZNIK_FORTU } from '../data/zasady-h3';
 import { POZIOM_MLODEGO, napisPoziomu, nowyStworek, obudz } from '../data/stworki';
 import { kosztWszystkich, ratuj, zemdleni } from '../data/centrum';
 import { FACTIONS, factionById } from '../data/factions';
@@ -1910,18 +1911,15 @@ export class TownScene extends Phaser.Scene {
     }
 
     if (b.rodzaj === 'fort') {
-      // Pokazujemy sumę dzienną z GNIAZD, KTÓRE STOJĄ, bo tylko ona jest
-      // prawdziwa dla tego miasta. Sam mnożnik nic nie mówi ośmiolatkowi.
-      const suma = (lista: string[]) =>
-        przyrostZamku(lista, PRZYROST_ODDZIALU).reduce((a, x) => a + x, 0);
-      const bez = suma(postawione.filter((x) => x !== 'fort'));
-      const z = suma([...postawione.filter((x) => x !== 'fort'), 'fort']);
-      const tyg = (x: number) => (x * 7).toLocaleString('pl', { maximumFractionDigits: 1 });
+      // Pełne liczby, jak w Heroes 3: treningów na tydzień z tego miasta
+      // teraz i z Żłobkiem — gracz: „jak wykorzystać 4,1 treningu?".
+      const bez = treningiNaTydzien(postawione.filter((x) => x !== 'fort'));
+      const z = treningiNaTydzien([...postawione.filter((x) => x !== 'fort'), 'fort']);
       wiersze.push(
-        `Rezerwaty i Sala treningowa ×${MNOZNIK_FORTU.toLocaleString('pl')}.`,
+        `Każdy rezerwat daje ${TRENINGI_ZA_REZERWAT + TRENINGI_ZA_ZLOBEK} treningów na tydzień zamiast ${TRENINGI_ZA_REZERWAT}.`,
         stoi
-          ? `Dzięki niemu ${tyg(z)} młodych stworków na tydzień zamiast ${tyg(bez)}.`
-          : `Byłoby ${tyg(z)} młodych stworków na tydzień zamiast ${tyg(bez)}.`
+          ? `Dzięki niemu ${z} treningów na tydzień zamiast ${bez}.`
+          : `W tym mieście: ${z} treningów na tydzień zamiast ${bez}.`
       );
     }
 

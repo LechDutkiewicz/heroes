@@ -225,12 +225,14 @@ export const BUDYNKOW_NA_DZIEN = 1;
 
 /**
  * [H3] Przyrost w siedliskach jest tygodniowy, a fort (i jego ulepszenia)
- * podnosi go we wszystkich siedliskach naraz.
+ * podnosi go we wszystkich siedliskach naraz — zawsze o całe jednostki.
  *
- * [NASZE] Przyrost jest dzienny i mniejszy — tydzień to dla ośmiolatka bardzo
- * długo, a nagroda musi być widoczna następnego dnia. Mnożnik fortu został.
+ * [NASZE] Fort to Żłobek i dokłada TRENINGI, pełną liczbą na rezerwat
+ * (`TRENINGI_ZA_ZLOBEK` w mapa.ts). Mnożnik ×1,5 dawał na karcie „6,1
+ * młodych na tydzień zamiast 4,1" — gracz: „jak wykorzystać 4,1?". A że
+ * każdego gatunku bierze się jednego stworka, większy przyrost młodych
+ * i tak prawie nic nie dawał; treningi to prawdziwa siła drużyny.
  */
-export const MNOZNIK_FORTU = 1.5;
 
 // ---------------------------------------------------------------------------
 // BUDOWLE MAPY PRZYGODY
