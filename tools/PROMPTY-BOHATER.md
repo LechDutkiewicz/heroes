@@ -482,3 +482,23 @@ A sturdy glossy turtle shell (like the Shell Armor ability of Pokemon): a rounde
 ```
 A bright red and white aiming target with a small crosshair scope in front of it, meaning precise long-range attacks (like the Sniper ability of Pokemon). Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
 ```
+
+
+## Przedmioty z gier Pokémon (Eter, Dysk TM, Kamień Mega)
+
+Nowe przedmioty Pokémartu, wzorem ikona Super mikstury. Do gry: `python3 tools/rywal_wczytaj.py` (tak jak inne `przedmiot-*`).
+
+<!-- plik: przedmiot-eter.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+An Ether bottle from the Pokemon games: a small round glass bottle with a light blue liquid, a white cap and a small sparkling star symbol on the label, meaning restored power points. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Transparent background, no text, no letters, no numbers, no logo.
+```
+
+<!-- plik: przedmiot-tm.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A Technical Machine from the Pokemon games: a shiny round compact disc in a bright purple case with a white ring, like a data disc that teaches a new move. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Transparent background, no text, no letters, no numbers, no logo.
+```
+
+<!-- plik: przedmiot-mega.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A Mega Stone from the Pokemon games: a round glossy marble-like stone with a swirling orange, yellow and blue DNA-like spiral pattern inside, softly glowing with rainbow light. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Transparent background, no text, no letters, no numbers, no logo.
+```

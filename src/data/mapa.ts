@@ -533,6 +533,11 @@ export interface Oddzial {
    * i tak go nie ruszy, dopóki flaga stoi.
    */
   bezEwolucji?: boolean;
+  /**
+   * Nauczony z Dysku TM (`przedmioty.ts`): zna atak ostateczny, choć jeszcze
+   * nie ewoluował (`atakiStworka`).
+   */
+  tm?: boolean;
   /** Pierwszy stworek trenera — ma wyrównane statystyki startera (`startery.ts`). */
   starter?: boolean;
 }

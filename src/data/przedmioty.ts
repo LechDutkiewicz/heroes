@@ -12,6 +12,14 @@
  *   drużyny. Zastępuje „neutralni dołączają do armii" z Heroes. Stworków
  *   innego trenera (sala, rywal) łapać nie wolno, jak w pokemonach.
  *
+ * Z gier Pokémon doszły jeszcze:
+ *
+ * - **Eter** odnawia punkty mocy (PP) ataków specjalnych stworka,
+ * - **Dysk TM** uczy stworka ataku ostatecznego NA STAŁE, choć jeszcze nie
+ *   ewoluował (Technical Machine — w grach dysk wgrywający nowy ruch),
+ * - **Kamień Mega** — mega ewolucja do końca bitwy: silniejszy i twardszy,
+ *   tylko stworek po ewolucji i raz na bitwę, jak w grach.
+ *
  * Użycie przedmiotu nie zabiera stworkowi tury (jak czar w Heroes).
  * Plecak to ZAPAS trenera, a nie przydział na bitwę: co zużyte, znika,
  * a nowe kupuje się w Pokémarcie w mieście (sklep zamiast gildii magów —
@@ -22,27 +30,28 @@
  * Wszystko tu jest czystą funkcją stanu bitwy — scena tylko odgrywa.
  */
 import { fullHp } from './units';
-import { SILA_ELIKSIRU, SILA_TARCZY, total, type Battle, type SimUnit } from './battle';
+import { SILA_ELIKSIRU, SILA_MEGA, SILA_TARCZY, total, type Battle, type SimUnit } from './battle';
+import { ETAP_TRZECIEGO, PP_OSTATECZNEGO, atakiStworka } from './ataki';
 import type { Skarbiec } from './mapa';
 
-export type Przedmiot = 'mikstura' | 'superMikstura' | 'eliksir' | 'tarcza' | 'pokeball';
+export type Przedmiot = 'mikstura' | 'superMikstura' | 'eliksir' | 'tarcza' | 'eter' | 'tm' | 'mega' | 'pokeball';
 /** To, co leży w plecaku (pokeballe są w skarbcu). */
 export type PrzedmiotPlecaka = Exclude<Przedmiot, 'pokeball'>;
 export type Plecak = Record<PrzedmiotPlecaka, number>;
 
 /** Kolejność w plecaku i w sklepie. */
-export const PRZEDMIOTY_PLECAKA: readonly PrzedmiotPlecaka[] = ['mikstura', 'superMikstura', 'eliksir', 'tarcza'];
+export const PRZEDMIOTY_PLECAKA: readonly PrzedmiotPlecaka[] = ['mikstura', 'superMikstura', 'eter', 'eliksir', 'tarcza', 'tm', 'mega'];
 
 /** Z czym trener rusza w drogę na nowej mapie. */
-export const PLECAK_STARTOWY: Plecak = { mikstura: 1, superMikstura: 0, eliksir: 0, tarcza: 0 };
+export const PLECAK_STARTOWY: Plecak = { mikstura: 1, superMikstura: 0, eliksir: 0, tarcza: 0, eter: 0, tm: 0, mega: 0 };
 /** Plecak bitwy pokazowej (bez mapy): wszystkiego po trochu, do wypróbowania. */
-export const PLECAK_NA_BITWE: Plecak = { mikstura: 2, superMikstura: 1, eliksir: 1, tarcza: 1 };
+export const PLECAK_NA_BITWE: Plecak = { mikstura: 2, superMikstura: 1, eliksir: 1, tarcza: 1, eter: 1, tm: 1, mega: 1 };
 /** Najwięcej sztuk jednego przedmiotu — plecak ma dno, jak w grach. */
 export const MAKS_W_PLECAKU = 5;
 
 /** Plecak z brakującymi polami uzupełnionymi zerami. */
 export function pelnyPlecak(p?: Partial<Plecak>): Plecak {
-  const w: Plecak = { mikstura: 0, superMikstura: 0, eliksir: 0, tarcza: 0 };
+  const w: Plecak = { mikstura: 0, superMikstura: 0, eliksir: 0, tarcza: 0, eter: 0, tm: 0, mega: 0 };
   for (const k of PRZEDMIOTY_PLECAKA) w[k] = Math.max(0, Math.floor(p?.[k] ?? 0));
   return w;
 }
@@ -68,6 +77,10 @@ export const SKLEP: Record<PrzedmiotPlecaka, { poziom: 1 | 2 | 3; cena: Partial<
   superMikstura: { poziom: 2, cena: { pokeball: 14, jagoda: 2 } },
   eliksir: { poziom: 2, cena: { pokeball: 16 } },
   tarcza: { poziom: 3, cena: { pokeball: 20, odlamek: 1 } },
+  eter: { poziom: 1, cena: { pokeball: 8 } },
+  // Dysk TM zostaje na zawsze — drogi, jak rzadki przedmiot w grach.
+  tm: { poziom: 3, cena: { pokeball: 45, kamien: 1 } },
+  mega: { poziom: 3, cena: { pokeball: 30, odlamek: 2 } },
 };
 
 /** Ile pokeballi ze skarbca kosztuje jeden rzut. */
@@ -75,7 +88,7 @@ export const KOSZT_RZUTU = 10;
 /** Mikstura leczy tyle pełnego życia (Super mikstura — całe). */
 export const LECZENIE_MIKSTURY = 0.5;
 export const LECZENIE_SUPER_MIKSTURY = 1;
-export { SILA_ELIKSIRU, SILA_TARCZY };
+export { SILA_ELIKSIRU, SILA_MEGA, SILA_TARCZY };
 
 export const PRZEDMIOTY: Record<Przedmiot, { nazwa: string; opis: string; tekstura: string }> = {
   mikstura: { nazwa: 'Mikstura', opis: 'leczy twojego stworka o połowę życia', tekstura: 'przedmiot-mikstura' },
@@ -87,6 +100,9 @@ export const PRZEDMIOTY: Record<Przedmiot, { nazwa: string; opis: string; tekstu
   // Opisy dla ośmiolatka: słowami, bez „×1,5" i „1/3" (krytyk sklepu).
   eliksir: { nazwa: 'Eliksir siły', opis: 'stworek bije dużo mocniej do końca bitwy', tekstura: 'przedmiot-eliksir' },
   tarcza: { nazwa: 'Tarcza', opis: 'ciosy mniej bolą do końca bitwy', tekstura: 'przedmiot-tarcza' },
+  eter: { nazwa: 'Eter', opis: 'odnawia ataki specjalne stworka', tekstura: 'przedmiot-eter' },
+  tm: { nazwa: 'Dysk TM', opis: 'stworek na zawsze uczy się ataku ostatecznego', tekstura: 'przedmiot-tm' },
+  mega: { nazwa: 'Kamień Mega', opis: 'mega ewolucja: silniejszy i twardszy do końca bitwy', tekstura: 'przedmiot-mega' },
   pokeball: { nazwa: 'Pokeball', opis: 'łapie osłabionego dzikiego stworka', tekstura: 'przedmiot-pokeball' },
 };
 
@@ -111,6 +127,32 @@ export function uzyjEliksiru(u: SimUnit) {
 }
 
 export const moznaOslonic = (u: SimUnit) => !u.tarcza;
+
+/** Pełne PP ataków stworka — ile ma na starcie bitwy. */
+const pelnePP = (u: SimUnit) => atakiStworka(u.def).map((a) => a.pp);
+
+/** Czy Eter coś da — któryś atak specjalny zużył choć jeden PP. */
+export const moznaOdnowic = (u: SimUnit) => pelnePP(u).some((pp, i) => pp !== null && (u.pp[i] ?? pp) < pp);
+
+export function uzyjEteru(u: SimUnit) {
+  u.pp = pelnePP(u);
+}
+
+/** Dysk TM: tylko stworek, który ataku ostatecznego jeszcze nie zna. */
+export const moznaNauczyc = (u: SimUnit) => (u.def.etap ?? 0) < ETAP_TRZECIEGO && !u.def.tm;
+
+/** Uczy stworka ataku ostatecznego — od razu w tej bitwie (PP pełne). */
+export function uzyjTM(u: SimUnit) {
+  u.def = { ...u.def, tm: true };
+  u.pp = [...u.pp.slice(0, 2), PP_OSTATECZNEGO];
+}
+
+/** Kamień Mega: tylko stworek po ewolucji, jeszcze nie mega. */
+export const moznaMega = (u: SimUnit) => (u.def.etap ?? 0) >= 1 && !u.mega;
+
+export function uzyjMega(u: SimUnit) {
+  u.mega = true;
+}
 
 export function uzyjTarczy(u: SimUnit) {
   u.tarcza = true;

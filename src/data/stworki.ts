@@ -75,7 +75,7 @@ export function postepStworka(o: Pick<Oddzial, 'poziom' | 'dosw'>) {
  * `jednostkiBitwy`.
  */
 export function defStworka(
-  o: Pick<Oddzial, 'frakcja' | 'tier' | 'sprite' | 'nazwa' | 'poziom'> & Partial<Pick<Oddzial, 'starter'>>
+  o: Pick<Oddzial, 'frakcja' | 'tier' | 'sprite' | 'nazwa' | 'poziom'> & Partial<Pick<Oddzial, 'starter' | 'tm'>>
 ): UnitDef | undefined {
   const gatunek = factionById(o.frakcja)?.units[o.tier];
   if (!gatunek) return undefined;
@@ -93,6 +93,7 @@ export function defStworka(
     atk: Math.max(1, Math.round(baza.atk * s)),
     poziom: o.poziom,
     etap,
+    tm: o.tm || undefined,
   };
 }
 

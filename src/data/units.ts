@@ -55,6 +55,8 @@ export interface UnitDef {
   poziom?: number;
   /** etap ewolucji (0 = pierwsza forma) — od niego zależy trzeci atak (`ataki.ts`) */
   etap?: number;
+  /** zna atak ostateczny z Dysku TM, choć nie ewoluował (`ataki.ts`) */
+  tm?: boolean;
 }
 
 // Odmiana przez przypadki, bo teksty w panelu wymagają różnych form:
