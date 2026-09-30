@@ -39,9 +39,12 @@ def twardaAlfa(im: Image.Image) -> Image.Image:
     return Image.fromarray(tab.astype(np.uint8), 'RGBA')
 
 
-#: Pokémart ma jeden rysunek na krainę, a trzy stopnie w grze — wyższy
-#: stopień to ten sam sklep, tylko większy (jak ratusze różnią się wielkością).
-SKLEP = {'sklep1': 250, 'sklep2': 280, 'sklep3': 310}
+#: Pokémart rośnie piętrami jak gildia magów w Heroes 3: stopień II i III
+#: to ten sam sklep z dostawionym piętrem (`m2-<f>-sklep2`, `-sklep3`,
+#: PROMPTY-MIASTO-2 „Pokémart rośnie piętrami"). Bez nich — dawny rysunek
+#: pierwszego stopnia, tylko większy. Wysokość w pliku: parter zostaje
+#: mniej więcej tej samej szerokości, budynek rośnie w górę.
+SKLEP = {'sklep1': 250, 'sklep2': 380, 'sklep3': 530}
 
 
 def main() -> None:
@@ -49,7 +52,9 @@ def main() -> None:
         if (WSAD / f'm2-{f}-sklep.png').exists():
             surowy = twardaAlfa(wczytaj(f'm2-{f}-sklep'))
             for nazwa, wys in SKLEP.items():
-                dopasuj(surowy, wys).save(MIASTO / f'{f}-{nazwa}.png')
+                pietro = f'm2-{f}-{nazwa}'
+                zrodlo = twardaAlfa(wczytaj(pietro)) if (WSAD / f'{pietro}.png').exists() else surowy
+                dopasuj(zrodlo, wys).save(MIASTO / f'{f}-{nazwa}.png')
             print(f'  {f}-sklep1..3.png')
         zrodlo = WSAD / f'm2-tlo-{f}.png'
         if zrodlo.exists():

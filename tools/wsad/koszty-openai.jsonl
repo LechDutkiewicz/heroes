@@ -843,3 +843,9 @@
 {"czas": "2026-09-30T08:48:05+00:00", "plik": "artefakt-kamizelka.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 564, "wyj": 1382, "usd": 0.047}
 {"czas": "2026-09-30T08:48:06+00:00", "plik": "umiejetnosc-pancerz.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 556, "wyj": 1332, "usd": 0.0454}
 {"czas": "2026-09-30T08:48:06+00:00", "plik": "umiejetnosc-lucznictwo.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 558, "wyj": 1378, "usd": 0.0469}
+{"czas": "2026-09-30T08:54:15+00:00", "plik": "m2-grota-sklep2.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 525, "wyj": 1892, "usd": 0.0632}
+{"czas": "2026-09-30T08:54:16+00:00", "plik": "m2-zbocze-sklep2.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 525, "wyj": 1927, "usd": 0.0643}
+{"czas": "2026-09-30T08:54:18+00:00", "plik": "m2-bor-sklep2.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 525, "wyj": 1984, "usd": 0.0661}
+{"czas": "2026-09-30T08:54:48+00:00", "plik": "m2-bor-sklep3.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 796, "wyj": 1932, "usd": 0.0658}
+{"czas": "2026-09-30T08:54:48+00:00", "plik": "m2-grota-sklep3.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 796, "wyj": 1949, "usd": 0.0663}
+{"czas": "2026-09-30T08:54:49+00:00", "plik": "m2-zbocze-sklep3.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 796, "wyj": 1953, "usd": 0.0665}

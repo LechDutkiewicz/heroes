@@ -6,7 +6,7 @@
 // tylko tym, ile budynków akurat stało.
 //
 //   node tools/zrzut-miasto.mjs [--frakcja bor] [--out tools/shots/miasto.png]
-//                               [--budynki wszystkie|start] [--url http://localhost:4173]
+//                               [--budynki wszystkie|start|sklep|sklep1|sklep2|sklep3] [--url http://localhost:4173]
 
 import { chromium } from 'playwright';
 
@@ -62,7 +62,14 @@ await page.evaluate(
     s.zajety = false;
     s.idz([{ x: z.x, y: z.y, koszt: 100 }]);
   },
-  [FRAKCJA, POSTAWIONE[BUDYNKI] ?? POSTAWIONE.wszystkie]
+  [
+    FRAKCJA,
+    // `--budynki sklep3` (sklep1..3) — Pokémart na zadanym stopniu na tle
+    // rozbudowanego miasta (piętra jak gildia magów).
+    /^sklep[123]$/.test(BUDYNKI)
+      ? [...POSTAWIONE.wszystkie, ...['sklep1', 'sklep2', 'sklep3'].slice(0, Number(BUDYNKI.slice(-1)))]
+      : (POSTAWIONE[BUDYNKI] ?? POSTAWIONE.wszystkie),
+  ]
 );
 
 await scena('zamek');
