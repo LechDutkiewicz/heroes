@@ -62,7 +62,7 @@ export const MUZYKA_MIASTO = { klucz: 'muzyka-miasto', glosnosc: 0.16, narost: 1
 /** Wczytanie próbek. Wołane z `preload` sceny. */
 export function loadSfx(scene: Phaser.Scene, muzyka: { klucz: string }) {
   for (const k of [...PLIKI, muzyka.klucz])
-    scene.load.audio(k, `${import.meta.env.BASE_URL}audio/${k}.wav`);
+    scene.load.audio(k, [`${import.meta.env.BASE_URL}audio/${k}.ogg`, `${import.meta.env.BASE_URL}audio/${k}.mp3`]);
 }
 
 interface Ambient {

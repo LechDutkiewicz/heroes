@@ -543,7 +543,7 @@ export class BattleScene extends Phaser.Scene {
     // Krój walki zaczyna się wczytywać już tutaj — zwykle zdąży przed `create`.
     void krojWalki();
     for (const t of TERRAINS) {
-      this.load.image(t.key, `${import.meta.env.BASE_URL}terrain/${t.key}.png`);
+      this.load.image(t.key, `${import.meta.env.BASE_URL}terrain/${t.key}.jpg`);
     }
     for (const kind of PRZESZKODY_BITWY) {
       const plik = kind.includes('/') ? `mapa/klocki/${kind}.png` : `terrain/obstacles/${kind}.png`;

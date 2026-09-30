@@ -280,7 +280,7 @@ export class TownScene extends Phaser.Scene {
       if (!this.textures.exists(`k-portret-${kto}`)) this.load.image(`k-portret-${kto}`, `${b}kampania/portret-${kto}.jpg`);
     }
     for (const f of ['bor', 'grota', 'zbocze']) {
-      this.load.image(`t-tlo-${f}`, `${b}miasto/tlo-${f}.png`);
+      this.load.image(`t-tlo-${f}`, `${b}miasto/tlo-${f}.jpg`);
       this.load.image(`t-znak-${f}`, `${b}miasto/znak-${f}.png`);
       // Każda kraina ma własne bryły (`tools/miasto2_wczytaj.py`).
       for (const id of BUDYNKI_ID) this.load.image(`t-${f}-${id}`, `${b}miasto/${f}-${id}.png`);

@@ -50,11 +50,13 @@ concurrency:
 
 env:
   MAGAZYN: strona-podglady
-  # Ile podglądów gałęzi trzymamy. Każdy to pełna kopia gry (~50 MB), a przy
-  # każdym deployu cała strona idzie na serwer od nowa — więc ta liczba wprost
-  # przekłada się na czas publikowania. Pięć to kompromis; gdyby deploye
-  # zaczęły męczyć, wystarczy tu wpisać mniej.
-  MAKS_PODGLADOW: 5
+  # Ile podglądów gałęzi trzymamy. Każdy to pełna kopia gry (~75 MB po
+  # porządkach z 2026-09-30, wcześniej ~110 MB), a przy każdym deployu cała
+  # strona idzie na serwer od nowa — więc ta liczba wprost przekłada się na
+  # czas publikowania i na limit 1 GB strony. Pracujemy jedną gałęzią naraz
+  # i merge'ujemy często, więc trzy podglądy wystarczą (było pięć i deploy
+  # raz nie przeszedł).
+  MAKS_PODGLADOW: 3
 
 jobs:
   build:
