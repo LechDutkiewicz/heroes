@@ -299,7 +299,7 @@ function drawGrid(scene: Phaser.Scene) {
         r: HEX_R - 0.5,
       });
 
-      g.lineStyle(1.6, 0x2a1606, 0.32);
+      g.lineStyle(1.6, 0x2a1606, 0.44);
       g.strokePoints(hexPoints(x, y, HEX_R - 1), true);
       bevel(g, x, y, HEX_R - 2.5, 0.22, 0.12);
     }
@@ -445,8 +445,12 @@ export function pulse(scene: Phaser.Scene, target: Phaser.GameObjects.Graphics, 
 export function drawObstacleShadow(scene: Phaser.Scene, x: number, y: number, width: number) {
   const g = scene.add.graphics().setDepth(Z.grid + 0.1);
   g.setMask(boardMask(scene));
+  // Zablokowane pole ciemniejsze, jak udeptana ziemia pod przeszkodą
+  // w Heroes 3 — krytyk: przeszkoda nie czytała się jako „tu nie wejdziesz".
+  g.fillStyle(C.shadow, 0.16);
+  g.fillPoints(hexPoints(x, y, HEX_R - 1.5), true);
   for (let i = 3; i >= 1; i--) {
-    g.fillStyle(C.shadow, 0.1);
+    g.fillStyle(C.shadow, 0.14);
     g.fillEllipse(x, y + 4, width * (0.6 + i * 0.12), width * (0.2 + i * 0.05));
   }
   return g;

@@ -2637,3 +2637,19 @@ po wygranej bez płacenia) — liczy go `rozliczDruzyne`.
 za jagody) i `probe-pojedynki.ts` (porażka bez teleportu) zaktualizowane.
 `probe-bohater.mjs` (klik w bohatera na mapie) pada już na bazie — do
 sprawdzenia osobno.
+
+## Teren bitwy z pola mapy (2026-09-30)
+
+Tło i przeszkody bitwy wynikają z pola, na którym stoi trener
+(`src/data/terenBitwy.ts`, `terenBitwy(stan, x, y, klimat)`), jak w Heroes 3.
+Sześć terenów: łąka, leśna polana (≥3 sąsiadów lasu), plaża (piasek),
+pustkowie (jałowa/skały), bagno, śnieg. Klimat planszy (`USTAWIENIA.klocki`)
+przestawia zwykłą trawę: zima → śnieg, bagno → bagno. Przeszkody to te same
+klocki drzew i skał co na mapie (`public/mapa/klocki/<zestaw>/`), plus
+palma i suchy krzak (`public/terrain/obstacles/przeszkoda-*.png`). Tła
+malowane OpenAI (`tlo-walka-<teren>.png`, prompty w `PROMPTY-MAPA-3.md`),
+wczytywane `tools/walka_wczytaj.py` do `public/terrain/<teren>.png`.
+Bez danych z przygody (sondy, podgląd `?ekran=walka`) teren jest losowy.
+Po ślepym krytyku: pole z przeszkodą lekko przyciemnione, siatka mocniejsza.
+Stare `public/terrain/{jesien,noc,plaza}.png` i dawne przeszkody są już
+nieużywane — do usunięcia w porządkach.
