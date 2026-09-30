@@ -133,7 +133,7 @@ sprawdz(
 //
 // Budowanie przeniosło się z panoramy do listy: w Heroes 3 miasto na starcie
 // jest puste i wypełnia się w miarę rozbudowy, a co postawić, wybiera się
-// z listy w ratuszu. Sonda musi więc klikać w wiersz listy, a nie w zarys.
+// z panelu w ratuszu. Sonda klika w kartę budynku, a potem w „Zbuduj".
 console.log('\n=== lista budowy ===');
 await page.evaluate(() => {
   const t = window.__game.scene.getScene('zamek');
@@ -141,23 +141,44 @@ await page.evaluate(() => {
   t.odswiez();
 });
 
-/** Gdzie na ekranie leży wiersz danego budynku na otwartej liście. */
+/** Gdzie na ekranie leży karta danego budynku w otwartym panelu budowy. */
 const gdzieWiersz = (id) =>
   page.evaluate((b) => {
     const t = window.__game.scene.getScene('zamek');
     const wiersz = t.children.list.find(
       (o) => o.type === 'Text' && o.text === (t.profil.budynki.find((x) => x.id === b)?.nazwa ?? '')
     );
-    return wiersz ? { x: wiersz.x + 120, y: wiersz.y + 14 } : null;
+    return wiersz ? { x: wiersz.x, y: wiersz.y - 40 } : null;
   }, id);
+
+/**
+ * Panel budowy jak ratusz w Heroes 3: klik w kartę otwiera okienko z opisem
+ * i ceną, a budynek staje dopiero po „Zbuduj" / „Rozbuduj".
+ */
+async function zbudujZPanelu(miejsce) {
+  await klik(miejsce.x, miejsce.y);
+  await page.waitForTimeout(400);
+  const przycisk = await page.evaluate(() => {
+    const t = window.__game.scene.getScene('zamek');
+    for (const o of t.children.list) {
+      if (o.type !== 'Container' || !o.visible) continue;
+      const napis = o.list.find((c) => c.type === 'Text' && /^(Zbuduj|Rozbuduj)$/.test(c.text));
+      if (napis) return { x: o.x, y: o.y };
+    }
+    return null;
+  });
+  if (!przycisk) return false;
+  await klik(przycisk.x, przycisk.y);
+  await page.waitForTimeout(500);
+  return true;
+}
 
 await klik(960 - 296, 663);
 await page.waitForTimeout(400);
 const wierszFortu = await gdzieWiersz('fort');
 sprawdz('przycisk „Buduj" otwiera listę z wierszem fortu', !!wierszFortu);
 
-await klik(wierszFortu.x, wierszFortu.y);
-await page.waitForTimeout(500);
+sprawdz('klik w kartę fortu otwiera okienko z „Zbuduj"', await zbudujZPanelu(wierszFortu));
 const poBudowie = await stanZamku();
 sprawdz('fort stanął', poBudowie.postawione.includes('fort'), poBudowie.postawione.join(', '));
 sprawdz(
@@ -359,8 +380,7 @@ await page.waitForTimeout(400);
 const wierszRatusza = await gdzieWiersz('ratusz2');
 sprawdz('klik w ratusz otwiera listę budowy', !!wierszRatusza);
 
-await klik(wierszRatusza.x, wierszRatusza.y);
-await page.waitForTimeout(500);
+sprawdz('okienko ratusza ma „Rozbuduj"', await zbudujZPanelu(wierszRatusza));
 const poRozbudowie = await page.evaluate(() => {
   const t = window.__game.scene.getScene('zamek');
   const ratusze = t.kafle.filter((k) => k.budynek.rodzaj === 'ratusz');

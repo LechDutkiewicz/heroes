@@ -91,6 +91,20 @@ if (process.argv.includes('--lista')) {
   await page.evaluate(() => window.__game.scene.getScene('zamek').pokazListeBudowy());
   await page.waitForTimeout(600);
 }
+// `--najedz x,y` / `--klik x,y` — ruch myszy albo klik w punkt płótna gry
+// (960 × 694), np. najechanie na kartę budynku w panelu budowy.
+for (const [flaga, klik] of [['--najedz', false], ['--klik', true]]) {
+  const gdzie = arg(flaga, '');
+  if (!gdzie) continue;
+  const [px, py] = gdzie.split(',').map(Number);
+  const box = await page.locator('canvas').boundingBox();
+  const k = box.width / 960;
+  const x = box.x + px * k;
+  const y = box.y + py * k;
+  if (klik) await page.mouse.click(x, y);
+  else await page.mouse.move(x, y);
+  await page.waitForTimeout(500);
+}
 // `--sklep` — zrzut z otwartym oknem Pokémartu.
 if (process.argv.includes('--sklep')) {
   await page.evaluate(() => window.__game.scene.getScene('zamek').pokazSklep());

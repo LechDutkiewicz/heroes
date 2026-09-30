@@ -1539,180 +1539,321 @@ export class TownScene extends Phaser.Scene {
 
   private pokazListeBudowy() {
     const postawione = this.zamek.postawione ?? [];
-    // Trzy ratusze to jeden budynek w trzech stopniach: na liście ma być
-    // najbliższy stopień, a nie trzy wiersze, z których dwa są bez sensu.
+    // Trzy ratusze to jeden budynek w trzech stopniach: w panelu ma być
+    // najbliższy stopień, a nie trzy karty, z których dwie są bez sensu.
     const najblizszyRatusz =
       ['ratusz1', 'ratusz2', 'ratusz3'].find((r) => !postawione.includes(r)) ?? 'ratusz3';
     const najblizszySklep = ['sklep1', 'sklep2', 'sklep3'].find((r) => !postawione.includes(r)) ?? 'sklep3';
-    const wiersze = this.profil.budynki.filter(
+    const budynki = this.profil.budynki.filter(
       (b) =>
         (!b.id.startsWith('ratusz') || b.id === najblizszyRatusz) &&
         (!b.id.startsWith('sklep') || b.id === najblizszySklep)
     );
-
-    // Okno jak wszystkie okna mapy: przyciemnienie i pergamin w złotej ramie.
-    const szer = 700;
-    // Dziesięć wierszy (z Pokémartem) musi zmieścić się w oknie gry.
-    const wysWiersza = 54;
-    // 70 na tytuł z ozdobnikiem u góry, 66 na przycisk u dołu — bez tego
-    // zapasu „Zamknij" nachodził na ostatni wiersz.
-    const wys = 70 + wiersze.length * wysWiersza + 66;
-    const cx = OKNO_W / 2;
-    const cy = OKNO_H / 2;
-    const lewo = cx - szer / 2;
-    const gora = cy - wys / 2;
-    const doZamkniecia: Phaser.GameObjects.GameObject[] = [];
-
-    const zaslona = this.add
-      .rectangle(0, 0, OKNO_W, OKNO_H, C.shadow, 0.5)
-      .setOrigin(0, 0)
-      .setDepth(Z.overlay)
-      .setInteractive();
-    doZamkniecia.push(zaslona);
-    for (const c of panelPergaminu(this, lewo, gora, szer, wys)) {
-      c.setDepth(Z.overlay + 1);
-      doZamkniecia.push(c);
-    }
-    doZamkniecia.push(
-      this.add
-        .text(cx, gora + 30, 'Co zbudować?', stylEtykiety(24))
-        .setOrigin(0.5)
-        .setDepth(Z.overlay + 2),
-      ozdobnik(this, lewo + 150, gora + 54, szer - 300).setDepth(Z.overlay + 2)
-    );
-
     const juzBudowano = this.zamek.budowanoDnia === this.stan.dzien;
-    // Tabliczka podskakuje napisem w tym samym kliknięciu, które zamyka okno
-    // — tweeny trzeba zdjąć, zanim zniszczy się napis (jak `zamknijOkno` mapy).
+    const nasz = this.zamek.wlasciciel === 'gracz';
+
+    // Panel ratusza jak w Heroes 3: siatka rysunków wszystkich budynków,
+    // pod każdym nazwa na pasku w barwie stanu. Szczegóły (do czego służy,
+    // ile kosztuje) — w pasku na dole po najechaniu i w okienku po kliknięciu.
+    const KOL = 5;
+    const KW = 156;
+    const ODST = 12;
+    const BELKA = 56;
+    const INFO = 92;
+    const rzedy = Math.ceil(budynki.length / KOL);
+    const zapas = OKNO_H - 20 - (BELKA + 38 + INFO + 14 + 62);
+    const KH = Math.min(172, Math.floor(zapas / rzedy) - ODST);
+    const siatkaW = KOL * KW + (KOL - 1) * ODST;
+    const szer = siatkaW + 48;
+    const wys = BELKA + 38 + rzedy * (KH + ODST) + INFO + 14 + 62;
+    const cx = OKNO_W / 2;
+    const lewo = cx - szer / 2;
+    const gora = (OKNO_H - wys) / 2;
+    const G = Z.overlay;
+    const warstwa: Phaser.GameObjects.GameObject[] = [];
     const zgas = (o: Phaser.GameObjects.GameObject) => {
       this.tweens.killTweensOf(o);
       if (o instanceof Phaser.GameObjects.Container) o.list.forEach(zgas);
     };
     const zamknij = () => {
-      for (const o of doZamkniecia) {
+      zamknijSzczegoly();
+      infoKoszt.forEach((o) => o.destroy());
+      infoKoszt.length = 0;
+      for (const o of warstwa) {
         zgas(o);
         o.destroy();
       }
-      doZamkniecia.length = 0;
+      warstwa.length = 0;
       this.karta.setVisible(false);
       this.kartaPrzycisk.kontener.setVisible(false);
       this.wybrany = undefined;
     };
 
-    for (const [i, b] of wiersze.entries()) {
-      const y = gora + 66 + i * wysWiersza;
+    const zaslona = this.add.rectangle(0, 0, OKNO_W, OKNO_H, C.shadow, 0.62).setOrigin(0, 0).setDepth(G).setInteractive();
+    zaslona.on('pointerdown', () => zamknij());
+    const panel = this.add.graphics().setDepth(G + 1);
+    panelBialy(panel, lewo, gora, szer, wys, 20, { obrys: 4, cien: 6 });
+    panel.fillStyle(0xd8412f, 1);
+    panel.fillRoundedRect(lewo + 4, gora + 4, szer - 8, BELKA - 4, { tl: 16, tr: 16, bl: 0, br: 0 });
+    panel.fillStyle(TUSZ, 1);
+    panel.fillRect(lewo + 4, gora + BELKA, szer - 8, 4);
+    panel.setInteractive(new Phaser.Geom.Rectangle(lewo, gora, szer, wys), Phaser.Geom.Rectangle.Contains);
+    warstwa.push(
+      zaslona,
+      panel,
+      this.add
+        .text(cx, gora + BELKA / 2 + 2, 'Co zbudować?', stylWalki(26, '#ffffff'))
+        .setOrigin(0.5)
+        .setShadow(0, 2, 'rgba(0,0,0,0.35)', 0, false, true)
+        .setDepth(G + 2),
+      this.add
+        .text(
+          cx,
+          gora + BELKA + 20,
+          !nasz
+            ? 'To nie twoje miasto — tu nic nie zbudujesz.'
+            : juzBudowano
+              ? 'Dziś już tu budowano — jutro postawisz następny budynek.'
+              : 'Jeden budynek dziennie. Najedź na rysunek, a zobaczysz, do czego służy.',
+          stylWalki(15, nasz && !juzBudowano ? '#26262e' : '#c92a09', 800)
+        )
+        .setOrigin(0.5)
+        .setDepth(G + 2)
+    );
+
+    // Pasek informacji na dole — jak podpowiedź na dole ekranu w Heroes 3.
+    const infoY = gora + BELKA + 38 + rzedy * (KH + ODST) + 2;
+    const infoX = lewo + 24;
+    const infoTlo = this.add.graphics().setDepth(G + 2);
+    infoTlo.fillStyle(0xeef2f7, 1);
+    infoTlo.fillRoundedRect(infoX, infoY, siatkaW, INFO, 14);
+    const infoNazwa = this.add.text(infoX + 18, infoY + 12, '', stylWalki(17)).setDepth(G + 3);
+    const infoOpis = this.add
+      .text(infoX + 18, infoY + 38, '', { ...stylWalki(13, '#5b6270', 800), lineSpacing: -1 })
+      .setWordWrapWidth(siatkaW - 300)
+      .setDepth(G + 3);
+    const infoKoszt: Phaser.GameObjects.GameObject[] = [];
+    warstwa.push(infoTlo, infoNazwa, infoOpis);
+
+    type Stan = { napis: string; barwa: number; tekst: string };
+    const stanBudynku = (b: Budynek): Stan & { dostepny: boolean } => {
       const stoi = postawione.includes(b.id);
       const mozna = moznaBudowac(b, postawione);
       const stac = stacNas(this.stan.skarbiec, b.koszt);
-      const dostepny = !stoi && mozna && stac && !juzBudowano && this.zamek.wlasciciel === 'gracz';
-      const rx = lewo + 16;
-      const rw = szer - 32;
-      const rh = wysWiersza - 6;
-
-      // Wiersze jak linie w księdze: co drugi na ciemniejszym papierze,
-      // a te, które da się postawić DZIŚ, w złotej ramce — widać je od razu.
-      const rzad = this.add.graphics().setDepth(Z.overlay + 2);
-      if (i % 2 === 0) {
-        rzad.fillStyle(BARWA.papierCiemny, 0.55);
-        rzad.fillRoundedRect(rx, y, rw, rh, 5);
+      const dostepny = !stoi && mozna && stac && !juzBudowano && nasz;
+      // Barwy paska jak w ratuszu Heroes 3: zielony — można, złoty — stoi,
+      // czerwony — brak surowców, szary — najpierw inny budynek.
+      if (stoi) return { napis: '✓ Stoi', barwa: 0xf2c230, tekst: '#26262e', dostepny };
+      if (!mozna) {
+        // Który budynek najpierw — nazwą, a nie „najpierw inny" (krytyk).
+        const brak = b.wymaga.find((w) => !postawione.includes(w));
+        const nazwa = this.profil.budynki.find((x) => x.id === brak)?.nazwa ?? '';
+        return { napis: `Najpierw: ${nazwa}`, barwa: 0x8b93a0, tekst: '#ffffff', dostepny };
       }
-      const podswietlenie = this.add.graphics().setDepth(Z.overlay + 2).setVisible(false);
-      podswietlenie.fillStyle(0xffe27a, 0.45);
-      podswietlenie.fillRoundedRect(rx, y, rw, rh, 5);
-      doZamkniecia.push(rzad, podswietlenie);
-      if (dostepny) doZamkniecia.push(ramaZlota(this, rx + 5, y + 5, rw - 10, rh - 10, false).setDepth(Z.overlay + 2));
+      if (!stac) return { napis: 'Brak surowców', barwa: 0xd8412f, tekst: '#ffffff', dostepny };
+      if (juzBudowano || !nasz) return { napis: 'Jutro', barwa: 0x8b93a0, tekst: '#ffffff', dostepny };
+      return { napis: 'Można budować', barwa: 0x34a85a, tekst: '#ffffff', dostepny };
+    };
 
-      // Miniatura budynku. W Heroes 3 lista budowy pokazuje rysunek każdej
-      // budowli i to on, a nie nazwa, mówi dziecku, co właśnie kupuje —
-      // „Rosista Kotlina" nic nie znaczy, dopóki nie zobaczy się kotliny.
-      // Bierzemy tę samą grafikę, która stanie na panoramie, więc nie ma jak
-      // się rozjechać z tym, co potem widać w mieście.
-      const bok = wysWiersza - 20;
-      const mx = rx + 16;
-      const my = y + (rh - bok) / 2;
-      const ramka = this.add.graphics().setDepth(Z.overlay + 3);
-      ramka.fillStyle(0xeaf4ff, 1);
-      ramka.fillRect(mx, my, bok, bok);
-      const mini = this.add
-        .image(mx + bok / 2, my + bok / 2, `t-${this.profil.frakcja}-${b.id}`)
-        .setDepth(Z.overlay + 4);
-      mini.setScale(Math.min((bok - 4) / mini.width, (bok - 4) / mini.height));
-      // Postawione są wyszarzone — od razu widać, co jest już załatwione.
-      if (stoi) mini.setTint(0x9aa2ae);
-      doZamkniecia.push(ramka, mini, ramaZlota(this, mx, my, bok, bok, false).setDepth(Z.overlay + 5));
+    const rysujKoszt = (koszt: Budynek['koszt'], prawo: number, y: number, rozmiar = 22) => {
+      const obiekty: Phaser.GameObjects.GameObject[] = [];
+      let x = prawo;
+      for (const [co, ile] of Object.entries(koszt).reverse()) {
+        const s = co as Surowiec;
+        const brak = this.stan.skarbiec[s] < ile;
+        const t = this.add
+          .text(x, y, String(ile), stylWalki(rozmiar - 6, brak ? '#c92a09' : '#26262e'))
+          .setOrigin(1, 0.5);
+        x -= t.width + 4;
+        const im = this.add.image(x - rozmiar / 2, y, `m-${SUROWIEC_INFO[s].ikona}`).setDisplaySize(rozmiar, rozmiar);
+        x -= rozmiar + 14;
+        obiekty.push(t, im);
+      }
+      return obiekty;
+    };
 
-      const tekstX = mx + bok + 16;
-      const barwaNazwy = dostepny ? BARWA.atrament : BARWA.atramentMiekki;
-      const barwaStanu = stoi ? 'zielony' : !mozna ? 'czerwony' : 'miekki';
-      // Opis kończy się przed kolumnami ceny — gdy się nie mieści, schodzi
-      // o piksel, a na końcu łamie w dwa wiersze.
-      const cenaOd = stoi ? rx + rw - 16 : rx + rw - 16 - 78 * Object.keys(b.koszt).length;
-      const maksW = cenaOd - tekstX - 8;
+    const pokazInfo = (b?: Budynek) => {
+      infoKoszt.forEach((o) => o.destroy());
+      infoKoszt.length = 0;
+      if (!b) {
+        infoNazwa.setText('Ratusz');
+        infoOpis.setText('Najedź na budynek, żeby zobaczyć, do czego służy i ile kosztuje. Kliknij, żeby zbudować.');
+        return;
+      }
+      const stoi = postawione.includes(b.id);
+      const mozna = moznaBudowac(b, postawione);
+      infoNazwa.setText(b.nazwa);
+      infoOpis.setText(
+        stoi
+          ? `${this.dzialanie(b, true).split('\n').join(' ')} Już stoi.`
+          : this.wiersz(b, stoi, mozna, stacNas(this.stan.skarbiec, b.koszt), juzBudowano)
+      );
+      for (const r of [13, 12, 11]) {
+        infoOpis.setFontSize(r);
+        if (infoOpis.height <= INFO - 44) break;
+      }
+      if (!stoi)
+        for (const o of rysujKoszt(b.koszt, infoX + siatkaW - 20, infoY + INFO / 2)) {
+          (o as Phaser.GameObjects.Image).setDepth(G + 3);
+          infoKoszt.push(o);
+        }
+    };
+    pokazInfo();
+
+    // Okienko po kliknięciu — rysunek, opis, warunki, cena, „Zbuduj".
+    let szczegoly: Phaser.GameObjects.GameObject[] = [];
+    let przyciskiSzczegolow: Przycisk[] = [];
+    const zamknijSzczegoly = () => {
+      szczegoly.forEach((o) => o.destroy());
+      przyciskiSzczegolow.forEach((p) => p.kontener.destroy());
+      szczegoly = [];
+      przyciskiSzczegolow = [];
+    };
+    const pokazSzczegoly = (b: Budynek) => {
+      zamknijSzczegoly();
+      const st = stanBudynku(b);
+      const stoi = postawione.includes(b.id);
+      const W = 560;
+      const H = 300;
+      const x0 = cx - W / 2;
+      const y0 = gora + (wys - H) / 2 - 10;
+      const D = G + 10;
+      const cien = this.add.rectangle(lewo, gora, szer, wys, C.shadow, 0.35).setOrigin(0, 0).setDepth(D).setInteractive();
+      cien.on('pointerdown', () => zamknijSzczegoly());
+      const g = this.add.graphics().setDepth(D + 1);
+      panelBialy(g, x0, y0, W, H, 18, { obrys: 4, cien: 6 });
+      g.fillStyle(0xeaf4ff, 1);
+      g.fillRoundedRect(x0 + 18, y0 + 18, 200, 170, 12);
+      g.fillStyle(st.barwa, 1);
+      g.fillRoundedRect(x0 + 18, y0 + 192, 200, 28, 10);
+      g.setInteractive(new Phaser.Geom.Rectangle(x0, y0, W, H), Phaser.Geom.Rectangle.Contains);
+      const obraz = this.add.image(x0 + 118, y0 + 103, `t-${this.profil.frakcja}-${b.id}`).setDepth(D + 2);
+      obraz.setScale(Math.min(184 / obraz.width, 156 / obraz.height));
+      const tx = x0 + 236;
+      const tw = W - 236 - 18;
+      const opisTekst = stoi
+        ? `${this.dzialanie(b, true)}\n\nJuż stoi.`
+        : this.dzialanie(b, false) +
+          (moznaBudowac(b, postawione)
+            ? ''
+            : `\n\nNajpierw: ${b.wymaga
+                .filter((w) => !postawione.includes(w))
+                .map((w) => this.profil.budynki.find((x) => x.id === w)?.nazwa ?? w)
+                .join(', ')}.`);
       const opis = this.add
-        .text(tekstX, y + 28, this.wiersz(b, stoi, mozna, stac, juzBudowano), stylAtramentu(12, barwaStanu))
-        .setDepth(Z.overlay + 3);
-      for (const r of [11, 10]) {
-        if (opis.width <= maksW) break;
-        opis.setFontSize(r);
-      }
-      if (opis.width > maksW) opis.setWordWrapWidth(maksW).setLineSpacing(-2).setY(y + 25);
-      doZamkniecia.push(
-        this.add
-          .text(tekstX, y + 7, b.nazwa, stylEtykiety(15, barwaNazwy))
-          .setDepth(Z.overlay + 3),
+        .text(tx, y0 + 52, opisTekst, { ...stylWalki(14, '#3b404a', 800), lineSpacing: 1 })
+        .setWordWrapWidth(tw)
+        .setDepth(D + 2);
+      for (const r of [13, 12]) if (opis.height > 150) opis.setFontSize(r);
+      const napisStanu = this.add.text(x0 + 118, y0 + 206, st.napis, stylWalki(14, st.tekst)).setOrigin(0.5).setDepth(D + 2);
+      if (napisStanu.width > 188) napisStanu.setScale(188 / napisStanu.width);
+      szczegoly.push(
+        cien,
+        g,
+        obraz,
+        napisStanu,
+        this.add.text(tx, y0 + 18, b.nazwa, stylWalki(22)).setDepth(D + 2),
         opis
       );
-
-      // Cena po prawej, ikonami — czytelna, zanim dziecko przeczyta nazwy.
       if (!stoi) {
-        // Stałe kolumny po 78 px: ikona, a za nią liczba od lewej — trzycyfrowa
-        // cena nie wchodzi wtedy pod ikonę.
-        let x = rx + rw - 16 - 78;
-        for (const [co, ile] of Object.entries(b.koszt).reverse()) {
-          const s = co as Surowiec;
-          const brak = this.stan.skarbiec[s] < ile;
-          doZamkniecia.push(
-            this.add
-              .image(x + 12, y + rh / 2, `m-${SUROWIEC_INFO[s].ikona}`)
-              .setDisplaySize(22, 22)
-              .setOrigin(0.5)
-              .setDepth(Z.overlay + 3),
-            this.add
-              .text(x + 28, y + rh / 2, String(ile), stylEtykiety(15, brak ? BARWA.atramentCzerwony : BARWA.atrament))
-              .setOrigin(0, 0.5)
-              .setDepth(Z.overlay + 3)
-          );
-          x -= 78;
-        }
+        szczegoly.push(
+          this.add.text(tx, y0 + 216, 'Koszt:', stylWalki(14, '#5b6270', 800)).setOrigin(0, 0.5).setDepth(D + 2),
+          ...rysujKoszt(b.koszt, x0 + W - 22, y0 + 216, 24).map((o) => (o as Phaser.GameObjects.Image).setDepth(D + 2))
+        );
       }
-
-      if (!dostepny) continue;
-      const strefa = this.add
-        .zone(rx, y, rw, rh)
-        .setOrigin(0, 0)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(Z.overlay + 6)
-        .on('pointerover', () => podswietlenie.setVisible(true))
-        .on('pointerout', () => podswietlenie.setVisible(false))
-        .on('pointerdown', () => {
+      const rozbudowa = b.rodzaj === 'ratusz' && b.id !== 'ratusz1';
+      const zbuduj = new Przycisk(this, {
+        x: cx + 120,
+        y: y0 + H - 38,
+        w: 180,
+        h: 42,
+        tekst: stoi ? 'Już stoi' : rozbudowa ? 'Rozbuduj' : 'Zbuduj',
+        rozmiar: 16,
+        glowny: st.dostepny,
+        glebia: D + 3,
+        akcja: () => {
+          if (!st.dostepny) return;
           zamknij();
           this.buduj(b);
-        });
-      doZamkniecia.push(strefa);
-    }
+        },
+      });
+      zbuduj.ustaw(st.dostepny);
+      const wroc = new Przycisk(this, {
+        x: cx - 120,
+        y: y0 + H - 38,
+        w: 180,
+        h: 42,
+        tekst: 'Wróć',
+        rozmiar: 16,
+        glebia: D + 3,
+        akcja: () => zamknijSzczegoly(),
+      });
+      przyciskiSzczegolow = [zbuduj, wroc];
+    };
+
+    const x0 = lewo + 24;
+    const y0 = gora + BELKA + 38;
+    budynki.forEach((b, i) => {
+      const kx = x0 + (i % KOL) * (KW + ODST);
+      const ky = y0 + Math.floor(i / KOL) * (KH + ODST);
+      const st = stanBudynku(b);
+      const stoi = postawione.includes(b.id);
+      const mozna = moznaBudowac(b, postawione);
+      const PASEK = 26;
+      const g = this.add.graphics().setDepth(G + 2);
+      const rysuj = (nad: boolean) => {
+        g.clear();
+        panelBialy(g, kx, ky, KW, KH, 12, { obrys: nad ? 4 : 3, cien: 3, wypelnienie: nad ? 0xfff4c2 : 0xffffff });
+        g.fillStyle(0xeaf4ff, 1);
+        g.fillRoundedRect(kx + 7, ky + 7, KW - 14, KH - PASEK - 34, 8);
+        g.fillStyle(st.barwa, 1);
+        g.fillRoundedRect(kx + 5, ky + KH - PASEK - 5, KW - 10, PASEK, 8);
+      };
+      rysuj(false);
+      const obraz = this.add
+        .image(kx + KW / 2, ky + 7 + (KH - PASEK - 34) / 2, `t-${this.profil.frakcja}-${b.id}`)
+        .setDepth(G + 3);
+      obraz.setScale(Math.min((KW - 22) / obraz.width, (KH - PASEK - 42) / obraz.height));
+      // Zablokowane (brak wcześniejszego budynku) — przygaszone, jak w HoMM3.
+      if (!mozna && !stoi) obraz.setTint(0xa9b0bb).setAlpha(0.8);
+      const nazwa = this.add
+        .text(kx + KW / 2, ky + KH - PASEK - 19, b.nazwa, stylWalki(13))
+        .setOrigin(0.5)
+        .setDepth(G + 3);
+      if (nazwa.width > KW - 12) nazwa.setScale((KW - 12) / nazwa.width);
+      const pasek = this.add
+        .text(kx + KW / 2, ky + KH - 5 - PASEK / 2, st.napis, stylWalki(12, st.tekst))
+        .setOrigin(0.5)
+        .setDepth(G + 3);
+      if (pasek.width > KW - 18) pasek.setScale((KW - 18) / pasek.width);
+      const strefa = this.add
+        .zone(kx, ky, KW, KH)
+        .setOrigin(0, 0)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(G + 4)
+        .on('pointerover', () => {
+          rysuj(true);
+          pokazInfo(b);
+        })
+        .on('pointerout', () => {
+          rysuj(false);
+          pokazInfo();
+        })
+        .on('pointerdown', () => pokazSzczegoly(b));
+      warstwa.push(g, obraz, nazwa, pasek, strefa);
+    });
 
     const zamknijPrzycisk = new Przycisk(this, {
       x: cx,
-      y: gora + wys - 34,
+      y: gora + wys - 36,
       w: 200,
       h: 42,
       tekst: 'Zamknij',
       rozmiar: 15,
-      glebia: Z.overlay + 6,
+      glebia: G + 4,
       akcja: () => zamknij(),
     });
-    doZamkniecia.push(zamknijPrzycisk.kontener);
-    zaslona.on('pointerdown', () => zamknij());
+    warstwa.push(zamknijPrzycisk.kontener);
   }
 
   /** Jednowierszowy stan budynku na liście budowy. */
