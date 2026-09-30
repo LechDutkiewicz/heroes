@@ -442,3 +442,43 @@ the chest. Cartoonish and funny rather than menacing, suitable for young
 children. Chunky, bold, simple shapes readable at 48 pixels, painted soft
 storybook style with glossy highlights. No text, no background, no hands.
 ```
+
+
+## Przemalowanie w stylu gier Pokémon (2026-09-30)
+
+Ikony po fantasy (kamizelka, tarcza, pazur, pas, skrzydła, pancerz, łucznictwo) w stylu przedmiotów z gier Pokémon; wzorem jest ikona Super mikstury. Do gry: `python3 tools/bohater_ikony.py`.
+
+<!-- plik: artefakt-kamizelka.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A modern sporty padded trainer vest (like the Assault Vest item from Pokemon games): sleeveless, bright red and dark grey technical fabric with a zip down the front and a small white pocket. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
+
+<!-- plik: artefakt-tarcza.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A pair of modern protective sports pads (knee and elbow pads) in bright blue plastic with white straps, like the Protective Pads item from Pokemon games. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
+
+<!-- plik: artefakt-pazur.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A small sharp curved claw charm (like the Razor Claw item from Pokemon games): one glossy dark grey hooked claw with a bright red band and a tiny white tag. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
+
+<!-- plik: artefakt-mistrz.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A shiny champion belt of a Pokemon battle tournament: a wide red leather belt with a big round golden buckle shaped like a capture ball with a star in the middle. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
+
+<!-- plik: artefakt-skrzydla.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A compact bright orange and white hang glider (a small kite-like glider wing with a harness bar), a modern trainer travel gadget for flying over the map. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
+
+<!-- plik: umiejetnosc-pancerz.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A sturdy glossy turtle shell (like the Shell Armor ability of Pokemon): a rounded brown and green shell with a hexagon pattern and a light rim. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
+
+<!-- plik: umiejetnosc-lucznictwo.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A bright red and white aiming target with a small crosshair scope in front of it, meaning precise long-range attacks (like the Sniper ability of Pokemon). Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
