@@ -5,7 +5,7 @@ Tło zależy od pola mapy, na którym stoi trener (`src/data/terenBitwy.ts`).
 Prompty: `tools/PROMPTY-MAPA-3.md`, „Tła walki wg terenu".
 
     python3 tools/walka_wczytaj.py
-      tools/wsad/tlo-walka-<teren>.png → public/terrain/<teren>.png (960 × 600)
+      tools/wsad/tlo-walka-<teren>.png → public/terrain/<teren>.jpg (960 × 600)
       tools/wsad/przeszkoda-<nazwa>.png → public/terrain/obstacles/przeszkoda-<nazwa>.png
 """
 from pathlib import Path
@@ -30,8 +30,9 @@ def main() -> None:
         im = im.resize((round(im.width * k), round(im.height * k)), Image.LANCZOS)
         x = (im.width - W) // 2
         im = im.crop((x, im.height - H, x + W, im.height))
-        im.save(TLA / f'{teren}.png', optimize=True)
-        print(f'  terrain/{teren}.png')
+        # JPG: tło jest nieprzezroczyste, a PNG ważył ~1 MB na teren.
+        im.save(TLA / f'{teren}.jpg', quality=88, optimize=True, progressive=True)
+        print(f'  terrain/{teren}.jpg')
     for zrodlo in sorted(WSAD.glob('przeszkoda-*.png')):
         im = oczysc_brzeg(Image.open(zrodlo).convert('RGBA'))
         im = im.crop(im.getchannel('A').point(lambda v: 255 if v > 24 else 0).getbbox())

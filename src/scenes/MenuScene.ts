@@ -168,7 +168,7 @@ export class MenuScene extends Phaser.Scene {
     this.load.image('menu-starter', `${B}sprites/00193.png`);
     // Dwie krótkie próbki: stuknięcie przycisku i wejście. Muzyka dochodzi
     // później, w tle — 4 MB nie może trzymać czarnego ekranu.
-    this.load.audio('wejscie', `${B}audio/wejscie.wav`);
+    this.load.audio('wejscie', [`${B}audio/wejscie.ogg`, `${B}audio/wejscie.mp3`]);
     this.load.audio('krok', `${B}audio/krok.ogg`);
     // Zestaw — okno zapisanych gier i pytania.
     wczytajZestaw(this);
@@ -952,7 +952,7 @@ export class MenuScene extends Phaser.Scene {
       graj();
       return;
     }
-    this.load.audio(MUZYKA_MIASTO.klucz, `${B}audio/${MUZYKA_MIASTO.klucz}.wav`);
+    this.load.audio(MUZYKA_MIASTO.klucz, [`${B}audio/${MUZYKA_MIASTO.klucz}.ogg`, `${B}audio/${MUZYKA_MIASTO.klucz}.mp3`]);
     this.load.once(Phaser.Loader.Events.COMPLETE, graj);
     this.load.start();
   }

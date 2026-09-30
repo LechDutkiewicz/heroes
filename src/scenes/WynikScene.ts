@@ -142,7 +142,7 @@ export class WynikScene extends Phaser.Scene {
     // Stworki-znaki tytułów („Twój tytuł", Sala sław) — okrągłe portrety.
     wczytajPortrety(this, { okragle: true }, SPRITE_TYTULOW);
     for (const n of ['wynik-zwyciestwo', 'wynik-porazka', 'wynik-koniec'])
-      this.load.audio(n, `${b}audio/${n}.wav`);
+      this.load.audio(n, [`${b}audio/${n}.ogg`, `${b}audio/${n}.mp3`]);
   }
 
   /** Portret trenera, który prowadzi kampanię — do karty zakończenia. */

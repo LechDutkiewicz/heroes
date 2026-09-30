@@ -63,8 +63,9 @@ def main() -> None:
             im = im.resize((PAN_W, round(im.height * skala)), Image.LANCZOS)
             # Przycinamy z góry: niebo jest tam, gdzie i tak nic nie stoi.
             im = im.crop((0, im.height - PAN_H, PAN_W, im.height))
-            im.save(MIASTO / f'tlo-{f}.png')
-            print(f'  tlo-{f}.png')
+            # JPG: panorama jest nieprzezroczysta (PNG ważył ~1 MB).
+            im.save(MIASTO / f'tlo-{f}.jpg', quality=88, optimize=True, progressive=True)
+            print(f'  tlo-{f}.jpg')
         for nazwa, wys in BUDYNKI.items():
             if not (WSAD / f'm2-{f}-{nazwa}.png').exists():
                 continue

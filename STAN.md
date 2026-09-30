@@ -2684,3 +2684,22 @@ pęknięty głaz, trzciny, pniak w bajorze, grzyby, lód, bałwan, oszroniony
 krzak), a `scatterObstacles` losuje je bez powtórzeń (talia). Wysokie vs
 niskie: `wysokaPrzeszkoda` w `terenBitwy.ts`. `?ekran=bitwa&teren=<teren>`
 — pokazowa bitwa na zadanym terenie.
+
+## Porządki w projekcie (2026-09-30)
+
+`public/` 112 MB → 73 MB (każdy podgląd gałęzi to pełna kopia):
+- usunięte 403 nieużywane pliki (~17 MB): stare sprite'y `sprites/000xx`
+  spoza 18 linii frakcji, zestawy klimatu mapy (`mapa/{zima,bagno,polana}`
+  poza stosami i krzakami — wszystkie plansze mają klocki), dawne tła walki
+  `terrain/{jesien,noc,plaza}` i stare przeszkody, plany i ulepszone
+  siedliska miasta zapisywane tylko przez narzędzia, drobne resztki.
+  Lista z analizy statycznej (rozwinięte wzorce ładowania) + nagrania
+  żądań sieci na wszystkich ekranach; pliki wejściowe narzędzi Pythona
+  (`mapa/teren`, `mapa/tlo`, licencje) zostały.
+- muzyka i dźwięki mapy WAV (18 MB) → OGG + MP3 (~5 MB); gra wczytuje
+  `[.ogg, .mp3]`. Po wygenerowaniu nowych WAV: `tools/audio_kompresja.py`.
+- tła walki i panoramy miasta PNG → JPG (~9 MB → 1,3 MB); loadery
+  `walka_wczytaj.py`, `miasto2_wczytaj.py` piszą JPG.
+- `MAKS_PODGLADOW` w deployu 5 → 3.
+Historii gita nie ruszaliśmy (pakiet 1,36 GB) — to wymagałoby force-pusha
+na domyślnej gałęzi, tylko za zgodą.

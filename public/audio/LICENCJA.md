@@ -49,9 +49,9 @@ w `src/audio/sfx.ts`, nie edycja próbek.
 
 ## Mapa przygody i miasto — placeholdery
 
-Pliki `krok-mapa.wav`, `zajecie.wav`, `zbior.wav`, `wejscie.wav`, `awans.wav`,
-`budowa.wav`, `ambient-kopalnia.wav`, `ambient-wieza.wav`, `muzyka-mapa.wav`
-i `muzyka-miasto.wav` (obsługiwane przez `src/audio/mapSfx.ts`) **nie są**
+Pliki `krok-mapa.ogg`, `zajecie.ogg`, `zbior.ogg`, `wejscie.ogg`, `awans.ogg`,
+`budowa.ogg`, `ambient-kopalnia.ogg`, `ambient-wieza.ogg`, `muzyka-mapa.ogg`
+i `muzyka-miasto.ogg` (obsługiwane przez `src/audio/mapSfx.ts`) **nie są**
 próbkami z Kenneya ani OpenGameArt — środowisko, w którym to powstawało,
 nie miało dostępu do kenney.nl ani opengameart.org (proxy sieciowe
 odrzucało połączenie). To wygenerowana synteza, zrobiona skryptem
@@ -72,9 +72,9 @@ w skrypcie to port matematyki `ZZFX.buildSamples` z ZzFX.js, bez zależności
 od `AudioContext` — żeby dało się to odpalić w Pythonie, offline.
 
 ZzFX wciąż był syntezą fal — brzmiał jak efekty z gier 8-bitowych, nie jak
-gra z klimatem Heroes 3. Trzecia wersja (`awans.wav`, `budowa.wav`,
-`muzyka-mapa.wav`, `muzyka-miasto.wav`, `wejscie.wav`, `zajecie.wav`,
-`zbior.wav` — `krok-mapa.wav`, `ambient-kopalnia.wav` i `ambient-wieza.wav`
+gra z klimatem Heroes 3. Trzecia wersja (`awans.ogg`, `budowa.ogg`,
+`muzyka-mapa.ogg`, `muzyka-miasto.ogg`, `wejscie.ogg`, `zajecie.ogg`,
+`zbior.ogg` — `krok-mapa.ogg`, `ambient-kopalnia.ogg` i `ambient-wieza.ogg`
 zostają przy ZzFX/szumie, bo tych nikt nie kwestionował) komponuje utwory
 jako MIDI (`tools/muzyka_fluidsynth.py`, biblioteka `mido`, PyPI) i renderuje
 je programem `fluidsynth` z soundfontem **FluidR3_GM** — pakiet apt
@@ -86,7 +86,7 @@ soundfont grany przez prosty MIDI-sequencer, nie sesja z orkiestrą, więc
 traktuj to jako spory krok w górę, nie jako wersję docelową.
 
 Podmiana na docelowe próbki, gdy będzie dostęp do sieci: te same nazwy
-plików w tym katalogu (rozszerzenie może zostać `.wav` albo zmienić się na
+plików w tym katalogu (rozszerzenie może zostać `.ogg` albo zmienić się na
 `.ogg` — wtedy dopisać rozszerzenie też w `loadSfx` w `src/audio/mapSfx.ts`).
 Dobrzy kandydaci w tym samym stylu co reszta:
 
@@ -97,8 +97,8 @@ Dobrzy kandydaci w tym samym stylu co reszta:
 
 ## Ekran wyniku
 
-`wynik-zwyciestwo.wav` (fanfara, trąbka i blacha z kotłami), `wynik-porazka.wav`
-(obój i harfa w a-moll, zakończone akordem durowym) i `wynik-koniec.wav`
+`wynik-zwyciestwo.ogg` (fanfara, trąbka i blacha z kotłami), `wynik-porazka.ogg`
+(obój i harfa w a-moll, zakończone akordem durowym) i `wynik-koniec.ogg`
 (zapętlony motyw rogów pod zakończenie kampanii i Salę sław) powstają tą samą
 drogą — MIDI z `tools/muzyka_wynik.py` renderowane przez `fluidsynth`
 z **FluidR3_GM** (MIT). Własna kompozycja, bez cudzych melodii.

@@ -404,7 +404,7 @@ export class KampaniaScene extends Phaser.Scene {
   private doladujDzwiek() {
     const b = import.meta.env.BASE_URL;
     for (const k of ['wejscie', 'zbior', 'awans', MUZYKA_MAPA.klucz])
-      if (!this.cache.audio.exists(k)) this.load.audio(k, `${b}audio/${k}.wav`);
+      if (!this.cache.audio.exists(k)) this.load.audio(k, [`${b}audio/${k}.ogg`, `${b}audio/${k}.mp3`]);
     this.load.once(Phaser.Loader.Events.COMPLETE, () => startMusic(this, MUZYKA_MAPA));
     this.load.start();
   }
