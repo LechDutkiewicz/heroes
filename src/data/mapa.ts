@@ -171,13 +171,13 @@ export interface Artefakt {
 
 export const ARTEFAKTY: Artefakt[] = [
   { id: 'opaska', nazwa: 'Opaska Treningowa', klasa: 'drobny', atak: 1 },
-  { id: 'kamizelka', nazwa: 'Kamizelka Ochronna', klasa: 'drobny', obrona: 1 },
+  { id: 'kamizelka', nazwa: 'Kamizelka Szturmowa', klasa: 'drobny', obrona: 1 },
   { id: 'buty', nazwa: 'Buty Wędrowca', klasa: 'drobny', ruch: 150 },
-  { id: 'pazur', nazwa: 'Pazur Ostrza', klasa: 'znaczny', atak: 2 },
-  { id: 'tarcza', nazwa: 'Tarcza z Łusek', klasa: 'znaczny', obrona: 2 },
+  { id: 'pazur', nazwa: 'Ostry Pazur', klasa: 'znaczny', atak: 2 },
+  { id: 'tarcza', nazwa: 'Ochraniacze', klasa: 'znaczny', obrona: 2 },
   { id: 'rower', nazwa: 'Rower Terenowy', klasa: 'znaczny', ruch: 300 },
   { id: 'mistrz', nazwa: 'Pas Mistrza Areny', klasa: 'relikt', atak: 3, obrona: 2 },
-  { id: 'skrzydla', nazwa: 'Skrzydła Latającego', klasa: 'relikt', ruch: 450, obrona: 1 },
+  { id: 'skrzydla', nazwa: 'Lotnia Trenera', klasa: 'relikt', ruch: 450, obrona: 1 },
   // Cel misji „Bagienny szlak". Dodatek skromny, na poziomie drobnego
   // artefaktu: to jest trofeum i dowód wygranej, a nie nagroda, która
   // rozstrzyga następną misję — bohater zabiera go ze sobą dalej.

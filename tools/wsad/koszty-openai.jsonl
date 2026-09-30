@@ -836,3 +836,10 @@
 {"czas": "2026-09-29T15:28:42+00:00", "plik": "m3k-bagno-las-1x1-b.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1536", "wej": 1364, "wyj": 1965, "usd": 0.0697}
 {"czas": "2026-09-29T15:28:51+00:00", "plik": "m3k-zima-skala-2x1.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 1373, "wyj": 1894, "usd": 0.0675}
 {"czas": "2026-09-29T15:28:55+00:00", "plik": "m3k-zima-skala-1x1.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 1364, "wyj": 1405, "usd": 0.0518}
+{"czas": "2026-09-30T08:46:46+00:00", "plik": "artefakt-skrzydla.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 559, "wyj": 1400, "usd": 0.0476}
+{"czas": "2026-09-30T08:46:47+00:00", "plik": "artefakt-mistrz.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 559, "wyj": 1363, "usd": 0.0464}
+{"czas": "2026-09-30T08:46:48+00:00", "plik": "artefakt-tarcza.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 557, "wyj": 1403, "usd": 0.0477}
+{"czas": "2026-09-30T08:48:03+00:00", "plik": "artefakt-pazur.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 560, "wyj": 1360, "usd": 0.0463}
+{"czas": "2026-09-30T08:48:05+00:00", "plik": "artefakt-kamizelka.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 564, "wyj": 1382, "usd": 0.047}
+{"czas": "2026-09-30T08:48:06+00:00", "plik": "umiejetnosc-pancerz.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 556, "wyj": 1332, "usd": 0.0454}
+{"czas": "2026-09-30T08:48:06+00:00", "plik": "umiejetnosc-lucznictwo.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 558, "wyj": 1378, "usd": 0.0469}

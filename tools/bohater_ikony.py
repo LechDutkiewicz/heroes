@@ -31,25 +31,22 @@ ARKUSZ = KORZEN / 'tools' / 'blind' / 'ikony-bohater.png'
 #: Kolejność i nazwy jak w `src/data/umiejetnosci.ts` (UMIEJETNOSCI).
 UMIEJETNOSCI = [
     ('zwiad', 'Zwiad'), ('tropiciel', 'Tropiciel'), ('napastnik', 'Napastnik'),
-    ('lucznictwo', 'Łucznictwo'), ('pancerz', 'Pancerz'), ('gospodarnosc', 'Gospodarność'),
+    ('lucznictwo', 'Celne oko'), ('pancerz', 'Pancerz'), ('gospodarnosc', 'Gospodarność'),
     ('nauka', 'Nauka'), ('uzdrowiciel', 'Uzdrowiciel'),
 ]
 
 #: Kolejność i nazwy jak w `src/data/mapa.ts` (ARTEFAKTY).
 ARTEFAKTY = [
-    ('opaska', 'Opaska Treningowa'), ('kamizelka', 'Kamizelka Ochronna'),
-    ('buty', 'Buty Wędrowca'), ('pazur', 'Pazur Ostrza'), ('tarcza', 'Tarcza z Łusek'),
+    ('opaska', 'Opaska Treningowa'), ('kamizelka', 'Kamizelka Szturmowa'),
+    ('buty', 'Buty Wędrowca'), ('pazur', 'Ostry Pazur'), ('tarcza', 'Ochraniacze'),
     ('rower', 'Rower Terenowy'), ('mistrz', 'Pas Mistrza Areny'),
-    ('skrzydla', 'Skrzydła Latającego'), ('ksiezycowy-kamien', 'Księżycowy Kamień'),
+    ('skrzydla', 'Lotnia Trenera'), ('ksiezycowy-kamien', 'Księżycowy Kamień'),
 ]
 
 #: Artefakty z gotową malowaną ikoną — zamiast generować nową.
 REUZYTE = {
     'buty': KORZEN / 'public' / 'kampania' / 'ikona-buty.png',
-    'tarcza': KORZEN / 'public' / 'kampania' / 'ikona-tarcza.png',
     'rower': KORZEN / 'public' / 'kampania' / 'ikona-rower.png',
-    'mistrz': Path(W) / 'relikt-pas.png',
-    'skrzydla': Path(W) / 'relikt-skrzydla.png',
 }
 
 

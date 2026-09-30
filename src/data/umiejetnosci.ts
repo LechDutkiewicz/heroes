@@ -89,8 +89,8 @@ export const UMIEJETNOSCI: Umiejetnosc[] = [
   },
   {
     id: 'lucznictwo',
-    nazwa: 'Łucznictwo',
-    opis: 'Twoi strzelcy zadają większe obrażenia.',
+    nazwa: 'Celne oko',
+    opis: 'Twoje stworki mocniej atakują z daleka.',
     klucz: 'strzal',
     wartosci: [0.12, 0.25, 0.4],
     jednostka: 'procent',

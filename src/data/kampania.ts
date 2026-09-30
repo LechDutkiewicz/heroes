@@ -167,7 +167,7 @@ export const KAMPANIA: Kampania = {
       porazka: [{ typ: 'utrata' }],
       bonusy: [
         { typ: 'oddzial', tier: 3, poziom: 12, opis: 'Nowy stworek: Torrenar, poziom 12' },
-        { typ: 'artefakt', artefakt: 'tarcza', opis: 'Tarcza z Łusek' },
+        { typ: 'artefakt', artefakt: 'tarcza', opis: 'Ochraniacze' },
         { typ: 'surowiec', surowiec: 'pokeball', ile: 60, opis: '60 pokeballi' },
       ],
       naMapie: { x: 0.8242, y: 0.459 },
