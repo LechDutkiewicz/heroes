@@ -118,6 +118,10 @@ interface DaneZPrzygody {
 // nie powtarzać — druga kopia reguł rozjechałaby się z symulatorem balansu.
 import { initSfx, loadSfx, sfx, startMusic, stopMusic, toggleSfx } from '../audio/sfx';
 import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
+import { RYWAL_ID, poziom, type StanMapy } from '../data/mapa';
+import { DOSW_BOHATERA_ZA_WALKE, type WynikDruzyny, rozliczDruzyne } from '../data/podsumowanie';
+import { efekt } from '../data/umiejetnosci';
+import { pokazPodsumowanieWalki } from '../visual/podsumowanieWalki';
 import {
   GUARD_REDUCTION,
   NA_POLU,
@@ -469,6 +473,10 @@ export class BattleScene extends Phaser.Scene {
   private readonly trenerXY = { x: 31, y: 29 };
   /** Złapane stworki: wpis w składzie wroga i id na polu. */
   private zlapani: { skad: number; id: number }[] = [];
+  /** Dane, z którymi walka się zaczęła (`init`) — dla „Jeszcze raz". */
+  private daneStartowe?: DaneZPrzygody;
+  /** Walka rozstrzygnięta z sondy (`rozstrzygnijNatychmiast`) — bez okna podsumowania. */
+  private natychmiast = false;
   private wydanePokeballe = 0;
   /** Okno „Kto walczy?", dopóki jest otwarte. */
   private wyborSkladu?: WyborSkladu;
@@ -591,6 +599,10 @@ export class BattleScene extends Phaser.Scene {
     // `init` dostaje pusty obiekt także przy zwykłym starcie sceny, więc
     // o narzuconym składzie decyduje obecność armii, a nie samego obiektu.
     this.zPrzygody = dane && dane.gracz?.length ? dane : undefined;
+    // Kopia danych startowych — „Jeszcze raz" na ekranie podsumowania
+    // rozgrywa dokładnie tę samą walkę (bitwa zmienia m.in. plecak).
+    this.daneStartowe = this.zPrzygody ? structuredClone(this.zPrzygody) : undefined;
+    this.natychmiast = false;
     // Bonusy bohatera przypinamy do stanu walki od razu w `init`, a nie przy
     // wystawianiu oddziałów: `zerujBitwe` podmienia cały obiekt i ustawione
     // wcześniej pole by przepadło.
@@ -2514,7 +2526,7 @@ export class BattleScene extends Phaser.Scene {
       const padli = naPolu.filter((w) => !this.naNogach(w.id)).length;
       return Math.max(0, o.ile - padli);
     });
-    this.registry.set('wynik-bitwy', {
+    const wynik = {
       oObiekt: this.zPrzygody!.oObiekt,
       wygrana,
       armia: ocalali,
@@ -2524,9 +2536,54 @@ export class BattleScene extends Phaser.Scene {
       wydanePokeballe: this.wydanePokeballe,
       // Plecak po bitwie: zużyte przedmioty nie wracają (`przedmioty.ts`).
       plecak: { ...this.plecak },
-    });
-    // Chwila na przeczytanie ekranu końca, dopiero potem powrót.
-    this.time.delayedCall(2600, () => this.scene.start(this.zPrzygody!.powrot ?? 'adventure'));
+    };
+    this.registry.set('wynik-bitwy', wynik);
+    const powrot = () => this.scene.start(this.zPrzygody!.powrot ?? 'adventure');
+    // Sonda (`rozstrzygnijNatychmiast`): prosto na mapę, bez okna.
+    if (this.natychmiast) {
+      this.time.delayedCall(2600, powrot);
+      return;
+    }
+    // Chwila na ekran końca, potem podsumowanie jak w Heroes 3.
+    const pokonaniNazwy = this.wrogZMapy
+      .filter((w) => !this.naNogach(w.id))
+      .map((w) => ({ nazwa: this.roster.get(w.id)?.def.name ?? '', sprite: this.roster.get(w.id)?.def.sprite ?? '' }));
+    this.time.delayedCall(1900, () =>
+      this.pokazPodsumowanie(wynik, pokonaniNazwy, zlapani.map((z) => z.nazwa), powrot)
+    );
+  }
+
+  /**
+   * Okno podsumowania: podgląd tego, co stanie się na mapie — ta sama
+   * funkcja (`rozliczDruzyne`) na KOPII drużyny ze stanu mapy. „Dalej"
+   * wraca na mapę z wynikiem, „Jeszcze raz" zaczyna tę samą walkę od nowa
+   * (wynik z rejestru znika, więc mapa niczego nie rozlicza).
+   */
+  private pokazPodsumowanie(
+    wynik: WynikDruzyny & { oObiekt: number },
+    pokonani: { nazwa: string; sprite: string }[],
+    zlapani: string[],
+    powrot: () => void
+  ) {
+    const stan = this.registry.get('stan-mapy') as StanMapy | undefined;
+    const armia = stan ? structuredClone(stan.bohater.armia) : [];
+    const wiersze = rozliczDruzyne(armia, wynik, wynik.wygrana && stan ? efekt(stan.bohater, 'leczenie') : 0);
+    const zaWalke = wynik.wygrana && stan && wynik.oObiekt !== RYWAL_ID;
+    const doswBohatera = zaWalke ? Math.round(DOSW_BOHATERA_ZA_WALKE * (1 + efekt(stan.bohater, 'nauka'))) : 0;
+    const awans =
+      stan && doswBohatera && poziom(stan.bohater.doswiadczenie + doswBohatera) > poziom(stan.bohater.doswiadczenie)
+        ? `Trener awansuje na poziom ${poziom(stan.bohater.doswiadczenie + doswBohatera)}!`
+        : undefined;
+    pokazPodsumowanieWalki(
+      this,
+      { wygrana: wynik.wygrana, wiersze, pokonani, zlapani, doswBohatera, awansBohatera: awans },
+      { x: BOARD_X, y: BOARD_Y, w: BOARD_W, h: BOARD_H },
+      powrot,
+      () => {
+        this.registry.remove('wynik-bitwy');
+        this.scene.restart(structuredClone(this.daneStartowe));
+      }
+    );
   }
 
   // ---------- koniec bitwy ----------
@@ -2545,6 +2602,7 @@ export class BattleScene extends Phaser.Scene {
    */
   rozstrzygnijNatychmiast(wygrana: boolean) {
     if (this.gameOver) return;
+    this.natychmiast = true;
     // Okno wyboru czwórki jeszcze otwarte — bez drużyny na polu każda bitwa
     // byłaby przegrana.
     this.wyborSkladu?.zatwierdz();

@@ -34,6 +34,7 @@ import {
   doswDoPoziomu,
   doswStworka,
   gatunek,
+  ktosNaNogach,
   napisPoziomu,
   obudz,
   przytnijPoziom,
@@ -993,6 +994,27 @@ export function kosztPola(s: StanMapy, x: number, y: number): number | null {
 }
 
 /**
+ * Dokąd trener cofa się po przegranej walce (zgłoszenie gracza: „trafiłem od
+ * razu do wioski — to chyba nie powinno tak wyglądać"). Jak w grach: przegrany
+ * nie teleportuje się, tylko ustępuje pola. Stoi na polu obiektu (wszedł na
+ * bramę, wejście kopalni) — cofa się na `skad` (pole, z którego przyszedł),
+ * a gdy to niemożliwe, na dowolne wolne przejezdne pole obok. Stoi obok
+ * celu (strażnik, rywal) — zostaje, gdzie jest (`null`).
+ */
+export function polePoUcieczce(s: StanMapy, skad?: Pole | null): Pole | null {
+  const { x, y } = s.bohater;
+  if (!obiektNa(s, x, y)) return null;
+  const wolne = (p: Pole) =>
+    (p.x !== x || p.y !== y) && Math.abs(p.x - x) <= 1 && Math.abs(p.y - y) <= 1 && kosztPola(s, p.x, p.y) !== null && !obiektNa(s, p.x, p.y);
+  if (skad && wolne(skad)) return { x: skad.x, y: skad.y };
+  for (const [dx, dy] of [[0, 1], [-1, 1], [1, 1], [-1, 0], [1, 0], [0, -1], [-1, -1], [1, -1]]) {
+    const p = { x: x + dx, y: y + dy };
+    if (wolne(p)) return p;
+  }
+  return null;
+}
+
+/**
  * Rzeczy ODWIEDZANE Z SĄSIEDNIEGO POLA — bohater na nie nie wchodzi.
  *
  * Tak to działa w Heroes 3: pole obiektu jest ZABLOKOWANE, a jednocześnie
@@ -1429,6 +1451,7 @@ function odwiedzBudowle(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
 
   if (e.typ === 'gniazdo') {
     if (o.wlasciciel === kto) return { opis: `${b.nazwa} — już twoje` };
+    if (!ktosNaNogach(bohaterOf(s, kto).armia)) return { opis: `${b.nazwa}\n${ZEMDLENI_NIE_ZAJMUJA}` };
     o.wlasciciel = kto;
     return { opis: `${b.nazwa} jest twoje!\nMłode stworki czekają w zamku`, zajete: o };
   }
@@ -1581,6 +1604,9 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
     // w Heroes 3: przejęcie cudzej kopalni nie wymaga bitwy, samo wejście
     // przestawia właściciela.
     if (o.wlasciciel === kto) return { opis: `${o.nazwa} — już twoja` };
+    // Trener bez ani jednego stworka na nogach może chodzić i zbierać, ale
+    // niczego nie zajmuje (zgłoszenie gracza po przegranej walce).
+    if (!ktosNaNogach(bohater.armia)) return { opis: `${o.nazwa}\n${ZEMDLENI_NIE_ZAJMUJA}` };
     o.wlasciciel = kto;
     const co = o.surowiec ?? 'pokeball';
     return {
@@ -1597,11 +1623,14 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
     // zakończenia. Dziecko dochodziło przez pół planszy do celu i dostawało
     // komunikat, że celu nie ma.
     if (o.wlasciciel !== kto) {
+      if (!ktosNaNogach(bohater.armia)) return { opis: `${o.nazwa}\n${ZEMDLENI_NIE_ZAJMUJA}` };
       if (obroncyZamku(o).length) return { opis: `${o.nazwa}\nBroni się!`, bitwaZ: o };
       const dawny = o.wlasciciel;
       o.wlasciciel = kto;
       if (dawny) wypedzZSali(s, o, dawny);
-      obudz(bohater.armia);
+      // Przeciwnik budzi drużynę za darmo (AI nie liczy jagód); gracz
+      // ratuje stworki w Centrum za jagody (`centrum.ts`).
+      if (kto === 'wrog') obudz(bohater.armia);
       const odznaka = kto === 'gracz' ? zdobadzOdznake(s, o) : undefined;
       return {
         opis: odznaka ? `${o.nazwa} jest twoja!\nOdznaka sali: ${odznaka}` : `${o.nazwa} jest twoja!`,
@@ -1609,9 +1638,10 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
         zajete: o,
       };
     }
-    // Centrum Pokemon: we własnym mieście zemdlone stworki od razu wracają
-    // do siebie — i te w drużynie, i te w garnizonie.
-    const obudzone = obudz(bohater.armia) + obudz(o.garnizon ?? []);
+    // Centrum Pokemon: garnizon wstaje sam (obrońcy miasta), a drużynę
+    // trenera gracz ratuje w Centrum za jagody (`centrum.ts`, ekran miasta).
+    // Przeciwnik (AI) budzi swoją za darmo — nie liczy jagód.
+    const obudzone = (kto === 'wrog' ? obudz(bohater.armia) : 0) + obudz(o.garnizon ?? []);
     if (obudzone > 0) return { opis: `${o.nazwa}\nCentrum Pokemon: ${obudzone} × znów na nogach!`, zamek: o };
     return { opis: o.nazwa, zamek: o };
   }
@@ -1736,9 +1766,10 @@ export function nowaTura(s: StanMapy): Partial<Record<Surowiec, number>> {
     urosnijStraze(s);
     // Sale treningowe odnawiają tygodniową pulę.
     for (const o of s.obiekty) if (o.rodzaj === 'zamek') delete o.treningi;
-    // Zemdlone stworki dochodzą do siebie z nowym tygodniem, nawet daleko
-    // od miasta — inaczej przegrana bitwa w głębi mapy zamykałaby grę.
-    obudz(s.bohater.armia);
+    // Przeciwnik budzi drużynę z nowym tygodniem (AI nie liczy jagód).
+    // Gracz już nie: ratowanie kosztuje jagody w Centrum (`centrum.ts`),
+    // a darmowe przeczekanie tygodnia robiło z tej ceny fikcję. Gry to nie
+    // zamyka — Centrum stawia jednego stworka za darmo, gdy nie ma jagód.
     obudz(s.wrogBohater.armia);
   }
   s.bohater.ruch = ruchNaDzis(s, 'gracz');
@@ -1907,6 +1938,9 @@ export function naPoluPrzeciw(o: Pick<Obiekt, 'rodzaj' | 'id'> | undefined): num
   return o?.id === RYWAL_ID || o?.rodzaj === 'zamek' ? NA_POLU : NA_POLU_DZIKIE;
 }
 
+/** Napis, gdy trener bez stworków na nogach próbuje coś zająć albo zaatakować. */
+export const ZEMDLENI_NIE_ZAJMUJA = 'Twoje stworki są zemdlone — najpierw Centrum Pokemon.';
+
 /** Czy trener strony `kto` jest w grze — ma zamek (salę) albo drużynę. */
 export function trenerWGrze(s: StanMapy, kto: Wlasciciel): boolean {
   if (kto === 'wrog' && !s.obiekty.some((o) => o.rodzaj === 'zamek' && o.wlasciciel === 'wrog')) return false;
@@ -1952,9 +1986,11 @@ export function nagrodaZaPojedynek(s: StanMapy, przegrany: Wlasciciel): number {
 }
 
 /**
- * Skutki pojedynku poza samą bitwą: nagroda przechodzi do zwycięzcy,
- * przegrany wraca do swojego Centrum (pierwszy własny zamek) z obudzoną
- * drużyną i bez ruchu na dziś. Zwraca wypłaconą nagrodę.
+ * Skutki pojedynku poza samą bitwą: nagroda przechodzi do zwycięzcy.
+ * Przegrany przeciwnik (AI) wraca do swojego Centrum (pierwszy własny zamek)
+ * z obudzoną drużyną; przegrany gracz zostaje, gdzie stoi (scena cofa go
+ * o pole — `uciekniPoPorazce`), a zemdlone stworki ratuje w Centrum za
+ * jagody. Obaj bez ruchu na dziś. Zwraca wypłaconą nagrodę.
  */
 export function rozliczPojedynek(s: StanMapy, zwyciezca: Wlasciciel): number {
   const przegrany: Wlasciciel = zwyciezca === 'gracz' ? 'wrog' : 'gracz';
@@ -1962,7 +1998,7 @@ export function rozliczPojedynek(s: StanMapy, zwyciezca: Wlasciciel): number {
   skarbiecOf(s, przegrany).pokeball -= nagroda;
   skarbiecOf(s, zwyciezca).pokeball += nagroda;
   const b = bohaterOf(s, przegrany);
-  const dom = s.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === przegrany);
+  const dom = przegrany === 'wrog' ? s.obiekty.find((o) => o.rodzaj === 'zamek' && o.wlasciciel === przegrany) : undefined;
   if (dom) {
     b.x = dom.x;
     b.y = dom.y;

@@ -122,7 +122,7 @@ export const UMIEJETNOSCI: Umiejetnosc[] = [
   {
     id: 'uzdrowiciel',
     nazwa: 'Uzdrowiciel',
-    opis: 'Po wygranej bitwie część zemdlonych stworków od razu wraca do siebie.',
+    opis: 'Po wygranej bitwie część zemdlonych stworków od razu wraca do siebie — bez płacenia jagodami w Centrum.',
     klucz: 'leczenie',
     wartosci: [0.1, 0.2, 0.33],
     jednostka: 'procent',

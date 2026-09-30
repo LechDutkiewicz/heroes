@@ -26,11 +26,18 @@ import { aktywnyProfil, czytajKlucz, imieTrenera, kluczProfilu, piszKlucz, usunK
 
 export const ILE_SLOTOW = 6;
 
-/** Slot 1–6 albo autozapis. */
-export type Slot = number | 'auto';
+/**
+ * Slot 1–6 albo autozapis: `auto` — na koniec każdej tury (i na starcie
+ * misji), `bitwa` — tuż przed każdą walką, jak „battle" w HotA: jeśli walka
+ * okazała się za trudna, wraca się do stanu sprzed niej.
+ */
+export type Slot = number | 'auto' | 'bitwa';
 
-/** Wszystkie sloty w kolejności okna: autozapis na górze, jak w Heroes 3. */
-export const SLOTY: Slot[] = ['auto', ...Array.from({ length: ILE_SLOTOW }, (_, i) => i + 1)];
+/** Autozapisy (gracz ich nie nadpisuje ręcznie). */
+export const AUTOZAPISY: readonly Slot[] = ['auto', 'bitwa'];
+
+/** Wszystkie sloty w kolejności okna: autozapisy na górze, jak w Heroes 3. */
+export const SLOTY: Slot[] = [...AUTOZAPISY, ...Array.from({ length: ILE_SLOTOW }, (_, i) => i + 1)];
 
 interface PlikZapisu {
   v: 2;
@@ -62,7 +69,8 @@ export function opisDnia(dzien: number): string {
   return `tydzień ${Math.floor((d - 1) / 7) + 1}, dzień ${((d - 1) % 7) + 1}`;
 }
 
-export const nazwaSlotu = (slot: Slot) => (slot === 'auto' ? 'Autozapis' : `Zapis ${slot}`);
+export const nazwaSlotu = (slot: Slot) =>
+  slot === 'auto' ? 'Autozapis' : slot === 'bitwa' ? 'Autozapis przed walką' : `Zapis ${slot}`;
 
 function czytajPlik(profil: string, slot: Slot): PlikZapisu | null {
   const s = czytajKlucz(kluczSlotu(profil, slot));
@@ -186,6 +194,9 @@ export function zapiszGre(stan: StanMapy, slot: Slot = 'auto'): boolean {
 
 /** Autozapis na początku dnia (i na starcie misji). */
 export const autozapis = (stan: StanMapy) => zapiszGre(stan, 'auto');
+
+/** Autozapis tuż przed walką (`bitwa`). */
+export const autozapisPrzedWalka = (stan: StanMapy) => zapiszGre(stan, 'bitwa');
 
 export function wczytajGre(slot: Slot = 'auto'): StanMapy | null {
   const profil = aktywnyProfil();

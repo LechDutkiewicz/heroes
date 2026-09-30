@@ -21,6 +21,7 @@ import { aktywnyProfil } from '../data/profile';
 import {
   type OpisZapisu,
   type Slot,
+  AUTOZAPISY,
   SLOTY,
   listaZapisow,
   nazwaSlotu,
@@ -208,7 +209,7 @@ function oknoSlotow(scene: Phaser.Scene, o: OpcjeListy): OknoGracza {
   const { k, W, H } = korzen(scene, o);
   const zapis = o.tryb === 'zapisz';
   // Autozapisu nie nadpisuje się ręcznie — pisze go gra na początku dnia.
-  const sloty = zapis ? SLOTY.filter((s) => s !== 'auto') : SLOTY;
+  const sloty = zapis ? SLOTY.filter((s) => !AUTOZAPISY.includes(s)) : SLOTY;
   const hListy = sloty.length * (WIERSZ + ODSTEP_W) - ODSTEP_W;
   const h = 112 + hListy + 76;
   const x = (W - W_OKNA) / 2;
@@ -268,9 +269,9 @@ function oknoSlotow(scene: Phaser.Scene, o: OpcjeListy): OknoGracza {
         }
       };
       maluj(false);
-      const med = medalion(scene, listaX + 26, wy + WIERSZ / 2, 16, slot === 'auto' ? 0x2f4a22 : 0x3a2210);
+      const med = medalion(scene, listaX + 26, wy + WIERSZ / 2, 16, AUTOZAPISY.includes(slot) ? 0x2f4a22 : 0x3a2210);
       const nr = scene.add
-        .text(listaX + 26, wy + WIERSZ / 2, slot === 'auto' ? 'A' : String(slot), {
+        .text(listaX + 26, wy + WIERSZ / 2, slot === 'auto' ? 'A' : slot === 'bitwa' ? 'W' : String(slot), {
           fontFamily: KROJ.tytul, fontStyle: '900',
           fontSize: '15px',
           color: '#26262e',
@@ -299,7 +300,7 @@ function oknoSlotow(scene: Phaser.Scene, o: OpcjeListy): OknoGracza {
       } else {
         elementy.push(
           scene.add
-            .text(tx, wy + WIERSZ / 2, slot === 'auto' ? 'Autozapis — jeszcze pusty' : `${nazwaSlotu(slot)} — pusty`, {
+            .text(tx, wy + WIERSZ / 2, AUTOZAPISY.includes(slot) ? `${nazwaSlotu(slot)} — jeszcze pusty` : `${nazwaSlotu(slot)} — pusty`, {
               ...stylAtramentu(15, 'miekki'),
               fontFamily: KROJ.kursywa,
             })
