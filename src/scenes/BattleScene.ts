@@ -119,6 +119,8 @@ interface DaneZPrzygody {
    * i obrońcy miasta (`naPoluPrzeciw`). Gracz wystawia zawsze dwa (`NA_POLU`).
    */
   naPolu?: number;
+  /** Teren pola bitwy z pola mapy (`terenBitwy`) — tło i przeszkody. */
+  teren?: TerenBitwy;
 }
 // Wszystkie zasady walki biorą się STĄD i tylko stąd. Scena ma je odgrywać,
 // nie powtarzać — druga kopia reguł rozjechałaby się z symulatorem balansu.
@@ -128,6 +130,7 @@ import { RYWAL_ID, poziom, type StanMapy } from '../data/mapa';
 import { DOSW_BOHATERA_ZA_WALKE, type WynikDruzyny, rozliczDruzyne } from '../data/podsumowanie';
 import { efekt } from '../data/umiejetnosci';
 import { nazwaTrzeciego } from '../data/ataki';
+import { PRZESZKODY_BITWY, TERENY_BITWY, type OpisTerenuBitwy, type TerenBitwy } from '../data/terenBitwy';
 import { pokazPodsumowanieWalki } from '../visual/podsumowanieWalki';
 import {
   GUARD_REDUCTION,
@@ -301,23 +304,17 @@ const CARD_Y = BOARD_Y + (BOARD_H - CARD_H) / 2;
 const CARD_LEFT_X = BOARD_X + 10;
 const CARD_RIGHT_X = BOARD_X + BOARD_W - CARD_W - 10;
 
-/** Tła pola bitwy — jedno losowane na bitwę, jak zmienne krajobrazy w Heroes 3. */
-const TERRAINS = [
-  { key: 'laka', label: 'Łąka', obstacles: ['drzewo', 'sosna', 'krzak', 'glaz', 'kopiec'] },
-  { key: 'plaza', label: 'Plaża', obstacles: ['palma', 'trawa', 'glaz_piaskowy', 'kopiec_piaskowy'] },
-  { key: 'snieg', label: 'Śnieżna polana', obstacles: ['sosna_snieg', 'drzewo_zimowe', 'glaz_sniezny', 'kopiec_sniezny'] },
-  { key: 'noc', label: 'Nocna łąka', obstacles: ['drzewo_noc', 'sosna_noc', 'glaz_noc', 'kopiec_noc'] },
-  { key: 'jesien', label: 'Jesienny las', obstacles: ['drzewo_jesien', 'sosna_jesien', 'krzak_jesien', 'kopiec_jesien'] },
-];
-
 /**
- * Drobne przeszkody rysujemy znacznie mniej niż drzewa. Wcześniej wszystko
- * dostawało rozmiar drzewa, przez co mały rysunek 16 pikseli rozdymał się
- * na całe pole i wyglądał jak klocki.
+ * Tła pola bitwy — teren z pola mapy, na którym stoi trener (`terenBitwy`,
+ * `src/data/terenBitwy.ts`). Bitwa bez mapy (pokaz) losuje jeden z nich.
  */
-const isSmallObstacle = (kind: string) => /^(krzak|trawa|glaz|kopiec)/.test(kind);
+const TERRAINS = Object.values(TERENY_BITWY);
 
-const ALL_OBSTACLES = [...new Set(TERRAINS.flatMap((t) => t.obstacles))];
+/** Drobne przeszkody (skały, suche krzaki) rysujemy mniej niż drzewa. */
+const isSmallObstacle = (kind: string) => /(skala|krzak)/.test(kind);
+
+/** Klucz tekstury przeszkody: klocek mapy (`zestaw/plik`) albo plik z `terrain/obstacles/`. */
+const kluczPrzeszkody = (kind: string) => (kind.includes('/') ? `k-${kind.replace('/', '-')}` : kind);
 
 /**
  * Ile przeszkód stawiamy — losowo, jak w Heroes 3. Nasza plansza jest znacznie
@@ -516,7 +513,7 @@ export class BattleScene extends Phaser.Scene {
   private wrogZMapy: { skad: number; id: number }[] = [];
 
   /** Krajobraz tej bitwy — losowany raz, przy tworzeniu sceny. */
-  private terrain = TERRAINS[0];
+  private terrain: OpisTerenuBitwy = TERENY_BITWY.laka;
 
   /** Zamki, których armie się biją. */
   private playerFaction: Faction = FACTIONS[0];
@@ -548,8 +545,9 @@ export class BattleScene extends Phaser.Scene {
     for (const t of TERRAINS) {
       this.load.image(t.key, `${import.meta.env.BASE_URL}terrain/${t.key}.png`);
     }
-    for (const key of ALL_OBSTACLES) {
-      this.load.image(key, `${import.meta.env.BASE_URL}terrain/obstacles/${key}.png`);
+    for (const kind of PRZESZKODY_BITWY) {
+      const plik = kind.includes('/') ? `mapa/klocki/${kind}.png` : `terrain/obstacles/${kind}.png`;
+      this.load.image(kluczPrzeszkody(kind), `${import.meta.env.BASE_URL}${plik}`);
     }
     for (const kto of ['janek', 'ela']) {
       this.load.image(`tr-glowa-${kto}`, `${import.meta.env.BASE_URL}kampania/glowa-${kto}.png`);
@@ -666,7 +664,8 @@ export class BattleScene extends Phaser.Scene {
     // `Math.random`, więc bitwa nie dawała się powtórzyć nawet z ziarnem,
     // a zgłoszenie błędu było wtedy tylko opowieścią. Efekty wizualne dalej
     // mogą losować swobodnie — one na przebieg walki nie wpływają.
-    this.terrain = Phaser.Math.RND.pick(TERRAINS);
+    // Teren z mapy (`terenBitwy`); bez mapy — losowy, jak dotąd.
+    this.terrain = (this.zPrzygody?.teren && TERENY_BITWY[this.zPrzygody.teren]) || Phaser.Math.RND.pick(TERRAINS);
     this.drawArmies();
     this.applyHarnessParams();
     // Ikony muszą istnieć, zanim cokolwiek po nie sięgnie — rysują się do
@@ -814,14 +813,16 @@ export class BattleScene extends Phaser.Scene {
       // Drzewo trzyma się pnia u dołu, płaska kępa czy pagórek siedzą środkiem
       // na polu — stąd różne punkty zaczepienia.
       const obstacle = this.add
-        .image(x, y, kind)
-        .setOrigin(0.5, /^(kopiec|glaz)/.test(kind) ? 0.62 : 0.78);
+        .image(x, y, kluczPrzeszkody(kind))
+        .setOrigin(0.5, isSmallObstacle(kind) ? 0.7 : 0.86);
       // Skalujemy z zachowaniem proporcji: drzewa są wysokie, głazy przysadziste,
       // więc sztywny rozmiar spłaszczyłby jedne albo rozciągnął drugie.
       const big = !isSmallObstacle(kind);
+      // Skała i suchy krzak (klocki mapy) — na pół hexa wszerz wyglądały jak
+      // kupka kamyków; teraz zajmują pole jak głaz w Heroes 3.
       const fit = Math.min(
-        (HEX_W * (big ? 0.9 : 0.46)) / obstacle.width,
-        (HEX_W * (big ? 1.45 : 0.5)) / obstacle.height
+        (HEX_W * (big ? 0.9 : 0.78)) / obstacle.width,
+        (HEX_W * (big ? 1.45 : 0.7)) / obstacle.height
       );
       obstacle.setScale(fit * Phaser.Math.FloatBetween(0.92, 1.06));
 

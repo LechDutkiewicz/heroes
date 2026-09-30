@@ -714,3 +714,48 @@ Two or three large boulders of grey-blue rock covered with fresh white snow, icy
 ```
 One large boulder of grey-blue rock covered with fresh white snow, icy blue shadows, one tile wide. It is one modular terrain block for a tile-based adventure map: identical blocks are placed side by side and one behind another to build large forests and mountain ranges, so the block must look complete on its own AND join naturally with copies of itself; its base sits on a flat rectangular footprint and its bottom edge is a natural, slightly uneven line of trunks or rock foot, not a straight cut. Seen from the FRONT like a classic 2D strategy-game adventure map (the Heroes of Might and Magic 3 map camera): the camera faces north and looks down at about 35 degrees, the front of everything faces the viewer squarely, no diagonal or isometric rotation, flat ground plane, light from the upper left. Match the colours, light, outline and finish of the attached reference images exactly. Transparent background, no ground patch, no pad, no cast shadow, clear margin on all four sides, nothing cropped. Clean anime game illustration like official Pokemon game art: smooth soft shading, crisp clean vivid colours, simple rounded shapes, a thin darker outline. No medieval or fantasy elements, no castles, no pixel art, no 3D render look, no photorealism. No text, no letters, no logo, no watermark, no characters, no people, no creatures.
 ```
+
+
+## Tła walki wg terenu (ekran bitwy)
+
+Tło pola bitwy zależy od pola, na którym stoi trener (`terenBitwy` w `src/data/terenBitwy.ts`). Pliki `tlo-walka-<teren>.png` (kryjące), wzorem kotwica mapy 2; wczytuje `tools/walka_wczytaj.py` do `public/terrain/<teren>.png`.
+
+<!-- plik: tlo-walka-laka.png | styl: brak | proporcje: 3:2 | wzor: kotwica-mapa-2.png -->
+```
+A sunny lush green meadow: short bright green grass with a few tiny flowers; on the horizon a line of round leafy trees and soft blue sky. A battlefield background for a turn-based creature battle in a 2D strategy game (like the battle screen of Heroes of Might and Magic 3), painted in exactly the same clean anime style, colours and light as the attached map image (official Pokemon game art). Wide landscape image. The top 15 percent is a low horizon strip with scenery far away; the remaining 85 percent is OPEN, FLAT, EVEN ground seen from above at a steep angle, with only small subtle texture details and no big objects, so that a hexagonal battle grid and creatures can be placed anywhere on it. No trees, rocks or objects in the open area, no paths across it, no water in the open area, no creatures, no people, no text, no user interface, no grid.
+```
+
+<!-- plik: tlo-walka-las.png | styl: brak | proporcje: 3:2 | wzor: kotwica-mapa-2.png -->
+```
+A shady forest clearing: soft green grass with patches of moss and fallen leaves, dappled sunlight; on the horizon a dense wall of leafy trees and pines. A battlefield background for a turn-based creature battle in a 2D strategy game (like the battle screen of Heroes of Might and Magic 3), painted in exactly the same clean anime style, colours and light as the attached map image (official Pokemon game art). Wide landscape image. The top 15 percent is a low horizon strip with scenery far away; the remaining 85 percent is OPEN, FLAT, EVEN ground seen from above at a steep angle, with only small subtle texture details and no big objects, so that a hexagonal battle grid and creatures can be placed anywhere on it. No trees, rocks or objects in the open area, no paths across it, no water in the open area, no creatures, no people, no text, no user interface, no grid.
+```
+
+<!-- plik: tlo-walka-piasek.png | styl: brak | proporcje: 3:2 | wzor: kotwica-mapa-2.png -->
+```
+A warm sandy beach and dunes: smooth golden sand with small ripples; on the horizon a strip of blue sea, a few palm crowns and a bright sky. A battlefield background for a turn-based creature battle in a 2D strategy game (like the battle screen of Heroes of Might and Magic 3), painted in exactly the same clean anime style, colours and light as the attached map image (official Pokemon game art). Wide landscape image. The top 15 percent is a low horizon strip with scenery far away; the remaining 85 percent is OPEN, FLAT, EVEN ground seen from above at a steep angle, with only small subtle texture details and no big objects, so that a hexagonal battle grid and creatures can be placed anywhere on it. No trees, rocks or objects in the open area, no paths across it, no water in the open area, no creatures, no people, no text, no user interface, no grid.
+```
+
+<!-- plik: tlo-walka-ziemia.png | styl: brak | proporcje: 3:2 | wzor: kotwica-mapa-2.png -->
+```
+A rough dry highland: packed brown earth with small pebbles and dry grass tufts; on the horizon grey-beige rocky hills and a pale sky. A battlefield background for a turn-based creature battle in a 2D strategy game (like the battle screen of Heroes of Might and Magic 3), painted in exactly the same clean anime style, colours and light as the attached map image (official Pokemon game art). Wide landscape image. The top 15 percent is a low horizon strip with scenery far away; the remaining 85 percent is OPEN, FLAT, EVEN ground seen from above at a steep angle, with only small subtle texture details and no big objects, so that a hexagonal battle grid and creatures can be placed anywhere on it. No trees, rocks or objects in the open area, no paths across it, no water in the open area, no creatures, no people, no text, no user interface, no grid.
+```
+
+<!-- plik: tlo-walka-bagno.png | styl: brak | proporcje: 3:2 | wzor: kotwica-mapa-2.png -->
+```
+A misty swamp clearing: dark olive-green grass and damp mud with small puddles and reed tufts; on the horizon drooping swamp willows in light mist. A battlefield background for a turn-based creature battle in a 2D strategy game (like the battle screen of Heroes of Might and Magic 3), painted in exactly the same clean anime style, colours and light as the attached map image (official Pokemon game art). Wide landscape image. The top 15 percent is a low horizon strip with scenery far away; the remaining 85 percent is OPEN, FLAT, EVEN ground seen from above at a steep angle, with only small subtle texture details and no big objects, so that a hexagonal battle grid and creatures can be placed anywhere on it. No trees, rocks or objects in the open area, no paths across it, no water in the open area, no creatures, no people, no text, no user interface, no grid.
+```
+
+<!-- plik: tlo-walka-snieg.png | styl: brak | proporcje: 3:2 | wzor: kotwica-mapa-2.png -->
+```
+A snowy winter field: smooth fresh white snow with soft blue shadows and a few icy sparkles; on the horizon snow-covered pines and pale blue mountains. A battlefield background for a turn-based creature battle in a 2D strategy game (like the battle screen of Heroes of Might and Magic 3), painted in exactly the same clean anime style, colours and light as the attached map image (official Pokemon game art). Wide landscape image. The top 15 percent is a low horizon strip with scenery far away; the remaining 85 percent is OPEN, FLAT, EVEN ground seen from above at a steep angle, with only small subtle texture details and no big objects, so that a hexagonal battle grid and creatures can be placed anywhere on it. No trees, rocks or objects in the open area, no paths across it, no water in the open area, no creatures, no people, no text, no user interface, no grid.
+```
+
+<!-- plik: przeszkoda-palma.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single palm tree with a curved trunk and a bright green crown, standing on a tiny patch of sand. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```
+
+<!-- plik: przeszkoda-krzak-suchy.png | styl: brak | proporcje: 1:1 | wzor: kotwica-mapa-2.png -->
+```
+One single dry thorny bush with a few brown leaves and small rocks at its base, for a rough dry highland. Single object for a battle board. Seen from the front, slightly from above, same clean anime Pokemon game style as the attached image. Transparent background, no shadow, nothing cropped, no text.
+```

@@ -3,6 +3,7 @@ import { pelnyPlecak, plecakBohatera, type Plecak } from '../data/przedmioty';
 import { kluczPortretuPanelu, spriteDoPortretow, wczytajPortrety } from '../visual/portrety';
 import { ZESTAWY_KLIMATU } from '../data/zestawy-klimatu';
 import { NAZWY_KLOCKOW, ulozKlocki } from '../data/klocki';
+import { terenBitwy } from '../data/terenBitwy';
 import {
   ARTEFAKTY,
   BUDOWLE,
@@ -5169,6 +5170,13 @@ export class AdventureScene extends Phaser.Scene {
         oObiekt: o.id,
         // Zapas z Pokémartu — co zostanie po bitwie, wraca w wyniku.
         plecak: { ...plecakBohatera(this.stan.bohater) },
+        // Tło i przeszkody bitwy z pola, na którym stoi trener.
+        teren: terenBitwy(
+          this.stan,
+          this.stan.bohater.x,
+          this.stan.bohater.y,
+          planszaPoId(this.stan.mapa).modul.USTAWIENIA?.klocki
+        ),
         // Dzikie: jeden na jednego; rywal, sale i miasta: dwa na dwa.
         naPolu: naPoluPrzeciw(o),
         powrot: 'adventure',

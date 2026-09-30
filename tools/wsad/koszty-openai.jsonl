@@ -852,3 +852,11 @@
 {"czas": "2026-09-30T09:08:08+00:00", "plik": "przedmiot-eter.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 526, "wyj": 1377, "usd": 0.0467}
 {"czas": "2026-09-30T09:08:10+00:00", "plik": "przedmiot-tm.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 522, "wyj": 1384, "usd": 0.0469}
 {"czas": "2026-09-30T09:08:11+00:00", "plik": "przedmiot-mega.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 523, "wyj": 1351, "usd": 0.0458}
+{"czas": "2026-09-30T09:19:38+00:00", "plik": "przeszkoda-palma.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 739, "wyj": 1445, "usd": 0.0499}
+{"czas": "2026-09-30T09:19:39+00:00", "plik": "przeszkoda-krzak-suchy.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 742, "wyj": 1367, "usd": 0.0475}
+{"czas": "2026-09-30T09:19:40+00:00", "plik": "tlo-walka-ziemia.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 870, "wyj": 1881, "usd": 0.0645}
+{"czas": "2026-09-30T09:19:40+00:00", "plik": "tlo-walka-snieg.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 869, "wyj": 1883, "usd": 0.0646}
+{"czas": "2026-09-30T09:19:40+00:00", "plik": "tlo-walka-piasek.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 870, "wyj": 1895, "usd": 0.065}
+{"czas": "2026-09-30T09:19:40+00:00", "plik": "tlo-walka-bagno.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 871, "wyj": 1886, "usd": 0.0647}
+{"czas": "2026-09-30T09:19:40+00:00", "plik": "tlo-walka-las.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 871, "wyj": 1918, "usd": 0.0657}
+{"czas": "2026-09-30T09:19:41+00:00", "plik": "tlo-walka-laka.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1536x1024", "wej": 867, "wyj": 1865, "usd": 0.064}
