@@ -41,6 +41,7 @@ import { kosztWszystkich, ratuj, zemdleni } from '../data/centrum';
 import { FACTIONS, factionById } from '../data/factions';
 import { type Armia, dolacz, znormalizuj, zywe } from '../data/armia';
 import { PanelArmii } from '../visual/panelArmii';
+import { BARWY_POZIOMU, RZYMSKIE } from '../visual/poziomPrzedmiotu';
 import { zapisz } from '../dev/dziennik';
 import { C, T, Z } from '../visual/theme';
 import { mix } from '../visual/hud';
@@ -1335,10 +1336,14 @@ export class TownScene extends Phaser.Scene {
     const stopien = stopienSklepu(this.zamek.postawione ?? []);
     const plecak = plecakBohatera(this.stan.bohater);
     const nasz = this.zamek.wlasciciel === 'gracz';
-    const szer = 660;
-    const wysWiersza = 72;
+    const szer = 730;
+    const wysWiersza = 66;
     const BELKA = 56;
-    const wys = BELKA + 40 + PRZEDMIOTY_PLECAKA.length * wysWiersza + 70;
+    // Półki jak w gildii magów: przedmioty pogrupowane wg poziomu, odstęp
+    // między poziomami, z lewej słupek z numerem poziomu.
+    const ODSTEP = 8;
+    const SLUPEK = 72;
+    const wys = BELKA + 40 + PRZEDMIOTY_PLECAKA.length * wysWiersza + 2 * ODSTEP + 70;
     const cx = OKNO_W / 2;
     const cy = OKNO_H / 2;
     const lewo = cx - szer / 2;
@@ -1386,17 +1391,42 @@ export class TownScene extends Phaser.Scene {
         .setDepth(G + 2)
     );
 
+    const yWiersza = (i: number) =>
+      gora + BELKA + 44 + i * wysWiersza + (SKLEP[PRZEDMIOTY_PLECAKA[i]].poziom - 1) * ODSTEP;
+    for (const poziom of [1, 2, 3] as const) {
+      const idx = PRZEDMIOTY_PLECAKA.flatMap((k, i) => (SKLEP[k].poziom === poziom ? [i] : []));
+      if (!idx.length) continue;
+      const y0 = yWiersza(idx[0]);
+      const h = yWiersza(idx[idx.length - 1]) + wysWiersza - 8 - y0;
+      const otwarty = stopien >= poziom;
+      const b = BARWY_POZIOMU[poziom];
+      const sl = this.add.graphics().setDepth(G + 2);
+      sl.fillStyle(otwarty ? b.tlo : 0xc3c8d0, 1);
+      sl.fillRoundedRect(lewo + 18, y0, SLUPEK - 8, h, 12);
+      warstwa.push(
+        sl,
+        this.add
+          .text(lewo + 18 + (SLUPEK - 8) / 2, y0 + h / 2 - 9, RZYMSKIE[poziom], stylWalki(26, otwarty ? b.tekst : '#ffffff'))
+          .setOrigin(0.5)
+          .setDepth(G + 3),
+        this.add
+          .text(lewo + 18 + (SLUPEK - 8) / 2, y0 + h / 2 + 15, 'poziom', stylWalki(11, otwarty ? b.tekst : '#ffffff', 800))
+          .setOrigin(0.5)
+          .setDepth(G + 3)
+      );
+    }
+
     PRZEDMIOTY_PLECAKA.forEach((k: PrzedmiotPlecaka, i) => {
-      const y = gora + BELKA + 44 + i * wysWiersza;
-      const rx = lewo + 18;
-      const rw = szer - 36;
+      const y = yWiersza(i);
+      const rx = lewo + 18 + SLUPEK;
+      const rw = szer - 36 - SLUPEK;
       const rh = wysWiersza - 8;
       const towar = SKLEP[k];
       const dostepny = stopien >= towar.poziom;
       const ma = plecak[k];
       const stac = stacNas(this.stan.skarbiec, towar.cena);
       const g = this.add.graphics().setDepth(G + 2);
-      g.fillStyle(dostepny ? 0xeef2f7 : 0xf4f5f7, 1);
+      g.fillStyle(dostepny ? BARWY_POZIOMU[towar.poziom].jasne : 0xf4f5f7, 1);
       g.fillRoundedRect(rx, y, rw, rh, 12);
       // Ikona na białym krążku z obrysem, jak medaliony stworków.
       g.fillStyle(TUSZ, 1);
@@ -1410,9 +1440,9 @@ export class TownScene extends Phaser.Scene {
       warstwa.push(
         g,
         ikona,
-        this.add.text(rx + 72, y + 9, PRZEDMIOTY[k].nazwa, stylWalki(18, barwa)).setDepth(G + 3),
+        this.add.text(rx + 72, y + 6, PRZEDMIOTY[k].nazwa, stylWalki(18, barwa)).setDepth(G + 3),
         this.add
-          .text(rx + 72, y + 34, PRZEDMIOTY[k].opis, stylWalki(13, dostepny ? '#5b6270' : '#9aa1ad', 700))
+          .text(rx + 72, y + 29, PRZEDMIOTY[k].opis, stylWalki(12, dostepny ? '#5b6270' : '#9aa1ad', 700))
           .setWordWrapWidth(270)
           .setDepth(G + 3)
       );
@@ -1441,7 +1471,7 @@ export class TownScene extends Phaser.Scene {
         warstwa.push(
           kl,
           this.add
-            .text(kx + 16, ky, `Rozbuduj sklep\ndo stopnia ${'I'.repeat(towar.poziom)}`, stylWalki(13, '#5b6270', 800))
+            .text(kx + 16, ky, `Rozbuduj sklep\ndo poziomu ${RZYMSKIE[towar.poziom]}`, stylWalki(13, '#5b6270', 800))
             .setOrigin(0, 0.5)
             .setLineSpacing(-2)
             .setDepth(G + 3)

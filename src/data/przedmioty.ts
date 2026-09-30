@@ -40,7 +40,9 @@ export type PrzedmiotPlecaka = Exclude<Przedmiot, 'pokeball'>;
 export type Plecak = Record<PrzedmiotPlecaka, number>;
 
 /** Kolejność w plecaku i w sklepie. */
-export const PRZEDMIOTY_PLECAKA: readonly PrzedmiotPlecaka[] = ['mikstura', 'superMikstura', 'eter', 'eliksir', 'tarcza', 'tm', 'mega'];
+// Kolejność wg poziomu w Pokémarcie (I, II, III) — jak czary w gildii magów
+// Heroes 3, od najsłabszych do najmocniejszych.
+export const PRZEDMIOTY_PLECAKA: readonly PrzedmiotPlecaka[] = ['mikstura', 'eter', 'superMikstura', 'eliksir', 'tarcza', 'tm', 'mega'];
 
 /** Z czym trener rusza w drogę na nowej mapie. */
 export const PLECAK_STARTOWY: Plecak = { mikstura: 1, superMikstura: 0, eliksir: 0, tarcza: 0, eter: 0, tm: 0, mega: 0 };
@@ -102,7 +104,7 @@ export const PRZEDMIOTY: Record<Przedmiot, { nazwa: string; opis: string; tekstu
   tarcza: { nazwa: 'Tarcza', opis: 'ciosy mniej bolą do końca bitwy', tekstura: 'przedmiot-tarcza' },
   eter: { nazwa: 'Eter', opis: 'odnawia ataki specjalne stworka', tekstura: 'przedmiot-eter' },
   tm: { nazwa: 'Dysk TM', opis: 'stworek na zawsze uczy się ataku ostatecznego', tekstura: 'przedmiot-tm' },
-  mega: { nazwa: 'Kamień Mega', opis: 'mega ewolucja: silniejszy i twardszy do końca bitwy', tekstura: 'przedmiot-mega' },
+  mega: { nazwa: 'Kamień Mega', opis: 'mega ewolucja: silniejszy i twardszy w bitwie', tekstura: 'przedmiot-mega' },
   pokeball: { nazwa: 'Pokeball', opis: 'łapie osłabionego dzikiego stworka', tekstura: 'przedmiot-pokeball' },
 };
 

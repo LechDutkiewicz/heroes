@@ -7,7 +7,8 @@
  * („tylko na dzikie stworki", „już użyty w tej rundzie").
  */
 import Phaser from 'phaser';
-import { PRZEDMIOTY, type Przedmiot } from '../data/przedmioty';
+import { PRZEDMIOTY, SKLEP, type Przedmiot } from '../data/przedmioty';
+import { odznakaPoziomu } from './poziomPrzedmiotu';
 import { TUSZ, TUSZ_CSS, panelBialy, stylWalki } from './stylWalki';
 
 export interface WierszPlecaka {
@@ -73,7 +74,15 @@ export function pokazPlecak(
     strefa.on('pointerdown', () => {
       if (wolno) wybierz(w.co);
     });
-    warstwa.add([g, obraz, nazwa, ile, opis, strefa]);
+    warstwa.add([g, obraz, nazwa, ile, opis]);
+    // Poziom z Pokémartu przy ikonie — jak poziom czaru w księdze Heroes 3.
+    if (w.co !== 'pokeball') {
+      const [og, ot] = odznakaPoziomu(scene, rx + 42, ry + RH - 12, SKLEP[w.co].poziom, 14);
+      og.setAlpha(wolno ? 1 : 0.6);
+      ot.setAlpha(wolno ? 1 : 0.6);
+      warstwa.add([og, ot]);
+    }
+    warstwa.add(strefa);
   });
   return warstwa;
 }
