@@ -2653,3 +2653,12 @@ Bez danych z przygody (sondy, podgląd `?ekran=walka`) teren jest losowy.
 Po ślepym krytyku: pole z przeszkodą lekko przyciemnione, siatka mocniejsza.
 Stare `public/terrain/{jesien,noc,plaza}.png` i dawne przeszkody są już
 nieużywane — do usunięcia w porządkach.
+
+## Poziom przedmiotu jak poziom czaru (2026-09-30)
+
+Zgłoszenie: w gildii magów widać, z którego poziomu jest czar, a wyższy =
+mocniejszy. Pokémart grupuje towar na półki I/II/III (słupek z numerem po
+lewej, tło wiersza w barwie poziomu), plecak w bitwie ma przy ikonie
+pigułkę poziomu (`src/visual/poziomPrzedmiotu.ts`). Barwy z pokeballi:
+I czerwień (Poké Ball), II niebieski (Great Ball), III złoto na czerni
+(Ultra Ball). `PRZEDMIOTY_PLECAKA` ułożone wg poziomu.
