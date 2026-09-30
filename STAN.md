@@ -2673,3 +2673,14 @@ klik otwiera okienko z rysunkiem, opisem, ceną i „Zbuduj"/„Rozbuduj" (budow
 dopiero po potwierdzeniu). Ślepy krytyk: nowy panel wygrywa 8/9/9/8 z 5/5/3/6.
 `probe-miasto.mjs` klika kartę, potem „Zbuduj"; `zrzut-miasto.mjs` ma
 `--najedz x,y` i `--klik x,y`.
+
+## Różne przeszkody na polu bitwy (2026-09-30)
+
+Zgłoszenie: „3 razy ta sama skała", „to samo drzewo dwa razy, raz
+mniejsze". Każdy teren ma 5–6 różnych przeszkód (18 nowych z OpenAI:
+kłoda, pniak, kwitnący krzak, paproć, pień z grzybami, omszały głaz,
+muszla, wyrzucone drewno, kamienie z sadzawką, kaktus, suche drzewo,
+pęknięty głaz, trzciny, pniak w bajorze, grzyby, lód, bałwan, oszroniony
+krzak), a `scatterObstacles` losuje je bez powtórzeń (talia). Wysokie vs
+niskie: `wysokaPrzeszkoda` w `terenBitwy.ts`. `?ekran=bitwa&teren=<teren>`
+— pokazowa bitwa na zadanym terenie.
