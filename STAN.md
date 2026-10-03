@@ -2711,3 +2711,34 @@ tydzień zamiast 4,1 — mnożnik ×1,5 przyrostu). W HoMM3 fort dokłada całe
 jednostki. Żłobek (`fort`) nie rusza już przyrostu młodych (i tak każdego
 gatunku bierze się jednego), tylko dokłada `TRENINGI_ZA_ZLOBEK = 2`
 treningi na tydzień z każdego rezerwatu (3 → 5). `MNOZNIK_FORTU` usunięty.
+
+## Polana — runda 13 planszy (2026-10-03)
+
+Werdykt r2 (`tools/blind/r2-polana-werdykt.md`): plansza wygrała ślepo,
+ale 2 × NIE (C4 straże do obejścia, G1 ponad 15 obiektów na starcie)
+i 13 × CZĘŚCIOWO. Zmiany tylko w `tools/mapy/polana.py` (+ 3 linie
+w `render_mapa.py`: `NAKLEJKI_KLOCKI` — naklejki, które plansza z klockami
+chce zachować poza kwiatami i paprociami):
+
+- straże: przełęcz doliny (9,17) NA trakcie, łąka pod nią zarośnięta
+  (10–13,17), (11–12,18); most (17,25) dwa pola za deskami (punkt
+  „brod wschod" → (18,25)); bród JEDEN wiersz (20–22,8) ze strażą na
+  łasze; straże (12,13) i (27,7) z otwartej łąki odpadły — obie kopalnie
+  złota siedzą w kieszeniach: plaża (10,4) za (12,6), róg NE (31,3) za (31,5).
+  Straży 7 (4 słabe, 2 średnie, 1 silna), bez bitwy 23 %.
+- ekran startowy (0–21,18–36): 14 obiektów z zamkiem (było 22+). Kopalnia
+  w zboczu pasma to kamieniołom (9,27) — jaskinia odłamków krytyk brał za
+  „jaskinię"; jaskinia odłamków na północnej łące (7,12). Wiatrak, obóz,
+  automat, ognisko, domek, skrzynia z wąwozu → pule budowli.
+- kraina wroga: cały las za rzeką na północ od granicy → skała, masyw
+  (22–29,16–17) zamyka ją od południa; `TLO` daje pod skałami łąkę (`.`),
+  a w krainie wroga ciemną łąkę (`b`); uschłe drzewa (`martwe-drzewo-1/2`)
+  na `b` 0,07. Pas ubitej ziemi pod zachodnim pasmem (3–12,27) usunięty
+  (czytał się jak droga do nikąd i plama piasku).
+- F3: jedna wieża, jeden domek na drzewie; pule: dom 6, pogranicze 5
+  (bez rancza — mur lądował w skałach), wróg 2.
+
+Liczby: 58 obiektów, co 10,1 pola, pasy [8,7,20,10,13], fort 25/35 kroków.
+Sondy: `probe-mapy` Polana OK, `probe-misja` WSZYSTKO OK, `tsc` czysty.
+Nierozwiązane (CZĘŚCIOWO): D2 bezdroże to ta sama łąka co przy drodze;
+E3 rough w kieszeni za rzeką ma 5 × 9 pól (poniżej 6 szerokości).
