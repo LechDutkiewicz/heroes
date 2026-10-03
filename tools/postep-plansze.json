@@ -1,12 +1,12 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-03 17:42",
+  "aktualizacja": "2026-10-03 17:43",
   "kawalki": [
     {
       "id": "polana",
       "tytul": "Polana (misja 1, samouczek, 36×36)",
-      "status": "critic",
+      "status": "build",
       "opis": "Rzeka z dwoma brodami, zamek na południowym zachodzie, Stary Fort na wschodzie.",
       "rundy": [
         {
@@ -24,13 +24,42 @@
               "opis": "Schemat planszy (ten sam, który dostaje krytyk)"
             }
           ]
+        },
+        {
+          "nr": 1,
+          "wzorzec": "Hatchet Axe and Saw (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 10,
+            "CZESCIOWO": 14,
+            "NIE": 6
+          },
+          "luka": "Straże nie budują łuku trudności: połowa stoi przy pojedynczych skrzyniach na otwartej łące, a trasa do celu misji (most → trakt → fort) jest po jednej słabej bitwie całkiem pusta, podczas gdy najcięższa straż pilnuje brodu do rogu z jednym artefaktem. Dobra mapa HoMM3 kładzie najtrudniejszą walkę tam, gdzie leży największa nagroda, i zamyka nią przejście, nie plac. (Ślepo wygrała nasza, ale 6 × NIE — kawałek jeszcze nie skończony.)",
+          "nie": [
+            "C1: NIE — tylko most (16,25) i bród (21,8) są szyjkami; (25,7), (33,4), (32,9), (19,21), (5,31), (27,27), (11,4) stoją na otwartej łące przy pojedynczej skrzyni lub artefakcie i nic nie blokują.",
+            "C3: NIE — najtrudniejsze straże (średnie) pilnują brodu (21,8) do rogu z jednym artefaktem (34,3) i skrzynią, a droga do celu misji — fortu (30,13) — prowadzi przez most ze słabą strażą i dalej bez żadnej bitwy.",
+            "E3: NIE — skały (12–14, 10–13), (12–14, 15–17), (25–26, 15–17), piasek (18–19, 15–16), (12–14, 3–5) to plamy po 2–4 pola rozsypane bez związku z granicami stref; teren zmienia się tylko przy pasmie doliny domu.",
+            "F2: NIE — nie ma chaty jasnowidza, namiotu klucznika ani strażnicy granicznej; wieże (20,14), (18,22), ciężarówki i ogniska są jednorazowe, pętla istnieje tylko topograficznie (bród → brzeg wschodni → most).",
+            "G1: NIE — pierwszy ekran wokół zamku (0–20, 18–35) ma dwie kopalnie, cztery straże (5,31), (10,33), (16,25), (17,30), cztery skrzynie, artefakt, ~sześć stosów i trzy budynki — ponad dwadzieścia rzeczy naraz, a ekran za fortem (26–35, 0–12) ma dla kontrastu kilka pionków.",
+            "G4: NIE — ta sama jasna łąka wokół zamku (9,31) i wokół fortu (30,13); na minimapie stref nie da się odróżnić kolorem."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r1-polana.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-polana-r0.png",
+              "opis": "Cała plansza w grze przed rundą 1"
+            }
+          ]
         }
       ]
     },
     {
       "id": "dwie-doliny",
       "tytul": "Dwie Doliny (misja 2, 72×72)",
-      "status": "critic",
+      "status": "build",
       "opis": "Trzy pasy za dwoma grzbietami, strażnice na klucze, pas sporny w środku.",
       "rundy": [
         {
@@ -46,6 +75,34 @@
             {
               "plik": "tools/wzorzec/nasza-minimapa.png",
               "opis": "Schemat planszy (ten sam, który dostaje krytyk)"
+            }
+          ]
+        },
+        {
+          "nr": 1,
+          "wzorzec": "Faeries! (72×72)",
+          "win": false,
+          "checklista": {
+            "TAK": 14,
+            "CZESCIOWO": 11,
+            "NIE": 5
+          },
+          "luka": "Obiekty są rozsypane losowo wewnątrz strefy zamiast skomponowane wokół drogi i szyjek — jedynymi prawdziwymi szyjkami są cztery bramy na klucz, straże potworów nie zamykają niczego, surowce leżą pojedynczo w polu, a gęstość skacze od jednego ekranu z kilkunastoma obiektami (wschodni rozstaj) do ekranów pustych; dobra mapa HoMM3 stawia najpierw ścieżkę i zakątki, a dopiero potem wrzuca w nie obiekty.",
+          "nie": [
+            "B2: NIE — Surowce są losowane w całej strefie w zakresie (0,999) i w zrzucie leżą pojedynczo na otwartej łące: (33,61), (26,64), (35,56), (18,69), (62,48); stosów po 2–4 na końcu odnóg praktycznie nie ma poza „kieszeniami” za strażą.",
+            "E3: NIE — Śnieg na północy to cztery osobne plamy (szkic ma 's' w kolumnach 1, 3–4, 8–9, 15), piasek leży w dwóch bezcelowych plamach 8 × 4 i 4 × 4 przy zachodniej krawędzi (0–8, 16–19) i (4–8, 27–32), bagno poza pierścieniem jeziora ma osobną plamę przy (55–60, 31–34); plamy 4 × 4 z komórek szkicu łamią próg ≥ 6 × 6.",
+            "F1: NIE — Odnoga do „zatoki południowej” kończy się w lesie na wschodnim brzegu jeziora przy (56,62) bez żadnego obiektu (wóz i gniazdo stoją wcześniej przy (60,58) na piasku), a odnoga do „wschodniego rozstaju” (54,38) wchodzi w gęsty węzeł zamiast w zakątek.",
+            "F3: NIE — Listy `budowle` powtarzają 'drzewo-wiedzy', 'kamienna-wieza', 'arena' w każdej z trzech stref plus w skarbcu krańca, a w zrzucie widać trzy wieże obserwacyjne (9,5), (42,6), (54,34) — budynki specjalne nie są rzadkie i stoją w losowych miejscach w polu, nie na wzgórzu czy nad wodą.",
+            "G1: NIE — Ekran wokół (41–58, 36–44) ma kilkanaście obiektów naraz (dwie kopalnie, ranczo, gniazdo, chatka, wóz, obóz, dom, arena, 3 skrzynie, surowce, straż), a ekran południowo-środkowy (28–48, 58–71) to łąka z kępami i dwoma surowcami."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r1-dwie-doliny.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = wzorzec"
+            },
+            {
+              "plik": "tools/shots/caly-dwie-doliny-r0.png",
+              "opis": "Cała plansza w grze przed rundą 1"
             }
           ]
         }
