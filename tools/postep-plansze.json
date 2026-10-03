@@ -1,12 +1,12 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-03 18:10",
+  "aktualizacja": "2026-10-03 20:22",
   "kawalki": [
     {
       "id": "polana",
       "tytul": "Polana (misja 1, samouczek, 36×36)",
-      "status": "critic",
+      "status": "build",
       "opis": "Rzeka z dwoma brodami, zamek na południowym zachodzie, Stary Fort na wschodzie.",
       "rundy": [
         {
@@ -58,6 +58,31 @@
             }
           ],
           "zmiana": "Silna straż w przełęczy przed fortem, słaba na moście, średnia na zwężonym brodzie; luźne straże z łąki zdjęte, kieszenie: plaża nad jeziorem (słaba straż w szyjce) i róg NE (średnia). Przełęcz północna doliny domu zamknięta lasem ze strażą — bez bitwy 38 % → 24 %. Kraina wroga = cały brzeg za rzeką na północ od pasa lasu, chłodniejszy grunt, 18 obiektów zamiast 8. Chata jasnowidza za mostem, ślepa odnoga kończy się skrzynią i artefaktem, druga droga do fortu przez bród. Pierwszy ekran odchudzony."
+        },
+        {
+          "nr": 2,
+          "wzorzec": "Unexpected Inheritance (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 15,
+            "CZESCIOWO": 13,
+            "NIE": 2
+          },
+          "luka": "strefa domowa nie jest zamknięta — straże (8,17) i (12,13) stoją na otwartej łące i da się je obejść, więc „zamknięcie strażami\" istnieje tylko na moście (16,25); dziecko uczy się, że straż można ominąć, zamiast że trzeba ją pobić.",
+          "nie": [
+            "C4: NIE — straż (8,17) obchodzi się łąką (9–10,17–18), straż (12,13) stoi na placu 4 pola szerokim, a (27,7) na otwartej ciemnej łące (23–29,5–8); tylko most (16,25) zamyka przejście w całości.",
+            "G1: NIE — ekran startowy (0–21,18–36) ma ponad 15 obiektów: zamek, jaskinię (9,26), kryształ i skrzynię (11,27), ognisko (5,28), automat (4,29), jagody (6,30), szklarnię (12,31), wiatrak (7,32), skrzynię (9,33), szopę (14,34), pachołki (15,34), kopalnię (18,28), kryształ (20,31), skrzynię (19,32), ognisko (19,33), kulki (20,35), dwie straże (16,25), (17,30), wieżę (18,21), jajka (20,23), skrzynię (9,19), domek (9,21)."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r2-polana.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-polana-r1.png",
+              "opis": "Cała plansza oceniana w rundzie 2"
+            }
+          ]
         }
       ]
     },
