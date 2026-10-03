@@ -46,22 +46,22 @@ ZIARNO = 20260925
 # i kępami lasu, wysepki suchej łąki, sucha dolina gracza.
 SZKIC = [
     'TTbbbTT##TTbbbbbbT',
-    'Tbbb.Tbb.bTbbb....',
-    'Tb~bb..b.bbbbb....',
+    'TTTb.Tbb.bTbbb....',
+    'TT~bb..b.bbbbb....',
     'Tbb~bTb..Tbb~b..T.',
     'Tbbbbbbb.bb~bb...T',
-    '#Tbb~~bbbbTbbbb~bT',
-    'Tb.bb~bb.T.bbb~bbT',
-    'Tbbbbbb~bbbbb~bb.T',
-    'TTbb~bb.bbbbbb~bbT',
-    'Tbbb~~bTTbb.bbbb~T',
+    '##TTTTTT##TTTTT~bT',
+    'Tb.b~~~~..bbbb~bTT',
+    'Tbb~~~~~bbbbb~bbTT',
+    'TTbbbbbbbbbbbb~bbT',
+    'TbbbbbbTbbb.bbbbTT',
     'T.bbbbbbbbb~Tbb.bT',
     'bb.bbbbbbbbbb~~bbT',
-    'Tb.Tb.Tbb~bbbbbbbT',
-    'T.#b.Tbbb~.Tbb~bbT',
-    'Tbb.T.bbbb.bbbb~~T',
-    'T.bb.bT~bb.T~bb~bT',
-    'Tb.Tbbbbb~.bbb~b.T',
+    'Tb.Tb.Tbb.bbbbbbbT',
+    'T.#b.Tbbb..Tbb~bbT',
+    'Tbb.T.bbbb.bbTb~~T',
+    'T.bb.bT~bb.TTbb~bT',
+    'Tb.Tbbbbb..bbb~b.T',
     'TTTT#TTbTTTTbTTTTT',
 ]
 
@@ -73,8 +73,24 @@ def struga_y(x):
 
 
 def struga_x(y):
-    """Środek pionowego odcinka Czarnej Strugi w wierszu `y`."""
-    return 20 + round(1.3 * math.sin(y / 4.0))
+    """Środek pionowego odcinka Czarnej Strugi w wierszu `y`. Runda 13 (ślepe
+    porównanie z oficjalną mapą: „strefa domowa to 135 pól, pogranicze 63 %
+    mapy"): odcinek przesunięty z x≈20 na x≈29 — dolina gracza sięga teraz
+    x 0–27, a za nią Struga z pasem lasu jest GRZBIETEM DOMOWYM."""
+    return 29 + round(1.3 * math.sin(y / 4.0))
+
+
+#: Grzbiet wroga (runda 13): masyw lasu i skał w wierszach 15–17 od zachodniej
+#: krawędzi po pierścień wyspy, z JEDNĄ bramą na grobli do warowni. Rdzeń
+#: pilnuje silnik (`GRZBIETY`/`PRZEJSCIA`): rozmycie szkicu nie wybije w nim
+#: dziury, a przejść ma być dokładnie jedno.
+GRZBIET_WROGA = (15, 17)
+GRZBIET_KONIEC = 44
+BRAMA_WROGA = (26, 15, 27, 17)
+GRZBIETY = [('wroga', 'y', GRZBIET_WROGA, (0, GRZBIET_KONIEC))]
+PRZEJSCIA = [('wroga', BRAMA_WROGA, '.')]
+PRZEJSC_W_MURZE = 1
+ZNAKI_MURU = '#T'
 
 
 WYSPA = (46, 8)
@@ -110,7 +126,7 @@ PUNKTY = {
     'grobla polnoc': (12, 28),
     'trzesawisko': (27, 24),
     'brod zachod': (14, 44),
-    'brod wschod': (27, 44),
+    'brod wschod': (31, 44),
     'wschodnie wyspy': (38, 37),
     'podnoze wyspy': (46, 21),
     'zamek wroga': (22, 7),
@@ -129,7 +145,9 @@ SZLAKI = [
 #: Grobla ma iść przez bagno WPROST — na tej planszy to jest jej sens. Przy
 #: domyślnym koszcie (bagno droższe od lasu) droga kluczyłaby między stawami
 #: i wyglądała jak ścieżka szukająca suchej nogi, a nie jak grobla.
-KOSZT_DROGI = {'b': 1.5}
+#: Las drogi nie przecina (runda 13): grobla ma iść bramą i przeprawami, nie
+#: skrótem przez pas lasu grzbietu.
+KOSZT_DROGI = {'b': 1.5, 'T': 12}
 
 #: Obiekty stoją też na bagnie — inaczej trzęsawisko byłoby pustą plamą.
 POD_OBIEKTY = '.,b'
@@ -244,7 +262,9 @@ def popraw_teren(g, mapa):
     punkty = list(PUNKTY.values())
     for y in range(2, BOK - 2):
         for x in range(2, BOK - 2):
-            if mapa[y][x] != 'b' or rng.random() > 0.025:
+            # Runda 13 (werdykt: kałuże bez funkcji): oczek o połowę mniej —
+            # jezioro środka i stawy ze szkicu mają być widoczne, nie krople.
+            if mapa[y][x] != 'b' or rng.random() > 0.014:
                 continue
             if any(max(abs(x - px), abs(y - py)) <= 3 for px, py in punkty):
                 continue
@@ -291,8 +311,10 @@ def popraw_teren(g, mapa):
             if x < struga_x(y) - 2 and mapa[y][x] != '~' or znak == '~':
                 mapa[y][x] = znak
     # Pasmo w dole doliny dochodzi do samej Strugi (runda 8).
+    # Runda 13: Struga odeszła na x≈29, więc pasmo kończy się na x 19 —
+    # dalej jest zakątek doliny z wieżą i stosem nagród.
     for y in range(50, BOK):
-        for x in range(18, struga_x(y) - 1):
+        for x in range(18, 20):
             if mapa[y][x] != '~':
                 mapa[y][x] = '#'
     # Runda 8 („prawa trzecia kadru to ciemnoturkusowa plama — nie widać,
@@ -316,7 +338,7 @@ def popraw_teren(g, mapa):
     # z trzciną w przełęczy, las i góry. Trzęsawisko zaczyna się za kadrem.
     for y in range(34, BOK):
         cx = struga_x(y)
-        for x in range(0, min(BOK, cx + 7)):
+        for x in range(0, min(BOK, cx - 1)):
             if mapa[y][x] == 'b':
                 mapa[y][x] = '.'
     # Wschodni brzeg pod mostem: ze szkicu zostało tu oczko przyklejone do
@@ -338,6 +360,79 @@ def popraw_teren(g, mapa):
     # wzorcu HotA) — dół kadru między traktem a rzeką był pustą łąką.
     for x, y in ((15, 48), (16, 48), (15, 49), (16, 49)):
         mapa[y][x] = '~'
+    grzbiet_domowy(mapa)
+    for x0, y0, x1, y1, wejscie in ZAKATKI:
+        zakatek(mapa, x0, y0, x1, y1, wejscie)
+
+
+#: Zakątki pogranicza (runda 13): prostokąt wnętrza `(x0, y0, x1, y1)` i pole
+#: wejścia na jego obwodzie. Obwód zarasta lasem, wejście zostaje jedyną
+#: szyjką — silnik znajduje je potem jako kieszeń (`znajdz_kieszenie`),
+#: a `rozstaw` kładzie w środku stos nagród i stawia straż w szyjce.
+#: Zachodni zakątek za jeziorem, północno-wschodni przy grobli na wyspę,
+#: wschodni nad jeziorem wschodnim; czwarty (południowo-wschodni, za
+#: jeziorem) wycina sam teren.
+ZAKATKI = [
+    (3, 19, 8, 22, (6, 23)),
+    (48, 19, 50, 22, (49, 23)),
+    (43, 35, 46, 37, (42, 36)),
+    (36, 19, 39, 21, (37, 22)),
+    (48, 27, 50, 29, (49, 30)),
+]
+
+
+def zakatek(mapa, x0, y0, x1, y1, wejscie):
+    """Zakątek zamknięty lasem z jednym wejściem. Pola po skosie na zewnątrz
+    od wejścia też zarastają: szyjka ma wtedy najwyżej czterech przejezdnych
+    sąsiadów, a strażnik w niej zamyka cały zakątek (potwór blokuje 3 × 3)."""
+    ex, ey = wejscie
+    for y in range(y0 - 1, y1 + 2):
+        for x in range(x0 - 1, x1 + 2):
+            if not (0 <= x < BOK and 0 <= y < BOK) or mapa[y][x] == '=':
+                continue
+            if x0 <= x <= x1 and y0 <= y <= y1 or (x, y) == wejscie:
+                mapa[y][x] = 'b'
+            else:
+                mapa[y][x] = 'T'
+    # Pola po skosie na zewnątrz od wejścia.
+    if ey in (y0 - 1, y1 + 1):
+        dy = -1 if ey == y0 - 1 else 1
+        skosy = [(ex - 1, ey + dy), (ex + 1, ey + dy)]
+        prosto = (ex, ey + dy)
+    else:
+        dx = -1 if ex == x0 - 1 else 1
+        skosy = [(ex + dx, ey - 1), (ex + dx, ey + 1)]
+        prosto = (ex + dx, ey)
+    for x, y in skosy:
+        if 0 <= x < BOK and 0 <= y < BOK and mapa[y][x] != '=':
+            mapa[y][x] = 'T'
+    x, y = prosto
+    if mapa[y][x] not in '.,=b':
+        mapa[y][x] = 'b'
+
+
+def grzbiet_domowy(mapa):
+    """Runda 13: Czarna Struga jako GRZBIET, nie kreska wody. Na zewnętrznym
+    (północnym i wschodnim) brzegu rośnie pas lasu na dwa pola — z minimapy
+    widać ciągłą bryłę „las + woda" szeroką na pięć pól, która oddziela
+    dolinę gracza od trzęsawiska. Pas ma dokładnie dwie wyrwy: wylot grobli
+    północnej i przyczółek mostu; obie zamyka straż."""
+    zakret = struga_x(struga_y(20))
+    for x in range(0, zakret + 2):
+        if GROBLA_PN[0] - 1 <= x <= GROBLA_PN[2] + 1:
+            continue
+        cy = struga_y(x)
+        for y in (cy - 3, cy - 2):
+            if mapa[y][x] not in '~=':
+                mapa[y][x] = 'T'
+    for y in range(struga_y(zakret) - 4, BOK):
+        if MOST_WSCH[1] - 1 <= y <= MOST_WSCH[3] + 1:
+            continue
+        cx = struga_x(y) if y >= struga_y(zakret) - 1 else zakret
+        brzeg = cx if y >= STRUGA_WASKA_OD else cx + 1
+        for x in (brzeg + 1, brzeg + 2):
+            if x < BOK and mapa[y][x] not in '~=':
+                mapa[y][x] = 'T'
 
 
 def w_dolinie(x, y):
@@ -345,10 +440,11 @@ def w_dolinie(x, y):
 
 
 def strefa(x, y):
-    """Dolina za Strugą, wyspa i północ to kraina wroga, reszta — trzęsawisko."""
+    """Dolina za Strugą to dom; wyspa i wszystko za grzbietem wroga to kraina
+    wroga; reszta — trzęsawisko (pogranicze)."""
     if w_dolinie(x, y):
         return 'dom'
-    if math.hypot(x - WYSPA[0], y - WYSPA[1]) <= PIERSCIEN_ZEWN + 1 or y < 13:
+    if math.hypot(x - WYSPA[0], y - WYSPA[1]) <= PIERSCIEN_ZEWN + 1 or (y < GRZBIET_WROGA[1] and x <= GRZBIET_KONIEC):
         return 'wroga'
     return 'pogranicze'
 
@@ -459,7 +555,12 @@ def rozstaw(g):
     g.dodaj(4, 'dom', (8, 30), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])))
     g.dodaj(2, 'dom', (8, 30), lambda p: ('skrzynia', None))
     g.strzez(g.dodaj(1, 'dom', (10, 30), lambda p: ('artefakt', None)), 'slaby')
-    g.dodaj(2, 'dom', (7, 30), lambda p: ('potwor', 'slaby'))
+    # Jedna wolno stojąca słaba walka w dolinie (A5) — do pobicia w pierwszych dniach.
+    # Stoi z dala od traktu, żeby nie zamykać go jak brama (G2).
+    g.dodaj(1, 'dom', (6, 18), lambda p: ('potwor', 'slaby'), kandydaci=[
+        p for p in g.wolne_pola('dom', (6, 18))
+        if not any(g.w(p[0] + dx, p[1] + dy) and g.mapa[p[1] + dy][p[0] + dx] == '=' for dy in (-1, 0, 1) for dx in (-1, 0, 1))
+    ])
     g.skarb_w_kieszeni('dom', 'slaby', 3, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'odlamek')]))
     # Budowle doliny nie przy samej drodze (runda 5: wiatrak na skraju ścieżki
     # w dół doliny zasłaniał ją całą i dół kadru znów był ścianą obiektów).
@@ -488,39 +589,114 @@ def rozstaw(g):
             continue
     scisle = False
 
-    # Straże przepraw przez Strugę. Obie średnie: pierwszy tydzień w dolinie
-    # jest bezpieczny, a wyjście z niej to pierwsza poważna bitwa.
-    g.postaw((GROBLA_PN[0], struga_y(12)), ('potwor', 'sredni'))
-    # Straż mostu na wschodnim przyczółku (jak na Polanie): potwór blokuje
-    # pole i osiem wokół, więc zamyka most, a nie stoi na deskach.
-    g.postaw((MOST_WSCH[2] + 1, MOST_WSCH[1]), ('potwor', 'sredni'))
-    # Runda 9: prawy dół kadru za mostem był pustą łąką — wieża obserwacyjna
-    # na brzegu Strugi (za strażą mostu, jak nagroda za pierwszą bitwę)
-    # i skrzynia pod lasem.
-    for pole, wpis in (((21, 49), ('budynek', 'wieza-obserwacyjna')), ((22, 46), ('skrzynia', None))):
+    # Straże przepraw przez Strugę — przełęcze grzbietu domowego. Runda 13
+    # (werdykt ślepego porównania): słabe, jak straż na grobli w oficjalnej
+    # mapie — pierwszy tydzień jest bezpieczny, a wyjście z doliny to nauka,
+    # nie bariera; poważne bitwy czekają na pograniczu i w bramie wroga.
+    g.postaw((GROBLA_PN[0], struga_y(12)), ('potwor', 'slaby'))
+    # Straż mostu dwa pola za wschodnim przyczółkiem (runda 13: „Cyndaquil
+    # stoi na przyczółku mostu"): potwór blokuje pole i osiem wokół, a pas
+    # lasu grzbietu zostawia przy moście wyrwę na trzy wiersze — zamyka ją
+    # w całości, a nie stoi na deskach.
+    g.postaw((MOST_WSCH[2] + 2, MOST_WSCH[1]), ('potwor', 'slaby'))
+    # Zakątek doliny za stawem (runda 13: stos nagród w zakątku (22,48)):
+    # wieża obserwacyjna nad Strugą, a przy niej skrzynia i stos surowców.
+    g.postaw((21, 49), ('budynek', 'wieza-obserwacyjna'))
+    zakatek = [p for p in g.wolne_pola('dom', (0, 999)) if 22 <= p[0] <= 26 and 47 <= p[1] <= 52]
+    for wpis in (('skrzynia', None), ('surowiec', 'kamien'), ('surowiec', 'pokeball'), ('surowiec', 'jagoda')):
         try:
-            g.postaw(pole, wpis)
+            g.dodaj(1, 'dom', (0, 999), lambda p, w=wpis: w, kandydaci=[q for q in zakatek if q not in g.zajete])
         except SystemExit as e:
-            print(f'  kadr za mostem: {e}')
+            print(f'  zakątek doliny: {e}')
+
+    # --- STOSY W ZAKĄTKACH (runda 13) --------------------------------------
+    # Werdykt ślepego porównania: „jasnożółte kropki rozsypane równo po całej
+    # mapie — konfetti, nie stosy w zakątkach; straże stoją na placach".
+    # Surowce i artefakty pogranicza leżą więc w ZAKĄTKACH, które zamyka
+    # jeden strażnik w szyjce: silnik szuka kieszeni 8–60 pól (jak
+    # `skarb_w_kieszeni`, tylko większych), a tu kładziemy w każdej 3–4 rzeczy
+    # i stawiamy straż. Reszta znajdziek pogranicza leży przy drodze.
+    def stos(ktora, zawartosc, sila, kieszen):
+        szyjka, pola = kieszen
+        wolne = [q for q in pola if g.mapa[q[1]][q[0]] in '.,b' and q not in g.zajete and not g.w_przejsciu(*q)]
+        polozone = []
+        for wpis in zawartosc[: min(len(zawartosc), max(1, len(wolne) // 2))]:
+            try:
+                polozone += g.dodaj(1, ktora, (0, 999), lambda p, w=wpis: w, kandydaci=[q for q in wolne if q not in g.zajete])
+            except SystemExit:
+                break
+        if polozone and szyjka not in g.zajete and not g.koliduje_ze_straza(szyjka, ('potwor', sila)):
+            g.zajete.append(szyjka)
+            g.obiekty.append((szyjka, ('potwor', sila)))
+        return polozone
+
+    # Zakątki wycięte w terenie (`ZAKATKI`): wnętrze to prostokąt, straż
+    # staje na polu PRZED wejściem (potwór blokuje 3 × 3, więc zamyka wejście
+    # w całości). Nic innego w zakątkach nie staje — tylko stos.
+    wybrane = []
+    w_zakatkach = set()
+    for x0, y0, x1, y1, (ex, ey) in ZAKATKI:
+        wnetrze = [(x, y) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1)]
+        if ey == y0 - 1:
+            przed = (ex, ey - 1)
+        elif ey == y1 + 1:
+            przed = (ex, ey + 1)
+        elif ex == x0 - 1:
+            przed = (ex - 1, ey)
+        else:
+            przed = (ex + 1, ey)
+        wybrane.append((przed, wnetrze))
+        w_zakatkach |= set(wnetrze) | {(ex, ey), przed}
+    # Czwarty zakątek znajduje sam teren (kieszeń 8–60 pól za jedną szyjką).
+    for k in g.znajdz_kieszenie(PUNKTY['start'], 8, 60):
+        if strefa(*k[0]) != 'pogranicze' or g.w_przejsciu(*k[0]):
+            continue
+        if all(max(abs(k[0][0] - w[0][0]), abs(k[0][1] - w[0][1])) >= 10 for w in wybrane):
+            wybrane.append(k)
+            w_zakatkach |= set(k[1]) | {k[0]}
+            break
+    print('  zakątki pogranicza (szyjka, pól):', [(k[0], len(k[1])) for k in wybrane])
+    # Kieszenie silnika, które zachodzą na zakątki, odpadają — inaczej
+    # `skarb_w_kieszeni` postawiłoby drugą straż w tym samym wejściu.
+    for ktora in list(g.kieszenie):
+        g.kieszenie[ktora] = [k for k in g.kieszenie[ktora] if k[0] not in w_zakatkach and not set(k[1]) & w_zakatkach]
+    wolne_pola_bez_zakatkow = g.wolne_pola
+    g.wolne_pola = lambda *a, **kw: [p for p in wolne_pola_bez_zakatkow(*a, **kw) if p not in w_zakatkach]
+    zawartosci = [
+        [('artefakt', None), ('skrzynia', None), ('surowiec', 'kamien'), ('surowiec', 'pokeball')],
+        [('skrzynia', None), ('surowiec', 'pokeball'), ('surowiec', 'jagoda'), ('surowiec', 'odlamek')],
+        [('artefakt', None), ('surowiec', 'kamien'), ('surowiec', 'jagoda'), ('skrzynia', None)],
+        [('skrzynia', None), ('surowiec', 'odlamek'), ('surowiec', 'pokeball'), ('surowiec', 'kamien')],
+        [('skrzynia', None), ('skrzynia', None), ('surowiec', 'jagoda'), ('surowiec', 'kamien')],
+        [('artefakt', None), ('surowiec', 'pokeball'), ('surowiec', 'odlamek'), ('skrzynia', None)],
+    ]
+    for k, zawartosc in zip(wybrane, zawartosci):
+        stos('pogranicze', zawartosc, 'sredni', k)
 
     # --- TRZĘSAWISKO -----------------------------------------------------------
-    # Najgęstszy kawałek. Kopalnie drogie (kamień, pokeballe) pod strażą; tanie
-    # otworem — to gospodarka, nie nagroda.
-    g.dodaj(24, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
+    # Najgęstszy kawałek. Kopalnie drogie (kamień) pod strażą; tanie otworem —
+    # to gospodarka, nie nagroda. Surowce luzem tylko tam, gdzie prowadzi
+    # droga (B2), w zasięgu dwóch pól od grobli.
+    def przy_grobli(ktora):
+        return [p for p in przy_drodze(g, g.wolne_pola(ktora, (0, 999)), 2) if p not in g.zajete]
+
+    for _ in range(12):
+        g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])), kandydaci=przy_grobli('pogranicze'))
     kopalnie = ['kamien', 'odlamek', 'pokeball', 'jagoda', 'kamien', 'pokeball', 'odlamek']
     polozone = []
     for co in kopalnie:
         polozone += g.dodaj(1, 'pogranicze', (0, 999), lambda p, co=co: ('kopalnia', co))
-    g.strzez([p for p, co in zip(polozone, kopalnie) if co in ('kamien', 'pokeball')], 'sredni')
-    g.dodaj(12, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
-    g.strzez(g.dodaj(4, 'pogranicze', (0, 999), lambda p: ('artefakt', None)), 'sredni')
-    g.dodaj(3, 'pogranicze', (0, 999), lambda p: ('potwor', 'sredni'))
+    g.strzez([p for p, co in zip(polozone, kopalnie) if co == 'kamien'], 'sredni')
+    g.dodaj(13, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
+    g.strzez(g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('artefakt', None)), 'sredni')
     g.skarb_w_kieszeni('pogranicze', 'sredni', 4, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'kamien'), ('artefakt', None)]))
     g.skarb_w_kieszeni('pogranicze', 'silny', 4, lambda p: rng.choice([('artefakt', None), ('skrzynia', None)]))
     g.skarb_w_kieszeni('pogranicze', 'sredni', 3, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'pokeball')]))
+    # Budowle specjalne po jednej–dwie na planszę (F3): pula bez areny
+    # (ta stoi tylko u wroga) i bez drugiego portalu.
     g.budowle(24, 'pogranicze', [
-        'wieza-obserwacyjna', 'ranczo', 'gniazdo', 'arena', 'wiatrak', 'zrodlo',
-        'chatka', 'woz', 'drzewo-wiedzy', 'kamienna-wieza', 'ognisko', 'oboz-treningowy',
+        'wieza-obserwacyjna', 'ranczo', 'gniazdo', 'wiatrak', 'zrodlo', 'chatka',
+        'woz', 'ognisko', 'oboz-treningowy', 'kamienna-wieza', 'drzewo-wiedzy',
     ])
     # Portal: jeden koniec w trzęsawisku, drugi pod wyspą — skrót do celu dla
     # tego, kto go znajdzie, ale za strażą pogranicza, nie z doliny.
@@ -528,15 +704,20 @@ def rozstaw(g):
     g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('jasnowidz', None))
 
     # --- KRAINA WROGA --------------------------------------------------------
-    g.dodaj(8, 'wroga', (0, 999), lambda p: ('surowiec', rng.choice(['kamien', 'odlamek', 'pokeball'])))
+    # Brama w grzbiecie wroga: silna straż u południowego wylotu — potwór
+    # blokuje trzy kolumny, a brama ma dwie, więc zamyka ją w całości.
+    g.postaw((BRAMA_WROGA[2], BRAMA_WROGA[3] + 1), ('potwor', 'silny'))
+    for _ in range(7):
+        g.dodaj(1, 'wroga', (0, 999), lambda p: ('surowiec', rng.choice(['kamien', 'odlamek', 'pokeball'])), kandydaci=przy_grobli('wroga') or None)
     kopalnie = ['kamien', 'pokeball', 'odlamek']
     polozone = []
     for co in kopalnie:
         polozone += g.dodaj(1, 'wroga', (0, 999), lambda p, co=co: ('kopalnia', co))
     g.strzez([p for p, co in zip(polozone, kopalnie) if co != 'odlamek'], 'silny')
-    g.strzez(g.dodaj(4, 'wroga', (0, 999), lambda p: ('skrzynia', None)), 'silny')
-    g.dodaj(2, 'wroga', (0, 999), lambda p: ('potwor', 'silny'))
-    g.budowle(6, 'wroga', ['osrodek-ewolucji', 'arena', 'kamienna-wieza', 'drzewo-wiedzy', 'gniazdo', 'zrodlo'])
+    g.dodaj(2, 'wroga', (0, 999), lambda p: ('skrzynia', None))
+    g.strzez(g.dodaj(2, 'wroga', (0, 999), lambda p: ('skrzynia', None)), 'silny')
+    g.skarb_w_kieszeni('wroga', 'silny', 4, lambda p: rng.choice([('artefakt', None), ('skrzynia', None), ('surowiec', 'kamien')]))
+    g.budowle(6, 'wroga', ['osrodek-ewolucji', 'arena', 'kamienna-wieza', 'drzewo-wiedzy', 'ognisko', 'zrodlo'])
 
     # Straż przy samym Kamieniu (sonda: „artefaktu pilnuje straż" — wódz stoi
     # na grobli, siedem pól dalej). Na końcu, żeby nie ruszać losowań wyżej.
@@ -551,6 +732,7 @@ def rozstaw(g):
 
     przerzedz_kadr(g)
     mokradla_kadru(g)
+    runda_3(g)
 
 
 #: Runda 11 (HotA, zwycięzca rundy 10: „nic nie przypomina bagna — stawy małe,
@@ -626,6 +808,236 @@ def przerzedz_kadr(g):
     g.obiekty[:] = zostaja
 
 
+# --- RUNDA 3 PĘTLI (werdykt ślepego porównania r2: 16 TAK / 12 CZĘŚCIOWO /
+# 2 NIE) ------------------------------------------------------------------
+# Wszystko PO rozstawieniu, jak `przerzedz_kadr` i `mokradla_kadru`: losowania
+# i reszta planszy zostają te same (plansza wygrała ślepo), a poprawki są
+# chirurgiczne. Co i dlaczego:
+#  - C4 (NIE): grzbiet wroga na wschód od bramy czytał się jak cienka linia
+#    wierzb z bagnem po obu stronach („obejście bagnem"), a kopalnia (29,19)
+#    siedziała w samym wylocie bramy. Grzbiet grubieje do siedmiu wierszy
+#    (13–19) na x 27–40, straż bramy stoi W bramie (26,16), kopalnia odchodzi.
+#  - C4 (NIE): północna grobla miała obok siebie cypel łąki (13–20, 34) ze
+#    stodołą, artefaktem i drugą strażą — „luka 5 pól na dwie straże".
+#    Cypel idzie pod wodę: Struga ma tu trzy wiersze, grobla dwa pola
+#    i JEDNĄ straż. Tym samym dolina ma dwa wyjścia (A1), stodoła nie
+#    wchodzi na bagno (G2).
+#  - G1 (NIE): ekran startowy (12–33, 37–54) miał 32 obiekty. Zostaje 11:
+#    dwie kopalnie, drzewo wiedzy, wiatrak, skrzynia, wieża z dwoma stosami,
+#    obóz za mostem, dwie straże. Artefakt spod Horsei (C3) i część stosów
+#    idą do zakątka doliny (F1) i do krainy wroga.
+#  - F1: lewy dolny róg (4–8, 50–53) to zakątek doliny — łąka za płotem
+#    wierzb z jednym wejściem (9,50) pod słabą strażą, w środku artefakt,
+#    skrzynia i stos. Masyw `gora-10` z tego miejsca znika.
+#  - B1/C2: kraina wroga dostaje komplet kopalń (jagody, kamienie) i zakątek
+#    (3–6, 10–13) z artefaktem za SILNĄ strażą; z wyspą daje to sześć
+#    silnych straży za bramą, a gradient dom → pogranicze → wróg jest w grze.
+#  - B2: południowo-wschodnia łąka dostaje ODNOGĘ drogi od mostu do stosu
+#    (artefakt, skrzynia, surowce), a straż stoi w szyjce odnogi.
+#  - G2: wieża (15,25) stała w zatoce jeziora — zatoka zasypana; kopalnia
+#    pokeballi (28,22) z murem na drodze odchodzi; bohater startuje pole
+#    dalej od płotu zamku.
+#  - E3/E4: skały na końcach grzbietu wroga to las (grzbiet jest jedną
+#    bryłą), pojedyncze wierzby na pograniczu znikają.
+R3_USUN = [
+    # ekran startowy
+    (13, 37), (22, 37), (22, 38), (23, 38), (23, 39), (27, 38), (17, 43),
+    (32, 44), (33, 44), (25, 46), (26, 46), (14, 47), (18, 47), (17, 48),
+    (23, 48), (24, 48), (25, 49), (24, 50), (26, 50), (22, 52), (23, 53),
+    # cypel przy północnej grobli
+    (14, 34), (14, 35), (15, 34),
+    # brama wroga i jej wylot
+    (27, 18), (29, 19), (36, 14),
+    # kopalnia z murem na drodze
+    (28, 22),
+]
+
+#: Zakątek doliny: wnętrze, płot, woda i stos.
+NOOK = (4, 50, 8, 53)
+NOOK_PLOT = [(x, 49) for x in range(3, 9)]
+NOOK_WODA = [(9, 53), (10, 53)]
+NOOK_STRAZ = (9, 50)
+NOOK_STOS = [((6, 52), ('artefakt', None)), ((5, 51), ('skrzynia', None)), ((7, 51), ('surowiec', 'pokeball'))]
+
+#: Zakątek w krainie wroga (jak `ZAKATKI`): wnętrze, wejście, straż przed nim.
+WROGA_ZAKATEK = (3, 10, 6, 13, (7, 12))
+WROGA_STRAZ = (8, 12)
+
+#: Odnoga drogi na południowo-wschodnią łąkę: od traktu za mostem do stosu.
+ODNOGA_SE = ((32, 43), (47, 48))
+START_R3 = (14, 46)
+
+
+def _czyste(g, p, obiekty, r=2, d=3):
+    """Pole, wokół którego na `r` jest tylko łąka albo bagno (bez wody, drogi,
+    lasu) i nie ma obiektu bliżej niż `d` pól — budowla nie stanie na
+    brzegu ani z murem na trakcie (G2)."""
+    x, y = p
+    for dy in range(-r, r + 1):
+        for dx in range(-r, r + 1):
+            if not g.w(x + dx, y + dy) or g.mapa[y + dy][x + dx] not in '.b':
+                return False
+    return all(max(abs(x - q[0]), abs(y - q[1])) >= d for q, _ in obiekty)
+
+
+def _odswiez(g):
+    g.blokada = set()
+    for nazwa, pole in PUNKTY.items():
+        if nazwa.startswith('zamek'):
+            g.blokada.update(g.pola_bryly('zamek', None, pole))
+    for p, w in g.obiekty:
+        if w[0] != 'potwor':
+            g.blokada.add(p)
+            g.blokada.update(g.pola_bryly(w[0], w[1], p))
+    g.stan_dostepnych = len(g.dostepnych())
+
+
+def _usun(g, pola):
+    pola = set(pola)
+    wyniesione = []
+    for p, w in list(g.obiekty):
+        if p in pola:
+            wyniesione.append((p, w))
+            for q in [p] + g.pola_bryly(w[0], w[1], p):
+                while q in g.zajete:
+                    g.zajete.remove(q)
+    g.obiekty[:] = [(p, w) for p, w in g.obiekty if p not in pola]
+    return wyniesione
+
+
+def _lataj(g, pola, znak):
+    zajete = {p for p, _ in g.obiekty} | g.blokada
+    for x, y in pola:
+        if g.w(x, y) and (x, y) not in zajete and g.mapa[y][x] != '=':
+            g.mapa[y][x] = znak
+
+
+def _odnoga(g, skad, dokad):
+    """Droga po terenie z obiektami jako przeszkodami; zwraca jej pola."""
+    kopia = [w[:] for w in g.mapa]
+    for p in g.blokada | {p for p, _ in g.obiekty}:
+        if p not in (skad, dokad):
+            kopia[p[1]][p[0]] = 'T'
+    stare = g.koszt_drogi
+    g.koszt_drogi = dict(stare, T=None)
+    try:
+        droga = g.trasa(kopia, skad, dokad)
+    finally:
+        g.koszt_drogi = stare
+    if droga is None:
+        print('  odnoga SE: brak trasy')
+        return []
+    for x, y in droga:
+        g.mapa[y][x] = '='
+    return droga
+
+
+def runda_3(g):
+    m = g.mapa
+    wyniesione = _usun(g, R3_USUN)
+    _odswiez(g)
+
+    # --- teren -------------------------------------------------------------
+    # Grzbiet wroga: gruby masyw lasu na wschód od bramy.
+    _lataj(g, [(x, y) for y in (13, 14) for x in range(27, 41) if m[y][x] in '.b'], 'T')
+    _lataj(g, [(x, y) for y in (18, 19) for x in range(28, 35) if m[y][x] in '.b'], 'T')
+    # Skały na końcach grzbietu to las — jedna bryła, nie wysepki (E3).
+    _lataj(g, [(x, y) for y in range(15, 18) for x in range(0, 6) if m[y][x] == '#'], 'T')
+    _lataj(g, [(x, y) for y in range(0, 3) for x in range(21, 28) if m[y][x] == '#'], 'T')
+    # Cypel przy północnej grobli pod wodę: Struga na trzy wiersze.
+    _lataj(g, [(x, 34) for x in range(13, 21)], '~')
+    # Zatoka jeziora pod wieżą (15,25) zasypana — wieża stoi na lądzie.
+    _lataj(g, [(13, 23), (14, 23), (15, 23), (13, 24), (14, 24)], 'b')
+    # Zakątek doliny w lewym dolnym rogu.
+    x0, y0, x1, y1 = NOOK
+    _lataj(g, [(x, y) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1)], '.')
+    _lataj(g, NOOK_PLOT, 'T')
+    _lataj(g, NOOK_WODA, '~')
+    # Zakątek w krainie wroga.
+    zx0, zy0, zx1, zy1, wejscie = WROGA_ZAKATEK
+    zakatek(m, zx0, zy0, zx1, zy1, wejscie)
+    # Pojedyncze wierzby poza doliną (E4) — konfetti, nie las.
+    for y in range(BOK):
+        for x in range(BOK):
+            if m[y][x] != 'T' or strefa(x, y) == 'dom':
+                continue
+            lesni = sum(
+                1 for dy in (-1, 0, 1) for dx in (-1, 0, 1)
+                if (dx or dy) and g.w(x + dx, y + dy) and m[y + dy][x + dx] in 'T#'
+            )
+            if lesni == 0:
+                m[y][x] = 'b'
+    _odswiez(g)
+
+    # --- obiekty -----------------------------------------------------------
+    # Straż bramy wroga W bramie: potwór blokuje 3 × 3, brama ma dwie kolumny.
+    g.postaw((26, 16), ('potwor', 'silny'))
+    # Zakątek doliny: stos i słaba straż w jedynym wejściu.
+    for pole, wpis in NOOK_STOS:
+        g.postaw(pole, wpis)
+    g.postaw(NOOK_STRAZ, ('potwor', 'slaby'))
+    # Zakątek wroga: artefakt, skrzynia, kamienie; silna straż przed wejściem.
+    wnetrze = [(x, y) for y in range(zy0, zy1 + 1) for x in range(zx0, zx1 + 1)]
+
+    def czyste_w(ktora, warunek):
+        # Najpierw czyste na dwa pola i trzy od obiektów; gdy brak — luźniej,
+        # w ostateczności byle wolne (pogranicze jest gęste).
+        pola = [p for p in g.wolne_pola(ktora, (0, 999)) if warunek(p)]
+
+        def otwartosc(p):
+            # Odległość od najbliższej wody, lasu albo drogi — budowla ma
+            # stać na otwartym, nie na brzegu.
+            return next(r for r in range(1, 5) if not _czyste(g, p, [], r, 0)) - 1
+
+        for r, d in ((2, 3), (1, 3), (2, 2), (1, 2)):
+            dobre = [p for p in pola if _czyste(g, p, g.obiekty, r, d)]
+            if dobre:
+                naj = max(otwartosc(p) for p in dobre)
+                return [p for p in dobre if otwartosc(p) == naj]
+        print(f'  runda 3: brak czystego miejsca w strefie {ktora}')
+        return pola or None
+
+    def u_wroga():
+        return czyste_w('wroga', lambda p: p[0] <= 20 and 3 <= p[1] <= 13)
+
+    for wpis in (('artefakt', None), ('skrzynia', None), ('surowiec', 'kamien')):
+        g.dodaj(1, 'wroga', (0, 999), lambda p, w=wpis: w, kandydaci=[q for q in wnetrze if q not in g.zajete])
+    g.postaw(WROGA_STRAZ, ('potwor', 'silny'))
+    # Komplet kopalń wroga (B1): jagody i kamienie w warowni, kamienie pod
+    # silną strażą; do tego skrzynia zabrana spod grzbietu.
+    g.dodaj(1, 'wroga', (0, 999), lambda p: ('kopalnia', 'jagoda'), kandydaci=u_wroga())
+    kamien = g.dodaj(1, 'wroga', (0, 999), lambda p: ('kopalnia', 'kamien'), kandydaci=u_wroga())
+    g.strzez(kamien, 'silny')
+    g.dodaj(1, 'wroga', (0, 999), lambda p: ('skrzynia', None), kandydaci=u_wroga())
+    # Kopalnie pogranicza zabrane z bramy i znad brzegu — w czystym miejscu.
+    def na_pograniczu():
+        return czyste_w('pogranicze', lambda p: p[1] >= 23)
+
+    g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('kopalnia', 'pokeball'), kandydaci=na_pograniczu())
+    kamien = g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('kopalnia', 'kamien'), kandydaci=na_pograniczu())
+    g.strzez(kamien, 'sredni')
+    # Odnoga na południowo-wschodnią łąkę i stos na jej końcu (B2).
+    droga = _odnoga(g, *ODNOGA_SE)
+    if droga:
+        # Straż w szyjce odnogi, cztery–sześć pól przed stosem.
+        straz = _usun(g, [(43, 47)])
+        szyjki = [p for p in droga[3:7] if p not in g.zajete and not g.ciasne(*p) and sum(
+            1 for dy in (-1, 0, 1) for dx in (-1, 0, 1)
+            if (dx or dy) and g.w(p[0] + dx, p[1] + dy) and m[p[1] + dy][p[0] + dx] in '.,=b'
+        ) <= 5]
+        pole = szyjki[0] if szyjki else droga[4]
+        g.zajete.append(pole)
+        g.obiekty.append((pole, straz[0][1] if straz else ('potwor', 'sredni')))
+        _usun(g, [(45, 48)])
+        g.postaw((49, 49), ('surowiec', 'odlamek'))
+    _odswiez(g)
+    # Bohater pole dalej od płotu zamku (G2): rysunek zamku sięga x≈13.
+    PUNKTY['start'] = START_R3
+    # Pola, do których po łatach nie da się dojść, zarastają.
+    g.zasyp_odciete(m)
+    print(f'  runda 3: usunięte {len(wyniesione)}, obiektów {len(g.obiekty)}')
+
+
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 // Źródło: tools/mapy/bagna.py (szkic i rozstawienie), silnik: tools/generuj_mape.py.
 //
@@ -679,7 +1091,9 @@ USTAWIENIA = {
         # u stóp (PROMPTY-PLANSZE §19). Masyw nad zamkiem zachodzi na podnóże
         # wodospadu, więc lewa krawędź to jedno pasmo.
         {'plik': 'gora-7', 'x': 6.0, 'y': 45.6, 'szer': 9.0, 'pokrywa': [4, 41, 9, 44]},
-        {'plik': 'gora-10', 'x': 5.3, 'y': 54.15, 'szer': 8.0, 'pokrywa': [4, 50, 8, 53]},
+        # Runda 3 pętli (werdykt r2, F1: „kąt (0–9, 49–53) pod zamkiem to skały
+        # i trawa bez jednego obiektu"): zamiast `gora-10` jest tu ZAKĄTEK
+        # DOLINY ze stosem za słabą strażą (`runda_3`).
         # Runda 9: węższa i w lewo — prawe zbocze wchodziło na Strugę
         # i rzeka płynęła „pod górą".
         # Runda 12 (HotA: „lewy dolny róg i środek dolnej krawędzi to

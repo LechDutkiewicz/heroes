@@ -200,6 +200,9 @@ def ustaw(mapa_id: str):
             if klocki == 'zima':
                 BARWY = {**BARWY, 'jalowa': {'nasycenie': 0.35, 'barwa': (120, 118, 122), 'moc': 0.2, 'jasnosc': 0.92}}
         ZOSTAJA = {'kwiaty-2', 'kepa-kwiatow', 'paproc', 'kwiaty-1'}
+        # …plus naklejki, o które plansza prosi wprost (`NAKLEJKI_KLOCKI`,
+        # Polana runda 13: uschłe drzewa na ciemnej łące krainy wroga).
+        ZOSTAJA |= set(getattr(k, 'NAKLEJKI_KLOCKI', ()))
         NAKLEJKI = [(pl, zn, g) for pl, zn, g in NAKLEJKI if set(pl) <= ZOSTAJA]
     WYS, SZER = len(RYSUNEK), len(RYSUNEK[0])
     W, H = SZER * KAFEL, WYS * KAFEL

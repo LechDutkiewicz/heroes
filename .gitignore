@@ -47,3 +47,6 @@ __pycache__/
 
 # Robocze kopie repozytorium dla równoległych builderów
 .claude/worktrees/
+
+# Strona postępu pętli plansz — generowana z postep-plansze.json, obrazy w środku
+tools/postep-plansze.html

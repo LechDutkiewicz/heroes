@@ -1,0 +1,372 @@
+{
+  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
+  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
+  "aktualizacja": "2026-10-03 20:57",
+  "kawalki": [
+    {
+      "id": "polana",
+      "tytul": "Polana (misja 1, samouczek, 36×36)",
+      "status": "build",
+      "opis": "Rzeka z dwoma brodami, zamek na południowym zachodzie, Stary Fort na wschodzie.",
+      "rundy": [
+        {
+          "nr": 0,
+          "wzorzec": "—",
+          "win": false,
+          "luka": "Stan wyjściowy przed pierwszą rundą.",
+          "obrazy": [
+            {
+              "plik": "tools/shots/caly-polana-r0.png",
+              "opis": "Cała plansza w grze (stan wyjściowy)"
+            },
+            {
+              "plik": "tools/wzorzec/nasza-polana-minimapa.png",
+              "opis": "Schemat planszy (ten sam, który dostaje krytyk)"
+            }
+          ]
+        },
+        {
+          "nr": 1,
+          "wzorzec": "Hatchet Axe and Saw (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 10,
+            "CZESCIOWO": 14,
+            "NIE": 6
+          },
+          "luka": "Straże nie budują łuku trudności: połowa stoi przy pojedynczych skrzyniach na otwartej łące, a trasa do celu misji (most → trakt → fort) jest po jednej słabej bitwie całkiem pusta, podczas gdy najcięższa straż pilnuje brodu do rogu z jednym artefaktem. Dobra mapa HoMM3 kładzie najtrudniejszą walkę tam, gdzie leży największa nagroda, i zamyka nią przejście, nie plac. (Ślepo wygrała nasza, ale 6 × NIE — kawałek jeszcze nie skończony.)",
+          "nie": [
+            "C1: NIE — tylko most (16,25) i bród (21,8) są szyjkami; (25,7), (33,4), (32,9), (19,21), (5,31), (27,27), (11,4) stoją na otwartej łące przy pojedynczej skrzyni lub artefakcie i nic nie blokują.",
+            "C3: NIE — najtrudniejsze straże (średnie) pilnują brodu (21,8) do rogu z jednym artefaktem (34,3) i skrzynią, a droga do celu misji — fortu (30,13) — prowadzi przez most ze słabą strażą i dalej bez żadnej bitwy.",
+            "E3: NIE — skały (12–14, 10–13), (12–14, 15–17), (25–26, 15–17), piasek (18–19, 15–16), (12–14, 3–5) to plamy po 2–4 pola rozsypane bez związku z granicami stref; teren zmienia się tylko przy pasmie doliny domu.",
+            "F2: NIE — nie ma chaty jasnowidza, namiotu klucznika ani strażnicy granicznej; wieże (20,14), (18,22), ciężarówki i ogniska są jednorazowe, pętla istnieje tylko topograficznie (bród → brzeg wschodni → most).",
+            "G1: NIE — pierwszy ekran wokół zamku (0–20, 18–35) ma dwie kopalnie, cztery straże (5,31), (10,33), (16,25), (17,30), cztery skrzynie, artefakt, ~sześć stosów i trzy budynki — ponad dwadzieścia rzeczy naraz, a ekran za fortem (26–35, 0–12) ma dla kontrastu kilka pionków.",
+            "G4: NIE — ta sama jasna łąka wokół zamku (9,31) i wokół fortu (30,13); na minimapie stref nie da się odróżnić kolorem."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r1-polana.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-polana-r0.png",
+              "opis": "Cała plansza w grze przed rundą 1"
+            },
+            {
+              "plik": "tools/shots/caly-polana-r1.png",
+              "opis": "Cała plansza po rundzie 1"
+            }
+          ],
+          "zmiana": "Silna straż w przełęczy przed fortem, słaba na moście, średnia na zwężonym brodzie; luźne straże z łąki zdjęte, kieszenie: plaża nad jeziorem (słaba straż w szyjce) i róg NE (średnia). Przełęcz północna doliny domu zamknięta lasem ze strażą — bez bitwy 38 % → 24 %. Kraina wroga = cały brzeg za rzeką na północ od pasa lasu, chłodniejszy grunt, 18 obiektów zamiast 8. Chata jasnowidza za mostem, ślepa odnoga kończy się skrzynią i artefaktem, druga droga do fortu przez bród. Pierwszy ekran odchudzony."
+        },
+        {
+          "nr": 2,
+          "wzorzec": "Unexpected Inheritance (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 15,
+            "CZESCIOWO": 13,
+            "NIE": 2
+          },
+          "luka": "strefa domowa nie jest zamknięta — straże (8,17) i (12,13) stoją na otwartej łące i da się je obejść, więc „zamknięcie strażami\" istnieje tylko na moście (16,25); dziecko uczy się, że straż można ominąć, zamiast że trzeba ją pobić.",
+          "nie": [
+            "C4: NIE — straż (8,17) obchodzi się łąką (9–10,17–18), straż (12,13) stoi na placu 4 pola szerokim, a (27,7) na otwartej ciemnej łące (23–29,5–8); tylko most (16,25) zamyka przejście w całości.",
+            "G1: NIE — ekran startowy (0–21,18–36) ma ponad 15 obiektów: zamek, jaskinię (9,26), kryształ i skrzynię (11,27), ognisko (5,28), automat (4,29), jagody (6,30), szklarnię (12,31), wiatrak (7,32), skrzynię (9,33), szopę (14,34), pachołki (15,34), kopalnię (18,28), kryształ (20,31), skrzynię (19,32), ognisko (19,33), kulki (20,35), dwie straże (16,25), (17,30), wieżę (18,21), jajka (20,23), skrzynię (9,19), domek (9,21)."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r2-polana.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-polana-r1.png",
+              "opis": "Cała plansza oceniana w rundzie 2"
+            },
+            {
+              "plik": "tools/shots/caly-polana-r2.png",
+              "opis": "Cała plansza po rundzie 2"
+            }
+          ],
+          "zmiana": "Straż przełęczy doliny na trakcie, łąka pod nią zarośnięta; most 2 pola za deskami; bród jeden wiersz ze strażą na łasze; straże z otwartej łąki odpadły, kopalnie złota w kieszeniach (plaża za strażą, róg NE za strażą). Ekran startowy 22+ → 14 obiektów; kamieniołom 3 kroki od zamku, komplet kopalń po stronie gracza. Kraina wroga obrysowana rzeką i masywem skał, ciemna łąka z uschłymi drzewami. Jedna wieża, jeden domek na drzewie. Bez bitwy 23 %, 7 straży (4/2/1), obiekt co 10,1 pola."
+        },
+        {
+          "nr": 3,
+          "wzorzec": "Gorlam's Tentacle Swampland (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 19,
+            "CZESCIOWO": 10,
+            "NIE": 1
+          },
+          "luka": "Pierwszy ekran dziecka jest przeładowany i dolina startowa ma trzy wyjścia — na 21×18 polach wokół zamku (9,29) leży 13 rzeczy i 3 straże, więc sześciolatek nie widzi JEDNEJ decyzji „idź na most\", tylko rozsypane konfetti; do tego kopalnie dublują kamień, a jagód nie ma wcale.",
+          "nie": [
+            "G1: NIE — ekran startowy (0–20,18–35) ma ok. 13 obiektów i 3 straże: kamieniołomy (9,26),(19,28), skrzynie (11,28),(9,34),(19,32),(20,18), kryształy (11,27),(20,31), koszyk (6,30), ogród (12,32), wieża (18,22), namiot (14,13 pod krawędzią), straże (17,25),(17,30),(9,17); ekran wroga (15–35,0–17) ma podobnie ~12."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r3-polana.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-polana-r2.png",
+              "opis": "Cała plansza oceniana w rundzie 3"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dwie-doliny",
+      "tytul": "Dwie Doliny (misja 2, 72×72)",
+      "status": "build",
+      "opis": "Trzy pasy za dwoma grzbietami, strażnice na klucze, pas sporny w środku.",
+      "rundy": [
+        {
+          "nr": 0,
+          "wzorzec": "—",
+          "win": false,
+          "luka": "Stan wyjściowy przed pierwszą rundą.",
+          "obrazy": [
+            {
+              "plik": "tools/shots/caly-dwie-doliny-r0.png",
+              "opis": "Cała plansza w grze (stan wyjściowy)"
+            },
+            {
+              "plik": "tools/wzorzec/nasza-minimapa.png",
+              "opis": "Schemat planszy (ten sam, który dostaje krytyk)"
+            }
+          ]
+        },
+        {
+          "nr": 1,
+          "wzorzec": "Faeries! (72×72)",
+          "win": false,
+          "checklista": {
+            "TAK": 14,
+            "CZESCIOWO": 11,
+            "NIE": 5
+          },
+          "luka": "Obiekty są rozsypane losowo wewnątrz strefy zamiast skomponowane wokół drogi i szyjek — jedynymi prawdziwymi szyjkami są cztery bramy na klucz, straże potworów nie zamykają niczego, surowce leżą pojedynczo w polu, a gęstość skacze od jednego ekranu z kilkunastoma obiektami (wschodni rozstaj) do ekranów pustych; dobra mapa HoMM3 stawia najpierw ścieżkę i zakątki, a dopiero potem wrzuca w nie obiekty.",
+          "nie": [
+            "B2: NIE — Surowce są losowane w całej strefie w zakresie (0,999) i w zrzucie leżą pojedynczo na otwartej łące: (33,61), (26,64), (35,56), (18,69), (62,48); stosów po 2–4 na końcu odnóg praktycznie nie ma poza „kieszeniami” za strażą.",
+            "E3: NIE — Śnieg na północy to cztery osobne plamy (szkic ma 's' w kolumnach 1, 3–4, 8–9, 15), piasek leży w dwóch bezcelowych plamach 8 × 4 i 4 × 4 przy zachodniej krawędzi (0–8, 16–19) i (4–8, 27–32), bagno poza pierścieniem jeziora ma osobną plamę przy (55–60, 31–34); plamy 4 × 4 z komórek szkicu łamią próg ≥ 6 × 6.",
+            "F1: NIE — Odnoga do „zatoki południowej” kończy się w lesie na wschodnim brzegu jeziora przy (56,62) bez żadnego obiektu (wóz i gniazdo stoją wcześniej przy (60,58) na piasku), a odnoga do „wschodniego rozstaju” (54,38) wchodzi w gęsty węzeł zamiast w zakątek.",
+            "F3: NIE — Listy `budowle` powtarzają 'drzewo-wiedzy', 'kamienna-wieza', 'arena' w każdej z trzech stref plus w skarbcu krańca, a w zrzucie widać trzy wieże obserwacyjne (9,5), (42,6), (54,34) — budynki specjalne nie są rzadkie i stoją w losowych miejscach w polu, nie na wzgórzu czy nad wodą.",
+            "G1: NIE — Ekran wokół (41–58, 36–44) ma kilkanaście obiektów naraz (dwie kopalnie, ranczo, gniazdo, chatka, wóz, obóz, dom, arena, 3 skrzynie, surowce, straż), a ekran południowo-środkowy (28–48, 58–71) to łąka z kępami i dwoma surowcami."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r1-dwie-doliny.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = wzorzec"
+            },
+            {
+              "plik": "tools/shots/caly-dwie-doliny-r0.png",
+              "opis": "Cała plansza w grze przed rundą 1"
+            },
+            {
+              "plik": "tools/shots/caly-dwie-doliny-r1.png",
+              "opis": "Cała plansza po rundzie 1"
+            }
+          ],
+          "zmiana": "Zatoka startowa z izbą pierwszego tygodnia (mur lasu w wierszach 55–56 z jedną luką pod słabą straż, przesmyk północny ze strażą); bez bitwy 34 % → 23 %. Wiersz każdej bramy do 3 pól w bok jest skałą — po skosie wchodziło się w przejście bez klucza. Jałowa rubież jako kieszeń z jednym wejściem i jedną strażą; podwójne straże zdjęte; para portali omijająca straż usunięta. Luźne losowania usunięte, stosy i budynki w zakątkach; budynki specjalne po jednym na planszę. Straże 14 %, obiekt co 10 pól, pasy [40,49,47,87,42]."
+        },
+        {
+          "nr": 2,
+          "wzorzec": "Unexpected Inheritance (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 19,
+            "CZESCIOWO": 10,
+            "NIE": 1
+          },
+          "luka": "Wnętrza dolin to równomierne konfetti — surowce, kępy i straże rozsypane co 4 pola po otwartej łące, bez stosów, ścian i szyjek (B2, C1, E4, G1, G3 to jedna wada). Szkielet mapy jest dobry, ale między grzbietami dziecko nie ma czego „odkryć\", tylko zbiera wszystko po kolei.",
+          "nie": [
+            "G1: NIE — ekran startowy (0–21, 54–71) ma ok. 12 rzeczy do zebrania, 4 budynki, 2 kopalnie i 2 straże; przy 10 polach na obiekt każdy ekran 21×18 niesie ~19 obiektów, dziecko nie widzi jednej decyzji."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r2-dwie-doliny.png",
+              "opis": "Ślepe A/B: krytyk wybrał A = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-dwie-doliny-r1.png",
+              "opis": "Cała plansza oceniana w rundzie 2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bagna",
+      "tytul": "Bagna (misja 3, 54×54)",
+      "status": "critic",
+      "opis": "Dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca z wodzem.",
+      "rundy": [
+        {
+          "nr": 0,
+          "wzorzec": "—",
+          "win": false,
+          "luka": "Stan wyjściowy przed pierwszą rundą.",
+          "obrazy": [
+            {
+              "plik": "tools/shots/caly-bagna-r0.png",
+              "opis": "Cała plansza w grze (stan wyjściowy)"
+            },
+            {
+              "plik": "tools/wzorzec/nasza-bagna-minimapa.png",
+              "opis": "Schemat planszy (ten sam, który dostaje krytyk)"
+            }
+          ]
+        },
+        {
+          "nr": 1,
+          "wzorzec": "Gorlam's Tentacle Swampland (72×72)",
+          "win": false,
+          "checklista": {
+            "TAK": 9,
+            "CZESCIOWO": 13,
+            "NIE": 8
+          },
+          "luka": "Brak topografii, która dzieli mapę na trzy akty. Poza skałami SW i fosą wyspy plansza to jednolita krata bagna z kałużami, więc straże stoją na placach, strefa domowa to 135 pól, a „pogranicze\" to 63 % mapy — gracz nie czuje, że przechodzi z własnej krainy przez sporny środek do krainy wroga, bo żaden grzbiet, jezioro ani las mu tego nie mówi.",
+          "nie": [
+            "B2: NIE — Jasnożółte kropki są rozsypane równo po całej mapie, szczególnie na wschodnim pasie x44–53 (y20–50 ma ich ok. 10 bez drogi) i w pasie zachodnim x3–9 — konfetti, nie stosy w zakątkach.",
+            "C1: NIE — Poza mostem (20,44), bramą północną (11,38) i groblą na wyspę (45,16) większość straży stoi na otwartym bagnie: (6,1),(8,1),(13,1),(3,14),(19,19),(27,12),(31,14),(35,24),(21,29),(33,34) — pilnują pojedynczej kropki na placu.",
+            "D4: NIE — Jedyny most stoi na (19,44); droga x12 przecina wodę na y29–34 i droga y27 na x14–17 bez mostu ani brodu, a wieża-drabina (39,43) stoi obok wody, nie na przejściu.",
+            "E3: NIE — Bagno, łąka i woda przeplatają się plamami 2–4 pól po całej mapie (np. x14–30, y18–36); jedyne plamy ≥ 6×6 z powodem to skały SW (x4–10,y36–52) i łąka wyspy (x42–50,y4–12).",
+            "E4: NIE — T+# = 22 % wobec wzorca 40–60 %, a las jest ramką na brzegach mapy (x0–3, x50–53, y0–2) i pojedynczymi kępami 1–3 pól w środku; żaden masyw nie tworzy przełęczy.",
+            "G1: NIE — Ekran z wyspą (x40–53, y0–18) ma ok. 15 obiektów i 4 straże, ekran centralny (x20–40, y20–36) ok. 25 kropek, a ekran zachodni (x0–12, y12–30) 6 — brak ekranu z „jedną decyzją\".",
+            "G2: NIE — Wiatrak stoi na drodze (27,16), Cyndaquil stoi na przyczółku mostu (20,44), automat (12,9) wchodzi w próg jaskini (13,11).",
+            "G4: NIE — Na minimapie górna i dolna połowa są tego samego bagnisto-zielonego koloru; jedyną jaśniejszą plamą jest wyspa, a kraina wroga (y0–18) nie jest ani ciemniejsza, ani chłodniejsza."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r1-bagna.png",
+              "opis": "Ślepe A/B: schemat nasz i wzorca (krytyk wybrał A = wzorzec)"
+            },
+            {
+              "plik": "tools/shots/caly-bagna-r0.png",
+              "opis": "Cała plansza w grze przed rundą 1"
+            },
+            {
+              "plik": "tools/shots/caly-bagna-r1.png",
+              "opis": "Cała plansza po rundzie 1"
+            }
+          ],
+          "zmiana": "Czarna Struga przesunięta na x≈29 i obudowana pasem lasu — dolina gracza x 0–27 z dwiema przeprawami (grobla, most) ze słabą strażą; bez bitwy 8 % → 19 %. Grzbiet wroga w wierszach 15–17 (las ze skalnymi guzami) z jedną bramą na grobli i silną strażą. Kałuże centrum scalone w jedno jezioro, droga wzdłuż brzegu. Sześć zakątków ze stosem 3–4 rzeczy i średnią strażą w szyjce; znajdźki tylko przy drodze; straże 20 % → 13 %, T+# 22 % → 33 %, gęstość 11,3 → 8,9."
+        },
+        {
+          "nr": 2,
+          "wzorzec": "Faeries! (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 16,
+            "CZESCIOWO": 12,
+            "NIE": 2
+          },
+          "luka": "Szyjki nie zamykają stref — główna straż na drodze (26,18) ma bagienne obejście przez (28–33, 13–20) do krainy wroga, a północne wyjście z domu (11–15, 32–34) ma 5 pól szerokości na dwie straże; przez to gradient trudności i trzy akty istnieją tylko w profilu, nie w grze.",
+          "nie": [
+            "C4: NIE — Straż (26,18) ma obejście: bagno (28–33, 13–20) jest przejezdne i prowadzi za pas lasu do (30,10) w krainie wroga; luka północna (11–15, 32–34) ma 5 pól szerokości na dwie straże, więc da się przejść środkiem przy (13,33).",
+            "G1: NIE — Ekran startowy (12–33, 37–54) ma zamek, kamieniołom, wieżę, jaskinię, 2 domki Pokeball, 2 trucki, Horsea, perłę, 4 koszyki, pokeballe, grzyby, wiatrak, skrzynię — ponad 20 obiektów naraz; 28 obiektów w pierwszym pasie odległości to dwa razy za dużo dla sześciolatka."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r2-bagna.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-bagna-r1.png",
+              "opis": "Cała plansza oceniana w rundzie 2"
+            },
+            {
+              "plik": "tools/shots/caly-bagna-r2.png",
+              "opis": "Cała plansza po rundzie 2"
+            }
+          ],
+          "zmiana": "Grzbiet wroga pogrubiony na wschód od bramy, straż w środku przełęczy; cypel przy grobli zalany — dolina ma dwa wyjścia. Ekran startowy 32 → 11 obiektów; zakątek w rogu doliny za płotem wierzb z jednym wejściem i słabą strażą. Kraina wroga z kompletem kopalń i zakątkiem za silną strażą; łąka SE z odnogą drogi, strażą w szyjce i stosem na końcu. Wieża z wody, kopalnia z drogi, start bohatera o pole od płotu. Bez bitwy 20 %, straże 15 %, obiekt co 9,4 pola, pasy [17,14,51,40,29]."
+        }
+      ]
+    },
+    {
+      "id": "twierdza",
+      "tytul": "Twierdza (misja 4, 72×72)",
+      "status": "build",
+      "opis": "Zima, trzy pasy i skalny grzbiet między dolinami dwóch twierdz.",
+      "rundy": [
+        {
+          "nr": 0,
+          "wzorzec": "—",
+          "win": false,
+          "luka": "Stan wyjściowy przed pierwszą rundą.",
+          "obrazy": [
+            {
+              "plik": "tools/shots/caly-twierdza-r0.png",
+              "opis": "Cała plansza w grze (stan wyjściowy)"
+            },
+            {
+              "plik": "tools/wzorzec/nasza-twierdza-minimapa.png",
+              "opis": "Schemat planszy (ten sam, który dostaje krytyk)"
+            }
+          ]
+        },
+        {
+          "nr": 1,
+          "wzorzec": "When Dragons Clash (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 11,
+            "CZESCIOWO": 13,
+            "NIE": 6
+          },
+          "luka": "Poza ręcznie zrobionym pierwszym ekranem plansza nie ma hierarchii gęstości ani odnóg — obiekty tundry i dolin twierdz są losowane z zasięgiem (0, 999) i rozsypane równo po śniegu, drogi nie mają ani jednej odnogi do kopalni, a skutkiem jest 27 obiektów na ekranie startowym przy prawie pustych rogach SE i NE. Dobre mapy HoMM3 prowadzą gracza drogą od stosu do stosu: każda ślepa odnoga kończy się zakątkiem z 2–4 rzeczami, a między nimi jest puste pole marszu. (Ślepo wygrała nasza, ale 6 × NIE — kawałek jeszcze nie skończony.)",
+          "nie": [
+            "B2: NIE — Tundra dostaje 18 kupek losowo z zasięgiem (0, 999) i na minimapie żółte kropki leżą równo rozsypane po całym pasie y 23–44 (np. samotne kupki 63,27 / 63,30 / 70,27 / 69,38 na wschodnim brzegu bez drogi); stosy po 2–4 przy drodze i na końcu ślepych odnóg są tylko w ręcznie ustawionym pierwszym ekranie.",
+            "E3: NIE — Teren w tundrze i w dolinach twierdz to mozaika z rozmytego szkicu 4 × 4: na minimapie śnieg, jałowa ziemia i bór zmieniają się plamami po 3–5 pól (np. pas y 23–44 między x 36 a 72), żadna plama poza grzbietami i jeziorem nie ma 6 × 6; teren nie mówi, gdzie zaczyna się strefa.",
+            "F1: NIE — Zaułki pierwszego ekranu mają cel (obóz łowców 14,70 ze skrzynią 11,70 za wąwozem, polana z gniazdem 20,69), ale poza kadrem ślepe końce są puste: róg SE (x 56–71, y 58–71) to 16 × 14 pól z trzema zwykłymi budynkami i ani jednej skrzyni czy kupki, róg NE doliny Lodowej Twierdzy (x 62–71, y 0–8) ma jedną kupkę i jeden budynek, a górny środek zachodniej doliny (x 20–32, y 0–19) ma 7 obiektów na 13 × 20 pól.",
+            "F3: NIE — Budowle specjalne powtarzają się i stoją byle gdzie: na zrzucie widać cztery areny (ok. 31,9 / 36,29 / 52,17 / 67,32), drzewo wiedzy w każdym pasie (dom, tundra, wróg — listy `budowle` zawierają je trzy razy) i kamienną wieżę też w trzech listach; żadna nie stoi na wzgórzu, nad wodą ani na końcu drogi, bo losuje je `budowle(...)` z zasięgiem (0, 999).",
+            "G1: NIE — Na pierwszym ekranie 21 × 18 wokół startu (13,62) stoi 27 obiektów (7 kupek, 7 budynków, 5 skrzyń, 4 kopalnie, 3 straże, 1 artefakt) — dziesięć razy więcej niż „2–3 rzeczy i jedna straż\", a jednocześnie róg SE (x 56–71, y 58–71) to ekran prawie pusty.",
+            "G4: NIE — Na minimapie pas domowy (y 47–71) i doliny wroga (y 0–20) to ten sam mix bieli, jałowej i boru; jeśli coś, to kraina wroga jest JAŚNIEJSZA (więcej czystego śniegu) niż dolina gracza z łąką i jałową ziemią, czyli odwrotnie niż chce zasada „dom cieplejszy, wróg chłodniejszy\"."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r1-twierdza.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-twierdza-r0.png",
+              "opis": "Cała plansza w grze przed rundą 1"
+            },
+            {
+              "plik": "tools/shots/caly-twierdza-r1.png",
+              "opis": "Cała plansza po rundzie 1"
+            }
+          ],
+          "zmiana": "Szkic w blokach 2×2, wschodnie przejście południowe przesunięte na kolumny 40–41, jezioro-zapora z brodem między tundrami. Ręczne listy obiektów zamiast losowania (0,999): stosy po 2–4 na końcach odnóg do kopalń, trakt między twierdzami przez przełęcz, zakątek w pustym środku zachodniej doliny. Plamy terenu ≤ 8 pól wtapiane w otoczenie; doliny twierdz sine, dolina gracza płowa i jaśniejsza. Budowle specjalne po jednej na planszę; skrzynie wroga przy trakcie, wódz pilnuje stosu. Pierwszy ekran 27 → 11 obiektów; bez bitwy 24 %, straże 13 %, pasy [25,50,75,63,30]."
+        },
+        {
+          "nr": 2,
+          "wzorzec": "Hatchet Axe and Saw (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 23,
+            "CZESCIOWO": 5,
+            "NIE": 1
+          },
+          "luka": "Rozkład obiektów po ekranach jest odwrócony względem rytmu gry dla dziecka — zachodnia dolina (0–21,26–44) z 43 obiektami jest konfetti, a ekran startowy (0–21,54–72) daje w 8 krokach od bramy jeden surowiec (16,61) i skrzynię (6,64) za strażą; pierwszy tydzień to marsz, a druga ma tabelę rzeczy do kliknięcia.",
+          "nie": [
+            "G1: NIE — ekran zachodniej doliny (0–21,26–44) ma 43 obiekty interaktywne, ekran wschodniego jeziora (36–57,24–42) 27, podczas gdy ekran startowy (0–21,54–72) ma 10, a ekran jeziora (18–39,18–36) 6; dziecko w dolinie widzi dziesiątki rzeczy naraz."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r2-twierdza.png",
+              "opis": "Ślepe A/B: krytyk wybrał A = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-twierdza-r1.png",
+              "opis": "Cała plansza oceniana w rundzie 2"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
