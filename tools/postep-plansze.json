@@ -1,12 +1,12 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-03 20:39",
+  "aktualizacja": "2026-10-03 20:43",
   "kawalki": [
     {
       "id": "polana",
       "tytul": "Polana (misja 1, samouczek, 36×36)",
-      "status": "critic",
+      "status": "build",
       "opis": "Rzeka z dwoma brodami, zamek na południowym zachodzie, Stary Fort na wschodzie.",
       "rundy": [
         {
@@ -88,6 +88,30 @@
             }
           ],
           "zmiana": "Straż przełęczy doliny na trakcie, łąka pod nią zarośnięta; most 2 pola za deskami; bród jeden wiersz ze strażą na łasze; straże z otwartej łąki odpadły, kopalnie złota w kieszeniach (plaża za strażą, róg NE za strażą). Ekran startowy 22+ → 14 obiektów; kamieniołom 3 kroki od zamku, komplet kopalń po stronie gracza. Kraina wroga obrysowana rzeką i masywem skał, ciemna łąka z uschłymi drzewami. Jedna wieża, jeden domek na drzewie. Bez bitwy 23 %, 7 straży (4/2/1), obiekt co 10,1 pola."
+        },
+        {
+          "nr": 3,
+          "wzorzec": "Gorlam's Tentacle Swampland (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 19,
+            "CZESCIOWO": 10,
+            "NIE": 1
+          },
+          "luka": "Pierwszy ekran dziecka jest przeładowany i dolina startowa ma trzy wyjścia — na 21×18 polach wokół zamku (9,29) leży 13 rzeczy i 3 straże, więc sześciolatek nie widzi JEDNEJ decyzji „idź na most\", tylko rozsypane konfetti; do tego kopalnie dublują kamień, a jagód nie ma wcale.",
+          "nie": [
+            "G1: NIE — ekran startowy (0–20,18–35) ma ok. 13 obiektów i 3 straże: kamieniołomy (9,26),(19,28), skrzynie (11,28),(9,34),(19,32),(20,18), kryształy (11,27),(20,31), koszyk (6,30), ogród (12,32), wieża (18,22), namiot (14,13 pod krawędzią), straże (17,25),(17,30),(9,17); ekran wroga (15–35,0–17) ma podobnie ~12."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r3-polana.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-polana-r2.png",
+              "opis": "Cała plansza oceniana w rundzie 3"
+            }
+          ]
         }
       ]
     },
