@@ -1,12 +1,12 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-03 20:27",
+  "aktualizacja": "2026-10-03 20:39",
   "kawalki": [
     {
       "id": "polana",
       "tytul": "Polana (misja 1, samouczek, 36×36)",
-      "status": "build",
+      "status": "critic",
       "opis": "Rzeka z dwoma brodami, zamek na południowym zachodzie, Stary Fort na wschodzie.",
       "rundy": [
         {
@@ -81,8 +81,13 @@
             {
               "plik": "tools/shots/caly-polana-r1.png",
               "opis": "Cała plansza oceniana w rundzie 2"
+            },
+            {
+              "plik": "tools/shots/caly-polana-r2.png",
+              "opis": "Cała plansza po rundzie 2"
             }
-          ]
+          ],
+          "zmiana": "Straż przełęczy doliny na trakcie, łąka pod nią zarośnięta; most 2 pola za deskami; bród jeden wiersz ze strażą na łasze; straże z otwartej łąki odpadły, kopalnie złota w kieszeniach (plaża za strażą, róg NE za strażą). Ekran startowy 22+ → 14 obiektów; kamieniołom 3 kroki od zamku, komplet kopalń po stronie gracza. Kraina wroga obrysowana rzeką i masywem skał, ciemna łąka z uschłymi drzewami. Jedna wieża, jeden domek na drzewie. Bez bitwy 23 %, 7 straży (4/2/1), obiekt co 10,1 pola."
         }
       ]
     },
