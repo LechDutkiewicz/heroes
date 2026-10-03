@@ -1,7 +1,7 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-03 20:56",
+  "aktualizacja": "2026-10-03 20:57",
   "kawalki": [
     {
       "id": "polana",
@@ -118,7 +118,7 @@
     {
       "id": "dwie-doliny",
       "tytul": "Dwie Doliny (misja 2, 72×72)",
-      "status": "critic",
+      "status": "build",
       "opis": "Trzy pasy za dwoma grzbietami, strażnice na klucze, pas sporny w środku.",
       "rundy": [
         {
@@ -169,6 +169,30 @@
             }
           ],
           "zmiana": "Zatoka startowa z izbą pierwszego tygodnia (mur lasu w wierszach 55–56 z jedną luką pod słabą straż, przesmyk północny ze strażą); bez bitwy 34 % → 23 %. Wiersz każdej bramy do 3 pól w bok jest skałą — po skosie wchodziło się w przejście bez klucza. Jałowa rubież jako kieszeń z jednym wejściem i jedną strażą; podwójne straże zdjęte; para portali omijająca straż usunięta. Luźne losowania usunięte, stosy i budynki w zakątkach; budynki specjalne po jednym na planszę. Straże 14 %, obiekt co 10 pól, pasy [40,49,47,87,42]."
+        },
+        {
+          "nr": 2,
+          "wzorzec": "Unexpected Inheritance (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 19,
+            "CZESCIOWO": 10,
+            "NIE": 1
+          },
+          "luka": "Wnętrza dolin to równomierne konfetti — surowce, kępy i straże rozsypane co 4 pola po otwartej łące, bez stosów, ścian i szyjek (B2, C1, E4, G1, G3 to jedna wada). Szkielet mapy jest dobry, ale między grzbietami dziecko nie ma czego „odkryć\", tylko zbiera wszystko po kolei.",
+          "nie": [
+            "G1: NIE — ekran startowy (0–21, 54–71) ma ok. 12 rzeczy do zebrania, 4 budynki, 2 kopalnie i 2 straże; przy 10 polach na obiekt każdy ekran 21×18 niesie ~19 obiektów, dziecko nie widzi jednej decyzji."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r2-dwie-doliny.png",
+              "opis": "Ślepe A/B: krytyk wybrał A = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-dwie-doliny-r1.png",
+              "opis": "Cała plansza oceniana w rundzie 2"
+            }
+          ]
         }
       ]
     },
@@ -265,7 +289,7 @@
     {
       "id": "twierdza",
       "tytul": "Twierdza (misja 4, 72×72)",
-      "status": "critic",
+      "status": "build",
       "opis": "Zima, trzy pasy i skalny grzbiet między dolinami dwóch twierdz.",
       "rundy": [
         {
@@ -317,6 +341,30 @@
             }
           ],
           "zmiana": "Szkic w blokach 2×2, wschodnie przejście południowe przesunięte na kolumny 40–41, jezioro-zapora z brodem między tundrami. Ręczne listy obiektów zamiast losowania (0,999): stosy po 2–4 na końcach odnóg do kopalń, trakt między twierdzami przez przełęcz, zakątek w pustym środku zachodniej doliny. Plamy terenu ≤ 8 pól wtapiane w otoczenie; doliny twierdz sine, dolina gracza płowa i jaśniejsza. Budowle specjalne po jednej na planszę; skrzynie wroga przy trakcie, wódz pilnuje stosu. Pierwszy ekran 27 → 11 obiektów; bez bitwy 24 %, straże 13 %, pasy [25,50,75,63,30]."
+        },
+        {
+          "nr": 2,
+          "wzorzec": "Hatchet Axe and Saw (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 23,
+            "CZESCIOWO": 5,
+            "NIE": 1
+          },
+          "luka": "Rozkład obiektów po ekranach jest odwrócony względem rytmu gry dla dziecka — zachodnia dolina (0–21,26–44) z 43 obiektami jest konfetti, a ekran startowy (0–21,54–72) daje w 8 krokach od bramy jeden surowiec (16,61) i skrzynię (6,64) za strażą; pierwszy tydzień to marsz, a druga ma tabelę rzeczy do kliknięcia.",
+          "nie": [
+            "G1: NIE — ekran zachodniej doliny (0–21,26–44) ma 43 obiekty interaktywne, ekran wschodniego jeziora (36–57,24–42) 27, podczas gdy ekran startowy (0–21,54–72) ma 10, a ekran jeziora (18–39,18–36) 6; dziecko w dolinie widzi dziesiątki rzeczy naraz."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r2-twierdza.png",
+              "opis": "Ślepe A/B: krytyk wybrał A = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-twierdza-r1.png",
+              "opis": "Cała plansza oceniana w rundzie 2"
+            }
+          ]
         }
       ]
     }

@@ -205,8 +205,11 @@ def minimapa():
         cx, cy = x * SKALA + SKALA / 2, y * SKALA + SKALA / 2
         r = SKALA * 0.42
         d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=c, outline=(20, 20, 20))
-    for nazwa in ('zamek gracza', 'zamek wroga'):
-        x, y = punkty[nazwa]
+    # Białe kwadraty na WSZYSTKICH zamkach — Twierdza ma dwie twierdze wroga,
+    # a PUNKTY znają tylko jedną; krytyk nie widział drugiej na schemacie.
+    zamki = {tuple(punkty[n]) for n in ('zamek gracza', 'zamek wroga')}
+    zamki |= {(int(o['x']), int(o['y'])) for o in obiekty if o['rodzaj'] == 'zamek'}
+    for x, y in zamki:
         cx, cy = x * SKALA + SKALA / 2, y * SKALA + SKALA / 2
         r = SKALA * 1.1
         d.rectangle([cx - r, cy - r, cx + r, cy + r], fill=(255, 255, 255), outline=(0, 0, 0))
