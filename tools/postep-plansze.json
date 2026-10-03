@@ -1,7 +1,7 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-03 17:43",
+  "aktualizacja": "2026-10-03 17:44",
   "kawalki": [
     {
       "id": "polana",
@@ -166,7 +166,7 @@
     {
       "id": "twierdza",
       "tytul": "Twierdza (misja 4, 72×72)",
-      "status": "critic",
+      "status": "build",
       "opis": "Zima, trzy pasy i skalny grzbiet między dolinami dwóch twierdz.",
       "rundy": [
         {
@@ -182,6 +182,35 @@
             {
               "plik": "tools/wzorzec/nasza-twierdza-minimapa.png",
               "opis": "Schemat planszy (ten sam, który dostaje krytyk)"
+            }
+          ]
+        },
+        {
+          "nr": 1,
+          "wzorzec": "When Dragons Clash (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 11,
+            "CZESCIOWO": 13,
+            "NIE": 6
+          },
+          "luka": "Poza ręcznie zrobionym pierwszym ekranem plansza nie ma hierarchii gęstości ani odnóg — obiekty tundry i dolin twierdz są losowane z zasięgiem (0, 999) i rozsypane równo po śniegu, drogi nie mają ani jednej odnogi do kopalni, a skutkiem jest 27 obiektów na ekranie startowym przy prawie pustych rogach SE i NE. Dobre mapy HoMM3 prowadzą gracza drogą od stosu do stosu: każda ślepa odnoga kończy się zakątkiem z 2–4 rzeczami, a między nimi jest puste pole marszu. (Ślepo wygrała nasza, ale 6 × NIE — kawałek jeszcze nie skończony.)",
+          "nie": [
+            "B2: NIE — Tundra dostaje 18 kupek losowo z zasięgiem (0, 999) i na minimapie żółte kropki leżą równo rozsypane po całym pasie y 23–44 (np. samotne kupki 63,27 / 63,30 / 70,27 / 69,38 na wschodnim brzegu bez drogi); stosy po 2–4 przy drodze i na końcu ślepych odnóg są tylko w ręcznie ustawionym pierwszym ekranie.",
+            "E3: NIE — Teren w tundrze i w dolinach twierdz to mozaika z rozmytego szkicu 4 × 4: na minimapie śnieg, jałowa ziemia i bór zmieniają się plamami po 3–5 pól (np. pas y 23–44 między x 36 a 72), żadna plama poza grzbietami i jeziorem nie ma 6 × 6; teren nie mówi, gdzie zaczyna się strefa.",
+            "F1: NIE — Zaułki pierwszego ekranu mają cel (obóz łowców 14,70 ze skrzynią 11,70 za wąwozem, polana z gniazdem 20,69), ale poza kadrem ślepe końce są puste: róg SE (x 56–71, y 58–71) to 16 × 14 pól z trzema zwykłymi budynkami i ani jednej skrzyni czy kupki, róg NE doliny Lodowej Twierdzy (x 62–71, y 0–8) ma jedną kupkę i jeden budynek, a górny środek zachodniej doliny (x 20–32, y 0–19) ma 7 obiektów na 13 × 20 pól.",
+            "F3: NIE — Budowle specjalne powtarzają się i stoją byle gdzie: na zrzucie widać cztery areny (ok. 31,9 / 36,29 / 52,17 / 67,32), drzewo wiedzy w każdym pasie (dom, tundra, wróg — listy `budowle` zawierają je trzy razy) i kamienną wieżę też w trzech listach; żadna nie stoi na wzgórzu, nad wodą ani na końcu drogi, bo losuje je `budowle(...)` z zasięgiem (0, 999).",
+            "G1: NIE — Na pierwszym ekranie 21 × 18 wokół startu (13,62) stoi 27 obiektów (7 kupek, 7 budynków, 5 skrzyń, 4 kopalnie, 3 straże, 1 artefakt) — dziesięć razy więcej niż „2–3 rzeczy i jedna straż\", a jednocześnie róg SE (x 56–71, y 58–71) to ekran prawie pusty.",
+            "G4: NIE — Na minimapie pas domowy (y 47–71) i doliny wroga (y 0–20) to ten sam mix bieli, jałowej i boru; jeśli coś, to kraina wroga jest JAŚNIEJSZA (więcej czystego śniegu) niż dolina gracza z łąką i jałową ziemią, czyli odwrotnie niż chce zasada „dom cieplejszy, wróg chłodniejszy\"."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r1-twierdza.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-twierdza-r0.png",
+              "opis": "Cała plansza w grze przed rundą 1"
             }
           ]
         }
