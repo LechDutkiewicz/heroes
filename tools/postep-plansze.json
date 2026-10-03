@@ -1,7 +1,7 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-03 17:36",
+  "aktualizacja": "2026-10-03 17:42",
   "kawalki": [
     {
       "id": "polana",
@@ -16,7 +16,7 @@
           "luka": "Stan wyjściowy przed pierwszą rundą.",
           "obrazy": [
             {
-              "plik": "tools/shots/caly-polana.png",
+              "plik": "tools/shots/caly-polana-r0.png",
               "opis": "Cała plansza w grze (stan wyjściowy)"
             },
             {
@@ -40,7 +40,7 @@
           "luka": "Stan wyjściowy przed pierwszą rundą.",
           "obrazy": [
             {
-              "plik": "tools/shots/caly-dwie-doliny.png",
+              "plik": "tools/shots/caly-dwie-doliny-r0.png",
               "opis": "Cała plansza w grze (stan wyjściowy)"
             },
             {
@@ -54,7 +54,7 @@
     {
       "id": "bagna",
       "tytul": "Bagna (misja 3, 54×54)",
-      "status": "critic",
+      "status": "build",
       "opis": "Dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca z wodzem.",
       "rundy": [
         {
@@ -64,12 +64,43 @@
           "luka": "Stan wyjściowy przed pierwszą rundą.",
           "obrazy": [
             {
-              "plik": "tools/shots/caly-bagna.png",
+              "plik": "tools/shots/caly-bagna-r0.png",
               "opis": "Cała plansza w grze (stan wyjściowy)"
             },
             {
               "plik": "tools/wzorzec/nasza-bagna-minimapa.png",
               "opis": "Schemat planszy (ten sam, który dostaje krytyk)"
+            }
+          ]
+        },
+        {
+          "nr": 1,
+          "wzorzec": "Gorlam's Tentacle Swampland (72×72)",
+          "win": false,
+          "checklista": {
+            "TAK": 9,
+            "CZESCIOWO": 13,
+            "NIE": 8
+          },
+          "luka": "Brak topografii, która dzieli mapę na trzy akty. Poza skałami SW i fosą wyspy plansza to jednolita krata bagna z kałużami, więc straże stoją na placach, strefa domowa to 135 pól, a „pogranicze\" to 63 % mapy — gracz nie czuje, że przechodzi z własnej krainy przez sporny środek do krainy wroga, bo żaden grzbiet, jezioro ani las mu tego nie mówi.",
+          "nie": [
+            "B2: NIE — Jasnożółte kropki są rozsypane równo po całej mapie, szczególnie na wschodnim pasie x44–53 (y20–50 ma ich ok. 10 bez drogi) i w pasie zachodnim x3–9 — konfetti, nie stosy w zakątkach.",
+            "C1: NIE — Poza mostem (20,44), bramą północną (11,38) i groblą na wyspę (45,16) większość straży stoi na otwartym bagnie: (6,1),(8,1),(13,1),(3,14),(19,19),(27,12),(31,14),(35,24),(21,29),(33,34) — pilnują pojedynczej kropki na placu.",
+            "D4: NIE — Jedyny most stoi na (19,44); droga x12 przecina wodę na y29–34 i droga y27 na x14–17 bez mostu ani brodu, a wieża-drabina (39,43) stoi obok wody, nie na przejściu.",
+            "E3: NIE — Bagno, łąka i woda przeplatają się plamami 2–4 pól po całej mapie (np. x14–30, y18–36); jedyne plamy ≥ 6×6 z powodem to skały SW (x4–10,y36–52) i łąka wyspy (x42–50,y4–12).",
+            "E4: NIE — T+# = 22 % wobec wzorca 40–60 %, a las jest ramką na brzegach mapy (x0–3, x50–53, y0–2) i pojedynczymi kępami 1–3 pól w środku; żaden masyw nie tworzy przełęczy.",
+            "G1: NIE — Ekran z wyspą (x40–53, y0–18) ma ok. 15 obiektów i 4 straże, ekran centralny (x20–40, y20–36) ok. 25 kropek, a ekran zachodni (x0–12, y12–30) 6 — brak ekranu z „jedną decyzją\".",
+            "G2: NIE — Wiatrak stoi na drodze (27,16), Cyndaquil stoi na przyczółku mostu (20,44), automat (12,9) wchodzi w próg jaskini (13,11).",
+            "G4: NIE — Na minimapie górna i dolna połowa są tego samego bagnisto-zielonego koloru; jedyną jaśniejszą plamą jest wyspa, a kraina wroga (y0–18) nie jest ani ciemniejsza, ani chłodniejsza."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r1-bagna.png",
+              "opis": "Ślepe A/B: schemat nasz i wzorca (krytyk wybrał A = wzorzec)"
+            },
+            {
+              "plik": "tools/shots/caly-bagna-r0.png",
+              "opis": "Cała plansza w grze przed rundą 1"
             }
           ]
         }
@@ -88,7 +119,7 @@
           "luka": "Stan wyjściowy przed pierwszą rundą.",
           "obrazy": [
             {
-              "plik": "tools/shots/caly-twierdza.png",
+              "plik": "tools/shots/caly-twierdza-r0.png",
               "opis": "Cała plansza w grze (stan wyjściowy)"
             },
             {
