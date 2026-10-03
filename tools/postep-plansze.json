@@ -1,7 +1,7 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-03 20:49",
+  "aktualizacja": "2026-10-03 20:53",
   "kawalki": [
     {
       "id": "polana",
@@ -118,7 +118,7 @@
     {
       "id": "dwie-doliny",
       "tytul": "Dwie Doliny (misja 2, 72×72)",
-      "status": "build",
+      "status": "critic",
       "opis": "Trzy pasy za dwoma grzbietami, strażnice na klucze, pas sporny w środku.",
       "rundy": [
         {
@@ -162,8 +162,13 @@
             {
               "plik": "tools/shots/caly-dwie-doliny-r0.png",
               "opis": "Cała plansza w grze przed rundą 1"
+            },
+            {
+              "plik": "tools/shots/caly-dwie-doliny-r1.png",
+              "opis": "Cała plansza po rundzie 1"
             }
-          ]
+          ],
+          "zmiana": "Zatoka startowa z izbą pierwszego tygodnia (mur lasu w wierszach 55–56 z jedną luką pod słabą straż, przesmyk północny ze strażą); bez bitwy 34 % → 23 %. Wiersz każdej bramy do 3 pól w bok jest skałą — po skosie wchodziło się w przejście bez klucza. Jałowa rubież jako kieszeń z jednym wejściem i jedną strażą; podwójne straże zdjęte; para portali omijająca straż usunięta. Luźne losowania usunięte, stosy i budynki w zakątkach; budynki specjalne po jednym na planszę. Straże 14 %, obiekt co 10 pól, pasy [40,49,47,87,42]."
         }
       ]
     },
