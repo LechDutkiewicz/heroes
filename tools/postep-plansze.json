@@ -1,7 +1,7 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-03 20:22",
+  "aktualizacja": "2026-10-03 20:27",
   "kawalki": [
     {
       "id": "polana",
@@ -141,7 +141,7 @@
     {
       "id": "bagna",
       "tytul": "Bagna (misja 3, 54×54)",
-      "status": "critic",
+      "status": "build",
       "opis": "Dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca z wodzem.",
       "rundy": [
         {
@@ -195,6 +195,31 @@
             }
           ],
           "zmiana": "Czarna Struga przesunięta na x≈29 i obudowana pasem lasu — dolina gracza x 0–27 z dwiema przeprawami (grobla, most) ze słabą strażą; bez bitwy 8 % → 19 %. Grzbiet wroga w wierszach 15–17 (las ze skalnymi guzami) z jedną bramą na grobli i silną strażą. Kałuże centrum scalone w jedno jezioro, droga wzdłuż brzegu. Sześć zakątków ze stosem 3–4 rzeczy i średnią strażą w szyjce; znajdźki tylko przy drodze; straże 20 % → 13 %, T+# 22 % → 33 %, gęstość 11,3 → 8,9."
+        },
+        {
+          "nr": 2,
+          "wzorzec": "Faeries! (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 16,
+            "CZESCIOWO": 12,
+            "NIE": 2
+          },
+          "luka": "Szyjki nie zamykają stref — główna straż na drodze (26,18) ma bagienne obejście przez (28–33, 13–20) do krainy wroga, a północne wyjście z domu (11–15, 32–34) ma 5 pól szerokości na dwie straże; przez to gradient trudności i trzy akty istnieją tylko w profilu, nie w grze.",
+          "nie": [
+            "C4: NIE — Straż (26,18) ma obejście: bagno (28–33, 13–20) jest przejezdne i prowadzi za pas lasu do (30,10) w krainie wroga; luka północna (11–15, 32–34) ma 5 pól szerokości na dwie straże, więc da się przejść środkiem przy (13,33).",
+            "G1: NIE — Ekran startowy (12–33, 37–54) ma zamek, kamieniołom, wieżę, jaskinię, 2 domki Pokeball, 2 trucki, Horsea, perłę, 4 koszyki, pokeballe, grzyby, wiatrak, skrzynię — ponad 20 obiektów naraz; 28 obiektów w pierwszym pasie odległości to dwa razy za dużo dla sześciolatka."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r2-bagna.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-bagna-r1.png",
+              "opis": "Cała plansza oceniana w rundzie 2"
+            }
+          ]
         }
       ]
     },
