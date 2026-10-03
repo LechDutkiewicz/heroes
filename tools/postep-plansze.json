@@ -1,0 +1,103 @@
+{
+  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
+  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
+  "aktualizacja": "2026-10-03 17:36",
+  "kawalki": [
+    {
+      "id": "polana",
+      "tytul": "Polana (misja 1, samouczek, 36×36)",
+      "status": "critic",
+      "opis": "Rzeka z dwoma brodami, zamek na południowym zachodzie, Stary Fort na wschodzie.",
+      "rundy": [
+        {
+          "nr": 0,
+          "wzorzec": "—",
+          "win": false,
+          "luka": "Stan wyjściowy przed pierwszą rundą.",
+          "obrazy": [
+            {
+              "plik": "tools/shots/caly-polana.png",
+              "opis": "Cała plansza w grze (stan wyjściowy)"
+            },
+            {
+              "plik": "tools/wzorzec/nasza-polana-minimapa.png",
+              "opis": "Schemat planszy (ten sam, który dostaje krytyk)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dwie-doliny",
+      "tytul": "Dwie Doliny (misja 2, 72×72)",
+      "status": "critic",
+      "opis": "Trzy pasy za dwoma grzbietami, strażnice na klucze, pas sporny w środku.",
+      "rundy": [
+        {
+          "nr": 0,
+          "wzorzec": "—",
+          "win": false,
+          "luka": "Stan wyjściowy przed pierwszą rundą.",
+          "obrazy": [
+            {
+              "plik": "tools/shots/caly-dwie-doliny.png",
+              "opis": "Cała plansza w grze (stan wyjściowy)"
+            },
+            {
+              "plik": "tools/wzorzec/nasza-minimapa.png",
+              "opis": "Schemat planszy (ten sam, który dostaje krytyk)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bagna",
+      "tytul": "Bagna (misja 3, 54×54)",
+      "status": "critic",
+      "opis": "Dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca z wodzem.",
+      "rundy": [
+        {
+          "nr": 0,
+          "wzorzec": "—",
+          "win": false,
+          "luka": "Stan wyjściowy przed pierwszą rundą.",
+          "obrazy": [
+            {
+              "plik": "tools/shots/caly-bagna.png",
+              "opis": "Cała plansza w grze (stan wyjściowy)"
+            },
+            {
+              "plik": "tools/wzorzec/nasza-bagna-minimapa.png",
+              "opis": "Schemat planszy (ten sam, który dostaje krytyk)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "twierdza",
+      "tytul": "Twierdza (misja 4, 72×72)",
+      "status": "critic",
+      "opis": "Zima, trzy pasy i skalny grzbiet między dolinami dwóch twierdz.",
+      "rundy": [
+        {
+          "nr": 0,
+          "wzorzec": "—",
+          "win": false,
+          "luka": "Stan wyjściowy przed pierwszą rundą.",
+          "obrazy": [
+            {
+              "plik": "tools/shots/caly-twierdza.png",
+              "opis": "Cała plansza w grze (stan wyjściowy)"
+            },
+            {
+              "plik": "tools/wzorzec/nasza-twierdza-minimapa.png",
+              "opis": "Schemat planszy (ten sam, który dostaje krytyk)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

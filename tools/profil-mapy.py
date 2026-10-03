@@ -27,8 +27,15 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 KORZEN = Path(__file__).resolve().parent.parent
-ZRODLO = KORZEN / 'src' / 'data' / 'plansza-teren.ts'
 WYJSCIE = KORZEN / 'tools' / 'wzorzec'
+
+#: Plansza z rejestru (`dwie-doliny`, `polana`, `bagna`, `twierdza`); bez
+#: argumentu — „Dwie Doliny", jak dawniej. Wynik ląduje w `nasza-<id>-…`
+#: (dla Dwóch Dolin bez przyrostka, żeby stare odwołania dalej działały).
+import sys
+MAPA = sys.argv[1] if len(sys.argv) > 1 else 'dwie-doliny'
+ZRODLO = KORZEN / 'src' / 'data' / ('plansza-teren.ts' if MAPA == 'dwie-doliny' else f'plansza-teren-{MAPA}.ts')
+PRZYROSTEK = '' if MAPA == 'dwie-doliny' else f'-{MAPA}'
 
 BARWY = {
     '.': (104, 152, 72),
@@ -209,9 +216,9 @@ def minimapa():
 if __name__ == '__main__':
     WYJSCIE.mkdir(parents=True, exist_ok=True)
     p = profil()
-    (WYJSCIE / 'nasza-profil.json').write_text(
+    (WYJSCIE / f'nasza{PRZYROSTEK}-profil.json').write_text(
         json.dumps(p, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
     )
-    minimapa().save(WYJSCIE / 'nasza-minimapa.png')
+    minimapa().save(WYJSCIE / f'nasza{PRZYROSTEK}-minimapa.png')
     for k, v in p.items():
         print(f'{k}: {v}')
