@@ -1,7 +1,7 @@
 import { planszaPrzygody } from './plansza';
 import { POZIOM_STARTERA } from './startery';
 import { dolacz } from './armia';
-import { doswDoPoziomu, ewoluujOdPoziomu, nowyStworek, usunDuplikaty } from './stworki';
+import { doswDoPoziomu, ewoluujOdPoziomu, nowyStworek, przytnijPoziom, usunDuplikaty } from './stworki';
 import { FACTIONS, factionById } from './factions';
 import { maGatunek, odznakaSali, type Oddzial, type StanMapy } from './mapa';
 import { SLOTY_ARMII, znormalizuj } from './armia';
@@ -60,6 +60,19 @@ export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): Sta
   // Strojenie misji pod drużynę, która przychodzi z poprzedniej (etap 6).
   if (m.poziomDruzyny) for (const o of s.bohater.armia) if (o) podciagnij(o, m.poziomDruzyny);
   if (m.poziomDruzyny && s.starter) s.starter.poziom = Math.max(s.starter.poziom, m.poziomDruzyny);
+  // Siła przeciwników pod limit misji: dzikie stada, zamki wroga i rywal.
+  if (m.skalaWroga && m.skalaWroga !== 1) {
+    const k = m.skalaWroga;
+    const wszyscy = [
+      ...s.wrogBohater.armia,
+      ...s.obiekty.flatMap((o) =>
+        o.rodzaj === 'potwor' || (o.rodzaj === 'zamek' && o.wlasciciel === 'wrog')
+          ? [...(o.oddzialy ?? []), ...(o.garnizon ?? [])]
+          : []
+      ),
+    ];
+    for (const o of wszyscy) if (o) podciagnij(o, przytnijPoziom(o.poziom * k));
+  }
   if (m.wrogPoziomy) {
     const wrog = [
       ...s.wrogBohater.armia,
@@ -68,7 +81,7 @@ export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): Sta
         ...(o.garnizon ?? []),
       ]),
     ];
-    for (const o of wrog) if (o) podciagnij(o, o.poziom + m.wrogPoziomy);
+    for (const o of wrog) if (o) podciagnij(o, przytnijPoziom(o.poziom + m.wrogPoziomy));
   }
   if (m.poziomDzikich)
     for (const o of s.obiekty)

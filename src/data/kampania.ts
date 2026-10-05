@@ -82,6 +82,13 @@ export interface Misja {
   /** Limit poziomu trenera, jak w kampaniach Heroes 3. */
   limitBohatera?: number;
   /**
+   * Mnożnik poziomu przeciwników na planszy: dzikich stad, załóg i garnizonów
+   * zamków wroga i drużyny rywala. Plansze są strojone pod drużynę z poziomów
+   * 10–20; przy limicie 35 i 50 w późnych misjach bez mnożnika stada byłyby
+   * tłem (uwagi z rozgrywki: drużyna 30+ na stada z poziomu 2–14).
+   */
+  skalaWroga?: number;
+  /**
    * Najniższy poziom dzikich stad na planszy. Plansze mają przy starcie
    * stada z poziomu 2–3 — w misji 1 to dobry początek, ale drużyna, która
    * przyszła z poprzedniej misji, przechodzi przez nie bez walki.
@@ -130,7 +137,7 @@ export const KAMPANIA: Kampania = {
       ],
       naMapie: { x: 0.2198, y: 0.8643 },
       limitPoziomu: 14,
-      limitBohatera: 4,
+      limitBohatera: 8,
       epilog: 'Fort jest wolny, a stworki z Polany wracają do domu. Ale srebrne płaszcze uciekły za góry.',
     },
     {
@@ -150,11 +157,12 @@ export const KAMPANIA: Kampania = {
         { typ: 'oddzial', tier: 2, poziom: 10, opis: 'Nowy stworek: Aquino, poziom 10' },
       ],
       naMapie: { x: 0.348, y: 0.459 },
-      limitPoziomu: 18,
-      limitBohatera: 6,
-      poziomDzikich: 7,
+      limitPoziomu: 24,
+      skalaWroga: 1.5,
+      limitBohatera: 12,
+      poziomDzikich: 10,
       epilog: 'Grota Księżycowa padła. W jej skarbcu była tylko mapa bagien i jedno słowo: Kamień.',
-      poziomDruzyny: 6,
+      poziomDruzyny: 10,
     },
     {
       id: 'bagienny-szlak',
@@ -173,11 +181,12 @@ export const KAMPANIA: Kampania = {
         { typ: 'statystyka', obrona: 2, opis: '+2 do opieki' },
       ],
       naMapie: { x: 0.5971, y: 0.752 },
-      limitPoziomu: 22,
-      limitBohatera: 8,
-      poziomDzikich: 9,
+      limitPoziomu: 35,
+      skalaWroga: 2.2,
+      limitBohatera: 16,
+      poziomDzikich: 18,
       epilog: 'Księżycowy Kamień świeci w twojej dłoni. Bez niego twierdze Groty są słabsze niż kiedykolwiek.',
-      poziomDruzyny: 11,
+      poziomDruzyny: 20,
     },
     {
       id: 'oblezenie-groty',
@@ -196,11 +205,12 @@ export const KAMPANIA: Kampania = {
         { typ: 'surowiec', surowiec: 'pokeball', ile: 60, opis: '60 pokeballi' },
       ],
       naMapie: { x: 0.8242, y: 0.459 },
-      limitPoziomu: 26,
-      limitBohatera: 10,
-      poziomDzikich: 11,
+      limitPoziomu: 50,
+      skalaWroga: 3.0,
+      limitBohatera: 20,
+      poziomDzikich: 28,
       epilog: 'Ostatnia twierdza Groty otwiera bramy. Srebrne płaszcze składają broń.',
-      poziomDruzyny: 16,
+      poziomDruzyny: 30,
       wrogPoziomy: 2,
     },
   ],

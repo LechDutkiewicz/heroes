@@ -2,6 +2,24 @@
 
 Ostatnia aktualizacja: 2026-09-27 (trener zamiast armii: stworek = postać z poziomem, 4 na polu bitwy, trening i Centrum Pokemon).
 
+## Rozpiętość limitów i okrągłe ceny (2026-10-05, po #46)
+
+**Uwagi użytkownika.** Skok limitu o 4 poziomy na misję za mały — gracz
+grający bez wysiłku zaczynał misję 3 z drużyną 30+ i trenerem na 11; poziom
+50 ma być osiągalny w ostatniej misji. Ceny budynków „7 czegoś, 19 czegoś"
+wyglądają dziwnie — w Heroes 3 są okrągłe (5 drewna, 10 rudy, 2/4/6/8/10).
+
+**Limity** (stworki / trener): 14/8, 24/12, 35/16, 50/20. Przeciwnicy pod
+limit: `Misja.skalaWroga` mnoży poziom dzikich stad, załóg i garnizonów zamków
+wroga i drużyny rywala (przycięte do 50), potem `poziomDzikich` (10/18/28)
+i `wrogPoziomy`. Próg drużyny (`poziomDruzyny`) 10/20/30 — gracz zwykle
+przychodzi silniejszy, podciąga tylko słabszych.
+
+**Ceny.** `ladnaCena` w `zamki.ts`: pokeballe co 5 (od 100 co 10, od 200
+co 25), reszta z listy 1, 2, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30 — po
+mnożnikach frakcji. Bazowe odłamki ratusza II i budynku specjalnego 3 → 4,
+jagody Pokémartu II 5 → 4.
+
 ## Balans bitwy po rozgrywce misji 2–3 (2026-10-05)
 
 **Uwagi użytkownika** (całość, do kolejnych PR-ów): drużyna przechodząca

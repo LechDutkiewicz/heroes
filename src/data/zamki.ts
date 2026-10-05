@@ -148,7 +148,7 @@ const CENY: Record<string, Partial<Skarbiec>> = {
   // formalnością. Przy dawnych 45 pokeballach zwracał się w półtora dnia,
   // więc nie było czego rozważać.
   ratusz1: { pokeball: 20 },
-  ratusz2: { pokeball: 100, odlamek: 3 },
+  ratusz2: { pokeball: 100, odlamek: 4 },
   ratusz3: { pokeball: 200, odlamek: 10 },
   fort: { pokeball: 35, odlamek: 5 },
   siedlisko1: { pokeball: 12 },
@@ -157,12 +157,12 @@ const CENY: Record<string, Partial<Skarbiec>> = {
   siedlisko4: { pokeball: 50, odlamek: 4 },
   siedlisko5: { pokeball: 75, odlamek: 8 },
   siedlisko6: { pokeball: 120, odlamek: 15 },
-  specjalny: { pokeball: 60, odlamek: 3 },
+  specjalny: { pokeball: 60, odlamek: 4 },
   // Jak gildia magów w Heroes 3 (1000 / 1000 / 1000 złota + surowce),
   // przeliczone na pokeballe: pierwszy stopień tani, żeby sklep otwierał
   // się w pierwszym tygodniu.
   sklep1: { pokeball: 25 },
-  sklep2: { pokeball: 60, jagoda: 5 },
+  sklep2: { pokeball: 60, jagoda: 4 },
   sklep3: { pokeball: 110, odlamek: 6 },
 };
 
@@ -194,9 +194,26 @@ function skalujKoszt(id: string, profil: (typeof PROFILE)[string]): Partial<Skar
   }
   const wynik: Partial<Skarbiec> = {};
   for (const [co, ile] of Object.entries(bazowy)) {
-    wynik[co as Surowiec] = Math.max(1, Math.round(ile * mn));
+    wynik[co as Surowiec] = ladnaCena(co as Surowiec, ile * mn);
   }
   return wynik;
+}
+
+/** Ceny surowców (poza pokeballami) — same okrągłe liczby, jak drewno i ruda w Heroes 3. */
+const LADNE_SUROWCE = [1, 2, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30];
+
+/**
+ * Okrągła cena: pokeballe co 5 (od 100 co 10, od 200 co 25), pozostałe
+ * surowce z `LADNE_SUROWCE`. Mnożniki frakcji dawały ceny w stylu „19
+ * pokeballi i 7 odłamków", a w Heroes 3 cennik to 5 drewna, 10 rudy,
+ * 2/4/6/8/10 kryształów za kolejne piętra gildii (uwagi z rozgrywki).
+ */
+export function ladnaCena(co: Surowiec, ile: number): number {
+  if (co === 'pokeball') {
+    const krok = ile >= 200 ? 25 : ile >= 100 ? 10 : 5;
+    return Math.max(krok, Math.round(ile / krok) * krok);
+  }
+  return LADNE_SUROWCE.reduce((a, b) => (Math.abs(b - ile) < Math.abs(a - ile) ? b : a));
 }
 
 /** Nazwy i opisy — jedyne miejsce, w którym miasta mówią własnym głosem. */
