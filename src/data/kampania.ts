@@ -82,10 +82,11 @@ export interface Misja {
   /** Limit poziomu trenera, jak w kampaniach Heroes 3. */
   limitBohatera?: number;
   /**
-   * Mnożnik poziomu przeciwników na planszy: dzikich stad, załóg i garnizonów
-   * zamków wroga i drużyny rywala. Plansze są strojone pod drużynę z poziomów
-   * 10–20; przy limicie 35 i 50 w późnych misjach bez mnożnika stada byłyby
-   * tłem (uwagi z rozgrywki: drużyna 30+ na stada z poziomu 2–14).
+   * Mnożnik SIŁY przeciwników na planszy (poziom p → (p + 10) · k − 10):
+   * dzikich stad, załóg i garnizonów zamków wroga i drużyny rywala. Plansze
+   * strojono pod drużynę na progu `poziomDruzyny` 6 / 11 / 16; k to stosunek
+   * siły nowego progu do starego, więc trudność względem drużyny zostaje
+   * (uwagi z rozgrywki: drużyna 30+ na stada z poziomu 2–14).
    */
   skalaWroga?: number;
   /**
@@ -160,9 +161,9 @@ export const KAMPANIA: Kampania = {
       limitPoziomu: 24,
       skalaWroga: 1.5,
       limitBohatera: 12,
-      poziomDzikich: 10,
+      poziomDzikich: 8,
       epilog: 'Grota Księżycowa padła. W jej skarbcu była tylko mapa bagien i jedno słowo: Kamień.',
-      poziomDruzyny: 10,
+      poziomDruzyny: 14,
     },
     {
       id: 'bagienny-szlak',
@@ -182,11 +183,11 @@ export const KAMPANIA: Kampania = {
       ],
       naMapie: { x: 0.5971, y: 0.752 },
       limitPoziomu: 35,
-      skalaWroga: 2.2,
+      skalaWroga: 1.62,
       limitBohatera: 16,
-      poziomDzikich: 18,
+      poziomDzikich: 14,
       epilog: 'Księżycowy Kamień świeci w twojej dłoni. Bez niego twierdze Groty są słabsze niż kiedykolwiek.',
-      poziomDruzyny: 20,
+      poziomDruzyny: 24,
     },
     {
       id: 'oblezenie-groty',
@@ -206,11 +207,11 @@ export const KAMPANIA: Kampania = {
       ],
       naMapie: { x: 0.8242, y: 0.459 },
       limitPoziomu: 50,
-      skalaWroga: 3.0,
+      skalaWroga: 1.73,
       limitBohatera: 20,
-      poziomDzikich: 28,
+      poziomDzikich: 20,
       epilog: 'Ostatnia twierdza Groty otwiera bramy. Srebrne płaszcze składają broń.',
-      poziomDruzyny: 30,
+      poziomDruzyny: 35,
       wrogPoziomy: 2,
     },
   ],

@@ -9,11 +9,13 @@ grający bez wysiłku zaczynał misję 3 z drużyną 30+ i trenerem na 11; pozio
 50 ma być osiągalny w ostatniej misji. Ceny budynków „7 czegoś, 19 czegoś"
 wyglądają dziwnie — w Heroes 3 są okrągłe (5 drewna, 10 rudy, 2/4/6/8/10).
 
-**Limity** (stworki / trener): 14/8, 24/12, 35/16, 50/20. Przeciwnicy pod
-limit: `Misja.skalaWroga` mnoży poziom dzikich stad, załóg i garnizonów zamków
-wroga i drużyny rywala (przycięte do 50), potem `poziomDzikich` (10/18/28)
-i `wrogPoziomy`. Próg drużyny (`poziomDruzyny`) 10/20/30 — gracz zwykle
-przychodzi silniejszy, podciąga tylko słabszych.
+**Limity** (stworki / trener): 14/8, 24/12, 35/16, 50/20. Próg drużyny
+(`poziomDruzyny`) = limit poprzedniej misji: 14/24/35. Przeciwnicy pod
+limit: `Misja.skalaWroga` mnoży SIŁĘ (poziom p → (p+10)·k − 10) dzikich stad,
+załóg i garnizonów zamków wroga i drużyny rywala, k = siła nowego progu /
+starego (1,5 / 1,62 / 1,73), potem `poziomDzikich` (8/14/20) i `wrogPoziomy`.
+Pierwsza próba mnożyła sam poziom (×1,5/2,2/3,0 i ×1,3/1,8/2,5) — autopilot
+przegrywał misję 3 i nie kończył 4.
 
 **Ceny.** `ladnaCena` w `zamki.ts`: pokeballe co 5 (od 100 co 10, od 200
 co 25), reszta z listy 1, 2, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30 — po

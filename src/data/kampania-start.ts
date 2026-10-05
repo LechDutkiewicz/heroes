@@ -71,7 +71,11 @@ export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): Sta
           : []
       ),
     ];
-    for (const o of wszyscy) if (o) podciagnij(o, przytnijPoziom(o.poziom * k));
+    // Mnożymy SIŁĘ, nie poziom: statystyki rosną jak (poziom + 10)
+    // (`skalaPoziomu`), więc ×1,5 na poziomie dawało stadom więcej siły,
+    // niż drużyna zyskała przez wyższy próg — misje 3 i 4 robiły się
+    // niewykonalne w symulacji.
+    for (const o of wszyscy) if (o) podciagnij(o, przytnijPoziom((o.poziom + 10) * k - 10));
   }
   if (m.wrogPoziomy) {
     const wrog = [
