@@ -200,7 +200,7 @@ export const KAMPANIA: Kampania = {
       limitBohatera: 10,
       poziomDzikich: 11,
       epilog: 'Ostatnia twierdza Groty otwiera bramy. Srebrne płaszcze składają broń.',
-      poziomDruzyny: 13,
+      poziomDruzyny: 16,
       wrogPoziomy: 2,
     },
   ],

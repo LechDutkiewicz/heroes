@@ -64,6 +64,11 @@ powtórek) — klik zakłada, zdjęty wraca do plecaka; „Noszone: +X zapału�
 Okno „Nowy artefakt" mówi, czy trener go założył, czy trafił do plecaka.
 Wybór przechodzi do następnej misji (`BohaterPrzenoszony.zalozone`).
 Sonda: `tools/probe-artefakty.ts`; `zrzut-bohater.mjs --stan plecak`.
+Skutek w symulacji: autopilot w misji 4 nie wygrywał do dnia 84 (wcześniej
+sumował dziesiątki duplikatów, a nowe artefakty zmieniły losowanie plansz,
+więc przychodził z drużyną 13–15 zamiast 17–18). `wrogPoziomy` 1 i 0 nic nie
+dały; `poziomDruzyny` misji 4 z 13 na 16 → wygrana dnia 13 (18 → dnia 10).
+Całość: m1 dnia 19, m2 bez wygranej do 60 (jak przed zmianami), m3 dnia 18.
 `probe-bohater.mjs` pada na „klik w bohatera otwiera jego ekran — zamek"
 także na kodzie sprzed zmian (nie ruszałem).
 
