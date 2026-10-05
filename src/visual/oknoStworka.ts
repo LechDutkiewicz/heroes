@@ -96,7 +96,8 @@ export function pokazOknoStworka(scena: Phaser.Scene, o: OpcjeOknaStworka): Okno
       .text(
         x + SZER / 2,
         y + 54,
-        `Poziom ${od.poziom}${zywiol ? ` · żywioł: ${zywiol.label}` : ''}${od.omdlaly ? ' · zemdlony' : ''}`,
+        `Poziom ${od.poziom}${od.slucha !== undefined && od.slucha < od.poziom ? ` (słucha do ${od.slucha})` : ''}` +
+          `${zywiol ? ` · żywioł: ${zywiol.label}` : ''}${od.omdlaly ? ' · zemdlony' : ''}`,
         stylAtramentu(14, 'miekki')
       )
       .setOrigin(0.5)

@@ -57,7 +57,7 @@ import {
   strzezoneProzez,
   trasa,
   zasiegNaTure,
-  kosztTreningu,
+  kosztTreninguW,
   rozliczPojedynek,
   rywalNa,
   trenerWGrze,
@@ -117,6 +117,9 @@ function wygramy(atak: Oddzial[], obrona: Oddzial[], ziarno: number, naPolu: num
  * `AdventureScene.zakonczBitwe`. Bez tego wyjątku wygrana bitwa o miasto
  * kasowałaby zamek z mapy zamiast go przejąć.
  */
+/** Limit poziomu z odznak dotyczy tylko stworków gracza (`StanMapy.limitPoziomu`). */
+const limitStrony = (s: StanMapy, kto: Wlasciciel) => (kto === 'gracz' ? s.limitPoziomu : undefined);
+
 function rozstrzygnijBitwe(s: StanMapy, kto: Wlasciciel, obrona: Obiekt, ziarno: number) {
   const bohater = bohaterOf(s, kto);
   const rng = makeRng(ziarno + s.dzien * 7919 + obrona.id * 104729 + 1);
@@ -126,7 +129,7 @@ function rozstrzygnijBitwe(s: StanMapy, kto: Wlasciciel, obrona: Obiekt, ziarno:
   // Ten sam rachunek co u gracza: kto nie przetrwał, mdleje, a po wygranej
   // drużyna AI też zbiera doświadczenie — inaczej przeciwnik stałby w miejscu,
   // kiedy stworki gracza rosną.
-  rozliczDruzyne(bohater.armia, wynik.ocalaliAtak, outcome === 'player', wynik.pokonaniObrona);
+  rozliczDruzyne(bohater.armia, wynik.ocalaliAtak, outcome === 'player', wynik.pokonaniObrona, limitStrony(s, kto));
 
   if (outcome === 'player') {
     if (obrona.rodzaj === 'zamek') {
@@ -184,9 +187,10 @@ function wartoscTreningu(zamek: Obiekt, s: StanMapy, kto: Wlasciciel): number {
   // końca misji i symulacja mierzyła to, a nie trudność planszy.
   const lezy = zemdleni(bohater.armia).length;
   if (kto === 'gracz' && lezy > 0 && (lezy * 2 >= zywe(bohater.armia).length || !ktosNaNogach(bohater.armia))) return 150;
-  const druzyna = zywe(bohater.armia);
+  const limit = limitStrony(s, kto);
+  const druzyna = zywe(bohater.armia).filter((o) => limit === undefined || o.poziom < limit);
   if (!druzyna.length) return 0;
-  const sredniKoszt = druzyna.reduce((a, o) => a + kosztTreningu(o), 0) / druzyna.length;
+  const sredniKoszt = druzyna.reduce((a, o) => a + kosztTreninguW(s, o, kto), 0) / druzyna.length;
   const stac = Math.floor(skarbiecOf(s, kto).pokeball / Math.max(1, sredniKoszt));
   const mozna = Math.min(stac, treningiZamku(zamek));
   return mozna >= 3 ? 40 * mozna : 0;
@@ -655,8 +659,8 @@ function pojedynek(s: StanMapy, kto: Wlasciciel, ziarno: number) {
   const b = bohaterOf(s, drugi);
   const w = rozegrajBitwe(a.armia, b.armia, makeRng(ziarno + s.dzien * 7919 + 31337), undefined, NA_POLU);
   const zwyciezca: Wlasciciel | null = w.outcome === 'player' ? kto : w.outcome === 'enemy' ? drugi : null;
-  rozliczDruzyne(a.armia, w.ocalaliAtak, zwyciezca === kto, w.pokonaniObrona);
-  rozliczDruzyne(b.armia, w.ocalaliObrona, zwyciezca === drugi, w.pokonaniAtak);
+  rozliczDruzyne(a.armia, w.ocalaliAtak, zwyciezca === kto, w.pokonaniObrona, limitStrony(s, kto));
+  rozliczDruzyne(b.armia, w.ocalaliObrona, zwyciezca === drugi, w.pokonaniAtak, limitStrony(s, drugi));
   const nagroda = zwyciezca ? rozliczPojedynek(s, zwyciezca) : 0;
   a.ruch = 0;
   (s.pojedynki ??= []).push({ wyzywajacy: kto, zwyciezca, nagroda });

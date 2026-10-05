@@ -70,7 +70,22 @@ export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): Sta
     ];
     for (const o of wrog) if (o) podciagnij(o, o.poziom + m.wrogPoziomy);
   }
+  if (m.poziomDzikich)
+    for (const o of s.obiekty)
+      if (o.rodzaj === 'potwor') for (const od of o.oddzialy ?? []) podciagnij(od, m.poziomDzikich);
+
+  // Limit z odznak: kto przyszedł silniejszy, słucha tylko do limitu
+  // (walczy jak na limicie), a poziom zostaje na następną misję.
+  s.limitPoziomu = m.limitPoziomu;
+  s.limitBohatera = m.limitBohatera;
+  for (const o of s.bohater.armia) if (o) ustawPosluszenstwo(o, m.limitPoziomu);
   return s;
+}
+
+/** `slucha` = limit, gdy stworek go przekracza; inaczej bez ograniczenia. */
+export function ustawPosluszenstwo(o: Oddzial, limit: number | undefined) {
+  if (limit !== undefined && o.poziom > limit) o.slucha = limit;
+  else delete o.slucha;
 }
 
 /** Stworek co najmniej na poziomie `poziom` — z doświadczeniem i ewolucją, jak po treningu. */

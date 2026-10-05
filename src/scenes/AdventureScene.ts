@@ -16,6 +16,7 @@ import {
   budowlaPoId,
   data,
   dochod,
+  dodajDoswBohatera,
   kosztPola,
   nowaTura,
   obiektNa,
@@ -5834,7 +5835,12 @@ export class AdventureScene extends Phaser.Scene {
     // doświadczenie i (Uzdrowiciel) stawiamy część zemdlonych na nogi.
     // Ta sama funkcja liczy podgląd na ekranie podsumowania walki.
     const wiersze = wynik.armia
-      ? rozliczDruzyne(this.stan.bohater.armia, wynik, wynik.wygrana ? efekt(this.stan.bohater, 'leczenie') : 0)
+      ? rozliczDruzyne(
+          this.stan.bohater.armia,
+          wynik,
+          wynik.wygrana ? efekt(this.stan.bohater, 'leczenie') : 0,
+          this.stan.limitPoziomu
+        )
       : [];
     const awanse = awanseZWierszy(wiersze, this.stan.bohater.armia);
     const wyleczeni = wiersze.filter((w) => w.uzdrowiony).length;
@@ -5857,6 +5863,8 @@ export class AdventureScene extends Phaser.Scene {
         omdlaly: undefined,
         bezEwolucji: undefined,
         dosw: doswDoPoziomu(od.poziom),
+        // Złapany silniejszy niż limit odznak słucha tylko do limitu.
+        slucha: this.stan.limitPoziomu !== undefined && od.poziom > this.stan.limitPoziomu ? this.stan.limitPoziomu : undefined,
       };
       zlapani.push(od.nazwa);
       const wpis = o?.oddzialy?.[skad];
@@ -5894,9 +5902,12 @@ export class AdventureScene extends Phaser.Scene {
       } else if (o) {
         o.zebrany = true;
       }
-      const nagroda = Math.round(DOSW_BOHATERA_ZA_WALKE * (1 + efekt(this.stan.bohater, 'nauka')));
       const poziomPrzed = poziom(this.stan.bohater.doswiadczenie);
-      this.stan.bohater.doswiadczenie += nagroda;
+      const nagroda = dodajDoswBohatera(
+        this.stan,
+        this.stan.bohater,
+        Math.round(DOSW_BOHATERA_ZA_WALKE * (1 + efekt(this.stan.bohater, 'nauka')))
+      );
       const poziomPo = poziom(this.stan.bohater.doswiadczenie);
       this.time.delayedCall(900, () =>
         this.napisUlotny(

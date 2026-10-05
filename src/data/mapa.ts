@@ -539,6 +539,13 @@ export interface Oddzial {
   tm?: boolean;
   /** Pierwszy stworek trenera — ma wyrównane statystyki startera (`startery.ts`). */
   starter?: boolean;
+  /**
+   * Słucha trenera tylko do tego poziomu (limit z odznak, `StanMapy.limitPoziomu`).
+   * Ustawiane na starcie misji stworkom, które przyszły z poprzedniej silniejsze
+   * niż limit: w bitwie walczą jak na `slucha`, a poziom i doświadczenie
+   * zostają — w następnej misji, z wyższym limitem, znów się przydadzą.
+   */
+  slucha?: number;
 }
 
 export interface Bohater {
@@ -684,9 +691,48 @@ export function poziom(doswiadczenie: number) {
   return p;
 }
 
+/** Łączne doświadczenie, od którego trener ma poziom `p` (te same progi co `poziom`). */
+export function doswDoPoziomuBohatera(p: number) {
+  let suma = 0;
+  let prog = 100;
+  for (let i = 1; i < p; i++) {
+    suma += prog;
+    prog = Math.round(prog * 1.4);
+  }
+  return suma;
+}
+
+/**
+ * Ile doświadczenia trener NAPRAWDĘ dostanie z `ile`: w misji z limitem
+ * (`StanMapy.limitBohatera`, jak w kampaniach Heroes 3) zatrzymuje się na
+ * progu limitu. Limit dotyczy tylko trenera gracza.
+ */
+export function ileDoswBohatera(s: StanMapy, b: Bohater, ile: number): number {
+  const dodane = Math.max(0, Math.round(ile));
+  const limit = b === s.bohater ? s.limitBohatera : undefined;
+  if (limit === undefined) return dodane;
+  const sufit = Math.max(b.doswiadczenie, doswDoPoziomuBohatera(limit));
+  return Math.min(dodane, sufit - b.doswiadczenie);
+}
+
+/** Dolicza trenerowi doświadczenie z limitem misji. Zwraca, ile przybyło. */
+export function dodajDoswBohatera(s: StanMapy, b: Bohater, ile: number): number {
+  const dodane = ileDoswBohatera(s, b, ile);
+  b.doswiadczenie += dodane;
+  return dodane;
+}
+
 export interface StanMapy {
   /** Identyfikator planszy z `MAPY` (src/data/mapy.ts). Brak = „Dwie Doliny". */
   mapa?: string;
+  /**
+   * Limit poziomu stworków gracza w tej misji (z odznak, jak w grach Pokémon;
+   * `Misja.limitPoziomu`). Powyżej limitu stworek nie rośnie, a nadmiar
+   * doświadczenia przechodzi na resztę drużyny. Brak = bez limitu.
+   */
+  limitPoziomu?: number;
+  /** Limit poziomu trenera w tej misji (jak w kampaniach Heroes 3). Brak = bez limitu. */
+  limitBohatera?: number;
   /** Misja kampanii, która się na tej planszy toczy. Brak = gra pojedyncza. */
   misja?: string;
   /**
@@ -1311,8 +1357,8 @@ export function wezZeSkrzyni(s: StanMapy, w: WyborSkrzyni, co: 'pokeballe' | 'do
     s.skarbiec.pokeball += w.pokeballe;
     return `+${w.pokeballe} pokeballi`;
   }
-  s.bohater.doswiadczenie += w.doswiadczenie;
-  return `+${w.doswiadczenie} doświadczenia`;
+  const ile = dodajDoswBohatera(s, s.bohater, w.doswiadczenie);
+  return ile < w.doswiadczenie ? `+${ile} doświadczenia (limit poziomu ${s.limitBohatera})` : `+${ile} doświadczenia`;
 }
 
 /**
@@ -1421,9 +1467,8 @@ function odwiedzBudowle(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
     // Tyle, ile brakuje do następnego poziomu — czyli awans od ręki, ale nie
     // za darmo na wysokim poziomie, gdzie brakować może dużo więcej.
     const p = postepPoziomu(bohater.doswiadczenie);
-    const ile = Math.max(DRZEWO_WIEDZY_MIN, p.doAwansu - p.wPoziomie);
-    bohater.doswiadczenie += ile;
-    return { opis: `${b.nazwa}\n+${ile} doświadczenia` };
+    const ile = dodajDoswBohatera(s, bohater, Math.max(DRZEWO_WIEDZY_MIN, p.doAwansu - p.wPoziomie));
+    return { opis: ile > 0 ? `${b.nazwa}\n+${ile} doświadczenia` : `${b.nazwa}\nLimit poziomu trenera w tej misji: ${s.limitBohatera}.` };
   }
 
   if (e.typ === 'odslona') {
@@ -1539,7 +1584,7 @@ export function odwiedz(s: StanMapy, o: Obiekt, kto: Wlasciciel = 'gracz'): Wyni
     const a = artefaktPoId(o.nagroda?.artefakt ?? '');
     if (a) bohater.artefakty.push(a.id);
     const dosw = o.nagroda?.doswiadczenie ?? 0;
-    if (dosw) bohater.doswiadczenie += dosw;
+    if (dosw) dodajDoswBohatera(s, bohater, dosw);
     return {
       opis:
         `Oddajesz ${z.ile} ${SUROWIEC_INFO[z.surowiec].dopelniacz}.\n` +
@@ -1895,6 +1940,22 @@ export function treningiNaTydzien(postawione: string[]) {
 
 export const kosztTreningu = (o: Pick<Oddzial, 'poziom'>) => Math.round(3 + 1.5 * o.poziom);
 
+/** O tyle poziomów za najsilniejszym w drużynie stworek trenuje za pół ceny. */
+export const ZALEGLOSC_TRENINGU = 5;
+
+/**
+ * Cena treningu w drużynie: stworek, który zostaje o `ZALEGLOSC_TRENINGU`
+ * poziomów za najsilniejszym, trenuje za pół ceny — doganianie ma być tańsze
+ * niż wyciąganie ulubieńca jeszcze wyżej (uwagi z rozgrywki: opłacało się
+ * grać w kółko dwoma stworkami).
+ */
+export function kosztTreninguW(s: StanMapy, o: Pick<Oddzial, 'poziom'>, kto: Wlasciciel = 'gracz'): number {
+  const druzyna = (kto === 'gracz' ? s.bohater : s.wrogBohater).armia;
+  const naj = Math.max(0, ...druzyna.map((x) => (x ? x.poziom : 0)));
+  const pelny = kosztTreningu(o);
+  return o.poziom + ZALEGLOSC_TRENINGU <= naj ? Math.ceil(pelny / 2) : pelny;
+}
+
 /** Ile treningów zostało w tym tygodniu. */
 export const treningiZamku = (zamek: Obiekt) =>
   zamek.treningi ?? treningiNaTydzien(zamek.postawione ?? []);
@@ -1902,9 +1963,11 @@ export const treningiZamku = (zamek: Obiekt) =>
 export function trenuj(s: StanMapy, zamek: Obiekt, o: Oddzial, kto: Wlasciciel = 'gracz'): WynikBudowy {
   const skarbiec = skarbiecOf(s, kto);
   if (o.poziom >= POZIOM_MAX) return { ok: false, opis: `${o.nazwa} ma już najwyższy poziom.` };
+  if (kto === 'gracz' && s.limitPoziomu !== undefined && o.poziom >= s.limitPoziomu)
+    return { ok: false, opis: `${o.nazwa} doszedł do limitu poziomu ${s.limitPoziomu}. Wyżej urośnie w następnej misji.` };
   const zostalo = treningiZamku(zamek);
   if (zostalo <= 0) return { ok: false, opis: 'W tym tygodniu nie ma już wolnych treningów.' };
-  const koszt = kosztTreningu(o);
+  const koszt = kosztTreninguW(s, o, kto);
   if (skarbiec.pokeball < koszt) return { ok: false, opis: `Trening kosztuje ${koszt} pokeballi.` };
   skarbiec.pokeball -= koszt;
   zamek.treningi = zostalo - 1;

@@ -126,7 +126,7 @@ interface DaneZPrzygody {
 // nie powtarzać — druga kopia reguł rozjechałaby się z symulatorem balansu.
 import { initSfx, loadSfx, sfx, startMusic, stopMusic, toggleSfx } from '../audio/sfx';
 import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
-import { RYWAL_ID, poziom, type StanMapy } from '../data/mapa';
+import { RYWAL_ID, ileDoswBohatera, poziom, type StanMapy } from '../data/mapa';
 import { DOSW_BOHATERA_ZA_WALKE, type WynikDruzyny, rozliczDruzyne } from '../data/podsumowanie';
 import { efekt } from '../data/umiejetnosci';
 import { nazwaTrzeciego } from '../data/ataki';
@@ -2656,9 +2656,16 @@ export class BattleScene extends Phaser.Scene {
   ) {
     const stan = this.registry.get('stan-mapy') as StanMapy | undefined;
     const armia = stan ? structuredClone(stan.bohater.armia) : [];
-    const wiersze = rozliczDruzyne(armia, wynik, wynik.wygrana && stan ? efekt(stan.bohater, 'leczenie') : 0);
+    const wiersze = rozliczDruzyne(
+      armia,
+      wynik,
+      wynik.wygrana && stan ? efekt(stan.bohater, 'leczenie') : 0,
+      stan?.limitPoziomu
+    );
     const zaWalke = wynik.wygrana && stan && wynik.oObiekt !== RYWAL_ID;
-    const doswBohatera = zaWalke ? Math.round(DOSW_BOHATERA_ZA_WALKE * (1 + efekt(stan.bohater, 'nauka'))) : 0;
+    const doswBohatera = zaWalke
+      ? ileDoswBohatera(stan, stan.bohater, Math.round(DOSW_BOHATERA_ZA_WALKE * (1 + efekt(stan.bohater, 'nauka'))))
+      : 0;
     const awans =
       stan && doswBohatera && poziom(stan.bohater.doswiadczenie + doswBohatera) > poziom(stan.bohater.doswiadczenie)
         ? `Trener awansuje na poziom ${poziom(stan.bohater.doswiadczenie + doswBohatera)}!`

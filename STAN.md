@@ -29,12 +29,29 @@ tylko `kto === 'gracz'`, czyli symulacje). Mapa przygody: Bór ma
 najwolniejszego stworka 3 zamiast 4, więc dzienny ruch startowy bohatera
 1500 zamiast 1562.
 
-**Uzgodnione na następne PR-y.** (1) Limit poziomu z odznak — dla stworków
-I dla bohatera, jak limity w kampaniach Heroes 3; powyżej limitu stworek
-walczy jak na limicie i nie rośnie, nadmiar EXP idzie na resztę drużyny;
-trening słabszych taniej; straże i rywal pod limit misji. (2) Artefakty
-w slotach (głowa, szyja, tułów, ręka, nogi) + plecak, po 2–3 przedmioty
-o różnej sile na slot.
+**Limit poziomu z odznak** (stworki i trener, jak w kampaniach Heroes 3).
+`Misja.limitPoziomu` / `limitBohatera` / `poziomDzikich`: misja 1 — 14/4,
+misja 2 — 18/6 (dzikie od 7), misja 3 — 22/8 (od 9), misja 4 — 26/10 (od 11).
+Start misji (`rozpocznijMisje`) kopiuje limity do `StanMapy` i daje
+`Oddzial.slucha` stworkom silniejszym niż limit — walczą jak na limicie
+(`poziomWWalce` w `defStworka`), poziom i EXP zostają na następną misję.
+`dodajDosw(o, ile, limit)` zwraca `nadmiar`; `przelejNadmiar` dzieli go po
+równo między resztę drużyny (też ławkę) — to ma zachęcać do rozwijania
+3–4 stworków. Podsumowanie walki: „poz. 18 · limit" i ławka z „+X od
+drużyny". Sala treningowa: na limicie odmawia, stworek ≥ 5 poziomów za
+najsilniejszym trenuje za pół ceny (`kosztTreninguW`). Trener:
+`dodajDoswBohatera`/`ileDoswBohatera` (bitwa, skrzynia, drzewo wiedzy,
+jasnowidz) zatrzymują EXP na progu limitu. Złapany silniejszy niż limit
+też dostaje `slucha`. Ekran kampanii pokazuje limit przy drużynie, okno
+stworka „Poziom 30 (słucha do 18)". Gra pojedyncza — bez limitów.
+Sonda: `tools/probe-limit.ts`.
+
+**Decyzja o koszcie treningu.** Rosnąca cena zostaje (w lore każdy poziom
+wymaga więcej doświadczenia), ale zaległy stworek trenuje taniej — to
+odpowiedź na „opłaca się grać dwoma".
+
+**Następny krok.** Artefakty w gniazdach lalki + plecak, po 2 przedmioty
+o różnej sile na gniazdo; zebrane duplikaty się nie sumują.
 
 ## Pokémart — sklep z przedmiotami zamiast gildii magów (2026-09-29)
 
