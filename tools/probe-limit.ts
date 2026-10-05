@@ -111,7 +111,7 @@ console.log('=== start misji ===');
   zamek.treningi = 10;
   s.skarbiec.pokeball = 1000;
   sprawdz('trening na limicie zablokowany', !trenuj(s, zamek, silny!).ok);
-  const slaby = s.bohater.armia.find((o) => o && o.poziom === 12)!;
+  const slaby = s.bohater.armia.find((o) => o && o.poziom < 30)!;
   sprawdz('zaległy o 5+ poziomów trenuje za pół ceny', kosztTreninguW(s, slaby) === Math.ceil(kosztTreningu(slaby) / 2));
   const bez = planszaPrzygody();
   sprawdz('gra pojedyncza bez limitu', bez.limitPoziomu === undefined && bez.limitBohatera === undefined);

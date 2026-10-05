@@ -2,6 +2,28 @@
 
 Ostatnia aktualizacja: 2026-09-27 (trener zamiast armii: stworek = postać z poziomem, 4 na polu bitwy, trening i Centrum Pokemon).
 
+## Rozpiętość limitów i okrągłe ceny (2026-10-05, po #46)
+
+**Uwagi użytkownika.** Skok limitu o 4 poziomy na misję za mały — gracz
+grający bez wysiłku zaczynał misję 3 z drużyną 30+ i trenerem na 11; poziom
+50 ma być osiągalny w ostatniej misji. Ceny budynków „7 czegoś, 19 czegoś"
+wyglądają dziwnie — w Heroes 3 są okrągłe (5 drewna, 10 rudy, 2/4/6/8/10).
+
+**Limity** (stworki / trener): 14/8, 24/12, 35/16, 50/20. Próg drużyny
+(`poziomDruzyny`) = limit poprzedniej misji: 14/24/35. Przeciwnicy pod
+limit: `Misja.skalaWroga` mnoży SIŁĘ (poziom p → (p+10)·k − 10) dzikich stad,
+załóg i garnizonów zamków wroga i drużyny rywala, k = siła nowego progu /
+starego (1,5 / 1,62 / 1,6 — przy 1,73 autopilot nie kończył misji 4, przy 1,6 wygrywa dnia 10), potem `poziomDzikich` (8/14/20) i `wrogPoziomy`.
+Pierwsza próba mnożyła sam poziom (×1,5/2,2/3,0 i ×1,3/1,8/2,5) — autopilot
+przegrywał misję 3 i nie kończył 4.
+Symulacja (PROB 2): m1 dnia 19, m2 bez wygranej do 60 (jak przed zmianami),
+m3 dnia 49, m4 dnia 10; do misji 4 autopilot wchodzi z drużyną 32–34.
+
+**Ceny.** `ladnaCena` w `zamki.ts`: pokeballe co 5 (od 100 co 10, od 200
+co 25), reszta z listy 1, 2, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30 — po
+mnożnikach frakcji. Bazowe odłamki ratusza II i budynku specjalnego 3 → 4,
+jagody Pokémartu II 5 → 4.
+
 ## Balans bitwy po rozgrywce misji 2–3 (2026-10-05)
 
 **Uwagi użytkownika** (całość, do kolejnych PR-ów): drużyna przechodząca
