@@ -1549,7 +1549,9 @@ export class KampaniaScene extends Phaser.Scene {
     // zdaniem przy plecaku: osobny wiersz nie mieścił się na zwoju.
     const druzyna = p.druzyna?.length
       ? `drużyna: ${p.druzyna.length} ${p.druzyna.length === 1 ? 'stworek' : p.druzyna.length < 5 ? 'stworki' : 'stworków'} ` +
-        `(do poz. ${Math.max(...p.druzyna.map((o) => o.poziom))})`
+        `(do poz. ${Math.max(...p.druzyna.map((o) => o.poziom))}` +
+        (m.limitPoziomu !== undefined ? `; limit misji: stworki ${m.limitPoziomu}, trener ${m.limitBohatera ?? '—'}` : '') +
+        ')'
       : '';
     const zabiera = [plecak.map(nazwaArtefaktu).join(', '), druzyna].filter(Boolean).join(' · ');
     if (zabiera) wiersz(plecak.length ? IKONA.sakwa : IKONA.pokeball, `${p.trener} zabiera ze sobą`, zabiera + '.');

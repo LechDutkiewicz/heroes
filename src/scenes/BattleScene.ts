@@ -126,7 +126,7 @@ interface DaneZPrzygody {
 // nie powtarzać — druga kopia reguł rozjechałaby się z symulatorem balansu.
 import { initSfx, loadSfx, sfx, startMusic, stopMusic, toggleSfx } from '../audio/sfx';
 import { migawkaStanu, sledzScene, zapisz } from '../dev/dziennik';
-import { RYWAL_ID, poziom, type StanMapy } from '../data/mapa';
+import { RYWAL_ID, ileDoswBohatera, poziom, type StanMapy } from '../data/mapa';
 import { DOSW_BOHATERA_ZA_WALKE, type WynikDruzyny, rozliczDruzyne } from '../data/podsumowanie';
 import { efekt } from '../data/umiejetnosci';
 import { nazwaTrzeciego } from '../data/ataki';
@@ -135,6 +135,8 @@ import { pokazPodsumowanieWalki } from '../visual/podsumowanieWalki';
 import {
   GUARD_REDUCTION,
   NA_POLU,
+  SILA_STRZALU,
+  premieTrenera,
   NA_POLU_DZIKIE,
   rzedyNaPolu,
   atakDostepny,
@@ -298,7 +300,15 @@ const HEAD_H = 26;
 /** Pierwszy wiersz zaczyna się pod pasem z nazwą oddziału. */
 const ROWS_Y = HEAD_Y + HEAD_H + 8;
 /** Osiem wierszy tabeli plus wstęga z umiejętnością pod nimi. */
-const CARD_H = ROWS_Y + 9 * ROW_STEP_Y + 6;
+/** Mnożnik jako zmiana w procentach: 1,25 → „+25%", 0,85 → „−15%". */
+const procent = (m: number) => {
+  const p = Math.round((m - 1) * 100);
+  return p >= 0 ? `+${p}%` : `−${-p}%`;
+};
+
+/** Wiersze tabeli karty; pod nimi jeszcze wstęga z atakami. */
+const WIERSZE_KARTY = 9;
+const CARD_H = ROWS_Y + (WIERSZE_KARTY + 1) * ROW_STEP_Y + 6;
 /** Karta wisi w pionie na środku planszy — nigdy nie wychodzi poza jej ramę. */
 const CARD_Y = BOARD_Y + (BOARD_H - CARD_H) / 2;
 const CARD_LEFT_X = BOARD_X + 10;
@@ -1052,10 +1062,10 @@ export class BattleScene extends Phaser.Scene {
       .setDepth(62);
     this.card.add([this.headBand, this.headIcon, this.headName, this.headMeta]);
 
-    // Osiem pasm jedno pod drugim; zebra nadal liczy się z miejsca w kolumnie,
+    // Pasma jedno pod drugim; zebra nadal liczy się z miejsca w kolumnie,
     // nie ze znaczenia wiersza.
     const slots: StatSlot[] = [];
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < WIERSZE_KARTY; i++) {
       slots.push({
         x: CARD_CONTENT_X,
         y: ROWS_Y + i * ROW_STEP_Y,
@@ -1065,10 +1075,10 @@ export class BattleScene extends Phaser.Scene {
       });
     }
     // Umiejętność zostaje wstęgą POD tabelą: inna geometria i brak zebry mówią,
-    // że to podpis do tabeli, a nie jej dziewiąty wiersz.
+    // że to podpis do tabeli, a nie kolejny wiersz.
     slots.push({
       x: CARD_CONTENT_X,
-      y: ROWS_Y + 8 * ROW_STEP_Y,
+      y: ROWS_Y + WIERSZE_KARTY * ROW_STEP_Y,
       w: CARD_CONTENT_W,
       h: ROW_H,
       ribbon: true,
@@ -1422,12 +1432,13 @@ export class BattleScene extends Phaser.Scene {
     // i prognozę naraz — jeden rysunek na trzy różne pojęcia. Teraz zasięg to
     // tarcza celownicza, atak to miecz, a prognoza ma własny rozbłysk.
     const blocked = unit.def.shooter && !canShoot(this.battle, unit);
+    const premie = premieTrenera(this.battle, unit);
     const reach: StatRow = unit.def.shooter
       ? blocked
         ? { label: 'Zasięg', value: 'zablokowany — pół siły', icon: MINI.reach, alert: true }
         : {
             label: 'Zasięg',
-            value: `strzela, pełna siła do ${unit.def.shootRange}`,
+            value: `strzela (×${SILA_STRZALU}) do ${unit.def.shootRange} pól, dalej pół`,
             icon: MINI.reach,
           }
       : { label: 'Zasięg', value: 'walka wręcz', icon: MINI.reach };
@@ -1457,10 +1468,18 @@ export class BattleScene extends Phaser.Scene {
       {
         label: 'Atak',
         value:
-          unit.count > 1
+          (unit.count > 1
             ? `${unit.count} × ${unit.def.atk} = ${stackAtk(unit.def, unit)}`
-            : `${unit.def.atk}${unit.eliksir ? ` (eliksir ×${SILA_ELIKSIRU})` : ''}`,
+            : `${unit.def.atk}${unit.eliksir ? ` (eliksir ×${SILA_ELIKSIRU})` : ''}`) +
+          (premie.atak !== 1 ? ` · trener ${procent(premie.atak)}` : ''),
         icon: MINI.attack,
+      },
+      // Obrona stworka to wyłącznie obrona trenera (i Pancerz) — stworek sam
+      // jej nie ma. Bez tego wiersza nie było widać, po co ją podnosić.
+      {
+        label: 'Obrona',
+        value: premie.obrona !== 1 ? `trener: ciosy ${procent(premie.obrona)}` : unit.side === 'player' ? 'bez premii' : 'bez trenera',
+        icon: MINI.retaliate,
       },
       {
         label: 'Ruch',
@@ -1568,7 +1587,7 @@ export class BattleScene extends Phaser.Scene {
   private showForecast(attacker: Unit, target: Unit) {
     const nrAtaku = attacker.side === 'player' && atakDostepny(attacker, this.wybranyAtak) ? this.wybranyAtak : 0;
     const atak = atakiJednostki(attacker)[nrAtaku];
-    const { value: jeden, base, moc, typeMult, penalty, pinned, tooFar, guarded } =
+    const { value: jeden, base, moc, typeMult, penalty, pinned, tooFar, guarded, bonus } =
       damageOf(this.battle, attacker, target, nrAtaku);
     // Podwójny cios to dwa trafienia tej samej siły — prognoza mówi o obu.
     const podwojny = atak?.efekt === 'podwojny';
@@ -1586,8 +1605,14 @@ export class BattleScene extends Phaser.Scene {
     if (podwojny) parts.push('× 2 (dwa ciosy)');
     if (typeMult !== 1) parts.push(`× ${typeMult} (${typeMult > 1 ? 'przewaga typu' : 'słaby typ'})`);
     if (pinned) parts.push('× 0.5 (zablokowany strzelec bije wręcz)');
-    else if (tooFar) parts.push('× 0.5 (za daleko — złamana strzała)');
+    else if (attacker.def.shooter) parts.push(`× ${SILA_STRZALU} (strzał)`);
+    if (tooFar) parts.push('× 0.5 (za daleko)');
     if (guarded) parts.push(`× ${GUARD_REDUCTION} (cel w obronie)`);
+    // Trener działa w obie strony: jego atak podbija ciosy naszych, obrona
+    // osłabia ciosy w nas. Bez tej linii premia z panelu bohatera była
+    // niewidoczna w rachunku.
+    if (Math.abs(bonus - 1) >= 0.005)
+      parts.push(`× ${Math.round(bonus * 100) / 100} (${attacker.side === 'player' ? 'atak' : 'obrona'} trenera)`);
     void penalty;
 
     // Stworek nie „traci ludzi" — albo wytrzyma, albo zemdleje. Przy
@@ -2631,9 +2656,16 @@ export class BattleScene extends Phaser.Scene {
   ) {
     const stan = this.registry.get('stan-mapy') as StanMapy | undefined;
     const armia = stan ? structuredClone(stan.bohater.armia) : [];
-    const wiersze = rozliczDruzyne(armia, wynik, wynik.wygrana && stan ? efekt(stan.bohater, 'leczenie') : 0);
+    const wiersze = rozliczDruzyne(
+      armia,
+      wynik,
+      wynik.wygrana && stan ? efekt(stan.bohater, 'leczenie') : 0,
+      stan?.limitPoziomu
+    );
     const zaWalke = wynik.wygrana && stan && wynik.oObiekt !== RYWAL_ID;
-    const doswBohatera = zaWalke ? Math.round(DOSW_BOHATERA_ZA_WALKE * (1 + efekt(stan.bohater, 'nauka'))) : 0;
+    const doswBohatera = zaWalke
+      ? ileDoswBohatera(stan, stan.bohater, Math.round(DOSW_BOHATERA_ZA_WALKE * (1 + efekt(stan.bohater, 'nauka'))))
+      : 0;
     const awans =
       stan && doswBohatera && poziom(stan.bohater.doswiadczenie + doswBohatera) > poziom(stan.bohater.doswiadczenie)
         ? `Trener awansuje na poziom ${poziom(stan.bohater.doswiadczenie + doswBohatera)}!`

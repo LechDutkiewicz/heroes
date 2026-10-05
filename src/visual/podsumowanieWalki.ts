@@ -108,14 +108,16 @@ export function pokazPodsumowanieWalki(
           ? `→ ${r.ewolucja.na}!`
           : r.poziom > r.poziomPrzed
             ? `poz. ${r.poziomPrzed} → ${r.poziom}!`
-            : `poz. ${r.poziom}`;
+            : r.naLimicie
+              ? `poz. ${r.poziom} · limit`
+              : `poz. ${r.poziom}`;
     const wyroznij = !padl && (r.ewolucja || r.poziom > r.poziomPrzed);
     const t1 = scene.add
       .text(kx + KW / 2, ky + 102, stan, stylWalki(12, padl ? '#8b93a0' : wyroznij ? '#c92a09' : '#5b6270', 900))
       .setOrigin(0.5);
     if (t1.width > KW - 6) t1.setScale((KW - 6) / t1.width);
     const t2 = scene.add
-      .text(kx + KW / 2, ky + 117, r.dosw ? `+${r.dosw} dośw.` : '', stylWalki(11, '#34a85a', 900))
+      .text(kx + KW / 2, ky + 117, r.dosw ? (r.zLawki ? `+${r.dosw} od drużyny` : `+${r.dosw} dośw.`) : '', stylWalki(11, '#34a85a', 900))
       .setOrigin(0.5);
     warstwa.add([g, obraz, nazwa, t1, t2]);
   });

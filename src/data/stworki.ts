@@ -70,12 +70,20 @@ export function postepStworka(o: Pick<Oddzial, 'poziom' | 'dosw'>) {
 }
 
 /**
+ * Poziom, na którym stworek walczy: jego własny, chyba że przyszedł z poprzedniej
+ * misji silniejszy niż limit odznak — wtedy słucha trenera tylko do limitu
+ * (jak w grach Pokémon stworek powyżej poziomu odznak).
+ */
+export const poziomWWalce = (o: Pick<Oddzial, 'poziom'> & Partial<Pick<Oddzial, 'slucha'>>) =>
+  o.slucha !== undefined ? Math.min(o.poziom, o.slucha) : o.poziom;
+
+/**
  * Pełna definicja stworka do bitwy: gatunek z frakcji, przeskalowany
  * poziomem i etapem ewolucji. Liczebność zawsze 1 — stado rozwija
  * `jednostkiBitwy`.
  */
 export function defStworka(
-  o: Pick<Oddzial, 'frakcja' | 'tier' | 'sprite' | 'nazwa' | 'poziom'> & Partial<Pick<Oddzial, 'starter' | 'tm'>>
+  o: Pick<Oddzial, 'frakcja' | 'tier' | 'sprite' | 'nazwa' | 'poziom'> & Partial<Pick<Oddzial, 'starter' | 'tm' | 'slucha'>>
 ): UnitDef | undefined {
   const gatunek = factionById(o.frakcja)?.units[o.tier];
   if (!gatunek) return undefined;
@@ -83,7 +91,8 @@ export function defStworka(
   const wzor = wzorStartera(o);
   const baza = wzor ? { ...gatunek, hp: wzor.hp, atk: wzor.atk } : gatunek;
   const etap = Math.max(0, etapStworka(o.sprite));
-  const s = skalaPoziomu(o.poziom) * SKALA_ETAPU[etap];
+  const poziom = poziomWWalce(o);
+  const s = skalaPoziomu(poziom) * SKALA_ETAPU[etap];
   return {
     ...baza,
     sprite: o.sprite,
@@ -91,7 +100,7 @@ export function defStworka(
     count: 1,
     hp: Math.max(1, Math.round(baza.hp * s)),
     atk: Math.max(1, Math.round(baza.atk * s)),
-    poziom: o.poziom,
+    poziom,
     etap,
     tm: o.tm || undefined,
   };
@@ -236,30 +245,97 @@ export function ewoluujOdPoziomu(o: Oddzial): { z: string; na: string } | undefi
  * progu — ewoluuje. Zwraca, o ile poziomów urósł i czy ewoluował: scena
  * mówi o awansie i ewolucji, a nie o liczbie punktów.
  */
-export function dodajDosw(o: Oddzial, ile: number): { poziomy: number; ewolucja?: { z: string; na: string } } {
+export function dodajDosw(
+  o: Oddzial,
+  ile: number,
+  limit?: number
+): { poziomy: number; ewolucja?: { z: string; na: string }; nadmiar: number } {
   const przed = o.poziom;
-  o.dosw = doswStworka(o) + Math.max(0, Math.round(ile));
+  let dodane = Math.max(0, Math.round(ile));
+  let nadmiar = 0;
+  // Limit odznak: stworek na limicie (albo powyżej, z poprzedniej misji)
+  // nie rośnie. Co by mu przybyło ponad limit, oddajemy wołającemu — reszta
+  // drużyny dostaje to jako nadmiar (`przelejNadmiar`).
+  if (limit !== undefined) {
+    const sufit = Math.max(doswStworka(o), doswDoPoziomu(limit));
+    nadmiar = Math.max(0, doswStworka(o) + dodane - sufit);
+    dodane -= nadmiar;
+  }
+  o.dosw = doswStworka(o) + dodane;
   o.poziom = Math.max(o.poziom, poziomZDosw(o.dosw));
-  return { poziomy: o.poziom - przed, ewolucja: ewoluujOdPoziomu(o) };
+  return { poziomy: o.poziom - przed, ewolucja: ewoluujOdPoziomu(o), nadmiar };
+}
+
+/** Awans po bitwie do pokazania na mapie. */
+export type Awans = { nazwa: string; poziom: number; o: number; ewolucja?: { z: string; na: string } };
+
+/**
+ * Nadmiar doświadczenia stworków stojących na limicie dzieli się po równo
+ * między tych z drużyny, którzy limitu nie mają i nie leżą — także tych z ławki.
+ * To jest powód, żeby rozwijać trzy, cztery stworki, a nie dwa ulubione:
+ * dwa ulubione i tak utkną na limicie, a ich praca przejdzie na resztę.
+ * Zwraca, ile dostał który stworek (do podsumowania walki).
+ */
+export function przelejNadmiar(
+  druzyna: readonly (Oddzial | null | undefined)[],
+  nadmiar: number,
+  limit: number
+): { o: Oddzial; ile: number; poziomy: number; ewolucja?: { z: string; na: string } }[] {
+  const wynik: { o: Oddzial; ile: number; poziomy: number; ewolucja?: { z: string; na: string } }[] = [];
+  let zostalo = Math.round(nadmiar);
+  for (let runda = 0; runda < 3 && zostalo > 0; runda++) {
+    const biorcy = druzyna.filter((o): o is Oddzial => !!o && o.ile > 0 && !o.omdlaly && o.poziom < limit);
+    if (!biorcy.length) break;
+    const dzial = Math.floor(zostalo / biorcy.length);
+    if (dzial <= 0) break;
+    zostalo -= dzial * biorcy.length;
+    for (const o of biorcy) {
+      const w = dodajDosw(o, dzial, limit);
+      zostalo += w.nadmiar;
+      const byl = wynik.find((x) => x.o === o);
+      if (byl) {
+        byl.ile += dzial - w.nadmiar;
+        byl.poziomy += w.poziomy;
+        byl.ewolucja ??= w.ewolucja;
+      } else wynik.push({ o, ile: dzial - w.nadmiar, poziomy: w.poziomy, ewolucja: w.ewolucja });
+    }
+  }
+  return wynik;
 }
 
 /**
  * Doświadczenie po wygranej bitwie: każdy stworek, który walczył i nie
  * zemdlał, dostaje pełną pulę za wszystkich pokonanych (jak Exp. Share
  * w nowszych grach — dziecko nie musi pilnować, kto dobił przeciwnika).
- * Zwraca awanse do pokazania.
+ * Z limitem odznak nadmiar idzie na resztę `druzyny`. Zwraca awanse do pokazania.
  */
 export function rozdajDosw(
   armia: readonly (Oddzial | null)[],
-  pokonani: readonly { poziom: number; tier: number }[]
-): { nazwa: string; poziom: number; o: number; ewolucja?: { z: string; na: string } }[] {
-  const awanse: { nazwa: string; poziom: number; o: number; ewolucja?: { z: string; na: string } }[] = [];
+  pokonani: readonly { poziom: number; tier: number }[],
+  limit?: number,
+  druzyna: readonly (Oddzial | null | undefined)[] = armia
+): Awans[] {
+  const awanse: Awans[] = [];
+  const dodaj = (o: Oddzial, poziomy: number, ewolucja?: { z: string; na: string }) => {
+    if (poziomy <= 0 && !ewolucja) return;
+    const byl = awanse.find((a) => a.nazwa === o.nazwa || a.nazwa === ewolucja?.z);
+    if (byl) {
+      byl.o += poziomy;
+      byl.poziom = o.poziom;
+      byl.nazwa = o.nazwa;
+      byl.ewolucja ??= ewolucja;
+    } else awanse.push({ nazwa: o.nazwa, poziom: o.poziom, o: poziomy, ewolucja });
+  };
+  let nadmiar = 0;
   for (const s of armia) {
     if (!s || s.omdlaly || s.ile <= 0) continue;
     const ile = pokonani.reduce((a, p) => a + doswZaPokonanego(p, s.poziom), 0);
-    const w = dodajDosw(s, ile);
-    if (w.poziomy > 0 || w.ewolucja) awanse.push({ nazwa: s.nazwa, poziom: s.poziom, o: w.poziomy, ewolucja: w.ewolucja });
+    const w = dodajDosw(s, ile, limit);
+    nadmiar += w.nadmiar;
+    dodaj(s, w.poziomy, w.ewolucja);
   }
+  if (limit !== undefined && nadmiar > 0)
+    for (const p of przelejNadmiar(druzyna, nadmiar, limit)) dodaj(p.o, p.poziomy, p.ewolucja);
   return awanse;
 }
 
@@ -347,7 +423,8 @@ export function rozliczDruzyne(
   armia: (Oddzial | null)[],
   ocalali: readonly number[],
   wygrana: boolean,
-  pokonani: readonly { poziom: number; tier: number }[]
+  pokonani: readonly { poziom: number; tier: number }[],
+  limit?: number
 ) {
   const walczyli = new Set(jednostkiBitwy(armia).map((j) => j.skad));
   armia.forEach((o, i) => {
@@ -357,7 +434,9 @@ export function rozliczDruzyne(
   if (!wygrana) return [];
   return rozdajDosw(
     armia.map((o, i) => (walczyli.has(i) ? o : null)),
-    pokonani
+    pokonani,
+    limit,
+    armia
   );
 }
 

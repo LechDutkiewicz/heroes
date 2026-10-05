@@ -163,7 +163,11 @@ function znajdz(s: StanMapy) {
     if (bez.zamek.wlasciciel === 'wrog') prog = p;
   }
   sprawdz('jest drużyna, która bierze zamek z samą strażą', prog > 0, `3 × poz. ${prog}`);
-  const z = podBrama(smoki(3, prog), [bor(5, 50), bor(5, 50), bor(4, 50), bor(4, 50)]);
+  // Garnizon wyraźnie silniejszy od napastnika: ten sam gatunek, poziom 50.
+  // Dawniej stały tu stworki Boru, ale od ruchu 2–6 (wolniejsi napastnicy pod
+  // murami) próg napastnika urósł z poz. 32 do 46, a kruchy Bór na 50 przeciw
+  // Grocie na 46 to już rzut monetą — sonda sprawdza AI, nie balans frakcji.
+  const z = podBrama(smoki(3, prog), smoki(4, 50));
   turaAI(z.s, 'wrog');
   sprawdz('z garnizonem zamek zostaje nasz', z.zamek.wlasciciel === 'gracz', String(z.zamek.wlasciciel));
   sprawdz('garnizon nietknięty', zajete(z.zamek.garnizon ?? pustaArmia()) === 4);

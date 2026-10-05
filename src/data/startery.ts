@@ -28,9 +28,9 @@ export interface Starter {
 }
 
 export const STARTERY: readonly Starter[] = [
-  { frakcja: 'bor', tier: 0, hp: 44, atk: 17, opis: 'Szybki i gorący. Najmocniej bije stworki trawy.' },
+  { frakcja: 'bor', tier: 0, hp: 46, atk: 17, opis: 'Szybki i gorący. Najmocniej bije stworki trawy.' },
   { frakcja: 'grota', tier: 0, hp: 54, atk: 13, opis: 'Spokojny i wytrzymały. Gasi stworki ognia.' },
-  { frakcja: 'zbocze', tier: 0, hp: 46, atk: 13, opis: 'Twardy jak skała. Fale mu niestraszne.' },
+  { frakcja: 'zbocze', tier: 0, hp: 46, atk: 12, opis: 'Twardy jak skała. Fale mu niestraszne.' },
 ];
 
 /** Poziom startera, gdy misja nie mówi inaczej — jak w grach. */

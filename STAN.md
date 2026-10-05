@@ -2,6 +2,76 @@
 
 Ostatnia aktualizacja: 2026-09-27 (trener zamiast armii: stworek = postać z poziomem, 4 na polu bitwy, trening i Centrum Pokemon).
 
+## Balans bitwy po rozgrywce misji 2–3 (2026-10-05)
+
+**Uwagi użytkownika** (całość, do kolejnych PR-ów): drużyna przechodząca
+z misji jest za mocna (poz. 30 na dzikie stada poz. 2), artefakty się
+sumują (5 opasek = 5× premia), nie widać, co atak i obrona trenera robią
+stworkowi, strzelcy za mocni, za dużo ruchu na planszy 8×5, rosnący koszt
+treningu pod znakiem zapytania, opłaca się rozwijać tylko dwa stworki.
+
+**Ten PR — bitwa.** Ruch 2–6 zamiast 4–10 (`TIERS` w `factions.ts`:
+drobnica 3, strzelcy i obrońca 2, latacz 5, czempion 4; Bór +1). Strzał
+×0,8 (`SILA_STRZALU`), zasięg pełnej siły 3/4 pola zamiast 5/6, dalej pół
+— z drugiego końca planszy strzelec zadaje 0,4. Karta stworka: atak
+z premią trenera w procentach i nowy wiersz „Obrona" (`premieTrenera`
+w `battle.ts`, jedyne źródło liczby i dla obrażeń, i dla karty); prognoza
+ciosu dopisuje „× 0,8 (strzał)" i „× 1,25 (atak trenera)".
+
+**Skutki uboczne.** Startery przestrojone (`probe-startery`: Pyroko HP 46,
+Bazalt atak 12). `probe-garnizon`: garnizon w teście to teraz Grota poz. 50
+(dawny Bór poz. 50 przeciw Grocie 46 był rzutem monetą — sonda sprawdza AI).
+Symulacja misji 1 nie wygrywała: autopilot gracza po przegranych chodził
+z całą drużyną zemdloną do końca misji, bo od Centrum za jagody (#35)
+nikt go nie budził. Teraz wraca do miasta, gdy leży połowa drużyny,
+i ratuje za jagody (`wartoscTreningu`/`trenujDruzyne` w `wrog-ai.ts`,
+tylko `kto === 'gracz'`, czyli symulacje). Mapa przygody: Bór ma
+najwolniejszego stworka 3 zamiast 4, więc dzienny ruch startowy bohatera
+1500 zamiast 1562.
+
+**Limit poziomu z odznak** (stworki i trener, jak w kampaniach Heroes 3).
+`Misja.limitPoziomu` / `limitBohatera` / `poziomDzikich`: misja 1 — 14/4,
+misja 2 — 18/6 (dzikie od 7), misja 3 — 22/8 (od 9), misja 4 — 26/10 (od 11).
+Start misji (`rozpocznijMisje`) kopiuje limity do `StanMapy` i daje
+`Oddzial.slucha` stworkom silniejszym niż limit — walczą jak na limicie
+(`poziomWWalce` w `defStworka`), poziom i EXP zostają na następną misję.
+`dodajDosw(o, ile, limit)` zwraca `nadmiar`; `przelejNadmiar` dzieli go po
+równo między resztę drużyny (też ławkę) — to ma zachęcać do rozwijania
+3–4 stworków. Podsumowanie walki: „poz. 18 · limit" i ławka z „+X od
+drużyny". Sala treningowa: na limicie odmawia, stworek ≥ 5 poziomów za
+najsilniejszym trenuje za pół ceny (`kosztTreninguW`). Trener:
+`dodajDoswBohatera`/`ileDoswBohatera` (bitwa, skrzynia, drzewo wiedzy,
+jasnowidz) zatrzymują EXP na progu limitu. Złapany silniejszy niż limit
+też dostaje `slucha`. Ekran kampanii pokazuje limit przy drużynie, okno
+stworka „Poziom 30 (słucha do 18)". Gra pojedyncza — bez limitów.
+Sonda: `tools/probe-limit.ts`.
+
+**Decyzja o koszcie treningu.** Rosnąca cena zostaje (w lore każdy poziom
+wymaga więcej doświadczenia), ale zaległy stworek trenuje taniej — to
+odpowiedź na „opłaca się grać dwoma".
+
+**Artefakty w gniazdach.** `Artefakt.gniazdo` (9 gniazd lalki: głowa,
+plecy, szyja, tułów, pas, prawa/lewa ręka, stopy, pojazd — `GNIAZDA`
+w `mapa.ts`), w każdym działa jeden. `zalozone(b)`: wybór gracza
+(`Bohater.zalozone`), a gdzie go nie ma — najsilniejszy zebrany, więc lepszy
+zakłada się sam i stare zapisy nie potrzebują migracji. `statystyki` liczą
+tylko noszone (5 opasek = 1 opaska). 10 nowych artefaktów — po dwa na gniazdo
+(czapka, plecak, amulet, muszelka, kurtka, pas, rękawica, bransoleta, buty
+biegacza, hulajnoga); ikony z OpenAI (`PROMPTY-BOHATER.md`,
+`bohater_ikony.py`), $0,42. Ekran bohatera: gniazdo pokazuje noszony albo
+cień najsłabszego możliwego, pod postacią „PLECAK" (nienoszone, ×N
+powtórek) — klik zakłada, zdjęty wraca do plecaka; „Noszone: +X zapału…".
+Okno „Nowy artefakt" mówi, czy trener go założył, czy trafił do plecaka.
+Wybór przechodzi do następnej misji (`BohaterPrzenoszony.zalozone`).
+Sonda: `tools/probe-artefakty.ts`; `zrzut-bohater.mjs --stan plecak`.
+Skutek w symulacji: autopilot w misji 4 nie wygrywał do dnia 84 (wcześniej
+sumował dziesiątki duplikatów, a nowe artefakty zmieniły losowanie plansz,
+więc przychodził z drużyną 13–15 zamiast 17–18). `wrogPoziomy` 1 i 0 nic nie
+dały; `poziomDruzyny` misji 4 z 13 na 16 → wygrana dnia 13 (18 → dnia 10).
+Całość: m1 dnia 19, m2 bez wygranej do 60 (jak przed zmianami), m3 dnia 18.
+`probe-bohater.mjs` pada na „klik w bohatera otwiera jego ekran — zamek"
+także na kodzie sprzed zmian (nie ruszałem).
+
 ## Pokémart — sklep z przedmiotami zamiast gildii magów (2026-09-29)
 
 **Co jest.** Plecak trenera przestał się napełniać sam przed każdą bitwą —

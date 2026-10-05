@@ -10,7 +10,7 @@
  */
 import { SLOTY_ARMII } from './armia';
 import type { Oddzial } from './mapa';
-import { dodajDosw, doswZaPokonanego } from './stworki';
+import { dodajDosw, doswZaPokonanego, przelejNadmiar } from './stworki';
 
 /** To, co bitwa oddaje o drużynie gracza (część `wynik-bitwy`). */
 export interface WynikDruzyny {
@@ -35,6 +35,10 @@ export interface WierszDruzyny {
   zemdlal: boolean;
   /** Zemdlał, ale Uzdrowiciel postawił go na nogi. */
   uzdrowiony?: boolean;
+  /** Stoi na limicie poziomu misji — jego doświadczenie poszło na resztę drużyny. */
+  naLimicie?: boolean;
+  /** Nie walczył (ławka), dostał tylko nadmiar od stworków z limitem. */
+  zLawki?: boolean;
 }
 
 /** Doświadczenie bohatera za wygraną walkę (bez premii z umiejętności). */
@@ -51,7 +55,8 @@ export const DOSW_BOHATERA_ZA_WALKE = 80;
 export function rozliczDruzyne(
   armia: (Oddzial | null | undefined)[],
   wynik: WynikDruzyny,
-  leczenie = 0
+  leczenie = 0,
+  limit?: number
 ): WierszDruzyny[] {
   const stoi = new Map<number, boolean>();
   for (const od of wynik.armia ?? []) {
@@ -74,14 +79,40 @@ export function rozliczDruzyne(
     if (!naNogach) o.omdlaly = true;
   }
   if (!wynik.wygrana) return wiersze;
+  let nadmiar = 0;
   for (const w of wiersze) {
     const o = armia[w.slot]!;
     if (w.zemdlal || o.omdlaly || o.ile <= 0) continue;
     const ile = (wynik.pokonani ?? []).reduce((a, p) => a + doswZaPokonanego(p, o.poziom), 0);
-    const r = dodajDosw(o, ile);
-    w.dosw = Math.max(0, Math.round(ile));
+    const r = dodajDosw(o, ile, limit);
+    nadmiar += r.nadmiar;
+    w.dosw = Math.max(0, Math.round(ile) - r.nadmiar);
     w.poziom = o.poziom;
     w.ewolucja = r.ewolucja;
+    if (limit !== undefined && o.poziom >= limit) w.naLimicie = true;
+  }
+  if (limit !== undefined && nadmiar > 0) {
+    for (const p of przelejNadmiar(armia, nadmiar, limit)) {
+      const w = wiersze.find((x) => armia[x.slot] === p.o);
+      if (w) {
+        w.dosw += p.ile;
+        w.poziom = p.o.poziom;
+        w.ewolucja ??= p.ewolucja;
+        continue;
+      }
+      const slot = armia.indexOf(p.o);
+      wiersze.push({
+        slot,
+        nazwa: p.ewolucja?.z ?? p.o.nazwa,
+        sprite: p.o.sprite,
+        poziomPrzed: p.o.poziom - p.poziomy,
+        poziom: p.o.poziom,
+        dosw: p.ile,
+        ewolucja: p.ewolucja,
+        zemdlal: false,
+        zLawki: true,
+      });
+    }
   }
   // Uzdrowiciel: zaokrąglenie w górę — przy jednym zemdlonym nawet pierwszy
   // stopień umiejętności coś daje. Wstają bez doświadczenia za tę walkę.

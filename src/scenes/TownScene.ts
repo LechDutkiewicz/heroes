@@ -10,12 +10,14 @@ import {
   zbuduj,
   maGatunek,
   kosztTreningu,
+  kosztTreninguW,
   treningiZamku,
   trenuj,
   TRENINGI_ZA_REZERWAT,
   TRENINGI_ZA_ZLOBEK,
   treningiNaTydzien,
   type Obiekt,
+  type Oddzial,
   type StanMapy,
   type Surowiec,
 } from '../data/mapa';
@@ -904,6 +906,16 @@ export class TownScene extends Phaser.Scene {
    * poziom za pokeballe. Tygodniowa pula treningów to dawny tygodniowy
    * przyrost z Heroes 3 — patrz `trenuj` w `mapa.ts`.
    */
+  /** Linia karty Sali: co da trening zaznaczonego stworka i za ile (albo czemu nic). */
+  private opisTreningu(o: Oddzial): string {
+    const limit = this.stan.limitPoziomu;
+    if (limit !== undefined && o.poziom >= limit)
+      return `${o.nazwa}: ${napisPoziomu(o.poziom)} — limit tej misji to ${limit}.`;
+    const koszt = kosztTreninguW(this.stan, o);
+    const taniej = koszt < kosztTreningu(o) ? ' (pół ceny — dogania drużynę)' : '';
+    return `${o.nazwa}: ${napisPoziomu(o.poziom)} → ${o.poziom + 1} za ${koszt} pokeballi${taniej}.`;
+  }
+
   private trenujWybranego() {
     const o = this.panel.wybranyStworek;
     const zostalo = treningiZamku(this.zamek);
@@ -917,7 +929,7 @@ export class TownScene extends Phaser.Scene {
     const w = trenuj(this.stan, this.zamek, o);
     this.komunikat.setText(
       w.ok
-        ? `${w.opis} Zostało treningów: ${treningiZamku(this.zamek)}. Następny: ${kosztTreningu(o)} pokeballi.`
+        ? `${w.opis} Zostało treningów: ${treningiZamku(this.zamek)}. Następny: ${kosztTreninguW(this.stan, o)} pokeballi.`
         : w.opis
     );
     if (w.ok) this.odswiez();
@@ -1238,7 +1250,7 @@ export class TownScene extends Phaser.Scene {
         const o = this.panel.wybranyStworek;
         this.kartaOpis.setText(
           `${b.opis}\n\nZostało treningów w tym tygodniu: ${treningiZamku(this.zamek)}.` +
-            (o ? `\n${o.nazwa}: ${napisPoziomu(o.poziom)} → ${o.poziom + 1} za ${kosztTreningu(o)} pokeballi.` : '\nNajpierw zaznacz stworka.')
+            (o ? `\n${this.opisTreningu(o)}` : '\nNajpierw zaznacz stworka.')
         );
         this.kartaPrzycisk.setLabel('Trenuj');
         this.kartaPrzycisk.ustaw(nasz && !!o && treningiZamku(this.zamek) > 0);

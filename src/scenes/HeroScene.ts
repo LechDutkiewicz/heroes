@@ -33,8 +33,13 @@ import Phaser from 'phaser';
 import { spriteDoPortretow, wczytajPortrety } from '../visual/portrety';
 import {
   ARTEFAKTY,
-  ARTEFAKTY_LOSOWE,
   artefaktPoId,
+  NAZWA_GNIAZDA,
+  silaArtefaktu,
+  wPlecaku,
+  zaloz,
+  zalozone,
+  type Gniazdo,
   bonusPoziomu,
   data,
   poziom,
@@ -128,22 +133,25 @@ const SZARY = '#5b6270';
 const ZIELONY = '#2f9e55';
 
 /**
- * Gniazda lalki: część ciała, artefakt, który tam siedzi, i punkt na
- * postaci (ułamki szerokości i wysokości rysunku). Punkty zmierzone na
- * obu postaciach (Janek i Ela stoją w tej samej pozie; Ela ma pas wyżej). Szyja jest na
- * amulet — cel misji (Księżycowy Kamień), gdy bohater go niesie.
+ * Gniazda lalki: gniazdo z `GNIAZDA` i punkt na postaci (ułamki szerokości
+ * i wysokości rysunku). Punkty zmierzone na obu postaciach (Janek i Ela stoją
+ * w tej samej pozie; Ela ma pas wyżej). W każdym gnieździe działa jeden
+ * artefakt (`zalozone`), reszta czeka w plecaku pod postacią.
  */
-const GNIAZDA_LALKI: Array<{ czesc: string; id: string | null; fx: number; fy: number; ela?: { fx: number; fy: number } }> = [
-  { czesc: 'głowa', id: 'opaska', fx: 0.14, fy: 0.07 },
-  { czesc: 'plecy', id: 'skrzydla', fx: 0.9, fy: 0.13 },
-  { czesc: 'szyja', id: null, fx: 0.5, fy: 0.385 },
-  { czesc: 'tułów', id: 'kamizelka', fx: 0.22, fy: 0.47 },
-  { czesc: 'pas', id: 'mistrz', fx: 0.5, fy: 0.585, ela: { fx: 0.5, fy: 0.515 } },
-  { czesc: 'prawa ręka', id: 'pazur', fx: 0.04, fy: 0.665 },
-  { czesc: 'lewa ręka', id: 'tarcza', fx: 0.96, fy: 0.665 },
-  { czesc: 'stopy', id: 'buty', fx: 0.24, fy: 0.925 },
-  { czesc: 'pojazd', id: 'rower', fx: 0.86, fy: 0.925 },
+const GNIAZDA_LALKI: Array<{ gniazdo: Gniazdo; fx: number; fy: number; ela?: { fx: number; fy: number } }> = [
+  { gniazdo: 'glowa', fx: 0.14, fy: 0.07 },
+  { gniazdo: 'plecy', fx: 0.9, fy: 0.13 },
+  { gniazdo: 'szyja', fx: 0.5, fy: 0.385 },
+  { gniazdo: 'tulow', fx: 0.22, fy: 0.47 },
+  { gniazdo: 'pas', fx: 0.5, fy: 0.585, ela: { fx: 0.5, fy: 0.515 } },
+  { gniazdo: 'prawa', fx: 0.04, fy: 0.665 },
+  { gniazdo: 'lewa', fx: 0.96, fy: 0.665 },
+  { gniazdo: 'stopy', fx: 0.24, fy: 0.925 },
+  { gniazdo: 'pojazd', fx: 0.86, fy: 0.925 },
 ];
+
+/** Kafel artefaktu w plecaku pod postacią. */
+const PLECAK_BOK = 36;
 
 /** Gniazdo umiejętności drugorzędnej. */
 const UM_BOK = 52;
@@ -475,21 +483,22 @@ export class HeroScene extends Phaser.Scene {
     const px = POSTAC_CX - pw / 2;
     this.strefaOpisu({ x: px + pw * 0.3, y: POSTAC_Y + POSTAC_H * 0.12, w: pw * 0.4, h: POSTAC_H * 0.16 }, () => this.opisBohatera());
 
-    // Gniazda na postaci.
-    const misja = ARTEFAKTY.find((a) => a.klasa === 'misja' && b.artefakty.includes(a.id));
+    // Gniazda na postaci: noszony artefakt albo cień najsłabszego, jaki
+    // można tam włożyć — widać, czego jeszcze szukać.
+    const noszone = zalozone(b);
     for (const gn of GNIAZDA_LALKI) {
       const { fx, fy } = (this.kto === 'ela' && gn.ela) || gn;
       const cx = Phaser.Math.Clamp(px + pw * fx, L.x + ART_BOK / 2 + 8, L.x + L.w - ART_BOK / 2 - 8);
       const cy = POSTAC_Y + POSTAC_H * fy;
-      const a = gn.id ? artefaktPoId(gn.id) : misja;
-      this.rysujArtefakt(cx - ART_BOK / 2, cy - ART_BOK / 2, ART_BOK, a ?? null, !!a && b.artefakty.includes(a.id), gn.czesc);
+      const a =
+        noszone[gn.gniazdo] ??
+        ARTEFAKTY.filter((x) => x.gniazdo === gn.gniazdo && x.klasa !== 'misja').sort((x, y) => silaArtefaktu(x) - silaArtefaktu(y))[0];
+      this.rysujArtefakt(cx - ART_BOK / 2, cy - ART_BOK / 2, ART_BOK, a ?? null, !!noszone[gn.gniazdo], NAZWA_GNIAZDA[gn.gniazdo]);
     }
 
-    // Pod stopami: ile zebrano i co to razem daje.
-    const zebrane = b.artefakty.filter((id) => ARTEFAKTY_LOSOWE.some((a) => a.id === id));
+    // Pod stopami: plecak (zebrane, nienoszone) i co dają noszone.
     const suma = { atak: 0, obrona: 0, ruch: 0 };
-    for (const id of b.artefakty) {
-      const a = artefaktPoId(id);
+    for (const a of Object.values(noszone)) {
       if (!a) continue;
       suma.atak += a.atak ?? 0;
       suma.obrona += a.obrona ?? 0;
@@ -500,18 +509,98 @@ export class HeroScene extends Phaser.Scene {
       suma.obrona ? `+${suma.obrona} opieki` : '',
       suma.ruch ? `+${suma.ruch} ruchu` : '',
     ].filter(Boolean);
-    const dy = L.y + L.h - (co.length ? 44 : 26);
-    const n = this.add.text(0, 0, `ARTEFAKTY ${zebrane.length} Z ${ARTEFAKTY_LOSOWE.length}`, stylWalki(13)).setDepth(Z.hud + 4);
-    const nw = n.width + 26;
-    const pg = this.add.graphics().setDepth(Z.hud + 3);
-    pigulka(pg, L.x + L.w / 2 - nw / 2, dy - 13, nw, 26, 'bialy');
-    n.setOrigin(0.5).setPosition(L.x + L.w / 2, dy - 1);
+    this.rysujPlecak(L.y + L.h - 78);
     if (co.length) {
       this.add
-        .text(L.x + L.w / 2, dy + 26, co.join(' · '), stylWalki(13, ZIELONY, 900))
+        .text(L.x + L.w / 2, L.y + L.h - 12, `Noszone: ${co.join(' · ')}`, stylWalki(13, ZIELONY, 900))
         .setOrigin(0.5)
         .setDepth(Z.hud + 3);
     }
+  }
+
+  /**
+   * Plecak: artefakty zebrane, ale nienoszone, z liczbą powtórek. Klik
+   * zakłada artefakt w jego gnieździe, a to, co tam było, wraca do plecaka
+   * — jak przeciąganie z plecaka na lalkę w Heroes 3, tylko jednym klikiem.
+   */
+  private rysujPlecak(y: number) {
+    const L = LALKA;
+    const b = this.stan.bohater;
+    const grupy: { a: Artefakt; ile: number }[] = [];
+    for (const a of wPlecaku(b)) {
+      const g = grupy.find((x) => x.a.id === a.id);
+      if (g) g.ile++;
+      else grupy.push({ a, ile: 1 });
+    }
+    const n = this.add.text(0, 0, 'PLECAK', stylWalki(12)).setDepth(Z.hud + 4);
+    const nw = n.width + 24;
+    const pg = this.add.graphics().setDepth(Z.hud + 3);
+    pigulka(pg, L.x + L.w / 2 - nw / 2, y - 11, nw, 22, 'bialy');
+    n.setOrigin(0.5).setPosition(L.x + L.w / 2, y);
+    const ry = y + 16;
+    if (!grupy.length) {
+      this.add
+        .text(L.x + L.w / 2, ry + PLECAK_BOK / 2, 'Pusty — wszystko, co masz, nosisz.', stylWalki(12, SZARY, 800))
+        .setOrigin(0.5)
+        .setDepth(Z.hud + 3);
+      return;
+    }
+    const odst = 5;
+    const miesci = Math.floor((L.w - 24 + odst) / (PLECAK_BOK + odst));
+    const widac = grupy.slice(0, miesci);
+    const x0 = L.x + (L.w - (widac.length * (PLECAK_BOK + odst) - odst)) / 2;
+    widac.forEach(({ a, ile }, i) => {
+      const x = x0 + i * (PLECAK_BOK + odst);
+      const g = this.add.graphics().setDepth(Z.hud + 3);
+      panelBialy(g, x, ry, PLECAK_BOK, PLECAK_BOK, 8, { obrys: 2, cien: 2 });
+      const im = this.add.image(x + PLECAK_BOK / 2, ry + PLECAK_BOK / 2, `bh-artefakt-${a.id}`).setDepth(Z.hud + 4);
+      im.setScale((PLECAK_BOK - 8) / Math.max(im.width, im.height));
+      if (ile > 1) {
+        const t = this.add
+          .text(x + PLECAK_BOK - 2, ry + PLECAK_BOK - 1, `×${ile}`, stylWalki(11, TUSZ_CSS, 900))
+          .setOrigin(1, 1)
+          .setStroke('#ffffff', 3)
+          .setDepth(Z.hud + 5);
+        void t;
+      }
+      const z = this.add
+        .zone(x, ry, PLECAK_BOK, PLECAK_BOK)
+        .setOrigin(0)
+        .setDepth(Z.hud + 5)
+        .setInteractive({ useHandCursor: true });
+      const obszar = { x, y: ry, w: PLECAK_BOK, h: PLECAK_BOK };
+      z.on('pointerover', () => {
+        if (this.dymekPrzypiety || this.oknoOtwarte) return;
+        this.pokazDymek(obszar, this.opisArtefaktu(a, false, NAZWA_GNIAZDA[a.gniazdo], true));
+        this.powiedz(`${a.nazwa} — kliknij, żeby założyć.`);
+      });
+      z.on('pointerout', () => {
+        if (this.dymekPrzypiety) return;
+        this.schowajDymek();
+        this.powiedz();
+      });
+      z.on('pointerdown', () => {
+        if (this.oknoOtwarte) return;
+        this.zalozArtefakt(a);
+      });
+    });
+    if (grupy.length > widac.length) {
+      this.add
+        .text(L.x + L.w - 10, ry + PLECAK_BOK + 4, `i jeszcze ${grupy.length - widac.length}`, stylWalki(11, SZARY, 800))
+        .setOrigin(1, 0)
+        .setDepth(Z.hud + 3);
+    }
+  }
+
+  /** Zakłada artefakt z plecaka i przerysowuje ekran (statystyki też się zmieniają). */
+  private zalozArtefakt(a: Artefakt) {
+    const b = this.stan.bohater;
+    const zdjety = zalozone(b)[a.gniazdo];
+    if (!zaloz(b, a.id)) return;
+    zapisz('artefakty', `bohater zakłada ${a.id}${zdjety ? ` zamiast ${zdjety.id}` : ''}`);
+    this.registry.set(KLUCZ_STANU, this.stan);
+    this.registry.set('komunikat-bohatera', `${b.imie} zakłada: ${a.nazwa}.${zdjety ? ` ${zdjety.nazwa} wraca do plecaka.` : ''}`);
+    this.scene.restart();
   }
 
   /**
@@ -620,7 +709,10 @@ export class HeroScene extends Phaser.Scene {
     }).setLabel(doMiasta ? 'Do miasta' : 'Na mapę');
 
     this.odswiezArmie();
-    this.powiedz();
+    // Po założeniu artefaktu scena rysuje się od nowa — komunikat przechodzi rejestrem.
+    const komunikat = this.registry.get('komunikat-bohatera') as string | undefined;
+    this.registry.remove('komunikat-bohatera');
+    this.powiedz(komunikat);
   }
 
   private odswiezArmie() {
@@ -876,7 +968,7 @@ export class HeroScene extends Phaser.Scene {
     };
   }
 
-  private opisArtefaktu(a: Artefakt, ma: boolean, czesc?: string): Opis {
+  private opisArtefaktu(a: Artefakt, ma: boolean, czesc?: string, wPlecaku = false): Opis {
     const co = [
       a.atak ? `+${a.atak} do zapału` : '',
       a.obrona ? `+${a.obrona} do opieki` : '',
@@ -886,15 +978,17 @@ export class HeroScene extends Phaser.Scene {
     return {
       klucz: `artefakt-${a.id}`,
       tytul: a.nazwa,
-      podtytul: `${klasa}${czesc ? ` · ${czesc}` : ''} · ${ma ? 'noszony' : 'jeszcze go nie masz'}`,
+      podtytul: `${klasa}${czesc ? ` · ${czesc}` : ''} · ${ma ? 'noszony' : wPlecaku ? 'w plecaku' : 'jeszcze go nie masz'}`,
       ikona: `bh-artefakt-${a.id}`,
       tresc: (
         co.join('\n') +
         (a.klasa === 'misja'
           ? '\n\nCel misji — zanieś go tam, dokąd każe misja.'
           : ma
-            ? '\n\nDziała, dopóki bohater go nosi.'
-            : '\n\nSzukaj go na mapie i w skrzyniach — zacznie działać, gdy tylko go podniesiesz.')
+            ? '\n\nDziała, dopóki bohater go nosi. W tym gnieździe działa tylko jeden artefakt.'
+            : wPlecaku
+              ? '\n\nKliknij, żeby go założyć — to, co nosisz w tym gnieździe, wróci do plecaka.'
+              : '\n\nSzukaj go na mapie i w skrzyniach. Lepszy od noszonego zakłada się sam.')
       ).trim(),
     };
   }
