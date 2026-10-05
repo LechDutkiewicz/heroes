@@ -147,11 +147,34 @@ export const KLUCZE: Record<Klucz, { nazwa: string; barwa: number }> = {
 };
 
 /**
+ * Gniazda na trenerze — jak lalka bohatera w Heroes 3: w każdym jeden
+ * artefakt naraz. Reszta zebranych leży w plecaku i nic nie daje.
+ */
+export const GNIAZDA = ['glowa', 'plecy', 'szyja', 'tulow', 'pas', 'prawa', 'lewa', 'stopy', 'pojazd'] as const;
+export type Gniazdo = (typeof GNIAZDA)[number];
+export const NAZWA_GNIAZDA: Record<Gniazdo, string> = {
+  glowa: 'głowa',
+  plecy: 'plecy',
+  szyja: 'szyja',
+  tulow: 'tułów',
+  pas: 'pas',
+  prawa: 'prawa ręka',
+  lewa: 'lewa ręka',
+  stopy: 'stopy',
+  pojazd: 'pojazd',
+};
+
+/**
  * Artefakty. W Heroes 3 dzielą się na klasy o rosnącej sile; u nas trzy klasy
  * wystarczą, bo bohater ma trzy statystyki, na które mogą działać.
  *
  * Każdy daje stały dodatek — żadnych warunków ani „działa tylko w bitwie".
  * Ośmiolatek ma zobaczyć, że liczba w panelu urosła.
+ *
+ * Każdy siedzi w swoim gnieździe (`gniazdo`) i w gnieździe działa tylko
+ * jeden. Wcześniej działały wszystkie zebrane, więc pięć opasek dawało
+ * pięć razy premię (uwagi z rozgrywki misji 2–3). Na gniazdo przypadają
+ * co najmniej dwa artefakty różnej siły — jest co wymieniać.
  */
 export interface Artefakt {
   id: string;
@@ -163,24 +186,35 @@ export interface Artefakt {
    * „odnajdź Kamień" kończyłaby się przypadkiem, w skrzyni przy zamku.
    */
   klasa: 'drobny' | 'znaczny' | 'relikt' | 'misja';
+  gniazdo: Gniazdo;
   atak?: number;
   obrona?: number;
   ruch?: number;
 }
 
 export const ARTEFAKTY: Artefakt[] = [
-  { id: 'opaska', nazwa: 'Opaska Treningowa', klasa: 'drobny', atak: 1 },
-  { id: 'kamizelka', nazwa: 'Kamizelka Szturmowa', klasa: 'drobny', obrona: 1 },
-  { id: 'buty', nazwa: 'Buty Wędrowca', klasa: 'drobny', ruch: 150 },
-  { id: 'pazur', nazwa: 'Ostry Pazur', klasa: 'znaczny', atak: 2 },
-  { id: 'tarcza', nazwa: 'Ochraniacze', klasa: 'znaczny', obrona: 2 },
-  { id: 'rower', nazwa: 'Rower Terenowy', klasa: 'znaczny', ruch: 300 },
-  { id: 'mistrz', nazwa: 'Pas Mistrza Areny', klasa: 'relikt', atak: 3, obrona: 2 },
-  { id: 'skrzydla', nazwa: 'Lotnia Trenera', klasa: 'relikt', ruch: 450, obrona: 1 },
+  { id: 'opaska', nazwa: 'Opaska Treningowa', klasa: 'drobny', gniazdo: 'glowa', atak: 1 },
+  { id: 'czapka', nazwa: 'Czapka Mistrza', klasa: 'znaczny', gniazdo: 'glowa', atak: 1, obrona: 1 },
+  { id: 'plecak', nazwa: 'Plecak Podróżnika', klasa: 'drobny', gniazdo: 'plecy', ruch: 100 },
+  { id: 'skrzydla', nazwa: 'Lotnia Trenera', klasa: 'relikt', gniazdo: 'plecy', ruch: 450, obrona: 1 },
+  { id: 'amulet', nazwa: 'Amulet Szczęścia', klasa: 'drobny', gniazdo: 'szyja', obrona: 1 },
+  { id: 'muszelka', nazwa: 'Muszlowy Dzwonek', klasa: 'znaczny', gniazdo: 'szyja', atak: 1, obrona: 2 },
+  { id: 'kamizelka', nazwa: 'Kamizelka Szturmowa', klasa: 'drobny', gniazdo: 'tulow', obrona: 1 },
+  { id: 'kurtka', nazwa: 'Kurtka Strażnika', klasa: 'relikt', gniazdo: 'tulow', obrona: 3, atak: 1 },
+  { id: 'pas', nazwa: 'Pas Skupienia', klasa: 'drobny', gniazdo: 'pas', atak: 1 },
+  { id: 'mistrz', nazwa: 'Pas Mistrza Areny', klasa: 'relikt', gniazdo: 'pas', atak: 3, obrona: 2 },
+  { id: 'pazur', nazwa: 'Ostry Pazur', klasa: 'znaczny', gniazdo: 'prawa', atak: 2 },
+  { id: 'rekawica', nazwa: 'Rękawica Mocy', klasa: 'relikt', gniazdo: 'prawa', atak: 4 },
+  { id: 'bransoleta', nazwa: 'Bransoleta Ochronna', klasa: 'drobny', gniazdo: 'lewa', obrona: 1 },
+  { id: 'tarcza', nazwa: 'Ochraniacze', klasa: 'znaczny', gniazdo: 'lewa', obrona: 2 },
+  { id: 'buty', nazwa: 'Buty Wędrowca', klasa: 'drobny', gniazdo: 'stopy', ruch: 150 },
+  { id: 'buty-biegacza', nazwa: 'Buty Biegacza', klasa: 'znaczny', gniazdo: 'stopy', ruch: 250 },
+  { id: 'hulajnoga', nazwa: 'Hulajnoga', klasa: 'drobny', gniazdo: 'pojazd', ruch: 200 },
+  { id: 'rower', nazwa: 'Rower Terenowy', klasa: 'znaczny', gniazdo: 'pojazd', ruch: 300 },
   // Cel misji „Bagienny szlak". Dodatek skromny, na poziomie drobnego
   // artefaktu: to jest trofeum i dowód wygranej, a nie nagroda, która
   // rozstrzyga następną misję — bohater zabiera go ze sobą dalej.
-  { id: 'ksiezycowy-kamien', nazwa: 'Księżycowy Kamień', klasa: 'misja', atak: 1, obrona: 1 },
+  { id: 'ksiezycowy-kamien', nazwa: 'Księżycowy Kamień', klasa: 'misja', gniazdo: 'szyja', atak: 1, obrona: 1 },
 ];
 
 /**
@@ -191,6 +225,51 @@ export const ARTEFAKTY: Artefakt[] = [
 export const ARTEFAKTY_LOSOWE: Artefakt[] = ARTEFAKTY.filter((a) => a.klasa !== 'misja');
 
 export const artefaktPoId = (id: string) => ARTEFAKTY.find((a) => a.id === id);
+
+/** Siła artefaktu do porównań: punkt ataku = punkt obrony = 150 ruchu. */
+export const silaArtefaktu = (a: Artefakt) => (a.atak ?? 0) + (a.obrona ?? 0) + (a.ruch ?? 0) / 150;
+
+/**
+ * Co trener nosi: w każdym gnieździe jeden artefakt. Wybór gracza
+ * (`Bohater.zalozone`) wygrywa, o ile artefakt dalej jest w plecaku; w
+ * gnieździe bez wyboru — najsilniejszy zebrany. Dzięki temu podniesiony
+ * lepszy artefakt zakłada się sam, a stare zapisy nie wymagają migracji.
+ */
+export function zalozone(b: Pick<Bohater, 'artefakty' | 'zalozone'>): Partial<Record<Gniazdo, Artefakt>> {
+  const wynik: Partial<Record<Gniazdo, Artefakt>> = {};
+  for (const id of b.artefakty) {
+    const a = artefaktPoId(id);
+    if (!a) continue;
+    const obecny = wynik[a.gniazdo];
+    if (!obecny || silaArtefaktu(a) > silaArtefaktu(obecny)) wynik[a.gniazdo] = a;
+  }
+  for (const [g, id] of Object.entries(b.zalozone ?? {}) as [Gniazdo, string][]) {
+    const a = artefaktPoId(id);
+    if (a && a.gniazdo === g && b.artefakty.includes(id)) wynik[g] = a;
+  }
+  return wynik;
+}
+
+/** Zakłada artefakt z plecaka w jego gnieździe (to, co tam było, wraca do plecaka). */
+export function zaloz(b: Pick<Bohater, 'artefakty' | 'zalozone'>, id: string): boolean {
+  const a = artefaktPoId(id);
+  if (!a || !b.artefakty.includes(id)) return false;
+  b.zalozone = { ...b.zalozone, [a.gniazdo]: id };
+  return true;
+}
+
+/** Zebrane, ale nienoszone — „plecak" na ekranie bohatera (z powtórkami). */
+export function wPlecaku(b: Pick<Bohater, 'artefakty' | 'zalozone'>): Artefakt[] {
+  const noszone = new Set(Object.values(zalozone(b)).map((a) => a!.id));
+  const wynik: Artefakt[] = [];
+  for (const id of b.artefakty) {
+    const a = artefaktPoId(id);
+    if (!a) continue;
+    if (noszone.has(id)) noszone.delete(id);
+    else wynik.push(a);
+  }
+  return wynik;
+}
 
 /**
  * Budowle odwiedzane — to, co w Heroes 3 stoi między kopalniami i daje powód,
@@ -563,8 +642,13 @@ export interface Bohater {
    * na ekranie bohatera, ma przeżyć zamknięcie okna.
    */
   armia: Armia;
-  /** Zebrane artefakty (identyfikatory z `ARTEFAKTY`). */
+  /** Zebrane artefakty (identyfikatory z `ARTEFAKTY`), także te w plecaku. */
   artefakty: string[];
+  /**
+   * Wybór gracza: który artefakt nosi w danym gnieździe. Gniazdo bez wpisu
+   * nosi najsilniejszy zebrany — patrz `zalozone`.
+   */
+  zalozone?: Partial<Record<Gniazdo, string>>;
   /**
    * Plecak trenera: zapas przedmiotów na bitwy (`przedmioty.ts`), kupowany
    * w Pokémarcie. Brak w starych zapisach — patrz `plecakBohatera`.
@@ -654,8 +738,7 @@ export function statystyki(b: Bohater) {
   let atak = b.atak + bonus.atak;
   let obrona = b.obrona + bonus.obrona;
   let ruchMax = b.ruchMax + bonus.ruch;
-  for (const id of b.artefakty) {
-    const a = artefaktPoId(id);
+  for (const a of Object.values(zalozone(b))) {
     if (!a) continue;
     atak += a.atak ?? 0;
     obrona += a.obrona ?? 0;

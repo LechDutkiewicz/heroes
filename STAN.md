@@ -50,8 +50,22 @@ Sonda: `tools/probe-limit.ts`.
 wymaga więcej doświadczenia), ale zaległy stworek trenuje taniej — to
 odpowiedź na „opłaca się grać dwoma".
 
-**Następny krok.** Artefakty w gniazdach lalki + plecak, po 2 przedmioty
-o różnej sile na gniazdo; zebrane duplikaty się nie sumują.
+**Artefakty w gniazdach.** `Artefakt.gniazdo` (9 gniazd lalki: głowa,
+plecy, szyja, tułów, pas, prawa/lewa ręka, stopy, pojazd — `GNIAZDA`
+w `mapa.ts`), w każdym działa jeden. `zalozone(b)`: wybór gracza
+(`Bohater.zalozone`), a gdzie go nie ma — najsilniejszy zebrany, więc lepszy
+zakłada się sam i stare zapisy nie potrzebują migracji. `statystyki` liczą
+tylko noszone (5 opasek = 1 opaska). 10 nowych artefaktów — po dwa na gniazdo
+(czapka, plecak, amulet, muszelka, kurtka, pas, rękawica, bransoleta, buty
+biegacza, hulajnoga); ikony z OpenAI (`PROMPTY-BOHATER.md`,
+`bohater_ikony.py`), $0,42. Ekran bohatera: gniazdo pokazuje noszony albo
+cień najsłabszego możliwego, pod postacią „PLECAK" (nienoszone, ×N
+powtórek) — klik zakłada, zdjęty wraca do plecaka; „Noszone: +X zapału…".
+Okno „Nowy artefakt" mówi, czy trener go założył, czy trafił do plecaka.
+Wybór przechodzi do następnej misji (`BohaterPrzenoszony.zalozone`).
+Sonda: `tools/probe-artefakty.ts`; `zrzut-bohater.mjs --stan plecak`.
+`probe-bohater.mjs` pada na „klik w bohatera otwiera jego ekran — zamek"
+także na kodzie sprzed zmian (nie ruszałem).
 
 ## Pokémart — sklep z przedmiotami zamiast gildii magów (2026-09-29)
 

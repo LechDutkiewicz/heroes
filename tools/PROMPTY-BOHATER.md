@@ -502,3 +502,57 @@ A Technical Machine from the Pokemon games: a shiny round compact disc in a brig
 ```
 A Mega Stone from the Pokemon games: a round glossy marble-like stone with a swirling orange, yellow and blue DNA-like spiral pattern inside, softly glowing with rainbow light. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Transparent background, no text, no letters, no numbers, no logo.
 ```
+
+
+## Artefakty w gniazdach — drugi artefakt na gniazdo (2026-10-05)
+Uwagi z rozgrywki: artefakty się sumowały, więc teraz w każdym gnieździe lalki działa jeden, a na gniazdo przypadają dwa o różnej sile. Wzór jak wyżej (Super mikstura). Do gry: `python3 tools/bohater_ikony.py`.
+
+<!-- plik: artefakt-czapka.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A trainer's champion baseball cap: bright red front with a white panel and a small golden star badge, a stiff black visor, slightly turned to three-quarter view so the visor reads clearly. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
+
+<!-- plik: artefakt-plecak.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A small sturdy travel backpack for a young trainer: yellow and green fabric, a rolled blue sleeping mat strapped on top, one round side pocket. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
+
+<!-- plik: artefakt-amulet.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A lucky charm necklace (like the Amulet Coin item from Pokemon games): one big shiny golden coin with a clover engraving on a thin red cord. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
+
+<!-- plik: artefakt-muszelka.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A shell bell necklace (like the Shell Bell item from Pokemon games): a pastel pink and cream spiral seashell hung as a small bell on a light blue string with one white bead. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
+
+<!-- plik: artefakt-kurtka.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A tough guardian trainer jacket: a thick padded teal and navy blue sports jacket with orange stripes on the sleeves, a high collar and a front zip, seen from the front. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
+
+<!-- plik: artefakt-pas.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A Focus Sash item from Pokemon games: a long soft white and orange satin sash tied in a loose knot with two ribbon ends hanging down. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
+
+<!-- plik: artefakt-rekawica.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A power sports glove: one chunky bright orange and black fingerless training glove with a red lightning-bolt patch on the back of the hand and a velcro wrist strap. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
+
+<!-- plik: artefakt-bransoleta.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A protective sports wristband bracelet: a thick bright blue silicone wristband with a white shield-shaped plate on the front. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
+
+<!-- plik: artefakt-buty-biegacza.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A pair of modern Running Shoes like in the Pokemon games: bright red and white sneakers with thick white soles and blue laces, slightly angled so both shoes show. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```
+
+<!-- plik: artefakt-hulajnoga.png | styl: brak | proporcje: 1:1 | wzor: przedmiot-super-mikstura.png -->
+```
+A modern kick scooter for a young trainer: bright green deck and handlebar with white grips and two small black wheels, seen from the side. Game UI icon, not a map object: the single item seen from the front, centered and filling the square frame, painted in exactly the same clean glossy anime finish, outline and light as the attached icon (a modern Pokemon-games style item). Chunky, bold, simple silhouette that stays readable at 24 pixels. Modern everyday sporty trainer gear from the Pokemon world, NO medieval or fantasy elements: no knights, no armour plates, no swords, no bows, no angel wings, no lions, no heraldry. Transparent background, no text, no letters, no logo.
+```

@@ -6,7 +6,7 @@
 // zebrano artefaktów. Stan ustawiamy więc z zewnątrz, przez rejestr gry.
 //
 //   node tools/zrzut-bohater.mjs [--out tools/shots/bohater.png]
-//                                [--stan pelny|pusty|po-bitwie|ela]
+//                                [--stan pelny|pusty|po-bitwie|ela|plecak]
 //                                [--okno] [--opis lucznictwo|artefakt-pazur|atak]
 //                                [--url http://localhost:4173]
 //
@@ -53,6 +53,13 @@ const STANY = {
     umiejetnosci: { tropiciel: 1, uzdrowiciel: 2, napastnik: 3, nauka: 1 },
   },
   pusty: { artefakty: [], dosw: 0, sloty: 1, umiejetnosci: {} },
+  // Gniazda i plecak: po dwa artefakty na gniazdo, powtórki (×2) w plecaku.
+  plecak: {
+    artefakty: ['opaska', 'opaska', 'czapka', 'pazur', 'rekawica', 'buty', 'buty-biegacza', 'hulajnoga', 'pas', 'mistrz', 'amulet', 'kamizelka', 'kamizelka'],
+    dosw: 900,
+    sloty: 4,
+    umiejetnosci: { zwiad: 1 },
+  },
   'po-bitwie': {
     artefakty: ['kamizelka'],
     dosw: 260,

@@ -116,6 +116,7 @@ export function bohaterDoPrzeniesienia(s: StanMapy): BohaterPrzenoszony {
     atak: b.atak,
     obrona: b.obrona,
     artefakty: b.artefakty,
+    zalozone: b.zalozone,
     // Plecak przechodzi dalej jak w grach: co trener kupił, to niesie.
     plecak: b.plecak,
     doswiadczenie: b.doswiadczenie,

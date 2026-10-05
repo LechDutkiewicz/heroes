@@ -41,6 +41,10 @@ ARTEFAKTY = [
     ('buty', 'Buty Wędrowca'), ('pazur', 'Ostry Pazur'), ('tarcza', 'Ochraniacze'),
     ('rower', 'Rower Terenowy'), ('mistrz', 'Pas Mistrza Areny'),
     ('skrzydla', 'Lotnia Trenera'), ('ksiezycowy-kamien', 'Księżycowy Kamień'),
+    ('czapka', 'Czapka Mistrza'), ('plecak', 'Plecak Podróżnika'), ('amulet', 'Amulet Szczęścia'),
+    ('muszelka', 'Muszlowy Dzwonek'), ('kurtka', 'Kurtka Strażnika'), ('pas', 'Pas Skupienia'),
+    ('rekawica', 'Rękawica Mocy'), ('bransoleta', 'Bransoleta Ochronna'),
+    ('buty-biegacza', 'Buty Biegacza'), ('hulajnoga', 'Hulajnoga'),
 ]
 
 #: Artefakty z gotową malowaną ikoną — zamiast generować nową.

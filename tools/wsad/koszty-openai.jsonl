@@ -878,3 +878,13 @@
 {"czas": "2026-09-30T10:03:06+00:00", "plik": "przeszkoda-lod.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 739, "wyj": 1368, "usd": 0.0475}
 {"czas": "2026-09-30T10:03:20+00:00", "plik": "przeszkoda-balwan.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 747, "wyj": 1410, "usd": 0.0489}
 {"czas": "2026-09-30T10:03:34+00:00", "plik": "przeszkoda-krzak-szron.png", "model": "gpt-image-1.5", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 745, "wyj": 1318, "usd": 0.0459}
+{"czas": "2026-10-05T09:55:15+00:00", "plik": "artefakt-czapka.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 564, "wyj": 1056, "usd": 0.0451}
+{"czas": "2026-10-05T09:55:31+00:00", "plik": "artefakt-plecak.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 555, "wyj": 1056, "usd": 0.045}
+{"czas": "2026-10-05T09:55:45+00:00", "plik": "artefakt-amulet.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 557, "wyj": 1056, "usd": 0.045}
+{"czas": "2026-10-05T09:55:59+00:00", "plik": "artefakt-muszelka.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 563, "wyj": 1056, "usd": 0.0451}
+{"czas": "2026-10-05T09:56:14+00:00", "plik": "artefakt-kurtka.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 561, "wyj": 1056, "usd": 0.045}
+{"czas": "2026-10-05T09:56:31+00:00", "plik": "artefakt-pas.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 555, "wyj": 1056, "usd": 0.045}
+{"czas": "2026-10-05T09:56:45+00:00", "plik": "artefakt-rekawica.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 561, "wyj": 1056, "usd": 0.045}
+{"czas": "2026-10-05T09:57:02+00:00", "plik": "artefakt-bransoleta.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 550, "wyj": 1056, "usd": 0.045}
+{"czas": "2026-10-05T09:57:17+00:00", "plik": "artefakt-buty-biegacza.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 559, "wyj": 1056, "usd": 0.045}
+{"czas": "2026-10-05T09:57:35+00:00", "plik": "artefakt-hulajnoga.png", "model": "gpt-image-1", "jakosc": "medium", "rozmiar": "1024x1024", "wej": 555, "wyj": 1056, "usd": 0.045}

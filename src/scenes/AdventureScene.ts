@@ -11,6 +11,9 @@ import {
   SUROWIEC_INFO,
   TEREN_INFO,
   artefaktPoId,
+  NAZWA_GNIAZDA,
+  zalozone,
+  type Artefakt,
   brylaNa,
   brylaObiektu,
   budowlaPoId,
@@ -4854,7 +4857,7 @@ export class AdventureScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(Z.overlay + 2);
     this.add
-      .text(cx, gora + 264, 'Działa, dopóki trener go nosi.', {
+      .text(cx, gora + 264, this.gdzieArtefakt(a), {
         ...stylAtramentu(12, 'miekki', szer - 60),
         align: 'center',
       })
@@ -4866,6 +4869,19 @@ export class AdventureScene extends Phaser.Scene {
       this.odswiezWszystko();
     }, true);
     this.naWierzchu(...nowe());
+  }
+
+  /**
+   * Gdzie trafił podniesiony artefakt: na trenera (gniazdo było puste albo
+   * jest lepszy) czy do plecaka — w gnieździe działa tylko jeden.
+   */
+  private gdzieArtefakt(a: Artefakt): string {
+    const gniazdo = NAZWA_GNIAZDA[a.gniazdo];
+    const noszony = zalozone(this.stan.bohater)[a.gniazdo];
+    const ile = this.stan.bohater.artefakty.filter((id) => id === a.id).length;
+    if (noszony?.id === a.id && ile > 1) return 'Trener już taki nosi — ten trafia do plecaka. Dwa takie same nie działają razem.';
+    if (!noszony || noszony.id === a.id) return `Trener od razu go zakłada (gniazdo: ${gniazdo}).`;
+    return `Trafia do plecaka: w gnieździe „${gniazdo}" trener nosi już ${noszony.nazwa}. Zamienisz je na ekranie trenera.`;
   }
 
   /**
