@@ -74,6 +74,7 @@ import {
   type Wlasciciel,
 } from './mapa';
 import { SLOTY_ARMII, dolacz, zywe } from './armia';
+import { ratuj, zemdleni } from './centrum';
 import { NA_POLU, makeRng } from './battle';
 import { factionById } from './factions';
 import { jednostkiBitwy, ktosNaNogach, najsilniejsiNaPrzod, nowyStworek, rozegrajBitwe, rozliczDruzyne } from './stworki';
@@ -177,6 +178,12 @@ function rozstrzygnijBitwe(s: StanMapy, kto: Wlasciciel, obrona: Obiekt, ziarno:
 function wartoscTreningu(zamek: Obiekt, s: StanMapy, kto: Wlasciciel): number {
   const bohater = bohaterOf(s, kto);
   if (bohater.x === zamek.x && bohater.y === zamek.y) return 0;
+  // Autopilot gracza (symulacje) nie dostaje darmowej pobudki co tydzień —
+  // gracz płaci jagodami w Centrum (`centrum.ts`). Bez powrotu do miasta
+  // po przegranej autopilot chodził po mapie z całą drużyną zemdloną do
+  // końca misji i symulacja mierzyła to, a nie trudność planszy.
+  const lezy = zemdleni(bohater.armia).length;
+  if (kto === 'gracz' && lezy > 0 && (lezy * 2 >= zywe(bohater.armia).length || !ktosNaNogach(bohater.armia))) return 150;
   const druzyna = zywe(bohater.armia);
   if (!druzyna.length) return 0;
   const sredniKoszt = druzyna.reduce((a, o) => a + kosztTreningu(o), 0) / druzyna.length;
@@ -732,6 +739,7 @@ function rozbudujIWerbuj(s: StanMapy, kto: Wlasciciel) {
 function trenujDruzyne(s: StanMapy, kto: Wlasciciel, zamek: Obiekt) {
   const bohater = bohaterOf(s, kto);
   const wZamku = bohater.x === zamek.x && bohater.y === zamek.y;
+  if (kto === 'gracz' && wZamku) ratuj(bohater.armia, skarbiecOf(s, kto));
   const druzyna =
     kto === 'wrog' && s.wrogTryb === 'obronca' ? (zamek.oddzialy ?? []) : wZamku ? bohater.armia : [];
   for (let proba = 0; proba < 20; proba++) {

@@ -305,6 +305,15 @@ export const ATAK_BOHATERA_MAKS = 3;
 export const OBRONA_BOHATERA_ZA_PUNKT = 0.025;
 export const OBRONA_BOHATERA_MAKS = 0.7;
 
+/**
+ * Strzał jest słabszy od ciosu wręcz. Strzelec bije bez odwetu i nie musi
+ * podchodzić, więc przy pełnej sile był po prostu lepszym stworkiem (uwagi
+ * z rozgrywki misji 2–3). Do tego za `shootRange` siła spada o połowę —
+ * jak kara za odległość w Heroes 3 — więc z drugiego końca planszy strzelec
+ * zadaje 0,8 × 0,5 = 0,4 siły.
+ */
+export const SILA_STRZALU = 0.8;
+
 /** Ataki jednostki w kolejności przycisków — patrz `ataki.ts`. */
 export const atakiJednostki = (u: SimUnit): Atak[] => atakiStworka(u.def);
 
@@ -322,7 +331,7 @@ export function damageOf(b: Battle, attacker: SimUnit, target: SimUnit, atak = 0
   const pinned = attacker.def.shooter && hasAdjacentEnemy(b, attacker);
   const tooFar =
     attacker.def.shooter && !pinned && hexDistance(attacker, target) > attacker.def.shootRange;
-  const penalty = pinned || tooFar ? HALF_DAMAGE : 1;
+  const penalty = (pinned || tooFar ? HALF_DAMAGE : 1) * (attacker.def.shooter && !pinned ? SILA_STRZALU : 1);
   const guard =
     (target.defending ? GUARD_REDUCTION : 1) * (target.tarcza ? SILA_TARCZY : 1) * (target.mega ? 1 / SILA_MEGA : 1);
   const base =
@@ -355,19 +364,29 @@ export function damageOf(b: Battle, attacker: SimUnit, target: SimUnit, atak = 0
  * jako cios wręcz — inaczej Łucznictwo podbijałoby uderzenie kolbą.
  */
 function bonusUmiejetnosci(b: Battle, attacker: SimUnit, target: SimUnit) {
-  const m = b.bonusGracza;
-  if (!m) return 1;
   let mnoznik = 1;
-  if (attacker.side === 'player') {
-    const strzela = attacker.def.shooter && !hasAdjacentEnemy(b, attacker);
-    mnoznik *= 1 + (strzela ? m.strzal : m.wrecz);
-    mnoznik *= 1 + Math.min(ATAK_BOHATERA_MAKS, ATAK_BOHATERA_ZA_PUNKT * Math.max(0, m.atak));
-  }
-  if (target.side === 'player') {
-    mnoznik *= 1 - m.pancerz;
-    mnoznik *= 1 - Math.min(OBRONA_BOHATERA_MAKS, OBRONA_BOHATERA_ZA_PUNKT * Math.max(0, m.obrona));
-  }
+  if (attacker.side === 'player') mnoznik *= premieTrenera(b, attacker).atak;
+  if (target.side === 'player') mnoznik *= premieTrenera(b, target).obrona;
   return mnoznik;
+}
+
+/**
+ * Premie trenera dla jego stworka, jako mnożniki: `atak` — ciosów, które
+ * zadaje (atak bohatera, Napastnik albo Łucznictwo), `obrona` — ciosów,
+ * które przyjmuje (obrona bohatera, Pancerz). Karta stworka pokazuje je
+ * w procentach, bo inaczej nie było widać, co atak i obrona z panelu
+ * bohatera robią w walce. Stworki przeciwnika premii nie mają.
+ */
+export function premieTrenera(b: Battle, u: SimUnit): { atak: number; obrona: number } {
+  const m = b.bonusGracza;
+  if (!m || u.side !== 'player') return { atak: 1, obrona: 1 };
+  const strzela = u.def.shooter && !hasAdjacentEnemy(b, u);
+  return {
+    atak:
+      (1 + (strzela ? m.strzal : m.wrecz)) *
+      (1 + Math.min(ATAK_BOHATERA_MAKS, ATAK_BOHATERA_ZA_PUNKT * Math.max(0, m.atak))),
+    obrona: (1 - m.pancerz) * (1 - Math.min(OBRONA_BOHATERA_MAKS, OBRONA_BOHATERA_ZA_PUNKT * Math.max(0, m.obrona))),
+  };
 }
 
 /** Nalicza jedno trafienie. Zwraca liczbę poległych. */

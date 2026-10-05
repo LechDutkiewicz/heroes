@@ -2,6 +2,40 @@
 
 Ostatnia aktualizacja: 2026-09-27 (trener zamiast armii: stworek = postać z poziomem, 4 na polu bitwy, trening i Centrum Pokemon).
 
+## Balans bitwy po rozgrywce misji 2–3 (2026-10-05)
+
+**Uwagi użytkownika** (całość, do kolejnych PR-ów): drużyna przechodząca
+z misji jest za mocna (poz. 30 na dzikie stada poz. 2), artefakty się
+sumują (5 opasek = 5× premia), nie widać, co atak i obrona trenera robią
+stworkowi, strzelcy za mocni, za dużo ruchu na planszy 8×5, rosnący koszt
+treningu pod znakiem zapytania, opłaca się rozwijać tylko dwa stworki.
+
+**Ten PR — bitwa.** Ruch 2–6 zamiast 4–10 (`TIERS` w `factions.ts`:
+drobnica 3, strzelcy i obrońca 2, latacz 5, czempion 4; Bór +1). Strzał
+×0,8 (`SILA_STRZALU`), zasięg pełnej siły 3/4 pola zamiast 5/6, dalej pół
+— z drugiego końca planszy strzelec zadaje 0,4. Karta stworka: atak
+z premią trenera w procentach i nowy wiersz „Obrona" (`premieTrenera`
+w `battle.ts`, jedyne źródło liczby i dla obrażeń, i dla karty); prognoza
+ciosu dopisuje „× 0,8 (strzał)" i „× 1,25 (atak trenera)".
+
+**Skutki uboczne.** Startery przestrojone (`probe-startery`: Pyroko HP 46,
+Bazalt atak 12). `probe-garnizon`: garnizon w teście to teraz Grota poz. 50
+(dawny Bór poz. 50 przeciw Grocie 46 był rzutem monetą — sonda sprawdza AI).
+Symulacja misji 1 nie wygrywała: autopilot gracza po przegranych chodził
+z całą drużyną zemdloną do końca misji, bo od Centrum za jagody (#35)
+nikt go nie budził. Teraz wraca do miasta, gdy leży połowa drużyny,
+i ratuje za jagody (`wartoscTreningu`/`trenujDruzyne` w `wrog-ai.ts`,
+tylko `kto === 'gracz'`, czyli symulacje). Mapa przygody: Bór ma
+najwolniejszego stworka 3 zamiast 4, więc dzienny ruch startowy bohatera
+1500 zamiast 1562.
+
+**Uzgodnione na następne PR-y.** (1) Limit poziomu z odznak — dla stworków
+I dla bohatera, jak limity w kampaniach Heroes 3; powyżej limitu stworek
+walczy jak na limicie i nie rośnie, nadmiar EXP idzie na resztę drużyny;
+trening słabszych taniej; straże i rywal pod limit misji. (2) Artefakty
+w slotach (głowa, szyja, tułów, ręka, nogi) + plecak, po 2–3 przedmioty
+o różnej sile na slot.
+
 ## Pokémart — sklep z przedmiotami zamiast gildii magów (2026-09-29)
 
 **Co jest.** Plecak trenera przestał się napełniać sam przed każdą bitwą —

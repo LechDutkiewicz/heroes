@@ -40,13 +40,20 @@ export interface Faction {
  */
 export const TIERS = [
   //                                              ciosów do wybicia równego
-  { tier: 1, count: 1, hp: 40, atk: 13, move: 4 }, // 3.1
-  { tier: 2, count: 1, hp: 38, atk: 14, move: 5 }, // 2.7 — strzelec
-  { tier: 3, count: 1, hp: 58, atk: 13, move: 3 }, // 4.5 — obrońca
-  { tier: 4, count: 1, hp: 52, atk: 17, move: 7 }, // 3.1 — latacz
-  { tier: 5, count: 1, hp: 58, atk: 20, move: 4 }, // 2.9 — elitarny strzelec
-  { tier: 6, count: 1, hp: 84, atk: 22, move: 6 }, // 3.8 (bije dwa razy)
+  { tier: 1, count: 1, hp: 40, atk: 13, move: 3 }, // 3.1
+  { tier: 2, count: 1, hp: 38, atk: 14, move: 2 }, // 2.7 — strzelec
+  { tier: 3, count: 1, hp: 58, atk: 13, move: 2 }, // 4.5 — obrońca
+  { tier: 4, count: 1, hp: 52, atk: 17, move: 5 }, // 3.1 — latacz
+  { tier: 5, count: 1, hp: 58, atk: 20, move: 2 }, // 2.9 — elitarny strzelec
+  { tier: 6, count: 1, hp: 84, atk: 22, move: 4 }, // 3.8 (bije dwa razy)
 ] as const;
+
+/*
+ * Ruch jest mały, bo plansza ma 8 kolumn: przy dawnych 4–10 polach prawie
+ * każdy stworek przechodził ją wszerz w dwie tury i nie było różnicy między
+ * szybkim a wolnym (uwagi z rozgrywki misji 2–3). Teraz 2–6: strzelec
+ * i obrońca człapią, latacz dopada w turę.
+ */
 
 /**
  * Role poziomów są wspólne dla obu frakcji: drobnica, strzelec, obrońca,
@@ -56,10 +63,10 @@ type Role = Pick<UnitDef, 'shooter' | 'shootRange' | 'flying' | 'ability'>;
 
 const ROLES: Role[] = [
   { shooter: false, shootRange: 0 },
-  { shooter: true, shootRange: 5 },
+  { shooter: true, shootRange: 3 },
   { shooter: false, shootRange: 0, ability: 'guardian' },
   { shooter: false, shootRange: 0, flying: true, ability: 'strikeAndReturn' },
-  { shooter: true, shootRange: 6 },
+  { shooter: true, shootRange: 4 },
   { shooter: false, shootRange: 0, ability: 'double' },
 ];
 
@@ -156,7 +163,7 @@ export const FACTIONS: Faction[] = [
       unit(0, '00193', 'Pyroko', 'fire', BOR, { count: 1.35 }),
       unit(1, '00020', 'Flamir', 'fire', BOR),
       unit(2, '00218', 'Aquino', 'water', BOR, { hp: 1.15 }),
-      unit(3, '00030', 'Torrenar', 'water', BOR, { move: 2 }),
+      unit(3, '00030', 'Torrenar', 'water', BOR),
       unit(4, '00096', 'Verdiko', 'grass', BOR),
       unit(5, '00227', 'Silvena', 'grass', BOR, { hp: 1.1, atk: 0.9 }),
     ],
@@ -171,7 +178,7 @@ export const FACTIONS: Faction[] = [
       unit(0, '00246', 'Glacyn', 'water', GROTA),
       unit(1, '00002', 'Sporex', 'grass', GROTA, { atk: 1.15 }),
       unit(2, '00263', 'Cindro', 'fire', GROTA, { hp: 1.45 }),
-      unit(3, '00250', 'Sporina', 'grass', GROTA, { move: -2 }),
+      unit(3, '00250', 'Sporina', 'grass', GROTA, { move: -1 }),
       unit(4, '00220', 'Aquator', 'water', GROTA),
       unit(5, '00196', 'Vulkaron', 'fire', GROTA, { atk: 1.1 }),
     ],

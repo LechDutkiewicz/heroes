@@ -18,6 +18,7 @@
 
 import Phaser from 'phaser';
 import type { Oddzial } from '../data/mapa';
+import { SILA_STRZALU } from '../data/battle';
 import { defStworka, napisPoziomu, postepStworka } from '../data/stworki';
 import { opisAtakow } from '../data/ataki';
 import { ABILITIES, TYPE_INFO, typeMatchup, type UnitDef } from '../data/units';
@@ -163,7 +164,7 @@ export function pokazOknoStworka(scena: Phaser.Scene, o: OpcjeOknaStworka): Okno
     wiersz(
       MINI.reach,
       'Strzały',
-      def.shooter ? `strzela, pełna siła do ${def.shootRange} pól` : 'walczy wręcz'
+      def.shooter ? `strzela (×${SILA_STRZALU}) do ${def.shootRange} pól, dalej pół` : 'walczy wręcz'
     );
     wiersz(MINI_TYPE[def.type], 'Żywioł', TYPE_INFO[def.type].label, TYPE_INFO[def.type].color);
     wiersz(MINI.strong, 'Mocny przeciw', TYPE_INFO[mecz.strong].dative);
