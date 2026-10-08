@@ -1,7 +1,7 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-08 04:43",
+  "aktualizacja": "2026-10-08 04:48",
   "kawalki": [
     {
       "id": "polana",
@@ -460,7 +460,7 @@
     {
       "id": "twierdza",
       "tytul": "Twierdza (misja 4, 72×72)",
-      "status": "critic",
+      "status": "build",
       "opis": "Zima, trzy pasy i skalny grzbiet między dolinami dwóch twierdz.",
       "rundy": [
         {
@@ -541,6 +541,33 @@
             }
           ],
           "zmiana": "Losowanie pilnuje gęstości ekranów (< 16 obiektów na każdym ekranie 21×18 z danym polem): zachodnia dolina 43 → 21, wschodnie jezioro 27 → 20. Kopalnia odłamków 5 kroków od bramy, w 8 krokach 2 kopalnie, 2 skrzynie i 3 kupki bez straży. Śnieg w pasie środkowym → ziemia jałowa; kałuża zasypana; słaba straż w jednopolowym przejściu między jeziorem SE a borem. Budowle z odstępem ≥ 3 pól. 218 obiektów, obiekt co 12,4 pola, bez bitwy 25 %, pasy [28,38,57,61,34]."
+        },
+        {
+          "nr": 3,
+          "wzorzec": "Faeries! (72×72)",
+          "win": false,
+          "checklista": {
+            "TAK": 18,
+            "CZESCIOWO": 8,
+            "NIE": 4
+          },
+          "luka": "Straże nie strzegą. Mniej więcej połowa z 29 potworów stoi na otwartym śniegu albo tundrze i da się ją obejść, a jedyna straż przed budynkiem specjalnym (40,33) ma dziurę po skosie. Do tego wodzowie pilnują tego samego, co zwykłe średnie straże. Dziecko dostaje więc bitwy, które są ozdobą, a nie decyzją „bić się, żeby wejść\", a cały rytm przełęcz → nagroda się rozmywa.",
+          "nie": [
+            "B3: NIE — obiekt co 12,4 pola przejezdnego, powyżej górnej granicy 12; puste pola śniegu np. x4–16 y4–10 i x44–62 y3–8.",
+            "C3: NIE — wodzowie (5,16), (63,3), (16,1) pilnują zestawu artefakt+skrzynia+surowiec, takiego samego jak średnie zakątki (4,35)/(2,39)/(69,42); jedyny budynek specjalny za strażą, Drzewo Wiedzy (40,26), jest za średnią strażą, a ośrodek ewolucji (52,10) nie ma straży wcale.",
+            "C4: NIE — Straż Międzyjezierza (40,33) da się obejść skosem (35,32)→(36,31) (ruch po skosie jest dozwolony) i dojść do Drzewa Wiedzy (40,26) bez bitwy; portal (40,38) leży przed strażą brodu (45,37), więc jeśli łączy się z portalem (63,29), bród też jest do ominięcia.",
+            "G1: NIE — ekran 21×18 przy (51–71, 21–38) i (24–44, 42–59) mieści po 23 obiekty, a ekran (18–38, 18–35) tylko 3 (sam grzbiet i jezioro)."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r3-twierdza.png",
+              "opis": "Ślepe A/B: krytyk wybrał A = wzorzec"
+            },
+            {
+              "plik": "tools/shots/caly-twierdza-r2.png",
+              "opis": "Cała plansza oceniana w rundzie 3"
+            }
+          ]
         }
       ]
     }
