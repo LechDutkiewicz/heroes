@@ -1,7 +1,7 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-08 05:11",
+  "aktualizacja": "2026-10-08 05:12",
   "kawalki": [
     {
       "id": "polana",
@@ -345,7 +345,7 @@
     {
       "id": "bagna",
       "tytul": "Bagna (misja 3, 54×54)",
-      "status": "build",
+      "status": "critic",
       "opis": "Dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca z wodzem.",
       "rundy": [
         {
@@ -510,8 +510,13 @@
             {
               "plik": "tools/shots/caly-bagna-r4.png",
               "opis": "Cała plansza oceniana w rundzie 5"
+            },
+            {
+              "plik": "tools/shots/caly-bagna-r5.png",
+              "opis": "Cała plansza po rundzie 5"
             }
-          ]
+          ],
+          "zmiana": "Ekran zamku 14 → 8 obiektów (stos, wiatrak, wieża, chatka precz; ranczo za trzęsawisko, drzewo wiedzy na płaskowyż wroga), ekran wroga 18 → 10. Straże w korytarzu lasu, w wylocie stosu NE i w wylocie niszy skalnej kopalni; odnogi drogi do sadu, niszy i kopalni na trzęsawisku. Wschodni trakt bez schodków, kamienna wieża na rozstajach; wieże 4 → 2, wiatraki 5 → 2, wozy 4 → 1. Wschodni pas bagnem, kałuże zasypane; zakątek za mostem (drugi pas 16 → 25); płaskowyż wroga w tundrze. 113 obiektów, obiekt co 11,1 pola, bez bitwy 22 %."
         }
       ]
     },
