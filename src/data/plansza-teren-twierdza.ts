@@ -63,7 +63,7 @@ export const TEREN = [
   'TTTTT...TTTTTTT.====.......===.jjTTTTTjjj=........TTTTTTTTTTTT...TTTTTTT',
   'TTTTTTTTTTTTTTTTTTTT=.....=jjj======j...=........~~~~~~~.TTTTT....TTTT..',
   'TTTT.................=...=..jjjjjjjj====....~~~~~~~~~~~~.TTTTTTT........',
-  'TTT...................=.=....TTT..jj....=..~~~~~~~~~~~~.................',
+  'TTT.......=...........=.=....TTT..jj....=..~~~~~~~~~~~~.................',
   'TTT........=.....~..~.==.....TTT..jjj....=..~~~~~~~~~~~~~...####........',
   'TTT..####.=~~~~~~~~~~.=..T....jjjjjj..TTTT=.~~~~~~~~~~~~~...#########...',
   'TTT..#####=~~~~TTT~~~.=..TTTT..jjj....TTj..=..~~~~~~~~~~~...#########...',
@@ -221,9 +221,8 @@ export const ROZSTAWIENIE: Array<{
   { x: 70, y: 39, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'portal' },
   { x: 59, y: 37, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'arena' },
   { x: 54, y: 38, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'ognisko' },
-  { x: 42, y: 36, rodzaj: 'surowiec', strefa: 'pogranicze', surowiec: 'pokeball' },
   { x: 42, y: 38, rodzaj: 'skrzynia', strefa: 'pogranicze' },
-  { x: 39, y: 37, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'zrodlo' },
+  { x: 36, y: 35, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'zrodlo' },
   { x: 59, y: 31, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'chatka' },
   { x: 26, y: 43, rodzaj: 'kopalnia', strefa: 'pogranicze', surowiec: 'odlamek' },
   { x: 15, y: 34, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'wiatrak' },
@@ -235,7 +234,6 @@ export const ROZSTAWIENIE: Array<{
   { x: 31, y: 42, rodzaj: 'skrzynia', strefa: 'pogranicze' },
   { x: 31, y: 43, rodzaj: 'surowiec', strefa: 'pogranicze', surowiec: 'jagoda' },
   { x: 40, y: 42, rodzaj: 'surowiec', strefa: 'pogranicze', surowiec: 'pokeball' },
-  { x: 41, y: 43, rodzaj: 'skrzynia', strefa: 'pogranicze' },
   { x: 68, y: 26, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'ognisko' },
   { x: 68, y: 28, rodzaj: 'surowiec', strefa: 'pogranicze', surowiec: 'odlamek' },
   { x: 69, y: 25, rodzaj: 'skrzynia', strefa: 'pogranicze' },
@@ -312,6 +310,8 @@ export const ROZSTAWIENIE: Array<{
   { x: 49, y: 66, rodzaj: 'budynek', strefa: 'dom', budynek: 'zrodlo' },
   { x: 54, y: 69, rodzaj: 'budynek', strefa: 'dom', budynek: 'woz' },
   { x: 71, y: 62, rodzaj: 'budynek', strefa: 'dom', budynek: 'chatka' },
+  { x: 8, y: 54, rodzaj: 'skrzynia', strefa: 'dom' },
+  { x: 9, y: 54, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'pokeball' },
 ];
 
 /** Ustawienia misji na tej planszy — patrz `UstawieniaPlanszy` w `src/data/mapy.ts`. */

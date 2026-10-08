@@ -26,9 +26,9 @@
     "jasnowidz": 2
   },
   "obiekty wg strefy": {
-    "pogranicze": 65,
+    "pogranicze": 63,
     "wroga": 55,
-    "dom": 63
+    "dom": 65
   },
   "straże wg siły": {
     "straznik": 3,
@@ -39,8 +39,8 @@
   },
   "straże %": 13,
   "obiekty w pasach odległości (5 × 20%)": [
-    17,
-    42,
+    19,
+    40,
     47,
     46,
     31

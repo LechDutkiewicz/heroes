@@ -1891,6 +1891,35 @@ w `tools/mapy/twierdza.py`:
   wroga ubrały pas 2, a wolne okna pasa 3 (międzyjezierze, wschodnia tundra)
   są pełne. Pogranicze tylko o 2 bogatsze od domu.
 
+Krytyk rundy 8 (`tools/blind/r8-twierdza-werdykt.md`): wygrana ślepo,
+27 TAK / 3 CZĘŚCIOWO / 0 NIE (D1 droga urwana na (11,55), F1 pusta polana
+przy stawie zamkowym (3–20,53–55), G1 węzeł tundry (38–45,36–43) 7 rzeczy,
+okno (27–47,33–50) 21). Runda 8 — chirurgiczna, tylko trzy zmiany
+z werdyktu, zmiany tylko w `tools/mapy/twierdza.py`:
+
+- **F1/G1**: skrzynia (41,43) → (8,54), kupka kul (42,36) → (9,54)
+  (`DOLINA_PO_LOSOWANIU`, strefa dom) — stos na polanie przy stawie
+  zamkowym. Skrzynia (41,43) stoi w `TUNDRA` do końca losowania i dopiero
+  potem jest zdejmowana (`PO_LOSOWANIU_ZDEJMIJ`): zdjęta wcześniej zmieniała
+  okna nad przełęczami, `luzne` przetasowywało 5 losowych budowli doliny
+  (wóz (54,69) → źródło (70,68)) i pasy wychodziły 19/40/46/46/32 — bez
+  garbu. Tak losowanie jest identyczne z rundą 7.
+- **D1**: droga `=` na (10,54) — ścieżka brzegiem stawu z (11,55) kończy
+  się przy stosie (8–9,54).
+- **G1**: źródło (39,37) → (36,35), za drogą (38,35) na zachodnim brzegu
+  wyspy; przy brodzie (45,37) zostają skrzynia (42,38) i kopalnia (40,41)
+  z kupką (40,42).
+- Liczby: 183 obiekty, co 11,3 pola (2069 przejezdnych); strefy dom 65 /
+  pogranicze 63 / wroga 55; pasy 19/40/47/46/31 (garb w pasie 3, pas 4 o 1
+  niżej); bez bitwy 27 % (551 pól); okna co 10 pól maks. 16, nadmiar 0;
+  węzeł (38–45,36–43) 7 → 4, okno (27–47,33–50) 21 → 19; T 27 % + # 22 %
+  bez zmian; straże 13 %. Sonda straży jak w rundzie 7 (17 dzieli teren,
+  przełęcze i bród parami). `probe-mapy` 0 ŹLE, `probe-misja` OK, tsc OK,
+  zrzut za pierwszym podejściem — stos przy stawie i źródło za drogą
+  widoczne.
+- Zostało: dom (65) jest teraz o 2 rzeczy bogatszy od pogranicza (63) —
+  odwrotnie niż chciała runda 3; pas 4 nadal tuż za pasem 3.
+
 ## Profile graczy i sloty zapisu (2026-09-26)
 
 Zgłoszenie taty Eli i Janka: „Nowa gra → Kampania" kontynuowała ostatnią

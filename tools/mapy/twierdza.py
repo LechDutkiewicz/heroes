@@ -857,6 +857,18 @@ DOLINA = [
     ([(47, 50), (47, 51)], ('surowiec', 'jagoda')),
 ]
 
+#: Runda 8 pętli (D1/F1): polana na zachód od stawu zamkowego (3–20,
+#: 53–55) była pusta, a droga brzegiem stawu urywała się na (11,55) — stos
+#: na jej końcu: skrzynia i kupka kul z węzła tundry (41,43)/(42,36).
+#: Skrzynię (41,43) zdejmuje się dopiero PO losowaniu: zdjęta wcześniej
+#: zmieniała okna nad przełęczami i losowe budowle doliny przetasowywały się
+#: (wóz (54,69) → źródło (70,68), pas 3 → 5, garb pasów znikał).
+PO_LOSOWANIU_ZDEJMIJ = [(41, 43)]
+DOLINA_PO_LOSOWANIU = [
+    ([(8, 54), (8, 53), (7, 54)], ('skrzynia', None)),
+    ([(9, 54), (9, 53), (9, 55)], ('surowiec', 'pokeball')),
+]
+
 #: Pętla 2026-10 (E5): brama zakątków SE i NE doliny. Trakt do kamiennej
 #: wieży wciska się między jezioro SE (47–57, 50–60) a pas boru (44–52,
 #: 61–63) przejściem szerokim na jedno pole (49,61)–(50,62); straż stoi na
@@ -917,11 +929,15 @@ TUNDRA = [
     ([(54, 38), (53, 38)], ('budynek', 'ognisko')),
     # Trakt wschodni (56,33 → 57,21) i zachodni brzeg jeziora-zapory:
     # skrzynia i kupki przy drodze, chatka na rozstajach odnogi.
-    ([(42, 36), (41, 36)], ('surowiec', 'pokeball')),
+    # (Runda 8 pętli, G1/F1: kupka kul (42,36) → polana przy stawie
+    # zamkowym (9,54) — węzeł tundry (38–45, 36–43) miał 7 rzeczy.)
     # Runda 5 pętli (E2): stos przed brodem od zachodu — środkowy pas
     # odległości, na luźnym ekranie (okna 21 × 18 nad brodem: 9–11).
     ([(42, 38), (41, 38)], ('skrzynia', None)),
-    ([(39, 37), (38, 37), (39, 38)], ('budynek', 'zrodlo')),
+    # Runda 8 pętli (G1): źródło z (39,37) za drogę (38,35), na zachodni
+    # brzeg wyspy — przy brodzie (45,37) zostaje jedna decyzja: skrzynia
+    # (42,38) i kopalnia (40,41).
+    ([(36, 35), (36, 34), (37, 34)], ('budynek', 'zrodlo')),
 
     # (Runda 6 pętli, G1: bez wiatraka (36,34) przed brodem.)
     ([(59, 31), (60, 31)], ('budynek', 'chatka')),
@@ -952,6 +968,9 @@ TUNDRA = [
     ([(31, 42), (31, 43)], ('skrzynia', None)),
     ([(31, 43), (29, 43)], ('surowiec', 'jagoda')),
     ([(40, 42), (39, 42)], ('surowiec', 'pokeball')),
+    # (Runda 8 pętli, G1/F1: skrzynia (41,43) stoi tu tylko na czas
+    # losowania i po nim idzie na polanę przy stawie zamkowym (8,54) —
+    # `PO_LOSOWANIU_ZDEJMIJ`.)
     ([(41, 43), (43, 42)], ('skrzynia', None)),
     # Polana za ranczem (x 66–69, y 25–28), koniec ślepej odnogi pod
     # średnią strażą w wejściu: ognisko, stos i skrzynia (z pasa za bramami
@@ -1470,6 +1489,12 @@ def rozstaw(g):
         'gniazdo', 'zrodlo', 'wiatrak', 'ognisko', 'woz', 'chatka',
     ])
     rozloz_nadmiar(g)
+    for pole in PO_LOSOWANIU_ZDEJMIJ:
+        wpis = next(co for q, co in g.obiekty if q == pole)
+        g.obiekty.remove((pole, wpis))
+        g.zajete = [q for q in g.zajete if q != pole]
+        g.blokada.difference_update([pole] + g.pola_bryly(wpis[0], wpis[1], pole))
+    postaw_recznie(g, DOLINA_PO_LOSOWANIU)
 
     # Runda 4 (HotA): spichlerz jagód (20, 60) i kopalnia odłamków (23, 60)
     # mają bryłę w rzędzie nad wejściem — w stawie. Na ekranie stały na
@@ -1520,6 +1545,7 @@ def rozstaw(g):
                  # do obozu łowców w zaułku.
                  (9, 64), (8, 65), (7, 65), (6, 65), (5, 66), (4, 66),
                  (11, 59), (11, 58), (10, 57), (10, 56), (11, 55),
+                 (10, 54),   # runda 8 pętli: do stosu (8–9, 54)
                  (12, 68), (12, 69), (13, 70), (14, 70),
                  # Runda 12: z zatoczki na polanę w borze.
                  (19, 68), (20, 68)]:
