@@ -1,12 +1,12 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, Polana r9 u krytyka; Dwie Doliny r5, Twierdza r5, Bagna r9 w budowie",
+ "aktualizacja": "2026-10-08, Polana GOTOWA (r9: wygrana, 28/2/0); Dwie Doliny r5, Twierdza r5, Bagna r9 w budowie",
  "kawalki": [
   {
    "id": "polana",
    "tytul": "Polana (misja 1, samouczek, 36×36)",
-   "status": "critic",
+   "status": "done",
    "opis": "Rzeka z dwoma brodami, zamek na południowym zachodzie, Stary Fort na wschodzie.",
    "rundy": [
     {
@@ -257,6 +257,27 @@
       }
      ],
      "zmiana": "Runda 19 generatora: most (24,8) średni, nowa silna straż (24,6) w 3-polowej szyjce; BFS potwierdza, że zakątek wieży i artefaktu (23–26,3–5) jest osiągalny tylko przez nią, a fort bez niej. Bez kamienia (24,12), gniazda (13,15), pokeballi (26,12) i skrzyni (28,6). Straże (4,31) i (27,19) odsunięte od wózków kopalń, kamieniołom pogranicza na (24,20). Samotne plamy terenu w las. 56 obiektów co 10,6 pola, pasy 5/10/18/14/9, bez bitwy 24 %, symulacja 9/9 (dzień 18,3; wynik zależy od kolejności rozstawienia), probe-misja OK."
+    },
+    {
+     "nr": 9,
+     "wzorzec": "faeries",
+     "win": true,
+     "checklista": {
+      "TAK": 28,
+      "CZESCIOWO": 2,
+      "NIE": 0
+     },
+     "luka": "Pełna checklista. Zostaje czytelność: wschodnia ziemia (24–33,19–33) ma ok. 16 obiektów, okno nad nią pokazuje 21 rzeczy; straże (24,6) i (24,8) dwa pola od siebie wyglądają jak jedna ściana potworów.",
+     "nie": [
+      "G1 częściowo: okno nad wschodnią ziemią 21 obiektów",
+      "G2 częściowo: dwie straże przy moście północnym dwa pola od siebie"
+     ],
+     "obrazy": [
+      {
+       "plik": "tools/blind/r9-polana.png",
+       "opis": "para ślepa r9 (A = faeries, B = nasza)"
+      }
+     ]
     }
    ]
   },
