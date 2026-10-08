@@ -1,7 +1,7 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, Polana gotowa; Twierdza r6: wygrana, 0 NIE, 4 CZĘŚCIOWO — builder r6; Dwie Doliny r6 i Bagna r10 u krytyków",
+ "aktualizacja": "2026-10-08, Polana gotowa; Dwie Doliny r6: wygrana, 0 NIE, 7 CZĘŚCIOWO — builder r6; Twierdza r6 w budowie; Bagna r10 u krytyka",
  "kawalki": [
   {
    "id": "polana",
@@ -284,7 +284,7 @@
   {
    "id": "dwie-doliny",
    "tytul": "Dwie Doliny (misja 2, 72×72)",
-   "status": "critic",
+   "status": "build",
    "opis": "Trzy pasy za dwoma grzbietami, strażnice na klucze, pas sporny w środku.",
    "rundy": [
     {
@@ -448,6 +448,30 @@
       }
      ],
      "zmiana": "Runda 6 generatora: jezioro środkowe sięga grzbietu, trakt idzie mostem (24–27,40) ze średnią strażą na wschodnim wylocie (28,40); kałuże bez funkcji w łąkę/las, pas wody pod grzbietem przerwany, oczko (59–64,25–28) jako zatoka ze skrzynią za strażą; las bez funkcji w łąkę (sad, zachodnia łąka, rubież, dolina wschodnia); jałowa ziemia pasa spornego w łąkę, skały nad zamkiem wroga jedną bryłą; przełęcze z garbem lasu, bryły skał zamiast grzebieni; ekran (47–67,25–42) 17 → 13, ekran (50–70,43–60) 3 → 6. 151 obiektów co 11,0 pola, przejezdne 32 %, woda 19 %, pasy 20/13/45/45/28, bez bitwy 24 %, probe-misja OK (4. podejście, timeouty przy load 10–12)."
+    },
+    {
+     "nr": 6,
+     "wzorzec": "hatchet-axe-and-saw",
+     "win": true,
+     "checklista": {
+      "TAK": 23,
+      "CZESCIOWO": 7,
+      "NIE": 0
+     },
+     "luka": "Słaba straż (39,65) stoi na otwartej łące, więc kopalnię pokeballi (38,69) da się zająć bez bitwy przez (36,66)–(36,68); wschodnia trasa od rozstajów (54,38) przez przełęcz (57,20) do zamku wroga nie ma drogi.",
+     "nie": [
+      "C1/C4 częściowo: straż (39,65) do obejścia bokiem",
+      "D1 częściowo: ~30 pól bez drogi między rozstajami (54,38) a zamkiem wroga",
+      "E3 częściowo: paski bagna i jałowej ziemi 2–5 pól, łaty skał w dolinie",
+      "E5 częściowo: pas wody (0–10,24–26) dubluje grzbiet, jezioro dolnego brzegu bez funkcji",
+      "F1 częściowo: puste zakątki (9–11,68–69) i (67,40–41)"
+     ],
+     "obrazy": [
+      {
+       "plik": "tools/blind/r6-dwie-doliny.png",
+       "opis": "para ślepa r6 (A = hatchet-axe-and-saw, B = nasza)"
+      }
+     ]
     }
    ]
   },
