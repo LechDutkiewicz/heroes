@@ -1,7 +1,7 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, Polana i Bagna GOTOWE; Dwie Doliny r6 i Twierdza r6 w budowie",
+ "aktualizacja": "2026-10-08, Polana i Bagna gotowe; Dwie Doliny r7 u krytyka; Twierdza r6 w budowie",
  "kawalki": [
   {
    "id": "polana",
@@ -284,7 +284,7 @@
   {
    "id": "dwie-doliny",
    "tytul": "Dwie Doliny (misja 2, 72×72)",
-   "status": "build",
+   "status": "critic",
    "opis": "Trzy pasy za dwoma grzbietami, strażnice na klucze, pas sporny w środku.",
    "rundy": [
     {
@@ -468,10 +468,15 @@
      ],
      "obrazy": [
       {
-       "plik": "tools/blind/r6-dwie-doliny.png",
-       "opis": "para ślepa r6 (A = hatchet-axe-and-saw, B = nasza)"
+       "plik": "tools/shots/caly-dwie-doliny-r6.png",
+       "opis": "Dwie Doliny po rundzie 7 generatora (zrzut z gry)"
+      },
+      {
+       "plik": "tools/blind/r7-dwie-doliny.png",
+       "opis": "para ślepa r7: A/B bez podpisów"
       }
-     ]
+     ],
+     "zmiana": "Runda 7 generatora: straż (38,67) w szyjce pasa kopalni pokeballi (kopalnia na (38,70), las (34–36,66–71)); sonda straży: tylko most (28,40) ma drugą trasę, i to za inną strażą; kieszeń jasnowidza za ścianą lasu (52–53,41–43), zatoczka NW zalana; nowy szlak od rozstajów (54,38) przez strażnicę (57,20) do traktu wroga; pas wody (0–10,24–26) w łąkę zakątka ze stosem (3–4,25); jezioro pod sadem w łąkę sadu i las; skrzynia (10,69), wypust zalesiony; bagno i łaty skał precz, jałowa ziemia wroga jedną plamą. 152 obiekty co 11,0 pola, przejezdne 32 %, woda 18 %, pasy 21/14/44/45/28, strefy 51/53/48, bez bitwy 24 %, żadne okno > 16, probe-misja OK za pierwszym razem."
     }
    ]
   },
