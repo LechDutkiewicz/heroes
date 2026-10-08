@@ -1,12 +1,12 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-08 03:44",
+  "aktualizacja": "2026-10-08 03:54",
   "kawalki": [
     {
       "id": "polana",
       "tytul": "Polana (misja 1, samouczek, 36×36)",
-      "status": "build",
+      "status": "critic",
       "opis": "Rzeka z dwoma brodami, zamek na południowym zachodzie, Stary Fort na wschodzie.",
       "rundy": [
         {
@@ -110,8 +110,13 @@
             {
               "plik": "tools/shots/caly-polana-r2.png",
               "opis": "Cała plansza oceniana w rundzie 3"
+            },
+            {
+              "plik": "tools/shots/caly-polana-r3.png",
+              "opis": "Cała plansza po rundzie 3"
             }
-          ]
+          ],
+          "zmiana": "Bród w kieszeni za rzeką usunięty, przesmyk nad wieżą zarośnięty, brzeg nad mostem zalesiony — dolina ma dwa wyjścia, straży mostu nie da się obejść. Straż plaży w szyjce między ścianami lasu; północna przeprawa z mostem i strażą na suchym brzegu; drugi kamieniołom → jaskinia odłamków. Pogranicze i pagoda rozstawione ręcznie, odstępy na północnej łące; automat i drugi stadion precz. 47 obiektów, obiekt co 11,7 pola, bez bitwy 25 %, ekran startowy: zamek + 8 obiektów i 2 straże."
         }
       ]
     },
