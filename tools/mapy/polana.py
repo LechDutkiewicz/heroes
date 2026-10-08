@@ -44,6 +44,15 @@ a nie na łące pod luźną strażą. Ekran startowy ma 14 obiektów (z zamkiem)
 Kraina wroga jest obwiedziona rzeką i skałami (las za rzeką na północ od
 granicy to skała), a w środku ma uschłe drzewa (`NAKLEJKI_KLOCKI`). Góry
 stoją na łące (`TLO`), bez plam ubitej ziemi pod klockami.
+
+Runda 14 (werdykt r3: 19 TAK / 10 CZĘŚCIOWO / 1 NIE — G1). Dolina domu ma
+DWA wyjścia: most i przełęcz północną. Kieszeń za rzeką na południu straciła
+rough, straż i stos — pas ubitej ziemi wzdłuż brzegu ze strażą na nim czytał
+się jako trzeci, piaszczysty bród. Ekran startowy: 10 obiektów z zamkiem,
+2 straże. Północna przeprawa to drugi MOST (`MOSTY`), a jej straż stoi na
+suchym, wschodnim brzegu; straż plaży i straż mostu mają ściany lasu po obu
+stronach. Kopalnie gracza bez dubla kamienia: kamieniołom, sad, jaskinia
+odłamków w kieszeni, sad na północnej łące, złoto na plaży.
 """
 
 import math
@@ -140,12 +149,12 @@ KIESZEN_ROUGH = (17, 30, 21, 35)
 #: Runda 6: ubita ziemia (`j`, tekstura `teren-ziemia`) pod skarpami pasm
 #: i na dnie kieszeni za rzeką — przejście terenu zamiast jednolitej zieleni.
 ZIEMIA = [
-    (18, 30), (19, 31), (20, 31), (18, 31), (19, 32),
-    # Runda 7: język rough z kieszeni korytarzem wzdłuż brzegu i pod skarpą.
-    (17, 28), (17, 29), (17, 27), (18, 27), (19, 27),
     # Runda 13 (E3, F1): pas ubitej ziemi u stóp zachodniego pasma (3–12, 27)
     # odpadł — na ekranie czytał się jak polna droga na zachód od zamku,
     # która urywa się na skraju mapy. Góra stoi na łące (patrz `TLO`).
+    # Runda 14 (A1, E3): język rough wzdłuż brzegu (17, 27–29) i dno kieszeni
+    # też odpadły — plama 4 × 6 nie wyznaczała granicy, a ze strażą na niej
+    # czytała się jak piaszczysty bród, trzecie wyjście z doliny.
 ]
 
 #: Runda 9: zwarte masywy lasu w górnej połowie pierwszego ekranu
@@ -157,12 +166,15 @@ LAS_KADRU = [
     (16, 18, 18, 21),
     (22, 17, 26, 18),
     (22, 19, 26, 22),
+    # Runda 14 (G1): ślepy przesmyk nad wieżą (19–21, 18–22) ze skrzynią na
+    # końcu zarasta — jedna rzecz mniej na ekranie startu, a las nad wieżą
+    # jest jedną bryłą od rzeki po wschodni masyw.
+    (19, 18, 21, 21),
 ]
 
 #: Runda 9: przesmyk na północ przez las na drugim brzegu (kolumny 19–21).
-#: Kępa lasu zachodzi na sąsiednie pole z każdej strony, więc przesmyk
-#: szeroki na dwa pola czytał się jak zwarta ściana drzew.
-PRZESMYK = [(21, y) for y in range(19, 23)]
+#: Runda 14: zamknięty (patrz `LAS_KADRU`).
+PRZESMYK = []
 
 #: Most (runda 4). Pola pod nim są w grze DROGĄ, a render maluje pod nimi
 #: nieprzerwaną wodę i kładzie na niej rysunek mostu (`MOSTY` niżej). Piaszczysty
@@ -174,6 +186,8 @@ MOST = (14, 25, 15, 25)
 #: Runda 13 (D4): bród ma JEDEN wiersz — ten, w którym droga przechodzi
 #: przez rzekę. Dwa wiersze piasku (7–8) z drogą na dolnym czytały się jak
 #: rzeka, która się urywa; jedna łacha w poprzek koryta to przeprawa.
+#: Runda 14 (D4): na tych polach leży rysunek DRUGIEGO mostu (`MOSTY`) —
+#: łacha piasku z drogą czytała się jak „droga wchodzi w wodę".
 BROD_POLNOCNY = (rzeka_x(8) - 1, 8, rzeka_x(8) + 1, 8)
 
 ZAPORY = {
@@ -237,8 +251,18 @@ LAS_GRANICY = [
     # szczeliną zostaje sam trakt z kolumn 8–10, a straż stoi NA nim.
     (10, 17, 13, 17), (11, 18, 12, 18),
     # Plaża nad jeziorem (8–13, 2–5): kieszeń z jednym wejściem (12, 6).
-    (14, 4, 16, 4), (14, 5, 17, 5), (9, 6, 11, 6), (13, 6, 16, 6),
+    # Runda 14 (C1): ściany po obu stronach wejścia mają DWA wiersze (kępa
+    # lasu 3 × 2) — pojedynczy rząd drzew czytał się jak otwarta łąka,
+    # a straż „stała na łące między jeziorem a fabryką". Szyjka to
+    # `SZYJKA_PLAZY`, straż w niej.
+    (14, 4, 16, 4), (14, 5, 17, 5), (9, 6, 11, 7), (13, 6, 16, 7),
+    # Runda 14 (C4): brzeg nad mostem (14–19, 22–24) zarasta — łąka za
+    # przyczółkiem wyglądała na obejście straży mostu wzdłuż rzeki.
+    (14, 22, 17, 24), (18, 24, 19, 24),
 ]
+
+#: Runda 14 (C1): szyjka plaży — jedno pole szerokości, trzy w głąb.
+SZYJKA_PLAZY = [(12, 6), (12, 7), (12, 8)]
 
 #: Runda 12 (E3): luźne plamy skał po 2–4 pola, które niczego nie obrysowują
 #: (x0, y0, x1, y1) — zostają tylko pasma i masywy.
@@ -247,8 +271,11 @@ PLAMY_SKAL = [(11, 9, 14, 17), (22, 9, 26, 16)]
 #: Straże w szyjkach (runda 12). Każda zamyka przejście albo kieszeń;
 #: potwór blokuje pole i osiem wokół.
 STRAZ_PRZELECZY_DOMU = (9, 17)      # na trakcie tuż pod szczeliną wiersza 16
-STRAZ_PLAZY = (12, 6)               # szyjka plaży
-STRAZ_BRODU = (rzeka_x(8), 8)       # środek łachy, na drodze przez rzekę
+STRAZ_PLAZY = (12, 7)               # szyjka plaży, między ścianami lasu
+# Runda 14 (D4, G2): straż mostu północnego na SUCHYM wschodnim brzegu, na
+# trakcie; jej dziewięć pól zamyka całe zejście z mostu (w wierszach 7 i 9
+# po obu stronach jest woda). Na łasze stała w korycie rzeki.
+STRAZ_BRODU = (rzeka_x(8) + 2, 8)
 STRAZ_PRZELECZY_FORTU = (30, 16)    # na trakcie między skałami a lasem
 STRAZ_ROGU = (31, 5)                # przesmyk do rogu NE (31–35, 1–5)
 
@@ -364,13 +391,15 @@ def popraw_teren(g, mapa):
     for x, y in ZIEMIA:
         if mapa[y][x] in '.,':
             mapa[y][x] = 'j'
-    # Runda 7: kieszeń za rzeką to rough od brzegu po ściane gór (las,
-    # który tu rósł z rozmycia szkicu, zasłaniał dno kieszeni).
+    # Runda 7: kieszeń za rzeką od brzegu po ścianę gór (las, który tu rósł
+    # z rozmycia szkicu, zasłaniał dno kieszeni). Runda 14 (E3, A1): dno to
+    # łąka, nie rough — a głąb kieszeni (18–21, 33–35) zarasta lasem, żeby
+    # kieszeń była ciasnym zakątkiem z jaskinią, nie pustym trawnikiem.
     x0, y0, x1, y1 = KIESZEN_ROUGH
     for y in range(y0, y1 + 1):
         for x in range(x0, x1 + 1):
             if x > rzeka_x(y) and mapa[y][x] in '.,T':
-                mapa[y][x] = 'j'
+                mapa[y][x] = 'T' if y >= 33 else '.'
     # Runda 8: dwa drzewa pod wschodnim przyczółkiem stały koronami na
     # drodze — trakt za mostem znikał pod nimi i „urywał się przy moście".
     for x in (16, 17, 18):
@@ -400,6 +429,9 @@ def popraw_teren(g, mapa):
             for x in range(x0, x1 + 1):
                 if mapa[y][x] in '.,j':
                     mapa[y][x] = 'T'
+    for x, y in SZYJKA_PLAZY:
+        if mapa[y][x] == 'T':
+            mapa[y][x] = '.'
     # Most: pola przeprawy przejezdne (droga wytyczy się po nich sama),
     # przyczółki po obu stronach wolne na dwa pola w głąb.
     x0, y0, x1, y1 = MOST
@@ -544,29 +576,37 @@ PIERWSZY_EKRAN_DOM = [
     ([(9, 27), (8, 27), (10, 27)], ('kopalnia', 'kamien')),
     ([(12, 33), (11, 33), (13, 33)], ('kopalnia', 'jagoda')),
     ([(11, 27), (10, 28)], ('surowiec', 'odlamek')),
-    ([(6, 30), (5, 30), (6, 31)], ('surowiec', 'jagoda')),
     # Runda 12 (G2): skrzynia leżała na trakcie tuż przed mostem — teraz
     # w stosie z odłamkami przy kopalni.
     ([(11, 28), (10, 29)], ('skrzynia', None)),
-    ([(9, 34), (10, 34)], ('skrzynia', None)),
+    # Runda 14 (B2): skrzynia (9, 34) i koszyk (6, 30) leżały w bezdrożnym
+    # lesie SW — teraz stos na końcu odnogi, za sadem.
+    ([(14, 33), (15, 33), (15, 34)], ('skrzynia', None)),
+    ([(14, 34), (13, 34), (14, 35)], ('surowiec', 'jagoda')),
 ]
 
-#: Runda 13 (B1): jaskinia odłamków na północnej łące, nad jeziorem.
-KOPALNIA_ODLAMKOW = [(6, 12), (5, 12), (7, 12), (6, 13)]
+#: Runda 13 (B1): jaskinia odłamków stała na północnej łące. Runda 14 (B1):
+#: poszła do kieszeni za rzeką zamiast drugiego kamieniołomu, a łąka nie ma
+#: kopalni — gracz ma kamień, sad, odłamki i złoto, każde raz.
 
 #: Pierwszy ekran, drugi brzeg.
 PIERWSZY_EKRAN_BRZEG = [
-    ([(19, 30), (20, 30), (18, 30)], ('kopalnia', 'kamien')),
-    ([(17, 30), (17, 29)], ('potwor', 'slaby')),
-    ([(19, 32), (18, 32)], ('skrzynia', None)),
+    # Runda 14 (A1, B1, G1): w kieszeni za pasmem zostaje SAMA jaskinia
+    # odłamków — bez straży (kieszeń i tak leży za strażą mostu), bez
+    # skrzyni i stosu (poszły na łąkę pogranicza, `STOS_POGRANICZA`).
+    ([(19, 30), (20, 30), (18, 30)], ('kopalnia', 'odlamek')),
     # Runda 13 (G1): bez ogniska w kieszeni i gniazda przy strażnicy —
     # mniej rzeczy w kadrze startu.
-    ([(20, 31), (18, 31)], ('surowiec', 'odlamek')),
     ([(18, 23), (17, 23)], ('budynek', 'wieza-obserwacyjna')),
     # Runda 12 (G1, F1): polana strażnicy odchudzona (bez wozu, jagód
-    # i kamienia na łące); przesmyk na północ jest ślepą odnogą ze skrzynią
-    # na końcu — bez straży, bo nie zamyka niczego.
-    ([(20, 18), (21, 18), (19, 18)], ('skrzynia', None)),
+    # i kamienia na łące). Runda 14: przesmyk nad wieżą zarósł (G1).
+]
+
+#: Runda 14 (G1): stos z kieszeni za rzeką przeniesiony za kadr startu —
+#: przy zakręcie traktu na łące pogranicza, pod ścianą lasu.
+STOS_POGRANICZA = [
+    ([(25, 23), (26, 23)], ('skrzynia', None)),
+    ([(25, 24), (24, 24)], ('surowiec', 'odlamek')),
 ]
 
 #: Runda 12: plaża nad jeziorem — kieszeń za strażą (12, 6).
@@ -604,6 +644,17 @@ ROG_SKARB = [
     ([(34, 3), (34, 4)], ('artefakt', None)),
     ([(33, 4), (33, 3)], ('skrzynia', None)),
     ([(34, 5), (30, 3)], ('surowiec', 'kamien')),
+]
+
+#: Runda 14: łąka pogranicza (27–33, 18–27) — każda rzecz w swoim miejscu:
+#: kamieniołom u stóp masywu pod przełęczą, pokeballe przy wschodnim lesie,
+#: stadion i wiatrak przy odnodze na południe. Kamieniołom, nie druga jaskinia
+#: odłamków (ta jest w kieszeni za mostem).
+LAKA_POGRANICZA = [
+    ([(28, 20), (28, 19), (27, 20)], ('kopalnia', 'kamien')),
+    ([(32, 21), (32, 20), (33, 21)], ('surowiec', 'pokeball')),
+    ([(32, 24), (31, 24), (32, 25)], ('budynek', 'arena')),
+    ([(30, 26), (29, 26), (30, 27)], ('budynek', 'wiatrak')),
 ]
 
 #: Runda 12 (F2): chata jasnowidza przy rozstajach za mostem — widać ją
@@ -688,13 +739,18 @@ def rozstaw(g):
     for miejsca, wpis in PLAZA_SKARB:
         postaw_kadr(g, miejsca, wpis)
     g.zajete += PLAZA
-    # Jaskinia odłamków na północnej łące (B1) — bez straży, podstawowa.
-    g.dodaj_najpierw('dom', lambda p: ('kopalnia', 'odlamek'), KOPALNIA_ODLAMKOW)
+    # Runda 14 (B1, B4): bez kopalni na północnej łące — drugi sad dublował
+    # sad przy zamku (ten sam rysunek dwa razy na brzegu domu).
     # Runda 13 (F3, G1): jedna wieża, jeden domek na drzewie na całej mapie;
     # budowle z pierwszego ekranu idą na północną łąkę.
-    g.budowle(6, 'dom', ['drzewo-wiedzy', 'zrodlo', 'gniazdo', 'ognisko', 'chatka', 'oboz-treningowy'], (4, 30))
-    g.dodaj(3, 'dom', (8, 30), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])))
-    g.dodaj(1, 'dom', (8, 30), lambda p: ('skrzynia', None))
+    # Runda 14 (G2, F3): bez ogniska (stoi w krainie wroga), a każda
+    # budowla co najmniej trzy pola od innych rzeczy — gniazdo, obóz
+    # i stos odłamków stały w jednej kupce, źródło dach w dach z ogniskiem.
+    for b in ['drzewo-wiedzy', 'zrodlo', 'gniazdo', 'chatka', 'oboz-treningowy']:
+        g.dodaj(1, 'dom', (4, 30), lambda p, b=b: ('budynek', b), odstep=3)
+    # Runda 14 (G2): stosy łąki też z odstępem — nie przyklejone do budowli.
+    g.dodaj(2, 'dom', (8, 30), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])), odstep=2)
+    g.dodaj(1, 'dom', (8, 30), lambda p: ('skrzynia', None), odstep=2)
     # Kieszeń domu bywa po rundzie 4 ciasna (rzeka skręca przez dolinę):
     # gdy każde miejsce w niej zatyka drogę, skarb w kieszeni odpada.
     try:
@@ -709,17 +765,28 @@ def rozstaw(g):
     for miejsca, wpis in PIERWSZY_EKRAN_BRZEG:
         postaw_kadr(g, miejsca, wpis)
     g.zajete += kadr_calego_ekranu
+    for miejsca, wpis in STOS_POGRANICZA:
+        postaw_kadr(g, miejsca, wpis)
+    # Runda 14 (G2): wokół rozstajów nic z puli — gniazdo, ognisko i drugi
+    # stos odłamków stawały przy tym stosie w jedną kupkę.
+    g.zajete += [(x, y) for y in range(21, 26) for x in range(23, 30)]
 
     # Chata jasnowidza przy rozstajach (F2) i koniec południowej odnogi (F1).
     postaw_kadr(g, JASNOWIDZ, ('jasnowidz', None))
+    # Runda 14 (G2): wokół chaty nic z puli — skrzynia i stos z losowania
+    # stawały tuż przy niej i zlewały się z rozstajami w jedną kupkę.
+    g.zajete += [(x, y) for y in range(25, 29) for x in range(23, 29)]
     for miejsca, wpis in KONIEC_ODNOGI:
         postaw_kadr(g, miejsca, wpis)
+    # Runda 14 (G2): wokół stosu na końcu odnogi nic z puli — wiatrak
+    # i ognisko stawały na skrzyni i artefakcie.
+    g.zajete += [(x, y) for y in range(27, 32) for x in range(28, 35)]
 
-    g.dodaj(2, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
-    g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('kopalnia', 'odlamek'))
-    g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
-    # Runda 13 (G2): bez rancza — jego mur 3 × 1 lądował w skałach masywu.
-    g.budowle(5, 'pogranicze', ['wiatrak', 'arena', 'ognisko', 'zrodlo', 'gniazdo'])
+    # Runda 14 (G2, F3, B1): łąka pogranicza rozstawiona ręcznie
+    # (`LAKA_POGRANICZA`) — losowanie zsypywało kopalnię, dwa stosy jagód,
+    # ognisko, gniazdo i skrzynię w jedną kolumnę pod przełęczą fortu.
+    for miejsca, wpis in LAKA_POGRANICZA:
+        postaw_kadr(g, miejsca, wpis)
     # Kieszeń pogranicza: artefakt i skrzynie za jedną średnią strażą (C1, B4).
     kieszen = iter([('artefakt', None), ('skrzynia', None), ('surowiec', 'kamien')])
     try:
@@ -734,7 +801,9 @@ def rozstaw(g):
     for miejsca, wpis in KRAINA_WROGA + ROG_SKARB:
         postaw_kadr(g, miejsca, wpis)
     g.zajete += ROG_NE
-    g.budowle(2, 'wroga', ['kamienna-wieza', 'arena'])
+    # Runda 14 (G2): pagoda na stałym miejscu przy trakcie — z losowania
+    # lądowała przy forcie, wciśnięta między skrzynię a stos (34–35, 9–11).
+    postaw_kadr(g, [(31, 8), (31, 7), (28, 7)], ('budynek', 'kamienna-wieza'))
 
 
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
@@ -915,4 +984,12 @@ NAKLEJKI_KLOCKI = ['martwe-drzewo-1', 'martwe-drzewo-2']
 #: pod górę w prawo — w poprzek rzeki, która w tym miejscu płynie skosem.
 MOSTY = [
     {'plik': 'polana/most.png', 'pola': [(MOST[0], MOST[1]), (MOST[2], MOST[3])], 'srodek': (15.1, 25.72), 'szer': 3.2},
+    # Runda 14 (D4): północna przeprawa to też most — koryto ma tu trzy
+    # pola, więc rysunek jest o półtora pola szerszy niż na południu.
+    {
+        'plik': 'polana/most.png',
+        'pola': [(x, BROD_POLNOCNY[1]) for x in range(BROD_POLNOCNY[0], BROD_POLNOCNY[2] + 1)],
+        'srodek': (BROD_POLNOCNY[0] + 1.6, BROD_POLNOCNY[1] + 0.72),
+        'szer': 4.6,
+    },
 ]

@@ -2742,3 +2742,33 @@ Liczby: 58 obiektów, co 10,1 pola, pasy [8,7,20,10,13], fort 25/35 kroków.
 Sondy: `probe-mapy` Polana OK, `probe-misja` WSZYSTKO OK, `tsc` czysty.
 Nierozwiązane (CZĘŚCIOWO): D2 bezdroże to ta sama łąka co przy drodze;
 E3 rough w kieszeni za rzeką ma 5 × 9 pól (poniżej 6 szerokości).
+
+### Runda 14 (2026-10-08)
+
+Werdykt r3 (`tools/blind/r3-polana-werdykt.md`): wygrana ślepo, 19 TAK /
+10 CZĘŚCIOWO / 1 NIE (G1). Zmiany tylko w `tools/mapy/polana.py`:
+
+- dolina domu ma dwa wyjścia (most, przełęcz (9,17)); trzecie — kieszeń
+  za rzeką z rough (17–21,27–35) i strażą (17,30) — znikło: dno kieszeni
+  to łąka, głąb (18–21,33–35) las, w kieszeni sama jaskinia odłamków
+  (19,30) bez straży (leży za strażą mostu). Plama piasku (E3) usunięta.
+- ekran startowy (0–20,18–35): zamek + 8 obiektów, 2 straże (9,17),
+  (17,25). Przesmyk nad wieżą (19–21,18–22) zarósł. Skrzynia i koszyk
+  z lasu SW → stos (14,33)–(14,34) przy sadzie, na końcu odnogi.
+- kopalnie bez dubla: kamieniołom (9,27), sad (12,33), złoto plaży (10,4),
+  odłamki w kieszeni (19,30), kamieniołom pogranicza (28,20) pod przełęczą
+  fortu, złoto wroga (31,3). Bez kopalni na północnej łące (drugi sad).
+- straże: plaża (12,7) w szyjce z dwurzędowymi ścianami lasu (9–11,6–7),
+  (13–16,6–7); most (17,25) z lasem nad brzegiem (14–19,22–24), nie da się
+  obejść; północna przeprawa (20–22,8) to drugi rysunek mostu (`MOSTY`),
+  straż (23,8) na suchym brzegu.
+- G2/F3: łąka pogranicza rozstawiona ręcznie (`LAKA_POGRANICZA`: kopalnia,
+  pokeballe, stadion, wiatrak — po jednym), pagoda na stałe (31,8),
+  budowle i stosy północnej łąki z odstępem (`odstep=3`/`2`), bez ogniska
+  i automatu w pulach; strefy wolne wokół chaty jasnowidza, końca odnogi
+  i stosu przy rozstajach (25,23).
+
+Liczby: 47 obiektów, co 11,7 pola, pasy [7,5,15,8,12], fort 25/35 kroków,
+6 straży, bez bitwy 25 %. Nierozwiązane: sad (rysunek `m-sad`) krytyk
+może dalej brać za ogród, nie kopalnię; stos kamieni plaży (8,4) nie ma
+miejsca (stan z poprzednich rund).
