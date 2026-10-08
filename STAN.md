@@ -211,6 +211,42 @@ tabele `R9_*` (usunięcia, przeniesienia stare → nowe pole, teren).
   G1 w sensie okna przesuwnego dalej 23; czwarty pas (22) niższy niż drugi
   (25), garb jest, ale niesymetryczny.
 
+Runda 10 buildera (po werdykcie r9: WYGRANA ślepo, 26 TAK / 4 CZĘŚCIOWO /
+0 NIE: A2, C1, G1, G3). Funkcja `runda_10(g)` po `runda_9`, tabele `R10_*`.
+- **A2**: kopalnia kamieni z otwartej łąki (11,51) → (5,52) w zakątku SW za
+  strażą (8,50), nie (6,52): rysunek kamieniołomu ma ~4,1 pola szerokości
+  (plik 300 × 160 przy 2,2 pola wysokości), przy (6,52) sięgałby x = 8,56,
+  czyli na straż; przy (5,52) kończy się na 7,56 (sprawdzone na zrzucie).
+  Bryła (4–6, 51) wypadała na skrzynię i kamień (5–6, 51) → stos pod
+  kopalnią: (6,53) kamień, (7,53) skrzynia. (11,51) zostaje łąką. BFS ze
+  strefami straży: zakątek (kopalnia, stos, (4,50)) zamknięty bez bitwy.
+- **C1**: straż (17,42) była na łące — kopalnia pokeballi (17,41) dostała
+  lasek po bokach wejścia (16,41), (18,41), (16,42), (18,42); straż stoi
+  w jednopolowym wylocie. Nisza (23–24, 40) nie ma już ścian (kępy zdjęte
+  w r7–r9), przenosiny tam wymagałyby nowego lasu na łące doliny (G3).
+  Pierwszy dzień w `probe-mapy`: 20 obiektów (było 21), OK.
+- **G1**: precz źródło (8,27), jagody (9,29), słaba straż (32,46). Ekrany
+  (6–26, 12–29) i (30–50, 33–50): po 19 obiektów i 3 straże. Okno
+  przesuwne 21 × 18 dalej maks 23 (przy (15,10)).
+- **G3**: kępa (20–21, 37–41) → łąka; wysepki (15–17, 9–11) i (7–12, 13)
+  → ziemia jałowa. Bez rzędu lasu (7–12, 13) straż korytarza (8,12) stała
+  na otwartym → (7,12), w szyjce x = 7 (rzędy 12–13) między lasem (7,11)
+  a skałami (7,14); stos NW (3–5, 10–11) dalej zamknięty bez bitwy.
+- **B3**: po zmianach obiekt co 11,1 → 20 zatok gruntu wcinających się
+  w las/skały (`R10_ZATOKI`, ≥ 4 z 8 sąsiadów las/skała, bez drogi i obiektów
+  obok) zarosło lasem. (36,12) odpadło — jedyne dojście do ośrodka (38,12).
+- Liczby: 116 obiektów, co 11,0 pola (1271 przejezdnych); budowle 32 +
+  jasnowidz (28,4 %), surowce 25 (21,6 %), skrzynie 23 (19,8 %), artefakty
+  10 (8,6 %), kopalnie 11 (9,5 %), straże 14 (12,1 %); pasy [22, 21, 31,
+  22, 20]; bez bitwy 24 % (299 pól); do zamku wroga 44, najdalszy zakątek 63.
+- Sondy: `probe-mapy` Bagna bez ŹLE, `probe-misja` WSZYSTKO OK, tsc OK.
+  `runda-planszy.sh bagna 5203` 4 razy (raz zrzut padł na „element is not
+  stable" — powtórka przeszła).
+- Nierozwiązane: B3 na samej granicy (11,0); pierwszy pas (22) wyżej niż
+  drugi (21) — garb w środku jest, ale lewe zbocze płaskie; lasek przy
+  kopalni pokeballi to cztery wierzby na łące — krytyk może je wziąć za
+  szpaler; okno przesuwne 23.
+
 ## Pokémart — sklep z przedmiotami zamiast gildii magów (2026-09-29)
 
 **Co jest.** Plecak trenera przestał się napełniać sam przed każdą bitwą —

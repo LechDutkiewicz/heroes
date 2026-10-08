@@ -739,6 +739,7 @@ def rozstaw(g):
     runda_7(g)
     runda_8(g)
     runda_9(g)
+    runda_10(g)
 
 
 #: Runda 11 (HotA, zwycięzca rundy 10: „nic nie przypomina bagna — stawy małe,
@@ -2178,6 +2179,74 @@ def runda_9(g):
     _odswiez(g)
     g.zasyp_odciete(m)
     print(f'  runda 9: usunięte {len(zabrane)}, obiektów {len(g.obiekty)}')
+
+
+# --- RUNDA 10 PĘTLI (werdykt ślepego porównania r9: WYGRANA, 26 TAK /
+# 4 CZĘŚCIOWO / 0 NIE: A2, C1, G1, G3) -------------------------------------
+#  - A2: kopalnia kamieni z otwartej łąki (11,51) do zakątka SW za strażą
+#    (8,50) — na (5,52), nie (6,52): rysunek kamieniołomu ma ~4,1 pola
+#    szerokości (300 × 160 px przy 2,2 pola wysokości), więc przy (6,52)
+#    sięgałby do x = 8,56, na straż. Przy (5,52) kończy się na 7,56. Bryła
+#    (4–6, 51) wypada na skrzynię i kamień (5–6, 51), więc stos zjeżdża pod
+#    kopalnię: (6,53) kamień, (7,53) skrzynia. Stare miejsce zostaje łąką.
+#  - C1: straż (17,42) stała na otwartej łące przy kopalni pokeballi (17,41).
+#    Kopalnia dostaje lasek po bokach wejścia — (16,41), (18,41), (16,42),
+#    (18,42) — i straż stoi w jednopolowym wylocie niszy. Nisza (23–24, 40)
+#    nie ma już ścian (kępy zdjęte w rundach 7–9), więc przenosiny tam
+#    wymagałyby nowego lasu na łące doliny (G3).
+#  - G1: precz źródło (8,27) i jagody (9,29) z zakątka zachodniego (zostaje
+#    stos (7–8, 29)) oraz słaba straż (32,46) — wylot mostu zamyka (30,44).
+#  - G3: kępa (20–21, 37–41) w łące doliny → łąka; wysepki lasu na
+#    płaskowyżu wroga (15–17, 9–11) i (7–12, 13) → ziemia jałowa. Bez rzędu
+#    lasu (7–12, 13) korytarz straży (8,12) przestał być korytarzem — straż
+#    stała na otwartym. Przejście na zachód, do stosu NW (3–5, 10–11), to
+#    teraz szyjka x = 7, rzędy 12–13, między lasem (7,11) a skałami (7,14):
+#    straż (8,12) → (7,12), w samej szyjce (C1/C4).
+R10_USUN = [(8, 27), (9, 29), (32, 46), (11, 51), (5, 51), (6, 51), (8, 12)]
+#: Przeniesienia: stare pole → nowe (wpis ten sam).
+R10_PRZENIES = {(8, 12): (7, 12)}
+R10_POSTAW = [
+    ((5, 52), ('kopalnia', 'kamien')),
+    ((6, 53), ('surowiec', 'kamien')),
+    ((7, 53), ('skrzynia', None)),
+]
+R10_LAS = [(16, 41), (18, 41), (16, 42), (18, 42)]
+R10_LAKA = [(x, y) for x in (20, 21) for y in range(37, 42)]
+R10_JALOWA = [(15, 9), (16, 9), (17, 9), (16, 10), (17, 10), (16, 11), (17, 11)] + \
+    [(x, 13) for x in range(7, 13)]
+#: B3: po kępie, wysepkach i trzech obiektach mniej obiekt wypadał co 11,1
+#: pola — zatoki gruntu wcinające się w las i skały (≥ 4 z 8 sąsiadów to las
+#: albo skała, bez drogi i obiektów obok) zarastają lasem: brzeg masywów
+#: gładszy, a gęstość wraca do 9–11.
+R10_ZATOKI = [
+    (4, 6), (4, 8), (6, 0), (6, 2), (15, 0), (21, 2), (22, 2), (25, 2), (3, 13),
+    (17, 7), (8, 19), (33, 13), (34, 21), (37, 0),
+    (47, 28), (50, 39), (51, 47), (40, 50), (52, 35), (52, 36),
+]
+
+
+def runda_10(g):
+    m = g.mapa
+    zabrane = dict(_usun(g, R10_USUN))
+    _odswiez(g)
+    zajete = {p for p, _ in g.obiekty} | g.blokada
+    for x, y in R10_LAKA:
+        if m[y][x] == 'T':
+            m[y][x] = '.'
+    for x, y in R10_JALOWA:
+        if m[y][x] == 'T':
+            m[y][x] = 'j'
+    for x, y in R10_LAS + R10_ZATOKI:
+        if m[y][x] in '.bj,' and (x, y) not in zajete:
+            m[y][x] = 'T'
+    _odswiez(g)
+    for p, w in R10_POSTAW:
+        g.postaw(p, w)
+    for stare, nowe in R10_PRZENIES.items():
+        g.postaw(nowe, zabrane[stare])
+    _odswiez(g)
+    g.zasyp_odciete(m)
+    print(f'  runda 10: usunięte {len(zabrane)}, obiektów {len(g.obiekty)}')
 
 
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
