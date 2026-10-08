@@ -68,6 +68,14 @@ dwiema skrzyniami i stosem; przy trakcie dwa surowce luzem. Środek północnej
 Kamieniołom pogranicza we wnęce lasu za strażą. Łąka za mostem to ubita
 ziemia (droga się opłaca) w innym, oliwkowym odcieniu; skały SE w dwóch
 masywach.
+
+Runda 18 (werdykt r7: wygrana ślepo, 25 TAK / 4 CZĘŚCIOWO — C3, E3, G1, G2).
+Trasa do fortu ma stopnie słaba → średnia: most (17, 26) słaby, przełęcz
+fortu (30, 16) ŚREDNIA. Most północny (24, 8) jest SILNY i pilnuje skarbca
+krainy wroga — zakątka (23–26, 3–6) z kamienną wieżą i artefaktem, zamkniętego
+od misy fortu ostrogą skał (26–27, 5–7); jedyne wejście leży w strefie tej
+straży. Środek północy bez drugiego wiatraka, wozu i stosu (15–16, 9);
+stos skrzynia + kamień w zatoczce przy moście (17–18, 6–7).
 """
 
 import math
@@ -583,6 +591,17 @@ def popraw_teren(g, mapa):
                 mapa[y][x] = '.'
     # …i skały nad plażą (9–11, 2) jednym blokiem, bez głazu w szczelinie.
     mapa[2][10] = '#'
+    # Runda 18 (E3): bez plam poniżej 6 × 6 — samotne pole łąki (8, 2)
+    # w lesie zarasta, kępka drzew (11–14, 9–10) na łące i samotne drzewa
+    # (27, 18–19) w ziemi pogranicza znikają.
+    mapa[2][8] = 'T'
+    for y in (9, 10):
+        for x in range(11, 15):
+            if mapa[y][x] == 'T':
+                mapa[y][x] = '.'
+    for y in (18, 19):
+        if mapa[y][27] == 'T':
+            mapa[y][27] = '.'
 
 
 def po_drogach(g, mapa):
@@ -613,7 +632,11 @@ PRZELECZ_DOMU_Y = 16
 #: (27–30, 2–4), który z przesmykiem (31, 5) zamyka róg NE, i grzbiet
 #: wschodni (33–35, 6–14) schodzący do masywu granicy. Pojedyncze kopce
 #: w misie fortu (25, 3), (27–28, 12–15), (28–29, 5), (32, 6–7) znikają.
-GRZBIETY_FORTU = [(27, 2, 30, 4), (33, 6, 35, 14)]
+GRZBIETY_FORTU = [(27, 2, 30, 4), (33, 6, 35, 14), (26, 5, 27, 7)]
+#: Runda 18 (C3): trzeci grzbiet (26–27, 5–7) to ostroga spod grzbietu
+#: północnego — odcina zakątek (23–26, 3–6) od misy fortu. Jedyne wejście,
+#: (23–25, 7), leży w strefie straży mostu północnego (24, 8): skarbiec
+#: bierze tylko ten, kto pobije SILNĄ straż (od mostu albo od fortu).
 MISA_FORTU = (23, 3, 34, 14)
 
 #: Runda 15 (B4, E2): polana w martwym masywie lasu na południowym wschodzie
@@ -724,10 +747,14 @@ PIERWSZY_EKRAN_DOM = [
     # Runda 16 (A2, G2): kamieniołom spod dachu zamku (9, 27) przeniesiony
     # do kieszeni SW za wolną słabą strażą (`KIESZEN_DOMU_SKARB`).
     ([(12, 33), (11, 33), (13, 33)], ('kopalnia', 'jagoda')),
-    ([(11, 27), (10, 28)], ('surowiec', 'odlamek')),
-    # Runda 12 (G2): skrzynia leżała na trakcie tuż przed mostem — teraz
-    # w stosie z odłamkami przy kopalni.
-    ([(11, 28), (10, 29)], ('skrzynia', None)),
+    # Runda 18 (G2): odłamek i skrzynia (11, 27–28) wchodziły w prawy domek
+    # zamku. Pola (14, 27–28) z werdyktu stykają się ze startem (`postaw_kadr`
+    # ich nie bierze), a (13–14, 30) leżą na dachu straganu sadu — stos
+    # stoi nad przyczółkiem mostu, po obu stronach traktu, 4 kroki od
+    # startu. Na wylocie doliny (9–10, 21) autopilot brał go za późno
+    # i misja 1 w symulacji spadała do 6/9 wygranych.
+    ([(13, 24), (13, 23)], ('surowiec', 'odlamek')),
+    ([(11, 24), (11, 23)], ('skrzynia', None)),
     # Runda 15 (A2, G1): kopalnia odłamków w dolinie, bez straży, za zamkiem
     # na końcu krótkiej odnogi traktu. Stos skrzynia + jagoda spod sadu
     # (14, 33–34) poszedł na zachodnią łąkę (`LAKA_POLNOCNA`).
@@ -787,7 +814,7 @@ STOS_POGRANICZA = [
 LAKA_POLNOCNA = [
     ([(6, 9), (5, 9)], ('budynek', 'zrodlo')),
     ([(3, 10), (3, 11)], ('budynek', 'chatka')),
-    ([(5, 12), (6, 12), (6, 11)], ('budynek', 'woz')),
+    # Runda 18 (G1): wóz (5, 12) odpadł — zachodnia łąka bez trzeciej budowli.
     ([(5, 14), (6, 14)], ('skrzynia', None)),
     ([(4, 15), (4, 14)], ('surowiec', 'jagoda')),
     ([(10, 13), (9, 13)], ('budynek', 'oboz-treningowy')),
@@ -795,16 +822,17 @@ LAKA_POLNOCNA = [
     # kosze, skrzynie i pokeballe (12, 12), (15, 14), (16, 14), (17–18,
     # 11–12) odpadły (dwa surowce poszły do doliny domu), zostają dwa stosy:
     # przy rozstajach (9–10, 11–12) i przy trakcie do mostu (15–16, 9).
-    ([(10, 11), (9, 11)], ('skrzynia', None)),
+    # Runda 18 (G1, F1): skrzynia z rozstajów (10, 11) poszła do pustej
+    # zatoczki przy moście północnym (`ZATOCZKA_MOSTU`).
     ([(9, 12), (10, 12)], ('surowiec', 'odlamek')),
     ([(15, 12), (15, 13)], ('budynek', 'drzewo-wiedzy')),
     ([(13, 15), (14, 15)], ('budynek', 'gniazdo')),
-    ([(15, 9), (15, 8)], ('surowiec', 'kamien')),
-    ([(16, 9), (16, 8)], ('skrzynia', None)),
-    # Runda 17 (B4): budynki 25–30 % — wiatrak na pustym brzegu łąki przy
-    # rzece (18, 11), trzy pola na wschód od drzewa wiedzy (na (17, 13)
-    # stał dach w dach z laboratorium).
-    ([(18, 11), (18, 12)], ('budynek', 'wiatrak')),
+    # Runda 18 (G1): stos przy trakcie (15–16, 9) i wiatrak (18, 11) —
+    # dubel wiatraka (30, 26) — odpadły; kamień leży w zatoczce przy moście.
+    # Zatoczka (17–19, 6–7): skrzynia z rozstajów i kamień — cel pustej
+    # łąki przy zejściu z mostu (F1), stos na dwie rzeczy (B2).
+    ([(18, 6), (18, 7)], ('skrzynia', None)),
+    ([(17, 7), (17, 6)], ('surowiec', 'kamien')),
 ]
 
 #: Runda 12: plaża nad jeziorem — kieszeń za strażą (12, 6).
@@ -821,9 +849,15 @@ PLAZA_SKARB = [
 #: 2–3, a nie pojedyncze pionki na łące (B2). Artefakt to ten, który stał
 #: w pierwszym ekranie.
 KRAINA_WROGA = [
+    # Runda 18 (G2): pokeball (24, 10) przy trakcie (26, 12) — kupka trzech
+    # rzeczy za mostem się rozpadła. Artefakt zostaje po stronie fortu:
+    # bez niego autopilot (`symulacja-misji`) nie bierze fortu za średnią
+    # przełęczą przed dniem 32 przy co trzecim starterze.
     ([(25, 9), (25, 10), (26, 9)], ('artefakt', None)),
-    ([(24, 10), (24, 11)], ('surowiec', 'pokeball')),
-    ([(25, 11), (26, 10), (26, 11)], ('surowiec', 'kamien')),
+    ([(26, 12), (27, 11)], ('surowiec', 'pokeball')),
+    # Runda 18 (G2): kamień spod artefaktu (25, 11) na (24, 12) — jajo
+    # artefaktu stało na kamieniach i czytało się jako jedna kupka.
+    ([(24, 12), (23, 12), (25, 12)], ('surowiec', 'kamien')),
     # Runda 17 (B4): skrzynia (26, 6) odpadła — skrzynie ≤ 20 %, a pod
     # grzbietem nie stoją już trzy rzeczy w jednym rzędzie.
     # Runda 17 (C3, F1): ognisko spod ślepej odnogi (24, 5) zrobiło miejsce
@@ -844,6 +878,13 @@ KRAINA_WROGA = [
     # z pokeballami; chatka na pustej ciemnej łące pod stosem artefaktu.
     ([(29, 6), (28, 7)], ('surowiec', 'pokeball')),
     ([(26, 14), (25, 13)], ('budynek', 'chatka')),
+]
+
+#: Runda 18 (C3): skarbiec za silną strażą mostu północnego — zakątek
+#: (23–26, 3–6) za ostrogą skał: kamienna wieża (stawiana na końcu `rozstaw`)
+#: i artefakt (z końca odnogi SE).
+SKARBIEC_WROGA = [
+    ([(24, 5), (23, 5), (24, 4)], ('artefakt', None)),
 ]
 
 #: Runda 12: róg NE (31–35, 1–5) za skałami — kieszeń za strażą (31, 5).
@@ -892,7 +933,9 @@ JASNOWIDZ = [(26, 27), (25, 27), (26, 26)]
 #: Runda 12 (F1): koniec południowej odnogi drogi — skrzynia i stos.
 KONIEC_ODNOGI = [
     ([(31, 28), (31, 29), (32, 28)], ('skrzynia', None)),
-    ([(31, 29), (32, 29), (31, 30)], ('artefakt', None)),
+    # Runda 18 (C3): artefakt z końca odnogi (31, 29) poszedł do skarbca
+    # za silną strażą (`SKARBIEC_WROGA`) — pogranicze SE ma drugi na polanie.
+    ([(31, 29), (32, 29), (31, 30)], ('surowiec', 'jagoda')),
 ]
 
 
@@ -962,15 +1005,19 @@ def rozstaw(g):
     # Przełęcz fortu: SILNA straż na trakcie — fort jest ostatnią, najdroższą
     # bitwą (C2, C3).
     # Kieszenie: plaża (słaba) i róg NE (średnia) — nagroda za cały zakątek.
+    # Runda 18 (C3, C2): siły zamienione — trakt do fortu idzie słaba (17, 26)
+    # → ŚREDNIA (30, 16), a SILNY most północny (24, 8) pilnuje skarbca
+    # (`SKARBIEC_WROGA`: kamienna wieża i artefakt za ostrogą skał). Przy
+    # średnim moście najbogatsza kraina leżała za łatwiejszą walką niż fort.
     straz(STRAZ_PRZELECZY_DOMU, 'slaby')
     straz(STRAZ_MOSTU, 'slaby')
-    straz(STRAZ_BRODU, 'sredni')
+    straz(STRAZ_BRODU, 'silny')
     straz(STRAZ_KIESZENI_DOMU, 'slaby')
     # Runda 17: (27, 20) zostaje SŁABA, choć krytyk r6 chciał średniej —
     # średnia odcina drugi kamieniołom i `symulacja-misji` misji 1 spada do
     # 2–4/6 wygranych przed dniem 32 (bez kamienia nie ma rozbudowy).
     straz(STRAZ_KAMIENIOLOMU, 'slaby')
-    straz(STRAZ_PRZELECZY_FORTU, 'silny')
+    straz(STRAZ_PRZELECZY_FORTU, 'sredni')
     straz(STRAZ_PLAZY, 'slaby')
     straz(STRAZ_ROGU, 'sredni')
 
@@ -1034,7 +1081,7 @@ def rozstaw(g):
     # Za brodem i przy forcie: artefakt, stosy po 2–3, skrzynie, ognisko;
     # w rogu NE kieszeń za średnią strażą z kopalnią złota wroga (runda 13:
     # każda straż krainy stoi w szyjce).
-    for miejsca, wpis in KRAINA_WROGA + ROG_SKARB:
+    for miejsca, wpis in KRAINA_WROGA + SKARBIEC_WROGA + ROG_SKARB:
         postaw_kadr(g, miejsca, wpis)
     g.zajete += ROG_NE
     # Runda 14 (G2): pagoda na stałym miejscu przy trakcie — z losowania

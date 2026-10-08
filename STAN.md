@@ -3172,6 +3172,48 @@ Nierozwiązane: C2 na trasie południowej nadal słaba → silna (średnia jest
 na północnej); silną przełęcz da się obejść średnim mostem; dwa wiatraki,
 dwa gniazda i dwa domki na drzewie (14 rodzajów budowli na 16 sztuk).
 
+### Runda 18 (2026-10-08)
+
+Werdykt r7 (`tools/blind/r7-polana-werdykt.md`): wygrana ślepo, 25 TAK /
+4 CZĘŚCIOWO (C3, E3, G1, G2) / 0 NIE. Zmiany tylko w `tools/mapy/polana.py`:
+
+- C3/C2 (zmiana 1): siły zamienione — przełęcz fortu (30, 16) ŚREDNIA, most
+  północny (24, 8) SILNY. Trasa do fortu: słaba (17, 26) → słaba (27, 20,
+  wnęka kamieniołomu, po drodze) → średnia (30, 16). Żeby silna pilnowała
+  czegoś wyłącznego, ostroga skał (26–27, 5–7) (trzeci `GRZBIETY_FORTU`)
+  odcina zakątek (23–26, 3–6) od misy fortu; jedyne wejście (23–25, 7) leży
+  w strefie straży (24, 8). W zakątku kamienna wieża (25, 3) i artefakt
+  (24, 5) (`SKARBIEC_WROGA`) — artefakt przyszedł z końca odnogi SE (31, 29),
+  tam teraz jagoda. Artefakt (25, 10) zostaje po stronie fortu: bez niego
+  autopilot przy starterze 0 brał przełęcz dnia 19, a fortu już nie (6/9).
+- G1 (zmiana 2): odpadły wiatrak (18, 11), wóz (5, 12) i skrzynia (16, 9);
+  skrzynia z rozstajów (10, 11) → zatoczka przy moście (18, 6), kamień
+  (15, 9) obok niej (17, 7).
+- G2/E3 (zmiana 3): pokeball (24, 10) → (26, 12), kamień (25, 11) → (24, 12)
+  (jajo artefaktu stało na kamieniach). Odłamek i skrzynia spod domku zamku
+  (11, 27–28) → nad przyczółek mostu, po obu stronach traktu: odłamek
+  (13, 24), skrzynia (11, 24). Pola z werdyktu (14, 27–28) stykają się ze
+  startem (`postaw_kadr` ich nie bierze, a (14, 27) to flaga bohatera);
+  (13–14, 30) leżały na dachu straganu sadu; (9–10, 21) na wylocie doliny
+  — autopilot brał je za późno, symulacja 6/9, dzień 28. Teren: (8, 2) → las,
+  kępka (11–14, 9–10) → łąka (trakt idzie teraz prosto wierszem 10),
+  (27, 18–19) → ziemia pogranicza.
+
+Liczby: 59 obiektów, co 10,1 pola, strefy dom 9 / pogranicze 34 / wróg 16,
+pasy [5,10,19,14,11], fort 25/35, straże 8 (5 słabych, 2 średnie, 1 silna),
+bez bitwy 24 %. Udziały: surowce 24 %, budynki z jasnowidzem 25,4 %,
+skrzynie 18,6 %, kopalnie 10,2 %, artefakty 8,5 %, straże 13,6 %.
+Sondy: `probe-mapy` i `probe-osiagalnosc` Polana bez ŹLE, `probe-misja`
+WSZYSTKO OK, `tsc` czysty; `symulacja-misji` misja 1: 9/9 wygranych,
+średnio dzień 18,3 (15/15/25 wg startera) — autopilot idzie południem
+(17, 26) → (27, 20) → (30, 16) → róg NE (31, 5) → fort, silnej nie rusza.
+Nierozwiązane: G1 — najgęstsze okno 21 × 18 ma 22 obiekty (środek północy
+(8–28, 3–20); było 23), próg „≤ 16 na ekran" jest przy gęstości co 10 pól
+nieosiągalny (średnio ~17 na okno); budynki 25,4 % i kopalnie 10,2 % na
+granicy widełek, więc dalszego odchudzania nie było (chatka (26, 14) to
+dubel (3, 10), ale bez niej budynki < 25 %). Most południowy i (27, 20) to
+dwie słabe z rzędu — stopień średni dopiero na przełęczy fortu.
+
 ## Dwie Doliny — pętla plansz 2026-10
 
 Runda 3 po werdykcie `tools/blind/r2-dwie-doliny-werdykt.md` (wygrana ślepo,
