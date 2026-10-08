@@ -36,6 +36,33 @@ Runda 4 buildera (po werdykcie r3: wygrana ślepo, 20 TAK / 9 CZĘŚCIOWO /
   niż w r3 (gradient płytszy), oczka malowane w tle trzęsawiska (efekt
   `trzesawisko`) dalej czytają się jak kałuże.
 
+Runda 5 buildera (po werdykcie r4: wygrana ślepo, 15 TAK / 13 CZĘŚCIOWO /
+2 NIE). Funkcja `runda_5(g)` po `runda_4`, ten sam styl (chirurgicznie).
+- **B4/B1**: kopalń 16 → 11 (kamień 3, pokeballe 3); precz (25,23), (29,28),
+  (26,30), (15,13), (20,13) — na ich miejsca budowle. Budowli 19 → 38
+  (31 %), skrzyń 21 (17 %), surowców 30, obiekt co 11,0 pola (121 obiektów).
+  Nowe budowle stawia `_miejsce(g, prostokąt)`: czyste pole, bez drogi pod
+  rysunkiem, ≥ 3 od budowli i ≥ 2 od obiektów (G2).
+- **G1**: okno środka (20–41 × 18–36) 14 obiektów / 1 straż, dom
+  (0–21 × 36–54) 14 / 1; kafle 18 × 18: 12–15, ≤ 2 straże. Okno przesuwne
+  21 × 18 dochodzi do 22 i 4 straży przy (30–50, 33–50) — tego nie zbiłem.
+- **A2/A5/A3/D1**: kopalnia pokeballi doliny pod słabą strażą (23,42) obok
+  drogi; kopalnia kamieni (11,51) i zakątek SW za jedną słabą strażą
+  (10,51) (kałuża (9–10, 51–53) → ściana lasu); ścieżka w dół doliny kończy
+  się na (13,52) stosem (12–13, 53) — 4 łatwe nagrody w ≤ 7 krokach.
+- **C1/C4/G2**: stos NE zamknięty lasem (35–36, 0–2/4), jedna brama (35,3)
+  ze strażą; kopalnia kamieni pogranicza z murem na drodze → (36,33) ze
+  strażą (35,34), straż (38,33) z drogi precz; straż odnogi SE (44,46) →
+  (45,48) obok drogi.
+- **D3**: `_prosta` — trakt doliny prosto wierszem 44 od (13,44) do mostu,
+  ukos spod warowni (22,7)–(25,14) po prostej. **E3/E5**: dolina bez bagna,
+  kałuże ≤ 6 pól zasypane. **G4**: kraina wroga ma w SIATCE grunt `j`
+  (minimapa: brąz zamiast zieleni). **G3**: pod lasem poza pierwszym
+  ekranem ciemna ściółka (`TLO` → `s`, barwa w `BARWY_TERENU['snieg']`) —
+  rzędy klocków zlewają się w masyw; plus rzadkie głazy w głębi lasu.
+  Szpalery samych sprite'ów wierzb zostają (to scena/klocki, nie plansza).
+- Sondy Bagien OK, `probe-misja` OK, bez bitwy 23 %, pasy [22, 16, 32, 24, 27].
+
 ## Pokémart — sklep z przedmiotami zamiast gildii magów (2026-09-29)
 
 **Co jest.** Plecak trenera przestał się napełniać sam przed każdą bitwą —
@@ -1424,6 +1451,42 @@ Zmiany (wszystkie per plansza, układ i rozstawienie bez zmian):
   na 8 pól, w lewym dolnym rogu łańcuch + grzbiet ~4 pola zamiast pasma
   10 × 6, szczyt z lodospadem mniejszy na progu nad stawem.
 - Grafiki: 3 obrazki medium, ≈ $0,17.
+
+## Twierdza — pętla plansz 2026-10
+
+Krytyk rundy 2 (`tools/blind/r2-twierdza-werdykt.md`): wygrana ślepo,
+23 TAK / 5 CZĘŚCIOWO / 1 NIE. Zmiany tylko w `tools/mapy/twierdza.py`:
+
+- **G1 (NIE → rozkład)**: zachodnia dolina (0–21, 24–44) i zakątek za
+  Strażą Międzyjezierza (35–43, 24–35) wyłączone z losowania
+  (`BEZ_LOSOWANIA`); losowanie kupek, skrzyń i budowli stawia rzecz tylko
+  tam, gdzie każdy ekran 21 × 18 z tym polem ma < `EKRAN_LIMIT` (16)
+  obiektów (`gestosc`/`luzne`, okna po wszystkich położeniach kadru), reszta
+  idzie do `NADMIAR` i trafia na najluźniejszy ekran przy trakcie (z
+  preferencją środkowego pasa odległości; zachodnia dolina przyjmuje go
+  do `DOLINA_W_MAX`). Rozstawienie najpierw ręczne we wszystkich strefach,
+  potem losowanie (inaczej strefa po strefie zapełniała ekrany na granicy).
+  Ekrany: dolina W 43 → ~21, wschodnie jezioro 27 → ~20, start 10 → 13;
+  najgęstszy ekran planszy ~23–24. Niżej się nie da bez łamania B3 (obiekt
+  co ≤ 12,5 pola przejezdnego ⇒ ≥ ~215 obiektów, czyli średnio ~16 na
+  ekran lądu) — stąd trzy kępy boru w pustych połaciach (16–19, 25–29;
+  58–61, 25–29; 17–21, 4–7), las+skały 39,5 % (sufit 40 %).
+- **A2/A3**: kopalnia odłamków na brzegu stawu (14, 60), 5 kroków od bramy,
+  wiatrak na jej dawne miejsce (21, 64); skrzynie (9, 61) i (13, 66),
+  kupki (12, 59) i (17, 63); skrzynia zza jaszczura (6, 64) usunięta. W 8
+  krokach: 2 kopalnie, 2 skrzynie, 3 kupki, bez straży.
+- **E3**: śnieg w pasie tundry (y 24–42) → jałowa ziemia, poza kątem pod
+  grzbietem (x ≤ 9, y ≥ 39).
+- **E5**: kałuża (47, 50) zasypana; straż `SZYJKA_SE` (50, 62) w jednopolowym
+  przejściu między jeziorem SE a borem — bez straży (58, 57), (51, 64),
+  (53, 61) i (69, 63) za nią (`ZA_SZYJKA_SE`).
+- **G2**: losowe budowle ≥ 3–4 pola od innych budowli, ta sama budowla nie
+  bliżej niż 10 pól (`budowle_z_odstepem`), chaty jasnowidza też z odstępem
+  (`z_dala_od_budowli`); kupki/skrzynie losowania ≥ 2 pola od obiektów.
+- Najdalszy relikt pod wodzem w dolinie Srebrnej Strażnicy (x < 24), ≥ 5 pól
+  od innych straży — po zmianie terenu wypadał o pole od reliktu (30, 12).
+- Zostało: pasy odległości 28/38/57/61/34 — garb przesunął się w pas 4
+  (zachodnia dolina to pas 3, a ją przerzedzono); surowce luzem ~24 %.
 
 ## Profile graczy i sloty zapisu (2026-09-26)
 

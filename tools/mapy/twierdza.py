@@ -370,6 +370,31 @@ def popraw_teren(g, mapa):
     for x in range(5, 9):
         mapa[16][x] = 's'
 
+    # --- Pętla plansz 2026-10 (krytyk rundy 2) ---------------------------
+    # E3: „środkowy pas ma śnieżne plamy nie na krawędziach stref" — zachodnia
+    # dolina (14–21, 32–40), brzeg nad jeziorem (17–20, 24–29), wschód
+    # (59–71, 24–36). Tundra to jałowa ziemia: śnieg zostaje tylko pod
+    # grzbietami (y 23 i zachodni kąt przy grzbiecie południowym, x ≤ 9,
+    # y ≥ 39), czyli na krawędziach stref. Koszt ruchu j < s — przejezdność
+    # bez zmian.
+    for y in range(24, 43):
+        for x in range(BOK):
+            if mapa[y][x] == 's' and not (x <= 9 and y >= 39):
+                mapa[y][x] = 'j'
+    # G1/B3: kępy boru w pustych połaciach — zachodni bór przy trakcie nad
+    # jeziorem (16–19, 25–29), bór przy trakcie wschodnim (58–61, 25–29)
+    # i zagajnik na gołym śniegu doliny Srebrnej Strażnicy (17–21, 4–7).
+    # Ekran ma mniej rzeczy, a plansza nie robi się rzadsza (obiekt co
+    # ≤ 12,5 pola przejezdnego): ubywa pustych pól, nie obiektów.
+    for x0, y0, x1, y1 in [(16, 25, 19, 29), (58, 25, 61, 29), (17, 4, 21, 7)]:
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                if mapa[y][x] in 's.j':
+                    mapa[y][x] = 'T'
+    # E5: kałuża (47, 50) nad jeziorem SE nie miała funkcji.
+    if mapa[50][47] == '~':
+        mapa[50][47] = '.'
+
 
 def scal_plamy(mapa, poza, najwiecej=8, przebiegi=2):
     """Wtapia drobne plamy terenu przejezdnego (`s`, `.`, `j`) w otoczenie.
@@ -448,24 +473,33 @@ PIERWSZY_EKRAN = [
     # (`DOLINA`), gdzie kończą się odnogi traktu.
     # Spichlerz jagód przy trakcie, między stawem a drogą.
     ([(18, 61), (17, 61), (19, 61)], ('kopalnia', 'jagoda')),
-    # Kopalnia odłamków na wschodnim placu, wejściem do korytarza.
-    ([(21, 64), (22, 64), (21, 63)], ('kopalnia', 'odlamek')),
+    # Pętla 2026-10 (A2): kopalnia odłamków na brzegu stawu nad zamkiem
+    # (5 kroków od bramy), w miejscu wiatraka — obie podstawowe ≤ 10 kroków
+    # i bez straży. Wiatrak idzie na wschodni plac (dawna kopalnia).
+    ([(14, 60), (13, 60), (15, 60)], ('kopalnia', 'odlamek')),
+    ([(21, 64), (22, 64), (21, 63)], ('budynek', 'wiatrak')),
     # Obóz łowców (złoto) w zaułku u stopy skarpy — za wąwozem ze strażą:
     # jedyna słaba straż w kadrze poza przełęczą (A5).
     ([(14, 70), (15, 70)], ('kopalnia', 'pokeball')),
     ([(12, 68), (12, 69), (11, 69)], ('potwor', 'slaby')),
-    # Plac nad zamkiem, na brzegu stawu: wiatrak przy ścieżce.
-    ([(14, 60), (13, 60), (15, 60)], ('budynek', 'wiatrak')),
     # Przełęcz przez lewe góry: kopalnia kamieni w skalnej ścianie, straż na
     # trakcie przełęczy, skrzynia za strażą.
     ([(4, 66), (5, 66)], ('kopalnia', 'kamien')),
     ([(7, 65), (7, 66)], ('potwor', 'slaby')),
-    ([(6, 64), (5, 64)], ('skrzynia', None)),
+    # Pętla 2026-10 (A3): skrzynia zza straży przeniesiona pod mury zamku
+    # — za jaszczurem zostaje kopalnia.
     # Za stawem kupka kul na brzegu; skrzynia przy trakcie na północ; kamień
     # ewolucji przy ścieżce między wiatrakiem a spichlerzem.
     ([(13, 54), (11, 54), (12, 54)], ('surowiec', 'pokeball')),
     ([(20, 61), (20, 60)], ('skrzynia', None)),
     ([(16, 61), (15, 61)], ('surowiec', 'kamien')),
+    # Pętla 2026-10 (A3, krytyk: „w 8 krokach od bramy jeden surowiec").
+    # Stos łatwych nagród wokół bramy: dwie skrzynie i dwie kupki, każda
+    # 3–7 kroków, bez straży — pierwszy dzień to zbieranie, nie marsz.
+    ([(9, 61), (10, 61), (9, 60)], ('skrzynia', None)),
+    ([(13, 66), (18, 66), (19, 66)], ('skrzynia', None)),
+    ([(12, 59), (13, 58), (11, 61)], ('surowiec', 'jagoda')),
+    ([(17, 63), (16, 63), (18, 63)], ('surowiec', 'odlamek')),
 ]
 
 
@@ -498,8 +532,8 @@ DOLINA = [
     ([(66, 54), (65, 53), (67, 53)], ('budynek', 'ranczo')),
     ([(70, 54), (69, 53)], ('surowiec', 'jagoda')),
     ([(71, 53), (70, 52)], ('skrzynia', None)),
-    # Szyjka zatoki NE (x 57–59, y 55–58): słaba straż — pierwsza brama doliny.
-    ([(58, 57), (58, 56)], ('potwor', 'slaby')),
+    # (Pętla 2026-10, E5: bez straży w szyjce zatoki NE (58, 57) — brama
+    # stoi teraz w szyjce jeziora SE, patrz `SZYJKA_SE`.)
     # Zatoka SE za szyjką (x 69–71, y 56–59): straż, za nią relikt i stos.
     ([(70, 58)], ('potwor', 'sredni')),
     ([(69, 64), (70, 64)], ('artefakt', None)),
@@ -509,7 +543,7 @@ DOLINA = [
     # Odnoga SE (37,53 → 61,59): kamienna wieża na wzgórzu na końcu drogi,
     # gniazdo i ognisko przy drodze, w kącie między borami stos.
     ([(63, 59), (62, 59), (63, 58)], ('budynek', 'kamienna-wieza')),
-    ([(56, 64), (57, 64), (55, 64)], ('budynek', 'gniazdo')),
+    ([(55, 64), (54, 64)], ('budynek', 'gniazdo')),
     ([(59, 66), (58, 66)], ('budynek', 'ognisko')),
     ([(53, 66), (54, 66)], ('surowiec', 'odlamek')),
     ([(54, 67), (53, 67)], ('surowiec', 'jagoda')),
@@ -520,7 +554,24 @@ DOLINA = [
     ([(27, 69), (26, 69)], ('surowiec', 'jagoda')),
     ([(28, 70), (29, 70)], ('surowiec', 'odlamek')),
     ([(31, 70), (30, 70)], ('artefakt', None)),
+    # Pętla 2026-10 (G1): rzadki ekran południowego boru (24–46, 54–72)
+    # dostaje to, co zabrano z zachodniej doliny — przy trakcie (30,65)–(34,67)
+    # źródło, chatka i dwie kupki, między nimi puste pole marszu.
+    ([(37, 66), (36, 66), (38, 66)], ('budynek', 'zrodlo')),
+    ([(26, 65), (26, 64), (27, 64)], ('budynek', 'chatka')),
+    ([(33, 64), (32, 64)], ('surowiec', 'kamien')),
+    ([(28, 67), (27, 67)], ('surowiec', 'jagoda')),
+    ([(39, 59), (40, 59)], ('skrzynia', None)),
 ]
+
+#: Pętla 2026-10 (E5): brama zakątków SE i NE doliny. Trakt do kamiennej
+#: wieży wciska się między jezioro SE (47–57, 50–60) a pas boru (44–52,
+#: 61–63) przejściem szerokim na jedno pole (49,61)–(50,62); straż stoi na
+#: nim — jezioro robi szyjkę, a nie tylko obchodzi się je drogą. Za bramą
+#: nie stawia się już drugiej straży przy każdej rzeczy (dawniej (51,64),
+#: (53,61) i (58,57) — trzy walki w rzędzie o ten sam zakątek).
+SZYJKA_SE = (50, 62)
+ZA_SZYJKA_SE = lambda p: p[0] >= 50 and p[1] >= 55
 
 TUNDRA = [
     # Odnoga zachodnia (14,30 → 6,33): kopalnia odłamków w skale, stos.
@@ -530,7 +581,6 @@ TUNDRA = [
     ([(4, 35), (5, 36)], ('artefakt', None)),
     # Zachodnia tundra: obóz łowców pod średnią strażą, z dala od traktu.
     ([(10, 38), (11, 38), (9, 38)], ('kopalnia', 'pokeball')),
-    ([(12, 40), (13, 40)], ('surowiec', 'pokeball')),
     # Północna odnoga (30,41 → 40,27), za strażą międzyjezierza: drzewo wiedzy
     # na końcu drogi i stos.
     ([(40, 26), (39, 26), (41, 26)], ('budynek', 'drzewo-wiedzy')),
@@ -543,20 +593,16 @@ TUNDRA = [
     ([(66, 34), (65, 34), (67, 34)], ('kopalnia', 'kamien')),
     ([(62, 37), (63, 37), (61, 37), (62, 38)], ('budynek', 'arena')),
     ([(68, 36), (69, 36)], ('surowiec', 'kamien')),
-    ([(64, 37), (65, 37)], ('surowiec', 'jagoda')),
     ([(69, 37), (70, 37)], ('skrzynia', None)),
     # Południowo-wschodni kąt tundry (x 60–71, y 38–43): wieża obserwacyjna
     # i relikt pod strażą w zaułku.
     ([(66, 40), (67, 40), (65, 40)], ('budynek', 'wieza-obserwacyjna')),
     ([(69, 42), (70, 42)], ('artefakt', None)),
-    ([(62, 42), (63, 42)], ('surowiec', 'odlamek')),
     ([(63, 43), (64, 43)], ('surowiec', 'pokeball')),
     # Przy brodzie, od wschodu: ognisko, żeby straż brodu miała za sobą cel.
     ([(54, 38), (53, 38)], ('budynek', 'ognisko')),
     # Trakt wschodni (56,33 → 57,21) i zachodni brzeg jeziora-zapory:
     # skrzynia i kupki przy drodze, chatka na rozstajach odnogi.
-    ([(58, 28), (59, 28)], ('skrzynia', None)),
-    ([(54, 26), (54, 27)], ('surowiec', 'jagoda')),
     ([(42, 36), (41, 36)], ('surowiec', 'pokeball')),
     ([(41, 39), (42, 39)], ('skrzynia', None)),
     ([(59, 31), (60, 31)], ('budynek', 'chatka')),
@@ -570,10 +616,27 @@ TUNDRA = [
     ([(8, 26), (8, 27)], ('artefakt', None)),
     # Druga kopalnia odłamków tundry przy trakcie pod jeziorem.
     ([(23, 40), (24, 40), (22, 40)], ('kopalnia', 'odlamek')),
-    # Zachodni brzeg jeziora przy trakcie: skrzynia i kupka przy drodze.
-    ([(17, 33), (18, 33)], ('skrzynia', None)),
-    ([(16, 36), (17, 36)], ('surowiec', 'jagoda')),
+    # (Pętla 2026-10, G1: bez skrzyni (17,33), kupek (16,36) i (12,40) —
+    # zachodnia dolina miała 43 obiekty na ekranie. Losowanie tundry jej nie
+    # dotyka (`ZACHODNIA_DOLINA`); zostają ręczne stosy na końcach odnóg
+    # i jeden wiatrak przy trakcie.)
+    ([(15, 34), (16, 34), (14, 35)], ('budynek', 'wiatrak')),
 ]
+
+#: Pętla 2026-10 (G1): prostokąt zachodniej doliny tundry (x0, y0, x1, y1),
+#: wyłączony z losowania budowli, skrzyń i kupek.
+ZACHODNIA_DOLINA = (0, 24, 21, 44)
+#: Prostokąty tundry bez losowania: zachodnia dolina i zakątek za Strażą
+#: Międzyjezierza z wylotem szyjki (35–43, 24–35) — ręczny stos, do którego losowanie
+#: dosypywało wiatrak, portal i kupki (ekran wschodniego jeziora: 29).
+BEZ_LOSOWANIA = [ZACHODNIA_DOLINA, (35, 24, 43, 35)]
+DOLINA_W_MAX = 22
+
+#: Pętla 2026-10 (G1): losowanie stawia obiekt tylko tam, gdzie na ekranie
+#: wokół (21 × 18 pól) stoi mniej niż `EKRAN_LIMIT` rzeczy — po wyłączeniu
+#: zachodniej doliny losowe budowle zbiły się we wschodniej tundrze (33 na
+#: ekranie) i w korytarzu między jeziorami (28).
+EKRAN_LIMIT = 16
 
 TWIERDZE = [
     # Srebrna Strażnica (13,11), odnoga (13,15 → 19,15): kopalnie wcięte w skałę
@@ -608,9 +671,14 @@ TWIERDZE = [
     ([(11, 1), (10, 1)], ('surowiec', 'kamien')),
 ]
 
-DOM_LOSOWE = {'kupki': 10, 'skrzynie': 7, 'budowle': 10}
-TUNDRA_LOSOWE = {'kupki': 14, 'skrzynie': 12, 'budowle': 28}
-WROGA_LOSOWE = {'kupki': 6, 'skrzynie': 4, 'budowle': 7}
+DOM_LOSOWE = {'kupki': 9, 'skrzynie': 9, 'budowle': 12}
+# Pętla 2026-10 (G1/B4): tundra 28 → 14 budowli, 14 → 7 kupek, 12 → 8 skrzyń
+# — połowa losowania szła w zachodnią dolinę, która jest teraz wyłączona;
+# reszta poszła na rzadkie ekrany doliny gracza (`DOLINA`, `DOM_LOSOWE`).
+TUNDRA_LOSOWE = {'kupki': 6, 'skrzynie': 13, 'budowle': 17}
+# Pętla 2026-10: budowle tundry, które nie mieszczą się już w dolinach
+# (zachodnia i wschodnia wyłączone z losowania), idą do krainy wroga.
+WROGA_LOSOWE = {'kupki': 2, 'skrzynie': 3, 'budowle': 4}
 
 
 def odleglosc(a, b):
@@ -666,6 +734,142 @@ def przy_drodze(g, ktora, zasieg=2):
     ]
 
 
+def na_ekranie(g, p):
+    """Ile obiektów widać na ekranie 21 × 18 ze środkiem w `p`."""
+    return sum(1 for q, _ in g.obiekty if abs(q[0] - p[0]) <= 10 and abs(q[1] - p[1]) <= 9)
+
+
+def gestosc(g, pola):
+    """{pole: obiektów na najgęstszym ekranie 21 × 18, na którym to pole
+    widać} — po wszystkich położeniach kadru."""
+    W, H = 21, 18
+    siatka = [[0] * (BOK + 1) for _ in range(BOK + 1)]
+    for (x, y), _ in g.obiekty:
+        siatka[y + 1][x + 1] += 1
+    for y in range(1, BOK + 1):
+        for x in range(1, BOK + 1):
+            siatka[y][x] += siatka[y - 1][x] + siatka[y][x - 1] - siatka[y - 1][x - 1]
+    nx, ny = BOK - W + 1, BOK - H + 1
+    okno = [[siatka[y0 + H][x0 + W] - siatka[y0][x0 + W] - siatka[y0 + H][x0] + siatka[y0][x0]
+             for x0 in range(nx)] for y0 in range(ny)]
+    # Najgęstszy kadr zawierający pole: maksimum okien po x0 ∈ [x−20, x]
+    # i y0 ∈ [y−17, y] (najpierw w poziomie, potem w pionie).
+    poziomo = [[max(w[max(0, x - W + 1):min(nx - 1, x) + 1]) for x in range(BOK)] for w in okno]
+    wynik = {}
+    for x, y in pola:
+        wynik[(x, y)] = max(poziomo[y0][x] for y0 in range(max(0, y - H + 1), min(ny - 1, y) + 1))
+    return wynik
+
+
+def luzne(g, pola, limit=None):
+    """Pola, na których każdym ekranie stoi mniej niż `EKRAN_LIMIT` obiektów."""
+    limit = limit or EKRAN_LIMIT
+    return [p for p, n in gestosc(g, pola).items() if n < limit]
+
+
+#: Obiekty losowania, które nie zmieściły się na luźnych ekranach swojej
+#: strefy — `rozstaw` kładzie je na końcu tam, gdzie na planszy jest luźno.
+NADMIAR = []
+
+
+def dodaj_luzno(g, ile, ktora, buduj, pola):
+    """`g.dodaj` po jednym, za każdym razem tylko na luźnych polach z `pola`;
+    reszta idzie do `NADMIAR` (gęstość planszy, checklista B3, się nie zmienia)."""
+    for _ in range(ile):
+        obok = [q for q, _ in g.obiekty]
+        kand = luzne(g, [p for p in pola if p not in g.zajete and all(odleglosc(p, q) >= 2 for q in obok)])
+        try:
+            if not kand:
+                raise SystemExit
+            g.dodaj(1, ktora, (0, 999), buduj, kandydaci=kand)
+        except SystemExit:
+            NADMIAR.append((buduj, None))
+
+
+def rozloz_nadmiar(g):
+    """Nadmiar losowania przy trakcie dowolnej strefy poza kadrem startu,
+    na najluźniejszym ekranie."""
+    print(f'  nadmiar losowania: {len(NADMIAR)}')
+    poza = [KADR] + BEZ_LOSOWANIA
+    najdalej = max(g.kroki.values())
+    zx0, zy0, zx1, zy1 = ZACHODNIA_DOLINA
+    w_dolinie = lambda p: zx0 <= p[0] <= zx1 and zy0 <= p[1] <= zy1
+    while NADMIAR:
+        buduj, budowla = NADMIAR.pop(0)
+        # Zachodnia dolina to środkowy pas odległości (E2): przyjmuje nadmiar,
+        # ale najwyżej do `DOLINA_W_MAX` rzeczy (w rundzie 2 było 43).
+        dolina_otwarta = sum(1 for q, _ in g.obiekty if w_dolinie(q)) < DOLINA_W_MAX
+        pola = [p for k in ('dom', 'pogranicze', 'wroga') for p in przy_drodze(g, k)
+                if not any(x0 <= p[0] <= x1 and y0 <= p[1] <= y1 for x0, y0, x1, y1 in poza)
+                or (dolina_otwarta and w_dolinie(p))]
+        if budowla:
+            budynki = [q for q, co in g.obiekty if co[0] in ('budynek', 'kopalnia', 'jasnowidz')]
+            takie = [q for q, co in g.obiekty if co == ('budynek', budowla)]
+            luzno = [p for p in pola if all(odleglosc(p, q) >= 3 for q in budynki)]
+            pola = [p for p in luzno if all(odleglosc(p, q) > 9 for q in takie)] or luzno
+        obok = [q for q, _ in g.obiekty]
+        pola = [p for p in pola if p not in g.zajete and all(odleglosc(p, q) >= 2 for q in obok)]
+        # Najluźniejsze miejsce planszy: pola, których najgęstszy ekran ma
+        # najmniej obiektów — a spośród prawie tak samo luźnych (+4) te ze
+        # środkowego pasa odległości (40–60 % najdalszego zakątka), żeby
+        # garb nagród został w środku drogi (checklista E2).
+        oceny = gestosc(g, pola)
+        dodane = False
+        for zapas in (0, 1, 2, 4, 99):
+            if not oceny or dodane:
+                break
+            prog = min(oceny.values()) + zapas
+            kand = [p for p, n in oceny.items() if n <= prog]
+            srodek = [p for p, n in oceny.items() if n <= prog + 4
+                      and 0.4 * najdalej <= g.kroki.get(p, 0) < 0.6 * najdalej]
+            for lista in (srodek, kand):
+                if not lista:
+                    continue
+                try:
+                    g.dodaj(1, strefa(*lista[0]), (0, 999), buduj, kandydaci=lista)
+                    dodane = True
+                    break
+                except SystemExit:
+                    continue
+        if not dodane:
+            print(f'  nadmiar: nie zmieścił się {buduj(None) if budowla else "stos"}')
+
+
+def z_dala_od_budowli(g, ktora, odstep=3):
+    """Wolne pola strefy co najmniej `odstep` pól od każdej budowli (chata
+    jasnowidza stała o pole od wieży obserwacyjnej — G2). Pusta lista →
+    `None`, czyli zwykłe losowanie silnika."""
+    budynki = [q for q, co in g.obiekty if co[0] in ('budynek', 'kopalnia', 'jasnowidz')]
+    return [p for p in g.wolne_pola(ktora, (0, 999), 2) if all(odleglosc(p, q) >= odstep for q in budynki)] or None
+
+
+def budowle_z_odstepem(g, ile, ktora, pula, odstep=3):
+    """`g.budowle`, ale każda budowla co najmniej `odstep` pól od innych
+    obiektów (pętla 2026-10, G2: gniazda (39,36) i (41,35) nachodziły na
+    siebie rysunkami, zabudowa doliny stała na styk). Gdy w strefie nie ma
+    już tak luźnego miejsca — o pole ciaśniej (nigdy bliżej niż 3 pola od
+    innej budowli). Ta sama budowla nie staje drugi raz w promieniu 9 pól —
+    trzy źródła w jednej dolinie to tapeta, nie mapa."""
+    for i in range(ile):
+        b = pula[i % len(pula)]
+        budynki = [q for q, co in g.obiekty if co[0] in ('budynek', 'kopalnia', 'jasnowidz')]
+        takie = [q for q, co in g.obiekty if co == ('budynek', b)]
+        buduj = lambda p, b=b: ('budynek', b)
+        for o in range(odstep, 1, -1):
+            kand = luzne(g, [p for p in g.wolne_pola(ktora, (0, 999), 2)
+                             if all(odleglosc(p, q) >= o + 1 for q in budynki)
+                             and all(odleglosc(p, q) > 9 for q in takie)])
+            if not kand:
+                continue
+            try:
+                g.dodaj(1, ktora, (0, 999), buduj, kandydaci=kand)
+                break
+            except SystemExit:
+                continue
+        else:
+            NADMIAR.append((buduj, b))
+
+
 def postaw_kadr(g, miejsca, wpis):
     """Obiekt pierwszego ekranu na pierwszym pasującym polu z listy."""
     sx, sy = PUNKTY['start']
@@ -718,44 +922,42 @@ def rozstaw(g):
     g.postaw((45, 37), ('potwor', 'sredni', 'Straż Brodu'))
     g.postaw((40, 33), ('potwor', 'sredni', 'Straż Międzyjezierza'))
 
-    # --- DOLINA GRACZA -------------------------------------------------------
+    # Pętla 2026-10 (G1): najpierw WSZYSTKO, co ręczne i stałe (stosy,
+    # zakątki pod strażą, kopalnie, relikt), we wszystkich strefach, potem
+    # losowanie — `luzne` widzi wtedy całą planszę. Przy kolejności strefa po
+    # strefie losowe kupki doliny gracza zapełniały ekran nad przełęczami,
+    # zanim stanęły na nim ręczne stosy tundry (ekran 23–43, 39–56: 28).
+
+    # --- DOLINA GRACZA: ręcznie ---------------------------------------------
     for miejsca, wpis in PIERWSZY_EKRAN:
         postaw_kadr(g, miejsca, wpis)
     g.zajete += [(x, y) for y in range(KADR[1], KADR[3] + 1) for x in range(KADR[0], KADR[2] + 1)
                  if strefa(x, y) == 'dom']
+    g.postaw(SZYJKA_SE, ('potwor', 'slaby', 'Straż Lodowego Brzegu'))
     dolina = postaw_recznie(g, DOLINA)
-    g.strzez([p for p, co in dolina if co == ('kopalnia', 'pokeball') or co[0] == 'artefakt'], 'slaby')
+    g.strzez([p for p, co in dolina if (co == ('kopalnia', 'pokeball') or co[0] == 'artefakt')
+              and not ZA_SZYJKA_SE(p)], 'slaby')
     bez_zajetych_kieszeni(g, 'dom')
+    g.kieszenie['dom'] = [k for k in g.kieszenie.get('dom', []) if not ZA_SZYJKA_SE(k[0])]
     g.skarb_w_kieszeni('dom', 'slaby', 3, lambda p: ('skrzynia', None))
     g.skarb_w_kieszeni('dom', 'slaby', 3, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'odlamek')]))
-    g.dodaj(DOM_LOSOWE['kupki'], 'dom', (12, 40), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])),
-            kandydaci=przy_drodze(g, 'dom'))
-    g.dodaj(DOM_LOSOWE['skrzynie'], 'dom', (12, 40), lambda p: ('skrzynia', None), kandydaci=przy_drodze(g, 'dom'))
-    g.budowle(DOM_LOSOWE['budowle'], 'dom', ['ognisko', 'wiatrak', 'zrodlo', 'woz', 'chatka', 'gniazdo'])
 
-    # --- TUNDRA --------------------------------------------------------------
+    # --- TUNDRA: ręcznie -----------------------------------------------------
     rng = g.rng = random.Random(ZIARNO + TUNDRA_ZIARNO)
     tundra = postaw_recznie(g, TUNDRA)
     g.strzez([p for p, co in tundra if co[0] == 'artefakt' or co[1] in ('kamien', 'pokeball') and co[0] == 'kopalnia'], 'sredni')
+    rezerwa = [(x, y) for zx0, zy0, zx1, zy1 in BEZ_LOSOWANIA
+               for y in range(zy0, zy1 + 1) for x in range(zx0, zx1 + 1) if (x, y) not in g.zajete]
+    g.zajete += rezerwa
     g.dodaj_najpierw('pogranicze', lambda p: ('kopalnia', 'jagoda'), bez_sniegu(g, g.wolne_pola('pogranicze')), None)
     bez_zajetych_kieszeni(g, 'pogranicze')
     g.skarb_w_kieszeni('pogranicze', 'sredni', 4, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'kamien'), ('artefakt', None)]))
     g.skarb_w_kieszeni('pogranicze', 'silny', 4, lambda p: rng.choice([('artefakt', None), ('skrzynia', None)]))
     g.skarb_w_kieszeni('pogranicze', 'silny', 4, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'pokeball')]))
-    g.dodaj(TUNDRA_LOSOWE['skrzynie'], 'pogranicze', (0, 999), lambda p: ('skrzynia', None), kandydaci=przy_drodze(g, 'pogranicze'))
-    g.dodaj(TUNDRA_LOSOWE['kupki'], 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])),
-            kandydaci=przy_drodze(g, 'pogranicze'))
-    # Runda 2 (checklista F3): wieża obserwacyjna i obóz treningowy nie
-    # wracają w losowaniu — po jednym na planszę, ustawione ręcznie (wieża
-    # w kącie wschodniej tundry, obóz przy trakcie doliny); losowanie daje
-    # tylko zwykłe budowle, które w HoMM3 stoją po kilka razy.
-    g.budowle(TUNDRA_LOSOWE['budowle'], 'pogranicze', [
-        'ranczo', 'gniazdo', 'wiatrak', 'ognisko', 'chatka', 'woz', 'zrodlo',
-    ])
     g.para_portali('pogranicze')
-    g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('jasnowidz', None))
+    g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('jasnowidz', None), kandydaci=z_dala_od_budowli(g, 'pogranicze'))
 
-    # --- DOLINY TWIERDZ ------------------------------------------------------
+    # --- DOLINY TWIERDZ: ręcznie ---------------------------------------------
     rng = g.rng = random.Random(ZIARNO + TWIERDZE_ZIARNO)
     twierdze = postaw_recznie(g, TWIERDZE)
     g.strzez([p for p, co in twierdze if co[0] == 'artefakt' or co[1] in ('kamien', 'pokeball') and co[0] == 'kopalnia'], 'silny')
@@ -765,25 +967,56 @@ def rozstaw(g):
     skarb_w_zakatku(g, 'wroga', (63, 3), 'wodz', [('artefakt', None), ('skrzynia', None), ('surowiec', 'pokeball')])
     bez_zajetych_kieszeni(g, 'wroga')
     g.skarb_w_kieszeni('wroga', 'silny', 4, lambda p: rng.choice([('artefakt', None), ('skrzynia', None)]))
-    # Runda 2 (checklista C1): skrzynie krainy wroga przy trakcie, bez własnej
-    # straży — silna straż pilnująca jednej skrzyni na placu to błąd; kraina
-    # i tak leży za strażnikiem i wodzem przełęczy.
-    g.dodaj(WROGA_LOSOWE['skrzynie'], 'wroga', (0, 999), lambda p: ('skrzynia', None), kandydaci=przy_drodze(g, 'wroga'))
-    g.dodaj(WROGA_LOSOWE['kupki'], 'wroga', (0, 999), lambda p: ('surowiec', rng.choice(['kamien', 'odlamek', 'pokeball'])),
-            kandydaci=przy_drodze(g, 'wroga'))
-    g.budowle(WROGA_LOSOWE['budowle'], 'wroga', [
-        'gniazdo', 'zrodlo', 'wiatrak', 'ognisko', 'woz', 'chatka',
-    ])
-    g.dodaj(1, 'wroga', (0, 999), lambda p: ('jasnowidz', None))
+    g.dodaj(1, 'wroga', (0, 999), lambda p: ('jasnowidz', None), kandydaci=z_dala_od_budowli(g, 'wroga'))
     najdalej = max(g.kroki.values())
     daleko = (int(najdalej * 0.8), 999)
     # Najdalszy relikt pod wodzem — ze skrzynią i kupką obok, żeby wódz
     # pilnował stosu, a nie jednego przedmiotu (C1/C3).
-    relikt = g.dodaj(1, 'wroga', daleko, lambda p: ('artefakt', None))
+    # Pętla 2026-10: z dala od innych straży i reliktów, w dolinie Srebrnej
+    # Strażnicy (jak w rundzie 2: róg (15, 0)) — po zmianie terenu tundry
+    # wypadał o pole od reliktu zakątka (30, 12), straż przy straży.
+    z_dala = [p for p in g.wolne_pola('wroga', daleko)
+              if all(odleglosc(p, q) >= 5 for q, co in g.obiekty if co[0] in ('potwor', 'artefakt', 'jasnowidz', 'budynek'))]
+    z_dala = [p for p in z_dala if p[0] < 24] or z_dala
+    relikt = g.dodaj(1, 'wroga', daleko, lambda p: ('artefakt', None), kandydaci=z_dala or None)
     obok_reliktu = [q for q in g.wolne_pola('wroga', (0, 999)) if odleglosc(q, relikt[0]) <= 2]
     g.dodaj(1, 'wroga', daleko, lambda p: ('skrzynia', None), kandydaci=obok_reliktu)
     g.dodaj(1, 'wroga', daleko, lambda p: ('surowiec', 'kamien'), kandydaci=obok_reliktu)
     g.strzez(relikt, 'wodz')
+
+    # --- LOSOWANIE (luźne ekrany) --------------------------------------------
+    rng = g.rng = random.Random(ZIARNO + 62)
+    dodaj_luzno(g, DOM_LOSOWE['kupki'], 'dom', lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])),
+                [p for p in przy_drodze(g, 'dom') if 12 <= g.kroki.get(p, 0) <= 40])
+    dodaj_luzno(g, DOM_LOSOWE['skrzynie'], 'dom', lambda p: ('skrzynia', None),
+                [p for p in przy_drodze(g, 'dom') if 12 <= g.kroki.get(p, 0) <= 40])
+    budowle_z_odstepem(g, DOM_LOSOWE['budowle'], 'dom', ['ognisko', 'wiatrak', 'zrodlo', 'woz', 'chatka', 'gniazdo'])
+
+    rng = g.rng = random.Random(ZIARNO + 63)
+    dodaj_luzno(g, TUNDRA_LOSOWE['skrzynie'], 'pogranicze', lambda p: ('skrzynia', None), przy_drodze(g, 'pogranicze'))
+    dodaj_luzno(g, TUNDRA_LOSOWE['kupki'], 'pogranicze', lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])),
+                przy_drodze(g, 'pogranicze'))
+    # Runda 2 (checklista F3): wieża obserwacyjna i obóz treningowy nie
+    # wracają w losowaniu — po jednym na planszę, ustawione ręcznie (wieża
+    # w kącie wschodniej tundry, obóz przy trakcie doliny); losowanie daje
+    # tylko zwykłe budowle, które w HoMM3 stoją po kilka razy.
+    budowle_z_odstepem(g, TUNDRA_LOSOWE['budowle'], 'pogranicze', [
+        'ranczo', 'gniazdo', 'wiatrak', 'ognisko', 'chatka', 'woz', 'zrodlo',
+    ])
+    rezerwa = set(rezerwa)
+    g.zajete = [q for q in g.zajete if q not in rezerwa]
+
+    rng = g.rng = random.Random(ZIARNO + 64)
+    # Runda 2 (checklista C1): skrzynie krainy wroga przy trakcie, bez własnej
+    # straży — silna straż pilnująca jednej skrzyni na placu to błąd; kraina
+    # i tak leży za strażnikiem i wodzem przełęczy.
+    dodaj_luzno(g, WROGA_LOSOWE['skrzynie'], 'wroga', lambda p: ('skrzynia', None), przy_drodze(g, 'wroga'))
+    dodaj_luzno(g, WROGA_LOSOWE['kupki'], 'wroga', lambda p: ('surowiec', rng.choice(['kamien', 'odlamek', 'pokeball'])),
+                przy_drodze(g, 'wroga'))
+    budowle_z_odstepem(g, WROGA_LOSOWE['budowle'], 'wroga', [
+        'gniazdo', 'zrodlo', 'wiatrak', 'ognisko', 'woz', 'chatka',
+    ])
+    rozloz_nadmiar(g)
 
     # Runda 4 (HotA): spichlerz jagód (20, 60) i kopalnia odłamków (23, 60)
     # mają bryłę w rzędzie nad wejściem — w stawie. Na ekranie stały na
