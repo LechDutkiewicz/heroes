@@ -76,6 +76,13 @@ krainy wroga — zakątka (23–26, 3–6) z kamienną wieżą i artefaktem, zam
 od misy fortu ostrogą skał (26–27, 5–7); jedyne wejście leży w strefie tej
 straży. Środek północy bez drugiego wiatraka, wozu i stosu (15–16, 9);
 stos skrzynia + kamień w zatoczce przy moście (17–18, 6–7).
+
+Runda 19 (werdykt r8: wygrana ślepo, 26 TAK / 3 CZĘŚCIOWO / 1 NIE — C3).
+Most północny (24, 8) jest ŚREDNI, a SILNA straż stoi w trzypolowej szyjce
+(23–25, 6) między wodą a ostrogą skał: zakątek (23–26, 3–5) z kamienną wieżą
+i artefaktem (23, 4) da się wziąć tylko przez jej strefę. Okno północnego
+środka bez kamienia (24, 12), pokeballi (26, 12), skrzyni (28, 6) i gniazda
+(13, 15); straże odklejone od wózków kopalń.
 """
 
 import math
@@ -321,12 +328,22 @@ STRAZ_ROGU = (31, 5)                # przesmyk do rogu NE (31–35, 1–5)
 # Runda 16 (A5, A2): wolna słaba straż w dolinie domu przed kieszenią SW
 # (`KIESZEN_DOMU`) z kamieniołomem i skarbem — pierwsza bitwa do nauki,
 # zanim gracz stanie przed strażą wyjścia z doliny.
-STRAZ_KIESZENI_DOMU = (4, 32)
+# Runda 19 (G2): o pole wyżej, (4, 31) — na (4, 32) sprite wtulał się
+# w wózek kamieniołomu (2, 33). Wylot kieszeni (4–5, 31–32) dalej w jej strefie.
+STRAZ_KIESZENI_DOMU = (4, 31)
 # Runda 16 (B1): kamieniołom pogranicza we wnęce lasu (`WNEKA_KAMIENIOLOMU`)
 # za słabą strażą w jej wylocie — sporny surowiec rzadki, nie kopalnia
 # przy trakcie. Średnia straż tutaj wydłużała misję w symulacji ponad
 # próg (autopilot wygrywał dnia 34 przy progu 32).
-STRAZ_KAMIENIOLOMU = (27, 20)
+# Runda 19 (G2): o pole wyżej, (27, 19), a kamieniołom o pole w lewo,
+# (24, 20) — sprite stykał się z wózkiem. Wejście do wnęki (26, 19–20)
+# dalej w strefie straży.
+STRAZ_KAMIENIOLOMU = (27, 19)
+# Runda 19 (C3): SILNA straż w szyjce zakątka (23–25, 6) między wodą (22, 6)
+# a ostrogą skał (26–27, 6). Zakątek (23–26, 3–5) z kamienną wieżą
+# i artefaktem da się wziąć tylko przez jej strefę — most (24, 8) jest już
+# zwykłym średnim przejściem do misy fortu.
+STRAZ_SKARBCA = (24, 6)
 
 #: Runda 16 (A5): kieszeń w lesie SW pod zamkiem (x0, y0, x1, y1), wejście
 #: (4–5, 31–32) przez pola straży; ściana lasu w wierszu 31 (0–3)
@@ -339,7 +356,9 @@ SCIANA_KIESZENI_DOMU = [(0, 31), (1, 31), (2, 31), (3, 31), (5, 33), (5, 34)]
 #: jeden blok (30–35, 32–35).
 SKALY_SE = [(24, 28, 29, 29), (30, 32, 35, 35)]
 #: Runda 16 (B1): wnęka w masywie lasu na wschodnim brzegu (24–26, 19–20).
-WNEKA_KAMIENIOLOMU = (24, 19, 26, 20)
+#: Runda 19 (G2): wnęka o kolumnę szersza (23–26), kamieniołom (24, 20)
+#: — jego wózek sięgał kolumny 27 i stykał się ze sprite'em straży.
+WNEKA_KAMIENIOLOMU = (23, 19, 26, 20)
 #: Runda 16 (D2, E3): łąka pogranicza za mostem (na wschód od rzeki, od
 #: wiersza 18) poza traktem to ubita ziemia (ruch 125 zamiast 100) — trakt
 #: wreszcie się opłaca — a w tle łąka w innym, cieplejszym, wypalonym
@@ -602,6 +621,12 @@ def popraw_teren(g, mapa):
     for y in (18, 19):
         if mapa[y][27] == 'T':
             mapa[y][27] = '.'
+    # Runda 19 (E3): dziura łąki (2, 12) zarasta — kępa „TT" (3–4, 12)
+    # zlewa się z lasem zachodniego brzegu; wysepka ziemi nad wieżą
+    # (18–20, 22) to las, ziemia zostaje tylko pod wieżą (18, 23).
+    mapa[12][2] = 'T'
+    for x in (18, 19, 20):
+        mapa[22][x] = 'T'
 
 
 def po_drogach(g, mapa):
@@ -826,7 +851,7 @@ LAKA_POLNOCNA = [
     # zatoczki przy moście północnym (`ZATOCZKA_MOSTU`).
     ([(9, 12), (10, 12)], ('surowiec', 'odlamek')),
     ([(15, 12), (15, 13)], ('budynek', 'drzewo-wiedzy')),
-    ([(13, 15), (14, 15)], ('budynek', 'gniazdo')),
+    # Runda 19 (G1): gniazdo (13, 15) — dubel gniazda (19, 30) — odpadło.
     # Runda 18 (G1): stos przy trakcie (15–16, 9) i wiatrak (18, 11) —
     # dubel wiatraka (30, 26) — odpadły; kamień leży w zatoczce przy moście.
     # Zatoczka (17–19, 6–7): skrzynia z rozstajów i kamień — cel pustej
@@ -854,10 +879,11 @@ KRAINA_WROGA = [
     # bez niego autopilot (`symulacja-misji`) nie bierze fortu za średnią
     # przełęczą przed dniem 32 przy co trzecim starterze.
     ([(25, 9), (25, 10), (26, 9)], ('artefakt', None)),
-    ([(26, 12), (27, 11)], ('surowiec', 'pokeball')),
+    # Runda 19 (G1): pokeball (26, 12) odpadł razem z kamieniem (24, 12)
+    # — pod fortem został sam artefakt (25, 10) i chatka (26, 14).
     # Runda 18 (G2): kamień spod artefaktu (25, 11) na (24, 12) — jajo
     # artefaktu stało na kamieniach i czytało się jako jedna kupka.
-    ([(24, 12), (23, 12), (25, 12)], ('surowiec', 'kamien')),
+    # Runda 19 (G1): kamień (24, 12) odpadł — dubel pokeballi (26, 12).
     # Runda 17 (B4): skrzynia (26, 6) odpadła — skrzynie ≤ 20 %, a pod
     # grzbietem nie stoją już trzy rzeczy w jednym rzędzie.
     # Runda 17 (C3, F1): ognisko spod ślepej odnogi (24, 5) zrobiło miejsce
@@ -873,10 +899,15 @@ KRAINA_WROGA = [
     # Runda 17 (B4): kopalnie ≤ 10 % — sad wroga to ognisko w tej samej wnęce.
     ([(24, 15), (23, 15), (25, 15)], ('budynek', 'ognisko')),
     # Runda 15 (B3): stos pod północnym grzbietem, przy trakcie z mostu.
-    ([(28, 6), (28, 7)], ('skrzynia', None)),
+    # Runda 19 (G1, B4): skrzynia (28, 6) odpadła — po dojściu straży
+    # szyjki skarbca (24, 6) budynki z jasnowidzem spadały do 24,6 %, a bez
+    # pokeballi zamiast niej surowce spadały poniżej 20 %. Pod grzbietem
+    # zostają same pokeballe (29, 6).
     # Runda 17 (B2, B4): skrzynia pod grzbietem nie leży sama — stos
     # z pokeballami; chatka na pustej ciemnej łące pod stosem artefaktu.
     ([(29, 6), (28, 7)], ('surowiec', 'pokeball')),
+    # Runda 19 (G1): chatka zostaje — bez niej budynki z jasnowidzem spadały
+    # do 22,8 % (< 25 %); zamiast niej odpadł samotny pokeball (26, 12).
     ([(26, 14), (25, 13)], ('budynek', 'chatka')),
 ]
 
@@ -884,7 +915,9 @@ KRAINA_WROGA = [
 #: (23–26, 3–6) za ostrogą skał: kamienna wieża (stawiana na końcu `rozstaw`)
 #: i artefakt (z końca odnogi SE).
 SKARBIEC_WROGA = [
-    ([(24, 5), (23, 5), (24, 4)], ('artefakt', None)),
+    # Runda 19 (C3): artefakt z (24, 5) na (23, 4) — (24, 5) leży w strefie
+    # nowej straży szyjki (24, 6).
+    ([(23, 4), (24, 4), (23, 3)], ('artefakt', None)),
 ]
 
 #: Runda 12: róg NE (31–35, 1–5) za skałami — kieszeń za strażą (31, 5).
@@ -911,7 +944,7 @@ LAKA_POGRANICZA = [
 
 #: Runda 16 (B1, G2): kamieniołom pogranicza we wnęce lasu za strażą (27, 20)
 #: — stawiany przed strażami, bo jej dziewięć pól zajmuje róg bryły.
-KAMIENIOLOM_POGRANICZA = ([(25, 20)], ('kopalnia', 'kamien'))
+KAMIENIOLOM_POGRANICZA = ([(24, 20)], ('kopalnia', 'kamien'))
 
 #: Runda 15 (B4, E2): polana w lesie SE (`POLANA_SE`).
 POLANA_SE_OBIEKTY = [
@@ -1011,7 +1044,9 @@ def rozstaw(g):
     # średnim moście najbogatsza kraina leżała za łatwiejszą walką niż fort.
     straz(STRAZ_PRZELECZY_DOMU, 'slaby')
     straz(STRAZ_MOSTU, 'slaby')
-    straz(STRAZ_BRODU, 'silny')
+    # Runda 19 (C3): most północny ŚREDNI, SILNA stoi w szyjce skarbca
+    # (24, 6) — pilnuje wyłącznie zakątka, nie drogi do fortu.
+    straz(STRAZ_BRODU, 'sredni')
     straz(STRAZ_KIESZENI_DOMU, 'slaby')
     # Runda 17: (27, 20) zostaje SŁABA, choć krytyk r6 chciał średniej —
     # średnia odcina drugi kamieniołom i `symulacja-misji` misji 1 spada do
@@ -1020,6 +1055,9 @@ def rozstaw(g):
     straz(STRAZ_PRZELECZY_FORTU, 'sredni')
     straz(STRAZ_PLAZY, 'slaby')
     straz(STRAZ_ROGU, 'sredni')
+    # Szyjka skarbca (straż stawiana na końcu `rozstaw`) — nic z puli
+    # nie stanie na jej dziewięciu polach.
+    g.zajete += [(STRAZ_SKARBCA[0] + dx, STRAZ_SKARBCA[1] + dy) for dy in (-1, 0, 1) for dx in (-1, 0, 1)]
 
     # PLAŻA: skrzynia, artefakt i kamienie za strażą.
     for miejsca, wpis in PLAZA_SKARB:
@@ -1089,6 +1127,13 @@ def rozstaw(g):
     # Runda 17 (G2, F1): z dachu fortu (31, 8) na koniec ślepej odnogi
     # północno-zachodniego zakątka (23–26, 3–4).
     postaw_kadr(g, [(25, 3), (24, 3), (25, 4)], ('budynek', 'kamienna-wieza'))
+    # Runda 19 (C3): SILNA straż szyjki skarbca (24, 6) jako OSTATNI obiekt
+    # planszy. `src/data/plansza.ts` losuje skład straży i zawartość skrzyń
+    # jednym strumieniem w kolejności rozstawienia: wstawiona między straże
+    # przestawiała gatunki dalszych (przełęcz fortu (30, 16) z grzybów na
+    # ogniste), a przed skrzyniami — ich zawartość; autopilot misji 1
+    # (`symulacja-misji`) wygrywał wtedy 1–3/9. Na końcu nie rusza niczego.
+    g.postaw(STRAZ_SKARBCA, ('potwor', 'silny'))
 
 
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.

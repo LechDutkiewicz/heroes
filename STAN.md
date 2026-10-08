@@ -3253,6 +3253,47 @@ granicy widełek, więc dalszego odchudzania nie było (chatka (26, 14) to
 dubel (3, 10), ale bez niej budynki < 25 %). Most południowy i (27, 20) to
 dwie słabe z rzędu — stopień średni dopiero na przełęczy fortu.
 
+### Runda 19 (2026-10-08)
+
+Werdykt r8 (`tools/blind/r8-polana-werdykt.md`): wygrana ślepo, 26 TAK /
+3 CZĘŚCIOWO (E3, G1, G2) / 1 NIE (C3). Zmiany tylko w `tools/mapy/polana.py`:
+
+- C3 (zmiana 1): most północny (24, 8) ŚREDNI, nowa SILNA straż (24, 6)
+  w szyjce (23–25, 6) między wodą (22, 6) a ostrogą skał (26–27, 6);
+  artefakt skarbca (24, 5) → (23, 4). BFS na `plansza-teren-polana.ts`
+  (strefa = pole + 8 sąsiadów): przy zablokowanej strefie (24, 6) żadne
+  z 11 przejezdnych pól zakątka (23–26, 3–5) nie jest osiągalne, a fort
+  zostaje osiągalny (także przy zablokowanej (30, 16) albo (24, 8)).
+  Szyjka ma 3 pola — bez dokładania skał.
+- **Pułapka losowania**: `src/data/plansza.ts` losuje skład straży i zawartość
+  skrzyń jednym strumieniem w kolejności `ROZSTAWIENIE`. Straż (24, 6)
+  wstawiona między straże przestawiała gatunki dalszych (przełęcz fortu
+  (30, 16) Sporex → Cindro) i symulacja spadała do 3/9; na końcu listy
+  straży — 1/3 (przesunięte skrzynie). Stoi więc jako OSTATNI obiekt
+  `rozstaw` (`g.postaw` po kamiennej wieży), jej 9 pól zajęte wcześniej.
+- G1 (zmiana 2): odpadły kamień (24, 12) i gniazdo (13, 15). Chatka (26, 14)
+  ZOSTAJE — bez niej budynki z jasnowidzem 22,8 %; zamiast niej odpadły
+  pokeballe (26, 12) i skrzynia (28, 6) (pokeballe (29, 6) zamiast skrzyni
+  dawały surowce 19,6 %). Okno (12–32, 3–20): 19 obiektów, w tym 6 straży
+  (było 22 i 5); najgęstsze okno 21 × 18 ma 21 obiektów.
+- G2/E3 (zmiana 3): straż (4, 32) → (4, 31); straż (27, 20) → (27, 19)
+  — na zrzucie wózek kamieniołomu (25, 20) dalej sięgał kolumny 27, więc
+  wnęka (`WNEKA_KAMIENIOLOMU`) jest o kolumnę szersza (23–26, 19–20),
+  a kamieniołom stoi na (24, 20). Obie straże dalej zamykają swoje zakątki
+  (BFS: 0 pól kieszeni SW i wnęki bez bitwy). Teren: (2, 12) → las (kępa
+  (3–4, 12) zlała się z lasem), (18–20, 22) → las, ziemia tylko pod wieżą.
+
+Liczby: 56 obiektów, co 10,6 pola, strefy dom 9 / pogranicze 33 / wróg 14,
+pasy [5,10,18,14,9], fort 25/35, straże 9 (5 słabych, 3 średnie, 1 silna),
+bez bitwy 24 %. Udziały: surowce 21,4 %, budynki z jasnowidzem 25,0 %,
+skrzynie 17,9 %, kopalnie 10,7 %, artefakty 8,9 %, straże 16,1 %.
+Sondy: `probe-mapy` Polana bez ŹLE, `probe-misja` WSZYSTKO OK, `tsc` czysty;
+`symulacja-misji` misja 1: 9/9, średnio dzień 18,3 (18/18/19 wg startera).
+Nierozwiązane: kopalnie 10,7 % i artefakty 8,9 % lekko ponad widełki
+(6 kopalń przy 56 obiektach — ≤ 10 % wymaga ≥ 60); budynki dokładnie 25 %,
+więc dalsze odchudzanie tylko kosztem surowców/skrzyń. Dwie średnie z rzędu
+na trasie północnej (24, 8) i południowej (30, 16), silna tylko przy skarbcu.
+
 ## Dwie Doliny — pętla plansz 2026-10
 
 Runda 3 po werdykcie `tools/blind/r2-dwie-doliny-werdykt.md` (wygrana ślepo,
