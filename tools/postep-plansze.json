@@ -1,7 +1,7 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-08 09:48",
+  "aktualizacja": "2026-10-08 09:51",
   "kawalki": [
     {
       "id": "polana",
@@ -345,7 +345,7 @@
     {
       "id": "bagna",
       "tytul": "Bagna (misja 3, 54×54)",
-      "status": "critic",
+      "status": "build",
       "opis": "Dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca z wodzem.",
       "rundy": [
         {
@@ -546,6 +546,28 @@
             }
           ],
           "zmiana": "Dom 15 → 25 obiektów w stosach: skrzynia z jagodami 4 kroki od bramy, kopalnia pokeballi na łące przy drodze, nisza za słabą strażą ze skrzynią i artefaktem, drzewo wiedzy, nagrody na końcach odnóg. Straż kopalni kamienia w niszy zamkniętej lasem; wejścia zakątka i korytarza wroga obudowane lasem; wylot mostu zwężony do jednego pola za strażą. Plamy skał lasem, zachodnie jezioro jedną taflą; dublujące budynki zamienione. 127 obiektów, obiekt co 9,8 pola, bez bitwy 22 %, pasy [25,27,30,27,18]."
+        },
+        {
+          "nr": 7,
+          "wzorzec": "Faeries! (72×72)",
+          "win": false,
+          "checklista": {
+            "TAK": 20,
+            "CZESCIOWO": 10,
+            "NIE": 0
+          },
+          "luka": "Środkowy i wschodni akt (bagno 30–54 × 18–50) to plac, nie seria szyjek: straże pogranicza stoją na szerokim bagnie przy rozstajach, obiekty są rozsiane pojedynczo, a powtarzające się budynki i tapeta wierzb sprawiają, że ekran nie daje jednej czytelnej decyzji (to wspólna przyczyna C1, C4, B2, G1 i G3).",
+          "nie": [],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r7-bagna.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = wzorzec"
+            },
+            {
+              "plik": "tools/shots/caly-bagna-r6.png",
+              "opis": "Cała plansza oceniana w rundzie 7"
+            }
+          ]
         }
       ]
     },
