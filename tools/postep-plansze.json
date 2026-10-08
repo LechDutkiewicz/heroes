@@ -1,7 +1,7 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-08 04:52",
+  "aktualizacja": "2026-10-08 04:55",
   "kawalki": [
     {
       "id": "polana",
@@ -177,7 +177,7 @@
     {
       "id": "dwie-doliny",
       "tytul": "Dwie Doliny (misja 2, 72×72)",
-      "status": "critic",
+      "status": "build",
       "opis": "Trzy pasy za dwoma grzbietami, strażnice na klucze, pas sporny w środku.",
       "rundy": [
         {
@@ -286,6 +286,30 @@
             }
           ],
           "zmiana": "Zachodni pas zarośnięty lasem z jedną ślepą odnogą (stos na końcu, średnia straż w leśnej szyjce), sporna kopalnia kamienia we wnęce. Zatoka startowa domknięta ścianą lasu, dwa wyjścia ze strażą, kopalnia kamienia w rogu za słabą strażą. Kopalnie pokeballi 4 → 2, sporne stosy z artefaktem; wódz w szyjce zakątku z reliktem, dojo i automatem. Jeden trakt w dolinie; jeziorko NW z mierzeją i plażą. 157 obiektów, obiekt co 11,9 pola, bez bitwy 23 %, pasy [23,21,43,44,26], każdy ekran 8–12 obiektów i ≤ 2 straże."
+        },
+        {
+          "nr": 4,
+          "wzorzec": "When Dragons Clash (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 18,
+            "CZESCIOWO": 9,
+            "NIE": 1
+          },
+          "luka": "Obiekty są źle rozdzielone między strefy: dolina gracza (60) jest bogatsza niż pas sporny (50), a dolina wschodnia (46–67, 50–67) to jeden przeładowany ekran z około 20 obiektami. Przez to łamie się G1 (jedna decyzja na ekran), E2 (środek najbogatszy) i B2 (konfetti zamiast stosów).",
+          "nie": [
+            "G1: NIE — ekran doliny wschodniej (46–66, 50–67) mieści około 20 obiektów (namiot, kopalnia, wiatrak, chatka, wóz, ognisko, obóz, 2 skrzynie, 4 stosy, straż), a ekran północnego pola (0–21, 0–18) ponad 10, więc dziecko widzi tam listę zakupów, a nie jedną decyzję."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r4-dwie-doliny.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-dwie-doliny-r3.png",
+              "opis": "Cała plansza oceniana w rundzie 4"
+            }
+          ]
         }
       ]
     },
