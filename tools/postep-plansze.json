@@ -258,7 +258,7 @@
     {
       "id": "bagna",
       "tytul": "Bagna (misja 3, 54×54)",
-      "status": "critic",
+      "status": "build",
       "opis": "Dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca z wodzem.",
       "rundy": [
         {
@@ -371,6 +371,31 @@
             }
           ],
           "zmiana": "Środek rozrzedzony o ok. 50 obiektów (zakątki zarosły lasem, drzewo wiedzy przy rozwidleniu grobli); budowle specjalne po jednej; straże na placu zdjęte, silna straż w nowej szyjce przed kątem z namiotem; dolina ma 4 kopalnie bez straży. Północna przeprawa to grobla w wodzie ze strażą; kałuże bez funkcji zasypane, plamy terenu scalone, masywy lasu. Kraina wroga bez bagna, ciemna chłodna trawa. 110 obiektów, obiekt co 12,0 pola, bez bitwy 23 %, 14 straży, każdy ekran 3×3 ma 12–15 obiektów."
+        },
+        {
+          "nr": 4,
+          "wzorzec": "Hatchet Axe and Saw (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 15,
+            "CZESCIOWO": 13,
+            "NIE": 2
+          },
+          "luka": "Zły rozkład obiektów. Trzęsawisko (x=20–41, y=18–36) jest przeładowane, a dom i drugi pas odległości (12 obiektów) świecą pustkami. Do tego za dużo kopalń, za mało budynków (B4) i ekran środka z ~20 obiektami (G1), czyli dla 6–9-latka zero jednej czytelnej decyzji.",
+          "nie": [
+            "B4: NIE — budynki 19/110 = 17 % (norma 25–35), kopalnie 16/110 = 15 % (norma 7–10), skrzynie 25/110 = 23 % (norma 15–20); tylko artefakty (6 %) i straże (13 %) w normie.",
+            "G1: NIE — ekran środka (x=20–41, y=18–36) mieści ~20 obiektów (4 kopalnie, 2 portale, jasnowidz, wieża, drzewo wiedzy, 5 skrzyń, 2 straże), a ekran domu (x=0–21, y=36–54) ma ledwie 7–8 rzeczy do wzięcia."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r4-bagna.png",
+              "opis": "Ślepe A/B: krytyk wybrał A = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-bagna-r3.png",
+              "opis": "Cała plansza oceniana w rundzie 4"
+            }
+          ]
         }
       ]
     },
