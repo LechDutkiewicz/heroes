@@ -2905,6 +2905,46 @@ startowym (5,28) i (19,30); pole przy forcie z 6 znajdźkami (23–27,9–14)
 dość gęste; brak straży przy jaskini (19,30) — leży za strażą mostu, a trzecia
 straż na ekranie startowym łamałaby G1.
 
+### Runda 16 (2026-10-08)
+
+Werdykt r5 (`tools/blind/r5-polana-werdykt.md`): wygrana ślepo, 19 TAK /
+9 CZĘŚCIOWO / 2 NIE (A5 brak wolnej straży w domu, G1 tłok na środkowej
+łące przy pustym starcie). Celowany środek między „przeładowany" a „pusty"
+start. Zmiany tylko w `tools/mapy/polana.py`:
+
+- dom: kieszeń SW w lesie (`KIESZEN_DOMU` 1–4, 32–34, ściany (0–3, 31),
+  (5, 33–34)) za wolną słabą strażą (4, 32): kamieniołom (2, 33) — przeniesiony
+  spod dachu zamku (9, 27) — dwie skrzynie (1, 34), (4, 34), odłamek (3, 34),
+  jagoda (1, 33). Przy trakcie luzem jagoda (12, 30) i pokeball (10, 33):
+  na starcie 4 łatwe nagrody w 8 krokach, sad i jaskinia odłamków bez straży.
+  Zatoka pod zachodnim pasmem (1–4, 21–22) odrosła z lasu, żeby bez bitwy
+  zostało 24 %. `skarb_w_kieszeni('dom')` (i tak nic nie stawiał) odpadł.
+- środek północnej łąki: zostają obóz, drzewo wiedzy, gniazdo i dwa stosy —
+  przy rozstajach skrzynia (10, 11) + odłamek (9, 12), przy trakcie do mostu
+  kamień (15, 9) + skrzynia (16, 9). Odpadły (12, 12), (15, 14), (16, 14),
+  (17–18, 11–12) i pokeball zachodniej łąki (6, 15).
+- C4: straż mostu północnego (23, 8) SILNA, jak przełęcz fortu (30, 16).
+- B1/G2: kamieniołom pogranicza we wnęce lasu (`WNEKA_KAMIENIOLOMU` 24–26,
+  19–20), wejście (25, 20), słaba straż w wylocie (27, 20). Średnia tu
+  (i średnia na plaży) wywracała `symulacja-misji.ts` (autopilot dnia 34–35
+  przy progu 32) — zostaje słaba.
+- B4: mniej surowców — bez kamieni plaży (11, 4), pokeballi (27, 14),
+  odłamka (29, 7).
+- D2/E3: `po_drogach` — łąka za mostem (na wschód od rzeki, od wiersza 18)
+  poza traktem to `j` (ruch 125), w tle warstwa `snieg` z teksturą `trawa`
+  i oliwkowym tintem (`TLO`, `TEKSTURY`, `BARWY_TERENU['snieg']`).
+- E3: `SKALY_SE` — pasmo nad jaskinią ciągnie się (18–28, 28–29), róg SE
+  to jeden blok skał (30–35, 32–35).
+
+Liczby: 64 obiekty, co 9,3 pola, strefy dom 13 / pogranicze 35 / wróg 16,
+pasy [6,12,22,13,11], fort 25/35, 8 straży (5 słabych, 1 średnia, 2 silne)
+= 12 %, surowce 15 = 23 %, bez bitwy 24 %. Sondy: `probe-mapy` Polana OK,
+`probe-osiagalnosc` OK, `probe-misja` WSZYSTKO OK, `tsc` czysty,
+`symulacja-misji` misja 1: 9/9 wygranych, średnio dzień 25,8 (było 17 —
+autopilot obchodził silną straż średnią na moście północnym).
+Nierozwiązane: C2 ma teraz jedną średnią straż (róg NE) — skok słaba →
+silna; dwie identyczne jaskinie odłamków na ekranie startowym zostają.
+
 ## Dwie Doliny — pętla plansz 2026-10
 
 Runda 3 po werdykcie `tools/blind/r2-dwie-doliny-werdykt.md` (wygrana ślepo,

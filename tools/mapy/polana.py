@@ -60,6 +60,14 @@ Runda 15 (werdykt r4: przegrana ślepo, 22 TAK / 7 CZĘŚCIOWO / 1 NIE — G1;
 startowy ma 7 rzeczy i straż mostu. Kopalnia odłamków stoi w dolinie bez
 straży, jaskinia (19, 30) i plaża mają odnogi traktu, wróg ma sad (24, 15).
 Skały wokół fortu tworzą dwa grzbiety zamiast rozsypanych kopców.
+
+Runda 16 (werdykt r5: wygrana ślepo, 19 TAK / 9 CZĘŚCIOWO / 2 NIE — A5, G1).
+Dolina domu ma wolną słabą straż (4, 32) przed kieszenią SW z kamieniołomem,
+dwiema skrzyniami i stosem; przy trakcie dwa surowce luzem. Środek północnej
+łąki bez konfetti — dwa stosy. Oba wejścia do krainy wroga mają SILNĄ straż.
+Kamieniołom pogranicza we wnęce lasu za strażą. Łąka za mostem to ubita
+ziemia (droga się opłaca) w innym, oliwkowym odcieniu; skały SE w dwóch
+masywach.
 """
 
 import math
@@ -293,6 +301,33 @@ STRAZ_PLAZY = (12, 7)               # szyjka plaży, między ścianami lasu
 STRAZ_BRODU = (rzeka_x(8) + 2, 8)
 STRAZ_PRZELECZY_FORTU = (30, 16)    # na trakcie między skałami a lasem
 STRAZ_ROGU = (31, 5)                # przesmyk do rogu NE (31–35, 1–5)
+# Runda 16 (A5, A2): wolna słaba straż w dolinie domu przed kieszenią SW
+# (`KIESZEN_DOMU`) z kamieniołomem i skarbem — pierwsza bitwa do nauki,
+# zanim gracz stanie przed strażą wyjścia z doliny.
+STRAZ_KIESZENI_DOMU = (4, 32)
+# Runda 16 (B1): kamieniołom pogranicza we wnęce lasu (`WNEKA_KAMIENIOLOMU`)
+# za słabą strażą w jej wylocie — sporny surowiec rzadki, nie kopalnia
+# przy trakcie. Średnia straż tutaj wydłużała misję w symulacji ponad
+# próg (autopilot wygrywał dnia 34 przy progu 32).
+STRAZ_KAMIENIOLOMU = (27, 20)
+
+#: Runda 16 (A5): kieszeń w lesie SW pod zamkiem (x0, y0, x1, y1), wejście
+#: (4–5, 31–32) przez pola straży; ściana lasu w wierszu 31 (0–3)
+#: i w kolumnie 5 (33–34). Straż stoi w samym wylocie, żeby jej dziewięć pól
+#: nie zabierało łąki doliny (bez bitwy ~24 %).
+KIESZEN_DOMU = (1, 32, 4, 34)
+SCIANA_KIESZENI_DOMU = [(0, 31), (1, 31), (2, 31), (3, 31), (5, 33), (5, 34)]
+#: Runda 16 (E3): skały SE w dwóch dużych masywach zamiast plamek — pasmo
+#: nad jaskinią sięga od rzeki po polanę SE (18–29, 28–29), a róg SE to
+#: jeden blok (30–35, 32–35).
+SKALY_SE = [(24, 28, 29, 29), (30, 32, 35, 35)]
+#: Runda 16 (B1): wnęka w masywie lasu na wschodnim brzegu (24–26, 19–20).
+WNEKA_KAMIENIOLOMU = (24, 19, 26, 20)
+#: Runda 16 (D2, E3): łąka pogranicza za mostem (na wschód od rzeki, od
+#: wiersza 18) poza traktem to ubita ziemia (ruch 125 zamiast 100) — trakt
+#: wreszcie się opłaca — a w tle łąka w innym, cieplejszym, wypalonym
+#: odcieniu niż dolina domu (`TLO`: warstwa `snieg` z teksturą trawy).
+LAKA_ZA_RZEKA_OD = GRANICA_WROGA + 1
 
 #: Pola plaży i rogu NE — zajęte od początku, żeby losowanie nic tam nie dosypało.
 PLAZA = [(x, y) for y in range(2, 6) for x in range(8, 14)]
@@ -512,6 +547,31 @@ def popraw_teren(g, mapa):
         for x in range(x0, x1 + 1):
             if mapa[y][x] in 'T#':
                 mapa[y][x] = '.'
+    # Runda 16 (A5): kieszeń SW pod zamkiem i wnęka kamieniołomu.
+    for x0, y0, x1, y1 in (KIESZEN_DOMU, WNEKA_KAMIENIOLOMU):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                mapa[y][x] = '.'
+    for x, y in SCIANA_KIESZENI_DOMU:
+        mapa[y][x] = 'T'
+    for x0, y0, x1, y1 in SKALY_SE:
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                if mapa[y][x] in '.,jT':
+                    mapa[y][x] = '#'
+    # …a dolina oddaje łąkę zabraną przez straż kieszeni: zatoka pod
+    # zachodnim pasmem (1–4, 21–22) odrasta z lasu (bez bitwy ~24 %).
+    for y in (21, 22):
+        for x in (1, 2, 3, 4):
+            mapa[y][x] = '.'
+
+
+def po_drogach(g, mapa):
+    """Runda 16 (D2, E3): łąka za mostem poza traktem — ubita ziemia."""
+    for y in range(LAKA_ZA_RZEKA_OD, BOK):
+        for x in range(BOK):
+            if mapa[y][x] == '.' and x > rzeka_x(y) and strefa(x, y) == 'pogranicze':
+                mapa[y][x] = 'j'
 
 
 #: Runda 13 (G4): masyw zamykający krainę wroga od południa (x0, y0, x1, y1).
@@ -563,6 +623,10 @@ def TLO(rysunek):
             wroga = y <= GRANICA_WROGA and strefa(x, y) == 'wroga'
             if wynik[y][x] == 'j' and wroga:
                 wynik[y][x] = 'b'
+            # Runda 16 (E3): ubita ziemia łąki za mostem to w tle łąka
+            # w innym odcieniu (warstwa `snieg` z teksturą trawy, `TEKSTURY`).
+            elif wynik[y][x] == 'j':
+                wynik[y][x] = 's'
             # Runda 13 (E3, F1): góra stoi NA łące, jak w Heroes 3 — ubita
             # ziemia pod klockami skał prześwitywała między nimi plamami
             # piasku (2–3 pola) i „ścieżką w skałach" (1–3, 22–25). W krainie
@@ -631,7 +695,8 @@ KADR = (3, 18, 24, 35)
 #: się jako „jaskinia", nie jako kopalnia — i gracz „nie miał" drugiej
 #: kopalni podstawowej przy zamku. Jaskinia odłamków stoi na północnej łące.
 PIERWSZY_EKRAN_DOM = [
-    ([(9, 27), (8, 27), (10, 27)], ('kopalnia', 'kamien')),
+    # Runda 16 (A2, G2): kamieniołom spod dachu zamku (9, 27) przeniesiony
+    # do kieszeni SW za wolną słabą strażą (`KIESZEN_DOMU_SKARB`).
     ([(12, 33), (11, 33), (13, 33)], ('kopalnia', 'jagoda')),
     ([(11, 27), (10, 28)], ('surowiec', 'odlamek')),
     # Runda 12 (G2): skrzynia leżała na trakcie tuż przed mostem — teraz
@@ -641,6 +706,21 @@ PIERWSZY_EKRAN_DOM = [
     # na końcu krótkiej odnogi traktu. Stos skrzynia + jagoda spod sadu
     # (14, 33–34) poszedł na zachodnią łąkę (`LAKA_POLNOCNA`).
     ([(5, 28), (4, 28), (6, 28)], ('kopalnia', 'odlamek')),
+    # Runda 16 (A3): dwa surowce luzem przy trakcie i odnodze do sadu — na
+    # starcie cztery łatwe nagrody w zasięgu ośmiu kroków.
+    ([(12, 30), (12, 29), (13, 31)], ('surowiec', 'jagoda')),
+    ([(10, 33), (9, 33), (7, 33)], ('surowiec', 'pokeball')),
+]
+
+#: Runda 16 (A5, A2): kieszeń SW (`KIESZEN_DOMU`) za wolną słabą strażą
+#: (4, 32): kamieniołom wcięty w las, dwie skrzynie i stos dwóch surowców;
+#: pole (2, 34) zostaje wolne — przez nie dochodzi się do wszystkiego.
+KIESZEN_DOMU_SKARB = [
+    ([(2, 33)], ('kopalnia', 'kamien')),
+    ([(4, 34)], ('skrzynia', None)),
+    ([(1, 34)], ('skrzynia', None)),
+    ([(3, 34)], ('surowiec', 'odlamek')),
+    ([(1, 33)], ('surowiec', 'jagoda')),
 ]
 
 #: Runda 13 (B1): jaskinia odłamków stała na północnej łące. Runda 14 (B1):
@@ -676,18 +756,17 @@ LAKA_POLNOCNA = [
     ([(5, 12), (6, 12), (6, 11)], ('budynek', 'woz')),
     ([(5, 14), (6, 14)], ('skrzynia', None)),
     ([(4, 15), (4, 14)], ('surowiec', 'jagoda')),
-    ([(6, 15), (7, 15)], ('surowiec', 'pokeball')),
     ([(10, 13), (9, 13)], ('budynek', 'oboz-treningowy')),
-    ([(12, 12), (12, 13)], ('skrzynia', None)),
-    ([(11, 12), (13, 13)], ('surowiec', 'odlamek')),
+    # Runda 16 (B2, G1): środek łąki (10–18, 9–16) bez konfetti — pojedyncze
+    # kosze, skrzynie i pokeballe (12, 12), (15, 14), (16, 14), (17–18,
+    # 11–12) odpadły (dwa surowce poszły do doliny domu), zostają dwa stosy:
+    # przy rozstajach (9–10, 11–12) i przy trakcie do mostu (15–16, 9).
+    ([(10, 11), (9, 11)], ('skrzynia', None)),
+    ([(9, 12), (10, 12)], ('surowiec', 'odlamek')),
     ([(15, 12), (15, 13)], ('budynek', 'drzewo-wiedzy')),
     ([(13, 15), (14, 15)], ('budynek', 'gniazdo')),
-    ([(18, 11), (17, 11)], ('surowiec', 'pokeball')),
-    ([(17, 12), (18, 12)], ('skrzynia', None)),
     ([(15, 9), (15, 8)], ('surowiec', 'kamien')),
-    ([(16, 9), (16, 8)], ('surowiec', 'odlamek')),
-    ([(16, 14), (16, 13)], ('skrzynia', None)),
-    ([(16, 15), (15, 14)], ('surowiec', 'jagoda')),
+    ([(16, 9), (16, 8)], ('skrzynia', None)),
 ]
 
 #: Runda 12: plaża nad jeziorem — kieszeń za strażą (12, 6).
@@ -698,7 +777,6 @@ PLAZA_SKARB = [
     ([(10, 4), (10, 3), (9, 4)], ('kopalnia', 'pokeball')),
     ([(13, 4), (12, 4), (13, 3)], ('artefakt', None)),
     ([(12, 3), (13, 3), (12, 4)], ('skrzynia', None)),
-    ([(8, 4), (8, 3), (9, 3), (11, 4)], ('surowiec', 'kamien')),
 ]
 
 #: Runda 12: nagrody krainy wroga — za brodem i przy forcie, w stosach po
@@ -716,12 +794,11 @@ KRAINA_WROGA = [
     # na zachodnią stronę fortu, gdzie stały kopce (27–28, 12–14), z dala
     # od jego dachu i od dachu sadu.
     ([(23, 12), (23, 11)], ('skrzynia', None)),
-    ([(27, 14), (26, 12)], ('surowiec', 'pokeball')),
+    # Runda 16 (B4): pokeballe (27, 14) odpadły — surowce ≤ 25 %.
     # Runda 15 (B1): sad wroga wcięty w masyw granicy, w misie fortu.
     ([(24, 15), (23, 15), (25, 15)], ('kopalnia', 'jagoda')),
     # Runda 15 (B3): stos pod północnym grzbietem, przy trakcie z mostu.
     ([(28, 6), (28, 7)], ('skrzynia', None)),
-    ([(29, 7), (29, 6)], ('surowiec', 'odlamek')),
 ]
 
 #: Runda 12: róg NE (31–35, 1–5) za skałami — kieszeń za strażą (31, 5).
@@ -739,13 +816,16 @@ ROG_SKARB = [
 #: stadion i wiatrak przy odnodze na południe. Kamieniołom, nie druga jaskinia
 #: odłamków (ta jest w kieszeni za mostem).
 LAKA_POGRANICZA = [
-    ([(28, 20), (28, 19), (27, 20)], ('kopalnia', 'kamien')),
     ([(32, 21), (32, 20), (33, 21)], ('surowiec', 'pokeball')),
     # Runda 15 (B2): pokeballe nie leżą same — stos z jagodami.
     ([(33, 21), (33, 22), (31, 21)], ('surowiec', 'jagoda')),
     ([(32, 24), (31, 24), (32, 25)], ('budynek', 'arena')),
     ([(30, 26), (29, 26), (30, 27)], ('budynek', 'wiatrak')),
 ]
+
+#: Runda 16 (B1, G2): kamieniołom pogranicza we wnęce lasu za strażą (27, 20)
+#: — stawiany przed strażami, bo jej dziewięć pól zajmuje róg bryły.
+KAMIENIOLOM_POGRANICZA = ([(25, 20)], ('kopalnia', 'kamien'))
 
 #: Runda 15 (B4, E2): polana w lesie SE (`POLANA_SE`).
 POLANA_SE_OBIEKTY = [
@@ -807,7 +887,7 @@ def rozstaw(g):
     # skarb pod strażą w lewym dole. `postaw_kadr` bierze pierwsze wolne
     # miejsce z listy (droga, bryła i próg startu odpadają).
     sx, sy = PUNKTY['start']
-    for miejsca, wpis in PIERWSZY_EKRAN_DOM:
+    for miejsca, wpis in PIERWSZY_EKRAN_DOM + KIESZEN_DOMU_SKARB + [KAMIENIOLOM_POGRANICZA]:
         postaw_kadr(g, miejsca, wpis)
     # Pierwszy ekran jest skończony: reszta rozstawienia (budowle i stosy
     # całej doliny) idzie poza kadr, inaczej trzy budowle stawały dach w dach.
@@ -828,7 +908,13 @@ def rozstaw(g):
     straz((MOST[2] + 2, MOST[1]), 'slaby')
     # Bród: średnia straż na środku łachy — druga lekcja; blokuje całą
     # szerokość koryta (20–22), a w wierszu 7 i 9 jest woda.
-    straz(STRAZ_BRODU, 'sredni')
+    # Runda 16 (C4): straż mostu północnego jest SILNA — inaczej silną straż
+    # przełęczy fortu (30, 16) dało się obejść za cenę średniej bitwy.
+    straz(STRAZ_BRODU, 'silny')
+    # Runda 16 (A5, B1): wolna słaba straż przed kieszenią SW w dolinie domu
+    # i druga słaba w wylocie wnęki z kamieniołomem pogranicza.
+    straz(STRAZ_KIESZENI_DOMU, 'slaby')
+    straz(STRAZ_KAMIENIOLOMU, 'slaby')
     # Przełęcz fortu: SILNA straż na trakcie — fort jest ostatnią, najdroższą
     # bitwą (C2, C3).
     straz(STRAZ_PRZELECZY_FORTU, 'silny')
@@ -852,12 +938,8 @@ def rozstaw(g):
     # i samotne pokeballe.
     for miejsca, wpis in LAKA_POLNOCNA:
         postaw_kadr(g, miejsca, wpis)
-    # Kieszeń domu bywa po rundzie 4 ciasna (rzeka skręca przez dolinę):
-    # gdy każde miejsce w niej zatyka drogę, skarb w kieszeni odpada.
-    try:
-        g.skarb_w_kieszeni('dom', 'slaby', 2, lambda p: ('skrzynia', None))
-    except SystemExit:
-        pass
+    # Runda 16: kieszeń domu jest stała (`KIESZEN_DOMU`) — losowa
+    # `skarb_w_kieszeni('dom', …)` i tak nie znajdowała miejsca.
 
     # --- ZA RZEKĄ ----------------------------------------------------------
     # DRUGI BRZEG W PIERWSZYM EKRANIE: kieszeń za pasmem (kopalnia kamienia
@@ -995,6 +1077,8 @@ TEKSTURY = {
     # Runda 12 (G4): grunt krainy wroga (`b` w tle, patrz `TLO`) to ciemna
     # trawa — ta sama, co ściółka pod lasem — zabarwiona chłodno.
     'bagno': ['trawa-3', 'trawa'],
+    # Runda 16 (E3): łąka pogranicza za mostem (`s` w tle, patrz `TLO`).
+    'snieg': ['trawa'],
 }
 
 #: Runda 6 („płaska, jednolita zieleń bez wzniesień"): łagodne pagórki
@@ -1047,6 +1131,9 @@ BARWY_TERENU = {
     # Runda 12 (G4): kraina wroga za rzeką — łąka o ton ciemniejsza
     # i wyraźnie chłodniejsza (sinozielona) niż ciepła łąka doliny domu.
     'bagno': {'nasycenie': 0.4, 'barwa': (46, 82, 108), 'moc': 0.9, 'jasnosc': 0.6},
+    # Runda 16 (E3): łąka za mostem — cieplejsza, przypalona słońcem,
+    # oliwkowo-złota, wyraźnie inna niż dolina domu i niż kraina wroga.
+    'snieg': {'nasycenie': 0.65, 'barwa': (185, 150, 70), 'moc': 0.6, 'jasnosc': 0.84},
 }
 
 #: Naklejki terenu (`public/mapa/tlo/`, prompty w `tools/PROMPTY-PLANSZE.md`).
