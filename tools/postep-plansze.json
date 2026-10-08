@@ -1,12 +1,12 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-08 04:55",
+  "aktualizacja": "2026-10-08 05:06",
   "kawalki": [
     {
       "id": "polana",
       "tytul": "Polana (misja 1, samouczek, 36×36)",
-      "status": "build",
+      "status": "critic",
       "opis": "Rzeka z dwoma brodami, zamek na południowym zachodzie, Stary Fort na wschodzie.",
       "rundy": [
         {
@@ -169,8 +169,13 @@
             {
               "plik": "tools/shots/caly-polana-r4.png",
               "opis": "Cała plansza oceniana w rundzie 5"
+            },
+            {
+              "plik": "tools/shots/caly-polana-r5.png",
+              "opis": "Cała plansza po rundzie 5"
             }
-          ]
+          ],
+          "zmiana": "Kieszeń w lesie SW z wolną słabą strażą, kamieniołomem (spod dachu zamku), skrzyniami i stosem; przy trakcie jagoda i pokeball — 4 łatwe nagrody w 8 krokach. Środkowa łąka: dwa stosy przy rozstajach i trakcie zamiast pojedynczych rzeczy; straż mostu północnego silna. Kamieniołom pogranicza we wnęce lasu ze słabą strażą w wylocie; łąka za mostem droższa (125) i oliwkowa; skały w pasma. 64 obiekty, obiekt co 9,3 pola, strefy 13/35/16, bez bitwy 24 %, symulacja misji 1: 9/9 wygranych."
         }
       ]
     },
