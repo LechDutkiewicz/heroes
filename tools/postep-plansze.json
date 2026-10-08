@@ -1,7 +1,7 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, Polana gotowa; Dwie Doliny r6: wygrana, 0 NIE, 7 CZĘŚCIOWO — builder r6; Twierdza r6 w budowie; Bagna r10 u krytyka",
+ "aktualizacja": "2026-10-08, Polana i Bagna GOTOWE; Dwie Doliny r6 i Twierdza r6 w budowie",
  "kawalki": [
   {
    "id": "polana",
@@ -478,7 +478,7 @@
   {
    "id": "bagna",
    "tytul": "Bagna (misja 3, 54×54)",
-   "status": "critic",
+   "status": "done",
    "opis": "Dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca z wodzem.",
    "rundy": [
     {
@@ -761,6 +761,26 @@
       }
      ],
      "zmiana": "Runda 10 generatora: kamieniołom (11,51) → (5,52) do zakątka za strażą (8,50) ze stosem pod kopalnią; kopalnia pokeballi otoczona lasem, straż (17,42) w jednopolowym wylocie; bez źródła (8,27), jagód (9,29) i straży (32,46) — ekrany pogranicza po 19 obiektów i 3 straże; kępa doliny w łąkę, wysepki lasu na płaskowyżu w ziemię jałową, straż (7,12) w szyjce; 20 pól lasu w zatokach. 116 obiektów co 11,0 pola, pasy 22/21/31/22/20, bez bitwy 24 %, probe-misja OK."
+    },
+    {
+     "nr": 10,
+     "wzorzec": "unexpected-inheritance",
+     "win": true,
+     "checklista": {
+      "TAK": 29,
+      "CZESCIOWO": 1,
+      "NIE": 0
+     },
+     "luka": "Pełna checklista. Jedyna luka (G1): środek trzęsawiska (25–33,19–27) ma 11 obiektów na 9×9 pól, najgęstsze okna 22–23 obiekty.",
+     "nie": [
+      "G1 częściowo: środek trzęsawiska zagęszczony"
+     ],
+     "obrazy": [
+      {
+       "plik": "tools/blind/r10-bagna.png",
+       "opis": "para ślepa r10 (A = nasza, B = unexpected-inheritance)"
+      }
+     ]
     }
    ]
   },
