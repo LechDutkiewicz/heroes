@@ -1,7 +1,7 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, Dwie Doliny r5: wygrana, 0 NIE, 7 CZĘŚCIOWO — builder r5; Twierdza r5 i Bagna r8 u krytyków; Polana r7 w budowie",
+ "aktualizacja": "2026-10-08, Twierdza r5: wygrana, 1 NIE — builder r5; Bagna r8 u krytyka; Polana r7 i Dwie Doliny r5 w budowie",
  "kawalki": [
   {
    "id": "polana",
@@ -625,7 +625,7 @@
   {
    "id": "twierdza",
    "tytul": "Twierdza (misja 4, 72×72)",
-   "status": "critic",
+   "status": "build",
    "opis": "Zima, trzy pasy i skalny grzbiet między dolinami dwóch twierdz.",
    "rundy": [
     {
@@ -761,6 +761,29 @@
       }
      ],
      "zmiana": "Runda 4 generatora: pas za bramami bez losowania (zostają jasnowidz, dwie kopalnie, chatka, stos), dolina NE rozładowana (ekrany 25 i 28 → 16), pusta rubież wschodnia dostała zakątek z ogniskiem i stosem za średnią strażą (ekran 3 → 9), straże przeniesione do przejść, skalne garby wyginają trakty, mury skał w pasie środkowym zamienione na bór, pas 3 dostał polanę z wiatrakiem, wozem i skrzynią. 233 obiekty co 10,9 pola, bez bitwy 23 %, pasy 22/38/68/61/44."
+    },
+    {
+     "nr": 5,
+     "wzorzec": "when-dragons-clash",
+     "win": true,
+     "checklista": {
+      "TAK": 26,
+      "CZESCIOWO": 3,
+      "NIE": 1
+     },
+     "luka": "Nagrody z doliny NE trafiły do wschodniej tundry (48–71,21–41): 30–32 obiekty z 3 strażami na jednym ekranie — ściana, nie decyzja. Dom urósł do 76 obiektów, w tym 20 skrzyń pojedynczo jak konfetti.",
+     "nie": [
+      "G1 NIE: wschodnia tundra 30–32 obiekty; cztery inne ekrany po 19–23",
+      "B2 częściowo: konfetti pojedynczych skrzyń w dolinie rozstajów i kieszeni wschodniej",
+      "D3 częściowo: prosta pionowa droga x 58–61, y 4–20 przez śnieżną równinę",
+      "G3 częściowo: drobne kopczyki śniegu i choinki mieszają się ze znajdźkami"
+     ],
+     "obrazy": [
+      {
+       "plik": "tools/blind/r5-twierdza.png",
+       "opis": "para ślepa r5 (A = when-dragons-clash, B = nasza)"
+      }
+     ]
     }
    ]
   }
