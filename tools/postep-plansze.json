@@ -1,7 +1,7 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, Polana, Dwie Doliny i Bagna gotowe; Twierdza r7: wygrana, 0 NIE, 6 CZĘŚCIOWO — builder r7",
+ "aktualizacja": "2026-10-08, Polana, Dwie Doliny i Bagna gotowe; Twierdza r8 u krytyka",
  "kawalki": [
   {
    "id": "polana",
@@ -813,7 +813,7 @@
   {
    "id": "twierdza",
    "tytul": "Twierdza (misja 4, 72×72)",
-   "status": "build",
+   "status": "critic",
    "opis": "Zima, trzy pasy i skalny grzbiet między dolinami dwóch twierdz.",
    "rundy": [
     {
@@ -1025,10 +1025,15 @@
      ],
      "obrazy": [
       {
-       "plik": "tools/blind/r7-twierdza.png",
-       "opis": "para ślepa r7 (A = hatchet-axe-and-saw, B = nasza)"
+       "plik": "tools/shots/caly-twierdza-r7.png",
+       "opis": "Twierdza po rundzie 7 generatora (zrzut z gry)"
+      },
+      {
+       "plik": "tools/blind/r8-twierdza.png",
+       "opis": "para ślepa r8: A/B bez podpisów"
       }
-     ]
+     ],
+     "zmiana": "Runda 7 generatora: skrzynia spod domku zamku i kamień na koniec odnogi (20–21,69); losowe skrzynie wroga i tundry wyłączone, pojedyncze skrzynie na śniegu dosunięte do stosów (dolina wroga 20 → 17 na ekranie); stos przy chatce (44,50); zachodnia tundra bez trzech pojedynczych rzeczy (20 → 17); nowe stosy pod zakrętem traktu i w zakątku drzewa wiedzy, relikt za ranczem; paski ziemi przy lodzie zamarznięte. 183 obiekty co 11,3 pola, bór+skały 49,5 %, pasy 17/42/47/46/31, strefy 63/65/55, bez bitwy 27 %, maks. 16 na oknie, probe-misja OK."
     }
    ]
   }
