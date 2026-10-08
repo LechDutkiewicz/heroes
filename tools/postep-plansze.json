@@ -1,12 +1,12 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, Polana r8 u krytyka; Dwie Doliny r5, Twierdza r5, Bagna r8 w budowie",
+ "aktualizacja": "2026-10-08, Polana r8: wygrana, 1 NIE (C3) — builder r8; Dwie Doliny r5, Twierdza r5, Bagna r8 w budowie",
  "kawalki": [
   {
    "id": "polana",
    "tytul": "Polana (misja 1, samouczek, 36×36)",
-   "status": "critic",
+   "status": "build",
    "opis": "Rzeka z dwoma brodami, zamek na południowym zachodzie, Stary Fort na wschodzie.",
    "rundy": [
     {
@@ -229,6 +229,29 @@
       }
      ],
      "zmiana": "Runda 18 generatora: trasa do fortu słaba (17,26) → słaba (27,20) → średnia (30,16); most północny (24,8) silny, z ostrogą skał (26–27,5–7) odcinającą zakątek kamiennej wieży (25,3) i artefaktu (24,5). Bez wiatraka (18,11), wozu (5,12) i skrzyni (16,9); skrzynia i kamień w zatoczce przy moście (18,6)/(17,7). Odłamek (13,24) i skrzynia (11,24) po obu stronach traktu zamiast pod domkami zamku; kupka za mostem rozbita. Samotne drzewa i pole łąki w lesie wyrównane. 59 obiektów co 10,1 pola, pasy 5/10/19/14/11, bez bitwy 24 %, symulacja 9/9 (dzień 18,3), probe-misja OK."
+    },
+    {
+     "nr": 8,
+     "wzorzec": "gorlam-s-tentacle-swampland",
+     "win": true,
+     "checklista": {
+      "TAK": 26,
+      "CZESCIOWO": 3,
+      "NIE": 1
+     },
+     "luka": "Zamiana sił z rundy 7 przeniosła problem: silna straż (24,8) stoi na dłuższej trasie i nie pilnuje niczego, czego nie da się wziąć zza średniej (30,16), bo kraina wroga za oboma wejściami to jedno bagno. Północny środek wciąż ma 22 obiekty i 5 straży na ekranie.",
+     "nie": [
+      "C3 NIE: najtrudniejsza walka mapy nie ma wyłącznej nagrody",
+      "E3 częściowo: dziura łąki (2,12), kępa TT (3–4,12), wysepka ziemi przy wieży",
+      "G1 częściowo: okno (12–32,3–20) z 22 obiektami i 5 strażami",
+      "G2 częściowo: straże (4,32) i (27,20) wtulone w wózki kamieniołomów"
+     ],
+     "obrazy": [
+      {
+       "plik": "tools/blind/r8-polana.png",
+       "opis": "para ślepa r8 (A = nasza, B = gorlam-s-tentacle-swampland)"
+      }
+     ]
     }
    ]
   },
