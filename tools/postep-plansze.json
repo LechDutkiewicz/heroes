@@ -1,7 +1,7 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-08 04:37",
+  "aktualizacja": "2026-10-08 04:41",
   "kawalki": [
     {
       "id": "polana",
@@ -287,7 +287,7 @@
     {
       "id": "bagna",
       "tytul": "Bagna (misja 3, 54×54)",
-      "status": "critic",
+      "status": "build",
       "opis": "Dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca z wodzem.",
       "rundy": [
         {
@@ -430,6 +430,30 @@
             }
           ],
           "zmiana": "Kopalnie 16 → 11, budowle 19 → 38 (11 nowych w rzadkich kaflach z odstępami). Kopalnie droższe w domu pod słabą strażą obok drogi; stos na końcu ścieżki w dół doliny; 4 łatwe nagrody w 7 krokach od bramy. Stos NE zamknięty lasem z jedną bramą; kopalnia kamieni zdjęta z drogi; straż odnogi SE obok drogi. Trakt doliny prosto, ukos spod warowni wyprostowany, kałuże zasypane, kraina wroga na jałowym gruncie (brązowa na minimapie), ciemna ściółka pod lasem. 121 obiektów, obiekt co 11,0 pola, bez bitwy 23 %, pasy [22,16,32,24,27]."
+        },
+        {
+          "nr": 5,
+          "wzorzec": "Unexpected Inheritance (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 21,
+            "CZESCIOWO": 8,
+            "NIE": 1
+          },
+          "luka": "Za dużo naraz na jednym ekranie — dolina gracza i płaskowyż wroga mają po kilkanaście obiektów w kadrze 21×18, więc sześcio-dziewięciolatek nie widzi jednej decyzji, tylko konfetti nagród (G1), co dodatkowo psują powtarzane budynki „specjalne\" (F3).",
+          "nie": [
+            "G1: NIE — ekran wokół zamku (0–20,36–53) ma ok. 14 obiektów (4 kopalnie, 4 surowce, 2 skrzynie, artefakt, 3 budynki, straż), a ekran północno-wschodni wroga (27–48,0–12) podobnie; dla dziecka to dziesięć decyzji naraz."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r5-bagna.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-bagna-r4.png",
+              "opis": "Cała plansza oceniana w rundzie 5"
+            }
+          ]
         }
       ]
     },
