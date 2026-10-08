@@ -1,7 +1,7 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, Polana i Bagna gotowe; Dwie Doliny r7 u krytyka; Twierdza r6 w budowie",
+ "aktualizacja": "2026-10-08, Polana i Bagna gotowe; Dwie Doliny r7 i Twierdza r7 u krytyków",
  "kawalki": [
   {
    "id": "polana",
@@ -792,7 +792,7 @@
   {
    "id": "twierdza",
    "tytul": "Twierdza (misja 4, 72×72)",
-   "status": "build",
+   "status": "critic",
    "opis": "Zima, trzy pasy i skalny grzbiet między dolinami dwóch twierdz.",
    "rundy": [
     {
@@ -975,10 +975,15 @@
      ],
      "obrazy": [
       {
-       "plik": "tools/blind/r6-twierdza.png",
-       "opis": "para ślepa r6 (A = nasza, B = gorlam-s-tentacle-swampland)"
+       "plik": "tools/shots/caly-twierdza-r6.png",
+       "opis": "Twierdza po rundzie 6 generatora (zrzut z gry)"
+      },
+      {
+       "plik": "tools/blind/r7-twierdza.png",
+       "opis": "para ślepa r7: A/B bez podpisów"
       }
-     ]
+     ],
+     "zmiana": "Runda 6 generatora: zachodnia dolina tundry (10–19,31–43) i dolina gracza (26–37,54–63) otwarte jako polany (bór tylko murem zatok i trzema kępami), bór na brzegach jezior w lód; międzyjezierze 18 → 13 obiektów (bez wiatraka, ogniska, skrzyni, kupki); śnieg w pasie y 24–44 w jałową ziemię, kałuża (15,60) w łąkę, pokeball do stosu przy kopalni (11,49); nowe stosy przy kopalniach pasa spornego i w skalnym zakątku wroga. 182 obiekty co 11,5 pola, bór+skały 49,5 %, pasy 17/40/47/45/33, strefy 61/63/58, bez bitwy 26 %, maks. 16 na oknie siatki, probe-misja OK za pierwszym razem."
     }
    ]
   }
