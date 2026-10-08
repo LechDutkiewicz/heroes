@@ -1,7 +1,7 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, Dwie Doliny r5 u krytyka, Polana r7 w budowie",
+ "aktualizacja": "2026-10-08, u krytyków: Dwie Doliny r5, Twierdza r5, Bagna r8; Polana r7 w budowie",
  "kawalki": [
   {
    "id": "polana",
@@ -370,7 +370,7 @@
   {
    "id": "bagna",
    "tytul": "Bagna (misja 3, 54×54)",
-   "status": "build",
+   "status": "critic",
    "opis": "Dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca z wodzem.",
    "rundy": [
     {
@@ -585,21 +585,22 @@
      "nie": [],
      "obrazy": [
       {
-       "plik": "tools/blind/r7-bagna.png",
-       "opis": "Ślepe A/B: krytyk wybrał B = wzorzec"
+       "plik": "tools/shots/caly-bagna-r7.png",
+       "opis": "Bagna po rundzie 8 generatora (zrzut z gry)"
       },
       {
-       "plik": "tools/shots/caly-bagna-r6.png",
-       "opis": "Cała plansza oceniana w rundzie 7"
+       "plik": "tools/blind/r8-bagna.png",
+       "opis": "para ślepa r8: A/B bez podpisów"
       }
-     ]
+     ],
+     "zmiana": "Runda 8 generatora: przejście wschód → środek zwężone do 2 pól ze strażą w nim, zakątek wschodni domknięty lasem, smok w jedynej luce muru lasu wyspy ze skarbcem za nim, straż brodu na brzegu, stosy 2–3 rzeczy zamiast samotnych surowców, budowle specjalne po jednej (laboratorium, wóz, obóz, ranczo), zwykłe budowle do 28 %, skrzynie 19,5 %, wnętrza masywów jako pasma skał, zatoki trzęsawiska, piasek wyspy celu i siny płaskowyż wroga. 128 obiektów co 9,8 pola, bez bitwy 21 %, pasy 25/24/28/27/24."
     }
    ]
   },
   {
    "id": "twierdza",
    "tytul": "Twierdza (misja 4, 72×72)",
-   "status": "build",
+   "status": "critic",
    "opis": "Zima, trzy pasy i skalny grzbiet między dolinami dwóch twierdz.",
    "rundy": [
     {
@@ -726,14 +727,15 @@
      "nie": [],
      "obrazy": [
       {
-       "plik": "tools/blind/r4-twierdza.png",
-       "opis": "Ślepe A/B: krytyk wybrał A = nasza"
+       "plik": "tools/shots/caly-twierdza-r4.png",
+       "opis": "Twierdza po rundzie 4 generatora (zrzut z gry)"
       },
       {
-       "plik": "tools/shots/caly-twierdza-r3.png",
-       "opis": "Cała plansza oceniana w rundzie 4"
+       "plik": "tools/blind/r5-twierdza.png",
+       "opis": "para ślepa r5: A/B bez podpisów"
       }
-     ]
+     ],
+     "zmiana": "Runda 4 generatora: pas za bramami bez losowania (zostają jasnowidz, dwie kopalnie, chatka, stos), dolina NE rozładowana (ekrany 25 i 28 → 16), pusta rubież wschodnia dostała zakątek z ogniskiem i stosem za średnią strażą (ekran 3 → 9), straże przeniesione do przejść, skalne garby wyginają trakty, mury skał w pasie środkowym zamienione na bór, pas 3 dostał polanę z wiatrakiem, wozem i skrzynią. 233 obiekty co 10,9 pola, bez bitwy 23 %, pasy 22/38/68/61/44."
     }
    ]
   }
