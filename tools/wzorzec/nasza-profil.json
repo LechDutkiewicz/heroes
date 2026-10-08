@@ -1,53 +1,53 @@
 {
   "rozmiar": "72 × 72",
   "pól": 5184,
-  "przejezdnych": 1867,
-  "przejezdnych %": 36,
+  "przejezdnych": 1455,
+  "przejezdnych %": 28,
   "teren %": {
-    ".": 19,
+    ".": 15,
     "=": 4,
-    ",": 1,
-    "j": 11,
+    ",": 0,
+    "j": 8,
     "s": 0,
     "b": 1,
-    "T": 40,
-    "#": 16,
-    "~": 8
+    "T": 36,
+    "#": 14,
+    "~": 22
   },
-  "obiektów": 157,
-  "obiekt co ile pól przejezdnych": 11.9,
+  "obiektów": 132,
+  "obiekt co ile pól przejezdnych": 11.0,
   "obiekty wg rodzaju": {
     "kopalnia": 15,
-    "budynek": 45,
-    "surowiec": 31,
-    "skrzynia": 27,
+    "budynek": 29,
+    "surowiec": 28,
+    "skrzynia": 23,
     "artefakt": 12,
-    "potwor": 18,
+    "potwor": 16,
     "namiot": 2,
     "jasnowidz": 3,
     "straznica": 4
   },
   "obiekty wg strefy": {
-    "dom": 60,
-    "pogranicze": 50,
-    "wroga": 47
+    "dom": 45,
+    "pogranicze": 48,
+    "wroga": 39
   },
   "straże wg siły": {
     "slaby": 5,
-    "sredni": 7,
-    "silny": 4,
+    "sredni": 6,
+    "silny": 3,
     "wodz": 2
   },
-  "straże %": 11,
+  "straże %": 12,
   "obiekty w pasach odległości (5 × 20%)": [
-    23,
-    21,
-    43,
-    44,
-    26
+    19,
+    16,
+    40,
+    39,
+    18
   ],
-  "kroków do zamku wroga": 84,
-  "najdalszy zakątek (kroków)": 94,
-  "pól dostępnych bez wygranej bitwy": 426,
+  "kroków do zamku wroga": 80,
+  "najdalszy zakątek (kroków)": 89,
+  "pól dostępnych bez wygranej bitwy": 339,
   "dostępnych bez bitwy %": 23
 }
