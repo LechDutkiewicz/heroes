@@ -1,12 +1,12 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, Polana r7 u krytyka",
+ "aktualizacja": "2026-10-08, Polana r7: wygrana, 0 NIE, 4 CZĘŚCIOWO — builder r7",
  "kawalki": [
   {
    "id": "polana",
    "tytul": "Polana (misja 1, samouczek, 36×36)",
-   "status": "critic",
+   "status": "build",
    "opis": "Rzeka z dwoma brodami, zamek na południowym zachodzie, Stary Fort na wschodzie.",
    "rundy": [
     {
@@ -201,6 +201,29 @@
       }
      ],
      "zmiana": "Runda 17 generatora: straż przełęczy domu w szczelinie (8,16), mosty (17,26) i (24,8), most północny średni, przełęcz fortu (30,16) jedyną silną; wieża na (25,3), kraina wroga na ciemnym gruncie; pokeball z płotu sadu na (8,34) prowadzi do kieszeni SW; skrzynia na końcu pasa (2,21); wiatrak odsunięty od laboratorium. Straż (27,20) zostaje słaba, bo przy średniej misja 1 w symulacji nie jest wygrywalna przed dniem 32. 61 obiektów, co 9,8 pola, bez bitwy 24 %, symulacja 9/9."
+    },
+    {
+     "nr": 7,
+     "wzorzec": "unexpected-inheritance",
+     "win": true,
+     "checklista": {
+      "TAK": 25,
+      "CZESCIOWO": 4,
+      "NIE": 0
+     },
+     "luka": "Nagrody i siła straży nie zgadzają się na trasie do celu: jedyną silną straż (30,16) da się obejść 9 krokami przez most północny ze średnią strażą (24,8), a za tą średnią leży najbogatsza kraina mapy. Środek północy przeładowany (23 obiekty na ekranie).",
+     "nie": [
+      "C3 częściowo: silna straż nie pilnuje niczego wyłącznego",
+      "E3 częściowo: plamy terenu poniżej 6×6 (samotne drzewa, pole łąki w lesie)",
+      "G1 częściowo: ekran środka północy z 23 obiektami i 4 strażami",
+      "G2 częściowo: odłamek i skrzynia wchodzą w domek zamku, kupka za mostem"
+     ],
+     "obrazy": [
+      {
+       "plik": "tools/blind/r7-polana.png",
+       "opis": "para ślepa r7 (A = nasza, B = unexpected-inheritance)"
+      }
+     ]
     }
    ]
   },
