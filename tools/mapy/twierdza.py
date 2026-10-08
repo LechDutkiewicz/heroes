@@ -385,9 +385,12 @@ def popraw_teren(g, mapa):
     # grzbietami (y 23 i zachodni kąt przy grzbiecie południowym, x ≤ 9,
     # y ≥ 39), czyli na krawędziach stref. Koszt ruchu j < s — przejezdność
     # bez zmian.
-    for y in range(24, 43):
+    # Runda 6 pętli (krytyk E3): także kąt zachodniej zatoki (2–8, 39–43)
+    # i skraj wschodniej (69–71, 43) — łaty śniegu po 1–3 pola bez powodu;
+    # cały pas y 24–44 to jałowa ziemia.
+    for y in range(24, 45):
         for x in range(BOK):
-            if mapa[y][x] == 's' and not (x <= 9 and y >= 39):
+            if mapa[y][x] == 's':
                 mapa[y][x] = 'j'
     # G1/B3: kępy boru w pustych połaciach — zachodni bór przy trakcie nad
     # jeziorem (16–19, 25–29), bór przy trakcie wschodnim (58–61, 25–29)
@@ -609,6 +612,48 @@ def po_drogach(g, mapa):
             if mapa[y][x] == '#' and (x, y) not in w_gorze:
                 mapa[y][x] = 'T'
 
+    # Runda 6 pętli (krytyk E4/G3): „morze choinek" — bór z rundy 5 (T+#
+    # 53 %) zamienił doliny w korytarze, a źródło (14,40) stało w leśnej
+    # dziurze. Polany wycięte we wnętrzach dolin, tam gdzie bór nie obrysowuje
+    # przejścia, zatoki ani brzegu (mury zatok, pasy przy szyjkach i skraje
+    # przy krawędzi zostają). Po drogach — trakty się nie przesuwają.
+    def polana(x0, y0, x1, y1, znak, bez=()):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                if mapa[y][x] == 'T' and (x, y) not in bez:
+                    mapa[y][x] = znak
+    # Zachodnia dolina tundry (x 10–19, y 31–43): mur zatoki (x 9–10) zostaje,
+    # reszta boru to polana — źródło (14,40) i ognisko (13,36) widać z traktu.
+    MUR_ZATOKI_W = {(9, y) for y in range(31, 36)} | {(10, y) for y in range(35, 44)} | {(9, y) for y in range(39, 44)}
+    polana(10, 31, 13, 34, 'j', MUR_ZATOKI_W)
+    polana(11, 35, 19, 43, 'j', MUR_ZATOKI_W)
+    # Dolina gracza: polana w środkowym borze (x 26–37, y 54–63) wokół wozu
+    # (32,57), połączona z południowym placem wiatraka — zostają trzy kępy
+    # 3 × 2 (scena składa z nich las) i bór od wschodu (x ≥ 38), który
+    # zamyka kieszeń za szyjką SE.
+    polana(26, 54, 37, 63, '.', {(x, y) for x in (26, 27, 28) for y in (57, 58)}
+           | {(x, y) for x in (29, 30, 31) for y in (54, 55)}
+           | {(x, y) for x in (35, 36, 37) for y in (61, 62, 63)})
+    # Bór na brzegach jezior (między traktem a lodem, między lodem a granią)
+    # staje się lodem tego samego jeziora: brzeg dalej jest brzegiem, droga
+    # idzie wzdłuż tafli zamiast wzdłuż ściany świerków, a pól przejezdnych
+    # (gęstość obiektów, B3) nie przybywa. Tylko pola stykające się z lodem.
+    def jezioro(pola):
+        for x, y in pola:
+            if mapa[y][x] == 'T':
+                mapa[y][x] = '~'
+    jezioro([(x, y) for y in range(24, 30) for x in range(15, 20) if (x, y) != (15, 25)]
+            + [(x, 24) for x in range(20, 37)])          # zachodnie jezioro
+    jezioro([(x, y) for x in range(52, 55) for y in range(32, 36)]
+            + [(x, 36) for x in range(47, 54)] + [(52, 24)])          # jezioro-zapora
+    jezioro([(x, y) for x in range(43, 49) for y in range(53, 57)] + [(46, 57), (52, 52)]
+            + [(x, y) for x in range(50, 58) for y in (59, 60)])     # jezioro SE
+    jezioro([(32, 25)])
+    # Cypel (48, 53–54) między nowym brzegiem a jeziorem — pas na pole, lód.
+    for x, y in [(48, 53), (48, 54)]:
+        if mapa[y][x] in 's.j':
+            mapa[y][x] = '~'
+
 
 def scal_plamy(mapa, poza, najwiecej=8, przebiegi=2):
     """Wtapia drobne plamy terenu przejezdnego (`s`, `.`, `j`) w otoczenie.
@@ -694,7 +739,8 @@ PIERWSZY_EKRAN = [
     # — za jaszczurem zostaje kopalnia.
     # Za stawem kupka kul na brzegu; skrzynia przy trakcie na północ; kamień
     # ewolucji przy ścieżce między wiatrakiem a spichlerzem.
-    ([(13, 54), (11, 54), (12, 54)], ('surowiec', 'pokeball')),
+    # (Runda 6 pętli, B2: kupka kul (13,54) za stawem leżała sama w polu —
+    # dołącza do stosu przy kopalni (11,49), patrz `DOLINA`.)
     ([(20, 61), (20, 60)], ('skrzynia', None)),
     ([(16, 61), (15, 61)], ('surowiec', 'kamien')),
     # Pętla 2026-10 (A3, krytyk: „w 8 krokach od bramy jeden surowiec").
@@ -727,6 +773,7 @@ DOLINA = [
     # na końcu stos i relikt pod słabą strażą w zaułku przy borze.
     ([(11, 49), (12, 49), (10, 49)], ('kopalnia', 'odlamek')),
     ([(13, 49), (14, 49)], ('surowiec', 'pokeball')),
+    ([(12, 50), (14, 48), (15, 49)], ('surowiec', 'pokeball')),
     # Runda 4 pętli (C1): zaułek zamknięty od południa (`popraw_teren`),
     # straż w wejściu od traktu, za nią skrzynia i relikt.
     ([(6, 50), (6, 48), (7, 48)], ('skrzynia', None)),
@@ -826,10 +873,9 @@ TUNDRA = [
     ([(37, 25), (38, 25)], ('surowiec', 'kamien')),
     ([(42, 25), (43, 26)], ('surowiec', 'odlamek')),
     ([(38, 28), (37, 28)], ('skrzynia', None)),
-    ([(41, 29), (42, 29)], ('skrzynia', None)),
-    # Runda 5 pętli (E2): ognisko w zakątku — środkowy pas odległości,
-    # luźny ekran (okna nad zakątkiem: 11–12).
-    ([(43, 28), (42, 28), (42, 31)], ('budynek', 'ognisko')),
+    # (Runda 6 pętli, G1: bez skrzyni (41,29) i ogniska (43,28) — ekran
+    # międzyjezierza (27–47, 24–41) miał 18 rzeczy; zostaje drzewo wiedzy
+    # ze stosem i portal.)
     ([(37, 30), (38, 30), (42, 31)], ('budynek', 'portal')),
     # Wschodnia zatoka odnogi (x 62–71, y 33–43) za średnią strażą w wejściu
     # (63, 34): kopalnia kamieni w skale, wieża obserwacyjna, artefakt, stosy
@@ -850,7 +896,7 @@ TUNDRA = [
     # odległości, na luźnym ekranie (okna 21 × 18 nad brodem: 9–11).
     ([(42, 38), (41, 38)], ('skrzynia', None)),
     ([(39, 37), (38, 37), (39, 38)], ('budynek', 'zrodlo')),
-    ([(36, 34), (37, 34), (36, 36)], ('budynek', 'wiatrak')),
+    # (Runda 6 pętli, G1: bez wiatraka (36,34) przed brodem.)
     ([(59, 31), (60, 31)], ('budynek', 'chatka')),
     # Druga kopalnia odłamków tundry przy trakcie pod jeziorem.
     ([(23, 40), (24, 40), (22, 40), (26, 43), (25, 43), (23, 43)], ('kopalnia', 'odlamek')),
@@ -859,15 +905,26 @@ TUNDRA = [
     # w zachodniej dolinie (x 10–21, y 30–44) i pod jeziorem (y 39–44).
     ([(12, 33), (12, 34)], ('surowiec', 'jagoda')),
     ([(13, 36), (14, 37)], ('budynek', 'ognisko')),
-    ([(12, 41), (13, 40), (14, 40), (15, 39), (13, 38)], ('budynek', 'zrodlo')),
+    # Runda 6 pętli (B3): kupka między ogniskiem a źródłem — stos na polanie.
+    ([(12, 38), (13, 38), (14, 38)], ('surowiec', 'kamien')),
+    ([(14, 40), (12, 41), (13, 40), (15, 39), (13, 38)], ('budynek', 'zrodlo')),
     ([(19, 42), (18, 42)], ('budynek', 'gniazdo')),
     ([(27, 41), (27, 40)], ('budynek', 'chatka')),
     # Runda 4 pętli (B2/G1): pas za bramami (x 23–43, y 39–43) bez
     # losowania — było 15 rzeczy wzdłuż drogi jak konfetti. Zostają
     # jasnowidz, dwie kopalnie, chatka i jeden stos przy drodze; skrzynia
     # (42,40) i kupka (29,43) poszły na polanę za ranczem.
-    ([(33, 40), (34, 40), (32, 40)], ('skrzynia', None)),
-    ([(35, 40), (36, 40), (35, 41)], ('surowiec', 'odlamek')),
+    # (Runda 6 pętli, G1: bez kupki (35,40) — międzyjezierze; skrzynia
+    # (33,40), która została po niej sama, dołącza do stosu niżej.)
+    ([(29, 43), (28, 42)], ('skrzynia', None)),
+    # Runda 6 pętli (B3): po przerzedzeniu boru obiekt wypadał co 12 pól —
+    # stosy 2–3 rzeczy przy trakcie pod jeziorem, poza ekranem
+    # międzyjezierza (y ≥ 42), na oknach z luzem: naprzeciw kopalni (26,43)
+    # i przy kopalni jagód (40,41) przed przełęczą wschodnią.
+    ([(31, 42), (31, 43)], ('skrzynia', None)),
+    ([(31, 43), (29, 43)], ('surowiec', 'jagoda')),
+    ([(40, 42), (39, 42)], ('surowiec', 'pokeball')),
+    ([(41, 43), (43, 42)], ('skrzynia', None)),
     # Polana za ranczem (x 66–69, y 25–28), koniec ślepej odnogi pod
     # średnią strażą w wejściu: ognisko, stos i skrzynia (z pasa za bramami
     # i z doliny Lodowej Twierdzy).
@@ -894,7 +951,10 @@ ZACHODNIA_DOLINA = (0, 24, 21, 44)
 #: Międzyjezierza z wylotem szyjki (35–43, 24–35) — ręczny stos, do którego losowanie
 #: dosypywało wiatrak, portal i kupki (ekran wschodniego jeziora: 29).
 BEZ_LOSOWANIA = [ZACHODNIA_DOLINA, (35, 24, 43, 35)]
-DOLINA_W_MAX = 28
+# Runda 6 pętli: 28 → 20 — po polanie i kupce przy ognisku dolina ma 20
+# ręcznych rzeczy; nadmiar losowania (dwie skrzynie) zbijał ekran zachodniej
+# tundry z zatoką (x 1–21, y 25–42) do 22 rzeczy.
+DOLINA_W_MAX = 20
 WROGA_MAX = 80
 #: Runda 3 (G1): pułapy nadmiaru w pasach pogranicza — (prostokąt, ile
 #: obiektów najwyżej). Bez nich nadmiar szedł w środkowy pas odległości
@@ -960,6 +1020,10 @@ TWIERDZE = [
     ([(10, 9), (9, 9), (11, 9)], ('kopalnia', 'jagoda')),
     ([(6, 8), (6, 7), (5, 8)], ('budynek', 'wiatrak')),
     ([(9, 6), (8, 7)], ('budynek', 'chatka')),
+    # Runda 6 pętli (B3): stos w skalnym zakątku nad traktem do przełęczy
+    # twierdz (26–28, 7–8) — okna nad nim mają 11–13 rzeczy.
+    ([(26, 7), (26, 8)], ('skrzynia', None)),
+    ([(28, 7), (27, 8)], ('surowiec', 'odlamek')),
     # Stos pod północną granią doliny (y 0), z dala od gęstego środka.
     # Lodowa Twierdza (58,9) — zatoka kopalni pokeballi (x 61–67, y 12–16),
     # wejście (60, 14–15).
@@ -1365,7 +1429,10 @@ def rozstaw(g):
     # nimi i pod wiatrakiem zamarza w śnieżny cypel: pola bryły i tak są
     # zablokowane, a rząd 58 to kawałek brzegu przy drodze.
     for x, y in [(13, 59), (14, 59), (15, 59), (19, 59), (20, 59), (21, 59), (22, 59),
-                 (19, 58), (20, 58), (21, 58), (23, 58), (16, 60), (21, 60)]:
+                 (19, 58), (20, 58), (21, 58), (23, 58), (16, 60), (21, 60),
+                 # Runda 6 pętli (krytyk E3/E5): kałuża (15,60) przy kopalni
+                 # odłamków — jedno pole lodu bez funkcji, zostaje łąką.
+                 (15, 60)]:
         if g.mapa[y][x] == '~':
             g.mapa[y][x] = 's'
 

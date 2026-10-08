@@ -1807,6 +1807,49 @@ przeniesieniu tam nagród z NE). Runda 5 — zmiany tylko w `tools/mapy/twierdza
   Skrót między twierdzami przez przełęcz (34,9) nadal bez drogi na wschód od
   x 34 (Dijkstra woli okrążyć po istniejących traktach) — od rundy 2.
 
+Krytyk rundy 6 (`tools/blind/r6-twierdza-werdykt.md`): wygrana ślepo,
+26 TAK / 4 CZĘŚCIOWO / 0 NIE (E3 łaty, E4 T+# 53 % i korytarze, G1
+międzyjezierze 18 rzeczy, G3 „morze choinek", źródło (14,40) w dziurze).
+Runda 6 — zmiany tylko w `tools/mapy/twierdza.py`:
+
+- **E4/G3 — polany** (`po_drogach`, po wytyczeniu dróg, więc trakty się nie
+  przesuwają): zachodnia dolina tundry x 10–19, y 31–43 cała z boru na `j`
+  poza murem zatoki (x 9 przy y 31–35 i 39–43, x 10 przy y 35–43) — źródło
+  (14,40), ognisko (13,36), wiatrak (15,34) widać z traktu; dolina gracza
+  x 26–37, y 54–63 na `.` z trzema kępami 3 × 2 ((26–28,57–58),
+  (29–31,54–55), (35–37,61–63)), bór x ≥ 38 przy kieszeni SE zostaje.
+  Bór na brzegach jezior → lód tego samego jeziora (`jezioro`): zachodnie
+  (15–19, 24–29) i drzewa y 24 pod granią, jezioro-zapora (52–54, 32–35),
+  pas (47–53, 36) i (52,24), jezioro SE (43–48, 53–56), (46,57), (52,52),
+  drzewa w tafli (50–57, 59–60), cypel (48,53–54). Lód nie dokłada pól
+  przejezdnych, więc T+# spada bez psucia gęstości.
+- **G1**: z międzyjezierza zniknęły wiatrak (36,34), ognisko (43,28),
+  skrzynia (41,29), kupka (35,40); skrzynia (33,40) po kupce dołączyła do
+  stosu (29,43). Ekran 27–47 × 24–41: 18 → 13.
+- **E3/E5**: śnieg w całym pasie y 24–44 → `j` (kąt zatoki zachodniej
+  2–8, 39–44 i skraj wschodniej 69–71, 43); kałuża (15,60) → łąka (lista
+  zamarzania na końcu `rozstaw`); kupka kul (13,54) → (14,48) przy kopalni
+  (11,49) i kupce (13,49) — (12,50) to droga, `postaw_kadr` jej nie bierze.
+- **B3 — stosy zamiast konfetti**: kupka (12,38) między ogniskiem
+  a źródłem; pod jeziorem skrzynia (31,42) + jagody (31,43) naprzeciw
+  kopalni (26,43) i stos przy kopalni jagód (40,42)/(41,43); w krainie
+  wroga skalny zakątek nad traktem do przełęczy twierdz (26,7)/(28,7).
+  `DOLINA_W_MAX` 28 → 20 — nadmiar (dwie skrzynie) zbijał ekran zachodniej
+  tundry z zatoką do 22 rzeczy przy dowolnym położeniu kadru.
+- Liczby: 182 obiekty, co 11,5 pola (2089 przejezdnych; akceptowane —
+  pas sporny nie ma więcej luzu w oknach, przy 11,0 T+# musiałby zostać
+  ~51 %); T 27 % + # 22 % = 49,5 %, lód 10 %; pasy 17/40/47/45/33;
+  strefy dom 61 / pogranicze 63 / wroga 58; bez bitwy 26 %; okna co 10 pól
+  maks. 16, nadmiar 0 przepada, przy dowolnym położeniu kadru maks. 20;
+  straże 13 %. Sonda w scratchpadzie: każda z 23 straży dzieli teren na
+  dwie strony. `probe-mapy` Twierdza bez ŹLE, `probe-misja` OK (dwa razy,
+  za pierwszym podejściem), zrzut za pierwszym podejściem (trzy rundy
+  skryptu).
+- Zostało: T+# 49,5 % to górna granica celu (checklista krytyka 25–40);
+  dalej się nie da bez gęstości > 11,5 albo nowych jezior bez funkcji.
+  Pogranicze ledwo bogatsze od domu (63 / 61). Bór wschodniej tundry
+  (57–61, 32–36) między traktami nie ruszony — okna (50,30) mają 16.
+
 ## Profile graczy i sloty zapisu (2026-09-26)
 
 Zgłoszenie taty Eli i Janka: „Nowa gra → Kampania" kontynuowała ostatnią
