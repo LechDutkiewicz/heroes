@@ -1,12 +1,12 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-08 04:13",
+  "aktualizacja": "2026-10-08 04:16",
   "kawalki": [
     {
       "id": "polana",
       "tytul": "Polana (misja 1, samouczek, 36×36)",
-      "status": "critic",
+      "status": "build",
       "opis": "Rzeka z dwoma brodami, zamek na południowym zachodzie, Stary Fort na wschodzie.",
       "rundy": [
         {
@@ -146,6 +146,31 @@
             }
           ],
           "zmiana": "Północna łąka rozstawiona ręcznie: stosy zamiast samotnych pokeballi, sklepik przy domku na drzewie. Kopalnia odłamków w dolinie bez straży z odnogą; odnogi do jaskini i na plażę; sad jagód wroga wcięty w masyw granicy. Skały wokół fortu w dwa grzbiety z przesmykiem; polana w martwym lesie SE z ośrodkiem ewolucji; ranczo i stosy za mostem. 64 obiekty, obiekt co 8,9 pola, pasy [5,7,27,13,12], bez bitwy 24 %, ekran startowy 7 rzeczy + straż mostu."
+        },
+        {
+          "nr": 5,
+          "wzorzec": "When Dragons Clash (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 19,
+            "CZESCIOWO": 9,
+            "NIE": 2
+          },
+          "luka": "Pierwsze dni są źle rozłożone dla dziecka. Strefa domowa jest pusta: 6 obiektów, żadnej walki do nauki, 1 skrzynia i 1 kryształ w zasięgu. Nagrody są stłoczone na środkowej północnej łące (10–18,9–16), więc start to marsz, a dalej jeden przeładowany ekran.",
+          "nie": [
+            "A5: NIE — w strefie domowej nie stoi żadna wolna straż (strefa „dom” ma 6 obiektów, żadnego potwora), więc pierwsza bitwa jest od razu bitwą o wyjście (9,17) albo (17,25).",
+            "G1: NIE — kadr 21×18 nad środkową łąką (8–28,4–21) mieści kilkanaście rzeczy do wzięcia (kosze, jaja, pokeballe, kryształy, dom, plac treningowy) i 2–3 straże naraz, a ekran startowy ma ich mało."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r5-polana.png",
+              "opis": "Ślepe A/B: krytyk wybrał A = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-polana-r4.png",
+              "opis": "Cała plansza oceniana w rundzie 5"
+            }
+          ]
         }
       ]
     },
