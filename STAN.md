@@ -3562,3 +3562,56 @@ timeouty przy load 10–12). Nierozwiązane: przejezdnych 32 %, nie 35 % — prz
 obiektów na okno pas sporny mieści ~53 obiekty, a dom musi mieć mniej (E2),
 więc więcej łąki = gęstość > 11; pas sporny ma 4 obiekty więcej niż dom;
 kopalnie na granicy 10 %.
+
+Runda 7 po werdykcie `tools/blind/r6-dwie-doliny-werdykt.md` (wygrana,
+23 TAK / 7 CZĘŚCIOWO / 0 NIE: C1, C4, D1, E3, E5, F1). Zmieniony tylko
+`tools/mapy/dwie_doliny.py` (`_runda7` w terenie, `po_drogach`, `SZLAKI`
+i punkt „przelecz rubiezy", `_ne_jalowa`, `rozstaw`).
+
+- **C1/C4 — sonda straży.** Nowa sonda (BFS po `plansza-teren.ts` funkcjami
+  gry: `kosztPola`, bryły z `polaZajete`; strefa straży = pole + 8 sąsiadów,
+  bramy otwarte) bije straże falami od startu i zgłasza każdą, której
+  pokonanie nie otwiera nic nowego. Przed rundą: 4 obejścia — kopalnia
+  pokeballi (39, 65), kieszeń jasnowidza (54, 39) (wejście z drogi wąwozu
+  przez jasnowidza (53, 41)), zatoczka jeziorka NW (15, 13) (plaża łączyła
+  się po skosie (12, 16) ↔ (11, 17)) i most (28, 40). Po: straż kopalni
+  w JEDYNYM wejściu (38, 67) — (36, 68) las, kolumny 34–35 las, kopalnia
+  zeszła na (38, 70) (z bryłą w wierszu 68 jej rysunek zasłaniał straż);
+  kieszeń jasnowidza ma ścianę lasu (52–53, 41–43), jasnowidz w głębi
+  (57, 41); (12, 16) → woda. Zostaje (28, 40): wschód pasa spornego ma drugie
+  wejście z doliny wschodniej przez strażnicę wąwozu (49, 44) — to druga
+  trasa, nie dziura (i tak trzeba bić (46, 52) i mieć zielony klucz).
+  Straże (14, 51) / (25, 55) i (46, 52) są tak samo równoległe.
+- **D1.** Szlak `wschodnie rozstaje → przelecz rubiezy (57, 21) → zamek
+  wroga`: z rozstajów (54, 34–38) skosem (55, 33)–(57, 31), korytarzem
+  x 57 (21–30), PRZEZ strażnicę (57, 20) (`po_drogach` — trasowanie brało
+  (58, 20) obok bramy), dalej zakosami korytarza (58, 16–19), (59, 12–15),
+  (60, 10–11), (61, 9) do traktu zamku wroga (wiersz 8).
+- **E5.** Pas wody pod zachodnim grzbietem (0–10, 24–26) → łąka zakątka za
+  strażą (6, 29), stos (3, 25) + (4, 25); niecki w grzbiecie (2, 23), (4, 23)
+  zasklepione. Jezioro pod sadem (24–35, 66–71): wybrałem „łąka + las
+  obrysowujący sad" — sad schodzi łąką do wiersza 67 (24–33, stos kamienia
+  (28, 67)), las (24–35, 68–71) łączy się z lasem zatoki zamku i jest ścianą
+  pasa kopalni. Zatoka ze skarbem odpadła: dom ma już 51 obiektów przy 53
+  w pasie spornym (E2), a skarb to kolejna straż w domu. Łąka sadu oddaje
+  „bez bitwy" to, co zabrało zamknięcie pasa kopalni (401 pól, 24 %).
+- **F1.** Skrzynia (10, 69) w zakątku zatoki zamku; wypust (67, 40–41) — las.
+- **E3.** Bagno zniknęło z planszy: przy polance (17–23, 27–29) łąka, na
+  zachód od traktu las, na wschód jezioro sięga traktu (pas traktu z rundy 6
+  zostaje łąką w `popraw_teren`, bo drogi kładzie silnik później — inaczej
+  trakt szedł przez garb lasu przełęczy x 7). Łaty skał (13–17, 31–36),
+  (28–30, 41–43), (52–58, 42–43) i głazy (31–51, 41–43) → las. Brązowa plama
+  wroga (`_ne_jalowa`) obejmuje teraz x 47–59, y ≤ 12 — ślepy wąwóz (49–52,
+  2–10) i trakt do zamku to jedna plama.
+- **G1.** Nowy stos zakątka przepełniał okna nad nim (17–18); kamień (1, 28),
+  kamień ze stosu (2, 17) i jagoda przy chatce na palach (23, 27) zniknęły.
+
+Liczby: 152 obiekty, obiekt co 11,0 pola, przejezdnych 1675 (32 %), woda
+18 %, T+# 50 %; strefy dom 51 / sporny 53 / wróg 48, pasy [21, 14, 44, 45,
+28]; skrzynie 18 %, budynki z namiotami/jasnowidzami/strażnicami 30 %,
+kopalnie 9,9 %; żadne okno 21 × 18 nie ma > 16 (max 16, min 3 — nad
+jeziorem środkowym); bez bitwy 24 %, kroków do zamku wroga 80 (najdalej 88).
+Sondy: tsc OK, probe-mapy (Dwie Doliny bez ŹLE), probe-mapa OK,
+probe-misja WSZYSTKO OK (za pierwszym podejściem). Sonda straży: 1 „do obejścia".
+Nierozwiązane: most (28, 40) w sondzie straży „do obejścia" przez drugą
+trasę; okno (14–34, 20–37) ma 3 obiekty (grzbiet + jezioro).

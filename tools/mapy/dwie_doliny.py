@@ -147,6 +147,9 @@ PUNKTY = {
     'polnocne rozstaje': (30, 16),
     'zamek wroga': (62, 8),
     'polnocna polana': (10, 10),
+    # Runda 7 (D1): boczna przełęcz północna — w rdzeniu grzbietu, więc
+    # silnik nie odsłania wokół niej skał.
+    'przelecz rubiezy': (57, 21),
 }
 
 #: Główny szlak. Drogę bitą dostaje tylko trasa przez oba GŁÓWNE przejścia —
@@ -172,6 +175,10 @@ SZLAKI = [
     ['przelecz poludniowa', 'brod', 'jezioro', 'wschodnie rozstaje'],
     # Kraina wroga: boczna odnoga na północną polanę.
     ['polnocne rozstaje', 'polnocna polana'],
+    # Runda 7 (D1): druga trasa — od wschodnich rozstajów korytarzem rubieży
+    # przez strażnicę (57, 20) i korytarz (58–60, 12–19) na trakt zamku wroga.
+    # Dziecko widzi, że jest drugie przejście.
+    ['wschodnie rozstaje', 'przelecz rubiezy', 'zamek wroga'],
 ]
 
 # STRAŻNICE GRANICZNE — cztery, po jednej na przejście, zawsze w tym samym
@@ -492,12 +499,16 @@ def popraw_teren(g, mapa):
     _runda4(g, mapa)
     _runda5(g, mapa)
     _runda6(g, mapa)
+    _runda7(g, mapa)
 
 
 def _ne_jalowa(x, y):
     """Jałowa ziemia wokół zamku wroga (x ≥ 60, y 6–20) — zostaje brązowa
-    także w tle; reszta krainy wroga to ciemna, chłodna łąka (`TLO`)."""
-    return x >= 60 and 6 <= y <= GRANICA_POLNOCNA - 1
+    także w tle; reszta krainy wroga to ciemna, chłodna łąka (`TLO`).
+    Runda 7 (E3): plamka jałowej ziemi w ślepym wąwozie (49–52, 2–10) była
+    osobną łatą 2–3 pól — brązowa plama wroga sięga teraz przez trakt
+    (wiersze 8–12) aż do wąwozu, jedna plama zamiast dwóch."""
+    return (x >= 60 and 6 <= y <= GRANICA_POLNOCNA - 1) or (47 <= x < 60 and y <= 12)
 
 
 def _runda3(g, mapa):
@@ -1060,6 +1071,101 @@ def _runda6(g, mapa):
     mapa[69][39] = '.'                       # głaz z rozmycia przy kopalni pokeballi
 
 
+#: Runda 7 (werdykt r6, C1/C4): słaba straż kopalni pokeballi stoi w JEDYNYM
+#: wejściu do pasa kopalni (37–39, 68), kopalnia (38, 70) w głębi pasa.
+STRAZ_KOPALNI = (38, 67)
+
+
+def _runda7(g, mapa):
+    """Werdykt ślepego porównania rundy 6 (r6-dwie-doliny-werdykt.md).
+
+    Wygrana (23 TAK / 7 CZĘŚCIOWO / 0 NIE). Luki: straż kopalni pokeballi da
+    się obejść (C1/C4), boczna trasa (54, 38) → (57, 20) → zamek wroga bez
+    drogi (D1 — `SZLAKI`), woda bez funkcji: pas pod zachodnim grzbietem
+    i jezioro pod sadem (E5), puste zakątki (F1), pasek bagna, plamka jałowej
+    ziemi i łaty skał (E3). Sonda straży (BFS na `plansza-teren.ts`, strefa =
+    pole + 8 sąsiadów) znalazła jeszcze dwa obejścia — mierzeję jeziorka NW
+    i kieszeń jasnowidza.
+    """
+    def pola(x0, y0, x1, y1, z, tylko=None):
+        _prostokat(mapa, x0, y0, x1, y1, z, tylko=tylko, procz='')
+
+    # --- C1/C4: pas kopalni pokeballi (36–39, 68–71). Wejście (37–39, 68) całe
+    # w strefie straży (38, 67); (36, 68) zarasta.
+    mapa[68][36] = 'T'
+    # --- E5: jezioro pod sadem (24–35, 66–71) nie miało funkcji. Sad schodzi
+    # łąką do wiersza 67 (24–33), dalej las obrysowuje sad od południa i łączy
+    # się z lasem zatoki zamku; kolumny 34–35 to ściana pasa kopalni (bez niej
+    # (35, 68) prowadziłoby do kopalni bokiem).
+    pola(24, 66, 33, 67, '.', tylko='~T')
+    pola(24, 68, 35, 71, 'T', tylko='~.')
+    pola(34, 66, 35, 67, 'T', tylko='~.')
+    pola(40, 68, 40, 71, '~', tylko='.')
+    # --- E5: pas wody pod zachodnim grzbietem (0–10, 24–26) → łąka zakątka za
+    # średnią strażą (6, 29). Wiersz 27 (6–11) zostaje lasem: łąka łączy się
+    # tylko z zakątkiem, nie z przesmykiem (7–12, 28–29).
+    pola(0, 25, 10, 26, '.', tylko='~T')
+    pola(1, 24, 8, 24, '.', tylko='~T')
+    pola(0, 24, 0, 24, 'T', tylko='~')
+    pola(9, 24, 12, 24, 'T', tylko='~')
+    pola(11, 25, 12, 26, 'T', tylko='~')
+    # --- F1: wypust (67, 40–41) pod kieszenią rubieży zarasta.
+    pola(67, 40, 67, 41, 'T')
+    # --- E3: pasek bagna przy trakcie (17–24, 23–36). Przy polance
+    # (wiersze 27–29) łąka — polanka sięga traktu; na zachód od traktu las
+    # (masyw, który i tak był za nim), na wschód jezioro sięga drogi.
+    # Drogi kładzie silnik PO `popraw_teren`, więc pas traktu (kolumna z
+    # rundy 6, wiersz po wierszu) zostaje łąką — inaczej trakt szukał
+    # objazdu przez garb lasu przełęczy (7–9, 20–23).
+    trakt = {23: 22, 24: 22, 25: 21, 26: 21, 27: 22, 28: 22, 29: 22, 30: 21,
+             31: 20, 32: 19, 33: 18, 34: 18, 35: 18, 36: 19}
+    for y in range(23, 37):
+        for x in range(16, 26):
+            if mapa[y][x] != 'b':
+                continue
+            if 27 <= y <= 29 or x == trakt[y] or (y == 23 and x in (21, 22)):
+                mapa[y][x] = '.'
+            elif x < trakt[y]:
+                mapa[y][x] = 'T'
+            else:
+                mapa[y][x] = '~'
+    # Kępa chatki na palach (22–23, 27–29) zostaje łąką; jej północny brzeg
+    # — jezioro.
+    # --- E3: łaty skał w pasie spornym → części masywów lasu: przy polance
+    # (13–17, 31–36), pod mostem (28–30, 41–43; łączy się z garbem lasu
+    # przełęczy 26–29), w kieszeni jasnowidza (53–57, 42–43) i drobne głazy
+    # pod jeziorem (39–48, 42–43).
+    pola(13, 31, 17, 36, 'T', tylko='#')
+    pola(28, 41, 30, 43, 'T', tylko='#')
+    pola(52, 42, 58, 43, 'T', tylko='#')
+    pola(31, 41, 51, 43, 'T', tylko='#')
+    # --- C1 (sonda straży): kieszeń jasnowidza (54–58, 40–43) miała drugie
+    # wejście z drogi wąwozu przez (52–53, 41–43) — straż szyjki (54, 39)
+    # dawało się obejść. Zachodnia ściana kieszeni: las w kolumnach 52–53.
+    pola(52, 41, 53, 43, 'T')
+    pola(58, 43, 58, 43, 'T')
+    # --- C1 (sonda straży): plaża zatoczki jeziorka NW (13–17, 14–16) łączyła
+    # się po skosie (12, 16) ↔ (11, 17) z łąką polany — silną straż mierzei
+    # dawało się obejść.
+    mapa[16][12] = '~'
+    # Domknięcia: dwie niecki w grzbiecie (2, 23), (4, 23) — dotąd odcięte
+    # wodą i zasypywane — stykają się z nową łąką zakątka; nisza (18, 35)
+    # przy trakcie i kępa (21, 35) w jeziorze.
+    for x, y in [(2, 23), (4, 23)]:
+        mapa[y][x] = '#'
+    mapa[35][18] = 'T'
+    mapa[35][21] = '~'
+
+
+
+def po_drogach(g, mapa):
+    """Runda 7 (D1): droga bocznej przełęczy biegnie PRZEZ strażnicę
+    (57, 20), a nie obok niej — trasowanie wybierało (58, 20) przy równym
+    koszcie."""
+    if mapa[20][58] == '=' and mapa[20][57] != '=':
+        mapa[20][57], mapa[20][58] = '=', '.'
+
+
 def strefa(x, y):
     """Strefa pola — wyznaczona przez grzbiety, bo to one dzielą tę mapę.
 
@@ -1192,6 +1298,8 @@ def rozstaw(g):
     _postaw(g, [(14, 66), (15, 66), (14, 67)], ('budynek', 'ognisko'))
     _stos(g, (11, 65), [S('jagoda'), S('odlamek'), S('pokeball')], r=1)
     _postaw(g, [(7, 60), (8, 60), (8, 59)], SKRZ)
+    # Runda 7 (F1): pusty zakątek (9–11, 68–69) kończy się skrzynią.
+    _postaw(g, [(10, 69), (10, 68), (9, 69)], SKRZ)
     _postaw(g, [(2, 70), (1, 70), (2, 71)], ('kopalnia', 'kamien'))
     _stos(g, (0, 71), [ART], r=1)
     _postaw(g, [SZYJKA_ROGU, (1, 67)], ('potwor', 'slaby'))
@@ -1224,11 +1332,16 @@ def rozstaw(g):
     # na środku.
     _postaw(g, [(31, 64), (32, 64), (30, 64)], ('budynek', 'ranczo'))
     _postaw(g, [(38, 60), (37, 59), (38, 59), (39, 60)], ('kopalnia', 'jagoda'))
-    _postaw(g, [(39, 65), (40, 65)], ('potwor', 'slaby'))
     _stos(g, (38, 63), [SKRZ, S('odlamek'), S('pokeball')], r=2)
-    # Kieszeń kopalni pokeballi (x 36–43, y 66–71): słaba straż w szyjce
-    # (39–40, 65) — pilnuje wejścia, nie samej kopalni (C1).
-    _postaw(g, [(38, 69), (37, 69), (39, 69), (38, 70)], ('kopalnia', 'pokeball'))
+    # Kieszeń kopalni pokeballi (x 36–39, y 68–71). Runda 7 (C1/C4): słaba
+    # straż stoi w JEDYNYM wejściu (37–39, 68) — nie na łące (39, 65), skąd
+    # pas kopalni był osiągalny bez bitwy przez (36, 66)–(36, 68). Kopalnia
+    # zeszła o wiersz (38, 69) → (38, 70): z bryłą w wierszu 68 zasłaniała
+    # straż na zrzucie (rysunek kopalni stoi przed nią).
+    _postaw(g, [(38, 70), (37, 70)], ('kopalnia', 'pokeball'))
+    _postaw(g, [STRAZ_KOPALNI], ('potwor', 'slaby'))
+    # Runda 7 (E5): sad zszedł łąką na miejsce jeziora (24–33, 66–67).
+    _stos(g, (28, 67), [S('kamien')], r=1)
 
     # --- Podnóże wschodnie (x 29–43, y 47–54) --------------------------------
     _postaw(g, [(34, 50), (33, 50), (35, 50)], ('budynek', 'gniazdo'))
@@ -1268,7 +1381,11 @@ def rozstaw(g):
     # z trzema rzeczami (sonda „całe zakątki").
     _stos(g, (4, 28), [ART, SKRZ, S('pokeball')], r=1)
     _postaw(g, [(6, 29), (6, 28)], ('potwor', 'sredni'))
-    _stos(g, (1, 28), [S('kamien')], r=1)
+    # Runda 7 (G1): kamień (1, 28) zniknął — zakątek ma stos pod grzbietem.
+    # Runda 7 (E5): łąka zakątka po pasie wody (0–10, 24–26) — stos pod
+    # grzbietem; straż (6, 29) pilnuje większego zakątka.
+    _postaw(g, [(3, 25), (3, 24), (2, 25)], S('odlamek'))
+    _postaw(g, [(4, 25), (4, 24), (5, 25)], S('jagoda'))
     # Runda 5 (E4/E2): zachodnia łąka nad jeziorem (1–11, 31–36) — kopalnia
     # kamienia, obóz z doliny wschodniej i ognisko z zatoki zamku, stos
     # na brzegu.
@@ -1313,7 +1430,8 @@ def rozstaw(g):
     _postaw(g, [(37, 25), (36, 25), (38, 25), (37, 26), (38, 26), (37, 27)], ('kopalnia', 'pokeball'))
     _kieszen(g, [(40, 29), (40, 28)], 'sredni', (39, 27), [ART], r=1)
     _postaw(g, [(23, 28), (22, 28), (23, 27)], ('budynek', 'chatka'))
-    _postaw(g, [(23, 29), (22, 29), (23, 27)], S('jagoda'))
+    # Runda 7 (G1): jagoda przy chatce na palach zniknęła — okna 21 × 18
+    # (2–23, 25–42) i (3–23, 12–29) miały 17 obiektów.
 
 
     # --- Wschodnie rozstaje (x 41–58, y 23–44) ---------------------------------
@@ -1331,7 +1449,9 @@ def rozstaw(g):
     # Runda 5 (C1): straż stoi w szyjce (53–55, 39), stos w kieszeni za nią.
     _postaw(g, [(54, 39), (54, 40)], ('potwor', 'sredni'))
     _stos(g, (55, 41), [ART, SKRZ], r=1)
-    _postaw(g, [(53, 41), (52, 41), (54, 41)], ('jasnowidz', None))
+    # Runda 7 (C1): jasnowidz w głębi kieszeni — w (53, 41) był wejściem
+    # z drogi wąwozu, obok straży.
+    _postaw(g, [(57, 41), (56, 42), (57, 42)], ('jasnowidz', None))
     # Runda 5 (G1): źródło (56, 42) zniknęło — okno (51–71, 27–44) miało 17
     # obiektów.
 
@@ -1375,7 +1495,9 @@ def rozstaw(g):
     _kieszen(g, [(15, 13), (15, 12)], 'silny', (15, 15), [ART, SKRZ, S('odlamek')], r=1)
     # Runda 6 (E5): zachodni kraniec jeziorka (0–10, 16–19) to łąka krainy.
     _postaw(g, [(5, 18), (6, 18), (4, 18)], ('budynek', 'ranczo'))
-    _stos(g, (2, 17), [S('odlamek'), SKRZ, S('kamien')], r=1)
+    # Runda 7 (G1): stos bez kamienia — okna 21 × 18 nad zakątkiem (0–23,
+    # 12–31) miały po nowym stosie (3–4, 25) 17–18 obiektów.
+    _stos(g, (2, 17), [S('odlamek'), SKRZ], r=1)
     # Runda 5 (zmiana 3, G1): środek krainy (20–40, 10–20) — wiatrak na końcu
     # odnogi ze stosem przy nim i kopalnia jagód (B1, z doliny wschodniej) na
     # odsłoniętej łące. Wóz, ognisko, źródło, chatka i pojedyncze surowce
