@@ -1,6 +1,68 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-09-27 (trener zamiast armii: stworek = postać z poziomem, 4 na polu bitwy, trening i Centrum Pokemon).
+Ostatnia aktualizacja: 2026-10-08 (plansze kampanii — pętla jakości wg zasad HoMM3; wcześniej 2026-09-27: trener zamiast armii).
+
+## Plansze kampanii — pętla jakości wg zasad HoMM3 (2026-10-08)
+
+Cel: cztery plansze kampanii dopracowane układem jak dobre mapy Heroes 3
+(strefa startowa, gospodarka, straże, drogi, topografia, odkrywanie,
+czytelność dla dziecka). Styl graficzny jest nasz; wzorem są tylko
+METODY budowy map.
+
+Wzorzec i miara
+- Wzorzec ślepy: pięć oficjalnych map HoMM3 72 × 72 (`tools/wzorzec/*-profil.json`,
+  `*-minimapa.png`, policzone z `.h3m` przez `tools/profil-wzorca.py`):
+  faeries, gorlam-s-tentacle-swampland, hatchet-axe-and-saw,
+  unexpected-inheritance, when-dragons-clash. Strony z poradnikiem edytora
+  HoMM3 i opisami map HotA są blokowane przez politykę sieci, więc
+  checklista `tools/wzorzec/CHECKLISTA.md` (30 punktów A1–G4) jest spisana
+  z pamięci poradnika i zakotwiczona w liczbach z tych pięciu map.
+- Runda = builder (osobny agent, jedna plansza, tylko jej pliki) → profil
+  `tools/profil-mapy.py <id>` → para ślepa A/B z losową kolejnością
+  (`tools/blind/r{N}-<id>.png`, klucz i liczby obok) → krytyk ze świeżym
+  kontekstem: werdykt ślepy + checklista + największa luka + 3 zmiany
+  (`tools/blind/r{N}-<id>-werdykt.md`). Wzorzec rotowany co rundę.
+  Wszyscy builderzy i krytycy na modelu Opus (prośba użytkownika).
+- Próg „gotowe": nasza wygrywa ślepo ORAZ 0 NIE i ≤ 2 CZĘŚCIOWO.
+- Dziennik: `tools/postep-plansze.json` → `tools/postep_plansze.py` →
+  strona postępu (artefakt, obrazy rund). Zrzuty rund w `tools/shots/caly-<id>-r{N}.png`
+  (poza repo). Skrypt rundy: `tools/runda-planszy.sh <id> <port>`.
+
+Wynik (ostatnia runda każdej planszy)
+| Plansza | Rund | Wzorzec ostatniej | Werdykt | TAK / CZĘŚCIOWO / NIE |
+|---|---|---|---|---|
+| Polana (misja 1) | 9 pętli (do rundy 19 generatora) | faeries | nasza | 28 / 2 / 0 |
+| Dwie Doliny (misja 2) | 7 | unexpected-inheritance | nasza | 28 / 2 / 0 |
+| Bagna (misja 3) | 10 | unexpected-inheritance | nasza | 29 / 1 / 0 |
+| Twierdza (misja 4) | 9 | unexpected-inheritance | nasza | 29 / 1 / 0 |
+
+Co zostało CZĘŚCIOWO (świadomie, do ewentualnej kolejnej pętli)
+- Polana: G1 okno nad wschodnią ziemią ~21 obiektów; G2 dwie straże przy
+  moście północnym dwa pola od siebie.
+- Dwie Doliny: D1 cztery pola bez drogi przy strażnicy wąwozu (49,44);
+  E3 pojedyncze kamienie w środku stref.
+- Bagna: G1 środek trzęsawiska (29–33,23–24) zagęszczony.
+- Twierdza: G1 dwa okna 21×18 po 20 obiektów (wschodnia tundra, zachód).
+
+Ograniczenia, które wyszły w pętli
+- Przy obiekcie co 10–11 pól przejezdnych średnio na pełne okno 21×18
+  wypada ~16–17 obiektów, więc „≤ 16 wszędzie" przy garbie w środku nie da
+  się spełnić; krytyk ocenia czytelną decyzję, nie samą liczbę.
+- Polana: siła straży na trasie do fortu jest ograniczona symulacją misji 1
+  (`symulacja-misji`, 9/9 wygranych, średnio dzień 18); straż (27,20) musi
+  zostać słaba, a wynik zależy od kolejności rozstawienia obiektów (jeden
+  strumień losowy). Silna straż pilnuje wyłącznego skarbca (BFS).
+- Twierdza: pułap 16 na okno siatki co 10 pól utrzymany kosztem liczby
+  obiektów (183) i boru+skał 49,5 %; gęstość 11,3.
+- Krytycy oscylowali (za gęsto ↔ za pusto, silna straż tu ↔ tam);
+  pomogły docelowe liczby w instrukcji (obiekt co 9–11 pól, 8–16 na ekran)
+  i sondy BFS na straże.
+
+Sondy na zamknięcie (maszyna luźna, load < 1): `npx tsc --noEmit -p .` OK,
+`probe-mapy` 0 ŹLE, `probe-mapa` OK, `probe-misja` WSZYSTKO OK.
+Szczegóły rund: sekcje „Polana — runda 13 planszy", „Dwie Doliny — pętla
+plansz 2026-10", „Bagna — pętla plansz 2026-10", „Twierdza — pętla plansz
+2026-10".
 
 ## Bagna — pętla plansz 2026-10
 
