@@ -649,6 +649,15 @@ def po_drogach(g, mapa):
     jezioro([(x, y) for x in range(43, 49) for y in range(53, 57)] + [(46, 57), (52, 52)]
             + [(x, y) for x in range(50, 58) for y in (59, 60)])     # jezioro SE
     jezioro([(32, 25)])
+    # Runda 7 pętli (B3): pasy jałowej ziemi szerokie na pole między traktem
+    # a lodem (nikt tamtędy nie idzie) zamarzają — brzeg jeziora sięga drogi,
+    # pól przejezdnych ubywa bez nowego boru: pod granią nad zakątkiem drzewa
+    # wiedzy (37–43, 24), pod zachodnim jeziorem nad traktem (30–35, 40)
+    # i (32, 39), na zachodnim brzegu jeziora-zapory (52–54, 27–29).
+    for x, y in ([(x, 24) for x in range(37, 44)] + [(x, 40) for x in range(30, 36)] + [(32, 39)]
+                 + [(52, 27), (52, 28), (53, 28), (52, 29), (53, 29), (54, 29)]):
+        if mapa[y][x] == 'j':
+            mapa[y][x] = '~'
     # Cypel (48, 53–54) między nowym brzegiem a jeziorem — pas na pole, lód.
     for x, y in [(48, 53), (48, 54)]:
         if mapa[y][x] in 's.j':
@@ -746,7 +755,8 @@ PIERWSZY_EKRAN = [
     # Pętla 2026-10 (A3, krytyk: „w 8 krokach od bramy jeden surowiec").
     # Stos łatwych nagród wokół bramy: dwie skrzynie i dwie kupki, każda
     # 3–7 kroków, bez straży — pierwszy dzień to zbieranie, nie marsz.
-    ([(9, 61), (10, 61), (9, 60)], ('skrzynia', None)),
+    # (Runda 7 pętli, G2/D1/F1: skrzynia (9,61) chowała się za lewym domkiem
+    # zamku — idzie na koniec odnogi (19–20,68), patrz `DOLINA`.)
     ([(13, 66), (18, 66), (19, 66)], ('skrzynia', None)),
     ([(12, 59), (13, 58), (11, 61)], ('surowiec', 'jagoda')),
     ([(17, 63), (16, 63), (18, 63)], ('surowiec', 'odlamek')),
@@ -818,7 +828,9 @@ DOLINA = [
     ([(54, 67), (53, 67)], ('surowiec', 'jagoda')),
     ([(52, 65), (52, 64)], ('artefakt', None)),
     # Południe doliny za borem (x 25–38, y 63–71): wiatrak, skrzynia, stos w kącie.
-    ([(30, 65), (31, 65), (29, 65)], ('budynek', 'wiatrak')),
+    # Runda 7 pętli (G1): wiatrak o pole na wschód — stos na końcu odnogi
+    # (20–21, 69) dokłada dwie rzeczy do okna (10–30, 54–71), które miało 16.
+    ([(31, 65), (30, 65), (32, 65)], ('budynek', 'wiatrak')),
     ([(34, 67), (35, 67)], ('skrzynia', None)),
     ([(27, 69), (26, 69)], ('surowiec', 'jagoda')),
     ([(28, 70), (29, 70)], ('surowiec', 'odlamek')),
@@ -834,7 +846,15 @@ DOLINA = [
     # tundry, na luźnym ekranie pod przełęczą wschodnią (okno 40–60 × 40–57: 5).
     ([(44, 58), (43, 58), (45, 58)], ('budynek', 'gniazdo')),
     ([(26, 65), (26, 64), (27, 64)], ('budynek', 'chatka')),
-    ([(33, 64), (32, 64)], ('surowiec', 'kamien')),
+    # Runda 7 pętli (D1/F1/G2): odnoga traktu z korytarza (19–20,68) kończyła
+    # się w pustej kieszeni — dostaje stos: skrzynia spod domku zamku (9,61)
+    # i samotny kamień z pola (33,64).
+    ([(20, 69), (19, 69), (20, 70)], ('skrzynia', None)),
+    ([(21, 69), (21, 70), (19, 70)], ('surowiec', 'kamien')),
+    # Runda 7 pętli (B3): stos przy chatce (44,50) w najrzadszym ekranie
+    # doliny (39–59, 47–64: 5 rzeczy).
+    ([(46, 50), (46, 51)], ('skrzynia', None)),
+    ([(47, 50), (47, 51)], ('surowiec', 'jagoda')),
 ]
 
 #: Pętla 2026-10 (E5): brama zakątków SE i NE doliny. Trakt do kamiennej
@@ -856,7 +876,8 @@ TUNDRA = [
     ([(7, 35), (6, 35)], ('surowiec', 'jagoda')),
     ([(4, 35), (5, 36)], ('artefakt', None)),
     ([(6, 38), (5, 38), (7, 38)], ('kopalnia', 'pokeball')),
-    ([(1, 36), (2, 36)], ('surowiec', 'pokeball')),
+    # (Runda 7 pętli, G1: bez kupki kul (1,36) — przy kopalni odłamków
+    # zostaje stos (2,34).)
     ([(3, 41), (2, 41)], ('surowiec', 'kamien')),
     ([(4, 42), (5, 42)], ('skrzynia', None)),
     ([(2, 39), (3, 40)], ('artefakt', None)),
@@ -873,6 +894,11 @@ TUNDRA = [
     ([(37, 25), (38, 25)], ('surowiec', 'kamien')),
     ([(42, 25), (43, 26)], ('surowiec', 'odlamek')),
     ([(38, 28), (37, 28)], ('skrzynia', None)),
+    # Runda 7 pętli (B3/E2): drugi stos zakątka, po wschodniej stronie
+    # traktu — środkowy pas odległości (41 kroków), okna (30,20) i (40,20)
+    # 12 / 10.
+    ([(41, 28), (42, 28)], ('skrzynia', None)),
+    ([(42, 28), (42, 29)], ('surowiec', 'odlamek')),
     # (Runda 6 pętli, G1: bez skrzyni (41,29) i ogniska (43,28) — ekran
     # międzyjezierza (27–47, 24–41) miał 18 rzeczy; zostaje drzewo wiedzy
     # ze stosem i portal.)
@@ -896,6 +922,7 @@ TUNDRA = [
     # odległości, na luźnym ekranie (okna 21 × 18 nad brodem: 9–11).
     ([(42, 38), (41, 38)], ('skrzynia', None)),
     ([(39, 37), (38, 37), (39, 38)], ('budynek', 'zrodlo')),
+
     # (Runda 6 pętli, G1: bez wiatraka (36,34) przed brodem.)
     ([(59, 31), (60, 31)], ('budynek', 'chatka')),
     # Druga kopalnia odłamków tundry przy trakcie pod jeziorem.
@@ -903,12 +930,13 @@ TUNDRA = [
     ([(15, 34), (16, 34), (14, 35)], ('budynek', 'wiatrak')),
     # Runda 3 (B3/E2): pas sporny bogatszy od domu — stosy przy trakcie
     # w zachodniej dolinie (x 10–21, y 30–44) i pod jeziorem (y 39–44).
-    ([(12, 33), (12, 34)], ('surowiec', 'jagoda')),
+    # (Runda 7 pętli, G1: bez kupki jagód (12,33) — ekran zachodniej
+    # tundry (0–20, 25–42) miał 20 rzeczy.)
     ([(13, 36), (14, 37)], ('budynek', 'ognisko')),
     # Runda 6 pętli (B3): kupka między ogniskiem a źródłem — stos na polanie.
     ([(12, 38), (13, 38), (14, 38)], ('surowiec', 'kamien')),
     ([(14, 40), (12, 41), (13, 40), (15, 39), (13, 38)], ('budynek', 'zrodlo')),
-    ([(19, 42), (18, 42)], ('budynek', 'gniazdo')),
+    # (Runda 7 pętli, G1: bez gniazda (19,42).)
     ([(27, 41), (27, 40)], ('budynek', 'chatka')),
     # Runda 4 pętli (B2/G1): pas za bramami (x 23–43, y 39–43) bez
     # losowania — było 15 rzeczy wzdłuż drogi jak konfetti. Zostają
@@ -933,6 +961,13 @@ TUNDRA = [
     ([(69, 25), (69, 26)], ('skrzynia', None)),
     ([(69, 27), (67, 25)], ('surowiec', 'jagoda')),
     ([(65, 26), (65, 27)], ('potwor', 'sredni')),
+    # Runda 7 pętli (B3/B4): relikt do stosu na polanie pod strażą (okna 15;
+    # surowce luzem ≤ 26 %).
+    ([(67, 25), (66, 28), (69, 26)], ('artefakt', None)),
+    # Runda 7 pętli (B3/E2): stos w zakątku pod zakrętem traktu (19–20, 43),
+    # poza ekranem zachodniej tundry (y ≤ 42); okna (0,30) i (10,30) 13 / 9.
+    ([(19, 43), (18, 43)], ('skrzynia', None)),
+    ([(18, 43), (17, 43)], ('skrzynia', None)),
     # Runda 3 (G1/B3): korytarz wschodniej tundry (44–62, 22–38) bez
     # losowania — losowe kupki zbijały się tu w 31 rzeczy na ekranie. Ręcznie,
     # co kilka pól marszu po obu stronach traktu.
@@ -1011,7 +1046,7 @@ TWIERDZE = [
     # wejście (29–30, 12): skrzynie i stosy (jasnowidz dochodzi z losowania).
     ([(26, 10), (27, 10), (25, 10)], ('budynek', 'ognisko')),
     ([(23, 11), (22, 11), (24, 10)], ('surowiec', 'kamien')),
-    ([(31, 14), (30, 14)], ('skrzynia', None)),
+    ([(30, 14), (31, 14)], ('skrzynia', None)),
     ([(28, 17), (28, 16)], ('surowiec', 'pokeball')),
     ([(31, 18), (30, 18)], ('budynek', 'gniazdo')),
     ([(29, 14), (28, 14)], ('surowiec', 'odlamek')),
@@ -1022,7 +1057,8 @@ TWIERDZE = [
     ([(9, 6), (8, 7)], ('budynek', 'chatka')),
     # Runda 6 pętli (B3): stos w skalnym zakątku nad traktem do przełęczy
     # twierdz (26–28, 7–8) — okna nad nim mają 11–13 rzeczy.
-    ([(26, 7), (26, 8)], ('skrzynia', None)),
+    # Runda 7 pętli (B2): skrzynia na styk z kupką — stos, nie dwie kropki.
+    ([(27, 8), (26, 7), (26, 8)], ('skrzynia', None)),
     ([(28, 7), (27, 8)], ('surowiec', 'odlamek')),
     # Stos pod północną granią doliny (y 0), z dala od gęstego środka.
     # Lodowa Twierdza (58,9) — zatoka kopalni pokeballi (x 61–67, y 12–16),
@@ -1034,12 +1070,13 @@ TWIERDZE = [
     # Zatoka kopalni odłamków (x 44–49, y 15–16), wejście (50, 15–16).
     ([(46, 15), (45, 15), (47, 15)], ('kopalnia', 'odlamek')),
     ([(44, 16), (45, 16)], ('surowiec', 'odlamek')),
-    ([(48, 15), (47, 16)], ('skrzynia', None)),
+    ([(45, 16), (48, 15), (47, 16)], ('skrzynia', None)),
     # Dolinka pod przełęczą twierdz (x 36–43, y 12–19): stos, wiatrak.
     ([(40, 17), (41, 18)], ('surowiec', 'kamien')),
     ([(39, 14), (38, 15), (40, 14)], ('budynek', 'wiatrak')),
-    ([(37, 18), (38, 18)], ('skrzynia', None)),
-    ([(42, 13), (41, 12)], ('skrzynia', None)),
+    # Runda 7 pętli (B2/G1): bez pojedynczej skrzyni (37,18); skrzynia (42,13)
+    # dołącza do stosu przy wiatraku (wiatrak, pokeball, skrzynia, kamień).
+    ([(40, 15), (41, 15)], ('skrzynia', None)),
     ([(36, 15), (37, 16)], ('surowiec', 'pokeball')),
     # Pusta dotąd dolina Lodowej Twierdzy (x 44–62, y 3–8, B3): sad, źródło,
     # stosy przy trakcie do skarbca.
@@ -1049,7 +1086,8 @@ TWIERDZE = [
     ([(56, 6), (55, 6)], ('budynek', 'wiatrak')),
     ([(52, 9), (53, 9)], ('budynek', 'chatka')),
     ([(57, 4), (56, 4), (57, 5)], ('budynek', 'gniazdo')),
-    ([(46, 6), (45, 6)], ('surowiec', 'jagoda')),
+    # Runda 7 pętli (G1): kupka jagód przy sadzie, nie sama w polu (46,6).
+    ([(48, 6), (47, 6), (46, 6)], ('surowiec', 'jagoda')),
     # Runda 5 pętli: gniazdo w korytarzu za przełęczą wschodnią (luźny ekran).
     ([(52, 18), (51, 18), (50, 18)], ('budynek', 'gniazdo')),
 ]
@@ -1073,10 +1111,19 @@ DOM_LOSOWE = {'kupki': 0, 'skrzynie': 0, 'budowle': 5}
 # Pętla 2026-10 (G1/B4): tundra 28 → 14 budowli, 14 → 7 kupek, 12 → 8 skrzyń
 # — połowa losowania szła w zachodnią dolinę, która jest teraz wyłączona;
 # reszta poszła na rzadkie ekrany doliny gracza (`DOLINA`, `DOM_LOSOWE`).
-TUNDRA_LOSOWE = {'kupki': 0, 'skrzynie': 2, 'budowle': 0}
+TUNDRA_LOSOWE = {'kupki': 0, 'skrzynie': 0, 'budowle': 0}
 # Pętla 2026-10: budowle tundry, które nie mieszczą się już w dolinach
 # (zachodnia i wschodnia wyłączone z losowania), idą do krainy wroga.
-WROGA_LOSOWE = {'kupki': 0, 'skrzynie': 3, 'budowle': 0}
+# Runda 7 pętli (B2): bez losowych skrzyń — losowanie i nadmiar (2 skrzynie
+# tundry) sypały je w dolinie wroga jak konfetti ((28,9), (37,9)); trzy,
+# które leżały przy stosach doliny Srebrnej Strażnicy, stoją teraz ręcznie
+# (`WROGA_SKRZYNIE`).
+WROGA_LOSOWE = {'kupki': 0, 'skrzynie': 0, 'budowle': 0}
+WROGA_SKRZYNIE = [
+    ([(21, 10), (22, 10)], ('skrzynia', None)),   # przy kupce kamieni (23,11)
+    ([(12, 18), (11, 18)], ('skrzynia', None)),   # pod przełęczą, przy jasnowidzu
+    ([(8, 16), (7, 16)], ('skrzynia', None)),     # przed skarbcem wodza (5,16)
+]
 
 
 def odleglosc(a, b):
@@ -1385,6 +1432,7 @@ def rozstaw(g):
     # Runda 4 pętli: chata jasnowidza krainy wroga pod przełęczą Srebrnej
     # Strażnicy (z losowania wypadała w dolinie Lodowej Twierdzy — G1).
     postaw_recznie(g, [([(9, 19), (9, 18), (8, 18), (10, 18), (8, 19)], ('jasnowidz', None))])
+    postaw_recznie(g, WROGA_SKRZYNIE)
 
     pelne = {o: n for o, n in okna(g).items() if n > EKRAN_LIMIT}
     print(f'  okna > {EKRAN_LIMIT} po ręcznym rozstawieniu: {pelne}')

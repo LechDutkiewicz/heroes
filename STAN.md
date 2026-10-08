@@ -1850,6 +1850,47 @@ Runda 6 — zmiany tylko w `tools/mapy/twierdza.py`:
   Pogranicze ledwo bogatsze od domu (63 / 61). Bór wschodniej tundry
   (57–61, 32–36) między traktami nie ruszony — okna (50,30) mają 16.
 
+Krytyk rundy 7 (`tools/blind/r7-twierdza-werdykt.md`): wygrana ślepo,
+24 TAK / 6 CZĘŚCIOWO / 0 NIE (B2 konfetti skrzyń w dolinie wroga, B3 11,5,
+D1/F1 pusta odnoga (19–20,68), G1 ekrany (26–46,1–18) i (0–20,25–42) po 20,
+G2 skrzynia (9,61) za domkiem zamku). Runda 7 — zmiany tylko
+w `tools/mapy/twierdza.py`:
+
+- **D1/F1/G2**: skrzynia (9,61) → (20,69), kamień (33,64) → (21,69) — stos
+  na końcu odnogi (19–20,68). Okno (10,54) dostawało 17, więc wiatrak
+  (30,65) → (31,65).
+- **B2/G1 — dolina wroga**: losowe skrzynie 5 → 0 (`TUNDRA_LOSOWE`,
+  `WROGA_LOSOWE`; nadmiar 0) — znikają (28,9) i (37,9), a trzy, które leżały
+  przy stosach doliny Srebrnej Strażnicy, stoją ręcznie (`WROGA_SKRZYNIE`:
+  (21,10), (12,18), (8,16), stawiane po jasnowidzu, żeby nie zatkać kieszeni
+  skarbca). Bez skrzyni (37,18); (42,13) → (40,15) do stosu z wiatrakiem
+  (39,14), kulami (36,15) i kamieniem (40,17); (31,14) → (30,14) obok kupki
+  (29,14); (26,7) → (27,8) na styk z kupką (28,7) ((27,7) to skała); (47,16) → (45,16) przy kupce
+  (44,16) pod kopalnią; jagody (46,6) → (48,6) przy sadzie. Ekran
+  (26–46,1–18): 20 → 17.
+- **G1 — zachodnia tundra** (0–20,25–42): bez kupki jagód (12,33), gniazda
+  (19,42) i kupki kul (1,36): 20 → 17.
+- **B3/E2**: stos skrzynia + jagody (46,50)/(47,50) przy chatce (44,50)
+  (ekran 39–59 × 47–64: 5 → 7); w pasie spornym dwie skrzynie (18–19,43) pod
+  zakrętem traktu (poza ekranem tundry), skrzynia + kupka (41–42,28)
+  w zakątku drzewa wiedzy (pas 3, 41 kroków; międzyjezierze 27–47 × 24–41:
+  15), relikt (67,25) na polanie za ranczem. Pasy jałowej ziemi szerokie na
+  pole między traktem a lodem zamarzają (`po_drogach`): (37–43,24),
+  (30–35,40), (32,39), (52–54,27–29) — 2089 → 2069 przejezdnych (profil)
+  bez nowego boru. Stos przy trakcie (36–37,35) próbowany i cofnięty — pas 2.
+- Liczby: 183 obiekty, co 11,3 pola (2069 przejezdnych); T 27 % + # 22 % =
+  49,5 % (bez zmian), lód 11 %; pasy 17/42/47/46/31 (garb w pasie 3, ale
+  pas 4 tuż za nim); strefy dom 63 / pogranicze 65 / wroga 55; bez bitwy
+  27 % (551 pól); okna co 10 pól maks. 16, nadmiar 0; straże 13 %,
+  surowce 25,7 %, skrzynie 19,1 %, budynki 25 %, artefakty 7,1 %. Sonda
+  w scratchpadzie: 17 straży dzieli teren na dwie strony, przełęcze i bród
+  (6) jak dotąd tylko parami (pętle). `probe-mapy` 0 ŹLE, `probe-misja` OK,
+  zrzut i sondy za pierwszym podejściem (dwa przebiegi skryptu —
+  drugi po poprawce (27,8)).
+- Zostało: pas 4 (46) prawie równy pasowi 3 (47) — przeniesienia z doliny
+  wroga ubrały pas 2, a wolne okna pasa 3 (międzyjezierze, wschodnia tundra)
+  są pełne. Pogranicze tylko o 2 bogatsze od domu.
+
 ## Profile graczy i sloty zapisu (2026-09-26)
 
 Zgłoszenie taty Eli i Janka: „Nowa gra → Kampania" kontynuowała ostatnią
