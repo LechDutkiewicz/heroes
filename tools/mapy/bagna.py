@@ -736,6 +736,7 @@ def rozstaw(g):
     runda_4(g)
     runda_5(g)
     runda_6(g)
+    runda_7(g)
 
 
 #: Runda 11 (HotA, zwycięzca rundy 10: „nic nie przypomina bagna — stawy małe,
@@ -1740,92 +1741,135 @@ def runda_6(g):
         _kupka(g, prost, wpisy)
     _odswiez(g)
     g.zasyp_odciete(m)
-    print(f'  runda 6: brak miejsca na stos w {prost}')
-    return []
-
-
-def runda_6(g):
-    m = g.mapa
-    zabrane = _usun(g, R6_USUN)
-    _odswiez(g)
-
-    # --- teren -------------------------------------------------------------
-    for x, y in R6_LAS:
-        if m[y][x] != '=':
-            m[y][x] = 'T'
-    for x, y in R6_ZAKATEK_MOST:
-        m[y][x] = '.'
-    for x, y in R6_ZAKATEK_MOST_LAS:
-        m[y][x] = 'T'
-    for x, y in R6_SKALY:
-        if m[y][x] != '=':
-            m[y][x] = '#'
-    # E3: plama skał w dole doliny → las (jedna bryła z lasem obok).
-    for y in range(50, BOK):
-        for x in range(14, 21):
-            if m[y][x] == '#':
-                m[y][x] = 'T'
-    # D3: staw w trójkącie między traktem a jeziorem, trakt jego brzegiem.
-    for x, y in R6_TRAKT_PRECZ:
-        m[y][x] = 'b'
-    for x, y in R6_STAW:
-        m[y][x] = '~'
-    for x, y in R6_TRAKT:
-        m[y][x] = '='
-    # Ścieżka w dół doliny kończy się przy kopalni kamieni, nie na pustym.
-    if m[52][13] == '=':
-        m[52][13] = '.'
-        m[52][12] = '='
-    for odnoga in R6_ODNOGI:
-        for x, y in odnoga:
-            m[y][x] = '='
-    # E3: wschodni pas — łąka w bagno, kałuże do 8 pól w grunt wokół, pola
-    # bagna wciśnięte w jezioro (≥ 5 sąsiadów wody) pod wodę.
-    wschod = lambda x, y: x >= 40 and 20 <= y <= 50
-    for y in range(BOK):
-        for x in range(BOK):
-            if wschod(x, y) and m[y][x] == '.':
-                m[y][x] = 'b'
-    for zn, sk in list(_skladowe(m, '~', 8)):
-        if len(sk) <= 8 and all(wschod(x, y) for x, y in sk):
-            for x, y in sk:
-                m[y][x] = 'b'
-    zajete = {p for p, _ in g.obiekty} | g.blokada
-    for y in range(20, 51):
-        for x in range(40, BOK - 1):
-            if m[y][x] != 'b' or (x, y) in zajete:
-                continue
-            woda = sum(1 for dy in (-1, 0, 1) for dx in (-1, 0, 1)
-                       if (dx or dy) and m[y + dy][x + dx] == '~')
-            if woda >= 5:
-                m[y][x] = '~'
-    _odswiez(g)
-
-    # --- obiekty -----------------------------------------------------------
-    for p, w in R6_OBIEKTY:
-        if m[p[1]][p[0]] not in '.,bj=':
-            m[p[1]][p[0]] = '.'
-        g.postaw(p, w)
-    _odswiez(g)
-    for x, y in R6_ODNOGA_SADU:
-        m[y][x] = '='
-    for b, prost in R6_BUDOWLE:
-        p = _miejsce(g, prost)
-        if p is None:
-            print(f'  runda 6: brak miejsca na {b} w {prost}')
-            continue
-        g.postaw(p, ('budynek', b))
-    _odswiez(g)
-    for prost, wpisy in R6_STOSY:
-        _kupka(g, prost, wpisy)
-    _odswiez(g)
-    g.zasyp_odciete(m)
     import os
     if os.environ.get('R6_DEBUG'):
         for y in range(BOK):
             ob = {q: w[0][0].upper() for q, w in g.obiekty}
             print('%3d ' % y + ''.join(ob.get((x, y)) or ('o' if _miejsce(g, (x, y, x, y)) else m[y][x]) for x in range(BOK)))
     print(f'  runda 6: usunięte {len(zabrane)}, obiektów {len(g.obiekty)}')
+
+
+
+# --- RUNDA 7 PĘTLI (werdykt ślepego porównania r6: przegrana, 19 TAK /
+# 10 CZĘŚCIOWO / 1 NIE) ---------------------------------------------------
+# Krytyk: plansza za rzadka (obiekt co 11,1 pola), dom ma 15 obiektów na
+# 113, start na pustej łące; pojedyncze surowce i straże na placu. Poprzednie
+# rundy odchudzały na żądanie innych krytyków — więc nie konfetti, tylko
+# STOSY po 2–3 przy drodze i na końcach odnóg, budynki do odwiedzenia.
+#  - A3/G1: stos skrzynia + jagody (16–17, 48) 4 kroki od bramy zamku.
+#  - B1: kopalnia pokeballi z niszy (24,40) na otwartą łąkę przy trakcie
+#    (komplet czterech kopalń w domu widać od razu); w niszy za słabą strażą
+#    (24,42) zostaje stos skrzynia + artefakt.
+#  - B2: pojedyncze (16,43) i (11,43) → pary.
+#  - D1/F1: koniec odnogi do sadu (5,46) i ścieżki w dół doliny (12,52)
+#    kończy stos (skrzynia + kamień).
+#  - B2: stos płaskowyżu wroga (19–21, 10–11) zbity w kupkę 2 × 2 + 1.
+#  - C1: straż kamiennej kopalni (35,34) → (36,34) w niszy domkniętej lasem
+#    (kopalnia jagód (37,36) dwa pola niżej, (36,38), przy zakręcie traktu);
+#    wejście do zakątka wschodniego (41,36) i zachodniego zakątka wroga (8,12)
+#    to korytarze z lasem po obu stronach.
+#  - C4: wylot mostu (29–30, 43–45) zwężony lasem do jednego pola; obóz
+#    treningowy z przyczółka precz.
+#  - E3: skały niszy (21–22/26, 39–42) i przy bramie wroga (23–30, 13–17)
+#    → las; jezioro zachodnie (10–23, 18–23) bez wysepek i zatok.
+#  - F3: drugi wiatrak (47,24) → wędrowny sklepik, druga wieża widokowa
+#    (39,39) → ranczo. Portale (para „Stacji Kolejki") zostają — to jeden
+#    obiekt w dwóch końcach.
+R7_USUN = [(24, 40), (30, 43), (35, 34), (37, 36), (20, 11)]
+
+R7_LAS = [
+    # korytarz przed zakątkiem wroga (8,12) dłuższy o dwa pola
+    (11, 11), (11, 13), (12, 13),
+    # wejście do zakątka wschodniego (41,36): las po obu stronach
+    (40, 35), (40, 37),
+    # nisza kamiennej kopalni pogranicza (36,33)
+    (34, 34), (34, 35), (35, 35), (34, 36), (35, 36),
+    # wylot mostu
+    (29, 43), (30, 43), (29, 45), (30, 45),
+]
+
+#: Budowle podmienione w miejscu (F3).
+R7_PODMIEN = {(47, 24): 'woz', (39, 39): 'ranczo'}
+
+R7_OBIEKTY = [
+    ((36, 34), ('potwor', 'sredni')),           # nisza kopalni kamieni
+    ((36, 38), ('kopalnia', 'jagoda')),         # z (37,36): rysunek nie wchodzi na straż
+    ((20, 9), ('surowiec', 'pokeball')),        # stos wroga (19–21, 9–10) zbity w kupkę
+    ((16, 48), ('skrzynia', None)),             # A3: 4 kroki od bramy
+    ((17, 48), ('surowiec', 'jagoda')),
+    ((17, 43), ('surowiec', 'pokeball')),       # para ze skrzynią (16,43)
+    ((11, 42), ('skrzynia', None)),             # para z jagodami (11,43)
+    ((23, 40), ('skrzynia', None)),             # nisza za strażą (24,42)
+    ((24, 40), ('artefakt', None)),
+    ((5, 47), ('skrzynia', None)),              # koniec odnogi do sadu
+    ((12, 53), ('skrzynia', None)),             # koniec ścieżki w dół doliny
+    ((13, 53), ('artefakt', None)),
+]
+
+R7_BUDOWLE = [
+    ('kopalnia:pokeball', (15, 39, 20, 42)),    # B1: przy trakcie, bez straży
+    ('drzewo-wiedzy', (14, 35, 18, 38)),        # dom: łąka nad traktem
+    ('ognisko', (30, 9, 36, 12)),               # płaskowyż wroga, wschód
+]
+
+#: Stosy w chudych ekranach (`_kupka`).
+R7_STOSY = [
+    ((26, 3, 30, 5), [('skrzynia', None), ('artefakt', None)]),
+    # drugi pas odległości (garb nagród): zachodnie trzęsawisko za groblą
+    ((5, 28, 8, 29), [('skrzynia', None), ('artefakt', None)]),
+]
+
+
+def runda_7(g):
+    m = g.mapa
+    zabrane = _usun(g, R7_USUN)
+    for i, (q, w) in enumerate(g.obiekty):
+        if q in R7_PODMIEN and w[0] == 'budynek':
+            g.obiekty[i] = (q, ('budynek', R7_PODMIEN[q]))
+    _odswiez(g)
+
+    # --- teren -------------------------------------------------------------
+    for x, y in R7_LAS:
+        if m[y][x] != '=':
+            m[y][x] = 'T'
+    # E3: skały-plamy → las.
+    for x, y in R6_SKALY:
+        if m[y][x] == '#':
+            m[y][x] = 'T'
+    for y in range(13, 19):
+        for x in range(22, 32):
+            if m[y][x] == '#':
+                m[y][x] = 'T'
+    # E3: jezioro zachodnie jedną taflą — wysepki lasu i wąskie zatoki bagna
+    # (pola z ≥ 5 sąsiadami wody) pod wodę; obrys jeziora zostaje krzywy.
+    for _ in range(3):
+        pod_wode = [
+            (x, y) for y in range(18, 24) for x in range(10, 24)
+            if m[y][x] in 'Tb' and sum(1 for dy in (-1, 0, 1) for dx in (-1, 0, 1)
+                                       if (dx or dy) and m[y + dy][x + dx] == '~') >= 5
+        ]
+        _lataj(g, pod_wode, '~')
+    _odswiez(g)
+
+    # --- obiekty -----------------------------------------------------------
+    for p, w in R7_OBIEKTY:
+        if m[p[1]][p[0]] not in '.,bj':
+            m[p[1]][p[0]] = '.' if strefa(*p) != 'pogranicze' else 'b'
+        g.postaw(p, w)
+    _odswiez(g)
+    for b, prost in R7_BUDOWLE:
+        p = _miejsce(g, prost)
+        if p is None:
+            print(f'  runda 7: brak miejsca na {b} w {prost}')
+            continue
+        wpis = ('kopalnia', b.split(':')[1]) if b.startswith('kopalnia:') else ('budynek', b)
+        g.postaw(p, wpis)
+    _odswiez(g)
+    for prost, wpisy in R7_STOSY:
+        _kupka(g, prost, wpisy)
+    _odswiez(g)
+    g.zasyp_odciete(m)
+    print(f'  runda 7: usunięte {len(zabrane)}, obiektów {len(g.obiekty)}')
 
 
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.

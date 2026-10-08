@@ -97,6 +97,37 @@ na wolnym gruncie), ten sam styl.
   22 %. Kafle 18 × 18: 7–16. Okno 21 × 18 przy (30–50, 33–50) ma 23
   obiekty i 5 straży — najgęstsze, nie zbite. Sondy Bagien OK, probe-misja OK.
 
+Runda 7 buildera (po werdykcie r6: PRZEGRANA ślepo, 19 TAK / 10 CZĘŚCIOWO /
+1 NIE — „za rzadka, dom 15 obiektów na 113, start na pustej łące").
+Funkcja `runda_7(g)` po `runda_6` (dublet martwej pierwszej `runda_6` usunięty).
+Dosypane STOSAMI, nie konfetti: obiektów 113 → 127, obiekt co 9,8 pola, dom
+15 → 25 (ekran zamku 0–20 × 36–53: 17).
+- **A3/G1**: skrzynia + jagody (16–17, 48) 4 kroki od bramy. **B1**:
+  kopalnia pokeballi z niszy (24,40) na łąkę przy trakcie (17,41) — cztery
+  kopalnie domu widać od razu; w niszy za słabą strażą (24,42) skrzynia +
+  artefakt. Drzewo wiedzy (16,36) na łące nad traktem.
+- **B2**: pary (16–17, 43), (11, 42–43); stos wroga (19–21, 9–10) zbity.
+  **D1/F1**: koniec odnogi do sadu — skrzynia (5,47); koniec ścieżki w dół
+  doliny — skrzynia + artefakt (12–13, 53).
+- **C1**: straż kopalni kamieni (35,34) → (36,34) w niszy (las (34–35,
+  34–36)), kopalnia jagód (37,36) → (36,38), żeby rysunek straganu nie
+  wchodził na straż; wejście do zakątka (41,36) i korytarz wroga (8,12)
+  domknięte lasem (40,35/37), (11–12, 11/13). **C4**: wylot mostu zwężony
+  lasem (29–30, 43/45) do jednego pola za strażą (30,44); obóz z przyczółka
+  precz.
+- **E3**: skały niszy (21–22/26, 39–42) i przy bramie wroga → las; jezioro
+  zachodnie (10–23, 18–23) bez wysepek (pola z ≥ 5 sąsiadami wody pod wodę).
+  **F3**: wiatrak (47,24) → wóz, wieża widokowa (39,39) → ranczo. Portale
+  zostają (para „Stacji Kolejki" — krytyk liczy ją jako dublet).
+- **G3** nie ruszone: równe rzędy wierzb to układ klocków w scenie
+  (`src/data/klocki.ts`, wspólny), konfiguracja planszy go nie zmienia.
+- Dosyp poza domem: ognisko (35,10) i stos (28–29, 4) na płaskowyżu wroga,
+  stos (7–8, 29) na zachodnim trzęsawisku (drugi pas — garb nagród).
+- Liczby: surowce 32 (25 %), skrzynie 28, budowle 28, artefakty 12,
+  kopalnie 11, straże 15 (12 %); pasy [25, 27, 30, 27, 18], bez bitwy 22 %.
+  Okna 21 × 18: 11–24 (najgęstsze (6–27, 18–42)). Sondy Bagien OK,
+  probe-misja OK, tsc OK.
+
 ## Pokémart — sklep z przedmiotami zamiast gildii magów (2026-09-29)
 
 **Co jest.** Plecak trenera przestał się napełniać sam przed każdą bitwą —
