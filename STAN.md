@@ -3424,3 +3424,50 @@ trzy rzeczy właśnie dlatego; przesunięcie stosu zatoki o pole psuło ją po
 cichu. Brodu (24–30, 39–40) nie ruszać: z łąką zamiast piasku trakt
 przeskakuje wiersz i stosy rozsypują się po brzegu. Nierozwiązane: pas sporny
 ma tylko 3 obiekty więcej niż dom; prawa dolna ćwiartka to w ~70 % woda.
+
+Runda 6 po werdykcie `tools/blind/r5-dwie-doliny-werdykt.md` (wygrana,
+22 TAK / 7 CZĘŚCIOWO / 0 NIE: B4, E3, E4, E5, G1, G3). Zmieniony tylko
+`tools/mapy/dwie_doliny.py` (`_runda6` w terenie, `PRZEPRAWA`/`MOSTY`,
+`rozstaw`). Zasada odwrotna do rundy 5: las bez funkcji → łąka, nie woda.
+
+- **E5 woda pracuje.** Przeprawa traktu przez jezioro środkowe: piaskowy brzeg
+  (24–27, 39) i skała (24–27, 41–43) zalane, trakt idzie po moście
+  (24–27, 40) — w grze droga, w tle woda i rysunek `polana/most.png`
+  (`MOSTY`). To jedyne przejście z zachodu pasa spornego na wschód; średnia
+  straż przeszła z szyjki (19, 36) na wschodni wylot (28, 40), za nią stos
+  na brzegu. Kałuże (28–29, 3–6), (38–40, 2–4), (45–48, 28–31), (43, 30),
+  (12–16, 66–69), (37–44, 48–51), (61, 70) zniknęły (łąka albo las brzegu).
+  Pas wody pod północnym grzbietem przerwany: zachodni kraniec jeziorka NW
+  (0–10, 16–19) i ogon jeziora krainy (33–41, 16–19) → łąka/las. Oczko
+  rubieży (59–64, 25–28) ma domknięty skalny brzeg od grzbietu i skrzynię na
+  cyplu (63–64, 27–28) za strażą (62, 30). Małych wód zostały dwie: zatoczka
+  pod mostem i oczko.
+- **E4.** Łąka zamiast lasu: sad (staw i wyspa lasu, 29–38, 62–65), zachodnia
+  łąka schodzi do jeziora (7–11, 35–42), wnętrze masywu rubieży (58–63,
+  34–37), łąka nad drogą doliny wschodniej (51–59, 55–58), wnęka nad groblą
+  krainy (44–47, 10–12). Przejezdnych 1455 → 1660 (28 → 32 %), woda 22 → 19 %,
+  T+# 49,6 → 48,8 %. Dalej się nie dało: każde nowe pole łąki wymaga obiektu
+  (co ≤ 11 pól), a okna 21 × 18 nad pasem spornym są już pełne (16).
+- **E3.** Cała jałowa ziemia pasa spornego (pasek dojścia 57–58, wąwóz
+  68–70, zwężenie 59–63) → łąka; piasku na planszy nie ma. Skały nad zamkiem
+  wroga to jedna bryła (60–71, 0–7) bez dziur; głazy pod grzbietem dołączone.
+- **G3.** Przełęcze z garbem lasu przez całą grubość grzbietu: północny x 7–9,
+  31–34, 47–50; południowy x 26–29, 60–63. Bryły skał 6 × 2 (16–21, 42–43)
+  i 5 × 2 (66–70, 42–43) przy stożkach zamiast grzebieni „T#T#"; grzebienie
+  w wierszach 24 i 47–48 wyprostowane.
+- **G1/B4/E2.** Żadne okno 21 × 18 (przesuwane co pole, stos liczony po
+  sztuce) nie ma więcej niż 16 obiektów ani mniej niż 4; siatka 7–15. Ekran
+  (47–67, 25–42) 17 → 13 (ognisko na drogę doliny wschodniej, stos (48, 29)
+  i ognisko rubieży precz), (50–70, 43–60) 3 → 6. Kopalnie 15 (9,9 %; kamień
+  w wąwozie rubieży → odłamki, sporna kamienia na brzegu jeziora →
+  pokeballe — sonda chce ≥ 5 w pasie i ≥ 6 w domu), artefakty 12 → 11
+  (7,3 %), skrzynie 17 %, budynki z namiotami/jasnowidzami/strażnicami 30 %.
+  Strefy dom 49 / sporny 53 / wróg 49, pasy [20, 13, 45, 45, 28].
+
+Liczby: 151 obiektów, obiekt co 11,0 pola, bez bitwy 24 %, kroków do zamku
+wroga 80 (najdalej 88). Sondy: probe-mapy (Dwie Doliny bez ŹLE), probe-mapa
+OK, tsc OK, probe-misja WSZYSTKO OK za czwartym podejściem (trzy pierwsze —
+timeouty przy load 10–12). Nierozwiązane: przejezdnych 32 %, nie 35 % — przy limicie 16
+obiektów na okno pas sporny mieści ~53 obiekty, a dom musi mieć mniej (E2),
+więc więcej łąki = gęstość > 11; pas sporny ma 4 obiekty więcej niż dom;
+kopalnie na granicy 10 %.
