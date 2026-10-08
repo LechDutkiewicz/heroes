@@ -738,6 +738,7 @@ def rozstaw(g):
     runda_6(g)
     runda_7(g)
     runda_8(g)
+    runda_9(g)
 
 
 #: Runda 11 (HotA, zwycięzca rundy 10: „nic nie przypomina bagna — stawy małe,
@@ -2069,6 +2070,114 @@ def runda_8(g):
             print('%3d ' % y + ''.join(ob.get((x, y)) or ('o' if _miejsce(g, (x, y, x, y), sucho=True) else m[y][x])
                                         for x in range(BOK)))
     print(f'  runda 8: usunięte {len(zabrane)}, obiektów {len(g.obiekty)}')
+
+
+# --- RUNDA 9 PĘTLI (werdykt ślepego porównania r8: WYGRANA, 23 TAK /
+# 7 CZĘŚCIOWO / 0 NIE: A2, C1, E2, E3, G1, G2, G3) -------------------------
+#  - A2/C1/G2: słaba straż z łąki (24,42) przy kopalni pokeballi (17,42) —
+#    droga kopalnia strzeżona, nisza (23–25, 39–42) to wolna nagroda; para
+#    (16–17, 43) ze strefy tej straży na (22–23, 43) przy trakcie, z dala od
+#    groty odłamków; straż brodu z traktu (12,35) na brzeg (11,35) (strefa
+#    dalej zamyka bród); straż zakątka SW spod dachu kamieniołomu (10,51)
+#    w zakątek (8,50) — jej strefa zamyka jedyne wejście (9,50), a rysunek
+#    kamieniołomu (szerszy niż 3 pola) już na nią nie wchodzi.
+#  - E2 (garb w środku): z doliny stos (16–17, 48) i skrzynia (5,47) → stos
+#    przy trakcie w środkowym bagnie (31–32, 23–24); z pasa 5 skrzynia
+#    (14,2), surowce (38,2) i (50,9) → stos przy trakcie do bramy
+#    (25–26, 19–20), w zatoce nad jeziorem.
+#  - G1: ekran wroga (11–31, 0–17) z 22 do 15: precz (27,4), (19,4),
+#    (13,2), połowa stosu (20,9)/(21,10), chatka (28,9); (14,2) wyjechała.
+#  - E3: kałuże jednopolowe (18,30), (20,30), (36,8), (35,12–13) → las,
+#    (32,28) → bagno, łączka (34–35, 29–30) → bagno.
+#  - F3/G1: piąte ognisko (46,29) w zatoce przy grobli precz; para
+#    (36–37, 24) cztery pola od nowego stosu środka precz (dwa stosy obok
+#    siebie dawały 24 obiekty na ekranie środka).
+#  - G3: pas drzew w dolinie (19–22, 35–43) skrócony do (20–21, 38–41),
+#    kępy (15–17, 39) i (26, 39–42) precz — łąka doliny bez przegródek.
+R9_USUN = [
+    (16, 48), (17, 48), (5, 47),                            # dom → środek
+    (14, 2), (38, 2), (50, 9),                              # pas 5 → środek
+    (27, 4), (19, 4), (13, 2), (20, 9), (21, 10), (28, 9),  # ekran wroga
+    (24, 42), (12, 35), (10, 51),                           # straże G2
+    (16, 43), (17, 43),                                     # para ze strefy straży
+    (46, 29),                                               # piąte ognisko (F3, G1 wschodu)
+    (36, 24), (37, 24),                                     # para tuż obok nowego stosu (G1)
+]
+
+#: Gdzie stają przeniesione: stare pole → nowe pole (wpis ten sam).
+R9_PRZENIES = {
+    (24, 42): (17, 42),
+    (12, 35): (11, 35),
+    (10, 51): (8, 50),
+    (16, 43): (22, 43),
+    (17, 43): (23, 43),
+    # stos przy trakcie w środkowym bagnie (z doliny)
+    (16, 48): (31, 24),
+    (17, 48): (32, 24),
+    (5, 47): (31, 23),
+    # stos przy trakcie do bramy (z pasa 5)
+    (14, 2): (25, 19),
+    (38, 2): (25, 20),
+    (50, 9): (26, 20),
+}
+
+R9_LAS = [(18, 30), (20, 30), (36, 8), (35, 12), (35, 13)]
+R9_BAGNO = [(34, 29), (34, 30), (35, 30)]
+#: Kałuża (32,28) — jedno pole wody dotykające jeziora tylko po skosie.
+R9_KALUZE = [(32, 28)]
+#: Pole drogi po straży (24,42) — bez straży to samotny kawałek bruku.
+R9_BEZ_DROGI = [(24, 42)]
+#: Pas drzew w dolinie: wszystko z prostokąta precz poza (20–21, 38–41).
+R9_PAS = (19, 35, 22, 43)
+R9_PAS_ZOSTAJE = (20, 38, 21, 41)
+R9_KEPY = [(15, 39), (16, 39), (17, 39), (26, 39), (26, 40), (26, 41), (26, 42)]
+
+
+def runda_9(g):
+    m = g.mapa
+    zabrane = dict(_usun(g, R9_USUN))
+    _odswiez(g)
+
+    # --- teren -------------------------------------------------------------
+    zajete = {p for p, _ in g.obiekty} | g.blokada
+    for x, y in R9_LAS:
+        if m[y][x] == '~' and (x, y) not in zajete:
+            m[y][x] = 'T'
+    for x, y in R9_BAGNO:
+        if m[y][x] == '.':
+            m[y][x] = 'b'
+    for x, y in R9_KALUZE:
+        if m[y][x] == '~':
+            m[y][x] = 'b'
+    for x, y in R9_BEZ_DROGI:
+        if m[y][x] == '=':
+            m[y][x] = '.'
+    x0, y0, x1, y1 = R9_PAS
+    zx0, zy0, zx1, zy1 = R9_PAS_ZOSTAJE
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            if zx0 <= x <= zx1 and zy0 <= y <= zy1:
+                if m[y][x] == '.' and (x, y) not in zajete:
+                    m[y][x] = 'T'
+            elif m[y][x] == 'T':
+                m[y][x] = '.'
+    for x, y in R9_KEPY:
+        if m[y][x] == 'T':
+            m[y][x] = '.'
+    _odswiez(g)
+
+    # --- obiekty -----------------------------------------------------------
+    grunt = {'dom': '.', 'pogranicze': 'b', 'wroga': 'j'}
+    for stare, nowe in R9_PRZENIES.items():
+        if stare not in zabrane:
+            print(f'  runda 9: brak obiektu na {stare}')
+            continue
+        if m[nowe[1]][nowe[0]] not in '.,bj=':
+            m[nowe[1]][nowe[0]] = grunt[strefa(*nowe)]
+        g.postaw(nowe, zabrane[stare])
+    _odswiez(g)
+    g.zasyp_odciete(m)
+    print(f'  runda 9: usunięte {len(zabrane)}, obiektów {len(g.obiekty)}')
 
 
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.

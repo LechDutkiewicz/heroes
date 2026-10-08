@@ -172,6 +172,45 @@ pas 18, straże pogranicza na placu). Funkcja `runda_8(g)` po `runda_7`;
   maszynie wisi na „element is not stable" (scena działa, fps jak Polana);
   zrzut zrobiony `page.screenshot` z wycinkiem płótna.
 
+Runda 9 buildera (po werdykcie r8: WYGRANA ślepo, 23 TAK / 7 CZĘŚCIOWO /
+0 NIE: A2, C1, E2, E3, G1, G2, G3). Funkcja `runda_9(g)` po `runda_8`,
+tabele `R9_*` (usunięcia, przeniesienia stare → nowe pole, teren).
+- **A2/C1/G2**: słaba straż z łąki (24,42) → (17,42) przy kopalni pokeballi
+  (17,41) (strefa obejmuje wszystkie pola wejścia kopalni); nisza (23–24, 40)
+  wolną nagrodą, samotny bruk (24,42) → łąka. Para (16–17, 43) ze strefy tej
+  straży → (22–23, 43) przy trakcie (na (19–20, 43) właziła na dach groty
+  (18,46)). Straż brodu z traktu (12,35) → brzeg (11,35): strefa dalej
+  obejmuje (12,34), więc bród zamknięty. Straż zakątka SW (10,51) → (8,50):
+  (9,50) też wchodziło pod rysunek kamieniołomu (szerszy niż 3 pola);
+  strefa (8,50) zamyka jedyne wejście (9,50). Cena: kopalnia kamieni
+  (11,51) jest teraz niestrzeżona (5 kroków od startu).
+- **E2**: z doliny stos (16–17, 48) i skrzynia (5,47) → stos przy trakcie
+  w środkowym bagnie (31,24), (32,24), (31,23); z pasa 5 skrzynia (14,2)
+  i surowce (38,2), (50,9) → stos przy trakcie do bramy (25,19), (25,20),
+  (26,20) nad jeziorem. Pasy [25, 24, 28, 27, 24] → [21, 25, 31, 22, 20].
+- **G1**: ekran wroga (11–31, 0–17) 22 → 15 obiektów (precz (27,4),
+  (19,4), (13,2), (20,9), (21,10), chatka (28,9); (14,2) wyjechała).
+  Ekran (22–42, 27–44) 4 → 3 straże ((30,44) most, (40,30) przesmyk,
+  (42,36) wylot zakątka), 17 obiektów. Para (36–37, 24) obok nowego stosu
+  i piąte ognisko (46,29) precz. Okno przesuwne 21 × 18: maks 23 (było 24
+  z tymi stosami; przy 119 obiektach średnia ~16, więc „≤ 16 wszędzie" przy
+  garbie w środku jest nieosiągalne). Kafle 18 × 18: 10–18.
+- **E3**: kałuże (18,30), (20,30), (36,8), (35,12–13) → las, (32,28) → bagno,
+  łączka (34–35, 29–30) → bagno. **G3**: pas drzew w dolinie (19–22, 35–43)
+  → kępa (20–21, 38–41); kępy (15–17, 39) i (26, 39–42) precz.
+- Liczby: 119 obiektów, co 10,7 pola; budowle 33 + jasnowidz (28,6 %),
+  surowce 26 (21,8 %), skrzynie 23 (19,3 %), artefakty 10 (8,4 %),
+  kopalnie 11 (9,2 %), straże 15 (12,6 %); bez bitwy 23 % (291 pól); do
+  zamku wroga 44 kroki, najdalszy zakątek 63. Plamy < 6 pól (wody/łąki):
+  tylko (31–32, 42–43) przy trakcie za mostem (łąka rozcięta drogą).
+- Sondy: `probe-mapy` Bagna bez ŹLE (ŹLE tła innych plansz — ich wątki),
+  `probe-misja` WSZYSTKO OK, tsc OK. `runda-planszy.sh bagna 5203` dwa
+  razy, oba ze zrzutem bez timeoutu (po pierwszym zrzucie poprawione
+  pozycje straży SW i pary przy grocie).
+- Nierozwiązane: niestrzeżony kamieniołom (11,51) (A2 może to wytknąć);
+  G1 w sensie okna przesuwnego dalej 23; czwarty pas (22) niższy niż drugi
+  (25), garb jest, ale niesymetryczny.
+
 ## Pokémart — sklep z przedmiotami zamiast gildii magów (2026-09-29)
 
 **Co jest.** Plecak trenera przestał się napełniać sam przed każdą bitwą —
