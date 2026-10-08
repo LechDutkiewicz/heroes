@@ -735,6 +735,7 @@ def rozstaw(g):
     runda_3(g)
     runda_4(g)
     runda_5(g)
+    runda_6(g)
 
 
 #: Runda 11 (HotA, zwycięzca rundy 10: „nic nie przypomina bagna — stawy małe,
@@ -1524,6 +1525,309 @@ def runda_5(g):
     print(f'  runda 5: usunięte {len(zabrane)}, obiektów {len(g.obiekty)}')
 
 
+# --- RUNDA 6 PĘTLI (werdykt ślepego porównania r5: 21 TAK / 8 CZĘŚCIOWO /
+# 1 NIE) ------------------------------------------------------------------
+# Jak poprzednie: po rozstawieniu, chirurgicznie. Co i dlaczego:
+#  - G1 (NIE): ekran wokół zamku (0–20 × 36–53) miał 14 obiektów, ekran wroga
+#    (27–48 × 0–12) 18. Przy zamku zostają dwie kopalnie bez straży, surowiec
+#    i skrzynia przy trakcie, kopalnia kamieni ze strażą i zakątek SW (dwie
+#    rzeczy). Ranczo i drzewo wiedzy idą za groblę / za most, wieża (21,49)
+#    i wiatrak (18,39) znikają. U wroga stosy (27–29, 3–8), połowa stosu NE,
+#    ognisko (40,1) i skrzynia z wyspy precz. Nadmiar trafia do drugiego pasu
+#    odległości: zachodnie trzęsawisko i łąka za mostem.
+#  - C1: straż (8,12) w korytarzu lasu (7–10, 12) przed zakątkiem wroga;
+#    stos NE za korytarzem (33–36, 3) z lasem pod nim, straż w wylocie (36,3);
+#    kopalnia pokeballi doliny w skalnej niszy (22–26, 39–42), straż w jej
+#    wylocie (24,42), nad traktem, nie na nim.
+#  - D1: odnogi drogi do kopalń (4,45), (24,42→24,40) i (10,24).
+#  - D3: wschodni trakt nie idzie schodkami po skosie (38,33)→(44,26), tylko
+#    pionem przy kopalni (36,33) i dalej brzegiem stawu dołożonego w trójkąt
+#    (41–43, 28–30) — zakręt ma powód w terenie. Na rozstajach (27,24)
+#    kamienna wieża (jedyna) zamiast ogniska.
+#  - E3: plama skał (15–19, 50–53) to las; wschodni pas (40–53 × 20–50) bez
+#    łat łąki i kałuż — bagno, las i jedno jezioro.
+#  - F3: wieże widokowe 4 → 2, wiatraki 5 → 2, wozy 4 → 2, portale (para)
+#    rozsunięte i z dala od drogi.
+#  - G2: klaster (7–12, 27) i (29–33, 27–29) rozebrany.
+#  - G4: płaskowyż wroga w tle to ciemne wrzosowisko (`TEKSTURY['jalowa']`).
+R6_USUN = [
+    # dolina (G1)
+    (12, 53), (13, 53), (7, 51), (18, 39), (15, 37), (14, 43), (21, 49),
+    (22, 39), (24, 42), (23, 42),
+    # kraina wroga (G1)
+    (27, 3), (28, 3), (28, 8), (29, 8), (37, 3), (38, 3), (40, 1), (43, 5), (35, 3),
+    (19, 8), (12, 12), (15, 12), (8, 1),
+    # F3/G2: wieże, wiatraki, wozy, gniazdo, portale, ognisko na rozstajach
+    (31, 23), (26, 30), (29, 29), (20, 26), (9, 27), (11, 27), (32, 27), (25, 24),
+    (49, 38), (15, 25), (26, 48),
+    # stos za mostem idzie do zakątka w lesie (C1/F1)
+    (32, 45), (33, 45),
+    # F3/G1: drugi wóz (sklepik) i ognisko z gęstego południowego wschodu
+    (41, 47), (44, 44),
+]
+
+#: Teren: las, skały, woda, bagno.
+R6_LAS = [
+    # korytarz przed zachodnim zakątkiem wroga
+    (8, 9), (9, 11), (10, 11), (9, 13), (10, 13),
+    # korytarz stosu NE
+    (33, 4), (34, 4),
+]
+#: Kępy lasu na pustych połaciach (E4, gęstość obiektów na pole przejezdne):
+#: płaskowyż na wschód od warowni i kąt doliny za stosem (22–23, 49).
+R6_LAS += [(x, y) for y in range(5, 9) for x in range(28, 31)]
+R6_LAS += [(x, y) for y in range(51, 54) for x in range(21, 25)]
+R6_LAS += [(x, y) for y in (13, 14) for x in range(17, 21)] + [(x, 12) for x in range(18, 20)]
+R6_SKALY = [(x, y) for y in range(39, 43) for x in (21, 22, 26)]
+R6_STAW = [(41, 28), (42, 28), (41, 29), (42, 29), (43, 29), (42, 30), (43, 30), (43, 28)]
+
+#: Wschodni trakt: stare schodki precz, nowy przebieg (D3).
+R6_TRAKT_PRECZ = [(41, 30), (42, 29), (43, 28)]
+R6_TRAKT = [(40, 31), (41, 31), (42, 31), (43, 31), (44, 30), (44, 29), (44, 28)]
+
+#: Odnogi do kopalń (D1): lista pól drogi.
+R6_ODNOGI = [
+    [(24, 43), (24, 42), (24, 41)],                 # kopalnia pokeballi doliny
+    [(12, 27), (11, 26), (10, 25)],                 # kopalnia pokeballi trzęsawiska
+]
+#: Odnoga do sadu (4,45) spod bramy zamku: pod rysunkiem zamku nie idzie.
+R6_ODNOGA_SADU = [(9, 48), (8, 48), (7, 47), (6, 47), (5, 46)]
+
+#: Zakątek w lesie za mostem: wnętrze (łąka), las domykający, straż w wejściu.
+R6_ZAKATEK_MOST = [(x, y) for y in (46, 47) for x in range(33, 36)] + [(32, 46)]
+R6_ZAKATEK_MOST_LAS = [(33, 45), (34, 45), (35, 45), (36, 46), (36, 47), (33, 48), (34, 48), (35, 48), (32, 47)]
+
+R6_OBIEKTY = [
+    ((32, 46), ('potwor', 'slaby')),
+    ((35, 46), ('skrzynia', None)),
+    ((35, 47), ('surowiec', 'jagoda')),
+    ((34, 47), ('artefakt', None)),
+    ((23, 49), ('skrzynia', None)),
+    ((24, 40), ('kopalnia', 'pokeball')),
+    ((24, 42), ('potwor', 'slaby')),
+    ((36, 3), ('potwor', 'silny')),
+    # kamienna wieża na rozstajach
+    ((25, 24), ('budynek', 'kamienna-wieza')),
+]
+
+#: Budowle: rodzaj i prostokąt (`_miejsce`).
+R6_BUDOWLE = [
+    ('portal', (16, 24, 19, 27)),            # zachodnie trzęsawisko, przy rozstajach
+    ('portal', (33, 38, 38, 42)),            # łąka za mostem
+    ('ranczo', (33, 22, 39, 24)),            # z doliny — za trzęsawisko
+    ('wiatrak', (24, 28, 29, 30)),           # jeden z dwóch, na otwartym bagnie
+    ('drzewo-wiedzy', (23, 8, 26, 11)),      # z doliny — na płaskowyż pod warownię
+    # B4: budowle zamiast części stosów (surowce ≤ 25 %, budowle ≥ 25 %)
+    ('chatka', (28, 21, 31, 23)),
+    ('gniazdo', (24, 30, 27, 30)),
+    ('zrodlo', (12, 22, 15, 26)),
+    ('chatka', (48, 32, 51, 39)),
+    ('ognisko', (24, 46, 26, 48)),
+]
+
+#: Stosy (1–3 rzeczy obok siebie) w chudych miejscach: prostokąt i zawartość.
+R6_STOSY = [
+    ((33, 22, 39, 25), [('skrzynia', None), ('surowiec', 'jagoda')]),
+    ((4, 25, 9, 26), [('surowiec', 'jagoda')]),
+    ((21, 24, 22, 25), [('surowiec', 'pokeball')]),
+    ((28, 27, 31, 28), [('surowiec', 'odlamek')]),
+    ((17, 3, 20, 5), [('skrzynia', None), ('surowiec', 'odlamek')]),
+    ((24, 11, 26, 12), [('surowiec', 'jagoda'), ('skrzynia', None)]),
+    ((13, 26, 17, 27), [('surowiec', 'kamien'), ('skrzynia', None)]),
+]
+
+
+def _kupka(g, prost, wpisy):
+    """Stos obok siebie (poziomo) na wolnym gruncie w prostokącie: nie na
+    drodze, nie w pasie nad budowlą, ≥ 2 od innych obiektów."""
+    x0, y0, x1, y1 = prost
+    m = g.mapa
+    budowle = [q for q, w in g.obiekty if w[0] in ('budynek', 'kopalnia', 'jasnowidz')]
+    wszystkie = [q for q, _ in g.obiekty]
+    zajete = set(wszystkie) | g.blokada
+    n = len(wpisy)
+
+    def wolne(p):
+        x, y = p
+        return (g.w(x, y) and m[y][x] in '.bj,' and p not in zajete and not g.ciasne(x, y)
+                and not any(abs(q[0] - x) <= 1 and 1 <= q[1] - y <= 2 for q in budowle)
+                and all(max(abs(x - q[0]), abs(y - q[1])) >= 2 for q in wszystkie))
+
+    sx, sy = (x0 + x1) / 2, (y0 + y1) / 2
+    for _, (x, y) in sorted((abs(x - sx) + abs(y - sy), (x, y)) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1)):
+        pola = [(x + i, y) for i in range(n)]
+        if all(wolne(p) for p in pola):
+            for p, w in zip(pola, wpisy):
+                g.postaw(p, w)
+            return pola
+    print(f'  runda 6: brak miejsca na stos w {prost}')
+    return []
+
+
+def runda_6(g):
+    m = g.mapa
+    zabrane = _usun(g, R6_USUN)
+    _odswiez(g)
+
+    # --- teren -------------------------------------------------------------
+    for x, y in R6_LAS:
+        if m[y][x] != '=':
+            m[y][x] = 'T'
+    for x, y in R6_ZAKATEK_MOST:
+        m[y][x] = '.'
+    for x, y in R6_ZAKATEK_MOST_LAS:
+        m[y][x] = 'T'
+    for x, y in R6_SKALY:
+        if m[y][x] != '=':
+            m[y][x] = '#'
+    # E3: plama skał w dole doliny → las (jedna bryła z lasem obok).
+    for y in range(50, BOK):
+        for x in range(14, 21):
+            if m[y][x] == '#':
+                m[y][x] = 'T'
+    # D3: staw w trójkącie między traktem a jeziorem, trakt jego brzegiem.
+    for x, y in R6_TRAKT_PRECZ:
+        m[y][x] = 'b'
+    for x, y in R6_STAW:
+        m[y][x] = '~'
+    for x, y in R6_TRAKT:
+        m[y][x] = '='
+    # Ścieżka w dół doliny kończy się przy kopalni kamieni, nie na pustym.
+    if m[52][13] == '=':
+        m[52][13] = '.'
+        m[52][12] = '='
+    for odnoga in R6_ODNOGI:
+        for x, y in odnoga:
+            m[y][x] = '='
+    # E3: wschodni pas — łąka w bagno, kałuże do 8 pól w grunt wokół, pola
+    # bagna wciśnięte w jezioro (≥ 5 sąsiadów wody) pod wodę.
+    wschod = lambda x, y: x >= 40 and 20 <= y <= 50
+    for y in range(BOK):
+        for x in range(BOK):
+            if wschod(x, y) and m[y][x] == '.':
+                m[y][x] = 'b'
+    for zn, sk in list(_skladowe(m, '~', 8)):
+        if len(sk) <= 8 and all(wschod(x, y) for x, y in sk):
+            for x, y in sk:
+                m[y][x] = 'b'
+    zajete = {p for p, _ in g.obiekty} | g.blokada
+    for y in range(20, 51):
+        for x in range(40, BOK - 1):
+            if m[y][x] != 'b' or (x, y) in zajete:
+                continue
+            woda = sum(1 for dy in (-1, 0, 1) for dx in (-1, 0, 1)
+                       if (dx or dy) and m[y + dy][x + dx] == '~')
+            if woda >= 5:
+                m[y][x] = '~'
+    _odswiez(g)
+
+    # --- obiekty -----------------------------------------------------------
+    for p, w in R6_OBIEKTY:
+        if m[p[1]][p[0]] not in '.,bj=':
+            m[p[1]][p[0]] = '.'
+        g.postaw(p, w)
+    _odswiez(g)
+    for x, y in R6_ODNOGA_SADU:
+        m[y][x] = '='
+    for b, prost in R6_BUDOWLE:
+        p = _miejsce(g, prost)
+        if p is None:
+            print(f'  runda 6: brak miejsca na {b} w {prost}')
+            continue
+        g.postaw(p, ('budynek', b))
+    _odswiez(g)
+    for prost, wpisy in R6_STOSY:
+        _kupka(g, prost, wpisy)
+    _odswiez(g)
+    g.zasyp_odciete(m)
+    print(f'  runda 6: brak miejsca na stos w {prost}')
+    return []
+
+
+def runda_6(g):
+    m = g.mapa
+    zabrane = _usun(g, R6_USUN)
+    _odswiez(g)
+
+    # --- teren -------------------------------------------------------------
+    for x, y in R6_LAS:
+        if m[y][x] != '=':
+            m[y][x] = 'T'
+    for x, y in R6_ZAKATEK_MOST:
+        m[y][x] = '.'
+    for x, y in R6_ZAKATEK_MOST_LAS:
+        m[y][x] = 'T'
+    for x, y in R6_SKALY:
+        if m[y][x] != '=':
+            m[y][x] = '#'
+    # E3: plama skał w dole doliny → las (jedna bryła z lasem obok).
+    for y in range(50, BOK):
+        for x in range(14, 21):
+            if m[y][x] == '#':
+                m[y][x] = 'T'
+    # D3: staw w trójkącie między traktem a jeziorem, trakt jego brzegiem.
+    for x, y in R6_TRAKT_PRECZ:
+        m[y][x] = 'b'
+    for x, y in R6_STAW:
+        m[y][x] = '~'
+    for x, y in R6_TRAKT:
+        m[y][x] = '='
+    # Ścieżka w dół doliny kończy się przy kopalni kamieni, nie na pustym.
+    if m[52][13] == '=':
+        m[52][13] = '.'
+        m[52][12] = '='
+    for odnoga in R6_ODNOGI:
+        for x, y in odnoga:
+            m[y][x] = '='
+    # E3: wschodni pas — łąka w bagno, kałuże do 8 pól w grunt wokół, pola
+    # bagna wciśnięte w jezioro (≥ 5 sąsiadów wody) pod wodę.
+    wschod = lambda x, y: x >= 40 and 20 <= y <= 50
+    for y in range(BOK):
+        for x in range(BOK):
+            if wschod(x, y) and m[y][x] == '.':
+                m[y][x] = 'b'
+    for zn, sk in list(_skladowe(m, '~', 8)):
+        if len(sk) <= 8 and all(wschod(x, y) for x, y in sk):
+            for x, y in sk:
+                m[y][x] = 'b'
+    zajete = {p for p, _ in g.obiekty} | g.blokada
+    for y in range(20, 51):
+        for x in range(40, BOK - 1):
+            if m[y][x] != 'b' or (x, y) in zajete:
+                continue
+            woda = sum(1 for dy in (-1, 0, 1) for dx in (-1, 0, 1)
+                       if (dx or dy) and m[y + dy][x + dx] == '~')
+            if woda >= 5:
+                m[y][x] = '~'
+    _odswiez(g)
+
+    # --- obiekty -----------------------------------------------------------
+    for p, w in R6_OBIEKTY:
+        if m[p[1]][p[0]] not in '.,bj=':
+            m[p[1]][p[0]] = '.'
+        g.postaw(p, w)
+    _odswiez(g)
+    for x, y in R6_ODNOGA_SADU:
+        m[y][x] = '='
+    for b, prost in R6_BUDOWLE:
+        p = _miejsce(g, prost)
+        if p is None:
+            print(f'  runda 6: brak miejsca na {b} w {prost}')
+            continue
+        g.postaw(p, ('budynek', b))
+    _odswiez(g)
+    for prost, wpisy in R6_STOSY:
+        _kupka(g, prost, wpisy)
+    _odswiez(g)
+    g.zasyp_odciete(m)
+    import os
+    if os.environ.get('R6_DEBUG'):
+        for y in range(BOK):
+            ob = {q: w[0][0].upper() for q, w in g.obiekty}
+            print('%3d ' % y + ''.join(ob.get((x, y)) or ('o' if _miejsce(g, (x, y, x, y)) else m[y][x]) for x in range(BOK)))
+    print(f'  runda 6: usunięte {len(zabrane)}, obiektów {len(g.obiekty)}')
+
+
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 // Źródło: tools/mapy/bagna.py (szkic i rozstawienie), silnik: tools/generuj_mape.py.
 //
@@ -1639,7 +1943,9 @@ BARWY_TERENU = {
     # Runda 9: bez jaśniejszej jezdni z `obwodka_drogi` bruk jaśniejszy tu.
     'sciezka': {'nasycenie': 0.8, 'barwa': (160, 145, 120), 'moc': 0.2, 'jasnosc': 1.32},
     # Runda 4 pętli (G4): ciemna, sina ziemia krainy wroga (`TLO`).
-    'jalowa': {'nasycenie': 0.45, 'barwa': (62, 84, 96), 'moc': 0.8, 'jasnosc': 0.62},
+    # Runda 6 pętli (G4): wrzosowisko płaskowyżu — ciemny, chłodny brąz,
+    # wyraźnie inny niż oliwkowa łąka doliny.
+    'jalowa': {'nasycenie': 0.6, 'barwa': (112, 92, 80), 'moc': 0.7, 'jasnosc': 0.6},
 }
 
 #: Po rundzie 1 ślepego porównania („bagno to brązowa plama w kolorze drogi"):
@@ -1659,7 +1965,10 @@ TEKSTURY = {'bagno': ['bloto', 'bagno'], 'woda': ['woda-czarna', 'woda-bagno', '
             # kamień — miękkie podnóże rysunku przechodzi w nią, a nie w kratę.
             'skaly': ['las'],
             # Runda 4 pętli (G4): grunt krainy wroga — ciemna trawa.
-            'jalowa': ['trawa-3', 'trawa'],
+            # Runda 6 (G4: „płaskowyż wroga w grze to zielona łąka niewiele
+            # ciemniejsza od doliny"): suche wrzosowisko z kamieniami
+            # (`teren-tundra`), zabarwione na ciemny, chłodny brąz.
+            'jalowa': ['tundra', 'trawa-3', 'trawa'],
             # Runda 5 pętli (G3): ściółka pod lasem (`TLO`, znak `s`).
             'snieg': ['trawa-3', 'trawa']}
 

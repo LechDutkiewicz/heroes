@@ -63,6 +63,40 @@ Runda 5 buildera (po werdykcie r4: wygrana ślepo, 15 TAK / 13 CZĘŚCIOWO /
   Szpalery samych sprite'ów wierzb zostają (to scena/klocki, nie plansza).
 - Sondy Bagien OK, `probe-misja` OK, bez bitwy 23 %, pasy [22, 16, 32, 24, 27].
 
+Runda 6 buildera (po werdykcie r5: wygrana ślepo, 21 TAK / 8 CZĘŚCIOWO /
+1 NIE). Funkcja `runda_6(g)` po `runda_5` (+ `_kupka` — stos obok siebie
+na wolnym gruncie), ten sam styl.
+- **G1**: ekran zamku (0–20 × 36–53) 14 → 8 obiektów / 1 straż (dwie
+  kopalnie bez straży, surowiec i skrzynia przy trakcie, kopalnia kamieni
+  ze strażą (10,51), zakątek SW: skrzynia + artefakt). Ranczo, drzewo
+  wiedzy, wiatrak, wieża (21,49), stos (12–13, 53) i (7,51) precz/dalej.
+  Ekran wroga (27–48 × 0–12) 18 → 10 (stosy (27–29, 3–8), połowa stosu NE,
+  ognisko (40,1), skrzynia wyspy). Najrzadszy ekran 21 × 18 ma 5.
+- **C1**: straż (8,12) w korytarzu lasu (7–10, 12); stos NE za korytarzem
+  (33–36, 3) (las (33–34, 4)), straż w wylocie (36,3); kopalnia pokeballi
+  doliny (24,42) → (24,40) w niszy (skały x 21–22 i 26, y 39–42), straż
+  (24,42) w wylocie — 3 × 3 nie sięga traktu (wiersz 44). Scena rysuje te
+  skały jak krzaki/wierzby, nie góry.
+- **D1**: odnogi: brama zamku → sad (4,45) przez (9,48)–(5,46); trakt →
+  nisza (24,43–41); grobla → kopalnia (10,24) przez (12,27)–(10,25);
+  ścieżka w dół doliny kończy się przy kopalni kamieni (12,52).
+- **D3**: trakt wschodni: schodki (41,30)–(43,28) precz, w trójkąt staw
+  (41–43, 28–30) zlany z jeziorem; trakt pionem przy kopalni (36,33),
+  wierszem 31 do (43,31) i brzegiem x=44 w górę. Rozstaje (27,24): kamienna
+  wieża (jedyna) na (25,24) zamiast ogniska.
+- **E3**: skały (15–19, 50–53) → las; wschodni pas (x ≥ 40, y 20–50): łąka
+  → bagno, kałuże ≤ 8 pól zasypane, pola bagna wciśnięte w jezioro → woda.
+- **F3/G2**: wieże 4 → 2 ((11,3), (39,39)), wiatraki 5 → 2 ((47,24) +
+  (29,29)), wozy 4 → 1, portale (para, zostają) z drogi na (17,25) i (38,42).
+  Klaster (7–12, 27) i (29–33, 27–29) rozebrany. Nowy zakątek w lesie za
+  mostem (33–35, 46–47): straż (32,46), skrzynia, jagody, artefakt.
+- **G4**: `TEKSTURY['jalowa']` = `tundra` w ciemnym, chłodnym brązie —
+  płaskowyż wroga i wyspa w grze wyraźnie brązowe, nie zielone.
+- Liczby: 113 obiektów, co 11,1 pola (las 38 %), budowle 27 (24 %),
+  surowce 30, skrzynie 21, straże 15; pasy [15, 25, 31, 24, 18], bez bitwy
+  22 %. Kafle 18 × 18: 7–16. Okno 21 × 18 przy (30–50, 33–50) ma 23
+  obiekty i 5 straży — najgęstsze, nie zbite. Sondy Bagien OK, probe-misja OK.
+
 ## Pokémart — sklep z przedmiotami zamiast gildii magów (2026-09-29)
 
 **Co jest.** Plecak trenera przestał się napełniać sam przed każdą bitwą —
