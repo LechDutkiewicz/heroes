@@ -53,6 +53,13 @@ się jako trzeci, piaszczysty bród. Ekran startowy: 10 obiektów z zamkiem,
 suchym, wschodnim brzegu; straż plaży i straż mostu mają ściany lasu po obu
 stronach. Kopalnie gracza bez dubla kamienia: kamieniołom, sad, jaskinia
 odłamków w kieszeni, sad na północnej łące, złoto na plaży.
+
+Runda 15 (werdykt r4: przegrana ślepo, 22 TAK / 7 CZĘŚCIOWO / 1 NIE — G1;
+„za rzadka, pas sporny najchudszy"). Obiekt co 8,9 pola (64), pas sporny
+(północna łąka za strażą (9, 17) i łąka za mostem) jest najbogatszy, ekran
+startowy ma 7 rzeczy i straż mostu. Kopalnia odłamków stoi w dolinie bez
+straży, jaskinia (19, 30) i plaża mają odnogi traktu, wróg ma sad (24, 15).
+Skały wokół fortu tworzą dwa grzbiety zamiast rozsypanych kopców.
 """
 
 import math
@@ -218,6 +225,11 @@ PUNKTY = {
     'zamek wroga': (30, 13),
     # Runda 12 (F1): południowa odnoga kończy się na skrzyni, nie w lesie.
     'poludniowy wschod': (30, 28),
+    # Runda 15 (D1): odnogi traktu do kopalń — odłamki za zamkiem, jaskinia
+    # w kieszeni za mostem (wzdłuż brzegu, 17, 26–30), plaża ze złotem.
+    'kopalnia domu': (5, 29),
+    'jaskinia': (19, 31),
+    'plaza': (12, 5),
 }
 
 #: Drogi. Główna prowadzi z zamku przez południowy bród pod sam fort — gracz,
@@ -227,6 +239,9 @@ SZLAKI = [
     ['zamek gracza', 'start', 'brod zachod', 'brod wschod', 'wschodnia laka', 'zamek wroga'],
     ['brod zachod', 'polnocna laka', 'brod polnocny zachod', 'brod polnocny wschod', 'zamek wroga'],
     ['wschodnia laka', 'poludniowy wschod'],
+    ['zamek gracza', 'kopalnia domu'],
+    ['brod wschod', 'jaskinia'],
+    ['polnocna laka', 'plaza'],
 ]
 
 #: Runda 12: granica krainy wroga — wiersz, do którego (włącznie) sięga za
@@ -473,6 +488,30 @@ def popraw_teren(g, mapa):
             for x in range(x0, x1 + 1):
                 if mapa[y][x] in '.,jT':
                     mapa[y][x] = '#'
+    # Runda 15 (E4): misa fortu bez rozsypanych kopców, skały w dwóch
+    # grzbietach (`GRZBIETY_FORTU`).
+    def w_grzbiecie(x, y):
+        return any(a <= x <= c and b <= y <= d for a, b, c, d in GRZBIETY_FORTU)
+
+    mx0, my0, mx1, my1 = MISA_FORTU
+    for y in range(my0, my1 + 1):
+        for x in range(mx0, mx1 + 1):
+            if mapa[y][x] == '#' and strefa(x, y) == 'wroga' and not w_grzbiecie(x, y):
+                mapa[y][x] = 'j'
+    for x0, y0, x1, y1 in GRZBIETY_FORTU:
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                if mapa[y][x] in '.,jT':
+                    mapa[y][x] = '#'
+    for x, y in KARCZUNEK_RANCZA:
+        if mapa[y][x] == 'T':
+            mapa[y][x] = '.'
+    # Runda 15 (B4, E2): polana w lesie SE.
+    x0, y0, x1, y1 = POLANA_SE
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            if mapa[y][x] in 'T#':
+                mapa[y][x] = '.'
 
 
 #: Runda 13 (G4): masyw zamykający krainę wroga od południa (x0, y0, x1, y1).
@@ -480,12 +519,31 @@ SKALY_WROGA = [(22, 16, 29, 17)]
 
 FORT = PUNKTY['zamek wroga']
 
+#: Runda 15: wiersz szczeliny w lesie nad doliną domu — północ od niego to
+#: już pas sporny (patrz `strefa`).
+PRZELECZ_DOMU_Y = 16
+
+#: Runda 15 (E4): skały wokół fortu jednym pasmem — grzbiet północny
+#: (27–30, 2–4), który z przesmykiem (31, 5) zamyka róg NE, i grzbiet
+#: wschodni (33–35, 6–14) schodzący do masywu granicy. Pojedyncze kopce
+#: w misie fortu (25, 3), (27–28, 12–15), (28–29, 5), (32, 6–7) znikają.
+GRZBIETY_FORTU = [(27, 2, 30, 4), (33, 6, 35, 14)]
+MISA_FORTU = (23, 3, 34, 14)
+
+#: Runda 15 (B4, E2): polana w martwym masywie lasu na południowym wschodzie
+#: (x0, y0, x1, y1) — wejście od końca odnogi (30, 30–31), w środku ośrodek
+#: ewolucji i stos.
+POLANA_SE = (25, 30, 29, 33)
+
 
 def strefa(x, y):
     """Za rzeką zaczyna się „pogranicze", a za pasem lasu (wiersze 15–17)
     na północ — kraina wroga (runda 12: granica stref = granica terenu)."""
     if x < rzeka_x(y):
-        return 'dom'
+        # Runda 15 (E2, G1): północna łąka za strażą przełęczy (9, 17) to pas
+        # sporny, nie dom — dolina domu kończy się na grzbiecie lasu w wierszu
+        # 16. Tak liczy ją krytyk („pas sporny z pustą zachodnią łąką").
+        return 'pogranicze' if y <= PRZELECZ_DOMU_Y else 'dom'
     if y <= GRANICA_WROGA:
         return 'wroga'
     return 'pogranicze'
@@ -579,10 +637,10 @@ PIERWSZY_EKRAN_DOM = [
     # Runda 12 (G2): skrzynia leżała na trakcie tuż przed mostem — teraz
     # w stosie z odłamkami przy kopalni.
     ([(11, 28), (10, 29)], ('skrzynia', None)),
-    # Runda 14 (B2): skrzynia (9, 34) i koszyk (6, 30) leżały w bezdrożnym
-    # lesie SW — teraz stos na końcu odnogi, za sadem.
-    ([(14, 33), (15, 33), (15, 34)], ('skrzynia', None)),
-    ([(14, 34), (13, 34), (14, 35)], ('surowiec', 'jagoda')),
+    # Runda 15 (A2, G1): kopalnia odłamków w dolinie, bez straży, za zamkiem
+    # na końcu krótkiej odnogi traktu. Stos skrzynia + jagoda spod sadu
+    # (14, 33–34) poszedł na zachodnią łąkę (`LAKA_POLNOCNA`).
+    ([(5, 28), (4, 28), (6, 28)], ('kopalnia', 'odlamek')),
 ]
 
 #: Runda 13 (B1): jaskinia odłamków stała na północnej łące. Runda 14 (B1):
@@ -609,6 +667,29 @@ STOS_POGRANICZA = [
     ([(25, 24), (24, 24)], ('surowiec', 'odlamek')),
 ]
 
+#: Runda 15 (B2, B3, E2): północna łąka (pas sporny za strażą (9, 17)) —
+#: budowle i stosy po 2–3 na stałych miejscach. Zachodnia łąka (2–7, 9–15)
+#: dostaje stos spod sadu i wędrowny sklepik przy domku na drzewie.
+LAKA_POLNOCNA = [
+    ([(6, 9), (5, 9)], ('budynek', 'zrodlo')),
+    ([(3, 10), (3, 11)], ('budynek', 'chatka')),
+    ([(5, 12), (6, 12), (6, 11)], ('budynek', 'woz')),
+    ([(5, 14), (6, 14)], ('skrzynia', None)),
+    ([(4, 15), (4, 14)], ('surowiec', 'jagoda')),
+    ([(6, 15), (7, 15)], ('surowiec', 'pokeball')),
+    ([(10, 13), (9, 13)], ('budynek', 'oboz-treningowy')),
+    ([(12, 12), (12, 13)], ('skrzynia', None)),
+    ([(11, 12), (13, 13)], ('surowiec', 'odlamek')),
+    ([(15, 12), (15, 13)], ('budynek', 'drzewo-wiedzy')),
+    ([(13, 15), (14, 15)], ('budynek', 'gniazdo')),
+    ([(18, 11), (17, 11)], ('surowiec', 'pokeball')),
+    ([(17, 12), (18, 12)], ('skrzynia', None)),
+    ([(15, 9), (15, 8)], ('surowiec', 'kamien')),
+    ([(16, 9), (16, 8)], ('surowiec', 'odlamek')),
+    ([(16, 14), (16, 13)], ('skrzynia', None)),
+    ([(16, 15), (15, 14)], ('surowiec', 'jagoda')),
+]
+
 #: Runda 12: plaża nad jeziorem — kieszeń za strażą (12, 6).
 #: Runda 13 (C1, C3): obóz łowców (złoto) wcięty w skałki plaży — straż
 #: (12, 6) pilnuje całej kieszeni: kopalni, artefaktu i skrzyni. Dotąd obóz
@@ -617,7 +698,7 @@ PLAZA_SKARB = [
     ([(10, 4), (10, 3), (9, 4)], ('kopalnia', 'pokeball')),
     ([(13, 4), (12, 4), (13, 3)], ('artefakt', None)),
     ([(12, 3), (13, 3), (12, 4)], ('skrzynia', None)),
-    ([(8, 4), (8, 3), (9, 3)], ('surowiec', 'kamien')),
+    ([(8, 4), (8, 3), (9, 3), (11, 4)], ('surowiec', 'kamien')),
 ]
 
 #: Runda 12: nagrody krainy wroga — za brodem i przy forcie, w stosach po
@@ -631,9 +712,16 @@ KRAINA_WROGA = [
     ([(24, 5), (25, 4), (24, 4)], ('budynek', 'ognisko')),
     # Runda 13 (G2): stos przy forcie odsunięty od jego rysunku — skrzynia
     # (33, 9) dotykała flagi fortu (32, 9).
-    ([(34, 11), (33, 11)], ('surowiec', 'kamien')),
-    ([(35, 11), (35, 10)], ('surowiec', 'pokeball')),
-    ([(35, 9), (35, 10)], ('skrzynia', None)),
+    # Runda 15 (E4): stos spod wschodniego grzbietu (34–35, 9–11) przeniesiony
+    # na zachodnią stronę fortu, gdzie stały kopce (27–28, 12–14), z dala
+    # od jego dachu i od dachu sadu.
+    ([(23, 12), (23, 11)], ('skrzynia', None)),
+    ([(27, 14), (26, 12)], ('surowiec', 'pokeball')),
+    # Runda 15 (B1): sad wroga wcięty w masyw granicy, w misie fortu.
+    ([(24, 15), (23, 15), (25, 15)], ('kopalnia', 'jagoda')),
+    # Runda 15 (B3): stos pod północnym grzbietem, przy trakcie z mostu.
+    ([(28, 6), (28, 7)], ('skrzynia', None)),
+    ([(29, 7), (29, 6)], ('surowiec', 'odlamek')),
 ]
 
 #: Runda 12: róg NE (31–35, 1–5) za skałami — kieszeń za strażą (31, 5).
@@ -653,9 +741,24 @@ ROG_SKARB = [
 LAKA_POGRANICZA = [
     ([(28, 20), (28, 19), (27, 20)], ('kopalnia', 'kamien')),
     ([(32, 21), (32, 20), (33, 21)], ('surowiec', 'pokeball')),
+    # Runda 15 (B2): pokeballe nie leżą same — stos z jagodami.
+    ([(33, 21), (33, 22), (31, 21)], ('surowiec', 'jagoda')),
     ([(32, 24), (31, 24), (32, 25)], ('budynek', 'arena')),
     ([(30, 26), (29, 26), (30, 27)], ('budynek', 'wiatrak')),
 ]
+
+#: Runda 15 (B4, E2): polana w lesie SE (`POLANA_SE`).
+POLANA_SE_OBIEKTY = [
+    ([(28, 31), (27, 31)], ('budynek', 'osrodek-ewolucji')),
+    ([(25, 32), (25, 31)], ('skrzynia', None)),
+    ([(26, 33), (25, 33)], ('surowiec', 'odlamek')),
+    ([(26, 30), (25, 30)], ('artefakt', None)),
+]
+
+#: Runda 15 (B4): ranczo w wykarczowanym rogu łąki pogranicza (32–34, 18–19),
+#: pod lasem przełęczy fortu.
+RANCZO = [(33, 19), (32, 19)]
+KARCZUNEK_RANCZA = [(34, 18), (32, 19), (33, 19), (34, 19)]
 
 #: Runda 12 (F2): chata jasnowidza przy rozstajach za mostem — widać ją
 #: z traktu, prosi o kamienie, po które trzeba iść do krainy wroga i wrócić.
@@ -691,8 +794,6 @@ def postaw_kadr(g, miejsca, wpis):
 
 
 def rozstaw(g):
-    rng = g.rng
-
     # --- DOLINA DOMU -------------------------------------------------------
     # Pierwsze dwa dni: stosy przy zamku, skrzynia i dwie kopalnie podstawowe
     # bez straży. Dziecko ma zobaczyć nagrodę za każdy krok, zanim zobaczy
@@ -746,11 +847,11 @@ def rozstaw(g):
     # Runda 14 (G2, F3): bez ogniska (stoi w krainie wroga), a każda
     # budowla co najmniej trzy pola od innych rzeczy — gniazdo, obóz
     # i stos odłamków stały w jednej kupce, źródło dach w dach z ogniskiem.
-    for b in ['drzewo-wiedzy', 'zrodlo', 'gniazdo', 'chatka', 'oboz-treningowy']:
-        g.dodaj(1, 'dom', (4, 30), lambda p, b=b: ('budynek', b), odstep=3)
-    # Runda 14 (G2): stosy łąki też z odstępem — nie przyklejone do budowli.
-    g.dodaj(2, 'dom', (8, 30), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'pokeball'])), odstep=2)
-    g.dodaj(1, 'dom', (8, 30), lambda p: ('skrzynia', None), odstep=2)
+    # Runda 15 (B2, B3, E2): północna łąka rozstawiona ręcznie
+    # (`LAKA_POLNOCNA`) — losowanie zostawiało pustą zachodnią łąkę
+    # i samotne pokeballe.
+    for miejsca, wpis in LAKA_POLNOCNA:
+        postaw_kadr(g, miejsca, wpis)
     # Kieszeń domu bywa po rundzie 4 ciasna (rzeka skręca przez dolinę):
     # gdy każde miejsce w niej zatyka drogę, skarb w kieszeni odpada.
     try:
@@ -785,8 +886,9 @@ def rozstaw(g):
     # Runda 14 (G2, F3, B1): łąka pogranicza rozstawiona ręcznie
     # (`LAKA_POGRANICZA`) — losowanie zsypywało kopalnię, dwa stosy jagód,
     # ognisko, gniazdo i skrzynię w jedną kolumnę pod przełęczą fortu.
-    for miejsca, wpis in LAKA_POGRANICZA:
+    for miejsca, wpis in LAKA_POGRANICZA + POLANA_SE_OBIEKTY:
         postaw_kadr(g, miejsca, wpis)
+    postaw_kadr(g, RANCZO, ('budynek', 'ranczo'))
     # Kieszeń pogranicza: artefakt i skrzynie za jedną średnią strażą (C1, B4).
     kieszen = iter([('artefakt', None), ('skrzynia', None), ('surowiec', 'kamien')])
     try:
