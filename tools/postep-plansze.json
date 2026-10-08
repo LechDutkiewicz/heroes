@@ -1,7 +1,7 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-08 05:34",
+  "aktualizacja": "2026-10-08 09:48",
   "kawalki": [
     {
       "id": "polana",
@@ -552,7 +552,7 @@
     {
       "id": "twierdza",
       "tytul": "Twierdza (misja 4, 72×72)",
-      "status": "critic",
+      "status": "build",
       "opis": "Zima, trzy pasy i skalny grzbiet między dolinami dwóch twierdz.",
       "rundy": [
         {
@@ -665,6 +665,28 @@
             }
           ],
           "zmiana": "Przeciek po skosie przy Straży Międzyjezierza zatkany skałą; portale za strażami. Lista ZATOKI: zatoki kopalń w dolinach twierdz i tundrze z murem szczelnym po skosie i 1–2-polowym wejściem w zasięgu straży; 12 straży z otwartego terenu usuniętych. Artefakty w krainie wroga tylko za wodzami (relikty, ośrodek ewolucji), nowy skarbiec NW z wodzem. Nowe obiekty w dolinach twierdz i tundrze, losowanie nie trafia do domu; dolina gracza cała w tundrze; kałuże zasypane. 233 obiekty, obiekt co 10,9 pola, strefy 67/88/78, bez bitwy 25 %, pasy [25,44,54,59,51]."
+        },
+        {
+          "nr": 4,
+          "wzorzec": "Unexpected Inheritance (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 22,
+            "CZESCIOWO": 8,
+            "NIE": 0
+          },
+          "luka": "Nagrody na pograniczu są rozsypane zamiast zebrane w decyzje. Pas tundry tuż za bramami (x 23–43, y 39–43) i dolina wroga NE (42–62, 0–17) mają po 25–28 obiektów na ekran, z czego wiele to powtarzalne ogniska, chatki, źródła i gniazda (ognisk 12, chatek 11, gniazd 11). Przez to 6–9-latek nie widzi jednej decyzji, a garb nagród przesuwa się na pas 4 zamiast na środek.",
+          "nie": [],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r4-twierdza.png",
+              "opis": "Ślepe A/B: krytyk wybrał A = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-twierdza-r3.png",
+              "opis": "Cała plansza oceniana w rundzie 4"
+            }
+          ]
         }
       ]
     }
