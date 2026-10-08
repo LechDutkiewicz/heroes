@@ -1,7 +1,7 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-08 03:58",
+  "aktualizacja": "2026-10-08 04:12",
   "kawalki": [
     {
       "id": "polana",
@@ -228,7 +228,7 @@
     {
       "id": "bagna",
       "tytul": "Bagna (misja 3, 54×54)",
-      "status": "build",
+      "status": "critic",
       "opis": "Dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca z wodzem.",
       "rundy": [
         {
@@ -334,8 +334,13 @@
             {
               "plik": "tools/shots/caly-bagna-r2.png",
               "opis": "Cała plansza oceniana w rundzie 3"
+            },
+            {
+              "plik": "tools/shots/caly-bagna-r3.png",
+              "opis": "Cała plansza po rundzie 3"
             }
-          ]
+          ],
+          "zmiana": "Środek rozrzedzony o ok. 50 obiektów (zakątki zarosły lasem, drzewo wiedzy przy rozwidleniu grobli); budowle specjalne po jednej; straże na placu zdjęte, silna straż w nowej szyjce przed kątem z namiotem; dolina ma 4 kopalnie bez straży. Północna przeprawa to grobla w wodzie ze strażą; kałuże bez funkcji zasypane, plamy terenu scalone, masywy lasu. Kraina wroga bez bagna, ciemna chłodna trawa. 110 obiektów, obiekt co 12,0 pola, bez bitwy 23 %, 14 straży, każdy ekran 3×3 ma 12–15 obiektów."
         }
       ]
     },
