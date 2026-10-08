@@ -1634,6 +1634,49 @@ najbogatszy). Zmiany tylko w `tools/mapy/twierdza.py`:
   przez obie twierdze (jak od rundy 2). T+# 42 % (checklista 25–40, wzorce
   40–60).
 
+Krytyk rundy 4 (`tools/blind/r4-twierdza-werdykt.md`): wygrana ślepo,
+22 TAK / 8 CZĘŚCIOWO / 0 NIE. Zmiany tylko w `tools/mapy/twierdza.py`:
+
+- **G1/B2 — przerzedzenie**: `ZAKAZ_LOSOWANIA` (losowanie i nadmiar nie
+  stawiają nic) w pasie za bramami (21–43, 36–44) i w dolinie Lodowej
+  Twierdzy (42–62, 0–19). Za bramami zostają jasnowidz (23,39), kopalnie
+  (26,43) i (40,41), chatka (27,41) i stos (33–35, 40) — kopalnia
+  jagód i jasnowidz stoją teraz ręcznie (z losowania sad wypadał po zmianach
+  terenu przy straży zatoki). Z doliny Lodowej zniknęły ognisko, dwa
+  źródła i pięć kupek; chatka jasnowidza krainy wroga ręcznie pod przełęczą
+  (9,19). Ekrany krytyka: wyjście przełęczy 25 → 16, NE 28 → 16, pusty
+  (63–71, 18–35) 3 → 9.
+- **Polana za ranczem** (x 66–69, y 25–28): wycięta w borze, ślepa odnoga
+  traktu (`wschodni zakatek`), średnia straż w wejściu (65,26), za nią
+  ognisko, skrzynia i trzy kupki. Rzeczy zdjęte z doliny Lodowej, których
+  nie ma na polanie, idą przez `PRZENIESIONE` do nadmiaru.
+- **E2**: w pasie 3 nie było wolnego miejsca — polana w borze pod
+  korytarzem wschodniej tundry (54–59, 40–42: wiatrak, wóz, skrzynia,
+  kupka), wiatrak (47,52) i ognisko (60,53) w dolinie, nadmiar przyjmuje
+  też dalszą dolinę gracza (≥ 40 % najdalszego zakątka, pułapy ekranów 16).
+  Pasy 25/44/54/59/51 → 22/38/68/61/44.
+- **C4/A2**: skała x 15–16, y 68–71 — kopalnia pokeballi (14,70) tylko przez
+  wąwóz ze strażą (12,68). **C1**: bez `strzez` i `skarb_w_kieszeni` w dolinie;
+  zaułek NW zamknięty od południa borem (5–6, 52), straż w wejściu (8,50)
+  przed skrzynią i reliktem; stos za borem zamknięty skrajem boru (25–28, 68),
+  straż w wejściu (30,68); kieszeń (63–64, 47–48) bez straży (skrzynia +
+  kupka). Sonda w scratchpadzie: każda straż stoi w przejściu, które dzieli
+  teren na dwie strony.
+- **D3**: skalne garby 3 × 2 i 4 × 3 w osi traktów — (11–13, 16–17),
+  (11–13, 6–7), (57–59, 12–13), (54–57, 25–27), (52–55, 30–31); trakty
+  skręcają, żeby je obejść.
+- **G3**: kopczyki w tundrze to cienkie mury skał (scena kładzie na nich
+  tylko głazy 1 × 1 / 2 × 1). `po_drogach`: w pasie y 24–43 skała spoza
+  pełnych prostokątów 3 × 2 zarasta borem (po wytyczeniu dróg). Naklejki
+  tundry rzadziej (krzak `j` 0,08 → 0,05, `.` 0,07 → 0,05, głazy `s` 0,06 →
+  0,04).
+- Liczby: 233 obiekty, co 10,9 pola; straże 10 %, budynki 30 %, surowce 26 %,
+  skrzynie 21 %; bez bitwy 23 %; strefy dom 76 / pogranicze 89 / wroga 68.
+- Zostało: 21 losowych budowli nie mieści się nigdzie (log „nadmiar: nie
+  zmieścił się") — przy ≥ 3 polach między budowlami plansza jest pełna;
+  ekrany zachodniej doliny i Srebrnej Strażnicy mają po 21. Skrzynie 21 %
+  (checklista 15–20 %).
+
 ## Profile graczy i sloty zapisu (2026-09-26)
 
 Zgłoszenie taty Eli i Janka: „Nowa gra → Kampania" kontynuowała ostatnią

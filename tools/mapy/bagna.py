@@ -737,6 +737,7 @@ def rozstaw(g):
     runda_5(g)
     runda_6(g)
     runda_7(g)
+    runda_8(g)
 
 
 #: Runda 11 (HotA, zwycięzca rundy 10: „nic nie przypomina bagna — stawy małe,
@@ -1376,7 +1377,7 @@ R5_BUDOWLE = [
 ]
 
 
-def _miejsce(g, prost):
+def _miejsce(g, prost, sucho=False):
     """Czyste pole na budowlę w prostokącie: grunt, nie droga, bez drogi pod
     rysunkiem (dwa rzędy wyżej), z dala od innych budowli (3) i obiektów (2),
     nic nie leży w pasie nad nią i ona nie stoi w pasie nad budowlą (G2)."""
@@ -1401,6 +1402,10 @@ def _miejsce(g, prost):
             if any(max(abs(x - q[0]), abs(y - q[1])) < 2 for q in wszystkie):
                 continue
             if any(abs(q[0] - x) <= 1 and 1 <= y - q[1] <= 2 for q in wszystkie):
+                continue
+            # Runda 8 (G2): rysunek budowli nie wchodzi na brzeg wody.
+            if sucho and any(g.w(x + dx, y + dy) and m[y + dy][x + dx] == '~'
+                             for dy in (-2, -1, 0, 1) for dx in (-1, 0, 1)):
                 continue
             otwarte = sum(1 for dy in (-1, 0, 1) for dx in (-1, 0, 1)
                           if g.w(x + dx, y + dy) and m[y + dy][x + dx] in '.bj,=')
@@ -1872,6 +1877,200 @@ def runda_7(g):
     print(f'  runda 7: usunięte {len(zabrane)}, obiektów {len(g.obiekty)}')
 
 
+
+# --- RUNDA 8 PĘTLI (werdykt ślepego porównania r7: przegrana, 20 TAK /
+# 10 CZĘŚCIOWO / 0 NIE) ---------------------------------------------------
+# Krytyk: „las z wyciętymi ścieżkami" (39 % lasu w równych rzędach wierzb),
+# obiekty pojedynczo wzdłuż dróg, najdalszy pas najuboższy (18), straże
+# pogranicza na szerokim bagnie przy rozstajach, a nie w szyjkach.
+#  - C1/C4: przejście traktu ze wschodniego bagna na środek (39–41, 30)
+#    zwężone lasem do 2 pól, w nim małpa z niszy (36,34); małpa zakątka
+#    (41,36) w wylocie (42,36), łupy zakątka jednym stosem w głębi; ognisty
+#    potwór (36,3) w korytarzu (34,3); smok wyspy w jedynej luce muru
+#    skarbca (46,5) (rząd 5 wyspy to las, skarbiec rzędy 3–4).
+#  - G2: straż brodu (12,33) na brzeg (12,35); stacja kolejki (17,25) i wóz
+#    (7,27) z brzegu wody (kolejka na suche, wóz precz).
+#  - D1: ostroga drogi do niszy (24,41–43) precz — straż stoi w wylocie
+#    niszy, nie na końcu drogi; ścieżka w dół doliny kończy się stosem.
+#  - B2: kropki (22–23, 49), (6,52), SE (48–51, 47–49) i zachodnie
+#    trzęsawisko w stosy; samotne surowce środka precz.
+#  - B4/F3: laboratorium (drzewo-wiedzy) zostaje jedno (16,36), wóz jeden
+#    (47,24), obóz jeden (24,36), ranczo jedno (33,23); budowle zwykłe
+#    (ognisko, chatka, gniazdo, automat, wiatrak, punkt widokowy) zamiast
+#    3 skrzyń i 2 artefaktów.
+#  - G3/E4: las 39 % → ok. 31 %: wnętrza masywów to pasma skał (narożnik
+#    NW, grzbiet krainy wroga na zachód i wschód od bramy, płaskowyż wroga,
+#    dół mapy, wschodni skraj); tapeta wierzb (0–10, 18–30) i (44–54,
+#    26–40) poszarpana zatokami trzęsawiska. Las zostaje przy szyjkach.
+#  - G4: wyspa celu piaszczysta (`,`), płaskowyż wroga chłodniejszy.
+#  - E2: skarbiec wyspy i budowle w kątach NE/NW — ostatni pas bogatszy.
+R8_USUN = [
+    (36, 34), (41, 36), (36, 3), (12, 33), (45, 8),        # straże do szyjek
+    (17, 25), (7, 27), (43, 32),                            # kolejka, wóz, obóz
+    (45, 36),                                               # zakątek: stos 3
+    (22, 49), (23, 49), (13, 53), (6, 52),                  # kropki domu
+    (50, 47), (51, 47), (49, 49), (48, 48),                 # SE w stos
+    (11, 30), (34, 43),                                     # skrzynie → budowle
+    (31, 27), (21, 24), (5, 26), (11, 28), (10, 29),        # samotne surowce
+    (45, 5), (47, 4),                                       # wyspa → skarbiec
+    (43, 22), (44, 22),                                     # para w jeziorze (G2)
+    (24, 20), (23, 25),                                     # G1: środek luźniej
+]
+
+#: Budowle podmienione w miejscu (F3: specjalne po jednym).
+R8_PODMIEN = {(25, 9): 'wiatrak', (40, 27): 'chatka', (39, 39): 'gniazdo'}
+
+#: Pola lasu (wąskie gardła i mur skarbca wyspy).
+R8_LAS = [
+    (41, 30),                                               # przejście 2 pola
+    (43, 35), (43, 37),                                     # wylot zakątka
+] + [(x, 5) for x in range(42, 51) if x != 46]              # mur skarbca
+
+#: Ostroga drogi do niszy (24,42) — trakt jej nie potrzebuje.
+R8_BEZ_DROGI = [(24, 41), (24, 43)]
+
+R8_OBIEKTY = [
+    ((40, 30), ('potwor', 'sredni')),           # przejście traktu na środek
+    ((42, 36), ('potwor', 'sredni')),           # wylot zakątka wschodniego
+    ((34, 3), ('potwor', 'silny')),             # korytarz kąta NE
+    ((12, 35), ('potwor', 'slaby')),            # brzeg za brodem
+    ((46, 5), ('potwor', 'silny')),             # luka muru skarbca wyspy
+    # skarbiec wyspy (rzędy 3–4)
+    ((44, 4), ('skrzynia', None)),
+    ((45, 3), ('surowiec', 'kamien')),
+    ((47, 4), ('artefakt', None)),
+    ((48, 4), ('surowiec', 'pokeball')),
+    # koniec ścieżki w dół doliny (12,52): stos
+    ((13, 53), ('surowiec', 'pokeball')),
+    ((13, 52), ('surowiec', 'odlamek')),
+    # zakątek SW za strażą (10,51): skrzynia + kamień obok
+    ((6, 51), ('surowiec', 'kamien')),
+    # SE: stos 3 na końcu odnogi
+    ((48, 47), ('skrzynia', None)),
+    ((48, 48), ('artefakt', None)),
+    ((49, 48), ('surowiec', 'odlamek')),
+    # zachodnie trzęsawisko: stos (7–9, 29)
+    ((9, 29), ('surowiec', 'jagoda')),
+    # para z brzegu jeziora (43–44, 22) w zatokę zachodu, obok wiatraka
+    ((3, 26), ('skrzynia', None)),
+    ((3, 27), ('surowiec', 'jagoda')),
+    # płaskowyż wroga: para (28–29, 4) dostaje trzeci (z (23,25) ze środka)
+    ((27, 4), ('surowiec', 'jagoda')),
+    # wyspa: para surowców przy Kamieniu dostaje trzeci
+    ((50, 9), ('surowiec', 'odlamek')),
+]
+
+#: Stosy (`_kupka`).
+R8_STOSY = []
+
+#: Nowe budowle (`_miejsce(..., sucho=True)`): zwykłe, do odwiedzenia.
+R8_BUDOWLE = [
+    ('portal', (12, 25, 24, 29)),                 # kolejka z brzegu jeziora
+    ('wieza-obserwacyjna', (42, 8, 50, 11)),      # wyspa: widok na jezioro
+    ('ognisko', (37, 0, 44, 2)),                  # kąt NE za korytarzem
+    ('wiatrak', (2, 24, 9, 28)),                  # zachodnie trzęsawisko
+    ('gniazdo', (38, 45, 43, 48)),                # trakt za mostem (zamiast skrzyni)
+    ('zrodlo', (6, 0, 15, 2)),                    # kraina wroga, północ
+    ('zrodlo', (7, 26, 9, 28)),                   # rozstaje zachodniego trzęsawiska
+    ('chatka', (3, 20, 3, 22)),                   # zakątek zachodni
+    ('chatka', (27, 9, 31, 11)),                  # płaskowyż wroga (z (24,20) znad jeziora)
+    ('ognisko', (44, 27, 48, 30)),                # zatoka przy grobli
+    ('wiatrak', (49, 32, 53, 36)),                # wschodni skraj (chatka stoi już w (49,35))
+]
+
+#: Pasma skał we wnętrzach masywów (prostokąty; las przy drodze zostaje).
+R8_SKALY = [
+    (0, 0, 4, 8),          # narożnik NW
+    (0, 14, 12, 18),       # grzbiet krainy wroga, zachód
+    (29, 15, 40, 20),      # grzbiet krainy wroga, wschód od bramy
+    (29, 5, 37, 8),        # płaskowyż wroga: skalny garb
+    (33, 50, 46, 53),      # dół mapy za mostem
+    (48, 26, 53, 31),      # wschodni skraj nad zatoką
+]
+
+#: Zatoki trzęsawiska w tapecie wierzb (G3) — pola lasu → grunt strefy.
+R8_ZATOKI = [
+    # zachód (0–10, 18–30)
+    (2, 20), (3, 20), (3, 21), (2, 22),
+    (4, 25), (5, 25), (3, 26), (4, 26), (2, 27), (3, 27), (4, 28), (5, 28),
+    (8, 30), (9, 30), (10, 30),
+    # wschód (44–54, 26–40)
+    (45, 29), (46, 29), (47, 29), (46, 28), (47, 28), (47, 30), (45, 28),
+    (51, 34), (51, 35), (52, 35), (51, 36), (52, 36), (51, 37),
+    (48, 38), (48, 39), (49, 39),
+]
+
+
+def runda_8(g):
+    m = g.mapa
+    zabrane = _usun(g, R8_USUN)
+    for i, (q, w) in enumerate(g.obiekty):
+        if q in R8_PODMIEN and w[0] == 'budynek':
+            g.obiekty[i] = (q, ('budynek', R8_PODMIEN[q]))
+    _odswiez(g)
+
+    # --- teren -------------------------------------------------------------
+    zajete = {p for p, _ in g.obiekty} | g.blokada
+    for x, y in R8_BEZ_DROGI:
+        if m[y][x] == '=':
+            m[y][x] = '.'
+    for x, y in R8_LAS:
+        if m[y][x] != '=' and (x, y) not in zajete:
+            m[y][x] = 'T'
+    grunt = {'dom': '.', 'pogranicze': 'b', 'wroga': 'j'}
+    for x, y in R8_ZATOKI:
+        if m[y][x] == 'T':
+            m[y][x] = grunt[strefa(x, y)]
+    brama = (26, 16)
+    for x0, y0, x1, y1 in R8_SKALY:
+        # Elipsa wpisana w prostokąt z poszarpanym brzegiem (stały szum
+        # z pola) — masyw, nie cegła.
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        rx, ry = (x1 - x0) / 2 + 0.6, (y1 - y0) / 2 + 0.6
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                if m[y][x] != 'T' or max(abs(x - brama[0]), abs(y - brama[1])) <= 2:
+                    continue
+                szum = ((x * 7919 + y * 104729 + x * y * 31) % 97) / 97 * 0.6 - 0.3
+                if ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 + szum > 1.0:
+                    continue
+                if any(g.w(x + dx, y + dy) and m[y + dy][x + dx] == '='
+                       for dy in (-1, 0, 1) for dx in (-1, 0, 1)):
+                    continue
+                m[y][x] = '#'
+    # G4: wyspa celu piaszczysta — odrębny teren, nie grunt płaskowyżu.
+    for y in range(0, 13):
+        for x in range(40, BOK):
+            if m[y][x] == 'j' and (x - WYSPA[0]) ** 2 + (y - WYSPA[1]) ** 2 <= PIERSCIEN_ZEWN ** 2:
+                m[y][x] = ','
+    _odswiez(g)
+
+    # --- obiekty -----------------------------------------------------------
+    for p, w in R8_OBIEKTY:
+        if m[p[1]][p[0]] not in '.,bj=':
+            m[p[1]][p[0]] = grunt[strefa(*p)]
+        g.postaw(p, w)
+    _odswiez(g)
+    for b, prost in R8_BUDOWLE:
+        p = _miejsce(g, prost, sucho=True)
+        if p is None:
+            print(f'  runda 8: brak miejsca na {b} w {prost}')
+            continue
+        g.postaw(p, ('budynek', b))
+    _odswiez(g)
+    for prost, wpisy in R8_STOSY:
+        _kupka(g, prost, wpisy)
+    _odswiez(g)
+    g.zasyp_odciete(m)
+    import os
+    if os.environ.get('R8_DEBUG'):
+        ob = {q: w[0][0].upper() for q, w in g.obiekty}
+        for y in range(BOK):
+            print('%3d ' % y + ''.join(ob.get((x, y)) or ('o' if _miejsce(g, (x, y, x, y), sucho=True) else m[y][x])
+                                        for x in range(BOK)))
+    print(f'  runda 8: usunięte {len(zabrane)}, obiektów {len(g.obiekty)}')
+
+
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 // Źródło: tools/mapy/bagna.py (szkic i rozstawienie), silnik: tools/generuj_mape.py.
 //
@@ -1989,7 +2188,12 @@ BARWY_TERENU = {
     # Runda 4 pętli (G4): ciemna, sina ziemia krainy wroga (`TLO`).
     # Runda 6 pętli (G4): wrzosowisko płaskowyżu — ciemny, chłodny brąz,
     # wyraźnie inny niż oliwkowa łąka doliny.
-    'jalowa': {'nasycenie': 0.6, 'barwa': (112, 92, 80), 'moc': 0.7, 'jasnosc': 0.6},
+    # Runda 8 pętli (G4: „kraina wroga to jasny, ciepły brąz"): sina,
+    # chłodna szarość torfowiska — ciemniejsza od łąki i bez czerwieni.
+    'jalowa': {'nasycenie': 0.45, 'barwa': (92, 100, 98), 'moc': 0.7, 'jasnosc': 0.52},
+    # Runda 8 pętli (G4): Wyspa Księżyca na jasnym, bladym piasku — odrębny
+    # teren celu, nie grunt płaskowyżu.
+    'piasek': {'nasycenie': 0.55, 'barwa': (176, 170, 150), 'moc': 0.4, 'jasnosc': 0.88},
 }
 
 #: Po rundzie 1 ślepego porównania („bagno to brązowa plama w kolorze drogi"):
@@ -2127,6 +2331,11 @@ def TLO(rysunek):
     for y in range(BOK):
         for x in range(BOK):
             if wynik[y][x] == 'T':
+                wynik[y][x] = 's'
+            # Runda 8 pętli: pasma skał (`R8_SKALY`) stoją na ściółce lasu,
+            # z którego wyrastają; poza krainą wroga grunt pod nimi nie może
+            # mieć barwy płaskowyżu wroga (silnik daje skałom `j`).
+            elif wynik[y][x] == '#' and strefa(x, y) != 'wroga':
                 wynik[y][x] = 's'
     return [''.join(w) for w in wynik]
 
