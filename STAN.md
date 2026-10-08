@@ -1716,6 +1716,61 @@ Krytyk rundy 4 (`tools/blind/r4-twierdza-werdykt.md`): wygrana ślepo,
   ekrany zachodniej doliny i Srebrnej Strażnicy mają po 21. Skrzynie 21 %
   (checklista 15–20 %).
 
+Krytyk rundy 5 (`tools/blind/r5-twierdza-werdykt.md`): wygrana ślepo,
+26 TAK / 3 CZĘŚCIOWO / 1 NIE (G1: wschodnia tundra 30–32 obiekty po
+przeniesieniu tam nagród z NE). Runda 5 — zmiany tylko w `tools/mapy/twierdza.py`:
+
+- **G1 — pułap 16 na każdym oknie 21 × 18 z siatki co 10 pól**
+  (`OKNA_X`/`OKNA_Y`, `okna`, `gestosc`; `EKRAN_LIMIT` 22 → 16). Losowanie
+  i nadmiar stawiają tylko tam, gdzie okno zostaje ≤ 16; nadmiar, który się
+  nie mieści, przepada — a liczby `*_LOSOWE` są przycięte tak, że nic nie
+  przepada (dom 5 budowli, tundra 2 skrzynie, wroga 3 skrzynie; dawniej 58
+  losowych, z czego 21 „nie zmieściło się"). `PRZENIESIONE` usunięte.
+  Wschodnia tundra (48–71, 21–43) w `ZAKAZ_LOSOWANIA`; z ręcznych zniknęły
+  ognisko (59,24), wóz (53,34), gniazdo (52,28), kupki (54,24), (50,38),
+  (63,42), skrzynia (48,36), chatka (70,43), artefakt (64,38) i cała polana
+  (54–59, 40–42) z wiatrakiem, wozem, skrzynią i kupką (zarosła z powrotem
+  borem). 48–71 × 21–41: 32 → 19 obiektów. Inne okna > 16 przycięte ręcznie:
+  Srebrna Strażnica (ognisko (18,0), gniazdo (15,5), kupki (14,0), (22,0),
+  (5,10), (17,17)), Lodowa (wóz (61,8), kupka (37,11), skrzynia (53,1)),
+  zatoka zachodnia (gniazdo (7,41), kupka (17,38)), pierwszy ekran + południe
+  (kupka (28,67)), zatoka NE/kieszeń SE (gniazdo (55,64), ognisko (60,53),
+  skrzynia (71,53)). Log generatora wypisuje okna > 16 po ręcznym rozstawieniu.
+- **B2**: losowe skrzynie domu 5 → 0 (konfetti (18,50), (29,53), (35,51),
+  (40,55), (42,59), (56,61), (59,57) i ognisko (37,51) znikają), ręczna
+  (39,59) też; skrzynia (57,65) i kupka kul (z zatoki SE) w stosie przy
+  ognisku (58,66) z reliktem i kupkami. Dom ma 10 skrzyń (było 20).
+- **D3**: skalna bryła pod murami Lodowej Twierdzy (56–59, 11–13), garb
+  w korytarzu za przełęczą (57–60, 16–17) i garb (60–61, 6–7) przy odnodze do
+  skarbca. Trakt z przełęczy (57,21) idzie łukiem (58,20) → (56,17) → (54,13)
+  → (55,11) → brama, odnoga do skarbca obchodzi garb od wschodu (x 62).
+  Kroków do Lodowej 69 → 75 (83 → 84 % najdalszego zakątka).
+- **B3 — las zamiast obiektów**: przy ≤ 16 na oknie mieści się ~180 obiektów,
+  więc puste połacie zarosły borem (`bor(...)` w `popraw_teren`, ~35
+  prostokątów: północne granie obu dolin twierdz, środek doliny Lodowej
+  (38–49, 7–12), pas za bramami, zachodnia dolina tundry, jałowe pola domu,
+  zatoka NE). Przejezdnych 2538 → 1958, T 21 % → 31 %, T+# 43 % → 53 %
+  (wzorce HoMM3 40–60). Nowe ręczne rzeczy na luźnych oknach środkowego pasa:
+  skrzynia (42,38), źródło (39,37), wiatrak (36,34) przed brodem, ognisko
+  (43,28) w zakątku drzewa wiedzy, kupka (56,38) przy stosie areny, gniazda
+  (52,18) i (44,58).
+- Liczby: 179 obiektów (233), co 10,9 pola; straże 13 %, budynki 27 %,
+  kopalnie 9 %, surowce 25 %, skrzynie 18 %, artefakty 7 %; bez bitwy 24 %;
+  pasy 18/36/48/45/32 (garb w pasie 3); strefy dom 62 / pogranicze 63 /
+  wroga 54; okna co 10 pól: maks. 16 (było 28), przy dowolnym położeniu kadru
+  maks. 20 (było 34). Sondy: każda z 23 straży dzieli teren na dwie strony;
+  straże zatok pilnują 3–9 rzeczy, szyjka SE (50,62) — całej zatoki NE i SE.
+  `probe-mapy` Twierdza bez ŹLE, `probe-misja` OK (za drugim podejściem —
+  pierwsze padło na timeoucie ekranu wyniku przy obciążonej maszynie), zrzut
+  `tools/shots/caly-twierdza.png` za drugim podejściem (30 s timeout).
+- Zostało: obiektów 179 — poniżej zakładanych ~205–215; więcej się nie
+  mieści przy pułapie 16 (okna przy lewej i prawej krawędzi i nad
+  zatokami są pełne, środek to jeziora). Dom 62 ≈ pogranicze 63 (runda 3
+  chciała pogranicze wyraźnie bogatsze). Las 31 % — bór w dolinie Lodowej
+  Twierdzy może się czytać jako „ściana", do sprawdzenia przez krytyka (G3/E4).
+  Skrót między twierdzami przez przełęcz (34,9) nadal bez drogi na wschód od
+  x 34 (Dijkstra woli okrążyć po istniejących traktach) — od rundy 2.
+
 ## Profile graczy i sloty zapisu (2026-09-26)
 
 Zgłoszenie taty Eli i Janka: „Nowa gra → Kampania" kontynuowała ostatnią
