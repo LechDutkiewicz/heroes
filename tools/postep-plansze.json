@@ -1,7 +1,7 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, u krytyków: Dwie Doliny r5, Twierdza r5, Bagna r8; Polana r7 w budowie",
+ "aktualizacja": "2026-10-08, Dwie Doliny r5: wygrana, 0 NIE, 7 CZĘŚCIOWO — builder r5; Twierdza r5 i Bagna r8 u krytyków; Polana r7 w budowie",
  "kawalki": [
   {
    "id": "polana",
@@ -230,7 +230,7 @@
   {
    "id": "dwie-doliny",
    "tytul": "Dwie Doliny (misja 2, 72×72)",
-   "status": "critic",
+   "status": "build",
    "opis": "Trzy pasy za dwoma grzbietami, strażnice na klucze, pas sporny w środku.",
    "rundy": [
     {
@@ -364,6 +364,31 @@
       }
      ],
      "zmiana": "Runda 5 generatora: dolina wschodnia rozładowana (bez ogniska, wozu, wiatraka), kraina wroga odchudzona, stosy 2–4 rzeczy zamiast konfetti, komplet kopalń na strefę (dom 6, sporny 5, wróg 4), nowe obiekty pasa spornego (chatka, ognisko, wiatrak), las bez funkcji zamieniony w jeziora (woda 8 → 22 %), jezioro zachodnie elipsą, kwiaty/trzciny tylko w zakątkach. 132 obiekty (było 157), co 11,0 pola, bez bitwy 23 %, pasy 19/16/40/39/18."
+    },
+    {
+     "nr": 5,
+     "wzorzec": "faeries",
+     "win": true,
+     "checklista": {
+      "TAK": 22,
+      "CZESCIOWO": 7,
+      "NIE": 0
+     },
+     "luka": "Woda zajmuje 22 % mapy, ale tylko jako ściana i kałuże: nie ma ani jednego brodu czy mostu jako szyjki, pas wody y 12–19 powtarza grzbiet, osiem oczek nie ma funkcji. Z 50 % lasu i skał zostaje 28 % pól przejezdnych, mapa robi się korytarzowa.",
+     "nie": [
+      "B4 częściowo: kopalnie 11 %, artefakty 9 %",
+      "E3 częściowo: 2-polowe paski jałowej ziemi, jeden rząd piasku, łaty skał 2×3",
+      "E4 częściowo: 28 % pól przejezdnych, łąki jako korytarze",
+      "E5 częściowo: brak brodu/mostu, 8 kałuż bez funkcji",
+      "G1 częściowo: ekran (47–67,25–42) z 17 obiektami obok ekranu z 3",
+      "G3 częściowo: grzbiety jako równy rząd stożków, las jako tapeta"
+     ],
+     "obrazy": [
+      {
+       "plik": "tools/blind/r5-dwie-doliny.png",
+       "opis": "para ślepa r5 (A = faeries, B = nasza)"
+      }
+     ]
     }
    ]
   },
