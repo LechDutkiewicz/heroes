@@ -293,12 +293,21 @@ PLAMY_SKAL = [(11, 9, 14, 17), (22, 9, 26, 16)]
 
 #: Straże w szyjkach (runda 12). Każda zamyka przejście albo kieszeń;
 #: potwór blokuje pole i osiem wokół.
-STRAZ_PRZELECZY_DOMU = (9, 17)      # na trakcie tuż pod szczeliną wiersza 16
+# Runda 17 (G1): straż w samej szczelinie wiersza 16 (było (9, 17) pod nią)
+# — zamyka przełęcz tak samo, a nie stoi w kadrze doliny domu.
+STRAZ_PRZELECZY_DOMU = (8, 16)
 STRAZ_PLAZY = (12, 7)               # szyjka plaży, między ścianami lasu
 # Runda 14 (D4, G2): straż mostu północnego na SUCHYM wschodnim brzegu, na
 # trakcie; jej dziewięć pól zamyka całe zejście z mostu (w wierszach 7 i 9
 # po obu stronach jest woda). Na łasze stała w korycie rzeki.
-STRAZ_BRODU = (rzeka_x(8) + 2, 8)
+# Runda 17 (G2): o pole dalej — rysunek mostu sięga do 23,9, straż (23, 8)
+# zasłaniała jego koniec. Zejście z mostu (23, 7–9) i tak leży w jej strefie.
+STRAZ_BRODU = (rzeka_x(8) + 3, 8)
+#: Runda 17 (G2): straż mostu południowego zeszła z linii desek — stoi pod
+#: przyczółkiem, (17, 26). Oba zejścia z mostu, (16, 25) i (16, 26), leżą
+#: w jej strefie, a jej pole widać od startu (na (18, 25) autopilot jej nie
+#: widział i nie przechodził rzeki).
+STRAZ_MOSTU = (MOST[2] + 2, MOST[1] + 1)
 STRAZ_PRZELECZY_FORTU = (30, 16)    # na trakcie między skałami a lasem
 STRAZ_ROGU = (31, 5)                # przesmyk do rogu NE (31–35, 1–5)
 # Runda 16 (A5, A2): wolna słaba straż w dolinie domu przed kieszenią SW
@@ -334,7 +343,7 @@ PLAZA = [(x, y) for y in range(2, 6) for x in range(8, 14)]
 ROG_NE = [(x, y) for y in range(0, 6) for x in range(29, 36)]
 
 #: Obiekty mogą stać na trawie i piasku (jak na Dwóch Dolinach).
-POD_OBIEKTY = '.,j'
+POD_OBIEKTY = '.,jb'
 
 
 def popraw_teren(g, mapa):
@@ -564,6 +573,16 @@ def popraw_teren(g, mapa):
     for y in (21, 22):
         for x in (1, 2, 3, 4):
             mapa[y][x] = '.'
+    # Runda 17 (E3): brzeg jeziora jedną linią — bez jednopolowych kałuż
+    # i plam łąki (4–9, 7–9): wiersz 7 to woda, wiersze 8–9 łąka.
+    for x in range(2, 9):
+        mapa[7][x] = '~'
+    for y in (8, 9):
+        for x in range(3, 11):
+            if mapa[y][x] == '~':
+                mapa[y][x] = '.'
+    # …i skały nad plażą (9–11, 2) jednym blokiem, bez głazu w szczelinie.
+    mapa[2][10] = '#'
 
 
 def po_drogach(g, mapa):
@@ -572,6 +591,13 @@ def po_drogach(g, mapa):
         for x in range(BOK):
             if mapa[y][x] == '.' and x > rzeka_x(y) and strefa(x, y) == 'pogranicze':
                 mapa[y][x] = 'j'
+    # Runda 17 (G4): kraina wroga w siatce to ciemna łąka `b`, nie `j` —
+    # na minimapie miała ten sam brąz co pogranicze za mostem. Po drogach,
+    # żeby trakt wytyczył się jak dotąd (koszt `b` w silniku jest wyższy).
+    for y in range(GRANICA_WROGA + 1):
+        for x in range(BOK):
+            if mapa[y][x] == 'j' and strefa(x, y) == 'wroga':
+                mapa[y][x] = 'b'
 
 
 #: Runda 13 (G4): masyw zamykający krainę wroga od południa (x0, y0, x1, y1).
@@ -708,19 +734,25 @@ PIERWSZY_EKRAN_DOM = [
     ([(5, 28), (4, 28), (6, 28)], ('kopalnia', 'odlamek')),
     # Runda 16 (A3): dwa surowce luzem przy trakcie i odnodze do sadu — na
     # starcie cztery łatwe nagrody w zasięgu ośmiu kroków.
-    ([(12, 30), (12, 29), (13, 31)], ('surowiec', 'jagoda')),
-    ([(10, 33), (9, 33), (7, 33)], ('surowiec', 'pokeball')),
+    # Runda 17 (G1, G2): jagoda (12, 30) odpadła, pokeball zszedł z płotu
+    # sadu (10, 33) na (8, 34) — prowadzi wzrok (i autopilota) ku kieszeni
+    # SW; bez niego kieszeń zostawała we mgle i kamieniołom brał się po
+    # dniu 14, a fort padał po dniu 32. Pusty pas pod lasem (1–10, 21–22)
+    # dostał na końcu skrzynię z kieszeni. Ekran domu: zamek + 10 rzeczy
+    # i 2 straże, (4, 32) i (17, 26).
+    ([(2, 21), (3, 21)], ('skrzynia', None)),
+    ([(8, 34), (7, 34)], ('surowiec', 'pokeball')),
 ]
 
 #: Runda 16 (A5, A2): kieszeń SW (`KIESZEN_DOMU`) za wolną słabą strażą
 #: (4, 32): kamieniołom wcięty w las, dwie skrzynie i stos dwóch surowców;
 #: pole (2, 34) zostaje wolne — przez nie dochodzi się do wszystkiego.
+#: Runda 17 (G1): w kieszeni zostaje kamieniołom i jedna skrzynia — pięć
+#: nagród na dwunastu polach to był stos; skrzynia (1, 34) poszła na koniec
+#: pasa pod lasem, odłamek (3, 34) i jagoda (1, 33) odpadły.
 KIESZEN_DOMU_SKARB = [
     ([(2, 33)], ('kopalnia', 'kamien')),
     ([(4, 34)], ('skrzynia', None)),
-    ([(1, 34)], ('skrzynia', None)),
-    ([(3, 34)], ('surowiec', 'odlamek')),
-    ([(1, 33)], ('surowiec', 'jagoda')),
 ]
 
 #: Runda 13 (B1): jaskinia odłamków stała na północnej łące. Runda 14 (B1):
@@ -732,7 +764,9 @@ PIERWSZY_EKRAN_BRZEG = [
     # Runda 14 (A1, B1, G1): w kieszeni za pasmem zostaje SAMA jaskinia
     # odłamków — bez straży (kieszeń i tak leży za strażą mostu), bez
     # skrzyni i stosu (poszły na łąkę pogranicza, `STOS_POGRANICZA`).
-    ([(19, 30), (20, 30), (18, 30)], ('kopalnia', 'odlamek')),
+    # Runda 17 (B4, G1): druga jaskinia odłamków (dubel (5, 28)) to teraz
+    # źródło — kopalnie ≤ 10 %, a odnoga traktu dalej ma cel.
+    ([(19, 30), (20, 30), (18, 30)], ('budynek', 'gniazdo')),
     # Runda 13 (G1): bez ogniska w kieszeni i gniazda przy strażnicy —
     # mniej rzeczy w kadrze startu.
     ([(18, 23), (17, 23)], ('budynek', 'wieza-obserwacyjna')),
@@ -767,6 +801,10 @@ LAKA_POLNOCNA = [
     ([(13, 15), (14, 15)], ('budynek', 'gniazdo')),
     ([(15, 9), (15, 8)], ('surowiec', 'kamien')),
     ([(16, 9), (16, 8)], ('skrzynia', None)),
+    # Runda 17 (B4): budynki 25–30 % — wiatrak na pustym brzegu łąki przy
+    # rzece (18, 11), trzy pola na wschód od drzewa wiedzy (na (17, 13)
+    # stał dach w dach z laboratorium).
+    ([(18, 11), (18, 12)], ('budynek', 'wiatrak')),
 ]
 
 #: Runda 12: plaża nad jeziorem — kieszeń za strażą (12, 6).
@@ -786,19 +824,26 @@ KRAINA_WROGA = [
     ([(25, 9), (25, 10), (26, 9)], ('artefakt', None)),
     ([(24, 10), (24, 11)], ('surowiec', 'pokeball')),
     ([(25, 11), (26, 10), (26, 11)], ('surowiec', 'kamien')),
-    ([(26, 6), (27, 6), (26, 5)], ('skrzynia', None)),
-    ([(24, 5), (25, 4), (24, 4)], ('budynek', 'ognisko')),
+    # Runda 17 (B4): skrzynia (26, 6) odpadła — skrzynie ≤ 20 %, a pod
+    # grzbietem nie stoją już trzy rzeczy w jednym rzędzie.
+    # Runda 17 (C3, F1): ognisko spod ślepej odnogi (24, 5) zrobiło miejsce
+    # kamiennej wieży (25, 3); samo stoi we wnęce po sadzie wroga.
     # Runda 13 (G2): stos przy forcie odsunięty od jego rysunku — skrzynia
     # (33, 9) dotykała flagi fortu (32, 9).
     # Runda 15 (E4): stos spod wschodniego grzbietu (34–35, 9–11) przeniesiony
     # na zachodnią stronę fortu, gdzie stały kopce (27–28, 12–14), z dala
     # od jego dachu i od dachu sadu.
-    ([(23, 12), (23, 11)], ('skrzynia', None)),
+    # Runda 17 (G2, B4): skrzynia (23, 12) przy sadzie wroga odpadła.
     # Runda 16 (B4): pokeballe (27, 14) odpadły — surowce ≤ 25 %.
     # Runda 15 (B1): sad wroga wcięty w masyw granicy, w misie fortu.
-    ([(24, 15), (23, 15), (25, 15)], ('kopalnia', 'jagoda')),
+    # Runda 17 (B4): kopalnie ≤ 10 % — sad wroga to ognisko w tej samej wnęce.
+    ([(24, 15), (23, 15), (25, 15)], ('budynek', 'ognisko')),
     # Runda 15 (B3): stos pod północnym grzbietem, przy trakcie z mostu.
     ([(28, 6), (28, 7)], ('skrzynia', None)),
+    # Runda 17 (B2, B4): skrzynia pod grzbietem nie leży sama — stos
+    # z pokeballami; chatka na pustej ciemnej łące pod stosem artefaktu.
+    ([(29, 6), (28, 7)], ('surowiec', 'pokeball')),
+    ([(26, 14), (25, 13)], ('budynek', 'chatka')),
 ]
 
 #: Runda 12: róg NE (31–35, 1–5) za skałami — kieszeń za strażą (31, 5).
@@ -856,7 +901,7 @@ def postaw_kadr(g, miejsca, wpis):
     sx, sy = PUNKTY['start']
     zajete = {q for q, _ in g.obiekty} | g.blokada | set(PUNKTY.values())
     for x, y in miejsca:
-        if not g.w(x, y) or g.mapa[y][x] not in '.,j' or (x, y) in zajete:
+        if not g.w(x, y) or g.mapa[y][x] not in '.,jb' or (x, y) in zajete:
             continue
         if max(abs(x - sx), abs(y - sy)) <= (2 if wpis[0] == 'potwor' else 1):
             continue
@@ -902,23 +947,30 @@ def rozstaw(g):
 
     # Przełęcz północna doliny: słaba straż obok traktu — zamyka dolinę domu,
     # a dziecko ma pierwszą „wolno stojącą" bitwę pod ręką (A4, A5).
-    straz(STRAZ_PRZELECZY_DOMU, 'slaby')
     # Most: słaba straż na wschodnim przyczółku — pierwsza lekcja (runda 13:
     # dwa pola za deskami, bo rysunek mostu sięga pole za przeprawę).
-    straz((MOST[2] + 2, MOST[1]), 'slaby')
     # Bród: średnia straż na środku łachy — druga lekcja; blokuje całą
     # szerokość koryta (20–22), a w wierszu 7 i 9 jest woda.
     # Runda 16 (C4): straż mostu północnego jest SILNA — inaczej silną straż
     # przełęczy fortu (30, 16) dało się obejść za cenę średniej bitwy.
-    straz(STRAZ_BRODU, 'silny')
+    # Runda 17 (C2): stopień słaba → średnia → silna — most północny
+    # ŚREDNI, jedyna silna straż to przełęcz fortu (30, 16). Cena: autopilot
+    # idzie na fort północą (słaba (8, 16) → średnia (24, 8)) i wygrywa
+    # ok. dnia 21 zamiast 26; silna przełęcz to droga krótsza, nie jedyna.
     # Runda 16 (A5, B1): wolna słaba straż przed kieszenią SW w dolinie domu
     # i druga słaba w wylocie wnęki z kamieniołomem pogranicza.
-    straz(STRAZ_KIESZENI_DOMU, 'slaby')
-    straz(STRAZ_KAMIENIOLOMU, 'slaby')
     # Przełęcz fortu: SILNA straż na trakcie — fort jest ostatnią, najdroższą
     # bitwą (C2, C3).
-    straz(STRAZ_PRZELECZY_FORTU, 'silny')
     # Kieszenie: plaża (słaba) i róg NE (średnia) — nagroda za cały zakątek.
+    straz(STRAZ_PRZELECZY_DOMU, 'slaby')
+    straz(STRAZ_MOSTU, 'slaby')
+    straz(STRAZ_BRODU, 'sredni')
+    straz(STRAZ_KIESZENI_DOMU, 'slaby')
+    # Runda 17: (27, 20) zostaje SŁABA, choć krytyk r6 chciał średniej —
+    # średnia odcina drugi kamieniołom i `symulacja-misji` misji 1 spada do
+    # 2–4/6 wygranych przed dniem 32 (bez kamienia nie ma rozbudowy).
+    straz(STRAZ_KAMIENIOLOMU, 'slaby')
+    straz(STRAZ_PRZELECZY_FORTU, 'silny')
     straz(STRAZ_PLAZY, 'slaby')
     straz(STRAZ_ROGU, 'sredni')
 
@@ -987,7 +1039,9 @@ def rozstaw(g):
     g.zajete += ROG_NE
     # Runda 14 (G2): pagoda na stałym miejscu przy trakcie — z losowania
     # lądowała przy forcie, wciśnięta między skrzynię a stos (34–35, 9–11).
-    postaw_kadr(g, [(31, 8), (31, 7), (28, 7)], ('budynek', 'kamienna-wieza'))
+    # Runda 17 (G2, F1): z dachu fortu (31, 8) na koniec ślepej odnogi
+    # północno-zachodniego zakątka (23–26, 3–4).
+    postaw_kadr(g, [(25, 3), (24, 3), (25, 4)], ('budynek', 'kamienna-wieza'))
 
 
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
