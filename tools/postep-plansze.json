@@ -1,7 +1,7 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, Polana gotowa; Dwie Doliny r6, Twierdza r6, Bagna r10 u krytyków",
+ "aktualizacja": "2026-10-08, Polana gotowa; Twierdza r6: wygrana, 0 NIE, 4 CZĘŚCIOWO — builder r6; Dwie Doliny r6 i Bagna r10 u krytyków",
  "kawalki": [
   {
    "id": "polana",
@@ -743,7 +743,7 @@
   {
    "id": "twierdza",
    "tytul": "Twierdza (misja 4, 72×72)",
-   "status": "critic",
+   "status": "build",
    "opis": "Zima, trzy pasy i skalny grzbiet między dolinami dwóch twierdz.",
    "rundy": [
     {
@@ -907,6 +907,29 @@
       }
      ],
      "zmiana": "Runda 5 generatora: pułap 16 obiektów na każde okno 21×18 z siatki co 10 pól (było do 28), nadmiar losowania 0 (było 21); wschodnia tundra 32 → 19 obiektów (bez ogniska, wozu, gniazda, kupek, polany z wiatrakiem); skrzynie domu 20 → 10, konfetti w dolinie rozstajów usunięte, stos przy ognisku (58,66); trakt do Lodowej Twierdzy łukiem wokół nowych skał (56–59,11–13); ok. 35 prostokątów boru zamiast obiektów na luźnych polach (przejezdne 2538 → 1958). 179 obiektów co 10,9 pola, pasy 18/36/48/45/32, strefy 62/63/54, bez bitwy 24 %, probe-misja OK (2. podejście)."
+    },
+    {
+     "nr": 6,
+     "wzorzec": "gorlam-s-tentacle-swampland",
+     "win": true,
+     "checklista": {
+      "TAK": 26,
+      "CZESCIOWO": 4,
+      "NIE": 0
+     },
+     "luka": "Nowy bór (las 31 %, las i skały 53 %) zamienił zachodnią tundrę i środek doliny w korytarze i chowa obiekty (źródło (14,40) w leśnej dziurze); gęstość przeniosła się do międzyjezierza (27–47,24–41): 18 obiektów i 2 straże na ekranie.",
+     "nie": [
+      "E3 częściowo: łaty śniegu 1–3 pola, kałuża (15,60)",
+      "E4 częściowo: T+# 53 %, korytarze 2–4 pola",
+      "G1 częściowo: międzyjezierze 18 obiektów",
+      "G3 częściowo: bór przykrywa mapę, źródło w dziurze lasu"
+     ],
+     "obrazy": [
+      {
+       "plik": "tools/blind/r6-twierdza.png",
+       "opis": "para ślepa r6 (A = nasza, B = gorlam-s-tentacle-swampland)"
+      }
+     ]
     }
    ]
   }
