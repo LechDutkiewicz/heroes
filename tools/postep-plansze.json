@@ -1,7 +1,7 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, Bagna r9 u krytyka; Polana r8, Dwie Doliny r5, Twierdza r5 w budowie",
+ "aktualizacja": "2026-10-08, Bagna r9: wygrana, 0 NIE, 4 CZĘŚCIOWO — builder r9; Polana r8, Dwie Doliny r5, Twierdza r5 w budowie",
  "kawalki": [
   {
    "id": "polana",
@@ -423,7 +423,7 @@
   {
    "id": "bagna",
    "tytul": "Bagna (misja 3, 54×54)",
-   "status": "critic",
+   "status": "build",
    "opis": "Dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca z wodzem.",
    "rundy": [
     {
@@ -678,6 +678,29 @@
       }
      ],
      "zmiana": "Runda 9 generatora: straż z łąki (24,42) pod kopalnię pokeballi (17,42), straż brodu na brzeg (11,35), straż zakątka SW na (8,50); stosy z doliny i rubieży przeniesione przy trakt w środkowym bagnie (31–32,23–24) i nad jezioro (25–26,19–20); ekran wroga 22 → 15 obiektów; kałuże jednopolowe w las, łączka w bagno; pas drzew w dolinie skrócony do kępy. 119 obiektów co 10,7 pola, pasy 21/25/31/22/20, bez bitwy 23 %, probe-misja OK."
+    },
+    {
+     "nr": 9,
+     "wzorzec": "hatchet-axe-and-saw",
+     "win": true,
+     "checklista": {
+      "TAK": 26,
+      "CZESCIOWO": 4,
+      "NIE": 0
+     },
+     "luka": "Dwa ekrany pogranicza przeładowane: zachodni (6–26,12–29) 21 obiektów i 3 straże, SE (30–50,33–50) 20 obiektów i 4 straże. Kopalnia kamienia (11,51) po przesunięciu straży bez ochrony.",
+     "nie": [
+      "A2 częściowo: kopalnia kamienia (11,51) wolna",
+      "C1 częściowo: straż (17,42) na łące pilnuje jednej kopalni",
+      "G1 częściowo: ekrany pogranicza 21 i 20 obiektów",
+      "G3 częściowo: kępa pośrodku łąki doliny, wysepki lasu na płaskowyżu wroga"
+     ],
+     "obrazy": [
+      {
+       "plik": "tools/blind/r9-bagna.png",
+       "opis": "para ślepa r9 (A = hatchet-axe-and-saw, B = nasza)"
+      }
+     ]
     }
    ]
   },
