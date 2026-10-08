@@ -734,6 +734,7 @@ def rozstaw(g):
     mokradla_kadru(g)
     runda_3(g)
     runda_4(g)
+    runda_5(g)
 
 
 #: Runda 11 (HotA, zwycięzca rundy 10: „nic nie przypomina bagna — stawy małe,
@@ -1279,6 +1280,250 @@ def runda_4(g):
     print(f'  runda 4: usunięte {len(zabrane)}, obiektów {len(g.obiekty)}')
 
 
+# --- RUNDA 5 PĘTLI (werdykt ślepego porównania r4: 15 TAK / 13 CZĘŚCIOWO /
+# 2 NIE) ------------------------------------------------------------------
+# Jak `runda_3` i `runda_4`: po rozstawieniu, chirurgicznie. Co i dlaczego:
+#  - B4/G1 (NIE): kopalń 16 → 11 (po trzy rzadkie: kamień i pokeballe),
+#    budowli do odwiedzenia 19 → ~35, skrzyń 25 → 22. Środek (20–41 × 18–36)
+#    traci kopalnie (25,23), (29,28) ze strażą (24,24), skrzynie (20,25),
+#    (30,25) idą na koniec grobli i za most; na zwolnione miejsca obozowisko.
+#  - A2/A5: kopalnia pokeballi doliny pod słabą strażą obok (już nie na)
+#    drogi; kopalnia kamieni i zakątek SW za JEDNĄ słabą strażą (10,51).
+#  - A3/D1: ścieżka w dół doliny kończy się stosem dwóch surowców — dwie
+#    łatwe nagrody w 7 krokach od bramy, odnoga ma cel.
+#  - C1/C4: stos NE zamknięty lasem z jednym wejściem (36,3), straż w nim;
+#    straż (38,33) z drogi przy kopalni kamieni (kopalnia z murem na drodze
+#    odchodzi na zachód od traktu), straż (44,46) z drogi do szyjki obok.
+#  - D3: trakt doliny (13 → 31, 44) prosty, bez schodka na łące; ukos spod
+#    warowni wyrównany.
+#  - E3/E5: dolina bez łat bagna; kałuże bez funkcji (9–10, 51–53) (las —
+#    ściana zakątka), (15–17, 39–41), (31–33, 11–13) i drobne oczka
+#    trzęsawiska zasypane.
+#  - G3: w głębi masywów lasu pojedyncze głazy — klocki lasu nie układają
+#    się w równe poziome szpalery.
+#  - G4: kraina wroga ma w SIATCE grunt `j` (ziemia jałowa) — inny kolor na
+#    minimapie niż łąka doliny, nie tylko w tle.
+R5_USUN = [
+    # środek: kopalnie i straż (zmiana 1), skrzynie do przeniesienia
+    (25, 23), (29, 28), (24, 24), (20, 25), (30, 25),
+    # kopalnie zamienione na budowle (B1/B4)
+    (26, 30), (15, 13), (20, 13),
+    # kopalnia kamieni z murem na drodze, jej straż na drodze, skrzynia obok
+    (39, 33), (38, 33), (34, 34), (34, 36),
+    # straże do przestawienia (C1/G2)
+    (32, 4), (44, 46), (9, 50),
+    # sierota pod warownią (B2)
+    (26, 10),
+]
+
+#: Skrzynie zamienione na budowle (B4: skrzyń 23 %, budowli 17 %).
+R5_SKRZYNIE_NA_BUDOWLE = {(12, 12): 'woz', (24, 20): 'chatka'}
+
+#: Teren: pola lasu (zamknięcie stosu NE i zakątka SW), łąki i bagna.
+R5_LAS = [
+    # stos NE: jedna brama (35,3) na końcu korytarza między lasami, pasek
+    # x=37 w dół zarasta
+    (35, 0), (36, 0), (35, 1), (36, 1), (35, 2), (36, 2), (35, 4), (36, 4),
+    (37, 5), (38, 5), (37, 6), (37, 7), (37, 8),
+    # zakątek SW: ściana zamiast kałuży (9–10, 51–53)
+    (9, 49), (9, 51), (9, 52), (9, 53),
+]
+R5_LAKA = [(10, 51), (10, 52), (10, 53), (11, 52), (11, 53),
+           (15, 40), (16, 40), (17, 40), (14, 41), (15, 41), (16, 41)]
+
+R5_OBIEKTY = [
+    # straże
+    ((35, 3), ('potwor', 'silny')),          # brama stosu NE
+    ((10, 51), ('potwor', 'slaby')),         # zakątek SW i kopalnia kamieni
+    ((23, 42), ('potwor', 'slaby')),         # kopalnia pokeballi doliny
+    ((45, 48), ('potwor', 'sredni')),        # szyjka odnogi SE, obok drogi
+    # kopalnia kamieni pogranicza na zachód od traktu, straż przy wejściu
+    ((36, 33), ('kopalnia', 'kamien')),
+    ((35, 34), ('potwor', 'sredni')),
+    # skrzynie ze środka: koniec grobli i za mostem
+    ((11, 30), ('skrzynia', None)),
+    ((34, 43), ('skrzynia', None)),
+    # koniec ścieżki w dół doliny: stos (D1, A3)
+    ((12, 53), ('surowiec', 'jagoda')),
+]
+
+#: Budowle do odwiedzenia: rodzaj i prostokąt, w którym szukać czystego
+#: miejsca (`_miejsce`). Najpierw zwolnione miejsca, potem rzadkie ekrany.
+R5_BUDOWLE = [
+    ('ognisko', (22, 23, 26, 25)),       # zamiast kopalni i straży (24,24)
+    ('wiatrak', (25, 29, 28, 31)),       # zamiast kopalni odłamków (26,30)
+    ('chatka', (14, 12, 17, 13)),        # zamiast kopalni wroga (15,13)
+    ('gniazdo', (19, 12, 22, 13)),       # zamiast kopalni wroga (20,13)
+    # kraina wroga, zachód: pusta kieszeń (4–8, 6–8) i łąka pod lasem
+    ('ognisko', (4, 6, 8, 8)),
+    ('wieza-obserwacyjna', (9, 3, 13, 5)),
+    ('wiatrak', (16, 7, 20, 9)),
+    # zachód trzęsawiska
+    ('wiatrak', (13, 23, 17, 27)),
+    ('woz', (3, 25, 8, 27)),
+    # dolina i za mostem
+    ('chatka', (20, 38, 24, 41)),
+    # wschód
+    ('oboz-treningowy', (42, 29, 47, 32)),
+    ('wiatrak', (39, 22, 47, 32)),
+    ('woz', (28, 29, 32, 31)),
+    ('zrodlo', (9, 7, 14, 11)),
+    ('gniazdo', (6, 0, 12, 3)),
+    ('gniazdo', (18, 24, 22, 27)),
+    ('ognisko', (44, 41, 50, 45)),
+]
+
+
+def _miejsce(g, prost):
+    """Czyste pole na budowlę w prostokącie: grunt, nie droga, bez drogi pod
+    rysunkiem (dwa rzędy wyżej), z dala od innych budowli (3) i obiektów (2),
+    nic nie leży w pasie nad nią i ona nie stoi w pasie nad budowlą (G2)."""
+    x0, y0, x1, y1 = prost
+    m = g.mapa
+    budowle = [q for q, w in g.obiekty if w[0] in ('budynek', 'kopalnia', 'jasnowidz')]
+    wszystkie = [q for q, _ in g.obiekty]
+    zajete = set(wszystkie) | g.blokada
+    for nazwa, p in PUNKTY.items():
+        if nazwa.startswith('zamek'):
+            budowle.append(p)
+    sx, sy = (x0 + x1) / 2, (y0 + y1) / 2
+    dobre = []
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            if not g.w(x, y) or m[y][x] not in '.bj,' or (x, y) in zajete or g.ciasne(x, y):
+                continue
+            if any(g.w(x + dx, y + dy) and m[y + dy][x + dx] == '=' for dy in (-2, -1, 0) for dx in (-1, 0, 1)):
+                continue
+            if any(max(abs(x - q[0]), abs(y - q[1])) < 3 for q in budowle):
+                continue
+            if any(max(abs(x - q[0]), abs(y - q[1])) < 2 for q in wszystkie):
+                continue
+            if any(abs(q[0] - x) <= 1 and 1 <= y - q[1] <= 2 for q in wszystkie):
+                continue
+            otwarte = sum(1 for dy in (-1, 0, 1) for dx in (-1, 0, 1)
+                          if g.w(x + dx, y + dy) and m[y + dy][x + dx] in '.bj,=')
+            dobre.append((-otwarte, abs(x - sx) + abs(y - sy), (x, y)))
+    return min(dobre)[2] if dobre else None
+
+
+def _linia(a, b):
+    (x0, y0), (x1, y1) = a, b
+    n = max(abs(x1 - x0), abs(y1 - y0))
+    return [(x0 + round((x1 - x0) * i / n), y0 + round((y1 - y0) * i / n)) for i in range(n + 1)]
+
+
+def _prosta(g, a, b):
+    """Odcinek drogi z `a` do `b` po prostej (D3: schodki i ząbki na łące).
+    Stara trasa między nimi (najkrótsza po polach drogi) wraca do gruntu
+    wokół. Gdy prosta trafia w wodę, las albo obiekt — zostaje stara."""
+    m = g.mapa
+    from collections import deque
+    skad = {a: None}
+    kol = deque([a])
+    while kol:
+        p = kol.popleft()
+        if p == b:
+            break
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                q = (p[0] + dx, p[1] + dy)
+                if g.w(*q) and q not in skad and m[q[1]][q[0]] == '=':
+                    skad[q] = p
+                    kol.append(q)
+    if b not in skad:
+        print(f'  prosta {a}→{b}: brak starej drogi')
+        return False
+    stara, p = [], b
+    while p is not None:
+        stara.append(p)
+        p = skad[p]
+    nowa = _linia(a, b)
+    zajete = {q for q, _ in g.obiekty} | g.blokada
+    if any(m[y][x] != '=' and (m[y][x] not in '.bj,' or (x, y) in zajete) for x, y in nowa):
+        print(f'  prosta {a}→{b}: przeszkoda, zostaje stara')
+        return False
+    for x, y in stara:
+        if (x, y) in nowa:
+            continue
+        w = _wokol(m, [(x, y)])
+        m[y][x] = max('.b', key=lambda z: w.get(z, 0))
+    for x, y in nowa:
+        m[y][x] = '='
+    return True
+
+
+def runda_5(g):
+    m = g.mapa
+    zabrane = _usun(g, R5_USUN)
+    for p, b in R5_SKRZYNIE_NA_BUDOWLE.items():
+        for i, (q, w) in enumerate(g.obiekty):
+            if q == p and w[0] == 'skrzynia':
+                g.obiekty[i] = (q, ('budynek', b))
+    _odswiez(g)
+
+    # --- teren -------------------------------------------------------------
+    for x, y in R5_LAS:
+        if m[y][x] != '=':
+            m[y][x] = 'T'
+    for x, y in R5_LAKA:
+        if m[y][x] in '~b':
+            m[y][x] = '.'
+    # Dolina bez łat bagna (E3: plamy mniejsze niż 6 × 6).
+    for y in range(BOK):
+        for x in range(BOK):
+            if m[y][x] == 'b' and strefa(x, y) == 'dom':
+                m[y][x] = '.'
+    # Kałuże: woda w składowych do 6 pól poza Strugą i pierścieniem → grunt
+    # wokół (E5). Większe stawy zostają — są szyjkami.
+    for zn, sk in list(_skladowe(m, '~', 8)):
+        if len(sk) > 6:
+            continue
+        w = _wokol(m, sk)
+        grunt = max('.bT', key=lambda z: w.get(z, 0))
+        for x, y in sk:
+            m[y][x] = grunt
+    # Drogi (D3).
+    _prosta(g, (13, 44), (31, 44))
+    _prosta(g, (22, 7), (25, 14))
+    # Koniec ścieżki w dół doliny pole wyżej — stos leży NA jej końcu.
+    if m[53][13] == '=':
+        m[53][13] = '.'
+        g.postaw((13, 53), ('surowiec', 'pokeball'))
+    _odswiez(g)
+
+    # --- obiekty -----------------------------------------------------------
+    for p, w in R5_OBIEKTY:
+        if m[p[1]][p[0]] not in '.,bj':
+            m[p[1]][p[0]] = '.' if strefa(*p) != 'pogranicze' else 'b'
+        g.postaw(p, w)
+    _odswiez(g)
+    for b, prost in R5_BUDOWLE:
+        p = _miejsce(g, prost)
+        if p is None:
+            print(f'  runda 5: brak miejsca na {b} w {prost}')
+            continue
+        g.postaw(p, ('budynek', b))
+    _odswiez(g)
+
+    # --- G3: głazy w głębi lasu ---------------------------------------------
+    for y in range(1, BOK - 1):
+        for x in range(1, BOK - 1):
+            if m[y][x] != 'T' or strefa(x, y) == 'dom' and y >= 34:
+                continue
+            if not all(m[y + dy][x + dx] in 'T#' for dy in (-1, 0, 1) for dx in (-1, 0, 1)):
+                continue
+            if (x * 7919 + y * 104729 + ZIARNO) % 23 == 0:
+                m[y][x] = '#'
+
+    g.zasyp_odciete(m)
+    # --- G4: grunt krainy wroga w siatce ------------------------------------
+    for y in range(BOK):
+        for x in range(BOK):
+            if m[y][x] == '.' and strefa(x, y) == 'wroga':
+                m[y][x] = 'j'
+    print(f'  runda 5: usunięte {len(zabrane)}, obiektów {len(g.obiekty)}')
+
+
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 // Źródło: tools/mapy/bagna.py (szkic i rozstawienie), silnik: tools/generuj_mape.py.
 //
@@ -1384,6 +1629,9 @@ BARWY_TERENU = {
     # Runda 6 („zieleń wokół obiektów przygasić"): łąka mniej nasycona.
     'trawa': {'nasycenie': 0.5, 'barwa': (116, 136, 86), 'moc': 0.55, 'jasnosc': 0.76},
     'las': {'nasycenie': 0.7, 'barwa': (90, 110, 75), 'moc': 0.4, 'jasnosc': 0.82},
+    # Runda 5 pętli (G3): ściółka pod lasem poza pierwszym ekranem (`TLO`
+    # maluje ją znakiem `s` — warstwa śniegu, której ta plansza nie ma).
+    'snieg': {'nasycenie': 0.6, 'barwa': (52, 78, 48), 'moc': 0.6, 'jasnosc': 0.3},
     # Runda 8 („rozjaśnić teren"): błoto trzęsawiska o ton jaśniejsze
     # i cieplejsze — czarnobrunatne łaty przy dolinie czytały się jak dziury.
     'bagno': {'nasycenie': 0.95, 'barwa': (130, 118, 80), 'moc': 0.2, 'jasnosc': 1.18},
@@ -1411,7 +1659,9 @@ TEKSTURY = {'bagno': ['bloto', 'bagno'], 'woda': ['woda-czarna', 'woda-bagno', '
             # kamień — miękkie podnóże rysunku przechodzi w nią, a nie w kratę.
             'skaly': ['las'],
             # Runda 4 pętli (G4): grunt krainy wroga — ciemna trawa.
-            'jalowa': ['trawa-3', 'trawa']}
+            'jalowa': ['trawa-3', 'trawa'],
+            # Runda 5 pętli (G3): ściółka pod lasem (`TLO`, znak `s`).
+            'snieg': ['trawa-3', 'trawa']}
 
 #: Runda 2 („krainy rozmywają się w jedną"): twardsze brzegi terenów.
 #: Runda 6 („brzegi wody miękko rozmyte, bez wyraźnej linii"): woda ostrzej.
@@ -1516,6 +1766,15 @@ def TLO(rysunek):
         for x in range(BOK):
             if wynik[y][x] == '.' and strefa(x, y) == 'wroga':
                 wynik[y][x] = 'j'
+    # Runda 5 pętli (G3: „drzewa w równych poziomych szpalerach jak
+    # plantacja"): klocki lasu to rzędy wierzb, a między rzędami prześwitywała
+    # trawa jaśniejsza od łąki — jasne pasy co dwa–trzy pola. Poza pierwszym
+    # ekranem pod lasem jest ciemna ściółka (`s`, barwa `BARWY_TERENU`):
+    # rzędy zlewają się w jeden ciemny masyw.
+    for y in range(BOK):
+        for x in range(BOK):
+            if wynik[y][x] == 'T':
+                wynik[y][x] = 's'
     return [''.join(w) for w in wynik]
 
 
