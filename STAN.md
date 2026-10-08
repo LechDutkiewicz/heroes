@@ -1,6 +1,313 @@
 # Stan prac — notatka na wznowienie
 
-Ostatnia aktualizacja: 2026-09-27 (trener zamiast armii: stworek = postać z poziomem, 4 na polu bitwy, trening i Centrum Pokemon).
+Ostatnia aktualizacja: 2026-10-08 (plansze kampanii — pętla jakości wg zasad HoMM3; wcześniej 2026-09-27: trener zamiast armii).
+
+## Plansze kampanii — pętla jakości wg zasad HoMM3 (2026-10-08)
+
+Cel: cztery plansze kampanii dopracowane układem jak dobre mapy Heroes 3
+(strefa startowa, gospodarka, straże, drogi, topografia, odkrywanie,
+czytelność dla dziecka). Styl graficzny jest nasz; wzorem są tylko
+METODY budowy map.
+
+Wzorzec i miara
+- Wzorzec ślepy: pięć oficjalnych map HoMM3 72 × 72 (`tools/wzorzec/*-profil.json`,
+  `*-minimapa.png`, policzone z `.h3m` przez `tools/profil-wzorca.py`):
+  faeries, gorlam-s-tentacle-swampland, hatchet-axe-and-saw,
+  unexpected-inheritance, when-dragons-clash. Strony z poradnikiem edytora
+  HoMM3 i opisami map HotA są blokowane przez politykę sieci, więc
+  checklista `tools/wzorzec/CHECKLISTA.md` (30 punktów A1–G4) jest spisana
+  z pamięci poradnika i zakotwiczona w liczbach z tych pięciu map.
+- Runda = builder (osobny agent, jedna plansza, tylko jej pliki) → profil
+  `tools/profil-mapy.py <id>` → para ślepa A/B z losową kolejnością
+  (`tools/blind/r{N}-<id>.png`, klucz i liczby obok) → krytyk ze świeżym
+  kontekstem: werdykt ślepy + checklista + największa luka + 3 zmiany
+  (`tools/blind/r{N}-<id>-werdykt.md`). Wzorzec rotowany co rundę.
+  Wszyscy builderzy i krytycy na modelu Opus (prośba użytkownika).
+- Próg „gotowe": nasza wygrywa ślepo ORAZ 0 NIE i ≤ 2 CZĘŚCIOWO.
+- Dziennik: `tools/postep-plansze.json` → `tools/postep_plansze.py` →
+  strona postępu (artefakt, obrazy rund). Zrzuty rund w `tools/shots/caly-<id>-r{N}.png`
+  (poza repo). Skrypt rundy: `tools/runda-planszy.sh <id> <port>`.
+
+Wynik (ostatnia runda każdej planszy)
+| Plansza | Rund | Wzorzec ostatniej | Werdykt | TAK / CZĘŚCIOWO / NIE |
+|---|---|---|---|---|
+| Polana (misja 1) | 9 pętli (do rundy 19 generatora) | faeries | nasza | 28 / 2 / 0 |
+| Dwie Doliny (misja 2) | 7 | unexpected-inheritance | nasza | 28 / 2 / 0 |
+| Bagna (misja 3) | 10 | unexpected-inheritance | nasza | 29 / 1 / 0 |
+| Twierdza (misja 4) | 9 | unexpected-inheritance | nasza | 29 / 1 / 0 |
+
+Co zostało CZĘŚCIOWO (świadomie, do ewentualnej kolejnej pętli)
+- Polana: G1 okno nad wschodnią ziemią ~21 obiektów; G2 dwie straże przy
+  moście północnym dwa pola od siebie.
+- Dwie Doliny: D1 cztery pola bez drogi przy strażnicy wąwozu (49,44);
+  E3 pojedyncze kamienie w środku stref.
+- Bagna: G1 środek trzęsawiska (29–33,23–24) zagęszczony.
+- Twierdza: G1 dwa okna 21×18 po 20 obiektów (wschodnia tundra, zachód).
+
+Ograniczenia, które wyszły w pętli
+- Przy obiekcie co 10–11 pól przejezdnych średnio na pełne okno 21×18
+  wypada ~16–17 obiektów, więc „≤ 16 wszędzie" przy garbie w środku nie da
+  się spełnić; krytyk ocenia czytelną decyzję, nie samą liczbę.
+- Polana: siła straży na trasie do fortu jest ograniczona symulacją misji 1
+  (`symulacja-misji`, 9/9 wygranych, średnio dzień 18); straż (27,20) musi
+  zostać słaba, a wynik zależy od kolejności rozstawienia obiektów (jeden
+  strumień losowy). Silna straż pilnuje wyłącznego skarbca (BFS).
+- Twierdza: pułap 16 na okno siatki co 10 pól utrzymany kosztem liczby
+  obiektów (183) i boru+skał 49,5 %; gęstość 11,3.
+- Krytycy oscylowali (za gęsto ↔ za pusto, silna straż tu ↔ tam);
+  pomogły docelowe liczby w instrukcji (obiekt co 9–11 pól, 8–16 na ekran)
+  i sondy BFS na straże.
+
+Sondy na zamknięcie (maszyna luźna, load < 1): `npx tsc --noEmit -p .` OK,
+`probe-mapy` 0 ŹLE, `probe-mapa` OK, `probe-misja` WSZYSTKO OK.
+Szczegóły rund: sekcje „Polana — runda 13 planszy", „Dwie Doliny — pętla
+plansz 2026-10", „Bagna — pętla plansz 2026-10", „Twierdza — pętla plansz
+2026-10".
+
+## Bagna — pętla plansz 2026-10
+
+Runda 4 buildera (po werdykcie r3: wygrana ślepo, 20 TAK / 9 CZĘŚCIOWO /
+1 NIE). Cała zmiana w `tools/mapy/bagna.py`, funkcja `runda_4(g)` wołana po
+`runda_3` — chirurgicznie po rozstawieniu, losowania i reszta planszy te same.
+- **G1 (środek tłumem)**: z 151 obiektów zostało 110. Środek (28–48 × 16–33)
+  ma kopalnię odłamków, portal, wieżę na rozstajach, drzewo wiedzy (40,27)
+  na otwartym przy rozwidleniu grobli i stosy w zakątkach. Zakątki
+  (36–39, 19–21) i (48–50, 27–29) zarosły lasem; wyspa bez drugiej straży
+  i luźnych kropek. Na kaflach 3 × 3 (21 × 18) każdy ekran ma 12–15 obiektów
+  i ≤ 2 straże; okno przesuwne w miejscach styku stosów dochodzi do 22.
+- **B1**: dolina ma 4 kopalnie bez straży (Seadra (23,43) precz) i ranczo
+  przeniesione z (6,28) na (15,37). **C1**: precz straże kopalń i pojedynczych
+  rzeczy na placu ((8,0), (11,1), (21,14), (36,5), (40,28), (43,11)); nowa
+  silna straż w szyjce (32,4) przed kątem przy namiocie (40,1).
+- **B2**: stosy zbite — zachodni zakątek ciaśniejszy (stos 2 × 2 w (5–7,
+  20–21)), NE i wschodni przesunięte; nowe stosy po 2–4 rzeczy przy drodze.
+- **D4/E5**: północna przeprawa to wąska grobla przez Strugę (pola obok
+  grobli pod wodę, straż na grobli (12,33)); kałuże zasypane w kieszeni NW,
+  w centrum przy łuku grobli (32–43, 27–35) i przy zamku (mokradła dołu
+  doliny → łąka). **E3/E4**: plamy bagna/łąki < 10 pól w grunt wokół,
+  samotne wierzby precz, luki lasu SE zarastają, nowe masywy (`R4_LAS`).
+- **F3**: zostają jedno drzewo wiedzy na strefę (dom, pogranicze), jedna
+  kamienna wieża, jedno źródło; trzy wieże obserwacyjne (dom + 2 węzły dróg).
+- **G4**: kraina wroga (`strefa == 'wroga'`) nie ma bagna w grze, a w tle
+  `TLO` maluje jej łąkę jako `j` — ciemna trawa (`TEKSTURY['jalowa']`)
+  zabarwiona sino (`BARWY_TERENU['jalowa']`).
+- Liczby: obiekt co 12,0 pola (było 9,4 — granica normy, bo mniej obiektów
+  przy dziurach łatanych lasem), straże 14 (3 słabe / 6 średnich / 4 silne
+  + wódz), pasy [18, 12, 34, 24, 22], bez bitwy 23 %. Sondy Bagien OK.
+- Do sprawdzenia przez krytyka: B3 na samej granicy, mniej silnych straży
+  niż w r3 (gradient płytszy), oczka malowane w tle trzęsawiska (efekt
+  `trzesawisko`) dalej czytają się jak kałuże.
+
+Runda 5 buildera (po werdykcie r4: wygrana ślepo, 15 TAK / 13 CZĘŚCIOWO /
+2 NIE). Funkcja `runda_5(g)` po `runda_4`, ten sam styl (chirurgicznie).
+- **B4/B1**: kopalń 16 → 11 (kamień 3, pokeballe 3); precz (25,23), (29,28),
+  (26,30), (15,13), (20,13) — na ich miejsca budowle. Budowli 19 → 38
+  (31 %), skrzyń 21 (17 %), surowców 30, obiekt co 11,0 pola (121 obiektów).
+  Nowe budowle stawia `_miejsce(g, prostokąt)`: czyste pole, bez drogi pod
+  rysunkiem, ≥ 3 od budowli i ≥ 2 od obiektów (G2).
+- **G1**: okno środka (20–41 × 18–36) 14 obiektów / 1 straż, dom
+  (0–21 × 36–54) 14 / 1; kafle 18 × 18: 12–15, ≤ 2 straże. Okno przesuwne
+  21 × 18 dochodzi do 22 i 4 straży przy (30–50, 33–50) — tego nie zbiłem.
+- **A2/A5/A3/D1**: kopalnia pokeballi doliny pod słabą strażą (23,42) obok
+  drogi; kopalnia kamieni (11,51) i zakątek SW za jedną słabą strażą
+  (10,51) (kałuża (9–10, 51–53) → ściana lasu); ścieżka w dół doliny kończy
+  się na (13,52) stosem (12–13, 53) — 4 łatwe nagrody w ≤ 7 krokach.
+- **C1/C4/G2**: stos NE zamknięty lasem (35–36, 0–2/4), jedna brama (35,3)
+  ze strażą; kopalnia kamieni pogranicza z murem na drodze → (36,33) ze
+  strażą (35,34), straż (38,33) z drogi precz; straż odnogi SE (44,46) →
+  (45,48) obok drogi.
+- **D3**: `_prosta` — trakt doliny prosto wierszem 44 od (13,44) do mostu,
+  ukos spod warowni (22,7)–(25,14) po prostej. **E3/E5**: dolina bez bagna,
+  kałuże ≤ 6 pól zasypane. **G4**: kraina wroga ma w SIATCE grunt `j`
+  (minimapa: brąz zamiast zieleni). **G3**: pod lasem poza pierwszym
+  ekranem ciemna ściółka (`TLO` → `s`, barwa w `BARWY_TERENU['snieg']`) —
+  rzędy klocków zlewają się w masyw; plus rzadkie głazy w głębi lasu.
+  Szpalery samych sprite'ów wierzb zostają (to scena/klocki, nie plansza).
+- Sondy Bagien OK, `probe-misja` OK, bez bitwy 23 %, pasy [22, 16, 32, 24, 27].
+
+Runda 6 buildera (po werdykcie r5: wygrana ślepo, 21 TAK / 8 CZĘŚCIOWO /
+1 NIE). Funkcja `runda_6(g)` po `runda_5` (+ `_kupka` — stos obok siebie
+na wolnym gruncie), ten sam styl.
+- **G1**: ekran zamku (0–20 × 36–53) 14 → 8 obiektów / 1 straż (dwie
+  kopalnie bez straży, surowiec i skrzynia przy trakcie, kopalnia kamieni
+  ze strażą (10,51), zakątek SW: skrzynia + artefakt). Ranczo, drzewo
+  wiedzy, wiatrak, wieża (21,49), stos (12–13, 53) i (7,51) precz/dalej.
+  Ekran wroga (27–48 × 0–12) 18 → 10 (stosy (27–29, 3–8), połowa stosu NE,
+  ognisko (40,1), skrzynia wyspy). Najrzadszy ekran 21 × 18 ma 5.
+- **C1**: straż (8,12) w korytarzu lasu (7–10, 12); stos NE za korytarzem
+  (33–36, 3) (las (33–34, 4)), straż w wylocie (36,3); kopalnia pokeballi
+  doliny (24,42) → (24,40) w niszy (skały x 21–22 i 26, y 39–42), straż
+  (24,42) w wylocie — 3 × 3 nie sięga traktu (wiersz 44). Scena rysuje te
+  skały jak krzaki/wierzby, nie góry.
+- **D1**: odnogi: brama zamku → sad (4,45) przez (9,48)–(5,46); trakt →
+  nisza (24,43–41); grobla → kopalnia (10,24) przez (12,27)–(10,25);
+  ścieżka w dół doliny kończy się przy kopalni kamieni (12,52).
+- **D3**: trakt wschodni: schodki (41,30)–(43,28) precz, w trójkąt staw
+  (41–43, 28–30) zlany z jeziorem; trakt pionem przy kopalni (36,33),
+  wierszem 31 do (43,31) i brzegiem x=44 w górę. Rozstaje (27,24): kamienna
+  wieża (jedyna) na (25,24) zamiast ogniska.
+- **E3**: skały (15–19, 50–53) → las; wschodni pas (x ≥ 40, y 20–50): łąka
+  → bagno, kałuże ≤ 8 pól zasypane, pola bagna wciśnięte w jezioro → woda.
+- **F3/G2**: wieże 4 → 2 ((11,3), (39,39)), wiatraki 5 → 2 ((47,24) +
+  (29,29)), wozy 4 → 1, portale (para, zostają) z drogi na (17,25) i (38,42).
+  Klaster (7–12, 27) i (29–33, 27–29) rozebrany. Nowy zakątek w lesie za
+  mostem (33–35, 46–47): straż (32,46), skrzynia, jagody, artefakt.
+- **G4**: `TEKSTURY['jalowa']` = `tundra` w ciemnym, chłodnym brązie —
+  płaskowyż wroga i wyspa w grze wyraźnie brązowe, nie zielone.
+- Liczby: 113 obiektów, co 11,1 pola (las 38 %), budowle 27 (24 %),
+  surowce 30, skrzynie 21, straże 15; pasy [15, 25, 31, 24, 18], bez bitwy
+  22 %. Kafle 18 × 18: 7–16. Okno 21 × 18 przy (30–50, 33–50) ma 23
+  obiekty i 5 straży — najgęstsze, nie zbite. Sondy Bagien OK, probe-misja OK.
+
+Runda 7 buildera (po werdykcie r6: PRZEGRANA ślepo, 19 TAK / 10 CZĘŚCIOWO /
+1 NIE — „za rzadka, dom 15 obiektów na 113, start na pustej łące").
+Funkcja `runda_7(g)` po `runda_6` (dublet martwej pierwszej `runda_6` usunięty).
+Dosypane STOSAMI, nie konfetti: obiektów 113 → 127, obiekt co 9,8 pola, dom
+15 → 25 (ekran zamku 0–20 × 36–53: 17).
+- **A3/G1**: skrzynia + jagody (16–17, 48) 4 kroki od bramy. **B1**:
+  kopalnia pokeballi z niszy (24,40) na łąkę przy trakcie (17,41) — cztery
+  kopalnie domu widać od razu; w niszy za słabą strażą (24,42) skrzynia +
+  artefakt. Drzewo wiedzy (16,36) na łące nad traktem.
+- **B2**: pary (16–17, 43), (11, 42–43); stos wroga (19–21, 9–10) zbity.
+  **D1/F1**: koniec odnogi do sadu — skrzynia (5,47); koniec ścieżki w dół
+  doliny — skrzynia + artefakt (12–13, 53).
+- **C1**: straż kopalni kamieni (35,34) → (36,34) w niszy (las (34–35,
+  34–36)), kopalnia jagód (37,36) → (36,38), żeby rysunek straganu nie
+  wchodził na straż; wejście do zakątka (41,36) i korytarz wroga (8,12)
+  domknięte lasem (40,35/37), (11–12, 11/13). **C4**: wylot mostu zwężony
+  lasem (29–30, 43/45) do jednego pola za strażą (30,44); obóz z przyczółka
+  precz.
+- **E3**: skały niszy (21–22/26, 39–42) i przy bramie wroga → las; jezioro
+  zachodnie (10–23, 18–23) bez wysepek (pola z ≥ 5 sąsiadami wody pod wodę).
+  **F3**: wiatrak (47,24) → wóz, wieża widokowa (39,39) → ranczo. Portale
+  zostają (para „Stacji Kolejki" — krytyk liczy ją jako dublet).
+- **G3** nie ruszone: równe rzędy wierzb to układ klocków w scenie
+  (`src/data/klocki.ts`, wspólny), konfiguracja planszy go nie zmienia.
+- Dosyp poza domem: ognisko (35,10) i stos (28–29, 4) na płaskowyżu wroga,
+  stos (7–8, 29) na zachodnim trzęsawisku (drugi pas — garb nagród).
+- Liczby: surowce 32 (25 %), skrzynie 28, budowle 28, artefakty 12,
+  kopalnie 11, straże 15 (12 %); pasy [25, 27, 30, 27, 18], bez bitwy 22 %.
+  Okna 21 × 18: 11–24 (najgęstsze (6–27, 18–42)). Sondy Bagien OK,
+  probe-misja OK, tsc OK.
+
+Runda 8 buildera (po werdykcie r7: PRZEGRANA ślepo, 20 TAK / 10 CZĘŚCIOWO /
+0 NIE — „las z wyciętymi ścieżkami", 39 % lasu, kropki wzdłuż dróg, ostatni
+pas 18, straże pogranicza na placu). Funkcja `runda_8(g)` po `runda_7`;
+`_miejsce(..., sucho=True)` nie stawia budowli z wodą pod rysunkiem (G2).
+- **C1/C4**: przejście traktu wschód → środek (39–41, 30) zwężone lasem
+  (41,30) do 2 pól, w nim małpa (40,30) (z niszy (36,34)); małpa zakątka
+  (41,36) → (42,36) w wylocie, zakątek (44–46, 35–37) zwężony lasem
+  (43,35/37), łupy stosem 3 w głębi; ognisty (36,3) → korytarz (34,3);
+  smok wyspy (45,8) → jedyna luka (46,5) w murze lasu (rząd 5) przed
+  skarbcem wyspy (rzędy 3–4: skrzynia, kamień, artefakt, pokeball).
+- **G2**: straż brodu (12,33) → brzeg (12,35); kolejka (17,25) → (18,27)
+  z dala od jeziora; wóz (7,27) i obóz (43,32) precz; para (43–44, 22)
+  z tafli jeziora → (3, 26–27). **D1**: ostroga drogi (24,41/43) precz —
+  straż (24,42) stoi w wylocie niszy; ścieżka w dół doliny kończy się
+  stosem (12–13, 52–53).
+- **B2**: (22–23, 49) i artefakt (13,53) → stos końca ścieżki; zakątek SW
+  skrzynia + kamień (5–6, 51); SE (48–49, 47–48) stos 3; samotne surowce
+  (31,27), (21,24), (5,26), (11,28) precz, (10,29) → (9,29) do stosu.
+- **F3/B4**: laboratorium (drzewo-wiedzy) jedno (16,36): (25,9) → wiatrak,
+  (40,27) → chatka; ranczo (39,39) → gniazdo; wóz, obóz, ranczo po jednym.
+  Nowe budowle zwykłe: kolejka, punkt widokowy na wyspie, ognisko w kącie
+  NE, wiatrak i automat na zachodnim trzęsawisku, chatka w zakątku
+  zachodnim i na płaskowyżu (z (24,20) znad jeziora), automat na północy
+  wroga, ognisko w zatoce przy grobli, wiatrak na wschodnim skraju, gniazdo
+  za mostem.
+- **G3/E4**: równe rzędy wierzb to klocki sceny (`las-3x3`), więc las
+  przerzedzony 39 → 30 %: wnętrza masywów to pasma skał (`R8_SKALY`,
+  elipsa z poszarpanym brzegiem): narożnik NW, grzbiet krainy wroga na
+  zachód i wschód od bramy (przy bramie las zostaje), garb na płaskowyżu,
+  dół mapy za mostem, wschodni skraj. Skały poza krainą wroga stoją w tle
+  na ściółce (`TLO`: `#` → `s`). Zatoki trzęsawiska (`R8_ZATOKI`) w
+  tapecie (0–10, 18–30) i (44–54, 26–40).
+- **G4**: wyspa celu piaszczysta (`,`, `BARWY_TERENU['piasek']` blady
+  piasek), płaskowyż wroga sinoszary (`jalowa` ciemniejsza i chłodna).
+- Liczby: 128 obiektów, co 9,8 pola; budowle 35 + jasnowidz (28 %),
+  surowce 31 (24 %), skrzynie 25 (19,5 %), artefakty 10 (7,8 %), kopalnie
+  11, straże 15; teren T 30 % + # 10 %; pasy [25, 24, 28, 27, 24], bez
+  bitwy 21 %. Okno środka (17–38 × 18–36) 13 obiektów bez straży (wszystkie
+  wyjścia ze środka mają straż: (40,30), (26,16), (12,35), (6,24)); okno
+  wschodu (34–54 × 28–46) 14 / 2 straże. Sondy Bagien OK, tsc OK.
+- Zrzut `tools/zrzut-mapa.mjs --caly` na tej planszy przy obciążonej
+  maszynie wisi na „element is not stable" (scena działa, fps jak Polana);
+  zrzut zrobiony `page.screenshot` z wycinkiem płótna.
+
+Runda 9 buildera (po werdykcie r8: WYGRANA ślepo, 23 TAK / 7 CZĘŚCIOWO /
+0 NIE: A2, C1, E2, E3, G1, G2, G3). Funkcja `runda_9(g)` po `runda_8`,
+tabele `R9_*` (usunięcia, przeniesienia stare → nowe pole, teren).
+- **A2/C1/G2**: słaba straż z łąki (24,42) → (17,42) przy kopalni pokeballi
+  (17,41) (strefa obejmuje wszystkie pola wejścia kopalni); nisza (23–24, 40)
+  wolną nagrodą, samotny bruk (24,42) → łąka. Para (16–17, 43) ze strefy tej
+  straży → (22–23, 43) przy trakcie (na (19–20, 43) właziła na dach groty
+  (18,46)). Straż brodu z traktu (12,35) → brzeg (11,35): strefa dalej
+  obejmuje (12,34), więc bród zamknięty. Straż zakątka SW (10,51) → (8,50):
+  (9,50) też wchodziło pod rysunek kamieniołomu (szerszy niż 3 pola);
+  strefa (8,50) zamyka jedyne wejście (9,50). Cena: kopalnia kamieni
+  (11,51) jest teraz niestrzeżona (5 kroków od startu).
+- **E2**: z doliny stos (16–17, 48) i skrzynia (5,47) → stos przy trakcie
+  w środkowym bagnie (31,24), (32,24), (31,23); z pasa 5 skrzynia (14,2)
+  i surowce (38,2), (50,9) → stos przy trakcie do bramy (25,19), (25,20),
+  (26,20) nad jeziorem. Pasy [25, 24, 28, 27, 24] → [21, 25, 31, 22, 20].
+- **G1**: ekran wroga (11–31, 0–17) 22 → 15 obiektów (precz (27,4),
+  (19,4), (13,2), (20,9), (21,10), chatka (28,9); (14,2) wyjechała).
+  Ekran (22–42, 27–44) 4 → 3 straże ((30,44) most, (40,30) przesmyk,
+  (42,36) wylot zakątka), 17 obiektów. Para (36–37, 24) obok nowego stosu
+  i piąte ognisko (46,29) precz. Okno przesuwne 21 × 18: maks 23 (było 24
+  z tymi stosami; przy 119 obiektach średnia ~16, więc „≤ 16 wszędzie" przy
+  garbie w środku jest nieosiągalne). Kafle 18 × 18: 10–18.
+- **E3**: kałuże (18,30), (20,30), (36,8), (35,12–13) → las, (32,28) → bagno,
+  łączka (34–35, 29–30) → bagno. **G3**: pas drzew w dolinie (19–22, 35–43)
+  → kępa (20–21, 38–41); kępy (15–17, 39) i (26, 39–42) precz.
+- Liczby: 119 obiektów, co 10,7 pola; budowle 33 + jasnowidz (28,6 %),
+  surowce 26 (21,8 %), skrzynie 23 (19,3 %), artefakty 10 (8,4 %),
+  kopalnie 11 (9,2 %), straże 15 (12,6 %); bez bitwy 23 % (291 pól); do
+  zamku wroga 44 kroki, najdalszy zakątek 63. Plamy < 6 pól (wody/łąki):
+  tylko (31–32, 42–43) przy trakcie za mostem (łąka rozcięta drogą).
+- Sondy: `probe-mapy` Bagna bez ŹLE (ŹLE tła innych plansz — ich wątki),
+  `probe-misja` WSZYSTKO OK, tsc OK. `runda-planszy.sh bagna 5203` dwa
+  razy, oba ze zrzutem bez timeoutu (po pierwszym zrzucie poprawione
+  pozycje straży SW i pary przy grocie).
+- Nierozwiązane: niestrzeżony kamieniołom (11,51) (A2 może to wytknąć);
+  G1 w sensie okna przesuwnego dalej 23; czwarty pas (22) niższy niż drugi
+  (25), garb jest, ale niesymetryczny.
+
+Runda 10 buildera (po werdykcie r9: WYGRANA ślepo, 26 TAK / 4 CZĘŚCIOWO /
+0 NIE: A2, C1, G1, G3). Funkcja `runda_10(g)` po `runda_9`, tabele `R10_*`.
+- **A2**: kopalnia kamieni z otwartej łąki (11,51) → (5,52) w zakątku SW za
+  strażą (8,50), nie (6,52): rysunek kamieniołomu ma ~4,1 pola szerokości
+  (plik 300 × 160 przy 2,2 pola wysokości), przy (6,52) sięgałby x = 8,56,
+  czyli na straż; przy (5,52) kończy się na 7,56 (sprawdzone na zrzucie).
+  Bryła (4–6, 51) wypadała na skrzynię i kamień (5–6, 51) → stos pod
+  kopalnią: (6,53) kamień, (7,53) skrzynia. (11,51) zostaje łąką. BFS ze
+  strefami straży: zakątek (kopalnia, stos, (4,50)) zamknięty bez bitwy.
+- **C1**: straż (17,42) była na łące — kopalnia pokeballi (17,41) dostała
+  lasek po bokach wejścia (16,41), (18,41), (16,42), (18,42); straż stoi
+  w jednopolowym wylocie. Nisza (23–24, 40) nie ma już ścian (kępy zdjęte
+  w r7–r9), przenosiny tam wymagałyby nowego lasu na łące doliny (G3).
+  Pierwszy dzień w `probe-mapy`: 20 obiektów (było 21), OK.
+- **G1**: precz źródło (8,27), jagody (9,29), słaba straż (32,46). Ekrany
+  (6–26, 12–29) i (30–50, 33–50): po 19 obiektów i 3 straże. Okno
+  przesuwne 21 × 18 dalej maks 23 (przy (15,10)).
+- **G3**: kępa (20–21, 37–41) → łąka; wysepki (15–17, 9–11) i (7–12, 13)
+  → ziemia jałowa. Bez rzędu lasu (7–12, 13) straż korytarza (8,12) stała
+  na otwartym → (7,12), w szyjce x = 7 (rzędy 12–13) między lasem (7,11)
+  a skałami (7,14); stos NW (3–5, 10–11) dalej zamknięty bez bitwy.
+- **B3**: po zmianach obiekt co 11,1 → 20 zatok gruntu wcinających się
+  w las/skały (`R10_ZATOKI`, ≥ 4 z 8 sąsiadów las/skała, bez drogi i obiektów
+  obok) zarosło lasem. (36,12) odpadło — jedyne dojście do ośrodka (38,12).
+- Liczby: 116 obiektów, co 11,0 pola (1271 przejezdnych); budowle 32 +
+  jasnowidz (28,4 %), surowce 25 (21,6 %), skrzynie 23 (19,8 %), artefakty
+  10 (8,6 %), kopalnie 11 (9,5 %), straże 14 (12,1 %); pasy [22, 21, 31,
+  22, 20]; bez bitwy 24 % (299 pól); do zamku wroga 44, najdalszy zakątek 63.
+- Sondy: `probe-mapy` Bagna bez ŹLE, `probe-misja` WSZYSTKO OK, tsc OK.
+  `runda-planszy.sh bagna 5203` 4 razy (raz zrzut padł na „element is not
+  stable" — powtórka przeszła).
+- Nierozwiązane: B3 na samej granicy (11,0); pierwszy pas (22) wyżej niż
+  drugi (21) — garb w środku jest, ale lewe zbocze płaskie; lasek przy
+  kopalni pokeballi to cztery wierzby na łące — krytyk może je wziąć za
+  szpaler; okno przesuwne 23.
 
 ## Rozpiętość limitów i okrągłe ceny (2026-10-05, po #46)
 
@@ -1483,6 +1790,290 @@ Zmiany (wszystkie per plansza, układ i rozstawienie bez zmian):
   10 × 6, szczyt z lodospadem mniejszy na progu nad stawem.
 - Grafiki: 3 obrazki medium, ≈ $0,17.
 
+## Twierdza — pętla plansz 2026-10
+
+Krytyk rundy 2 (`tools/blind/r2-twierdza-werdykt.md`): wygrana ślepo,
+23 TAK / 5 CZĘŚCIOWO / 1 NIE. Zmiany tylko w `tools/mapy/twierdza.py`:
+
+- **G1 (NIE → rozkład)**: zachodnia dolina (0–21, 24–44) i zakątek za
+  Strażą Międzyjezierza (35–43, 24–35) wyłączone z losowania
+  (`BEZ_LOSOWANIA`); losowanie kupek, skrzyń i budowli stawia rzecz tylko
+  tam, gdzie każdy ekran 21 × 18 z tym polem ma < `EKRAN_LIMIT` (16)
+  obiektów (`gestosc`/`luzne`, okna po wszystkich położeniach kadru), reszta
+  idzie do `NADMIAR` i trafia na najluźniejszy ekran przy trakcie (z
+  preferencją środkowego pasa odległości; zachodnia dolina przyjmuje go
+  do `DOLINA_W_MAX`). Rozstawienie najpierw ręczne we wszystkich strefach,
+  potem losowanie (inaczej strefa po strefie zapełniała ekrany na granicy).
+  Ekrany: dolina W 43 → ~21, wschodnie jezioro 27 → ~20, start 10 → 13;
+  najgęstszy ekran planszy ~23–24. Niżej się nie da bez łamania B3 (obiekt
+  co ≤ 12,5 pola przejezdnego ⇒ ≥ ~215 obiektów, czyli średnio ~16 na
+  ekran lądu) — stąd trzy kępy boru w pustych połaciach (16–19, 25–29;
+  58–61, 25–29; 17–21, 4–7), las+skały 39,5 % (sufit 40 %).
+- **A2/A3**: kopalnia odłamków na brzegu stawu (14, 60), 5 kroków od bramy,
+  wiatrak na jej dawne miejsce (21, 64); skrzynie (9, 61) i (13, 66),
+  kupki (12, 59) i (17, 63); skrzynia zza jaszczura (6, 64) usunięta. W 8
+  krokach: 2 kopalnie, 2 skrzynie, 3 kupki, bez straży.
+- **E3**: śnieg w pasie tundry (y 24–42) → jałowa ziemia, poza kątem pod
+  grzbietem (x ≤ 9, y ≥ 39).
+- **E5**: kałuża (47, 50) zasypana; straż `SZYJKA_SE` (50, 62) w jednopolowym
+  przejściu między jeziorem SE a borem — bez straży (58, 57), (51, 64),
+  (53, 61) i (69, 63) za nią (`ZA_SZYJKA_SE`).
+- **G2**: losowe budowle ≥ 3–4 pola od innych budowli, ta sama budowla nie
+  bliżej niż 10 pól (`budowle_z_odstepem`), chaty jasnowidza też z odstępem
+  (`z_dala_od_budowli`); kupki/skrzynie losowania ≥ 2 pola od obiektów.
+- Najdalszy relikt pod wodzem w dolinie Srebrnej Strażnicy (x < 24), ≥ 5 pól
+  od innych straży — po zmianie terenu wypadał o pole od reliktu (30, 12).
+- Zostało: pasy odległości 28/38/57/61/34 — garb przesunął się w pas 4
+  (zachodnia dolina to pas 3, a ją przerzedzono); surowce luzem ~24 %.
+
+Krytyk rundy 3 (`tools/blind/r3-twierdza-werdykt.md`): przegrana ślepo,
+18 TAK / 8 CZĘŚCIOWO / 4 NIE („straże nie strzegą", rzadko, dom
+najbogatszy). Zmiany tylko w `tools/mapy/twierdza.py`:
+
+- **C1/C4 — straże w szyjkach** (`ZATOKI`, mury w `popraw_teren`): każda
+  zatoka ma czterospójny mur (ruch jest ośmiokierunkowy — mur po skosie
+  przecieka), wejście 1–2 pola w kwadracie 3 × 3 straży. Srebrna Strażnica:
+  kopalnie (16,14)/(19,14) za (14,15), zakątek pod borem za (30,12), skarbiec
+  NW (x 4–9, y 0–4) za wodzem (10,1); Lodowa: kopalnia pokeballi (63,14) za
+  (60,15), kopalnia odłamków (46,15) za (50,16); tundra: zachodnia zatoka
+  (x 0–9, y 32–43) za (8,31), wschodnia (x 62–71, y 33–43) za (63,34).
+  Zniknęło `strzez` (straż obok rzeczy na placu) i 12 straży placowych.
+  Przeciek (35,32)–(35,33) zamurowany. Kolejka: (37,30) w zakątku Drzewa
+  Wiedzy ↔ (70,39) w zatoce wschodniej — oba końce za strażami. Sonda
+  w scratchpadzie (łup każdej straży przy pokonanych pozostałych): każda
+  straż poza przełęczami i brodem pilnuje 3–10 rzeczy.
+- **C3**: w krainie wroga artefakt = relikt, więc artefakty tylko za
+  wodzami: (4,16) dwa relikty, (63,3) Ośrodek Ewolucji (przeniesiony spod
+  murów) + relikt, (10,1) relikt + stos. Za silnymi kopalnie i stosy.
+- **B3/E2/B1/B2**: 218 → 233 obiekty, przejezdnych 2693 → 2550 (kępy boru
+  w pustych połaciach: dolina Lodowej y 0–3, dom), obiekt co 10,9 pola;
+  strefy dom 67 / pogranicze 88 / wroga 78. Druga kopalnia pokeballi w domu
+  (61,49) usunięta; losowe kupki w domu 9 → 0, nadmiar losowania nie idzie
+  do domu, a w pasach pogranicza i dolinach twierdz ma pułapy
+  (`NADMIAR_PULAPY`, `WROGA_MAX`). B4: budynki 32 %, surowce 26 %, skrzynie
+  19 %, artefakty 6 %, straże 10 %. Bez bitwy 25 %.
+- **E3/G4**: cała dolina gracza (y ≥ 47) to tundra `.`, także tło pod
+  górami pierwszego ekranu (`TLO`). **E5**: kałuże (26,40), (26–27,41),
+  (34–35,40) i oczko (22–25,57–59) zasypane; wypustki (54,50–51), (50,51)
+  zarosły borem — zamykały północne obejście szyjki SE (bez nich trakt szedł
+  dookoła i straż (50,62) stała w lesie).
+- Zostało: **G1** — przy gęstości ≤ 11 pól na obiekt ekran 21 × 18 w dolinach
+  twierdz mieści 25–29 rzeczy (dolina ma wysokość ekranu); progi 8–16 i 9–11
+  wykluczają się przy 49 % przejezdnych. Bród (45,37) nadal do obejścia pętlą
+  przez obie twierdze (jak od rundy 2). T+# 42 % (checklista 25–40, wzorce
+  40–60).
+
+Krytyk rundy 4 (`tools/blind/r4-twierdza-werdykt.md`): wygrana ślepo,
+22 TAK / 8 CZĘŚCIOWO / 0 NIE. Zmiany tylko w `tools/mapy/twierdza.py`:
+
+- **G1/B2 — przerzedzenie**: `ZAKAZ_LOSOWANIA` (losowanie i nadmiar nie
+  stawiają nic) w pasie za bramami (21–43, 36–44) i w dolinie Lodowej
+  Twierdzy (42–62, 0–19). Za bramami zostają jasnowidz (23,39), kopalnie
+  (26,43) i (40,41), chatka (27,41) i stos (33–35, 40) — kopalnia
+  jagód i jasnowidz stoją teraz ręcznie (z losowania sad wypadał po zmianach
+  terenu przy straży zatoki). Z doliny Lodowej zniknęły ognisko, dwa
+  źródła i pięć kupek; chatka jasnowidza krainy wroga ręcznie pod przełęczą
+  (9,19). Ekrany krytyka: wyjście przełęczy 25 → 16, NE 28 → 16, pusty
+  (63–71, 18–35) 3 → 9.
+- **Polana za ranczem** (x 66–69, y 25–28): wycięta w borze, ślepa odnoga
+  traktu (`wschodni zakatek`), średnia straż w wejściu (65,26), za nią
+  ognisko, skrzynia i trzy kupki. Rzeczy zdjęte z doliny Lodowej, których
+  nie ma na polanie, idą przez `PRZENIESIONE` do nadmiaru.
+- **E2**: w pasie 3 nie było wolnego miejsca — polana w borze pod
+  korytarzem wschodniej tundry (54–59, 40–42: wiatrak, wóz, skrzynia,
+  kupka), wiatrak (47,52) i ognisko (60,53) w dolinie, nadmiar przyjmuje
+  też dalszą dolinę gracza (≥ 40 % najdalszego zakątka, pułapy ekranów 16).
+  Pasy 25/44/54/59/51 → 22/38/68/61/44.
+- **C4/A2**: skała x 15–16, y 68–71 — kopalnia pokeballi (14,70) tylko przez
+  wąwóz ze strażą (12,68). **C1**: bez `strzez` i `skarb_w_kieszeni` w dolinie;
+  zaułek NW zamknięty od południa borem (5–6, 52), straż w wejściu (8,50)
+  przed skrzynią i reliktem; stos za borem zamknięty skrajem boru (25–28, 68),
+  straż w wejściu (30,68); kieszeń (63–64, 47–48) bez straży (skrzynia +
+  kupka). Sonda w scratchpadzie: każda straż stoi w przejściu, które dzieli
+  teren na dwie strony.
+- **D3**: skalne garby 3 × 2 i 4 × 3 w osi traktów — (11–13, 16–17),
+  (11–13, 6–7), (57–59, 12–13), (54–57, 25–27), (52–55, 30–31); trakty
+  skręcają, żeby je obejść.
+- **G3**: kopczyki w tundrze to cienkie mury skał (scena kładzie na nich
+  tylko głazy 1 × 1 / 2 × 1). `po_drogach`: w pasie y 24–43 skała spoza
+  pełnych prostokątów 3 × 2 zarasta borem (po wytyczeniu dróg). Naklejki
+  tundry rzadziej (krzak `j` 0,08 → 0,05, `.` 0,07 → 0,05, głazy `s` 0,06 →
+  0,04).
+- Liczby: 233 obiekty, co 10,9 pola; straże 10 %, budynki 30 %, surowce 26 %,
+  skrzynie 21 %; bez bitwy 23 %; strefy dom 76 / pogranicze 89 / wroga 68.
+- Zostało: 21 losowych budowli nie mieści się nigdzie (log „nadmiar: nie
+  zmieścił się") — przy ≥ 3 polach między budowlami plansza jest pełna;
+  ekrany zachodniej doliny i Srebrnej Strażnicy mają po 21. Skrzynie 21 %
+  (checklista 15–20 %).
+
+Krytyk rundy 5 (`tools/blind/r5-twierdza-werdykt.md`): wygrana ślepo,
+26 TAK / 3 CZĘŚCIOWO / 1 NIE (G1: wschodnia tundra 30–32 obiekty po
+przeniesieniu tam nagród z NE). Runda 5 — zmiany tylko w `tools/mapy/twierdza.py`:
+
+- **G1 — pułap 16 na każdym oknie 21 × 18 z siatki co 10 pól**
+  (`OKNA_X`/`OKNA_Y`, `okna`, `gestosc`; `EKRAN_LIMIT` 22 → 16). Losowanie
+  i nadmiar stawiają tylko tam, gdzie okno zostaje ≤ 16; nadmiar, który się
+  nie mieści, przepada — a liczby `*_LOSOWE` są przycięte tak, że nic nie
+  przepada (dom 5 budowli, tundra 2 skrzynie, wroga 3 skrzynie; dawniej 58
+  losowych, z czego 21 „nie zmieściło się"). `PRZENIESIONE` usunięte.
+  Wschodnia tundra (48–71, 21–43) w `ZAKAZ_LOSOWANIA`; z ręcznych zniknęły
+  ognisko (59,24), wóz (53,34), gniazdo (52,28), kupki (54,24), (50,38),
+  (63,42), skrzynia (48,36), chatka (70,43), artefakt (64,38) i cała polana
+  (54–59, 40–42) z wiatrakiem, wozem, skrzynią i kupką (zarosła z powrotem
+  borem). 48–71 × 21–41: 32 → 19 obiektów. Inne okna > 16 przycięte ręcznie:
+  Srebrna Strażnica (ognisko (18,0), gniazdo (15,5), kupki (14,0), (22,0),
+  (5,10), (17,17)), Lodowa (wóz (61,8), kupka (37,11), skrzynia (53,1)),
+  zatoka zachodnia (gniazdo (7,41), kupka (17,38)), pierwszy ekran + południe
+  (kupka (28,67)), zatoka NE/kieszeń SE (gniazdo (55,64), ognisko (60,53),
+  skrzynia (71,53)). Log generatora wypisuje okna > 16 po ręcznym rozstawieniu.
+- **B2**: losowe skrzynie domu 5 → 0 (konfetti (18,50), (29,53), (35,51),
+  (40,55), (42,59), (56,61), (59,57) i ognisko (37,51) znikają), ręczna
+  (39,59) też; skrzynia (57,65) i kupka kul (z zatoki SE) w stosie przy
+  ognisku (58,66) z reliktem i kupkami. Dom ma 10 skrzyń (było 20).
+- **D3**: skalna bryła pod murami Lodowej Twierdzy (56–59, 11–13), garb
+  w korytarzu za przełęczą (57–60, 16–17) i garb (60–61, 6–7) przy odnodze do
+  skarbca. Trakt z przełęczy (57,21) idzie łukiem (58,20) → (56,17) → (54,13)
+  → (55,11) → brama, odnoga do skarbca obchodzi garb od wschodu (x 62).
+  Kroków do Lodowej 69 → 75 (83 → 84 % najdalszego zakątka).
+- **B3 — las zamiast obiektów**: przy ≤ 16 na oknie mieści się ~180 obiektów,
+  więc puste połacie zarosły borem (`bor(...)` w `popraw_teren`, ~35
+  prostokątów: północne granie obu dolin twierdz, środek doliny Lodowej
+  (38–49, 7–12), pas za bramami, zachodnia dolina tundry, jałowe pola domu,
+  zatoka NE). Przejezdnych 2538 → 1958, T 21 % → 31 %, T+# 43 % → 53 %
+  (wzorce HoMM3 40–60). Nowe ręczne rzeczy na luźnych oknach środkowego pasa:
+  skrzynia (42,38), źródło (39,37), wiatrak (36,34) przed brodem, ognisko
+  (43,28) w zakątku drzewa wiedzy, kupka (56,38) przy stosie areny, gniazda
+  (52,18) i (44,58).
+- Liczby: 179 obiektów (233), co 10,9 pola; straże 13 %, budynki 27 %,
+  kopalnie 9 %, surowce 25 %, skrzynie 18 %, artefakty 7 %; bez bitwy 24 %;
+  pasy 18/36/48/45/32 (garb w pasie 3); strefy dom 62 / pogranicze 63 /
+  wroga 54; okna co 10 pól: maks. 16 (było 28), przy dowolnym położeniu kadru
+  maks. 20 (było 34). Sondy: każda z 23 straży dzieli teren na dwie strony;
+  straże zatok pilnują 3–9 rzeczy, szyjka SE (50,62) — całej zatoki NE i SE.
+  `probe-mapy` Twierdza bez ŹLE, `probe-misja` OK (za drugim podejściem —
+  pierwsze padło na timeoucie ekranu wyniku przy obciążonej maszynie), zrzut
+  `tools/shots/caly-twierdza.png` za drugim podejściem (30 s timeout).
+- Zostało: obiektów 179 — poniżej zakładanych ~205–215; więcej się nie
+  mieści przy pułapie 16 (okna przy lewej i prawej krawędzi i nad
+  zatokami są pełne, środek to jeziora). Dom 62 ≈ pogranicze 63 (runda 3
+  chciała pogranicze wyraźnie bogatsze). Las 31 % — bór w dolinie Lodowej
+  Twierdzy może się czytać jako „ściana", do sprawdzenia przez krytyka (G3/E4).
+  Skrót między twierdzami przez przełęcz (34,9) nadal bez drogi na wschód od
+  x 34 (Dijkstra woli okrążyć po istniejących traktach) — od rundy 2.
+
+Krytyk rundy 6 (`tools/blind/r6-twierdza-werdykt.md`): wygrana ślepo,
+26 TAK / 4 CZĘŚCIOWO / 0 NIE (E3 łaty, E4 T+# 53 % i korytarze, G1
+międzyjezierze 18 rzeczy, G3 „morze choinek", źródło (14,40) w dziurze).
+Runda 6 — zmiany tylko w `tools/mapy/twierdza.py`:
+
+- **E4/G3 — polany** (`po_drogach`, po wytyczeniu dróg, więc trakty się nie
+  przesuwają): zachodnia dolina tundry x 10–19, y 31–43 cała z boru na `j`
+  poza murem zatoki (x 9 przy y 31–35 i 39–43, x 10 przy y 35–43) — źródło
+  (14,40), ognisko (13,36), wiatrak (15,34) widać z traktu; dolina gracza
+  x 26–37, y 54–63 na `.` z trzema kępami 3 × 2 ((26–28,57–58),
+  (29–31,54–55), (35–37,61–63)), bór x ≥ 38 przy kieszeni SE zostaje.
+  Bór na brzegach jezior → lód tego samego jeziora (`jezioro`): zachodnie
+  (15–19, 24–29) i drzewa y 24 pod granią, jezioro-zapora (52–54, 32–35),
+  pas (47–53, 36) i (52,24), jezioro SE (43–48, 53–56), (46,57), (52,52),
+  drzewa w tafli (50–57, 59–60), cypel (48,53–54). Lód nie dokłada pól
+  przejezdnych, więc T+# spada bez psucia gęstości.
+- **G1**: z międzyjezierza zniknęły wiatrak (36,34), ognisko (43,28),
+  skrzynia (41,29), kupka (35,40); skrzynia (33,40) po kupce dołączyła do
+  stosu (29,43). Ekran 27–47 × 24–41: 18 → 13.
+- **E3/E5**: śnieg w całym pasie y 24–44 → `j` (kąt zatoki zachodniej
+  2–8, 39–44 i skraj wschodniej 69–71, 43); kałuża (15,60) → łąka (lista
+  zamarzania na końcu `rozstaw`); kupka kul (13,54) → (14,48) przy kopalni
+  (11,49) i kupce (13,49) — (12,50) to droga, `postaw_kadr` jej nie bierze.
+- **B3 — stosy zamiast konfetti**: kupka (12,38) między ogniskiem
+  a źródłem; pod jeziorem skrzynia (31,42) + jagody (31,43) naprzeciw
+  kopalni (26,43) i stos przy kopalni jagód (40,42)/(41,43); w krainie
+  wroga skalny zakątek nad traktem do przełęczy twierdz (26,7)/(28,7).
+  `DOLINA_W_MAX` 28 → 20 — nadmiar (dwie skrzynie) zbijał ekran zachodniej
+  tundry z zatoką do 22 rzeczy przy dowolnym położeniu kadru.
+- Liczby: 182 obiekty, co 11,5 pola (2089 przejezdnych; akceptowane —
+  pas sporny nie ma więcej luzu w oknach, przy 11,0 T+# musiałby zostać
+  ~51 %); T 27 % + # 22 % = 49,5 %, lód 10 %; pasy 17/40/47/45/33;
+  strefy dom 61 / pogranicze 63 / wroga 58; bez bitwy 26 %; okna co 10 pól
+  maks. 16, nadmiar 0 przepada, przy dowolnym położeniu kadru maks. 20;
+  straże 13 %. Sonda w scratchpadzie: każda z 23 straży dzieli teren na
+  dwie strony. `probe-mapy` Twierdza bez ŹLE, `probe-misja` OK (dwa razy,
+  za pierwszym podejściem), zrzut za pierwszym podejściem (trzy rundy
+  skryptu).
+- Zostało: T+# 49,5 % to górna granica celu (checklista krytyka 25–40);
+  dalej się nie da bez gęstości > 11,5 albo nowych jezior bez funkcji.
+  Pogranicze ledwo bogatsze od domu (63 / 61). Bór wschodniej tundry
+  (57–61, 32–36) między traktami nie ruszony — okna (50,30) mają 16.
+
+Krytyk rundy 7 (`tools/blind/r7-twierdza-werdykt.md`): wygrana ślepo,
+24 TAK / 6 CZĘŚCIOWO / 0 NIE (B2 konfetti skrzyń w dolinie wroga, B3 11,5,
+D1/F1 pusta odnoga (19–20,68), G1 ekrany (26–46,1–18) i (0–20,25–42) po 20,
+G2 skrzynia (9,61) za domkiem zamku). Runda 7 — zmiany tylko
+w `tools/mapy/twierdza.py`:
+
+- **D1/F1/G2**: skrzynia (9,61) → (20,69), kamień (33,64) → (21,69) — stos
+  na końcu odnogi (19–20,68). Okno (10,54) dostawało 17, więc wiatrak
+  (30,65) → (31,65).
+- **B2/G1 — dolina wroga**: losowe skrzynie 5 → 0 (`TUNDRA_LOSOWE`,
+  `WROGA_LOSOWE`; nadmiar 0) — znikają (28,9) i (37,9), a trzy, które leżały
+  przy stosach doliny Srebrnej Strażnicy, stoją ręcznie (`WROGA_SKRZYNIE`:
+  (21,10), (12,18), (8,16), stawiane po jasnowidzu, żeby nie zatkać kieszeni
+  skarbca). Bez skrzyni (37,18); (42,13) → (40,15) do stosu z wiatrakiem
+  (39,14), kulami (36,15) i kamieniem (40,17); (31,14) → (30,14) obok kupki
+  (29,14); (26,7) → (27,8) na styk z kupką (28,7) ((27,7) to skała); (47,16) → (45,16) przy kupce
+  (44,16) pod kopalnią; jagody (46,6) → (48,6) przy sadzie. Ekran
+  (26–46,1–18): 20 → 17.
+- **G1 — zachodnia tundra** (0–20,25–42): bez kupki jagód (12,33), gniazda
+  (19,42) i kupki kul (1,36): 20 → 17.
+- **B3/E2**: stos skrzynia + jagody (46,50)/(47,50) przy chatce (44,50)
+  (ekran 39–59 × 47–64: 5 → 7); w pasie spornym dwie skrzynie (18–19,43) pod
+  zakrętem traktu (poza ekranem tundry), skrzynia + kupka (41–42,28)
+  w zakątku drzewa wiedzy (pas 3, 41 kroków; międzyjezierze 27–47 × 24–41:
+  15), relikt (67,25) na polanie za ranczem. Pasy jałowej ziemi szerokie na
+  pole między traktem a lodem zamarzają (`po_drogach`): (37–43,24),
+  (30–35,40), (32,39), (52–54,27–29) — 2089 → 2069 przejezdnych (profil)
+  bez nowego boru. Stos przy trakcie (36–37,35) próbowany i cofnięty — pas 2.
+- Liczby: 183 obiekty, co 11,3 pola (2069 przejezdnych); T 27 % + # 22 % =
+  49,5 % (bez zmian), lód 11 %; pasy 17/42/47/46/31 (garb w pasie 3, ale
+  pas 4 tuż za nim); strefy dom 63 / pogranicze 65 / wroga 55; bez bitwy
+  27 % (551 pól); okna co 10 pól maks. 16, nadmiar 0; straże 13 %,
+  surowce 25,7 %, skrzynie 19,1 %, budynki 25 %, artefakty 7,1 %. Sonda
+  w scratchpadzie: 17 straży dzieli teren na dwie strony, przełęcze i bród
+  (6) jak dotąd tylko parami (pętle). `probe-mapy` 0 ŹLE, `probe-misja` OK,
+  zrzut i sondy za pierwszym podejściem (dwa przebiegi skryptu —
+  drugi po poprawce (27,8)).
+- Zostało: pas 4 (46) prawie równy pasowi 3 (47) — przeniesienia z doliny
+  wroga ubrały pas 2, a wolne okna pasa 3 (międzyjezierze, wschodnia tundra)
+  są pełne. Pogranicze tylko o 2 bogatsze od domu.
+
+Krytyk rundy 8 (`tools/blind/r8-twierdza-werdykt.md`): wygrana ślepo,
+27 TAK / 3 CZĘŚCIOWO / 0 NIE (D1 droga urwana na (11,55), F1 pusta polana
+przy stawie zamkowym (3–20,53–55), G1 węzeł tundry (38–45,36–43) 7 rzeczy,
+okno (27–47,33–50) 21). Runda 8 — chirurgiczna, tylko trzy zmiany
+z werdyktu, zmiany tylko w `tools/mapy/twierdza.py`:
+
+- **F1/G1**: skrzynia (41,43) → (8,54), kupka kul (42,36) → (9,54)
+  (`DOLINA_PO_LOSOWANIU`, strefa dom) — stos na polanie przy stawie
+  zamkowym. Skrzynia (41,43) stoi w `TUNDRA` do końca losowania i dopiero
+  potem jest zdejmowana (`PO_LOSOWANIU_ZDEJMIJ`): zdjęta wcześniej zmieniała
+  okna nad przełęczami, `luzne` przetasowywało 5 losowych budowli doliny
+  (wóz (54,69) → źródło (70,68)) i pasy wychodziły 19/40/46/46/32 — bez
+  garbu. Tak losowanie jest identyczne z rundą 7.
+- **D1**: droga `=` na (10,54) — ścieżka brzegiem stawu z (11,55) kończy
+  się przy stosie (8–9,54).
+- **G1**: źródło (39,37) → (36,35), za drogą (38,35) na zachodnim brzegu
+  wyspy; przy brodzie (45,37) zostają skrzynia (42,38) i kopalnia (40,41)
+  z kupką (40,42).
+- Liczby: 183 obiekty, co 11,3 pola (2069 przejezdnych); strefy dom 65 /
+  pogranicze 63 / wroga 55; pasy 19/40/47/46/31 (garb w pasie 3, pas 4 o 1
+  niżej); bez bitwy 27 % (551 pól); okna co 10 pól maks. 16, nadmiar 0;
+  węzeł (38–45,36–43) 7 → 4, okno (27–47,33–50) 21 → 19; T 27 % + # 22 %
+  bez zmian; straże 13 %. Sonda straży jak w rundzie 7 (17 dzieli teren,
+  przełęcze i bród parami). `probe-mapy` 0 ŹLE, `probe-misja` OK, tsc OK,
+  zrzut za pierwszym podejściem — stos przy stawie i źródło za drogą
+  widoczne.
+- Zostało: dom (65) jest teraz o 2 rzeczy bogatszy od pogranicza (63) —
+  odwrotnie niż chciała runda 3; pas 4 nadal tuż za pasem 3.
+
 ## Profile graczy i sloty zapisu (2026-09-26)
 
 Zgłoszenie taty Eli i Janka: „Nowa gra → Kampania" kontynuowała ostatnią
@@ -2803,3 +3394,491 @@ tydzień zamiast 4,1 — mnożnik ×1,5 przyrostu). W HoMM3 fort dokłada całe
 jednostki. Żłobek (`fort`) nie rusza już przyrostu młodych (i tak każdego
 gatunku bierze się jednego), tylko dokłada `TRENINGI_ZA_ZLOBEK = 2`
 treningi na tydzień z każdego rezerwatu (3 → 5). `MNOZNIK_FORTU` usunięty.
+
+## Polana — runda 13 planszy (2026-10-03)
+
+Werdykt r2 (`tools/blind/r2-polana-werdykt.md`): plansza wygrała ślepo,
+ale 2 × NIE (C4 straże do obejścia, G1 ponad 15 obiektów na starcie)
+i 13 × CZĘŚCIOWO. Zmiany tylko w `tools/mapy/polana.py` (+ 3 linie
+w `render_mapa.py`: `NAKLEJKI_KLOCKI` — naklejki, które plansza z klockami
+chce zachować poza kwiatami i paprociami):
+
+- straże: przełęcz doliny (9,17) NA trakcie, łąka pod nią zarośnięta
+  (10–13,17), (11–12,18); most (17,25) dwa pola za deskami (punkt
+  „brod wschod" → (18,25)); bród JEDEN wiersz (20–22,8) ze strażą na
+  łasze; straże (12,13) i (27,7) z otwartej łąki odpadły — obie kopalnie
+  złota siedzą w kieszeniach: plaża (10,4) za (12,6), róg NE (31,3) za (31,5).
+  Straży 7 (4 słabe, 2 średnie, 1 silna), bez bitwy 23 %.
+- ekran startowy (0–21,18–36): 14 obiektów z zamkiem (było 22+). Kopalnia
+  w zboczu pasma to kamieniołom (9,27) — jaskinia odłamków krytyk brał za
+  „jaskinię"; jaskinia odłamków na północnej łące (7,12). Wiatrak, obóz,
+  automat, ognisko, domek, skrzynia z wąwozu → pule budowli.
+- kraina wroga: cały las za rzeką na północ od granicy → skała, masyw
+  (22–29,16–17) zamyka ją od południa; `TLO` daje pod skałami łąkę (`.`),
+  a w krainie wroga ciemną łąkę (`b`); uschłe drzewa (`martwe-drzewo-1/2`)
+  na `b` 0,07. Pas ubitej ziemi pod zachodnim pasmem (3–12,27) usunięty
+  (czytał się jak droga do nikąd i plama piasku).
+- F3: jedna wieża, jeden domek na drzewie; pule: dom 6, pogranicze 5
+  (bez rancza — mur lądował w skałach), wróg 2.
+
+Liczby: 58 obiektów, co 10,1 pola, pasy [8,7,20,10,13], fort 25/35 kroków.
+Sondy: `probe-mapy` Polana OK, `probe-misja` WSZYSTKO OK, `tsc` czysty.
+Nierozwiązane (CZĘŚCIOWO): D2 bezdroże to ta sama łąka co przy drodze;
+E3 rough w kieszeni za rzeką ma 5 × 9 pól (poniżej 6 szerokości).
+
+### Runda 14 (2026-10-08)
+
+Werdykt r3 (`tools/blind/r3-polana-werdykt.md`): wygrana ślepo, 19 TAK /
+10 CZĘŚCIOWO / 1 NIE (G1). Zmiany tylko w `tools/mapy/polana.py`:
+
+- dolina domu ma dwa wyjścia (most, przełęcz (9,17)); trzecie — kieszeń
+  za rzeką z rough (17–21,27–35) i strażą (17,30) — znikło: dno kieszeni
+  to łąka, głąb (18–21,33–35) las, w kieszeni sama jaskinia odłamków
+  (19,30) bez straży (leży za strażą mostu). Plama piasku (E3) usunięta.
+- ekran startowy (0–20,18–35): zamek + 8 obiektów, 2 straże (9,17),
+  (17,25). Przesmyk nad wieżą (19–21,18–22) zarósł. Skrzynia i koszyk
+  z lasu SW → stos (14,33)–(14,34) przy sadzie, na końcu odnogi.
+- kopalnie bez dubla: kamieniołom (9,27), sad (12,33), złoto plaży (10,4),
+  odłamki w kieszeni (19,30), kamieniołom pogranicza (28,20) pod przełęczą
+  fortu, złoto wroga (31,3). Bez kopalni na północnej łące (drugi sad).
+- straże: plaża (12,7) w szyjce z dwurzędowymi ścianami lasu (9–11,6–7),
+  (13–16,6–7); most (17,25) z lasem nad brzegiem (14–19,22–24), nie da się
+  obejść; północna przeprawa (20–22,8) to drugi rysunek mostu (`MOSTY`),
+  straż (23,8) na suchym brzegu.
+- G2/F3: łąka pogranicza rozstawiona ręcznie (`LAKA_POGRANICZA`: kopalnia,
+  pokeballe, stadion, wiatrak — po jednym), pagoda na stałe (31,8),
+  budowle i stosy północnej łąki z odstępem (`odstep=3`/`2`), bez ogniska
+  i automatu w pulach; strefy wolne wokół chaty jasnowidza, końca odnogi
+  i stosu przy rozstajach (25,23).
+
+Liczby: 47 obiektów, co 11,7 pola, pasy [7,5,15,8,12], fort 25/35 kroków,
+6 straży, bez bitwy 25 %. Nierozwiązane: sad (rysunek `m-sad`) krytyk
+może dalej brać za ogród, nie kopalnię; stos kamieni plaży (8,4) nie ma
+miejsca (stan z poprzednich rund).
+
+### Runda 15 (2026-10-08)
+
+Werdykt r4 (`tools/blind/r4-polana-werdykt.md`): PRZEGRANA ślepo, 22 TAK /
+7 CZĘŚCIOWO / 1 NIE (G1) — „za rzadka (co 11,7), pas sporny najchudszy,
+zachodnia łąka pusta". Zmiany tylko w `tools/mapy/polana.py`:
+
+- `strefa`: północna łąka (na zachód od rzeki, wiersze ≤ 16, za strażą
+  (9, 17)) to `pogranicze`, nie `dom` — tak ją liczy krytyk. Dom = dolina.
+- północna łąka rozstawiona ręcznie (`LAKA_POLNOCNA`, bez `g.dodaj`):
+  zachodnia łąka dostała stos skrzynia (5,14) + jagoda (4,15) + pokeball
+  (6,15) i wędrowny sklepik (5,12) przy domku na drzewie (3,10); samotne
+  pokeballe w stosach (11–12,12), (17–18,11–12); stosy (15–16,9),
+  (15–16,14).
+- dolina: kopalnia odłamków (5,28) bez straży z odnogą od zamku
+  (`kopalnia domu` (5,29)); stos spod sadu (14,33–34) wyjechał na
+  zachodnią łąkę. Ekran startowy (3–24,18–35): 7 rzeczy + straż mostu.
+- odnogi traktu: most → jaskinia (17,26–30 → `jaskinia` (19,31)),
+  północna łąka → plaża przez straż (`plaza` (12,5)).
+- pogranicze za mostem: stos pokeball + jagoda (32–33,21), ranczo (33,19)
+  w wykarczowanym rogu (`KARCZUNEK_RANCZA`), polana w lesie SE
+  (`POLANA_SE` 25–29,30–33) z ośrodkiem ewolucji (28,31), artefaktem,
+  skrzynią i odłamkami.
+- kraina wroga: misa fortu bez kopców, skały w dwóch grzbietach
+  (`GRZBIETY_FORTU`: 27–30,2–4 i 33–35,6–14) z przesmykiem (31,5) do rogu;
+  sad wroga (24,15) wcięty w masyw granicy; stos spod grzbietu (34–35,9–11)
+  → (23,12), (27,14); stos (28–29,6–7) pod grzbietem północnym.
+
+Liczby: 64 obiekty, co 8,9 pola, strefy dom 6 / pogranicze 40 / wróg 18
+(samo pogranicze za mostem 18), pasy [5,7,27,13,12], fort 25/35, 6 straży,
+bez bitwy 24 %. Sondy: `probe-mapy` Polana OK, `probe-misja` WSZYSTKO OK,
+`tsc` czysty. Nierozwiązane: dwie identyczne jaskinie odłamków na ekranie
+startowym (5,28) i (19,30); pole przy forcie z 6 znajdźkami (23–27,9–14)
+dość gęste; brak straży przy jaskini (19,30) — leży za strażą mostu, a trzecia
+straż na ekranie startowym łamałaby G1.
+
+### Runda 16 (2026-10-08)
+
+Werdykt r5 (`tools/blind/r5-polana-werdykt.md`): wygrana ślepo, 19 TAK /
+9 CZĘŚCIOWO / 2 NIE (A5 brak wolnej straży w domu, G1 tłok na środkowej
+łące przy pustym starcie). Celowany środek między „przeładowany" a „pusty"
+start. Zmiany tylko w `tools/mapy/polana.py`:
+
+- dom: kieszeń SW w lesie (`KIESZEN_DOMU` 1–4, 32–34, ściany (0–3, 31),
+  (5, 33–34)) za wolną słabą strażą (4, 32): kamieniołom (2, 33) — przeniesiony
+  spod dachu zamku (9, 27) — dwie skrzynie (1, 34), (4, 34), odłamek (3, 34),
+  jagoda (1, 33). Przy trakcie luzem jagoda (12, 30) i pokeball (10, 33):
+  na starcie 4 łatwe nagrody w 8 krokach, sad i jaskinia odłamków bez straży.
+  Zatoka pod zachodnim pasmem (1–4, 21–22) odrosła z lasu, żeby bez bitwy
+  zostało 24 %. `skarb_w_kieszeni('dom')` (i tak nic nie stawiał) odpadł.
+- środek północnej łąki: zostają obóz, drzewo wiedzy, gniazdo i dwa stosy —
+  przy rozstajach skrzynia (10, 11) + odłamek (9, 12), przy trakcie do mostu
+  kamień (15, 9) + skrzynia (16, 9). Odpadły (12, 12), (15, 14), (16, 14),
+  (17–18, 11–12) i pokeball zachodniej łąki (6, 15).
+- C4: straż mostu północnego (23, 8) SILNA, jak przełęcz fortu (30, 16).
+- B1/G2: kamieniołom pogranicza we wnęce lasu (`WNEKA_KAMIENIOLOMU` 24–26,
+  19–20), wejście (25, 20), słaba straż w wylocie (27, 20). Średnia tu
+  (i średnia na plaży) wywracała `symulacja-misji.ts` (autopilot dnia 34–35
+  przy progu 32) — zostaje słaba.
+- B4: mniej surowców — bez kamieni plaży (11, 4), pokeballi (27, 14),
+  odłamka (29, 7).
+- D2/E3: `po_drogach` — łąka za mostem (na wschód od rzeki, od wiersza 18)
+  poza traktem to `j` (ruch 125), w tle warstwa `snieg` z teksturą `trawa`
+  i oliwkowym tintem (`TLO`, `TEKSTURY`, `BARWY_TERENU['snieg']`).
+- E3: `SKALY_SE` — pasmo nad jaskinią ciągnie się (18–28, 28–29), róg SE
+  to jeden blok skał (30–35, 32–35).
+
+Liczby: 64 obiekty, co 9,3 pola, strefy dom 13 / pogranicze 35 / wróg 16,
+pasy [6,12,22,13,11], fort 25/35, 8 straży (5 słabych, 1 średnia, 2 silne)
+= 12 %, surowce 15 = 23 %, bez bitwy 24 %. Sondy: `probe-mapy` Polana OK,
+`probe-osiagalnosc` OK, `probe-misja` WSZYSTKO OK, `tsc` czysty,
+`symulacja-misji` misja 1: 9/9 wygranych, średnio dzień 25,8 (było 17 —
+autopilot obchodził silną straż średnią na moście północnym).
+Nierozwiązane: C2 ma teraz jedną średnią straż (róg NE) — skok słaba →
+silna; dwie identyczne jaskinie odłamków na ekranie startowym zostają.
+
+### Runda 17 (2026-10-08)
+
+Werdykt r6 (`tools/blind/r6-polana-werdykt.md`): wygrana ślepo, 23 TAK /
+6 CZĘŚCIOWO / 1 NIE (G1: przeładowany ekran domu, 5 nagród w kieszeni SW
+przy pustym pasie (1–10, 21–22)). Zmiany tylko w `tools/mapy/polana.py`:
+
+- G1/F1: ekran domu (0–20, 18–35) = zamek + 10 rzeczy + 2 straże (4, 32),
+  (17, 26). Kieszeń SW: kamieniołom (2, 33) + skrzynia (4, 34); skrzynia
+  (1, 34) na koniec pasa pod lasem (2, 21); odłamek (3, 34), jagody (1, 33)
+  i (12, 30) odpadły; pokeball z płotu sadu (10, 33) → (8, 34). Straż
+  przełęczy w samej szczelinie (8, 16) zamiast pod nią (9, 17).
+- C2: most północny (24, 8) ŚREDNI, (30, 16) jedyna silna. (27, 20) zostaje
+  SŁABA: średnia odcina drugi kamieniołom i misja 1 w symulacji spada do
+  2–4/6 wygranych przed dniem 32. Skutek średniego mostu: autopilot idzie
+  na fort północą (słaba (8, 16) → średnia (24, 8)) i wygrywa ok. dnia 21.
+- C3/F1/G2: kamienna wieża (31, 8) spod dachu fortu na koniec ślepej
+  odnogi (25, 3); ognisko z (24, 5) do wnęki po sadzie wroga (24, 15).
+  Straż mostu południowego pod przyczółkiem (17, 26), północnego (24, 8)
+  — o pole od końca desek. Skrzynia (23, 12) przy sadzie wroga odpadła.
+- B4: kopalnie 6 = 9,8 % (sad wroga → ognisko, druga jaskinia odłamków
+  (19, 30) → gniazdo), budynki 17 z jasnowidzem = 28 % (wiatrak (18, 11)
+  trzy pola od laboratorium, chatka (26, 14), stos pokeball (29, 6) przy
+  skrzyni (28, 6)), skrzynie 12 = 19,7 % (bez (26, 6)).
+- E3: brzeg jeziora jedną linią (wiersz 7 woda, 8–9 łąka), skały nad plażą
+  (9–11, 2) jednym blokiem. G4: kraina wroga w siatce `b` (ciemna łąka;
+  ruch jak bagno 175 poza traktem) — na minimapie inna niż brąz `j`.
+- **Pułapka autopilota**: kieszeń SW poza zasięgiem wzroku zostaje we
+  mgle — bez przynęty na (8, 34) autopilot brał kamieniołom (2, 33) po
+  dniu 14 albo wcale, a bez kamienia nie rozbudowywał zamku (0/6 wygranych).
+
+Liczby: 61 obiektów, co 9,8 pola, strefy dom 9 / pogranicze 37 / wróg 15,
+pasy [5,10,22,15,9], fort 25/35, 8 straży (5 słabych, 2 średnie, 1 silna),
+bez bitwy 24 %. Sondy: `probe-mapy` i `probe-osiagalnosc` Polana bez ŹLE,
+`tsc` czysty, `symulacja-misji` misja 1: 9/9 wygranych, średnio dzień 21,3.
+Nierozwiązane: C2 na trasie południowej nadal słaba → silna (średnia jest
+na północnej); silną przełęcz da się obejść średnim mostem; dwa wiatraki,
+dwa gniazda i dwa domki na drzewie (14 rodzajów budowli na 16 sztuk).
+
+### Runda 18 (2026-10-08)
+
+Werdykt r7 (`tools/blind/r7-polana-werdykt.md`): wygrana ślepo, 25 TAK /
+4 CZĘŚCIOWO (C3, E3, G1, G2) / 0 NIE. Zmiany tylko w `tools/mapy/polana.py`:
+
+- C3/C2 (zmiana 1): siły zamienione — przełęcz fortu (30, 16) ŚREDNIA, most
+  północny (24, 8) SILNY. Trasa do fortu: słaba (17, 26) → słaba (27, 20,
+  wnęka kamieniołomu, po drodze) → średnia (30, 16). Żeby silna pilnowała
+  czegoś wyłącznego, ostroga skał (26–27, 5–7) (trzeci `GRZBIETY_FORTU`)
+  odcina zakątek (23–26, 3–6) od misy fortu; jedyne wejście (23–25, 7) leży
+  w strefie straży (24, 8). W zakątku kamienna wieża (25, 3) i artefakt
+  (24, 5) (`SKARBIEC_WROGA`) — artefakt przyszedł z końca odnogi SE (31, 29),
+  tam teraz jagoda. Artefakt (25, 10) zostaje po stronie fortu: bez niego
+  autopilot przy starterze 0 brał przełęcz dnia 19, a fortu już nie (6/9).
+- G1 (zmiana 2): odpadły wiatrak (18, 11), wóz (5, 12) i skrzynia (16, 9);
+  skrzynia z rozstajów (10, 11) → zatoczka przy moście (18, 6), kamień
+  (15, 9) obok niej (17, 7).
+- G2/E3 (zmiana 3): pokeball (24, 10) → (26, 12), kamień (25, 11) → (24, 12)
+  (jajo artefaktu stało na kamieniach). Odłamek i skrzynia spod domku zamku
+  (11, 27–28) → nad przyczółek mostu, po obu stronach traktu: odłamek
+  (13, 24), skrzynia (11, 24). Pola z werdyktu (14, 27–28) stykają się ze
+  startem (`postaw_kadr` ich nie bierze, a (14, 27) to flaga bohatera);
+  (13–14, 30) leżały na dachu straganu sadu; (9–10, 21) na wylocie doliny
+  — autopilot brał je za późno, symulacja 6/9, dzień 28. Teren: (8, 2) → las,
+  kępka (11–14, 9–10) → łąka (trakt idzie teraz prosto wierszem 10),
+  (27, 18–19) → ziemia pogranicza.
+
+Liczby: 59 obiektów, co 10,1 pola, strefy dom 9 / pogranicze 34 / wróg 16,
+pasy [5,10,19,14,11], fort 25/35, straże 8 (5 słabych, 2 średnie, 1 silna),
+bez bitwy 24 %. Udziały: surowce 24 %, budynki z jasnowidzem 25,4 %,
+skrzynie 18,6 %, kopalnie 10,2 %, artefakty 8,5 %, straże 13,6 %.
+Sondy: `probe-mapy` i `probe-osiagalnosc` Polana bez ŹLE, `probe-misja`
+WSZYSTKO OK, `tsc` czysty; `symulacja-misji` misja 1: 9/9 wygranych,
+średnio dzień 18,3 (15/15/25 wg startera) — autopilot idzie południem
+(17, 26) → (27, 20) → (30, 16) → róg NE (31, 5) → fort, silnej nie rusza.
+Nierozwiązane: G1 — najgęstsze okno 21 × 18 ma 22 obiekty (środek północy
+(8–28, 3–20); było 23), próg „≤ 16 na ekran" jest przy gęstości co 10 pól
+nieosiągalny (średnio ~17 na okno); budynki 25,4 % i kopalnie 10,2 % na
+granicy widełek, więc dalszego odchudzania nie było (chatka (26, 14) to
+dubel (3, 10), ale bez niej budynki < 25 %). Most południowy i (27, 20) to
+dwie słabe z rzędu — stopień średni dopiero na przełęczy fortu.
+
+### Runda 19 (2026-10-08)
+
+Werdykt r8 (`tools/blind/r8-polana-werdykt.md`): wygrana ślepo, 26 TAK /
+3 CZĘŚCIOWO (E3, G1, G2) / 1 NIE (C3). Zmiany tylko w `tools/mapy/polana.py`:
+
+- C3 (zmiana 1): most północny (24, 8) ŚREDNI, nowa SILNA straż (24, 6)
+  w szyjce (23–25, 6) między wodą (22, 6) a ostrogą skał (26–27, 6);
+  artefakt skarbca (24, 5) → (23, 4). BFS na `plansza-teren-polana.ts`
+  (strefa = pole + 8 sąsiadów): przy zablokowanej strefie (24, 6) żadne
+  z 11 przejezdnych pól zakątka (23–26, 3–5) nie jest osiągalne, a fort
+  zostaje osiągalny (także przy zablokowanej (30, 16) albo (24, 8)).
+  Szyjka ma 3 pola — bez dokładania skał.
+- **Pułapka losowania**: `src/data/plansza.ts` losuje skład straży i zawartość
+  skrzyń jednym strumieniem w kolejności `ROZSTAWIENIE`. Straż (24, 6)
+  wstawiona między straże przestawiała gatunki dalszych (przełęcz fortu
+  (30, 16) Sporex → Cindro) i symulacja spadała do 3/9; na końcu listy
+  straży — 1/3 (przesunięte skrzynie). Stoi więc jako OSTATNI obiekt
+  `rozstaw` (`g.postaw` po kamiennej wieży), jej 9 pól zajęte wcześniej.
+- G1 (zmiana 2): odpadły kamień (24, 12) i gniazdo (13, 15). Chatka (26, 14)
+  ZOSTAJE — bez niej budynki z jasnowidzem 22,8 %; zamiast niej odpadły
+  pokeballe (26, 12) i skrzynia (28, 6) (pokeballe (29, 6) zamiast skrzyni
+  dawały surowce 19,6 %). Okno (12–32, 3–20): 19 obiektów, w tym 6 straży
+  (było 22 i 5); najgęstsze okno 21 × 18 ma 21 obiektów.
+- G2/E3 (zmiana 3): straż (4, 32) → (4, 31); straż (27, 20) → (27, 19)
+  — na zrzucie wózek kamieniołomu (25, 20) dalej sięgał kolumny 27, więc
+  wnęka (`WNEKA_KAMIENIOLOMU`) jest o kolumnę szersza (23–26, 19–20),
+  a kamieniołom stoi na (24, 20). Obie straże dalej zamykają swoje zakątki
+  (BFS: 0 pól kieszeni SW i wnęki bez bitwy). Teren: (2, 12) → las (kępa
+  (3–4, 12) zlała się z lasem), (18–20, 22) → las, ziemia tylko pod wieżą.
+
+Liczby: 56 obiektów, co 10,6 pola, strefy dom 9 / pogranicze 33 / wróg 14,
+pasy [5,10,18,14,9], fort 25/35, straże 9 (5 słabych, 3 średnie, 1 silna),
+bez bitwy 24 %. Udziały: surowce 21,4 %, budynki z jasnowidzem 25,0 %,
+skrzynie 17,9 %, kopalnie 10,7 %, artefakty 8,9 %, straże 16,1 %.
+Sondy: `probe-mapy` Polana bez ŹLE, `probe-misja` WSZYSTKO OK, `tsc` czysty;
+`symulacja-misji` misja 1: 9/9, średnio dzień 18,3 (18/18/19 wg startera).
+Nierozwiązane: kopalnie 10,7 % i artefakty 8,9 % lekko ponad widełki
+(6 kopalń przy 56 obiektach — ≤ 10 % wymaga ≥ 60); budynki dokładnie 25 %,
+więc dalsze odchudzanie tylko kosztem surowców/skrzyń. Dwie średnie z rzędu
+na trasie północnej (24, 8) i południowej (30, 16), silna tylko przy skarbcu.
+
+## Dwie Doliny — pętla plansz 2026-10
+
+Runda 3 po werdykcie `tools/blind/r2-dwie-doliny-werdykt.md` (wygrana ślepo,
+ale G1 = NIE: „każdy ekran 21 × 18 niesie ~19 obiektów, konfetti surowców").
+Zmieniony tylko `tools/mapy/dwie_doliny.py` (`_runda3` w terenie, nowe
+`rozstaw`, `TLO` + `TEKSTURY` + `BARWY_TERENU`, `ZASYP_ODCIETE`).
+
+- **G1/B2: stosy zamiast konfetti.** 265 → 184 obiekty, straży 36 → 21.
+  Każdy ekran 21 × 18 (siatka 0/21/42/51 × 0/18/36/54) ma 9–15 obiektów
+  i najwyżej dwie straże. Surowce leżą stosami po 2–3 (sad (22,66), pod
+  jagodami (38,63), przy pokeballowej (41,67), za luką rozstajów (24,52),
+  stos startowy (11,65)); pojedyncze surowce zostały tylko przy szyjkach,
+  gdzie są nagrodą straży.
+- **B3: masywy zamiast łąk.** Po przerzedzeniu obiekt wypadał co 14 pól,
+  więc otwarte place dostały masywy lasu (lista w `_runda3`), a odcięte
+  niecki zarastają (`ZASYP_ODCIETE`). Przejezdnych 51 % → 42 %, obiekt co 11,7.
+- **A1: zatoka zamku ze ścianami.** Skalny mur w wierszach 55–56 (x 2–11)
+  z lasem nad nim, skała x 17–19 nad wrotami wschodnimi (57–62), las pod
+  nimi i wzdłuż południowego brzegu. Dwa wyjścia: północne (13–14) ze strażą
+  (14,51), wschodnie (wiersze 63–64) do sadu. Straży NIE przeniesiono na
+  (19,63), jak radził krytyk: wtedy bez bitwy stoi tylko zatoka (~14 %),
+  a `probe-mapa` wymaga ≥ 22 %. Sad i łąka należą do pierwszego tygodnia.
+- **C1: straże w szyjkach.** Luka rozstajów (25,55) stoi teraz w skalnej
+  bramie (skały x 22–24 i 27–29, wiersze 54–57); zachodnia łąka pasa
+  spornego ma wejście przesmykiem w lesie (8–12, 28–29) ze strażą (10,28)
+  zamiast otwartej łąki (10,41); rubież wschodnia — zwężeniem (59–63, 30–31)
+  ze strażą (60,30) przy drodze do niebieskiego namiotu, wiersz 39 zamknięty.
+- **D2/D3.** Rozstaje (25,58) mają arenę jako punkt orientacyjny. Trakt
+  z brodu biegnie prosto przecinką w lesie (34–40, 39–40) — wcześniej nurkował
+  pod kępę i wracał. Droga doliny idzie korytarzem między masywami (30–35,
+  56–60) i (30–35, 65–71). Kraina wroga to w grze jałowa ziemia (125), więc
+  tam droga bita się opłaca.
+- **E2: pas sporny najgęstszy.** Strefy dom 59 / pogranicze 73 / wróg 52;
+  pasy odległości [23, 22, 55, 54, 30] — garb w środku, nie w czwartym pasie.
+- **E3/G4.** Śnieg zniknął; piaskowa kieszeń doliny wschodniej → łąka
+  (piasek został tylko w wąwozie bocznego przejścia). Cała kraina wroga
+  (y < 21) ma własny grunt: w grze `j`, w tle (`TLO`) wolna po śniegu
+  warstwa `s` z teksturą ciemnej trawy, zabarwiona sinozielono (jak `b`
+  na Polanie). Brązowa jałowa ziemia wokół zamku wroga (x ≥ 60, y 6–20)
+  zostaje brązowa. Bagno przy jeziorze ma swoją warstwę i się nie zmienia.
+- Ślepa odnoga w rogu SE (67–71, 59–71) zarosła lasem — była pustą końcówką.
+
+Bez bitwy 23 %, kroków do zamku wroga 84 (najdalej 93), akty I/II/III OK.
+Nierozwiązane: pole za wodzem (3–29, 0–7) dalej jest dużą łąką z jedną
+kępą — lasu nie da się tam dołożyć bez odcięcia zachodniej części (wiersze
+0–3 x 8–12 to skała).
+
+Runda 4 po werdykcie `tools/blind/r3-dwie-doliny-werdykt.md` (wygrana,
+19 TAK / 10 CZĘŚCIOWO / 1 NIE — G1). Zmieniony tylko `tools/mapy/dwie_doliny.py`
+(nowe `_runda4` w terenie, przepisane `rozstaw`, SZLAKI).
+
+- **A1 zatoka zamku.** Ściana lasu x 17–21 (wiersze 60–70), wrota wschodnie
+  (63–64) zamknięte; drugie wyjście to korytarz w wierszach 58–59 na rozstaje
+  (25, 58) — dalej straż bramy (25, 55). Las w wierszu 57 (x 8–11) domyka
+  ścianę północną. Sad jest teraz za rozstajami, nie przy zamku.
+- **A2.** Kopalnia kamienia w kieszeni rogu zatoki (2, 70) za słabą strażą
+  (2, 67) — zamiast stosu.
+- **B1/B4/C3.** Kopalnie pokeballi 4 → 2 ((38, 69) w domu, (51, 3) u wroga);
+  (55, 37) i (37, 19) to sporne stosy z artefaktem. Kopalni 20 → 15 (9,6 %),
+  surowców luzem 54 → 31 (≈ 20 %), budowli z namiotami i strażnicami ≈ 34 %.
+  Wódz wschodni stoi w szyjce (65, 11) zakątka (x 64–71, y 12–19) z reliktem
+  (66, 14), Dojo (69, 12) i automatem (64, 17); boczna przełęcz wychodzi
+  korytarzem (58–60, 12–19).
+- **G1/B2/C1.** Zachodni pas sporny (x 0–11, y 24–39) zarósł: ślepa odnoga
+  z polanki, średnia straż w leśnej szyjce (6, 29), jeden stos (1–3, 28) na
+  końcu; sporna kopalnia kamienia we wnęce (6, 34). Kopalnia pokeballi w domu
+  stoi w kieszeni (36–43, 66–71), słaba straż w szyjce (40, 65) — pilnuje
+  wejścia. Straż rubieży (60, 30) pilnuje całej rubieży (kopalnia (69, 33)
+  bez własnej straży); stos (8, 11) ze strażą przeniesiony na jeziorko.
+- **D3.** Jeden trakt w dolinie: odnoga na rozstaje odchodzi od głównej drogi
+  przy (13, 58) korytarzem; sad nie ma własnej drogi.
+- **E3.** Skalne kępy (15–19, 51–54) i brama rozstajów (22–24 / 27–29,
+  54–57) to teraz las tego samego pasa; głazy (36–40, 64–68) zniknęły.
+- **E5.** Jeziorko NW: mierzeja (15, 12–13) z silną strażą i plaża
+  (13–17, 14–16) ze stosem — zatoczka ze skarbem.
+- **B3.** Po przerzedzeniu obiekt wypadał co 13–16 pól, więc puste place
+  (głównie kraina wroga) dostały masywy (lista w `_runda4`), a bagno dalej
+  niż dwa pola od traktu zarosło / weszło w jezioro. Przejezdnych 2160 → 1867.
+
+Liczby: 157 obiektów, obiekt co 11,9 pola, każdy ekran siatki 21 × 18
+(0/21/42/51 × 0/18/36/54) ma 8–12 obiektów i ≤ 2 straże; ekran krytyka
+(0–20, 26–40) — 7. Bez bitwy 23 %, kroków do zamku wroga 84 (najdalej 94),
+pasy odległości [23, 21, 43, 44, 26]. Sondy: probe-mapy, probe-mapa,
+probe-misja OK. Uwaga przy dalszych zmianach: wypełnienia lasem łatwo
+odcinają zakątki (pole za wodzem łączy się z resztą tylko wierszami 2–3
+x 12–17 i wejściem (26–27, 9)); `ZASYP_ODCIETE` zasypuje je po cichu —
+patrz komunikat „brak miejsca na …" przy generowaniu. Garb pasów odległości
+jest teraz po równo w 3. i 4. pasie (był wyraźnie w 3.). Straż szyjki traktu
+(19, 36) nie ma nagrody w promieniu 3 (sonda dopuszcza 1 na 10).
+
+Runda 5 po werdykcie `tools/blind/r4-dwie-doliny-werdykt.md` (wygrana,
+18 TAK / 9 CZĘŚCIOWO / 1 NIE — G1). Zmieniony tylko `tools/mapy/dwie_doliny.py`
+(`_runda5` w terenie, `_jezioro`, `NAKLEJKI`/`ZAKATKI`, `rozstaw`). Dwa podejścia
+— przerwany builder zrobił teren i większość rozstawienia, drugi domknął liczby.
+
+- **G1.** Dolina wschodnia (ekran krytyka 46–66, 50–67): 12 obiektów — straż
+  wyrwy, namiot ze stosem (49, 58), chatka, stos (66, 57), zatoka za strażą.
+  Ognisko, wóz, wiatrak, skrzynie i kopalnia jagód wyszły. Pole północne
+  (0–21, 0–18): 9 — ranczo, stosy (1, 9) i (4, 10) zniknęły. Równina zamku
+  wroga: skrzynie (55, 12), (70, 14), jagoda (64, 13) zniknęły. Siatka
+  21 × 18 (0/21/42/51 × 0/18/36/54): każdy ekran 6–12 obiektów, ≤ 2 straże.
+  Okna przesuwane po polu mają do 17 sztuk tylko tam, gdzie liczy się stosy
+  po sztuce (pas sporny).
+- **B1.** Kopalnie: dom 6 (sonda wymaga ≥ 6), pas sporny 5, wróg 4 — każda
+  strona ma komplet, kopalnia jagód z doliny wschodniej stoi w krainie wroga
+  (35, 15).
+- **C1.** Straże w szyjkach: (54, 39) zamiast (55, 37), (53, 8) w wejściu
+  ślepego wąwozu zamiast przy kopalni (52, 3), silnej (45, 14) nie ma.
+- **G2.** Arena we wnęce (23–24, 56–57) obok rozstajów; portal krainy (41, 14)
+  na łące przy trakcie, nie pod grzbietem.
+- **E3/E4.** Drobne skały krainy wroga → las/łąka (zostaje blok nad zamkiem),
+  plaża jeziorka NW i piaskowe przesmyki → jałowa ziemia / łąka. Las, który
+  niczego nie obrysowywał, przeszedł w wodę: jezioro pod sadem, pod
+  grzbietem nad zachodnią łąką, w rogu doliny wschodniej, jezioro zachodnie
+  jako elipsa (prostokątne wypełnienia wyglądały jak baseny). T+# = 49,6 %,
+  woda 22 %.
+- **E2.** Strefy dom 45 / pas sporny 48 / wróg 39 (było 60/50/47). Obóz
+  i ognisko poszły na zachodnią łąkę pasa spornego, wiatrak na wschodni brzeg
+  jeziora (41, 32), chatka i ognisko na rubież przy namiocie.
+- **B3.** Obiekt co 11,0 pola (1455 przejezdnych, 132 obiekty). Puste łąki
+  POZA doliną gracza zarosły (lista w `_runda5`, „druga część") — w dolinie
+  każde zarośnięte pole obniża udział „bez bitwy" (23 %, próg 22 %).
+- **G3.** Kwiaty 0,16 i trzciny 0,40 tylko w `ZAKATKI`.
+
+Uwagi: sonda „część straży pilnuje całych zakątków" chce ≥ 6 straży z trzema
+nagrodami w promieniu 3 — stos (4, 28) i kieszeń jeziorka (15, 15) mają po
+trzy rzeczy właśnie dlatego; przesunięcie stosu zatoki o pole psuło ją po
+cichu. Brodu (24–30, 39–40) nie ruszać: z łąką zamiast piasku trakt
+przeskakuje wiersz i stosy rozsypują się po brzegu. Nierozwiązane: pas sporny
+ma tylko 3 obiekty więcej niż dom; prawa dolna ćwiartka to w ~70 % woda.
+
+Runda 6 po werdykcie `tools/blind/r5-dwie-doliny-werdykt.md` (wygrana,
+22 TAK / 7 CZĘŚCIOWO / 0 NIE: B4, E3, E4, E5, G1, G3). Zmieniony tylko
+`tools/mapy/dwie_doliny.py` (`_runda6` w terenie, `PRZEPRAWA`/`MOSTY`,
+`rozstaw`). Zasada odwrotna do rundy 5: las bez funkcji → łąka, nie woda.
+
+- **E5 woda pracuje.** Przeprawa traktu przez jezioro środkowe: piaskowy brzeg
+  (24–27, 39) i skała (24–27, 41–43) zalane, trakt idzie po moście
+  (24–27, 40) — w grze droga, w tle woda i rysunek `polana/most.png`
+  (`MOSTY`). To jedyne przejście z zachodu pasa spornego na wschód; średnia
+  straż przeszła z szyjki (19, 36) na wschodni wylot (28, 40), za nią stos
+  na brzegu. Kałuże (28–29, 3–6), (38–40, 2–4), (45–48, 28–31), (43, 30),
+  (12–16, 66–69), (37–44, 48–51), (61, 70) zniknęły (łąka albo las brzegu).
+  Pas wody pod północnym grzbietem przerwany: zachodni kraniec jeziorka NW
+  (0–10, 16–19) i ogon jeziora krainy (33–41, 16–19) → łąka/las. Oczko
+  rubieży (59–64, 25–28) ma domknięty skalny brzeg od grzbietu i skrzynię na
+  cyplu (63–64, 27–28) za strażą (62, 30). Małych wód zostały dwie: zatoczka
+  pod mostem i oczko.
+- **E4.** Łąka zamiast lasu: sad (staw i wyspa lasu, 29–38, 62–65), zachodnia
+  łąka schodzi do jeziora (7–11, 35–42), wnętrze masywu rubieży (58–63,
+  34–37), łąka nad drogą doliny wschodniej (51–59, 55–58), wnęka nad groblą
+  krainy (44–47, 10–12). Przejezdnych 1455 → 1660 (28 → 32 %), woda 22 → 19 %,
+  T+# 49,6 → 48,8 %. Dalej się nie dało: każde nowe pole łąki wymaga obiektu
+  (co ≤ 11 pól), a okna 21 × 18 nad pasem spornym są już pełne (16).
+- **E3.** Cała jałowa ziemia pasa spornego (pasek dojścia 57–58, wąwóz
+  68–70, zwężenie 59–63) → łąka; piasku na planszy nie ma. Skały nad zamkiem
+  wroga to jedna bryła (60–71, 0–7) bez dziur; głazy pod grzbietem dołączone.
+- **G3.** Przełęcze z garbem lasu przez całą grubość grzbietu: północny x 7–9,
+  31–34, 47–50; południowy x 26–29, 60–63. Bryły skał 6 × 2 (16–21, 42–43)
+  i 5 × 2 (66–70, 42–43) przy stożkach zamiast grzebieni „T#T#"; grzebienie
+  w wierszach 24 i 47–48 wyprostowane.
+- **G1/B4/E2.** Żadne okno 21 × 18 (przesuwane co pole, stos liczony po
+  sztuce) nie ma więcej niż 16 obiektów ani mniej niż 4; siatka 7–15. Ekran
+  (47–67, 25–42) 17 → 13 (ognisko na drogę doliny wschodniej, stos (48, 29)
+  i ognisko rubieży precz), (50–70, 43–60) 3 → 6. Kopalnie 15 (9,9 %; kamień
+  w wąwozie rubieży → odłamki, sporna kamienia na brzegu jeziora →
+  pokeballe — sonda chce ≥ 5 w pasie i ≥ 6 w domu), artefakty 12 → 11
+  (7,3 %), skrzynie 17 %, budynki z namiotami/jasnowidzami/strażnicami 30 %.
+  Strefy dom 49 / sporny 53 / wróg 49, pasy [20, 13, 45, 45, 28].
+
+Liczby: 151 obiektów, obiekt co 11,0 pola, bez bitwy 24 %, kroków do zamku
+wroga 80 (najdalej 88). Sondy: probe-mapy (Dwie Doliny bez ŹLE), probe-mapa
+OK, tsc OK, probe-misja WSZYSTKO OK za czwartym podejściem (trzy pierwsze —
+timeouty przy load 10–12). Nierozwiązane: przejezdnych 32 %, nie 35 % — przy limicie 16
+obiektów na okno pas sporny mieści ~53 obiekty, a dom musi mieć mniej (E2),
+więc więcej łąki = gęstość > 11; pas sporny ma 4 obiekty więcej niż dom;
+kopalnie na granicy 10 %.
+
+Runda 7 po werdykcie `tools/blind/r6-dwie-doliny-werdykt.md` (wygrana,
+23 TAK / 7 CZĘŚCIOWO / 0 NIE: C1, C4, D1, E3, E5, F1). Zmieniony tylko
+`tools/mapy/dwie_doliny.py` (`_runda7` w terenie, `po_drogach`, `SZLAKI`
+i punkt „przelecz rubiezy", `_ne_jalowa`, `rozstaw`).
+
+- **C1/C4 — sonda straży.** Nowa sonda (BFS po `plansza-teren.ts` funkcjami
+  gry: `kosztPola`, bryły z `polaZajete`; strefa straży = pole + 8 sąsiadów,
+  bramy otwarte) bije straże falami od startu i zgłasza każdą, której
+  pokonanie nie otwiera nic nowego. Przed rundą: 4 obejścia — kopalnia
+  pokeballi (39, 65), kieszeń jasnowidza (54, 39) (wejście z drogi wąwozu
+  przez jasnowidza (53, 41)), zatoczka jeziorka NW (15, 13) (plaża łączyła
+  się po skosie (12, 16) ↔ (11, 17)) i most (28, 40). Po: straż kopalni
+  w JEDYNYM wejściu (38, 67) — (36, 68) las, kolumny 34–35 las, kopalnia
+  zeszła na (38, 70) (z bryłą w wierszu 68 jej rysunek zasłaniał straż);
+  kieszeń jasnowidza ma ścianę lasu (52–53, 41–43), jasnowidz w głębi
+  (57, 41); (12, 16) → woda. Zostaje (28, 40): wschód pasa spornego ma drugie
+  wejście z doliny wschodniej przez strażnicę wąwozu (49, 44) — to druga
+  trasa, nie dziura (i tak trzeba bić (46, 52) i mieć zielony klucz).
+  Straże (14, 51) / (25, 55) i (46, 52) są tak samo równoległe.
+- **D1.** Szlak `wschodnie rozstaje → przelecz rubiezy (57, 21) → zamek
+  wroga`: z rozstajów (54, 34–38) skosem (55, 33)–(57, 31), korytarzem
+  x 57 (21–30), PRZEZ strażnicę (57, 20) (`po_drogach` — trasowanie brało
+  (58, 20) obok bramy), dalej zakosami korytarza (58, 16–19), (59, 12–15),
+  (60, 10–11), (61, 9) do traktu zamku wroga (wiersz 8).
+- **E5.** Pas wody pod zachodnim grzbietem (0–10, 24–26) → łąka zakątka za
+  strażą (6, 29), stos (3, 25) + (4, 25); niecki w grzbiecie (2, 23), (4, 23)
+  zasklepione. Jezioro pod sadem (24–35, 66–71): wybrałem „łąka + las
+  obrysowujący sad" — sad schodzi łąką do wiersza 67 (24–33, stos kamienia
+  (28, 67)), las (24–35, 68–71) łączy się z lasem zatoki zamku i jest ścianą
+  pasa kopalni. Zatoka ze skarbem odpadła: dom ma już 51 obiektów przy 53
+  w pasie spornym (E2), a skarb to kolejna straż w domu. Łąka sadu oddaje
+  „bez bitwy" to, co zabrało zamknięcie pasa kopalni (401 pól, 24 %).
+- **F1.** Skrzynia (10, 69) w zakątku zatoki zamku; wypust (67, 40–41) — las.
+- **E3.** Bagno zniknęło z planszy: przy polance (17–23, 27–29) łąka, na
+  zachód od traktu las, na wschód jezioro sięga traktu (pas traktu z rundy 6
+  zostaje łąką w `popraw_teren`, bo drogi kładzie silnik później — inaczej
+  trakt szedł przez garb lasu przełęczy x 7). Łaty skał (13–17, 31–36),
+  (28–30, 41–43), (52–58, 42–43) i głazy (31–51, 41–43) → las. Brązowa plama
+  wroga (`_ne_jalowa`) obejmuje teraz x 47–59, y ≤ 12 — ślepy wąwóz (49–52,
+  2–10) i trakt do zamku to jedna plama.
+- **G1.** Nowy stos zakątka przepełniał okna nad nim (17–18); kamień (1, 28),
+  kamień ze stosu (2, 17) i jagoda przy chatce na palach (23, 27) zniknęły.
+
+Liczby: 152 obiekty, obiekt co 11,0 pola, przejezdnych 1675 (32 %), woda
+18 %, T+# 50 %; strefy dom 51 / sporny 53 / wróg 48, pasy [21, 14, 44, 45,
+28]; skrzynie 18 %, budynki z namiotami/jasnowidzami/strażnicami 30 %,
+kopalnie 9,9 %; żadne okno 21 × 18 nie ma > 16 (max 16, min 3 — nad
+jeziorem środkowym); bez bitwy 24 %, kroków do zamku wroga 80 (najdalej 88).
+Sondy: tsc OK, probe-mapy (Dwie Doliny bez ŹLE), probe-mapa OK,
+probe-misja WSZYSTKO OK (za pierwszym podejściem). Sonda straży: 1 „do obejścia".
+Nierozwiązane: most (28, 40) w sondzie straży „do obejścia" przez drugą
+trasę; okno (14–34, 20–37) ma 3 obiekty (grzbiet + jezioro).
