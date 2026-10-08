@@ -1,7 +1,7 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-03 20:57",
+  "aktualizacja": "2026-10-08 03:44",
   "kawalki": [
     {
       "id": "polana",
@@ -199,7 +199,7 @@
     {
       "id": "bagna",
       "tytul": "Bagna (misja 3, 54×54)",
-      "status": "critic",
+      "status": "build",
       "opis": "Dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca z wodzem.",
       "rundy": [
         {
@@ -283,6 +283,30 @@
             }
           ],
           "zmiana": "Grzbiet wroga pogrubiony na wschód od bramy, straż w środku przełęczy; cypel przy grobli zalany — dolina ma dwa wyjścia. Ekran startowy 32 → 11 obiektów; zakątek w rogu doliny za płotem wierzb z jednym wejściem i słabą strażą. Kraina wroga z kompletem kopalń i zakątkiem za silną strażą; łąka SE z odnogą drogi, strażą w szyjce i stosem na końcu. Wieża z wody, kopalnia z drogi, start bohatera o pole od płotu. Bez bitwy 20 %, straże 15 %, obiekt co 9,4 pola, pasy [17,14,51,40,29]."
+        },
+        {
+          "nr": 3,
+          "wzorzec": "When Dragons Clash (72×72)",
+          "win": true,
+          "checklista": {
+            "TAK": 20,
+            "CZESCIOWO": 9,
+            "NIE": 1
+          },
+          "luka": "Środek planszy (28–48 × 16–33) jest jednym tłumem: pięć budynków, cztery straże na placu i kilkanaście luźnych kropek na jednym ekranie, a straże tam (Muchomory (33,19), (44,19), Growlithe (44,47)) pilnują pojedynczych znalezisk zamiast przejść — dziecko widzi chmurę ikon, nie decyzję.",
+          "nie": [
+            "G1: NIE — ekran wokół (38,24) (pola 28–48 × 16–33) ma świątynię, wieżę, drzewo wiedzy, gniazdo, 2 automaty, 2 Muchomory, Weepinbella, Oddisha, Growlithe i kilkanaście kropek surowców — ponad dziesięć decyzji naraz; to samo na wyspie (44–50, 4–10)."
+          ],
+          "obrazy": [
+            {
+              "plik": "tools/blind/r3-bagna.png",
+              "opis": "Ślepe A/B: krytyk wybrał B = nasza"
+            },
+            {
+              "plik": "tools/shots/caly-bagna-r2.png",
+              "opis": "Cała plansza oceniana w rundzie 3"
+            }
+          ]
         }
       ]
     },
