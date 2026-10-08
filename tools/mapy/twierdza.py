@@ -127,6 +127,9 @@ PUNKTY = {
     'kopalnia srebrna': (19, 15),
     'kopalnia lodowa': (63, 15),
     'kopalnia lodowa 2': (46, 16),
+    # Runda 3 (krytyk C1/C3): trakty do skarbców pod wodzami.
+    'skarbiec srebrny': (11, 3),
+    'skarbiec lodowy': (61, 4),
 }
 
 SZLAKI = [
@@ -147,6 +150,8 @@ SZLAKI = [
     # dotąd środek zachodniej doliny (x 20–32, y 0–19) dostaje przy niej
     # zakątek.
     ['zamek wroga 2', 'przelecz twierdz', 'zamek wroga'],
+    ['zamek wroga 2', 'skarbiec srebrny'],
+    ['zamek wroga', 'skarbiec lodowy'],
 ]
 
 #: Zapora: jezioro-zapora (x 44–51, y 23–35) i skalna ostroga (y 39–44) pod
@@ -395,6 +400,81 @@ def popraw_teren(g, mapa):
     if mapa[50][47] == '~':
         mapa[50][47] = '.'
 
+    # --- Pętla 2026-10, runda 3 (krytyk: „straże nie strzegą") -------------
+    # Każda straż poza przełęczami stoi teraz w SZYJCE zatoki: zatoka ma
+    # ciągły (czterospójny) mur, więc ruch po skosie nie przecieka obok
+    # straży, a jedyne wejście (1–2 pola) leży w jej kwadracie 3 × 3.
+    # Ściany przy PUNKTACH są borem, nie skałą — silnik czyści skały wokół
+    # punktów orientacyjnych.
+    def zamaluj(pola, znak):
+        for x, y in pola:
+            mapa[y][x] = znak
+
+    # C4: przeciek po skosie obok Straży Międzyjezierza (40, 33) — kolumna
+    # x 35 przy jeziorze prowadziła (35,34) → (35,32) → (36,31) do zakątka.
+    zamaluj([(35, 32), (35, 33)], '#')
+    # Srebrna Strażnica — zatoka kopalń (16,14) i (19,14): mur x 14 i y 18,
+    # zamknięty wschodni wylot (21,14); wejście (14,15)–(14,16) pod strażą.
+    zamaluj([(14, 13), (15, 13), (16, 13), (14, 14), (14, 17), (14, 18)] + [(21, y) for y in range(13, 19)], '#')
+    zamaluj([(x, 18) for x in range(15, 22)], '#')
+    # Srebrna Strażnica — zakątek pod borem przy trakcie do przełęczy
+    # (x 27–32, y 13–19): wejście (29–30, 12) pod strażą.
+    zamaluj([(28, 12), (31, 12), (32, 12), (32, 11)], '#')
+    zamaluj([(25, 12)], 'T')
+    # Srebrna Strażnica — skarbiec w północno-zachodnim rogu (x 4–9, y 0–4)
+    # pod wodzem w wejściu (10, 1–2).
+    zamaluj([(10, 0), (10, 3), (10, 4), (10, 5)] + [(x, 5) for x in range(4, 10)], 'T')
+    # Lodowa Twierdza — zatoka kopalni odłamków (46,15): mur x 43–44 i y 17,
+    # wejście od wschodu (50, 15–16) pod strażą.
+    zamaluj([(43, 15), (43, 16), (44, 15), (43, 17), (44, 17), (48, 17), (49, 17), (50, 17)], '#')
+    zamaluj([(45, 17), (46, 17), (47, 17)], 'T')
+    mapa[15][50] = 's'
+    # Lodowa Twierdza — zatoka kopalni pokeballi (63,14): wejście (60, 14–15).
+    zamaluj([(60, 13)], '#')
+    # Zachodnia tundra — zatoka odnogi (x 0–9, y 32–43): mur x 9–10, wejście
+    # (7–8, 31) na trakcie odnogi pod średnią strażą.
+    zamaluj([(9, 31), (9, 32), (9, 33), (9, 34), (9, 35), (10, 35), (10, 36), (10, 37), (10, 38), (10, 39), (9, 39)], '#')
+    # Wschodnia tundra — zatoka odnogi (x 62–71, y 33–43): wąskie wejście
+    # (63, 34) między skałą y 33 i y 35, dalej mur skośnym uskokiem do ostrogi.
+    zamaluj([(63, 35), (63, 36), (63, 37), (62, 37), (62, 38), (62, 39), (62, 40), (61, 40),
+             (61, 41), (61, 42), (61, 43), (61, 44)], '#')
+    # E5: kałuże bez funkcji — (26,40), (26–27,41), (34–35,40) i oczko
+    # (22–25, 57–59) obok stawu. Wypustki jeziora SE (54, 50–51) i (50, 51)
+    # zamykają północne obejście szyjki SE — zarastają borem, zamiast znikać.
+    for x, y in [(26, 40), (26, 41), (27, 41), (34, 40), (35, 40)]:
+        if mapa[y][x] == '~':
+            mapa[y][x] = 'j'
+    for x, y in [(x, y) for y in range(55, 61) for x in range(22, 27)]:
+        if mapa[y][x] == '~':
+            mapa[y][x] = '.'
+    for x, y in [(54, 50), (54, 51), (50, 51)]:
+        if mapa[y][x] == '~':
+            mapa[y][x] = 'T'
+    # B3/E4: puste połacie (krytyk: „obiekt co 12,4 pola, puste pola śniegu
+    # x 44–62, y 3–8") — oprócz nowych obiektów kępy boru i skałki, które
+    # dzielą płaszczyznę na place przy trakcie: bór pod granią doliny Lodowej
+    # Twierdzy, skalny garb nad sadem, zagajnik w pustym kącie doliny gracza.
+    for y, (od, do) in {0: (47, 52), 1: (47, 51), 2: (48, 51), 3: (49, 50)}.items():
+        for x in range(od, do + 1):
+            if mapa[y][x] in 's.j':
+                mapa[y][x] = 'T'
+    for x, y in [(55, 7), (56, 7), (57, 7), (56, 8), (54, 8)]:
+        if mapa[y][x] in 's.j':
+            mapa[y][x] = '#'
+    for y, (od, do) in {50: (58, 61), 51: (57, 62), 52: (58, 61),
+                        # bór w pustym kącie pod jeziorem SE i kępa na łące
+                        # na wschód od traktu wschodniego
+                        70: (48, 55), 71: (48, 55), 69: (50, 53),
+                        53: (44, 47), 54: (43, 47),
+                        # zagajnik na pustej łące nad pierwszym ekranem
+                        # i kępa pod przełęczą wschodnią
+                        51: (8, 14), 52: (7, 15), 48: (44, 46), 49: (43, 47),
+                        # bór na brzegu jeziora SE, nad traktem do wieży
+                        55: (44, 48), 56: (44, 48), 57: (46, 47)}.items():
+        for x in range(od, do + 1):
+            if mapa[y][x] in 's.j':
+                mapa[y][x] = 'T'
+
 
 def scal_plamy(mapa, poza, najwiecej=8, przebiegi=2):
     """Wtapia drobne plamy terenu przejezdnego (`s`, `.`, `j`) w otoczenie.
@@ -528,7 +608,8 @@ DOLINA = [
     # Północno-wschodnia zatoka doliny (x 53–71, y 48–55): drugi sad, obóz
     # łowców pod strażą, ranczo; przed szyjką zatoki stos.
     ([(57, 54), (56, 54), (58, 53)], ('kopalnia', 'jagoda')),
-    ([(61, 49), (60, 49), (62, 50)], ('kopalnia', 'pokeball')),
+    # (Runda 3, B1: bez drugiej kopalni pokeballi (61,49) — rzadkie kopalnie
+    # w domu po jednej, reszta za strażami pogranicza i krainy wroga.)
     ([(66, 54), (65, 53), (67, 53)], ('budynek', 'ranczo')),
     ([(70, 54), (69, 53)], ('surowiec', 'jagoda')),
     ([(71, 53), (70, 52)], ('skrzynia', None)),
@@ -574,53 +655,80 @@ SZYJKA_SE = (50, 62)
 ZA_SZYJKA_SE = lambda p: p[0] >= 50 and p[1] >= 55
 
 TUNDRA = [
-    # Odnoga zachodnia (14,30 → 6,33): kopalnia odłamków w skale, stos.
+    # Runda 3 (C1): zachodnia zatoka odnogi (x 0–9, y 32–43) za jedną średnią
+    # strażą w wejściu (8, 31) — `ZATOKI`. W środku kopalnia odłamków
+    # w skale, sporna kopalnia pokeballi, dwa artefakty i stosy; pojedyncze
+    # straże na placu (5,36), (11,38), (3,39) zniknęły.
     ([(4, 32), (3, 32), (5, 32)], ('kopalnia', 'odlamek')),
     ([(2, 34), (3, 34)], ('surowiec', 'odlamek')),
     ([(7, 35), (6, 35)], ('surowiec', 'jagoda')),
     ([(4, 35), (5, 36)], ('artefakt', None)),
-    # Zachodnia tundra: obóz łowców pod średnią strażą, z dala od traktu.
-    ([(10, 38), (11, 38), (9, 38)], ('kopalnia', 'pokeball')),
-    # Północna odnoga (30,41 → 40,27), za strażą międzyjezierza: drzewo wiedzy
-    # na końcu drogi i stos.
+    ([(6, 38), (5, 38), (7, 38)], ('kopalnia', 'pokeball')),
+    ([(1, 36), (2, 36)], ('surowiec', 'pokeball')),
+    ([(3, 41), (2, 41)], ('surowiec', 'kamien')),
+    ([(4, 42), (5, 42)], ('skrzynia', None)),
+    ([(2, 39), (3, 40)], ('artefakt', None)),
+    ([(7, 41), (7, 42), (6, 41)], ('budynek', 'gniazdo')),
+    # Północno-zachodni kąt tundry pod przełęczą (x 7–13, y 23–29): stos przy
+    # trakcie bez straży (dawniej artefakt pod strażą na placu (9, 27)).
+    ([(10, 25), (9, 25)], ('skrzynia', None)),
+    ([(11, 27), (10, 27)], ('surowiec', 'pokeball')),
+    ([(8, 26), (8, 27)], ('surowiec', 'kamien')),
+    ([(10, 29), (11, 29)], ('budynek', 'woz')),
+    # Północna odnoga (30,41 → 40,27), za Strażą Międzyjezierza: drzewo wiedzy
+    # na końcu drogi, stos i stacja kolejki (runda 3, C4: portal za strażą,
+    # drugi koniec w zatoce wschodniej — kolejka nie omija żadnej straży).
     ([(40, 26), (39, 26), (41, 26)], ('budynek', 'drzewo-wiedzy')),
     ([(37, 25), (38, 25)], ('surowiec', 'kamien')),
     ([(42, 25), (43, 26)], ('surowiec', 'odlamek')),
     ([(38, 28), (37, 28)], ('skrzynia', None)),
     ([(41, 29), (42, 29)], ('skrzynia', None)),
-    # Wschodnia odnoga (56,33 → 66,35): kopalnia kamieni w skale pod średnią
-    # strażą — jedyna sporna, arena przy drodze widoczna z daleka, stos.
+    ([(37, 30), (38, 30), (42, 31)], ('budynek', 'portal')),
+    # Wschodnia zatoka odnogi (x 62–71, y 33–43) za średnią strażą w wejściu
+    # (63, 34): kopalnia kamieni w skale, wieża obserwacyjna, artefakt, stosy
+    # i drugi koniec kolejki. Stadion przed zatoką, przy trakcie.
     ([(66, 34), (65, 34), (67, 34)], ('kopalnia', 'kamien')),
-    ([(62, 37), (63, 37), (61, 37), (62, 38)], ('budynek', 'arena')),
     ([(68, 36), (69, 36)], ('surowiec', 'kamien')),
     ([(69, 37), (70, 37)], ('skrzynia', None)),
-    # Południowo-wschodni kąt tundry (x 60–71, y 38–43): wieża obserwacyjna
-    # i relikt pod strażą w zaułku.
     ([(66, 40), (67, 40), (65, 40)], ('budynek', 'wieza-obserwacyjna')),
     ([(69, 42), (70, 42)], ('artefakt', None)),
-    ([(63, 43), (64, 43)], ('surowiec', 'pokeball')),
+    ([(63, 42), (64, 43)], ('surowiec', 'pokeball')),
+    ([(70, 39), (69, 39), (68, 38)], ('budynek', 'portal')),
+    ([(59, 37), (60, 37), (58, 37)], ('budynek', 'arena')),
     # Przy brodzie, od wschodu: ognisko, żeby straż brodu miała za sobą cel.
     ([(54, 38), (53, 38)], ('budynek', 'ognisko')),
     # Trakt wschodni (56,33 → 57,21) i zachodni brzeg jeziora-zapory:
     # skrzynia i kupki przy drodze, chatka na rozstajach odnogi.
     ([(42, 36), (41, 36)], ('surowiec', 'pokeball')),
-    ([(41, 39), (42, 39)], ('skrzynia', None)),
+    ([(41, 39), (42, 39), (42, 40), (41, 41)], ('skrzynia', None)),
     ([(59, 31), (60, 31)], ('budynek', 'chatka')),
-    # Zachodnia tundra: stos w kącie pod grzbietem (x 1–6, y 40–43) i przy
-    # zachodniej przełęczy.
-    ([(3, 41), (2, 41)], ('surowiec', 'kamien')),
-    ([(4, 42), (5, 42)], ('skrzynia', None)),
-    ([(2, 39), (3, 40)], ('artefakt', None)),
-    ([(10, 25), (9, 25)], ('skrzynia', None)),
-    ([(11, 27), (10, 27)], ('surowiec', 'pokeball')),
-    ([(8, 26), (8, 27)], ('artefakt', None)),
     # Druga kopalnia odłamków tundry przy trakcie pod jeziorem.
-    ([(23, 40), (24, 40), (22, 40)], ('kopalnia', 'odlamek')),
-    # (Pętla 2026-10, G1: bez skrzyni (17,33), kupek (16,36) i (12,40) —
-    # zachodnia dolina miała 43 obiekty na ekranie. Losowanie tundry jej nie
-    # dotyka (`ZACHODNIA_DOLINA`); zostają ręczne stosy na końcach odnóg
-    # i jeden wiatrak przy trakcie.)
+    ([(23, 40), (24, 40), (22, 40), (26, 43), (25, 43), (23, 43)], ('kopalnia', 'odlamek')),
     ([(15, 34), (16, 34), (14, 35)], ('budynek', 'wiatrak')),
+    # Runda 3 (B3/E2): pas sporny bogatszy od domu — stosy przy trakcie
+    # w zachodniej dolinie (x 10–21, y 30–44) i pod jeziorem (y 39–44).
+    ([(12, 33), (12, 34)], ('surowiec', 'jagoda')),
+    ([(13, 36), (14, 37)], ('budynek', 'ognisko')),
+    ([(17, 38), (16, 38)], ('surowiec', 'odlamek')),
+    ([(12, 41), (13, 40), (14, 40), (15, 39), (13, 38)], ('budynek', 'zrodlo')),
+    ([(19, 42), (18, 42)], ('budynek', 'gniazdo')),
+    ([(27, 41), (27, 40)], ('budynek', 'chatka')),
+    ([(29, 43), (28, 43)], ('surowiec', 'jagoda')),
+    # Runda 3 (G1/B3): korytarz wschodniej tundry (44–62, 22–38) bez
+    # losowania — losowe kupki zbijały się tu w 31 rzeczy na ekranie. Ręcznie,
+    # co kilka pól marszu po obu stronach traktu.
+    ([(54, 24), (53, 24)], ('surowiec', 'kamien')),
+    ([(53, 27), (54, 27), (53, 28)], ('budynek', 'gniazdo')),
+    ([(59, 24), (60, 24)], ('budynek', 'ognisko')),
+    ([(54, 31), (53, 30)], ('budynek', 'zrodlo')),
+    ([(53, 34), (52, 34), (53, 35)], ('budynek', 'woz')),
+    ([(60, 34), (61, 35)], ('surowiec', 'jagoda')),
+    ([(56, 37), (55, 37)], ('skrzynia', None)),
+    ([(50, 38), (49, 38)], ('surowiec', 'pokeball')),
+    ([(48, 36), (49, 36)], ('skrzynia', None)),
+    ([(70, 43), (69, 41)], ('budynek', 'chatka')),
+    ([(64, 38), (65, 38)], ('artefakt', None)),
+    ([(36, 27), (37, 27)], ('artefakt', None)),
 ]
 
 #: Pętla 2026-10 (G1): prostokąt zachodniej doliny tundry (x0, y0, x1, y1),
@@ -630,55 +738,117 @@ ZACHODNIA_DOLINA = (0, 24, 21, 44)
 #: Międzyjezierza z wylotem szyjki (35–43, 24–35) — ręczny stos, do którego losowanie
 #: dosypywało wiatrak, portal i kupki (ekran wschodniego jeziora: 29).
 BEZ_LOSOWANIA = [ZACHODNIA_DOLINA, (35, 24, 43, 35)]
-DOLINA_W_MAX = 22
+DOLINA_W_MAX = 28
+WROGA_MAX = 80
+#: Runda 3 (G1): pułapy nadmiaru w pasach pogranicza — (prostokąt, ile
+#: obiektów najwyżej). Bez nich nadmiar szedł w środkowy pas odległości
+#: i zbijał 31–33 rzeczy na ekran nad brodem i pod jeziorem.
+NADMIAR_PULAPY = [
+    ((44, 22, 62, 38), 19),   # korytarz wschodniej tundry przy brodzie
+    ((16, 36, 43, 44), 20),   # pas pod jeziorem, nad przełęczami
+    ((0, 22, 14, 31), 7),     # północno-zachodni kąt tundry pod przełęczą
+    ((0, 0, 32, 20), 35),     # dolina Srebrnej Strażnicy (mniejsza od Lodowej)
+    ((36, 0, 71, 20), 42),    # dolina Lodowej Twierdzy
+]
 
 #: Pętla 2026-10 (G1): losowanie stawia obiekt tylko tam, gdzie na ekranie
 #: wokół (21 × 18 pól) stoi mniej niż `EKRAN_LIMIT` rzeczy — po wyłączeniu
 #: zachodniej doliny losowe budowle zbiły się we wschodniej tundrze (33 na
 #: ekranie) i w korytarzu między jeziorami (28).
-EKRAN_LIMIT = 16
+EKRAN_LIMIT = 20
 
 TWIERDZE = [
-    # Srebrna Strażnica (13,11), odnoga (13,15 → 19,15): kopalnie wcięte w skałę
-    # — odłamki i kamienie pod silną strażą, obok stos.
+    # Runda 3 (C1/C3): straże krainy wroga stoją w szyjkach zatok (`ZATOKI`),
+    # a artefakty — w krainie wroga zawsze relikty — leżą tylko za wodzami
+    # (`SKARBCE`). Za silnymi strażami kopalnie, skrzynie i stosy.
+    #
+    # Srebrna Strażnica (13,11) — zatoka kopalń (x 15–20, y 14–17), wejście
+    # (14, 15–16): odłamki i kamienie wcięte w skałę, stos, skrzynia.
     ([(16, 14), (15, 14)], ('kopalnia', 'odlamek')),
-    ([(20, 14), (19, 14)], ('kopalnia', 'kamien')),
+    ([(19, 14), (20, 14)], ('kopalnia', 'kamien')),
     ([(17, 17), (16, 17)], ('surowiec', 'kamien')),
-    ([(18, 16), (19, 17)], ('surowiec', 'odlamek')),
-    ([(15, 17), (14, 18)], ('artefakt', None)),
-    # Lodowa Twierdza (58,9): ośrodek ewolucji pod murami, kopalnie na końcach
-    # obu odnóg (63,15 i 46,16) ze stosami.
-    ([(52, 10), (51, 10), (53, 10)], ('budynek', 'osrodek-ewolucji')),
-    ([(63, 14), (62, 14), (64, 14)], ('kopalnia', 'pokeball')),
-    ([(65, 15), (66, 15)], ('surowiec', 'kamien')),
-    ([(66, 14), (67, 14)], ('surowiec', 'pokeball')),
-    ([(66, 15), (67, 14), (61, 14)], ('skrzynia', None)),
-    ([(46, 15), (45, 15), (47, 15)], ('kopalnia', 'odlamek')),
-    ([(44, 17), (44, 16)], ('surowiec', 'odlamek')),
-    ([(42, 16), (42, 17)], ('artefakt', None)),
-    ([(40, 17), (41, 18)], ('surowiec', 'kamien')),
-    # Zakątek pod borem przy trakcie do przełęczy twierdz (x 22–30, y 10–12):
-    # ognisko, skrzynia, kupka i relikt pod silną strażą.
+    ([(19, 16), (19, 17)], ('surowiec', 'odlamek')),
+    ([(15, 17), (16, 16)], ('skrzynia', None)),
+    # Zakątek pod borem przy trakcie do przełęczy twierdz (x 27–32, y 13–19),
+    # wejście (29–30, 12): skrzynie i stosy (jasnowidz dochodzi z losowania).
     ([(26, 10), (27, 10), (25, 10)], ('budynek', 'ognisko')),
-    ([(28, 11), (29, 11)], ('skrzynia', None)),
-    ([(23, 11), (22, 11)], ('surowiec', 'kamien')),
-    ([(30, 12), (29, 12), (30, 11)], ('artefakt', None)),
-    # Sady twierdz i zakątek w północno-zachodnim kącie Srebrnej Strażnicy.
+    ([(23, 11), (22, 11), (24, 10)], ('surowiec', 'kamien')),
+    ([(31, 14), (30, 14)], ('skrzynia', None)),
+    ([(28, 17), (28, 16)], ('surowiec', 'pokeball')),
+    ([(31, 18), (30, 18)], ('budynek', 'gniazdo')),
+    ([(29, 14), (28, 14)], ('surowiec', 'odlamek')),
+    # Pusta dotąd dolina Srebrnej Strażnicy (x 4–16, y 4–10, B3): sad przy
+    # murach, wiatrak i gniazdo przy trakcie do skarbca, stosy przy drodze.
     ([(10, 9), (9, 9), (11, 9)], ('kopalnia', 'jagoda')),
+    ([(6, 8), (6, 7), (5, 8)], ('budynek', 'wiatrak')),
+    ([(15, 5), (15, 4), (16, 6)], ('budynek', 'gniazdo')),
+    ([(9, 6), (8, 7)], ('budynek', 'chatka')),
+    ([(5, 10), (6, 11)], ('surowiec', 'pokeball')),
+    # Stos pod północną granią doliny (y 0), z dala od gęstego środka.
+    ([(18, 0), (19, 0)], ('budynek', 'ognisko')),
+    ([(14, 0), (13, 0)], ('surowiec', 'kamien')),
+    ([(22, 0), (22, 1)], ('surowiec', 'odlamek')),
+    # Lodowa Twierdza (58,9) — zatoka kopalni pokeballi (x 61–67, y 12–16),
+    # wejście (60, 14–15).
+    ([(63, 14), (62, 14), (64, 14)], ('kopalnia', 'pokeball')),
+    ([(66, 15), (66, 14)], ('surowiec', 'kamien')),
+    ([(67, 13), (67, 12)], ('surowiec', 'pokeball')),
+    ([(62, 16), (61, 14)], ('skrzynia', None)),
+    # Zatoka kopalni odłamków (x 44–49, y 15–16), wejście (50, 15–16).
+    ([(46, 15), (45, 15), (47, 15)], ('kopalnia', 'odlamek')),
+    ([(44, 16), (45, 16)], ('surowiec', 'odlamek')),
+    ([(48, 15), (47, 16)], ('skrzynia', None)),
+    # Dolinka pod przełęczą twierdz (x 36–43, y 12–19): stos, wiatrak.
+    ([(40, 17), (41, 18)], ('surowiec', 'kamien')),
+    ([(39, 14), (38, 15), (40, 14)], ('budynek', 'wiatrak')),
+    ([(37, 18), (38, 18)], ('skrzynia', None)),
+    ([(37, 11), (38, 12)], ('surowiec', 'odlamek')),
+    ([(42, 13), (41, 12)], ('skrzynia', None)),
+    ([(36, 15), (37, 16)], ('surowiec', 'pokeball')),
+    # Pusta dotąd dolina Lodowej Twierdzy (x 44–62, y 3–8, B3): sad, źródło,
+    # stosy przy trakcie do skarbca.
     ([(50, 6), (49, 6), (51, 6)], ('kopalnia', 'jagoda')),
-    ([(9, 3), (10, 3)], ('artefakt', None)),
-    ([(8, 2), (8, 1)], ('skrzynia', None)),
-    ([(11, 1), (10, 1)], ('surowiec', 'kamien')),
+    ([(46, 3), (47, 3), (46, 4)], ('budynek', 'zrodlo')),
+    ([(54, 4), (55, 4)], ('surowiec', 'kamien')),
+    ([(56, 6), (55, 6)], ('budynek', 'wiatrak')),
+    ([(59, 3), (58, 3)], ('surowiec', 'odlamek')),
+    ([(45, 8), (46, 8)], ('surowiec', 'pokeball')),
+    ([(53, 1), (52, 1)], ('skrzynia', None)),
+    ([(48, 10), (47, 10), (48, 9)], ('budynek', 'ognisko')),
+    ([(52, 9), (53, 9)], ('budynek', 'chatka')),
+    ([(44, 11), (43, 11)], ('surowiec', 'kamien')),
+    ([(55, 12), (54, 12)], ('surowiec', 'odlamek')),
+    ([(41, 10), (40, 10)], ('budynek', 'zrodlo')),
+    ([(57, 4), (56, 4), (57, 5)], ('budynek', 'gniazdo')),
+    ([(46, 6), (45, 6)], ('surowiec', 'jagoda')),
+    ([(60, 7), (61, 8)], ('budynek', 'woz')),
+    ([(44, 1), (45, 2)], ('surowiec', 'kamien')),
+    ([(58, 1), (59, 1)], ('budynek', 'zrodlo')),
 ]
 
-DOM_LOSOWE = {'kupki': 9, 'skrzynie': 9, 'budowle': 12}
+#: Runda 3 (C1): straże w szyjkach zatok — (pole, siła, nazwa). Każda zatoka
+#: ma czterospójny mur (`popraw_teren`), wejście leży w kwadracie 3 × 3 straży.
+ZATOKI = [
+    ((14, 15), 'silny', 'Straż Srebrnej Kopalni'),
+    ((30, 12), 'silny', 'Straż Zakątka pod Borem'),
+    ((60, 15), 'silny', 'Straż Lodowej Kopalni'),
+    ((50, 16), 'silny', 'Straż Kopalni Odłamków'),
+    ((8, 31), 'sredni', 'Straż Zachodniej Zatoki'),
+    ((63, 34), 'sredni', 'Straż Wschodniej Zatoki'),
+]
+#: Wnętrza zatok — losowanie nic do nich nie dosypuje.
+ZATOKI_WNETRZA = [(15, 14, 20, 17), (27, 13, 32, 19), (61, 12, 67, 16), (44, 15, 49, 16), (62, 33, 71, 43)]
+
+# Runda 3 (E2/B2): dom 82 obiekty > pas sporny 69 — losowanie doliny gracza
+# 30 → 14, bez kupek luzem na łące x 36–52, y 48–62; nadmiar nie idzie do domu.
+DOM_LOSOWE = {'kupki': 0, 'skrzynie': 5, 'budowle': 7}
 # Pętla 2026-10 (G1/B4): tundra 28 → 14 budowli, 14 → 7 kupek, 12 → 8 skrzyń
 # — połowa losowania szła w zachodnią dolinę, która jest teraz wyłączona;
 # reszta poszła na rzadkie ekrany doliny gracza (`DOLINA`, `DOM_LOSOWE`).
-TUNDRA_LOSOWE = {'kupki': 6, 'skrzynie': 13, 'budowle': 17}
+TUNDRA_LOSOWE = {'kupki': 5, 'skrzynie': 9, 'budowle': 22}
 # Pętla 2026-10: budowle tundry, które nie mieszczą się już w dolinach
 # (zachodnia i wschodnia wyłączone z losowania), idą do krainy wroga.
-WROGA_LOSOWE = {'kupki': 2, 'skrzynie': 3, 'budowle': 4}
+WROGA_LOSOWE = {'kupki': 1, 'skrzynie': 4, 'budowle': 9}
 
 
 def odleglosc(a, b):
@@ -799,9 +969,14 @@ def rozloz_nadmiar(g):
         # Zachodnia dolina to środkowy pas odległości (E2): przyjmuje nadmiar,
         # ale najwyżej do `DOLINA_W_MAX` rzeczy (w rundzie 2 było 43).
         dolina_otwarta = sum(1 for q, _ in g.obiekty if w_dolinie(q)) < DOLINA_W_MAX
-        pola = [p for k in ('dom', 'pogranicze', 'wroga') for p in przy_drodze(g, k)
-                if not any(x0 <= p[0] <= x1 and y0 <= p[1] <= y1 for x0, y0, x1, y1 in poza)
-                or (dolina_otwarta and w_dolinie(p))]
+        # Runda 3 (E2): pas sporny ma być najbogatszy — kraina wroga przyjmuje
+        # nadmiar najwyżej do `WROGA_MAX` obiektów.
+        strefy = ['pogranicze'] + (['wroga'] if sum(1 for q, _ in g.obiekty if strefa(*q) == 'wroga') < WROGA_MAX else [])
+        w = lambda p, r: r[0] <= p[0] <= r[2] and r[1] <= p[1] <= r[3]
+        pelne = [r for r, ile in NADMIAR_PULAPY if sum(1 for q, _ in g.obiekty if w(q, r)) >= ile]
+        pola = [p for k in strefy for p in przy_drodze(g, k)
+                if (not any(w(p, r) for r in poza) or (dolina_otwarta and w_dolinie(p)))
+                and not any(w(p, r) for r in pelne)]
         if budowla:
             budynki = [q for q, co in g.obiekty if co[0] in ('budynek', 'kopalnia', 'jasnowidz')]
             takie = [q for q, co in g.obiekty if co == ('budynek', budowla)]
@@ -820,7 +995,7 @@ def rozloz_nadmiar(g):
                 break
             prog = min(oceny.values()) + zapas
             kand = [p for p, n in oceny.items() if n <= prog]
-            srodek = [p for p, n in oceny.items() if n <= prog + 4
+            srodek = [p for p, n in oceny.items() if n <= prog + 1
                       and 0.4 * najdalej <= g.kroki.get(p, 0) < 0.6 * najdalej]
             for lista in (srodek, kand):
                 if not lista:
@@ -943,46 +1118,41 @@ def rozstaw(g):
     g.skarb_w_kieszeni('dom', 'slaby', 3, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'odlamek')]))
 
     # --- TUNDRA: ręcznie -----------------------------------------------------
+    # Runda 3 (C1): bez `strzez` — straż przy artefakcie albo kopalni stawała
+    # na placu obok niej i dało się ją obejść. Straże pogranicza stoją
+    # w szyjkach zatok (`ZATOKI`), a zawartość zatok jest zarezerwowana.
     rng = g.rng = random.Random(ZIARNO + TUNDRA_ZIARNO)
-    tundra = postaw_recznie(g, TUNDRA)
-    g.strzez([p for p, co in tundra if co[0] == 'artefakt' or co[1] in ('kamien', 'pokeball') and co[0] == 'kopalnia'], 'sredni')
+    postaw_recznie(g, TUNDRA)
     rezerwa = [(x, y) for zx0, zy0, zx1, zy1 in BEZ_LOSOWANIA
                for y in range(zy0, zy1 + 1) for x in range(zx0, zx1 + 1) if (x, y) not in g.zajete]
     g.zajete += rezerwa
     g.dodaj_najpierw('pogranicze', lambda p: ('kopalnia', 'jagoda'), bez_sniegu(g, g.wolne_pola('pogranicze')), None)
-    bez_zajetych_kieszeni(g, 'pogranicze')
-    g.skarb_w_kieszeni('pogranicze', 'sredni', 4, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'kamien'), ('artefakt', None)]))
-    g.skarb_w_kieszeni('pogranicze', 'silny', 4, lambda p: rng.choice([('artefakt', None), ('skrzynia', None)]))
-    g.skarb_w_kieszeni('pogranicze', 'silny', 4, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'pokeball')]))
-    g.para_portali('pogranicze')
     g.dodaj(1, 'pogranicze', (0, 999), lambda p: ('jasnowidz', None), kandydaci=z_dala_od_budowli(g, 'pogranicze'))
 
     # --- DOLINY TWIERDZ: ręcznie ---------------------------------------------
     rng = g.rng = random.Random(ZIARNO + TWIERDZE_ZIARNO)
-    twierdze = postaw_recznie(g, TWIERDZE)
-    g.strzez([p for p, co in twierdze if co[0] == 'artefakt' or co[1] in ('kamien', 'pokeball') and co[0] == 'kopalnia'], 'silny')
-    # Skarbce w najdalszych rogach: zakątki w borze (SW przy Srebrnej
-    # Strażnicy, NE przy Lodowej Twierdzy), wódz w wejściu, za nim relikt.
-    skarb_w_zakatku(g, 'wroga', (4, 16), 'wodz', [('artefakt', None), ('skrzynia', None), ('surowiec', 'kamien')])
-    skarb_w_zakatku(g, 'wroga', (63, 3), 'wodz', [('artefakt', None), ('skrzynia', None), ('surowiec', 'pokeball')])
-    bez_zajetych_kieszeni(g, 'wroga')
-    g.skarb_w_kieszeni('wroga', 'silny', 4, lambda p: rng.choice([('artefakt', None), ('skrzynia', None)]))
+    postaw_recznie(g, TWIERDZE)
+    # Runda 3 (C3): skarbce pod wodzami mają to, czego nie ma nigdzie
+    # indziej — relikty (w krainie wroga artefakt jest zawsze reliktem,
+    # a poza skarbcami nie leży tam żaden) i Ośrodek Ewolucji (dawniej bez
+    # straży pod murami Lodowej Twierdzy).
+    skarb_w_zakatku(g, 'wroga', (4, 16), 'wodz', [('artefakt', None), ('artefakt', None), ('skrzynia', None)])
+    skarb_w_zakatku(g, 'wroga', (63, 3), 'wodz', [('budynek', 'osrodek-ewolucji'), ('artefakt', None), ('skrzynia', None)])
+    # Najdalszy relikt: skarbiec w północno-zachodnim rogu doliny Srebrnej
+    # Strażnicy (x 4–9, y 0–4, mur w `popraw_teren`), wódz w wejściu (10, 1).
+    wnetrze = [(x, y) for y in range(0, 5) for x in range(4, 10)
+               if g.mapa[y][x] in '.,js' and (x, y) not in g.zajete]
+    for wpis in [('artefakt', None), ('skrzynia', None), ('surowiec', 'kamien')]:
+        g.dodaj(1, 'wroga', (0, 999), lambda p, w=wpis: w,
+                kandydaci=[q for q in wnetrze if all(odleglosc(q, o) >= 2 for o, _ in g.obiekty)] or wnetrze)
+    g.zajete += wnetrze
+    g.postaw((10, 1), ('potwor', 'wodz', 'Wódz Srebrnego Skarbca'))
+    for pole, sila, nazwa in ZATOKI:
+        g.postaw(pole, ('potwor', sila, nazwa))
+        g.zajete += [(pole[0] + dx, pole[1] + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)]
+    g.zajete += [(x, y) for x0, y0, x1, y1 in ZATOKI_WNETRZA
+                 for y in range(y0, y1 + 1) for x in range(x0, x1 + 1)]
     g.dodaj(1, 'wroga', (0, 999), lambda p: ('jasnowidz', None), kandydaci=z_dala_od_budowli(g, 'wroga'))
-    najdalej = max(g.kroki.values())
-    daleko = (int(najdalej * 0.8), 999)
-    # Najdalszy relikt pod wodzem — ze skrzynią i kupką obok, żeby wódz
-    # pilnował stosu, a nie jednego przedmiotu (C1/C3).
-    # Pętla 2026-10: z dala od innych straży i reliktów, w dolinie Srebrnej
-    # Strażnicy (jak w rundzie 2: róg (15, 0)) — po zmianie terenu tundry
-    # wypadał o pole od reliktu zakątka (30, 12), straż przy straży.
-    z_dala = [p for p in g.wolne_pola('wroga', daleko)
-              if all(odleglosc(p, q) >= 5 for q, co in g.obiekty if co[0] in ('potwor', 'artefakt', 'jasnowidz', 'budynek'))]
-    z_dala = [p for p in z_dala if p[0] < 24] or z_dala
-    relikt = g.dodaj(1, 'wroga', daleko, lambda p: ('artefakt', None), kandydaci=z_dala or None)
-    obok_reliktu = [q for q in g.wolne_pola('wroga', (0, 999)) if odleglosc(q, relikt[0]) <= 2]
-    g.dodaj(1, 'wroga', daleko, lambda p: ('skrzynia', None), kandydaci=obok_reliktu)
-    g.dodaj(1, 'wroga', daleko, lambda p: ('surowiec', 'kamien'), kandydaci=obok_reliktu)
-    g.strzez(relikt, 'wodz')
 
     # --- LOSOWANIE (luźne ekrany) --------------------------------------------
     rng = g.rng = random.Random(ZIARNO + 62)
@@ -1069,6 +1239,16 @@ def rozstaw(g):
                  (19, 68), (20, 68)]:
         if g.mapa[y][x] in 's.j':
             g.mapa[y][x] = '='
+
+    # Runda 3 (krytyk E3/G4): „zamek gracza stoi w białej plamie śniegu, takiej
+    # samej jak kraina wroga". Cała dolina gracza (strefa domu, y ≥ 47) to
+    # wywiana tundra — płowa, cieplejsza od białej północy; śnieg zostaje
+    # w tundrze pod grzbietami i w dolinach twierdz. Po drogach i rozstawieniu
+    # (tańsza darń nie przyciąga traktów, obiekty stoją tam, gdzie stały).
+    for y in range(47, BOK):
+        for x in range(BOK):
+            if g.mapa[y][x] == 's':
+                g.mapa[y][x] = '.'
 
 
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
@@ -1353,7 +1533,9 @@ def TLO(rysunek):
         for y in range(y0, y1 + 1):
             for x in range(x0, x1 + 1):
                 if wynik[y][x] == '#':
-                    wynik[y][x] = 's'
+                    # Runda 3 (G4): dolina gracza to tundra, nie śnieg — pod
+                    # górami pierwszego ekranu tło też (biała plama za zamkiem).
+                    wynik[y][x] = '.' if y >= 47 else 's'
     return [''.join(w) for w in wynik]
 
 def DOMALUJ(plansza, rysunek, kafel, droga=None, maska_wody=None):

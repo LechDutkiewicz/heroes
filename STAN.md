@@ -1522,6 +1522,43 @@ Krytyk rundy 2 (`tools/blind/r2-twierdza-werdykt.md`): wygrana ślepo,
 - Zostało: pasy odległości 28/38/57/61/34 — garb przesunął się w pas 4
   (zachodnia dolina to pas 3, a ją przerzedzono); surowce luzem ~24 %.
 
+Krytyk rundy 3 (`tools/blind/r3-twierdza-werdykt.md`): przegrana ślepo,
+18 TAK / 8 CZĘŚCIOWO / 4 NIE („straże nie strzegą", rzadko, dom
+najbogatszy). Zmiany tylko w `tools/mapy/twierdza.py`:
+
+- **C1/C4 — straże w szyjkach** (`ZATOKI`, mury w `popraw_teren`): każda
+  zatoka ma czterospójny mur (ruch jest ośmiokierunkowy — mur po skosie
+  przecieka), wejście 1–2 pola w kwadracie 3 × 3 straży. Srebrna Strażnica:
+  kopalnie (16,14)/(19,14) za (14,15), zakątek pod borem za (30,12), skarbiec
+  NW (x 4–9, y 0–4) za wodzem (10,1); Lodowa: kopalnia pokeballi (63,14) za
+  (60,15), kopalnia odłamków (46,15) za (50,16); tundra: zachodnia zatoka
+  (x 0–9, y 32–43) za (8,31), wschodnia (x 62–71, y 33–43) za (63,34).
+  Zniknęło `strzez` (straż obok rzeczy na placu) i 12 straży placowych.
+  Przeciek (35,32)–(35,33) zamurowany. Kolejka: (37,30) w zakątku Drzewa
+  Wiedzy ↔ (70,39) w zatoce wschodniej — oba końce za strażami. Sonda
+  w scratchpadzie (łup każdej straży przy pokonanych pozostałych): każda
+  straż poza przełęczami i brodem pilnuje 3–10 rzeczy.
+- **C3**: w krainie wroga artefakt = relikt, więc artefakty tylko za
+  wodzami: (4,16) dwa relikty, (63,3) Ośrodek Ewolucji (przeniesiony spod
+  murów) + relikt, (10,1) relikt + stos. Za silnymi kopalnie i stosy.
+- **B3/E2/B1/B2**: 218 → 233 obiekty, przejezdnych 2693 → 2550 (kępy boru
+  w pustych połaciach: dolina Lodowej y 0–3, dom), obiekt co 10,9 pola;
+  strefy dom 67 / pogranicze 88 / wroga 78. Druga kopalnia pokeballi w domu
+  (61,49) usunięta; losowe kupki w domu 9 → 0, nadmiar losowania nie idzie
+  do domu, a w pasach pogranicza i dolinach twierdz ma pułapy
+  (`NADMIAR_PULAPY`, `WROGA_MAX`). B4: budynki 32 %, surowce 26 %, skrzynie
+  19 %, artefakty 6 %, straże 10 %. Bez bitwy 25 %.
+- **E3/G4**: cała dolina gracza (y ≥ 47) to tundra `.`, także tło pod
+  górami pierwszego ekranu (`TLO`). **E5**: kałuże (26,40), (26–27,41),
+  (34–35,40) i oczko (22–25,57–59) zasypane; wypustki (54,50–51), (50,51)
+  zarosły borem — zamykały północne obejście szyjki SE (bez nich trakt szedł
+  dookoła i straż (50,62) stała w lesie).
+- Zostało: **G1** — przy gęstości ≤ 11 pól na obiekt ekran 21 × 18 w dolinach
+  twierdz mieści 25–29 rzeczy (dolina ma wysokość ekranu); progi 8–16 i 9–11
+  wykluczają się przy 49 % przejezdnych. Bród (45,37) nadal do obejścia pętlą
+  przez obie twierdze (jak od rundy 2). T+# 42 % (checklista 25–40, wzorce
+  40–60).
+
 ## Profile graczy i sloty zapisu (2026-09-26)
 
 Zgłoszenie taty Eli i Janka: „Nowa gra → Kampania" kontynuowała ostatnią
