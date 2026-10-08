@@ -1,7 +1,7 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, Twierdza r5: wygrana, 1 NIE — builder r5; Bagna r8 u krytyka; Polana r7 i Dwie Doliny r5 w budowie",
+ "aktualizacja": "2026-10-08, Bagna r8: pierwsza wygrana ślepo, 0 NIE, 7 CZĘŚCIOWO — builder r8; wszystkie cztery plansze w budowie",
  "kawalki": [
   {
    "id": "polana",
@@ -395,7 +395,7 @@
   {
    "id": "bagna",
    "tytul": "Bagna (misja 3, 54×54)",
-   "status": "critic",
+   "status": "build",
    "opis": "Dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca z wodzem.",
    "rundy": [
     {
@@ -619,6 +619,32 @@
       }
      ],
      "zmiana": "Runda 8 generatora: przejście wschód → środek zwężone do 2 pól ze strażą w nim, zakątek wschodni domknięty lasem, smok w jedynej luce muru lasu wyspy ze skarbcem za nim, straż brodu na brzegu, stosy 2–3 rzeczy zamiast samotnych surowców, budowle specjalne po jednej (laboratorium, wóz, obóz, ranczo), zwykłe budowle do 28 %, skrzynie 19,5 %, wnętrza masywów jako pasma skał, zatoki trzęsawiska, piasek wyspy celu i siny płaskowyż wroga. 128 obiektów co 9,8 pola, bez bitwy 21 %, pasy 25/24/28/27/24."
+    },
+    {
+     "nr": 8,
+     "wzorzec": "when-dragons-clash",
+     "win": true,
+     "checklista": {
+      "TAK": 23,
+      "CZESCIOWO": 7,
+      "NIE": 0
+     },
+     "luka": "Luki z rundy 7 w większości zamknięte. Teraz najsłabsze jest rozłożenie wartości: pasy odległości płaskie (25/24/28/27/24), dom ma tyle samo co środek, ekran wroga przeładowany (22 obiekty). Straż (24,42) stoi na placu, kopalnia pokeballi (17,41) bez straży.",
+     "nie": [
+      "A2 częściowo: kopalnia pokeballi (17,41) niestrzeżona 4 kroki od startu",
+      "C1 częściowo: straż (24,42) na łące niczego nie odcina",
+      "E2 częściowo: pasy płaskie, bez garbu",
+      "E3 częściowo: plamy < 6×6 i jednopolowe kałuże",
+      "G1 częściowo: ekran wroga 22 obiekty, ekran środka 4 straże",
+      "G2 częściowo: straż pod dachem kamieniołomu, straże na trakcie",
+      "G3 częściowo: pas drzew w dolinie dzieli łąkę bez funkcji"
+     ],
+     "obrazy": [
+      {
+       "plik": "tools/blind/r8-bagna.png",
+       "opis": "para ślepa r8 (A = nasza, B = when-dragons-clash)"
+      }
+     ]
     }
    ]
   },
