@@ -1,7 +1,7 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, Polana r8: wygrana, 1 NIE (C3) — builder r8; Dwie Doliny r5, Twierdza r5, Bagna r8 w budowie",
+ "aktualizacja": "2026-10-08, Bagna r9 u krytyka; Polana r8, Dwie Doliny r5, Twierdza r5 w budowie",
  "kawalki": [
   {
    "id": "polana",
@@ -423,7 +423,7 @@
   {
    "id": "bagna",
    "tytul": "Bagna (misja 3, 54×54)",
-   "status": "build",
+   "status": "critic",
    "opis": "Dolina za Czarną Strugą, trzęsawisko z groblami, Wyspa Księżyca z wodzem.",
    "rundy": [
     {
@@ -669,10 +669,15 @@
      ],
      "obrazy": [
       {
-       "plik": "tools/blind/r8-bagna.png",
-       "opis": "para ślepa r8 (A = nasza, B = when-dragons-clash)"
+       "plik": "tools/shots/caly-bagna-r8.png",
+       "opis": "Bagna po rundzie 9 generatora (zrzut z gry)"
+      },
+      {
+       "plik": "tools/blind/r9-bagna.png",
+       "opis": "para ślepa r9: A/B bez podpisów"
       }
-     ]
+     ],
+     "zmiana": "Runda 9 generatora: straż z łąki (24,42) pod kopalnię pokeballi (17,42), straż brodu na brzeg (11,35), straż zakątka SW na (8,50); stosy z doliny i rubieży przeniesione przy trakt w środkowym bagnie (31–32,23–24) i nad jezioro (25–26,19–20); ekran wroga 22 → 15 obiektów; kałuże jednopolowe w las, łączka w bagno; pas drzew w dolinie skrócony do kępy. 119 obiektów co 10,7 pola, pasy 21/25/31/22/20, bez bitwy 23 %, probe-misja OK."
     }
    ]
   },
