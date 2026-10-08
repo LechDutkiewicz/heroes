@@ -1,7 +1,7 @@
 {
  "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
  "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
- "aktualizacja": "2026-10-08, Polana, Dwie Doliny i Bagna GOTOWE; Twierdza r7 u krytyka",
+ "aktualizacja": "2026-10-08, Polana, Dwie Doliny i Bagna gotowe; Twierdza r7: wygrana, 0 NIE, 6 CZĘŚCIOWO — builder r7",
  "kawalki": [
   {
    "id": "polana",
@@ -813,7 +813,7 @@
   {
    "id": "twierdza",
    "tytul": "Twierdza (misja 4, 72×72)",
-   "status": "critic",
+   "status": "build",
    "opis": "Zima, trzy pasy i skalny grzbiet między dolinami dwóch twierdz.",
    "rundy": [
     {
@@ -1005,6 +1005,30 @@
       }
      ],
      "zmiana": "Runda 6 generatora: zachodnia dolina tundry (10–19,31–43) i dolina gracza (26–37,54–63) otwarte jako polany (bór tylko murem zatok i trzema kępami), bór na brzegach jezior w lód; międzyjezierze 18 → 13 obiektów (bez wiatraka, ogniska, skrzyni, kupki); śnieg w pasie y 24–44 w jałową ziemię, kałuża (15,60) w łąkę, pokeball do stosu przy kopalni (11,49); nowe stosy przy kopalniach pasa spornego i w skalnym zakątku wroga. 182 obiekty co 11,5 pola, bór+skały 49,5 %, pasy 17/40/47/45/33, strefy 61/63/58, bez bitwy 26 %, maks. 16 na oknie siatki, probe-misja OK za pierwszym razem."
+    },
+    {
+     "nr": 7,
+     "wzorzec": "hatchet-axe-and-saw",
+     "win": true,
+     "checklista": {
+      "TAK": 24,
+      "CZESCIOWO": 6,
+      "NIE": 0
+     },
+     "luka": "Konfetti pojedynczych skrzyń w śnieżnej dolinie wroga (26–47,7–18), 20 obiektów na ekran; skrzynia (9,61) chowa się pod sprite'em zamku; odnoga drogi do (20,68) kończy się w pustej kieszeni.",
+     "nie": [
+      "B2 częściowo: pojedyncze skrzynie na śniegu wroga",
+      "B3 częściowo: obiekt co 11,5 pola",
+      "D1/F1 częściowo: odnoga (19–20,68) do pustej kieszeni",
+      "G1 częściowo: ekran doliny wroga i zachodniej tundry po 20",
+      "G2 częściowo: skrzynia (9,61) za domkiem zamku"
+     ],
+     "obrazy": [
+      {
+       "plik": "tools/blind/r7-twierdza.png",
+       "opis": "para ślepa r7 (A = hatchet-axe-and-saw, B = nasza)"
+      }
+     ]
     }
    ]
   }
