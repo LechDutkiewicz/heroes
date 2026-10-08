@@ -2951,3 +2951,46 @@ Bez bitwy 23 %, kroków do zamku wroga 84 (najdalej 93), akty I/II/III OK.
 Nierozwiązane: pole za wodzem (3–29, 0–7) dalej jest dużą łąką z jedną
 kępą — lasu nie da się tam dołożyć bez odcięcia zachodniej części (wiersze
 0–3 x 8–12 to skała).
+
+Runda 4 po werdykcie `tools/blind/r3-dwie-doliny-werdykt.md` (wygrana,
+19 TAK / 10 CZĘŚCIOWO / 1 NIE — G1). Zmieniony tylko `tools/mapy/dwie_doliny.py`
+(nowe `_runda4` w terenie, przepisane `rozstaw`, SZLAKI).
+
+- **A1 zatoka zamku.** Ściana lasu x 17–21 (wiersze 60–70), wrota wschodnie
+  (63–64) zamknięte; drugie wyjście to korytarz w wierszach 58–59 na rozstaje
+  (25, 58) — dalej straż bramy (25, 55). Las w wierszu 57 (x 8–11) domyka
+  ścianę północną. Sad jest teraz za rozstajami, nie przy zamku.
+- **A2.** Kopalnia kamienia w kieszeni rogu zatoki (2, 70) za słabą strażą
+  (2, 67) — zamiast stosu.
+- **B1/B4/C3.** Kopalnie pokeballi 4 → 2 ((38, 69) w domu, (51, 3) u wroga);
+  (55, 37) i (37, 19) to sporne stosy z artefaktem. Kopalni 20 → 15 (9,6 %),
+  surowców luzem 54 → 31 (≈ 20 %), budowli z namiotami i strażnicami ≈ 34 %.
+  Wódz wschodni stoi w szyjce (65, 11) zakątka (x 64–71, y 12–19) z reliktem
+  (66, 14), Dojo (69, 12) i automatem (64, 17); boczna przełęcz wychodzi
+  korytarzem (58–60, 12–19).
+- **G1/B2/C1.** Zachodni pas sporny (x 0–11, y 24–39) zarósł: ślepa odnoga
+  z polanki, średnia straż w leśnej szyjce (6, 29), jeden stos (1–3, 28) na
+  końcu; sporna kopalnia kamienia we wnęce (6, 34). Kopalnia pokeballi w domu
+  stoi w kieszeni (36–43, 66–71), słaba straż w szyjce (40, 65) — pilnuje
+  wejścia. Straż rubieży (60, 30) pilnuje całej rubieży (kopalnia (69, 33)
+  bez własnej straży); stos (8, 11) ze strażą przeniesiony na jeziorko.
+- **D3.** Jeden trakt w dolinie: odnoga na rozstaje odchodzi od głównej drogi
+  przy (13, 58) korytarzem; sad nie ma własnej drogi.
+- **E3.** Skalne kępy (15–19, 51–54) i brama rozstajów (22–24 / 27–29,
+  54–57) to teraz las tego samego pasa; głazy (36–40, 64–68) zniknęły.
+- **E5.** Jeziorko NW: mierzeja (15, 12–13) z silną strażą i plaża
+  (13–17, 14–16) ze stosem — zatoczka ze skarbem.
+- **B3.** Po przerzedzeniu obiekt wypadał co 13–16 pól, więc puste place
+  (głównie kraina wroga) dostały masywy (lista w `_runda4`), a bagno dalej
+  niż dwa pola od traktu zarosło / weszło w jezioro. Przejezdnych 2160 → 1867.
+
+Liczby: 157 obiektów, obiekt co 11,9 pola, każdy ekran siatki 21 × 18
+(0/21/42/51 × 0/18/36/54) ma 8–12 obiektów i ≤ 2 straże; ekran krytyka
+(0–20, 26–40) — 7. Bez bitwy 23 %, kroków do zamku wroga 84 (najdalej 94),
+pasy odległości [23, 21, 43, 44, 26]. Sondy: probe-mapy, probe-mapa,
+probe-misja OK. Uwaga przy dalszych zmianach: wypełnienia lasem łatwo
+odcinają zakątki (pole za wodzem łączy się z resztą tylko wierszami 2–3
+x 12–17 i wejściem (26–27, 9)); `ZASYP_ODCIETE` zasypuje je po cichu —
+patrz komunikat „brak miejsca na …" przy generowaniu. Garb pasów odległości
+jest teraz po równo w 3. i 4. pasie (był wyraźnie w 3.). Straż szyjki traktu
+(19, 36) nie ma nagrody w promieniu 3 (sonda dopuszcza 1 na 10).

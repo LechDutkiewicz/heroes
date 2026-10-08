@@ -130,8 +130,8 @@ PUNKTY = {
     'start': (10, 62),
     'zamek gracza': (8, 64),
     'wrota polnocne': (14, 54),
-    'wrota wschodnie': (19, 63),
-    'sad': (21, 66),
+    'wrota wschodnie': (19, 58),
+    'sad': (25, 64),
     'rozstaje doliny': (25, 58),
     'wrota doliny wschodniej': (45, 51),
     'piaskowy wawoz': (49, 48),
@@ -161,8 +161,11 @@ SZLAKI = [
         'przelecz poludniowa', 'zachodni trakt', 'podnoze polnocne',
         'przelecz polnocna', 'polnocne rozstaje', 'zamek wroga',
     ],
-    # Odnoga doliny: wschodnie wrota zatoki, sad, rozstaje i dolina wschodnia.
-    ['start', 'wrota wschodnie', 'sad', 'rozstaje doliny', 'wrota doliny wschodniej', 'piaskowy wawoz'],
+    # Odnoga doliny: z traktu (rozwidlenie pod wrotami północnymi) korytarzem
+    # wrót wschodnich na rozstaje i dalej do doliny wschodniej. Runda 4 (D3):
+    # sad nie ma już własnej drogi — dwa równoległe odcinki z pętlami między
+    # zamkiem a rozstajami zastąpił jeden trakt z jednym rozwidleniem.
+    ['start', 'wrota wschodnie', 'rozstaje doliny', 'wrota doliny wschodniej', 'piaskowy wawoz'],
     ['wrota doliny wschodniej', 'zatoka poludniowa'],
     ['rozstaje doliny', 'podnoze poludniowe'],
     # Pas sporny: przez bród pod jeziorem na wschodnie rozstaje.
@@ -425,6 +428,7 @@ def popraw_teren(g, mapa):
                 mapa[y][x] = '.'
 
     _runda3(g, mapa)
+    _runda4(g, mapa)
 
 
 def _ne_jalowa(x, y):
@@ -527,6 +531,107 @@ def _runda3(g, mapa):
         for x in range(BOK):
             if mapa[y][x] == '.':
                 mapa[y][x] = 'j'
+
+
+
+def _runda4(g, mapa):
+    """Werdykt ślepego porównania rundy 3 (r3-dwie-doliny-werdykt.md).
+
+    Wygrana, ale „pas środkowy i dolina gracza to place, a nie układ szyjek
+    i zakątków". Tu: zatoka zamku z dwoma wyjściami (oba pod strażą dalej
+    na trasie), zachodni pas sporny jako ślepa odnoga za szyjką, kępy skał
+    bez funkcji wchłonięte w masywy, jeziorko NW z zatoczką skarbu.
+    """
+    # --- A1: zatoka zamku. Ściana lasu x 17–21 (wiersze 60–70) odcina sad;
+    # wrota wschodnie (63–64) zamknięte. Drugie wyjście to KORYTARZ w wierszach
+    # 58–59 (x 16–23) na rozstaje (25, 58), gdzie stoi straż bramy (25, 55).
+    # Pierwsze — przesmyk wrót północnych ze strażą (14, 51).
+    _prostokat(mapa, 17, 60, 21, 70, 'T', procz='')
+    _prostokat(mapa, 16, 57, 24, 57, 'T', procz='')
+    _prostokat(mapa, 16, 58, 23, 59, '.', procz='')
+    # Domknięcie północnej ściany zatoki: skalny występ (3–7, 57–58) łączy się
+    # lasem z murem (wiersze 54–56) — łąka y 57 nie ma „szpary" przy x 8–12.
+    _prostokat(mapa, 8, 57, 11, 57, 'T', procz='')
+    # --- E3: skalne kępy bez funkcji w dolinie → części masywów lasu --------
+    # (15–19, 51–54) odcina podnóże od przesmyku (bez niej straż (14, 51) da
+    # się obejść) — zostaje, ale jako las złączony z pasem 54–56.
+    _prostokat(mapa, 15, 51, 19, 54, 'T', tylko='#.', procz='')
+    # Skalna brama rozstajów (22–24 i 27–29, 54–57) → las tego samego pasa.
+    _prostokat(mapa, 22, 54, 24, 57, 'T', tylko='#', procz='')
+    _prostokat(mapa, 27, 54, 29, 57, 'T', tylko='#', procz='')
+    # Głazy wokół kopalni pokeballi (36–40, 64–68) — z rozmycia szkicu.
+    _prostokat(mapa, 36, 64, 40, 68, '.', tylko='#', procz='')
+    # --- C1: kopalnia pokeballi w kieszeni (x 36–43, y 66–71): las w wierszu
+    # 65 z szyjką (39–40), w niej słaba straż — pilnuje WEJŚCIA, nie kopalni.
+    _prostokat(mapa, 36, 65, 43, 65, 'T', procz='')
+    _prostokat(mapa, 39, 65, 40, 65, '.', procz='')
+    _prostokat(mapa, 36, 66, 43, 71, '.', tylko='T#')
+    # --- G1/B2/C1: zachodni pas sporny (x 0–11, y 24–39) zarasta. Zostaje
+    # ślepa odnoga: przesmyk z polanki (7–12, 28–29), szyjka (6, 28–29) pod
+    # średnią straż, za nią zakątek (1–5, 27–29) ze stosem. Kopalnia kamienia
+    # (sporna) we wnęce (4–8, 31–34) przed szyjką, wejście (8–9, 30).
+    _prostokat(mapa, 0, 24, 11, 39, 'T', procz='~')
+    _prostokat(mapa, 7, 28, 12, 29, '.', procz='')
+    _prostokat(mapa, 6, 28, 6, 29, '.', procz='')
+    _prostokat(mapa, 1, 27, 5, 29, '.', procz='')
+    _prostokat(mapa, 4, 31, 8, 34, '.', procz='')
+    _prostokat(mapa, 8, 30, 9, 30, '.', procz='')
+    # --- E5: jeziorko NW — zatoczka skarbu. Mierzeja (15, 12–13) z drogi
+    # nad jeziorem prowadzi na plażę (13–17, 14–16) w wodzie; w mierzei silna
+    # straż. Jezioro przestaje „tylko wypełniać róg".
+    _prostokat(mapa, 15, 12, 15, 13, ',', procz='')
+    _prostokat(mapa, 13, 14, 17, 16, ',', procz='')
+    for x, y in [(13, 12), (14, 12), (14, 13), (16, 13), (12, 14), (18, 14), (12, 15), (18, 15)]:
+        mapa[y][x] = '~'
+    # --- C3: wódz wschodni strzeże ZAKĄTKA z reliktem i Dojo (x 64–71,
+    # y 12–19): las (61–63, 10–19) i (67–71, 10–11), wejście szyjką (64–66,
+    # 10–11). Boczna przełęcz (57–58, 20) wychodzi korytarzem (58–60, 12–19).
+    _prostokat(mapa, 59, 12, 60, 19, 'j', procz='')
+    _prostokat(mapa, 61, 12, 63, 19, 'T', procz='')
+    _prostokat(mapa, 62, 10, 63, 11, 'T', procz='')
+    _prostokat(mapa, 67, 10, 71, 11, 'T', procz='')
+    _prostokat(mapa, 64, 10, 66, 11, 'j', procz='')
+    # Bagno przy trakcie (x 16–24, y 24–36) — mniej pustego bagna: dalej niż
+    # dwa pola od drogi (kolumny 18–22) zarasta lasem albo wchodzi w jezioro.
+    for y in range(24, 37):
+        for x in range(14, 26):
+            if mapa[y][x] == 'b' and x <= 16:
+                mapa[y][x] = 'T'
+            elif mapa[y][x] == 'b' and x >= 24:
+                mapa[y][x] = '~'
+    # Kępa suchej łąki na bagnie przy trakcie — chatka na palach (23, 28).
+    _prostokat(mapa, 22, 27, 23, 29, '.', procz='~')
+    # --- B3: gęstość. Otwarte place bez obiektów (głównie w krainie wroga,
+    # która miała pole na obiekt co 14,6) dostają masywy lasu przy brzegach.
+    for x0, y0, x1, y1 in [
+        (4, 6, 7, 7),       # i zachodni zakątek
+        (32, 2, 34, 4),     # północna polana — zachodni brzeg
+        (31, 10, 34, 11),   # i południowy
+        (36, 18, 38, 19),   # środek krainy — pod drogą
+        (6, 14, 8, 15),     # północno-zachodnia polana
+        (44, 30, 47, 31),   # pas sporny — łąka wschodnich rozstajów
+        (46, 39, 47, 41),   # i pod nią
+        (69, 35, 71, 37),   # rubież — wschodni brzeg
+        (65, 42, 68, 43),   # i róg pod grzbietem
+        (68, 51, 71, 54),   # dolina wschodnia — róg pod grzbietem
+        (68, 24, 71, 26),   # rubież — róg pod grzbietem
+        (38, 15, 41, 16),   # środek krainy — nad drogą
+        (50, 9, 53, 10),    # równina zamku wroga — zachodni brzeg
+        (38, 7, 40, 8),     # północna polana — środek
+        (60, 68, 64, 71),   # zatoka południowa — kieszeń krótsza
+        (64, 54, 67, 54),   # dolina wschodnia — pusty pas pod lasem
+        (43, 39, 45, 40),   # pas sporny — łąka pod wschodnimi rozstajami
+        (28, 6, 29, 7),     # pole za wodzem — wschodni róg
+        (27, 66, 29, 68),   # sad — wschodni brzeg
+        (29, 48, 31, 50),   # podnóże wschodnie — zachodni róg
+        (12, 9, 14, 10),    # północno-zachodnia polana — nad drogą
+        (48, 0, 51, 1),     # ślepy wąwóz kopalni pokeballi — koniec
+        (3, 0, 7, 1),       # pole za wodzem — północny brzeg
+        (11, 0, 16, 1),     # i dalej na wschód
+        (3, 17, 5, 19),     # północno-zachodnia polana — róg pod grzbietem
+        (44, 24, 46, 26),   # wschodnie rozstaje — łąka nad obozem
+    ]:
+        _prostokat(mapa, x0, y0, x1, y1, 'T')
 
 
 def strefa(x, y):
@@ -649,60 +754,67 @@ def rozstaw(g):
     # DOLINA GRACZA
     # ===================================================================
     # --- Zatoka startowa (x 0–16, y 57–71): pierwszy ekran -----------------
-    # Dwie kopalnie podstawowe pod skałą bez straży (A2), jeden stos przy
-    # zamku (A3), dwie budowle, kieszeń w rogu za słabą strażą (A5).
+    # Dwie kopalnie podstawowe pod skałą bez straży, jeden stos przy zamku
+    # (A3), budowle, a w kieszeni w rogu za słabą strażą kopalnia KAMIENIA
+    # (runda 4, A2: kamień był dopiero za strażnicą, w pasie spornym).
     _postaw(g, [(4, 59), (5, 59), (3, 59), (4, 60)], ('kopalnia', 'odlamek'))
     _postaw(g, [(3, 64), (4, 64), (3, 65), (2, 64)], ('kopalnia', 'jagoda'))
-    _postaw(g, [(15, 58), (15, 59), (14, 58)], ('budynek', 'wiatrak'))
+    # Wiatrak na rozwidleniu traktu (wrota północne | korytarz na rozstaje).
+    _postaw(g, [(15, 60), (16, 60), (15, 61)], ('budynek', 'wiatrak'))
     _postaw(g, [(14, 67), (15, 66), (14, 66)], ('budynek', 'ognisko'))
     _postaw(g, [(12, 69), (13, 69), (12, 68)], ('budynek', 'oboz-treningowy'))
     _stos(g, (11, 65), [S('jagoda'), S('odlamek'), S('pokeball')], r=1)
     _postaw(g, [(7, 60), (8, 60), (8, 59)], SKRZ)
-    _stos(g, (1, 69), [ART, SKRZ, S('pokeball')], r=2)
+    _postaw(g, [(2, 70), (1, 70), (2, 71)], ('kopalnia', 'kamien'))
+    _stos(g, (0, 71), [ART], r=1)
     _postaw(g, [SZYJKA_ROGU, (1, 67)], ('potwor', 'slaby'))
 
     # --- Wrota północne i zakątek za nimi (x 0–12, y 47–53) ----------------
     # Słaba straż na północnym końcu przesmyku (13–14, 50–52).
     _postaw(g, [(14, 51), (13, 51), (14, 52)], ('potwor', 'slaby'))
     _postaw(g, [(17, 48), (18, 48), (16, 49), (17, 49)], ('kopalnia', 'odlamek'))
+    _stos(g, (19, 49), [S('jagoda'), S('pokeball'), S('kamien')], r=1)
     _postaw(g, [(6, 48), (5, 49), (5, 48)], ('budynek', 'zrodlo'))
     _stos(g, (3, 51), [SKRZ, S('jagoda'), S('pokeball')], r=2)
+    _postaw(g, [(8, 50), (8, 49), (9, 50)], ('budynek', 'oboz-treningowy'))
 
     # --- Podnóże zachodnie (x 15–26, y 47–53) za luką rozstajów ------------
-    # Słaba straż W skalnej bramie (25–26, 54–57), stos tuż za nią.
+    # Słaba straż W bramie (25–26, 54–57), stos tuż za nią.
     _postaw(g, [(25, 55), (26, 55), (25, 56), (26, 56)], ('potwor', 'slaby'))
-    _stos(g, (24, 52), [S('pokeball'), S('jagoda'), SKRZ], r=1)
+    _stos(g, (24, 52), [S('pokeball'), SKRZ], r=1)
 
     # --- Rozstaje (25, 58): arena jako punkt orientacyjny (D3) --------------
-    _postaw(g, [(27, 59), (23, 59), (27, 60), (24, 60), (23, 60)], ('budynek', 'arena'))
+    _postaw(g, [(27, 59), (23, 60), (27, 60), (24, 60)], ('budynek', 'arena'))
 
-    # --- Sad (x 20–29, y 61–68) i południowa łąka (x 36–43, y 57–71) --------
-    # Trzy stosy (sad, pod jagodami, przy pokeballowej) zamiast konfetti.
-    _stos(g, (22, 66), [S('jagoda'), SKRZ, S('odlamek')], r=2)
+    # --- Sad (x 22–29, y 60–68) i południowa łąka (x 36–43, y 57–71) --------
+    _stos(g, (25, 65), [S('jagoda'), SKRZ, S('odlamek')], r=2)
+    _postaw(g, [(28, 63), (27, 63), (28, 64)], ('budynek', 'zrodlo'))
     _postaw(g, [(38, 60), (37, 59), (38, 59), (39, 60)], ('kopalnia', 'jagoda'))
+    _postaw(g, [(39, 65), (40, 65)], ('potwor', 'slaby'))
     _stos(g, (38, 63), [SKRZ, S('pokeball'), S('odlamek')], r=2)
-    pokeball_lak = _postaw(g, [(36, 67), (36, 68), (37, 68)], ('kopalnia', 'pokeball'))
-    if pokeball_lak:
-        g.strzez([pokeball_lak], 'slaby')
-    _stos(g, (41, 67), [SKRZ, S('jagoda')], r=2)
+    # Kieszeń kopalni pokeballi (x 36–43, y 66–71): słaba straż w szyjce
+    # (39–40, 65) — pilnuje wejścia, nie samej kopalni (C1).
+    _postaw(g, [(38, 69), (37, 69), (39, 69), (38, 70)], ('kopalnia', 'pokeball'))
+    _stos(g, (42, 69), [SKRZ], r=1)
 
     # --- Podnóże wschodnie (x 29–43, y 47–54) --------------------------------
-    _postaw(g, [(34, 50), (33, 50), (35, 50)], ('kopalnia', 'jagoda'))
-    _stos(g, (39, 49), [SKRZ, S('odlamek')], r=2)
+    _postaw(g, [(34, 50), (33, 50), (35, 50)], ('budynek', 'gniazdo'))
+    _stos(g, (39, 49), [SKRZ], r=2)
 
     # --- Dolina wschodnia (x 46–71, y 47–71) za wyrwą w murze ----------------
     _postaw(g, [(45, 52), (44, 52), (45, 51)], ('potwor', 'slaby'))
-    _stos(g, (47, 53), [SKRZ, S('jagoda'), S('pokeball')], r=1)
+    _stos(g, (47, 53), [SKRZ, S('jagoda')], r=1)
+    _postaw(g, [(46, 50), (46, 49), (47, 50)], SKRZ)
     _postaw(g, [(48, 61), (48, 60), (47, 61), (49, 62)], ('namiot', 'zielony'))
     _postaw(g, [(48, 57), (49, 57), (47, 58)], ('kopalnia', 'jagoda'))
     _postaw(g, [(49, 59), (50, 60), (49, 58)], ('budynek', 'wiatrak'))
-    _stos(g, (47, 66), [SKRZ, S('odlamek'), S('pokeball')], r=2)
+    _stos(g, (47, 66), [SKRZ, S('pokeball')], r=2)
     _postaw(g, [(57, 54), (58, 55), (56, 54), (58, 54)], ('budynek', 'chatka'))
     _postaw(g, [(61, 57), (60, 58), (61, 58)], ('budynek', 'woz'))
-    _stos(g, (53, 54), [S('pokeball'), SKRZ], r=1)
-    _stos(g, (65, 54), [S('jagoda'), S('odlamek'), SKRZ], r=2)
-    # Ślepa odnoga w rogu (x 67–71, y 62–71) zostaje pusta: łąka zatoki to
-    # widok z brzegu, a nie kolejny zakątek do wyczyszczenia (G1).
+    _postaw(g, [(60, 53), (59, 53), (60, 52)], ('budynek', 'ognisko'))
+    _postaw(g, [(65, 58), (64, 58), (66, 58)], ('budynek', 'oboz-treningowy'))
+    _postaw(g, [(61, 59), (62, 58), (61, 58)], SKRZ)
+    _stos(g, (66, 57), [S('jagoda'), SKRZ, S('odlamek')], r=1)
     # Zatoka południowa (x 59–64, y 63–71) za średnią strażą w szyjce (64, 61).
     _kieszen(g, [SZYJKA_ZATOKI, (64, 60), (64, 62)], 'sredni', (63, 64),
              [ART, SKRZ, S('kamien')], r=1)
@@ -710,28 +822,22 @@ def rozstaw(g):
     # ===================================================================
     # PAS SPORNY — najgęściej zabudowany pas mapy
     # ===================================================================
-    # --- Zachodnia łąka (x 0–8, y 24–39): kieszeń za średnią strażą w
-    # przesmyku (8–12, 28–29) od polanki przy trakcie.
-    _postaw(g, [(10, 28), (10, 29), (9, 28)], ('potwor', 'sredni'))
-    _postaw(g, [(7, 28), (7, 29), (6, 28)], S('kamien'))
-    _stos(g, (3, 26), [ART, SKRZ, S('kamien')], r=2)
-    _postaw(g, [(5, 34), (6, 34), (4, 34)], ('kopalnia', 'kamien'))
-    _stos(g, (5, 31), [SKRZ, S('odlamek')], r=2)
-    _postaw(g, [(3, 37), (2, 37), (4, 37)], ('budynek', 'oboz-treningowy'))
-    _stos(g, (5, 38), [SKRZ, S('pokeball')], r=1)
-    _stos(g, (2, 30), [SKRZ, S('kamien'), S('jagoda')], r=1)
-    _postaw(g, [(6, 36), (5, 36), (7, 36)], ('budynek', 'gniazdo'))
+    # --- Zachodnia odnoga (runda 4, G1/B2/C1): przesmyk z polanki, średnia
+    # straż w leśnej szyjce (6, 28–29), za nią JEDEN stos na końcu odnogi.
+    # Wnęka przed szyjką ma sporną kopalnię kamienia.
+    _stos(g, (2, 28), [ART, SKRZ, S('kamien')], r=1)
+    _postaw(g, [(6, 29), (6, 28)], ('potwor', 'sredni'))
+    _postaw(g, [(6, 34), (5, 34), (7, 34)], ('kopalnia', 'kamien'))
+    _postaw(g, [(8, 32), (7, 32), (8, 31)], S('odlamek'))
     # Polanka przy trakcie (x 12–16, y 27–31).
     _postaw(g, [(14, 31), (13, 31), (14, 30)], ('budynek', 'chatka'))
-    _stos(g, (15, 28), [S('pokeball'), S('jagoda')], r=1)
-    # SZYJKA TRAKTU (19, 36): średnia straż, stos przed nią, źródło przy drodze.
+    _postaw(g, [(13, 28), (13, 27), (14, 28)], ('budynek', 'zrodlo'))
+    # SZYJKA TRAKTU (19, 36): średnia straż; nagrodą jest przejście.
     _postaw(g, [SZYJKA_TRAKTU, (19, 35), (19, 37)], ('potwor', 'sredni'))
-    _stos(g, (18, 38), [SKRZ, S('kamien'), S('odlamek')], r=1)
-    _postaw(g, [(13, 27), (16, 28), (12, 30)], ('budynek', 'zrodlo'))
 
     # --- Bród i południe jeziora (x 24–43, y 36–43) ---------------------------
     _postaw(g, [(29, 39), (28, 39), (29, 40), (27, 39)], ('potwor', 'sredni'))
-    _stos(g, (31, 40), [SKRZ, S('kamien'), S('pokeball')], r=1)
+    _stos(g, (31, 40), [SKRZ, S('kamien')], r=1)
     _postaw(g, [(35, 37), (34, 37), (35, 36)], ('kopalnia', 'odlamek'))
     _postaw(g, [(41, 43), (42, 43), (41, 42), (43, 42)], ('budynek', 'kamienna-wieza'))
     _postaw(g, [(38, 38), (39, 38), (38, 39)], ('budynek', 'chatka'))
@@ -741,78 +847,74 @@ def rozstaw(g):
     # kamienia za średnią strażą w szyjce (40, 28–29).
     _postaw(g, [(37, 25), (36, 25), (38, 25), (37, 26), (38, 26), (37, 27)], ('kopalnia', 'kamien'))
     _kieszen(g, [(40, 29), (40, 28)], 'sredni', (38, 27), [ART, SKRZ], r=1)
+    _postaw(g, [(23, 28), (22, 28), (23, 27)], ('budynek', 'chatka'))
+    _postaw(g, [(23, 29), (22, 29), (23, 27)], S('jagoda'))
 
     # --- Wschodnie rozstaje (x 41–58, y 23–44) ---------------------------------
-    stos_c = _stos(g, (44, 27), [SKRZ, S('kamien'), ART], r=1)
-    if stos_c:
-        g.strzez(stos_c[:1], 'sredni')
+    _postaw(g, [(45, 27), (46, 27), (45, 26)], ('budynek', 'oboz-treningowy'))
     _postaw(g, [(48, 25), (49, 25), (47, 25)], ('kopalnia', 'jagoda'))
+    _stos(g, (48, 29), [SKRZ, S('jagoda')], r=1)
     _postaw(g, [(46, 33), (47, 33), (46, 32)], ('budynek', 'wiatrak'))
-    _stos(g, (46, 41), [S('odlamek'), S('kamien')], r=1)
     _postaw(g, [(56, 33), (57, 33), (55, 33)], ('budynek', 'woz'))
-    pok_wezel = _postaw(g, [(55, 37), (54, 37), (56, 37)], ('kopalnia', 'pokeball'))
-    if pok_wezel:
-        g.strzez([pok_wezel], 'sredni')
+    _stos(g, (54, 34), [SKRZ, S('odlamek')], r=1)
+    # Runda 4 (B1): kopalnia pokeballi (55, 37) → sporny stos z artefaktem.
+    stos_p = _stos(g, (55, 37), [ART, SKRZ], r=1)
+    if stos_p:
+        g.strzez(stos_p[:1], 'sredni')
     _postaw(g, [(53, 41), (52, 41), (54, 41)], ('jasnowidz', None))
-    _postaw(g, [(56, 42), (55, 42), (56, 41)], ('budynek', 'chatka'))
+    _postaw(g, [(56, 42), (55, 42), (56, 41)], ('budynek', 'zrodlo'))
     _postaw(g, [(44, 42), (45, 42), (44, 43)], ('budynek', 'ognisko'))
-    _stos(g, (47, 38), [SKRZ, S('odlamek')], r=1)
-    _stos(g, (57, 40), [SKRZ, S('pokeball')], r=1)
 
     # --- Jałowa rubież wschodnia (x 59–71, y 23–43) ----------------------------
-    # Jedno wejście: zwężenie (59–63, 30–31) przy dojściu do bocznej przełęczy,
-    # średnia straż w nim. Niebieski namiot na końcu świata — każe wrócić.
+    # Jedno wejście: zwężenie (59–63, 30–31), średnia straż w nim — i to ona
+    # pilnuje całej rubieży (kopalnia kamienia nie ma już własnej straży).
     _postaw(g, [(60, 30), (60, 31), (61, 30)], ('potwor', 'sredni'))
-    _postaw(g, [(63, 31), (64, 31), (63, 32)], S('odlamek'))
-    _stos(g, (64, 28), [SKRZ, S('kamien')], r=1)
+    _stos(g, (63, 29), [SKRZ], r=1)
     _postaw(g, [(67, 27), (68, 27), (67, 28), (66, 26)], ('namiot', 'niebieski'))
-    kam_rubiez = _postaw(g, [(69, 33), (68, 33), (70, 33)], ('kopalnia', 'kamien'))
-    if kam_rubiez:
-        g.strzez([kam_rubiez], 'silny')
+    _postaw(g, [(69, 33), (68, 33), (70, 33)], ('kopalnia', 'kamien'))
     _postaw(g, [(70, 29), (69, 29), (70, 30)], ('budynek', 'ognisko'))
     _postaw(g, [(64, 36), (65, 36), (64, 37)], ART)
     _postaw(g, [(66, 41), (65, 41), (66, 40)], ('budynek', 'oboz-treningowy'))
-    _stos(g, (69, 38), [S('kamien'), SKRZ], r=2)
-    _stos(g, (68, 42), [S('pokeball'), S('odlamek')], r=1)
+    _stos(g, (69, 38), [SKRZ, S('kamien')], r=2)
     _postaw(g, [(65, 38), (66, 38), (65, 37)], ('budynek', 'gniazdo'))
     _postaw(g, [(64, 25), (63, 25), (64, 26)], ('budynek', 'chatka'))
-    _stos(g, (66, 31), [SKRZ, S('jagoda')], r=1)
+    _postaw(g, [(66, 30), (67, 30), (66, 31)], ('budynek', 'zrodlo'))
 
     # ===================================================================
     # KRAINA PRZECIWNIKA
     # ===================================================================
     # --- Północno-zachodnia polana (x 0–27, y 9–20) ---------------------------
     _postaw(g, [(16, 10), (15, 10), (17, 10), (16, 9)], ('budynek', 'wieza-obserwacyjna'))
-    _postaw(g, [(6, 13), (7, 13), (5, 13)], ('kopalnia', 'odlamek'))
     _postaw(g, [(3, 16), (4, 16), (3, 15), (4, 17)], ('jasnowidz', None))
-    stos_d = _stos(g, (8, 11), [SKRZ, S('kamien')], r=2)
-    if stos_d:
-        g.strzez(stos_d[:1], 'silny')
     _postaw(g, [(2, 10), (1, 10), (3, 10)], ('budynek', 'portal'))
+    _postaw(g, [(7, 13), (6, 13), (8, 13)], ('budynek', 'ranczo'))
+    # Zatoczka na jeziorku (E5): plaża (13–17, 14–16), silna straż w mierzei.
+    _kieszen(g, [(15, 13), (15, 12)], 'silny', (15, 15), [ART, SKRZ], r=1)
     _postaw(g, [(26, 13), (25, 13), (26, 12)], ('budynek', 'woz'))
     _postaw(g, [(24, 11), (25, 11), (24, 10)], ('budynek', 'ognisko'))
-    _stos(g, (29, 18), [S('pokeball'), SKRZ], r=2)
-    _stos(g, (25, 19), [S('kamien'), SKRZ], r=1)
+    _postaw(g, [(32, 18), (31, 18), (32, 19)], S('kamien'))
+    _postaw(g, [(24, 18), (23, 19), (24, 19)], S('jagoda'))
+    _postaw(g, [(26, 19), (25, 19), (27, 18)], ('budynek', 'wiatrak'))
+    _postaw(g, [(40, 18), (39, 18), (41, 18)], ('budynek', 'chatka'))
+    _stos(g, (29, 18), [SKRZ, S('pokeball'), S('odlamek')], r=2)
     _postaw(g, [(27, 15), (28, 14), (27, 14)], ('budynek', 'zrodlo'))
     # Pole za wodzem (x 3–29, y 0–7): skarbiec krańca, jedno wejście (26–27, 8).
     _postaw(g, [(8, 5), (9, 5), (7, 5)], ('kopalnia', 'kamien'))
     _postaw(g, [(20, 3), (19, 3), (21, 3), (18, 4)], ('budynek', 'drzewo-wiedzy'))
     _stos(g, (5, 3), [ART, SKRZ], r=2)
-    _stos(g, (25, 5), [ART, S('kamien'), SKRZ], r=2)
+    _stos(g, (25, 5), [ART], r=2)
     _postaw(g, [(26, 8), (27, 8), (26, 9)], ('potwor', 'wodz'))
 
     # --- Północna polana (x 31–43, y 0–10): kieszeń za silną strażą (37–39, 11–13)
     _postaw(g, [(36, 5), (37, 5), (35, 5), (36, 6)], ('budynek', 'osrodek-ewolucji'))
-    _postaw(g, [(33, 8), (34, 8), (33, 9)], ('kopalnia', 'kamien'))
-    _stos(g, (39, 3), [ART, SKRZ], r=2)
-    _postaw(g, [(38, 9), (37, 9), (39, 9)], S('pokeball'))
+    _postaw(g, [(33, 8), (34, 8), (33, 9)], ('budynek', 'gniazdo'))
+    _stos(g, (37, 9), [ART], r=1)
     _postaw(g, [(38, 12), (37, 12), (38, 11)], ('potwor', 'silny'))
 
     # --- Środek krainy (x 28–48, y 12–20): przy drodze z przełęczy ------------
-    pok_n = _postaw(g, [(37, 19), (36, 19), (38, 19)], ('kopalnia', 'pokeball'))
-    if pok_n:
-        g.strzez([pok_n], 'silny')
-    stos_e = _stos(g, (45, 14), [SKRZ, S('kamien'), S('odlamek')], r=2)
+    # Runda 4 (B1): kopalnia pokeballi (37, 19) zniknęła; stos z artefaktem
+    # pod silną strażą przy rozstajach (45, 14).
+    stos_e = _stos(g, (45, 14), [ART, SKRZ], r=2)
     if stos_e:
         g.strzez(stos_e[:1], 'silny')
     _postaw(g, [(44, 19), (43, 19), (45, 19), (42, 19), (45, 18), (41, 19)], ('budynek', 'portal'))
@@ -823,12 +925,13 @@ def rozstaw(g):
         g.strzez([pok_w], 'silny')
     _stos(g, (50, 6), [SKRZ, S('kamien')], r=2)
     _postaw(g, [(57, 5), (58, 5), (56, 5)], ('kopalnia', 'odlamek'))
-    _stos(g, (55, 12), [SKRZ, S('odlamek'), ART], r=2)
+    _stos(g, (55, 12), [SKRZ, S('kamien')], r=2)
     _postaw(g, [(60, 7), (59, 7), (61, 7)], ('budynek', 'ranczo'))
-    kam_w = _postaw(g, [(66, 13), (65, 13), (67, 13)], ('kopalnia', 'kamien'))
-    if kam_w:
-        g.strzez([kam_w], 'wodz')
-    _postaw(g, [(69, 12), (70, 12), (69, 13)], ART)
+    # Runda 4 (C3): wódz w szyjce (65, 11) strzeże zakątka z RELIKTEM
+    # (artefakt w krainie wroga to zawsze relikt) i Dojo, a nie kopalni.
+    _postaw(g, [(66, 14), (65, 14), (67, 14)], ART)
+    _postaw(g, [(65, 11), (65, 10), (64, 11)], ('potwor', 'wodz'))
+    _postaw(g, [(69, 12), (70, 12), (69, 13)], ('budynek', 'kamienna-wieza'))
     _postaw(g, [(68, 9), (67, 9), (68, 10)], ('jasnowidz', None))
     _postaw(g, [(60, 4), (61, 4), (60, 3)], ('budynek', 'wiatrak'))
     _postaw(g, [(64, 17), (63, 17), (64, 16)], ('budynek', 'zrodlo'))
