@@ -1,7 +1,7 @@
 {
   "wstep": "Każda plansza kampanii jest budowana przez osobnego buildera i oceniana przez osobnego, surowego krytyka ze świeżym kontekstem: schemat naszej planszy obok schematu oficjalnej mapy Heroes 3 (A/B bez podpisów, ta sama skala), te same liczby policzone dla obu, checklista zasad budowy map i jedna największa luka. Kawałek jest skończony, gdy krytyk wybierze naszą na ślepo i checklista nie ma żadnego NIE.",
   "stopka": "Wzorzec: pięć oficjalnych map HoMM3 72×72 (Faeries!, Gorlam's Tentacle Swampland, Hatchet Axe and Saw, Unexpected Inheritance, When Dragons Clash) sparsowanych z plików .h3m. Mapy HotA „Arrogance” i „Dragon Slayer” nie są osiągalne z tego środowiska (maps4heroes i wiki HoMM3 blokowane przez politykę sieci). Checklista spisana z pamięci poradnika edytora map HoMM3 i przyłożona do liczb z tych pięciu map.",
-  "aktualizacja": "2026-10-08 04:16",
+  "aktualizacja": "2026-10-08 04:21",
   "kawalki": [
     {
       "id": "polana",
@@ -177,7 +177,7 @@
     {
       "id": "dwie-doliny",
       "tytul": "Dwie Doliny (misja 2, 72×72)",
-      "status": "build",
+      "status": "critic",
       "opis": "Trzy pasy za dwoma grzbietami, strażnice na klucze, pas sporny w środku.",
       "rundy": [
         {
@@ -250,8 +250,13 @@
             {
               "plik": "tools/shots/caly-dwie-doliny-r1.png",
               "opis": "Cała plansza oceniana w rundzie 2"
+            },
+            {
+              "plik": "tools/shots/caly-dwie-doliny-r2.png",
+              "opis": "Cała plansza po rundzie 2"
             }
-          ]
+          ],
+          "zmiana": "Rozstaw napisany od nowa bez losowań: 184 obiekty w stosach i zakątkach (sad, jagody, kopalnia pokeballi, luka, zamek), straże 36 → 21, każdy ekran 21×18 ma 9–15 obiektów i ≤ 2 straże. Zatoka zamku w skałach i lesie z dwoma wyjściami ze strażą; luka rozstajów w skalnej bramie; przesmyki ze strażą na zachodniej łące i w rubieży. Masywy lasu na łące doliny, ślepa odnoga w rogu zarosła, trakt wyprostowany, arena na rozstajach. Śnieg usunięty, kraina wroga na jałowym gruncie malowanym jako ciemna łąka. Bez bitwy 23 %, pasy [23,22,55,54,30], obiekt co 11,7 pola."
         }
       ]
     },
