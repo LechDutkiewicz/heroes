@@ -733,6 +733,7 @@ def rozstaw(g):
     przerzedz_kadr(g)
     mokradla_kadru(g)
     runda_3(g)
+    runda_4(g)
 
 
 #: Runda 11 (HotA, zwycięzca rundy 10: „nic nie przypomina bagna — stawy małe,
@@ -1038,6 +1039,246 @@ def runda_3(g):
     print(f'  runda 3: usunięte {len(wyniesione)}, obiektów {len(g.obiekty)}')
 
 
+# --- RUNDA 4 PĘTLI (werdykt ślepego porównania r3: 20 TAK / 9 CZĘŚCIOWO /
+# 1 NIE) ------------------------------------------------------------------
+# Jak `runda_3`: po rozstawieniu, chirurgicznie. Co i dlaczego:
+#  - G1 (NIE): środek (28–48 × 16–33) był tłumem — pięć budowli, cztery
+#    straże na placu, kilkanaście kropek. Zostaje: kopalnia odłamków, portal,
+#    wieża na rozstajach, drzewo wiedzy przy rozwidleniu grobli (F3: widoczne,
+#    na otwartym) i dwa stosy w zakątkach za strażą. Zakątek (36–39, 19–21)
+#    i zakątek (48–50, 27–29) zarastają lasem — grzbiet wroga grubieje.
+#  - F3: budowli specjalnych po jednej: drzewa wiedzy z wyspy, z południowego
+#    wschodu i spod zamku wroga znikają (zostaje domowe i środkowe), znika
+#    druga kamienna wieża, drugie źródło, chatka, gniazda, wiatraki i ogniska
+#    pogranicza.
+#  - C1: straże przy jednej rzeczy na placu precz — Seadra (23,43) przy
+#    kopalni pokeballi w dolinie (B1: komplet kopalń domu bez straży),
+#    straż artefaktu (40,28), Charizard (36,5) przy jednej skrzyni, druga
+#    straż na wyspie (43,11) i straż kamiennej wieży (8,0).
+#  - B2: stosy w zakątkach zbite w jedną kupkę (zachodni, północno-
+#    wschodni, wschodni), luźne kropki pogranicza zebrane albo usunięte.
+#  - D4/E5: północna przeprawa to bród (piasek pod groblą), kałuże bez
+#    funkcji zasypane: przy zamku, w kieszeni NW, w centrum przy łuku grobli.
+#  - E3/E4: plamy bagna i łąki mniejsze niż 10 pól przechodzą w teren wokół
+#    (strefy mają jeden grunt), samotne kępy wierzb poza grzbietami znikają,
+#    a luki w lesie SE zarastają w masyw.
+#  - G4: łąka krainy wroga w tle to ciemna, chłodna ziemia (`TLO`).
+R4_USUN = [
+    # kraina wroga i wyspa
+    (7, 0), (8, 0), (34, 3), (35, 4), (36, 5), (38, 5), (44, 6), (45, 10), (48, 11),
+    (42, 10), (43, 11), (26, 9), (6, 2),
+    # zachód pogranicza
+    (18, 27), (26, 19), (25, 25), (6, 28), (15, 25),
+    # środek
+    (34, 19), (36, 19), (37, 19), (37, 21), (38, 21), (37, 23), (34, 22), (33, 23),
+    (31, 24), (29, 26), (31, 28), (36, 28), (35, 33),
+    # wschód środka
+    (44, 20), (39, 24), (47, 24), (38, 26), (38, 27), (40, 27), (40, 28), (41, 28),
+    (42, 27), (45, 29), (46, 29), (44, 31), (49, 35), (50, 35),
+    (50, 27), (48, 28), (50, 28), (50, 29), (49, 31),
+    # południowy wschód
+    (49, 41), (43, 43), (37, 49), (37, 53), (39, 40), (38, 49), (37, 42),
+    # dolina: straż przy kopalni pokeballi
+    (23, 43),
+    # straże kopalń na otwartym (C1: straż w szyjce albo wcale)
+    (11, 1), (21, 14),
+]
+
+#: Zakątki zarastające lasem (wnętrze z wejściem i polem przed nim).
+R4_ZAROST = [(36, 19, 39, 22), (37, 23, 37, 23), (48, 27, 50, 30)]
+
+#: Przesunięcia w stosach: skąd → dokąd (zakątek zachodni, NE, wschodni).
+R4_PRZESUN = {
+    (6, 19): (7, 21), (8, 19): (6, 20), (3, 22): (5, 21), (6, 22): (6, 21),
+    (50, 19): (50, 21),
+    (44, 35): (45, 36),
+}
+#: Zachodni zakątek o rząd i kolumnę ciaśniejszy — stos, nie plac.
+R4_ZACHOD_LAS = [(x, 19) for x in range(3, 9)] + [(3, y) for y in range(20, 23)]
+
+#: Ranczo z zachodniego trzęsawiska idzie do doliny (B1: gospodarka domu
+#: bez bitwy) — na łąkę nad stawem, z dala od traktu i wiatraka.
+R4_RANCZO = (15, 37)
+
+#: Stosy dołożone tam, gdzie ekran był pusty — zawsze po dwie–trzy rzeczy
+#: razem, przy drodze (B2: stos, nie konfetti).
+R4_DODAJ = [
+    # pod zamkiem wroga, przy kropce (21,10)
+    ((19, 10), ('skrzynia', None)), ((20, 10), ('surowiec', 'kamien')), ((20, 11), ('surowiec', 'odlamek')),
+    # koniec drogi przy namiocie (40,1): kąt za szyjką (32–34, 3–4) między
+    # lasami (`R4_LAS`), silna straż w szyjce (C1)
+    ((32, 4), ('potwor', 'silny')),
+    ((37, 3), ('surowiec', 'jagoda')), ((38, 3), ('surowiec', 'odlamek')), ((39, 3), ('skrzynia', None)), ((38, 2), ('surowiec', 'pokeball')),
+    # przy drodze na wschód od bramy
+    ((28, 8), ('skrzynia', None)), ((29, 8), ('surowiec', 'jagoda')),
+    # kieszeń NW: druga skrzynia obok (14,2) zamiast samotnej (6,2)
+    ((13, 2), ('skrzynia', None)),
+    # pod zamkiem wroga, nad drogą do bramy
+    ((27, 3), ('surowiec', 'odlamek')), ((28, 3), ('skrzynia', None)),
+    # za mostem, za pierwszą bitwą (C3: nagroda za strażą mostu)
+    ((32, 45), ('skrzynia', None)), ((33, 45), ('surowiec', 'jagoda')),
+    # przy grobli na wyspę
+    ((43, 22), ('surowiec', 'kamien')), ((44, 22), ('skrzynia', None)),
+]
+#: Masywy lasu dołożone (E4) — prostokąty.
+R4_LAS = [(28, 20, 33, 21), (3, 28, 5, 30), (3, 30, 10, 30), (31, 5, 36, 8), (9, 7, 11, 10), (47, 40, 50, 42),
+          (32, 0, 34, 2), (45, 26, 47, 29), (37, 49, 39, 53)]
+
+#: Północna przeprawa: pola obok grobli, które idą pod wodę.
+R4_BROD = [(GROBLA_PN[0], y) for y in range(struga_y(12) - 1, struga_y(12) + 2)]
+
+#: Drzewo wiedzy pogranicza: przy rozwidleniu grobli, na otwartym (F3).
+R4_DRZEWO = (40, 27)
+
+#: Kałuże do zasypania: prostokąty `(x0, y0, x1, y1)`.
+R4_KALUZE = [
+    (0, 0, 16, 14),     # kieszeń NW w krainie wroga
+    (32, 27, 37, 33),   # centrum, staw przy łuku grobli
+    (39, 31, 43, 35),   # centrum, oczka przy grobli
+    (14, 44, 24, 49),   # przy zamku
+]
+#: Mokradła doliny przy zamku → sucha łąka (E3/E5).
+R4_LAKA = [(15, 45, 18, 49), (20, 44, 25, 47), (4, 48, 8, 49)]
+
+
+def _skladowe(m, znaki, sasiedztwo=4):
+    kroki = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+    if sasiedztwo == 8:
+        kroki += [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+    widziane = set()
+    for y in range(BOK):
+        for x in range(BOK):
+            if (x, y) in widziane or m[y][x] not in znaki:
+                continue
+            zn = m[y][x]
+            stos, sk = [(x, y)], []
+            widziane.add((x, y))
+            while stos:
+                p = stos.pop()
+                sk.append(p)
+                for dx, dy in kroki:
+                    q = (p[0] + dx, p[1] + dy)
+                    if 0 <= q[0] < BOK and 0 <= q[1] < BOK and q not in widziane and m[q[1]][q[0]] == zn:
+                        widziane.add(q)
+                        stos.append(q)
+            yield zn, sk
+
+
+def _wokol(m, sk):
+    s = set(sk)
+    licz = {}
+    for x, y in sk:
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                q = (x + dx, y + dy)
+                if q in s or not (0 <= q[0] < BOK and 0 <= q[1] < BOK):
+                    continue
+                licz[m[q[1]][q[0]]] = licz.get(m[q[1]][q[0]], 0) + 1
+    return licz
+
+
+def runda_4(g):
+    m = g.mapa
+    zabrane = _usun(g, R4_USUN)
+    _odswiez(g)
+    obiekty = lambda: {p for p, _ in g.obiekty}
+
+    # --- teren -------------------------------------------------------------
+    for x0, y0, x1, y1 in R4_ZAROST:
+        _lataj(g, [(x, y) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1)], 'T')
+    # Kałuże: woda w prostokątach (poza Strugą — jej koryto zostaje) przechodzi
+    # w grunt, którego wokół najwięcej.
+    for x0, y0, x1, y1 in R4_KALUZE:
+        for zn, sk in list(_skladowe(m, '~', 8)):
+            if len(sk) > 40 or not all(x0 <= x <= x1 and y0 <= y <= y1 for x, y in sk):
+                continue
+            w = _wokol(m, sk)
+            grunt = '.' if w.get('.', 0) >= w.get('b', 0) else 'b'
+            for x, y in sk:
+                m[y][x] = grunt
+    for x0, y0, x1, y1 in R4_LAKA:
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                if m[y][x] in 'b~' and w_dolinie(x, y):
+                    m[y][x] = '.'
+    # Północna przeprawa (D4): trakt idzie wąską groblą PRZEZ Strugę — woda
+    # z obu stron — a nie przesmykiem łąki na dwa pola. Straż staje na samej
+    # grobli i zamyka ją w całości.
+    for x, y in R4_BROD:
+        if m[y][x] == '.':
+            m[y][x] = '~'
+    for i, (p, w) in enumerate(g.obiekty):
+        if p == (GROBLA_PN[0], struga_y(12)) and w[0] == 'potwor':
+            g.obiekty[i] = ((GROBLA_PN[2], struga_y(12)), w)
+    # Plamy bagna i łąki poza doliną mniejsze niż 10 pól — w grunt wokół (E3).
+    for _ in range(2):
+        for zn, sk in list(_skladowe(m, '.b')):
+            if len(sk) >= 10 or any(strefa(x, y) == 'dom' for x, y in sk):
+                continue
+            inny = 'b' if zn == '.' else '.'
+            w = _wokol(m, sk)
+            if w.get(inny, 0) >= 3 and w.get(inny, 0) >= w.get(zn, 0):
+                for x, y in sk:
+                    m[y][x] = inny
+    # Samotne kępy wierzb (do 3 pól) poza doliną — grunt (E4).
+    for zn, sk in list(_skladowe(m, 'T', 8)):
+        if len(sk) > 3 or any(strefa(x, y) == 'dom' for x, y in sk):
+            continue
+        w = _wokol(m, sk)
+        grunt = '.' if w.get('.', 0) >= w.get('b', 0) else 'b'
+        for x, y in sk:
+            if (x, y) not in obiekty():
+                m[y][x] = grunt
+    # Luki w lesie południowego wschodu zarastają — masyw, nie kępy (E4).
+    zajete = obiekty() | g.blokada
+    for _ in range(2):
+        nowe = []
+        for y in range(36, BOK):
+            for x in range(31, BOK):
+                if m[y][x] not in '.b' or (x, y) in zajete:
+                    continue
+                las = sum(1 for dy in (-1, 0, 1) for dx in (-1, 0, 1)
+                          if (dx or dy) and g.w(x + dx, y + dy) and m[y + dy][x + dx] == 'T')
+                if las >= 5:
+                    nowe.append((x, y))
+        for x, y in nowe:
+            m[y][x] = 'T'
+    # Zachodni zakątek ciaśniejszy.
+    _lataj(g, R4_ZACHOD_LAS, 'T')
+    for x0, y0, x1, y1 in R4_LAS:
+        _lataj(g, [(x, y) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1) if m[y][x] in '.b'], 'T')
+    # Kraina wroga ma JEDEN grunt: twardą, ciemną ziemię (w tle `j`, G4),
+    # bez łat trzęsawiska — bagno jest pograniczem (E3).
+    for y in range(BOK):
+        for x in range(BOK):
+            if m[y][x] == 'b' and strefa(x, y) == 'wroga':
+                m[y][x] = '.'
+
+    # --- obiekty -----------------------------------------------------------
+    for i, (p, w) in enumerate(list(g.obiekty)):
+        if p in R4_PRZESUN:
+            q = R4_PRZESUN[p]
+            if m[q[1]][q[0]] not in '.,b':
+                m[q[1]][q[0]] = 'b'
+            g.obiekty[i] = (q, w)
+            if p in g.zajete:
+                g.zajete.remove(p)
+            g.zajete.append(q)
+    _odswiez(g)
+    x, y = R4_DRZEWO
+    if m[y][x] not in '.b':
+        m[y][x] = 'b'
+    g.postaw(R4_DRZEWO, ('budynek', 'drzewo-wiedzy'))
+    g.postaw(R4_RANCZO, ('budynek', 'ranczo'))
+    for p, w in R4_DODAJ:
+        if m[p[1]][p[0]] not in '.,b':
+            m[p[1]][p[0]] = '.' if strefa(*p) == 'wroga' else 'b'
+        g.postaw(p, w)
+    _odswiez(g)
+    g.zasyp_odciete(m)
+    print(f'  runda 4: usunięte {len(zabrane)}, obiektów {len(g.obiekty)}')
+
+
 NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 // Źródło: tools/mapy/bagna.py (szkic i rozstawienie), silnik: tools/generuj_mape.py.
 //
@@ -1149,6 +1390,8 @@ BARWY_TERENU = {
     # Bruk grobli (runda 6): prawie bez zmian, lekko ciepły.
     # Runda 9: bez jaśniejszej jezdni z `obwodka_drogi` bruk jaśniejszy tu.
     'sciezka': {'nasycenie': 0.8, 'barwa': (160, 145, 120), 'moc': 0.2, 'jasnosc': 1.32},
+    # Runda 4 pętli (G4): ciemna, sina ziemia krainy wroga (`TLO`).
+    'jalowa': {'nasycenie': 0.45, 'barwa': (62, 84, 96), 'moc': 0.8, 'jasnosc': 0.62},
 }
 
 #: Po rundzie 1 ślepego porównania („bagno to brązowa plama w kolorze drogi"):
@@ -1166,7 +1409,9 @@ TRZESAWISKO = {'woda': (46, 76, 82)}
 TEKSTURY = {'bagno': ['bloto', 'bagno'], 'woda': ['woda-czarna', 'woda-bagno', 'woda'], 'sciezka': ['bruk', 'sciezka'],
             # Runda 8: pod pasmami gór (`masywy`) mszysta ściółka, nie szary
             # kamień — miękkie podnóże rysunku przechodzi w nią, a nie w kratę.
-            'skaly': ['las']}
+            'skaly': ['las'],
+            # Runda 4 pętli (G4): grunt krainy wroga — ciemna trawa.
+            'jalowa': ['trawa-3', 'trawa']}
 
 #: Runda 2 („krainy rozmywają się w jedną"): twardsze brzegi terenów.
 #: Runda 6 („brzegi wody miękko rozmyte, bez wyraźnej linii"): woda ostrzej.
@@ -1263,6 +1508,14 @@ def TLO(rysunek):
     for x, y in TLO_PRZESMYK:
         if wynik[y][x] == '~':
             wynik[y][x] = '.'
+    # Runda 4 pętli (G4: „zamek wroga i wyspa stoją na tej samej jasnej łące
+    # co dom"): grunt krainy wroga to ciemna, chłodna ziemia — warstwa `j`
+    # z teksturą ciemnej trawy (`TEKSTURY`), zabarwioną na sino
+    # (`BARWY_TERENU['jalowa']`), jak ciemna łąka krainy wroga na Polanie.
+    for y in range(BOK):
+        for x in range(BOK):
+            if wynik[y][x] == '.' and strefa(x, y) == 'wroga':
+                wynik[y][x] = 'j'
     return [''.join(w) for w in wynik]
 
 
