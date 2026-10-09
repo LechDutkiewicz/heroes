@@ -523,6 +523,8 @@ export class AdventureScene extends Phaser.Scene {
   private guzikRuchuWlaczony: boolean | null = null;
   /** Otwarte okno łapania — sonda (`probe-plecak.mjs`) wybiera nim stworka. */
   lapanie: { kandydaci: Oddzial[]; zamknij: (od?: Oddzial) => void } | null = null;
+  /** Trwająca mini-gra łapania — sonda rzuca nią z wymuszonym wynikiem. */
+  minigra: { rzuc: (wymus?: boolean) => void } | null = null;
   private bohaterSprite!: Phaser.GameObjects.Sprite;
   private kierunek: Kierunek = 'dol';
 
@@ -801,6 +803,7 @@ export class AdventureScene extends Phaser.Scene {
     this.rywalObj = null;
     this.guzikRuchu = null;
     this.lapanie = null;
+    this.minigra = null;
     sledzScene(this);
     // Phaser używa TEJ SAMEJ instancji sceny przy każdym `scene.start`, więc
     // pola klasy przeżywają przejście do bitwy i z powrotem. `zajety` zostawało
@@ -6160,7 +6163,7 @@ export class AdventureScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(Z.overlay + 2);
     this.add
-      .text(cx, gora + 64, `Pokonane stworki dadzą się złapać. Masz ${this.stan.skarbiec.pokeball} pokeballi.`, {
+      .text(cx, gora + 64, `Pokonane stworki można spróbować złapać. Masz ${this.stan.skarbiec.pokeball} pokeballi.`, {
         ...stylAtramentu(14, 'zwykly', szer - 40),
         align: 'center',
       })
@@ -6172,20 +6175,11 @@ export class AdventureScene extends Phaser.Scene {
       this.zajety = false;
       this.lapanie = null;
       if (od) {
-        const wolny = this.stan.bohater.armia.findIndex((s) => !s);
+        // Pokeballe idą od razu — za próbę, nie za sukces.
         this.stan.skarbiec.pokeball -= kosztZlapania(od);
-        this.stan.bohater.armia[wolny] = {
-          ...od,
-          ile: 1,
-          omdlaly: undefined,
-          bezEwolucji: undefined,
-          dosw: doswDoPoziomu(od.poziom),
-          // Złapany silniejszy niż limit odznak słucha tylko do limitu.
-          slucha:
-            this.stan.limitPoziomu !== undefined && od.poziom > this.stan.limitPoziomu ? this.stan.limitPoziomu : undefined,
-        };
-        sfx(this, 'awans');
-        this.napisUlotny(`Złapany: ${od.nazwa}!\nDołącza do twojej drużyny.`);
+        this.odswiezWszystko();
+        this.minigraLapania(od, potem);
+        return;
       }
       this.odswiezWszystko();
       potem();
@@ -6238,6 +6232,177 @@ export class AdventureScene extends Phaser.Scene {
     this.guzikOkna(cx, gora + wys - 34, 180, 'Nie łapię', () => zamknij());
     this.lapanie = { kandydaci, zamknij };
     this.naWierzchu(...nowe());
+  }
+
+  /**
+   * Mini-gra łapania: znacznik jeździ po pasku, a w odpowiedniej chwili
+   * trzeba kliknąć (albo Spacja / „Rzuć!"), żeby trafić w zieloną strefę.
+   * Trzy rzuty; rzadszy (ranga) i silniejszy (poziom) stworek ma węższą
+   * strefę i szybszy znacznik. Pudło trzy razy — stworek ucieka.
+   */
+  private minigraLapania(od: Oddzial, potem: () => void) {
+    this.zajety = true;
+    const RZUTY = 3;
+    const szer = 460;
+    const wys = 360;
+    const cx = this.mapaX + this.oknoW / 2;
+    const cy = this.mapaY + this.oknoH / 2;
+    const gora = cy - wys / 2;
+    const nowe = this.znacznik();
+    this.oknoPergaminu(cx, cy, szer, wys);
+    this.add
+      .text(cx, gora + 30, `Łapiesz: ${od.nazwa}!`, stylEtykiety(22))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    const stworek = this.add.image(cx, gora + 110, `p-${od.sprite}`).setDepth(Z.overlay + 2);
+    stworek.setScale(Math.min(110 / stworek.width, 110 / stworek.height));
+    const skalaStworka = stworek.scale;
+    this.tweens.add({ targets: stworek, y: stworek.y - 6, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+    // Pasek: szerokość strefy i czas przejazdu zależą od trudności stworka.
+    const trudnosc = Phaser.Math.Clamp((od.tier + od.poziom / 10) / 8, 0, 1);
+    const pasW = 340;
+    const pasH = 22;
+    const pasX = cx - pasW / 2;
+    const pasY = gora + 196;
+    const strefaW = pasW * (0.3 - 0.17 * trudnosc);
+    const przejazd = 1300 - 600 * trudnosc;
+    const pas = this.add.graphics().setDepth(Z.overlay + 2);
+    const strefa = this.add.graphics().setDepth(Z.overlay + 3);
+    let strefaX = 0;
+    const nowaStrefa = () => {
+      strefaX = pasX + Phaser.Math.Between(20, Math.round(pasW - strefaW - 20));
+      strefa.clear();
+      strefa.fillStyle(0x4caf50, 1);
+      strefa.fillRoundedRect(strefaX, pasY + 2, strefaW, pasH - 4, 6);
+      strefa.fillStyle(0xffffff, 0.35);
+      strefa.fillRoundedRect(strefaX + 3, pasY + 4, strefaW - 6, 5, 3);
+    };
+    pas.fillStyle(TUSZ, 1);
+    pas.fillRoundedRect(pasX - 3, pasY - 3, pasW + 6, pasH + 6, 10);
+    pas.fillStyle(0xe7ecf2, 1);
+    pas.fillRoundedRect(pasX, pasY, pasW, pasH, 8);
+    nowaStrefa();
+    const znak = this.add.rectangle(pasX, pasY + pasH / 2, 6, pasH + 14, 0xd62828).setDepth(Z.overlay + 4);
+    znak.setStrokeStyle(2, TUSZ);
+    const jazda = this.tweens.add({
+      targets: znak,
+      x: pasX + pasW,
+      duration: przejazd,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    const napis = this.add
+      .text(cx, pasY + 46, 'Kliknij, gdy czerwona kreska będzie na zielonym!', {
+        ...stylAtramentu(14, 'zwykly', szer - 40),
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    const kule: Phaser.GameObjects.Image[] = [];
+    for (let i = 0; i < RZUTY; i++) {
+      const k = this.add
+        .image(cx + (i - (RZUTY - 1) / 2) * 30, pasY + 76, `m-${SUROWIEC_INFO.pokeball.ikona}`)
+        .setDepth(Z.overlay + 2);
+      k.setScale(24 / Math.max(k.width, k.height));
+      kule.push(k);
+    }
+
+    let zostalo = RZUTY;
+    let czeka = false;
+    const koniec = (zlapany: boolean) => {
+      this.input.keyboard?.off('keydown-SPACE', rzucKlawiszem);
+      this.minigra = null;
+      this.time.delayedCall(zlapany ? 1100 : 900, () => {
+        this.zamknijOkno(nowe());
+        this.zajety = false;
+        if (zlapany) {
+          this.dolaczZlapanego(od);
+          sfx(this, 'awans');
+          this.napisUlotny(`Złapany: ${od.nazwa}!\nDołącza do twojej drużyny.`);
+        } else {
+          this.napisUlotny(`${od.nazwa} uciekł w zarośla.`);
+        }
+        this.odswiezWszystko();
+        potem();
+      });
+    };
+    /** `wymus` — tylko dla sondy: rzut trafiony albo chybiony niezależnie od kreski. */
+    const rzuc = (wymus?: boolean) => {
+      if (czeka || zostalo <= 0) return;
+      czeka = true;
+      jazda.pause();
+      const trafiony = wymus ?? (znak.x >= strefaX && znak.x <= strefaX + strefaW);
+      zostalo--;
+      kule[zostalo]?.setAlpha(0.25);
+      // Pokeball leci łukiem w stworka.
+      const kula = this.add.image(cx, pasY + 76, `m-${SUROWIEC_INFO.pokeball.ikona}`).setDepth(Z.overlay + 5);
+      kula.setScale(30 / Math.max(kula.width, kula.height));
+      sfx(this, 'zbior');
+      this.tweens.add({
+        targets: kula,
+        x: stworek.x,
+        y: stworek.y,
+        angle: 540,
+        duration: 380,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          if (trafiony) {
+            this.tweens.add({ targets: stworek, scale: 0, alpha: 0, duration: 220 });
+            this.tweens.add({ targets: kula, angle: { from: -20, to: 20 }, duration: 160, yoyo: true, repeat: 2 });
+            napis.setText('Złapany!');
+            koniec(true);
+            return;
+          }
+          kula.destroy();
+          this.tweens.add({
+            targets: stworek,
+            scale: skalaStworka * 1.15,
+            duration: 120,
+            yoyo: true,
+          });
+          if (zostalo <= 0) {
+            napis.setText(`Pudło! ${od.nazwa} ucieka…`);
+            this.tweens.add({ targets: stworek, x: stworek.x + 260, alpha: 0, duration: 600, delay: 200 });
+            koniec(false);
+            return;
+          }
+          napis.setText(`Pudło! ${od.nazwa} się wyrwał. Jeszcze ${zostalo === 1 ? 'jeden rzut' : `${zostalo} rzuty`}.`);
+          nowaStrefa();
+          czeka = false;
+          jazda.resume();
+        },
+      });
+    };
+    const rzucKlawiszem = () => rzuc();
+    this.input.keyboard?.on('keydown-SPACE', rzucKlawiszem);
+    // Klik w całe okno też rzuca — dziecko nie musi celować w przycisk.
+    this.add
+      .zone(cx - szer / 2, gora, szer, wys - 70)
+      .setOrigin(0)
+      .setDepth(Z.overlay + 4)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => rzuc());
+    this.guzikOkna(cx, gora + wys - 34, 180, 'Rzuć!', () => rzuc(), true);
+    this.minigra = { rzuc };
+    this.naWierzchu(...nowe());
+  }
+
+  /** Złapany stworek dołącza do drużyny w pierwszym wolnym slocie. */
+  private dolaczZlapanego(od: Oddzial) {
+    const wolny = this.stan.bohater.armia.findIndex((s) => !s);
+    if (wolny < 0) return;
+    this.stan.bohater.armia[wolny] = {
+      ...od,
+      ile: 1,
+      omdlaly: undefined,
+      bezEwolucji: undefined,
+      dosw: doswDoPoziomu(od.poziom),
+      // Złapany silniejszy niż limit odznak słucha tylko do limitu.
+      slucha:
+        this.stan.limitPoziomu !== undefined && od.poziom > this.stan.limitPoziomu ? this.stan.limitPoziomu : undefined,
+    };
   }
 
   /** Cofnięcie o pole po przegranej (`polePoUcieczce`). */

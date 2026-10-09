@@ -35,7 +35,14 @@ zaznaczonej wczoraj; rzut pokeballem w bitwie za mocny.
   bez losowania; cena `kosztZlapania` = 5·ranga + poziom, co 5, min. 10
   (ranga 1 poz. 2 — 10, ranga 7 poz. 20 — 55). Za drogi — karta wyszarzona.
   Okno awansu bohatera czeka, aż łapanie się zamknie. AI i autopilot nie
-  łapią. `probe-plecak.mjs` łapie pierwszego i sprawdza drużynę i pokeballe
+  łapią.
+- **Mini-gra łapania** (prośba użytkownika: „żeby nie zawsze się łapało").
+  Po wyborze stworka pokeballe schodzą od razu (za próbę), potem
+  `minigraLapania`: czerwona kreska jeździ po pasku, klik / Spacja /
+  „Rzuć!" w chwili, gdy jest na zielonej strefie. Trzy rzuty; po pudle
+  strefa losuje się w nowym miejscu. Trudność = (ranga + poziom/10)/8:
+  strefa 30% → 13% paska, przejazd 1,3 s → 0,7 s. Trzy pudła — stworek
+  ucieka. `minigra.rzuc(wymus)` jest dla sondy. `probe-plecak.mjs` łapie pierwszego i sprawdza drużynę i pokeballe
   (`lapanie` na scenie jest dla sondy).
 
 ## Rozpiętość limitów i okrągłe ceny (2026-10-05, po #46)

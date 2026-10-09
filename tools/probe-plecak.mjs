@@ -93,7 +93,28 @@ const zlapany = await page.evaluate(() => {
   s.lapanie.zamknij(od);
   return { nazwa: od.nazwa, koszt: pbPrzed - s.stan.skarbiec.pokeball };
 });
+// Mini-gra: pierwszy rzut chybiony, drugi trafiony (wynik wymuszony).
+const minigra = await page
+  .waitForFunction(() => window.__game.scene.getScene('adventure').minigra, null, { timeout: 10000 })
+  .then(() => true)
+  .catch(() => false);
+await page.waitForTimeout(500);
+await zrzut('plecak-minigra');
+await page.evaluate(() => window.__game.scene.getScene('adventure').minigra?.rzuc(false));
 await page.waitForTimeout(1500);
+const poPudle = await page.evaluate(() => window.__game.scene.getScene('adventure').stan.bohater.armia.filter(Boolean).length);
+// Rzut trafiony — powtarzany, bo w wolnej przeglądarce poprzedni lot kuli
+// mógł jeszcze trwać (wtedy `rzuc` nic nie robi).
+await page.waitForFunction(
+  () => {
+    const s = window.__game.scene.getScene('adventure');
+    s.minigra?.rzuc(true);
+    return !s.zajety;
+  },
+  null,
+  { timeout: 30000, polling: 400 }
+);
+await page.waitForTimeout(500);
 await zrzut('plecak-mapa');
 const po = await page.evaluate(() => {
   const st = window.__game.scene.getScene('adventure').stan;
@@ -114,12 +135,14 @@ if (po.plecakMikstur !== 0) zle.push(`zużyta mikstura wróciła do plecaka na m
 if (!pokeballZablokowany) zle.push('pokeball dalej daje się rzucić w bitwie');
 if (zlapanych !== 0) zle.push(`złapanych w bitwie: ${zlapanych}`);
 if (!lapanie || !zlapany) zle.push('po wygranej z dzikim stadem nie było okna łapania');
+if (!minigra) zle.push('po wyborze stworka nie ruszyła mini-gra');
+if (poPudle !== 6) zle.push(`po pudle drużyna ma ${poPudle} (pudło nie może łapać)`);
 if (po.druzyna !== 7) zle.push(`drużyna po łapaniu: ${po.druzyna} (oczekiwane 7)`);
 if (zlapany && (zlapany.koszt < 10 || po.pb !== przed.pb - zlapany.koszt))
   zle.push(`pokeballe ${przed.pb} → ${po.pb}, koszt łapania ${zlapany?.koszt}`);
 if (po.zemdleni !== 0) zle.push(`zemdlonych po wygranej bez strat: ${po.zemdleni} (stworki spoza dwójki mdlały)`);
 if (bledy.length) zle.push('błędy strony: ' + bledy.join(' | '));
 console.log({ przed, naPolu, leczenie, zlapanych, zlapany, po });
-console.log(zle.length ? 'ŹLE:\n' + zle.join('\n') : 'OK — wybór dwójki, mikstura, bez łapania w bitwie, łapanie po wygranej');
+console.log(zle.length ? 'ŹLE:\n' + zle.join('\n') : 'OK — wybór dwójki, mikstura, bez łapania w bitwie, łapanie po wygranej (mini-gra)');
 await b.close();
 process.exit(zle.length ? 1 : 0);
