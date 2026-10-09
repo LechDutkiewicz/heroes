@@ -1,6 +1,6 @@
 // Etap 5 w przeglądarce: okno „Kto walczy?", plecak trenera (mikstura,
-// pokeball) i powrót na mapę — złapany stworek w drużynie, pokeballe zeszły
-// ze skarbca, a stworki spoza dwójki nie zemdlały.
+// pokeball zablokowany) i powrót na mapę — drużyna bez zmian, pokeballe nietknięte
+// a stworki spoza dwójki nie zemdlały.
 // Użycie: node tools/probe-plecak.mjs [--url http://localhost:5210/] [--out katalog-na-zrzuty]
 import { chromium } from 'playwright';
 const arg = (n, d) => (process.argv.indexOf(n) > 0 ? process.argv[process.argv.indexOf(n) + 1] : d);
@@ -68,24 +68,13 @@ const leczenie = await page.evaluate(() => {
   s.uzyjNa(swoj);
   return { przed, po: swoj.topHp, mikstPrzed, mikstur: s.plecak.mikstura };
 });
-await page.evaluate(() => {
+// Łapania w bitwie już nie ma (za mocne) — pokeball nie daje się wybrać.
+const pokeballZablokowany = await page.evaluate(() => {
   const s = window.__game.scene.getScene('battle');
   s.przedmiotWRundzie = 0; // drugi przedmiot w tej samej rundzie — tylko w sondzie
   s.wybierzPrzedmiot('pokeball');
-  s.onUnitHover(s.units.find((u) => u.side === 'enemy'));
+  return s.celowanie === null && s.blokadaPrzedmiotu('pokeball') !== null;
 });
-await page.waitForTimeout(400);
-await zrzut('plecak-pokeball');
-await page.evaluate(() => {
-  const s = window.__game.scene.getScene('battle');
-  s.losujRzut = () => 0; // rzut na pewno udany
-  s.uzyjNa(s.units.find((u) => u.side === 'enemy'));
-});
-await page.waitForTimeout(1500);
-await zrzut('plecak-rzut');
-await page
-  .waitForFunction(() => !window.__game.scene.getScene('battle').busy || window.__game.scene.getScene('battle').gameOver, null, { timeout: 60000 })
-  .catch(() => console.log('bitwa została zajęta po rzucie', bledy));
 const zlapanych = await page.evaluate(() => window.__game.scene.getScene('battle').zlapani.length);
 await page.evaluate(() => window.__game.scene.getScene('battle').rozstrzygnijNatychmiast(true));
 await scena('adventure');
@@ -107,12 +96,13 @@ if (naPolu !== 2) zle.push(`na polu ${naPolu} stworków gracza zamiast 2`);
 if (!(leczenie.po > leczenie.przed && leczenie.mikstPrzed === 1 && leczenie.mikstur === 0))
   zle.push(`mikstura nie działa: ${JSON.stringify(leczenie)}`);
 if (po.plecakMikstur !== 0) zle.push(`zużyta mikstura wróciła do plecaka na mapie: ${po.plecakMikstur}`);
-if (zlapanych !== 1) zle.push(`złapanych w bitwie: ${zlapanych}`);
-if (po.druzyna !== 7) zle.push(`drużyna po bitwie: ${po.druzyna} (oczekiwane 7 — złapany dołączył)`);
-if (po.pb !== przed.pb - 10) zle.push(`pokeballe ${przed.pb} → ${po.pb}, oczekiwane −10`);
+if (!pokeballZablokowany) zle.push('pokeball dalej daje się rzucić w bitwie');
+if (zlapanych !== 0) zle.push(`złapanych w bitwie: ${zlapanych}`);
+if (po.druzyna !== 6) zle.push(`drużyna po bitwie: ${po.druzyna} (oczekiwane 6)`);
+if (po.pb !== przed.pb) zle.push(`pokeballe ${przed.pb} → ${po.pb}, bitwa nie powinna ich brać`);
 if (po.zemdleni !== 0) zle.push(`zemdlonych po wygranej bez strat: ${po.zemdleni} (stworki spoza dwójki mdlały)`);
 if (bledy.length) zle.push('błędy strony: ' + bledy.join(' | '));
 console.log({ przed, naPolu, leczenie, zlapanych, po });
-console.log(zle.length ? 'ŹLE:\n' + zle.join('\n') : 'OK — wybór dwójki, mikstura, pokeball, złapany w drużynie');
+console.log(zle.length ? 'ŹLE:\n' + zle.join('\n') : 'OK — wybór dwójki, mikstura, bez łapania');
 await b.close();
 process.exit(zle.length ? 1 : 0);

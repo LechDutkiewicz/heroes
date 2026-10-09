@@ -470,6 +470,7 @@ function wejdzNa(s: StanMapy, kto: Wlasciciel, o: Obiekt, ziarno: number) {
     const bohater = bohaterOf(s, kto);
     bohater.x = wynik.przenies.x;
     bohater.y = wynik.przenies.y;
+    slad?.push({ x: bohater.x, y: bohater.y, skok: true });
     odslon(s, undefined, undefined, kto);
   }
 }
@@ -622,6 +623,7 @@ function ruszSie(s: StanMapy, kto: Wlasciciel, ziarno: number) {
       bohater.ruch -= k.koszt;
       bohater.x = k.x;
       bohater.y = k.y;
+      slad?.push({ x: k.x, y: k.y });
       odslon(s, undefined, undefined, kto);
     }
 
@@ -781,7 +783,22 @@ export function turaAI(s: StanMapy, kto: Wlasciciel, ziarno = 0): void {
   if (tu) trenujDruzyne(s, kto, tu);
 }
 
-/** Wygodny alias na potrzeby gry: tura przeciwnika gracza. */
-export function turaWroga(s: StanMapy, ziarno = 0): void {
-  turaAI(s, 'wrog', ziarno);
+/** Pole, na które bohater AI wszedł w swojej turze; `skok` — portal, nie krok. */
+export type KrokSladu = { x: number; y: number; skok?: boolean };
+
+/** Ślad marszu zbierany w trakcie `turaWroga` — poza nią zawsze `undefined`. */
+let slad: KrokSladu[] | undefined;
+
+/**
+ * Wygodny alias na potrzeby gry: tura przeciwnika gracza. `sladRuchu`
+ * dostaje kolejne pola marszu rywala — scena odgrywa je potem tam, gdzie
+ * gracz widzi, jak w Heroes 3.
+ */
+export function turaWroga(s: StanMapy, ziarno = 0, sladRuchu?: KrokSladu[]): void {
+  slad = sladRuchu;
+  try {
+    turaAI(s, 'wrog', ziarno);
+  } finally {
+    slad = undefined;
+  }
 }

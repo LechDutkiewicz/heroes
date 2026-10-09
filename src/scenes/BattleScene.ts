@@ -8,10 +8,9 @@ import {
   type UnitDef,
 } from '../data/units';
 import { ALL_SPRITES, FACTIONS, factionById, type Faction } from '../data/factions';
-import { gatunek, jednostkiBitwy, napisPoziomu } from '../data/stworki';
+import { jednostkiBitwy, napisPoziomu } from '../data/stworki';
 import { createPasekAtakow, type PasekAtakow } from '../visual/pasekAtakow';
 import {
-  KOSZT_RZUTU,
   PLECAK_NA_BITWE,
   PRZEDMIOTY,
   PRZEDMIOTY_PLECAKA,
@@ -22,14 +21,12 @@ import {
   moznaOslonic,
   moznaWzmocnic,
   pelnyPlecak,
-  szansaZlapania,
   uzyjEliksiru,
   uzyjEteru,
   uzyjMega,
   uzyjMikstury,
   uzyjTarczy,
   uzyjTM,
-  zlap,
   LECZENIE_MIKSTURY,
   LECZENIE_SUPER_MIKSTURY,
   SILA_ELIKSIRU,
@@ -430,11 +427,7 @@ export class BattleScene extends Phaser.Scene {
     // Z mapy przychodzi zapas trenera; bitwa pokazowa dostaje wszystkiego po trochu.
     this.plecak = pelnyPlecak(this.zPrzygody?.plecak ?? PLECAK_NA_BITWE);
     const tr = this.zPrzygody?.trener;
-    // Bitwa pokazowa (bez mapy) też ma plecak — łapanie tylko „na niby".
-    this.pokeballe = tr?.pokeballe ?? 50;
-    this.wolneSloty = tr?.wolneSloty ?? 1;
     this.dzikie = tr?.dzikie ?? !this.zPrzygody;
-    this.posiadaneGatunki = new Set(tr?.posiadane ?? []);
     this.przedmiotWRundzie = 0;
     this.megaWBitwie = false;
     this.nauczeni = [];
@@ -474,11 +467,7 @@ export class BattleScene extends Phaser.Scene {
   private waitButton!: HudButton;
   /** Plecak trenera (`przedmioty.ts`): co zostało na tę bitwę. */
   private plecak: Plecak = pelnyPlecak(PLECAK_NA_BITWE);
-  private pokeballe = 0;
-  private wolneSloty = 0;
   private dzikie = false;
-  /** Gatunki trenera — jeden stworek danego gatunku, więc tych nie łapiemy. */
-  private posiadaneGatunki = new Set<string>();
   /** Runda, w której trener ostatnio sięgnął do plecaka — raz na rundę. */
   private przedmiotWRundzie = 0;
   /** Kamień Mega użyty w tej bitwie — mega ewolucja raz na bitwę, jak w grach. */
@@ -1849,7 +1838,7 @@ export class BattleScene extends Phaser.Scene {
   private blokadaPrzedmiotu(co: Przedmiot): string | null {
     if (this.przedmiotWRundzie === this.battle.round) return 'już sięgałeś do plecaka w tej rundzie';
     const swoi = this.units.filter((u) => u.side === 'player');
-    if (co !== 'pokeball' && this.plecak[co] <= 0) return 'brak w plecaku — kupisz w Pokémarcie';
+    if (co === 'pokeball' || this.plecak[co] <= 0) return 'brak w plecaku — kupisz w Pokémarcie';
     if (co === 'mikstura' || co === 'superMikstura') {
       if (!swoi.some(moznaLeczyc)) return 'nikt nie jest ranny';
     } else if (co === 'eliksir') {
@@ -1863,18 +1852,12 @@ export class BattleScene extends Phaser.Scene {
     } else if (co === 'mega') {
       if (this.megaWBitwie) return 'mega ewolucja tylko raz na bitwę';
       if (!swoi.some(moznaMega)) return 'mega ewolucja tylko dla stworka po ewolucji';
-    } else {
-      if (!this.dzikie) return 'stworków innego trenera nie wolno łapać';
-      if (!this.units.some((u) => this.celPrzedmiotu('pokeball', u))) return 'masz już każdy z tych gatunków';
-      if (this.wolneSloty <= 0) return 'drużyna pełna — nie ma miejsca';
-      if (this.pokeballe < KOSZT_RZUTU) return `za mało pokeballi (masz ${this.pokeballe})`;
     }
     return null;
   }
 
   /** Czy ten stworek może przyjąć wybrany przedmiot. */
   private celPrzedmiotu(co: Przedmiot, u: Unit): boolean {
-    if (co === 'pokeball') return u.side === 'enemy' && !this.posiadaneGatunki.has(gatunek(u.def.sprite));
     if (u.side !== 'player') return false;
     if (co === 'mikstura' || co === 'superMikstura') return moznaLeczyc(u);
     if (co === 'eter') return moznaOdnowic(u);
@@ -1894,12 +1877,6 @@ export class BattleScene extends Phaser.Scene {
         ile: `× ${this.plecak[co]}`,
         blokada: null,
       })),
-      {
-        co: 'pokeball',
-        tekstura: 'przedmiot-pokeball',
-        ile: `${KOSZT_RZUTU} z ${this.pokeballe}`,
-        blokada: null,
-      },
     ];
     wiersze.forEach((w) => (w.blokada = this.blokadaPrzedmiotu(w.co)));
     this.oknoPlecaka = pokazPlecak(
@@ -1932,11 +1909,9 @@ export class BattleScene extends Phaser.Scene {
       else paintMoveCell(g, u.col, u.row);
     }
     this.turnText.setText(
-      co === 'pokeball'
-        ? 'Rzuć pokeball: kliknij dzikiego stworka  ·  Esc — anuluj'
-        : co === 'mikstura' || co === 'superMikstura'
+      co === 'mikstura' || co === 'superMikstura'
           ? `${PRZEDMIOTY[co].nazwa}: kliknij swojego rannego stworka  ·  Esc — anuluj`
-          : `${PRZEDMIOTY[co].nazwa}: kliknij swojego stworka  ·  Esc — anuluj`
+        : `${PRZEDMIOTY[co].nazwa}: kliknij swojego stworka  ·  Esc — anuluj`
     );
   }
 
@@ -1949,10 +1924,6 @@ export class BattleScene extends Phaser.Scene {
 
   private prognozaPrzedmiotu(u: Unit) {
     const co = this.celowanie;
-    if (co === 'pokeball' && u.side === 'enemy' && this.posiadaneGatunki.has(gatunek(u.def.sprite))) {
-      this.forecast.show(`Masz już ${u.def.name} — każdego stworka ma się jednego`, false);
-      return;
-    }
     if (!co || !this.celPrzedmiotu(co, u)) {
       this.forecast.hide();
       return;
@@ -1978,12 +1949,6 @@ export class BattleScene extends Phaser.Scene {
       this.forecast.show(`Dysk TM: ${u.def.name} na zawsze uczy się ataku ${nazwaTrzeciego(u.def)}`, false);
     } else if (co === 'mega') {
       this.forecast.show(`Kamień Mega: ${u.def.name} mega ewoluuje — silniejszy i twardszy do końca bitwy`, false);
-    } else {
-      const s = Math.round(szansaZlapania(u) * 100);
-      this.forecast.show(
-        `Pokeball: szansa ${s}% na złapanie ${u.def.name}${s < 30 ? ' — najpierw go osłab!' : ''}`,
-        false
-      );
     }
   }
 
@@ -1992,10 +1957,6 @@ export class BattleScene extends Phaser.Scene {
     if (!co || !this.celPrzedmiotu(co, u)) return;
     this.celowanie = null;
     this.przedmiotWRundzie = this.battle.round;
-    if (co === 'pokeball') {
-      this.rzucPokeball(u);
-      return;
-    }
     if (co === 'mikstura' || co === 'superMikstura') {
       this.plecak[co]--;
       const ile = uzyjMikstury(u, co === 'mikstura' ? LECZENIE_MIKSTURY : LECZENIE_SUPER_MIKSTURY);
@@ -2050,90 +2011,6 @@ export class BattleScene extends Phaser.Scene {
     this.updateButtons(a);
     this.odswiezAtaki();
     this.showOptions(a);
-  }
-
-  /**
-   * Rzut pokeballem: lot łukiem od trenera, stworek znika w kuli, kula
-   * kołysze się trzy razy — i albo „Złapany!", albo stworek się wyrywa.
-   */
-  private rzucPokeball(cel: Unit) {
-    this.busy = true;
-    this.clearHighlights();
-    this.pokeballe -= KOSZT_RZUTU;
-    this.wydanePokeballe += KOSZT_RZUTU;
-    const udane = this.losujRzut() < szansaZlapania(cel);
-    const start = this.trenerXY;
-    const kon = this.cellToXY(cel.col, cel.row);
-    const kula = this.add.image(start.x, start.y, 'przedmiot-pokeball').setDepth(120);
-    kula.setScale(30 / kula.width);
-    this.turnText.setText(`Rzucasz pokeball w ${cel.def.name}!`);
-    const sx = cel.container.scaleX;
-    const sy = cel.container.scaleY;
-
-    const wynik = () => {
-      if (udane) {
-        zlap(this.battle, cel);
-        const skad = this.wrogZMapy.find((w) => w.id === cel.id)?.skad ?? -1;
-        this.zlapani.push({ skad, id: cel.id });
-        this.posiadaneGatunki.add(gatunek(cel.def.sprite));
-        this.wolneSloty--;
-        cel.container.setVisible(false);
-        flashTarget(this, kula, C.gold);
-        this.floatText(cel, `Złapany! ${cel.def.name} dołącza do drużyny!`, '#ffe08a', -40, ICON.star, 19);
-        this.turnText.setText(`Złapany: ${cel.def.name}!`);
-        this.buildQueueIcons();
-      } else {
-        this.tweens.add({ targets: cel.container, scaleX: sx, scaleY: sy, alpha: 1, duration: 260, ease: 'Back.easeOut' });
-        this.floatText(cel, 'Wyrwał się!', '#ff8a80', -52, undefined, 19);
-        this.turnText.setText(`${cel.def.name} wyrwał się z pokeballa!`);
-      }
-      this.tweens.add({
-        targets: kula,
-        alpha: 0,
-        scale: kula.scale * (udane ? 1 : 1.6),
-        delay: udane ? 700 : 0,
-        duration: 300,
-        onComplete: () => kula.destroy(),
-      });
-      this.time.delayedCall(udane ? 1100 : 700, () => {
-        this.busy = false;
-        this.checkGameOver();
-        if (!this.gameOver) this.poPrzedmiocie();
-      });
-    };
-
-    // Kołysanie: trzy przechyły, jak w grach z pokemonami.
-    const kolysz = () =>
-      this.tweens.add({
-        targets: kula,
-        angle: { from: -22, to: 22 },
-        duration: 180,
-        yoyo: true,
-        repeat: 2,
-        delay: 200,
-        onComplete: () => {
-          kula.setAngle(0);
-          wynik();
-        },
-      });
-
-    this.tweens.addCounter({
-      from: 0,
-      to: 1,
-      duration: 560,
-      onUpdate: (tw) => {
-        const p = tw.getValue() ?? 0;
-        kula.x = start.x + (kon.x - start.x) * p;
-        kula.y = start.y + (kon.y - 24 - start.y) * p - Math.sin(p * Math.PI) * 110;
-        kula.setAngle(p * 540);
-      },
-      onComplete: () => {
-        kula.setAngle(0);
-        flashTarget(this, cel.view.sprite, C.white);
-        this.tweens.add({ targets: cel.container, scaleX: 0.1, scaleY: 0.1, alpha: 0, duration: 240 });
-        this.tweens.add({ targets: kula, y: kon.y + 6, duration: 320, delay: 200, ease: 'Bounce.easeOut', onComplete: kolysz });
-      },
-    });
   }
 
   // ---------- akcje ----------

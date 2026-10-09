@@ -2,6 +2,36 @@
 
 Ostatnia aktualizacja: 2026-09-27 (trener zamiast armii: stworek = postać z poziomem, 4 na polu bitwy, trening i Centrum Pokemon).
 
+## Mapa przygody jak w HotA + bez łapania w bitwie (2026-10-09)
+
+**Uwagi użytkownika.** Osada gracza dużo mniejsza od sali wroga; zdobyte
+miasto zmieniało wygląd (w HoMM3 zmienia się tylko flaga); ruchu rywala
+w jego turze nie było widać; brak przycisku „ruch bohatera" dla trasy
+zaznaczonej wczoraj; rzut pokeballem w bitwie za mocny.
+
+- **Wygląd zamku z frakcji**, nie właściciela: `kluczZamku(o)` w
+  AdventureScene (`frakcjaZamku` `bor` → `m-zamek-las`, reszta →
+  `m-zamek-ogien`), też w pasku miast. `SKALA_RYSUNKU_ZAMKU` (las 1,25,
+  ogień 0,72) wyrównuje rozmiar: sala to jedna pełna bryła 501 × 336 px,
+  osada to domki z prześwitami 470 × 384 px — przy tej samej wysokości
+  sala wyglądała na dwa razy większą.
+- **Marsz rywala widać**: `turaWroga(s, ziarno, slad)` zbiera pola marszu
+  (`KrokSladu`, `skok` = portal) w `ruszSie`/`wejdzNa`. Scena zdejmuje
+  zasłonę po obliczeniu tury AI i `pokazRuchRywala` odgrywa ślad na
+  odkrytych polach (kamera podjeżdża, w mgle figura znika i przeskakuje),
+  potem `poTurzeWroga` (dawna druga połowa `koniecTury`). Stan gry jest już
+  po turze — to tylko animacja; zebrane przez rywala rzeczy znikają dopiero
+  na końcu (do poprawy, jeśli będzie przeszkadzać).
+- **„Idź dalej"** w panelu (rząd z Zapisz/Wczytaj, trzy równe przyciski) —
+  to samo co klawisz G (`kontynuujTrase`); włączany w `update`, gdy jest
+  trasa, ruch i scena nie jest zajęta.
+- **Łapanie w bitwie usunięte** (decyzja: za mocne). Pokeball nie ma wiersza
+  w plecaku, `blokadaPrzedmiotu('pokeball')` zawsze blokuje, `rzucPokeball`
+  wycięty. Logika danych (`szansaZlapania`, `zlap`) i rozliczenie
+  `zlapani` w AdventureScene zostały — gdyby wracać do łapania w innej
+  formie (np. jeden stworek z pokonanego dzikiego stada do wyboru po
+  wygranej, za pokeballe). `probe-plecak.mjs` sprawdza teraz, że się nie da.
+
 ## Rozpiętość limitów i okrągłe ceny (2026-10-05, po #46)
 
 **Uwagi użytkownika.** Skok limitu o 4 poziomy na misję za mały — gracz
