@@ -28,9 +28,15 @@ zaznaczonej wczoraj; rzut pokeballem w bitwie za mocny.
 - **Łapanie w bitwie usunięte** (decyzja: za mocne). Pokeball nie ma wiersza
   w plecaku, `blokadaPrzedmiotu('pokeball')` zawsze blokuje, `rzucPokeball`
   wycięty. Logika danych (`szansaZlapania`, `zlap`) i rozliczenie
-  `zlapani` w AdventureScene zostały — gdyby wracać do łapania w innej
-  formie (np. jeden stworek z pokonanego dzikiego stada do wyboru po
-  wygranej, za pokeballe). `probe-plecak.mjs` sprawdza teraz, że się nie da.
+  `zlapani` w AdventureScene zostały (nieużywane).
+- **Łapanie po wygranej z dzikim stadem** (prośba użytkownika): okno „Złap
+  jednego!" (`oknoLapania`) z kartą każdego pokonanego gatunku, którego
+  trener nie ma (`kandydaciDoZlapania`), tylko przy wolnym slocie. Pewne,
+  bez losowania; cena `kosztZlapania` = 5·ranga + poziom, co 5, min. 10
+  (ranga 1 poz. 2 — 10, ranga 7 poz. 20 — 55). Za drogi — karta wyszarzona.
+  Okno awansu bohatera czeka, aż łapanie się zamknie. AI i autopilot nie
+  łapią. `probe-plecak.mjs` łapie pierwszego i sprawdza drużynę i pokeballe
+  (`lapanie` na scenie jest dla sondy).
 
 ## Rozpiętość limitów i okrągłe ceny (2026-10-05, po #46)
 

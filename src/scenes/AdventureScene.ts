@@ -238,6 +238,13 @@ const kluczZamku = (o: Obiekt) => ((o.frakcjaZamku ?? 'bor') === 'bor' ? 'm-zame
 const SKALA_RYSUNKU_ZAMKU: Record<string, number> = { 'm-zamek-las': 1.25, 'm-zamek-ogien': 0.72 };
 
 const KLUCZ_STANU = 'stan-mapy';
+
+/**
+ * Cena złapania pokonanego dzikiego stworka w pokeballach: rzadszy (wyższa
+ * ranga) i silniejszy (poziom) kosztuje więcej. Okrągło, co 5, najmniej 10:
+ * ranga 1 poz. 2 — 10, ranga 4 poz. 14 — 35, ranga 7 poz. 20 — 55.
+ */
+const kosztZlapania = (od: Oddzial) => Math.max(10, Math.round((5 * od.tier + od.poziom) / 5) * 5);
 /** Skład armii sprzed bitwy (slot → liczebność) — z niego Uzdrowiciel liczy straty. */
 /** Pole, z którego trener wszedł tam, gdzie zaczęła się walka — dokąd cofa się po porażce. */
 const KLUCZ_UCIECZKI = 'pole-ucieczki';
@@ -514,6 +521,8 @@ export class AdventureScene extends Phaser.Scene {
   /** „Idź dalej" w panelu i jego ostatni stan — przełączany z `update`. */
   private guzikRuchu: HudButton | null = null;
   private guzikRuchuWlaczony: boolean | null = null;
+  /** Otwarte okno łapania — sonda (`probe-plecak.mjs`) wybiera nim stworka. */
+  lapanie: { kandydaci: Oddzial[]; zamknij: (od?: Oddzial) => void } | null = null;
   private bohaterSprite!: Phaser.GameObjects.Sprite;
   private kierunek: Kierunek = 'dol';
 
@@ -791,6 +800,7 @@ export class AdventureScene extends Phaser.Scene {
     // wejścia jest już zniszczony razem z tamtą sceną.
     this.rywalObj = null;
     this.guzikRuchu = null;
+    this.lapanie = null;
     sledzScene(this);
     // Phaser używa TEJ SAMEJ instancji sceny przy każdym `scene.start`, więc
     // pola klasy przeżywają przejście do bitwy i z powrotem. `zajety` zostawało
@@ -6058,7 +6068,17 @@ export class AdventureScene extends Phaser.Scene {
       // Okno otwiera `sprawdzAwans`, a nie to miejsce: doświadczenie wpada do
       // gry także ze skrzyń i z drzewa wiedzy, więc wykrywanie awansu musi
       // siedzieć w jednym miejscu dla wszystkich źródeł naraz.
-      if (poziomPo > poziomPrzed) {
+      // Pokonane dzikie stado: jednego z nich można zabrać do drużyny za
+      // pokeballe (`oknoLapania`). Okno idzie przed oknem awansu, a awans
+      // czeka, aż się zamknie — dwa okna naraz to jedno niewidoczne.
+      const doZlapania = o?.rodzaj === 'potwor' ? this.kandydaciDoZlapania(o) : [];
+      if (doZlapania.length) {
+        this.time.delayedCall(1500, () =>
+          this.oknoLapania(doZlapania, () => {
+            if (poziomPo > poziomPrzed) this.sprawdzAwans();
+          })
+        );
+      } else if (poziomPo > poziomPrzed) {
         this.time.delayedCall(2100, () => this.sprawdzAwans());
       }
       // Obiekt POD BOHATEREM po wygranej bitwie.
@@ -6099,6 +6119,125 @@ export class AdventureScene extends Phaser.Scene {
       this.uciekniPoPorazce();
       this.time.delayedCall(400, () => this.napisUlotny(this.napisPorazki()));
     }
+  }
+
+  /**
+   * Kogo z pokonanego dzikiego stada można złapać: po jednym z gatunku,
+   * którego trener jeszcze nie ma, i tylko gdy w drużynie jest wolne miejsce.
+   * Łapanie było kiedyś rzutem pokeballem w trakcie bitwy — za mocne (osłabić,
+   * złapać, a bitwa i tak wygrana). Teraz jest nagrodą PO wygranej.
+   */
+  private kandydaciDoZlapania(o: Obiekt): Oddzial[] {
+    if (!this.stan.bohater.armia.some((s) => !s)) return [];
+    const widziane = new Set<string>();
+    return (o.oddzialy ?? []).filter((od) => {
+      const g = gatunek(od.sprite);
+      if (od.ile <= 0 || widziane.has(g) || maGatunek(this.stan, od.sprite)) return false;
+      widziane.add(g);
+      return true;
+    });
+  }
+
+  /** Okno „Złap jednego!" po wygranej z dzikim stadem. `potem` — po zamknięciu. */
+  private oknoLapania(kandydaci: Oddzial[], potem: () => void) {
+    if (this.zajety) {
+      // Coś innego trzyma ekran (np. okno obiektu) — spróbujemy za chwilę.
+      this.time.delayedCall(500, () => this.oknoLapania(kandydaci, potem));
+      return;
+    }
+    this.zajety = true;
+    const kartaW = 150;
+    const kartaH = 196;
+    const szer = Math.max(400, kandydaci.length * (kartaW + 20) + 40);
+    const wys = 414;
+    const cx = this.mapaX + this.oknoW / 2;
+    const cy = this.mapaY + this.oknoH / 2;
+    const gora = cy - wys / 2;
+    const nowe = this.znacznik();
+    this.oknoPergaminu(cx, cy, szer, wys);
+    this.add
+      .text(cx, gora + 34, 'Złap jednego!', stylEtykiety(24))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    this.add
+      .text(cx, gora + 64, `Pokonane stworki dadzą się złapać. Masz ${this.stan.skarbiec.pokeball} pokeballi.`, {
+        ...stylAtramentu(14, 'zwykly', szer - 40),
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+
+    const zamknij = (od?: Oddzial) => {
+      this.zamknijOkno(nowe());
+      this.zajety = false;
+      this.lapanie = null;
+      if (od) {
+        const wolny = this.stan.bohater.armia.findIndex((s) => !s);
+        this.stan.skarbiec.pokeball -= kosztZlapania(od);
+        this.stan.bohater.armia[wolny] = {
+          ...od,
+          ile: 1,
+          omdlaly: undefined,
+          bezEwolucji: undefined,
+          dosw: doswDoPoziomu(od.poziom),
+          // Złapany silniejszy niż limit odznak słucha tylko do limitu.
+          slucha:
+            this.stan.limitPoziomu !== undefined && od.poziom > this.stan.limitPoziomu ? this.stan.limitPoziomu : undefined,
+        };
+        sfx(this, 'awans');
+        this.napisUlotny(`Złapany: ${od.nazwa}!\nDołącza do twojej drużyny.`);
+      }
+      this.odswiezWszystko();
+      potem();
+    };
+
+    const kartaY = gora + 92;
+    kandydaci.forEach((od, i) => {
+      const koszt = kosztZlapania(od);
+      const stac = this.stan.skarbiec.pokeball >= koszt;
+      const kx = cx + (i - (kandydaci.length - 1) / 2) * (kartaW + 20) - kartaW / 2;
+      const g = this.add.graphics().setDepth(Z.overlay + 2);
+      panelBialy(g, kx, kartaY, kartaW, kartaH, 14, { obrys: 3, cien: 3, wypelnienie: 0xf4f8fd });
+      const im = this.add.image(kx + kartaW / 2, kartaY + 58, `p-${od.sprite}`).setDepth(Z.overlay + 3);
+      im.setScale(Math.min(96 / im.width, 96 / im.height));
+      if (!stac) im.setAlpha(0.45);
+      this.add
+        .text(kx + kartaW / 2, kartaY + 122, od.nazwa, stylEtykiety(18))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      this.add
+        .text(kx + kartaW / 2, kartaY + 144, napisPoziomu(od.poziom), stylAtramentu(13, 'miekki'))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      const pb = this.add
+        .image(kx + kartaW / 2 - 22, kartaY + 172, `m-${SUROWIEC_INFO.pokeball.ikona}`)
+        .setDepth(Z.overlay + 3);
+      pb.setScale(22 / Math.max(pb.width, pb.height));
+      this.add
+        .text(kx + kartaW / 2 - 6, kartaY + 172, String(koszt), {
+          ...stylEtykiety(18),
+          ...(stac ? {} : { color: '#b03a2e' }),
+        })
+        .setOrigin(0, 0.5)
+        .setDepth(Z.overlay + 3);
+      if (stac) {
+        this.add
+          .zone(kx, kartaY, kartaW, kartaH)
+          .setOrigin(0)
+          .setDepth(Z.overlay + 4)
+          .setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => zamknij(od));
+        this.guzikOkna(kx + kartaW / 2, kartaY + kartaH + 28, kartaW, 'Łapię', () => zamknij(od), true, 40);
+      } else {
+        this.add
+          .text(kx + kartaW / 2, kartaY + kartaH + 28, 'za mało pokeballi', stylAtramentu(13, 'miekki'))
+          .setOrigin(0.5)
+          .setDepth(Z.overlay + 3);
+      }
+    });
+    this.guzikOkna(cx, gora + wys - 34, 180, 'Nie łapię', () => zamknij());
+    this.lapanie = { kandydaci, zamknij };
+    this.naWierzchu(...nowe());
   }
 
   /** Cofnięcie o pole po przegranej (`polePoUcieczce`). */

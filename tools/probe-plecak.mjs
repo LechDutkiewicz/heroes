@@ -1,6 +1,6 @@
 // Etap 5 w przeglądarce: okno „Kto walczy?", plecak trenera (mikstura,
-// pokeball zablokowany) i powrót na mapę — drużyna bez zmian, pokeballe nietknięte
-// a stworki spoza dwójki nie zemdlały.
+// pokeball zablokowany) i powrót na mapę — okno łapania po wygranej z dzikim
+// stadem (złapany dołącza, pokeballe schodzą o cenę), stworki spoza dwójki nie mdleją.
 // Użycie: node tools/probe-plecak.mjs [--url http://localhost:5210/] [--out katalog-na-zrzuty]
 import { chromium } from 'playwright';
 const arg = (n, d) => (process.argv.indexOf(n) > 0 ? process.argv[process.argv.indexOf(n) + 1] : d);
@@ -26,7 +26,7 @@ const przed = await page.evaluate(() => {
   st.bohater.armia = Array.from({ length: 7 }, (_, i) =>
     i < 6 ? { ...wzor, sprite: bor[i][0], nazwa: bor[i][1], tier: i, ile: 1, poziom: 8 + i, omdlaly: undefined } : null
   );
-  const straz = st.obiekty.find((o) => o.rodzaj !== 'zamek' && !o.zebrany && o.oddzialy?.length);
+  const straz = st.obiekty.find((o) => o.rodzaj === 'potwor' && !o.zebrany && o.oddzialy?.length);
   s.zajety = false;
   s.zacznijBitwe(straz);
   return { pb: st.skarbiec.pokeball, straz: straz.id };
@@ -78,7 +78,22 @@ const pokeballZablokowany = await page.evaluate(() => {
 const zlapanych = await page.evaluate(() => window.__game.scene.getScene('battle').zlapani.length);
 await page.evaluate(() => window.__game.scene.getScene('battle').rozstrzygnijNatychmiast(true));
 await scena('adventure');
-await page.waitForTimeout(3500);
+// Po wygranej z dzikim stadem — okno „Złap jednego!" (łapanie za pokeballe).
+const lapanie = await page
+  .waitForFunction(() => window.__game.scene.getScene('adventure').lapanie, null, { timeout: 60000 })
+  .then(() => true)
+  .catch(() => false);
+await page.waitForTimeout(600);
+await zrzut('plecak-lapanie');
+const zlapany = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  if (!s.lapanie) return null;
+  const pbPrzed = s.stan.skarbiec.pokeball;
+  const od = s.lapanie.kandydaci[0];
+  s.lapanie.zamknij(od);
+  return { nazwa: od.nazwa, koszt: pbPrzed - s.stan.skarbiec.pokeball };
+});
+await page.waitForTimeout(1500);
 await zrzut('plecak-mapa');
 const po = await page.evaluate(() => {
   const st = window.__game.scene.getScene('adventure').stan;
@@ -98,11 +113,13 @@ if (!(leczenie.po > leczenie.przed && leczenie.mikstPrzed === 1 && leczenie.miks
 if (po.plecakMikstur !== 0) zle.push(`zużyta mikstura wróciła do plecaka na mapie: ${po.plecakMikstur}`);
 if (!pokeballZablokowany) zle.push('pokeball dalej daje się rzucić w bitwie');
 if (zlapanych !== 0) zle.push(`złapanych w bitwie: ${zlapanych}`);
-if (po.druzyna !== 6) zle.push(`drużyna po bitwie: ${po.druzyna} (oczekiwane 6)`);
-if (po.pb !== przed.pb) zle.push(`pokeballe ${przed.pb} → ${po.pb}, bitwa nie powinna ich brać`);
+if (!lapanie || !zlapany) zle.push('po wygranej z dzikim stadem nie było okna łapania');
+if (po.druzyna !== 7) zle.push(`drużyna po łapaniu: ${po.druzyna} (oczekiwane 7)`);
+if (zlapany && (zlapany.koszt < 10 || po.pb !== przed.pb - zlapany.koszt))
+  zle.push(`pokeballe ${przed.pb} → ${po.pb}, koszt łapania ${zlapany?.koszt}`);
 if (po.zemdleni !== 0) zle.push(`zemdlonych po wygranej bez strat: ${po.zemdleni} (stworki spoza dwójki mdlały)`);
 if (bledy.length) zle.push('błędy strony: ' + bledy.join(' | '));
-console.log({ przed, naPolu, leczenie, zlapanych, po });
-console.log(zle.length ? 'ŹLE:\n' + zle.join('\n') : 'OK — wybór dwójki, mikstura, bez łapania');
+console.log({ przed, naPolu, leczenie, zlapanych, zlapany, po });
+console.log(zle.length ? 'ŹLE:\n' + zle.join('\n') : 'OK — wybór dwójki, mikstura, bez łapania w bitwie, łapanie po wygranej');
 await b.close();
 process.exit(zle.length ? 1 : 0);
