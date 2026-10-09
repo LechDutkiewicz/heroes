@@ -1,6 +1,6 @@
 // Etap 5 w przeglądarce: okno „Kto walczy?", plecak trenera (mikstura,
-// pokeball) i powrót na mapę — złapany stworek w drużynie, pokeballe zeszły
-// ze skarbca, a stworki spoza dwójki nie zemdlały.
+// pokeball zablokowany) i powrót na mapę — okno łapania po wygranej z dzikim
+// stadem (złapany dołącza, pokeballe schodzą o cenę), stworki spoza dwójki nie mdleją.
 // Użycie: node tools/probe-plecak.mjs [--url http://localhost:5210/] [--out katalog-na-zrzuty]
 import { chromium } from 'playwright';
 const arg = (n, d) => (process.argv.indexOf(n) > 0 ? process.argv[process.argv.indexOf(n) + 1] : d);
@@ -26,7 +26,7 @@ const przed = await page.evaluate(() => {
   st.bohater.armia = Array.from({ length: 7 }, (_, i) =>
     i < 6 ? { ...wzor, sprite: bor[i][0], nazwa: bor[i][1], tier: i, ile: 1, poziom: 8 + i, omdlaly: undefined } : null
   );
-  const straz = st.obiekty.find((o) => o.rodzaj !== 'zamek' && !o.zebrany && o.oddzialy?.length);
+  const straz = st.obiekty.find((o) => o.rodzaj === 'potwor' && !o.zebrany && o.oddzialy?.length);
   s.zajety = false;
   s.zacznijBitwe(straz);
   return { pb: st.skarbiec.pokeball, straz: straz.id };
@@ -68,28 +68,53 @@ const leczenie = await page.evaluate(() => {
   s.uzyjNa(swoj);
   return { przed, po: swoj.topHp, mikstPrzed, mikstur: s.plecak.mikstura };
 });
-await page.evaluate(() => {
+// Łapania w bitwie już nie ma (za mocne) — pokeball nie daje się wybrać.
+const pokeballZablokowany = await page.evaluate(() => {
   const s = window.__game.scene.getScene('battle');
   s.przedmiotWRundzie = 0; // drugi przedmiot w tej samej rundzie — tylko w sondzie
   s.wybierzPrzedmiot('pokeball');
-  s.onUnitHover(s.units.find((u) => u.side === 'enemy'));
+  return s.celowanie === null && s.blokadaPrzedmiotu('pokeball') !== null;
 });
-await page.waitForTimeout(400);
-await zrzut('plecak-pokeball');
-await page.evaluate(() => {
-  const s = window.__game.scene.getScene('battle');
-  s.losujRzut = () => 0; // rzut na pewno udany
-  s.uzyjNa(s.units.find((u) => u.side === 'enemy'));
-});
-await page.waitForTimeout(1500);
-await zrzut('plecak-rzut');
-await page
-  .waitForFunction(() => !window.__game.scene.getScene('battle').busy || window.__game.scene.getScene('battle').gameOver, null, { timeout: 60000 })
-  .catch(() => console.log('bitwa została zajęta po rzucie', bledy));
 const zlapanych = await page.evaluate(() => window.__game.scene.getScene('battle').zlapani.length);
 await page.evaluate(() => window.__game.scene.getScene('battle').rozstrzygnijNatychmiast(true));
 await scena('adventure');
-await page.waitForTimeout(3500);
+// Po wygranej z dzikim stadem — okno „Złap jednego!" (łapanie za pokeballe).
+const lapanie = await page
+  .waitForFunction(() => window.__game.scene.getScene('adventure').lapanie, null, { timeout: 60000 })
+  .then(() => true)
+  .catch(() => false);
+await page.waitForTimeout(600);
+await zrzut('plecak-lapanie');
+const zlapany = await page.evaluate(() => {
+  const s = window.__game.scene.getScene('adventure');
+  if (!s.lapanie) return null;
+  const pbPrzed = s.stan.skarbiec.pokeball;
+  const od = s.lapanie.kandydaci[0];
+  s.lapanie.zamknij(od);
+  return { nazwa: od.nazwa, koszt: pbPrzed - s.stan.skarbiec.pokeball };
+});
+// Mini-gra: pierwszy rzut chybiony, drugi trafiony (wynik wymuszony).
+const minigra = await page
+  .waitForFunction(() => window.__game.scene.getScene('adventure').minigra, null, { timeout: 10000 })
+  .then(() => true)
+  .catch(() => false);
+await page.waitForTimeout(500);
+await zrzut('plecak-minigra');
+await page.evaluate(() => window.__game.scene.getScene('adventure').minigra?.rzuc(false));
+await page.waitForTimeout(1500);
+const poPudle = await page.evaluate(() => window.__game.scene.getScene('adventure').stan.bohater.armia.filter(Boolean).length);
+// Rzut trafiony — powtarzany, bo w wolnej przeglądarce poprzedni lot kuli
+// mógł jeszcze trwać (wtedy `rzuc` nic nie robi).
+await page.waitForFunction(
+  () => {
+    const s = window.__game.scene.getScene('adventure');
+    s.minigra?.rzuc(true);
+    return !s.zajety;
+  },
+  null,
+  { timeout: 30000, polling: 400 }
+);
+await page.waitForTimeout(500);
 await zrzut('plecak-mapa');
 const po = await page.evaluate(() => {
   const st = window.__game.scene.getScene('adventure').stan;
@@ -107,12 +132,17 @@ if (naPolu !== 2) zle.push(`na polu ${naPolu} stworków gracza zamiast 2`);
 if (!(leczenie.po > leczenie.przed && leczenie.mikstPrzed === 1 && leczenie.mikstur === 0))
   zle.push(`mikstura nie działa: ${JSON.stringify(leczenie)}`);
 if (po.plecakMikstur !== 0) zle.push(`zużyta mikstura wróciła do plecaka na mapie: ${po.plecakMikstur}`);
-if (zlapanych !== 1) zle.push(`złapanych w bitwie: ${zlapanych}`);
-if (po.druzyna !== 7) zle.push(`drużyna po bitwie: ${po.druzyna} (oczekiwane 7 — złapany dołączył)`);
-if (po.pb !== przed.pb - 10) zle.push(`pokeballe ${przed.pb} → ${po.pb}, oczekiwane −10`);
+if (!pokeballZablokowany) zle.push('pokeball dalej daje się rzucić w bitwie');
+if (zlapanych !== 0) zle.push(`złapanych w bitwie: ${zlapanych}`);
+if (!lapanie || !zlapany) zle.push('po wygranej z dzikim stadem nie było okna łapania');
+if (!minigra) zle.push('po wyborze stworka nie ruszyła mini-gra');
+if (poPudle !== 6) zle.push(`po pudle drużyna ma ${poPudle} (pudło nie może łapać)`);
+if (po.druzyna !== 7) zle.push(`drużyna po łapaniu: ${po.druzyna} (oczekiwane 7)`);
+if (zlapany && (zlapany.koszt < 10 || po.pb !== przed.pb - zlapany.koszt))
+  zle.push(`pokeballe ${przed.pb} → ${po.pb}, koszt łapania ${zlapany?.koszt}`);
 if (po.zemdleni !== 0) zle.push(`zemdlonych po wygranej bez strat: ${po.zemdleni} (stworki spoza dwójki mdlały)`);
 if (bledy.length) zle.push('błędy strony: ' + bledy.join(' | '));
-console.log({ przed, naPolu, leczenie, zlapanych, po });
-console.log(zle.length ? 'ŹLE:\n' + zle.join('\n') : 'OK — wybór dwójki, mikstura, pokeball, złapany w drużynie');
+console.log({ przed, naPolu, leczenie, zlapanych, zlapany, po });
+console.log(zle.length ? 'ŹLE:\n' + zle.join('\n') : 'OK — wybór dwójki, mikstura, bez łapania w bitwie, łapanie po wygranej (mini-gra)');
 await b.close();
 process.exit(zle.length ? 1 : 0);

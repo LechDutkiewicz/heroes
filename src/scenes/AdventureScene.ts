@@ -77,12 +77,12 @@ import {
   tloEkranu,
   type KolorPigulki,
 } from '../visual/stylWalki';
-import { przyciskWalki } from '../visual/hudWalki';
+import { przyciskWalki, type HudButton } from '../visual/hudWalki';
 import { TYPE_INFO } from '../data/units';
 import { STRAZNICY_MAPOWI } from '../data/strazniki-mapa';
 import type { PoseName } from '../visual/unitView';
 import { planszaPoId } from '../data/mapy';
-import { turaWroga } from '../data/wrog-ai';
+import { turaWroga, type KrokSladu } from '../data/wrog-ai';
 import { SLOTY_ARMII, zywe } from '../data/armia';
 import { doswDoPoziomu, gatunek, ktosNaNogach, napisPoziomu } from '../data/stworki';
 import { DOSW_BOHATERA_ZA_WALKE, awanseZWierszy, rozliczDruzyne } from '../data/podsumowanie';
@@ -223,7 +223,28 @@ type SylwetkaBohatera = { skala: number; kotwica: number; stopy: number; glowa: 
 
 
 /** Klucze, pod którymi stan przeżywa przejście do bitwy i z powrotem. */
+/**
+ * Rysunek zamku zależy od FRAKCJI miasta, nie od właściciela — jak w Heroes 3,
+ * gdzie zdobyte miasto wygląda tak samo, a zmienia się tylko flaga.
+ */
+const kluczZamku = (o: Obiekt) => ((o.frakcjaZamku ?? 'bor') === 'bor' ? 'm-zamek-las' : 'm-zamek-ogien');
+
+/**
+ * Oba rysunki zamku stały na tej samej wysokości, ale sala wroga to jedna
+ * zwarta bryła na 501 × 336 px (szersza i pełna), a osada gracza to kilka
+ * domków z prześwitami na 470 × 384 px. Na mapie sala wyglądała na dwa razy
+ * większą. Mnożniki wyrównują widoczną masę: osada trochę rośnie, sala maleje.
+ */
+const SKALA_RYSUNKU_ZAMKU: Record<string, number> = { 'm-zamek-las': 1.25, 'm-zamek-ogien': 0.72 };
+
 const KLUCZ_STANU = 'stan-mapy';
+
+/**
+ * Cena złapania pokonanego dzikiego stworka w pokeballach: rzadszy (wyższa
+ * ranga) i silniejszy (poziom) kosztuje więcej. Okrągło, co 5, najmniej 10:
+ * ranga 1 poz. 2 — 10, ranga 4 poz. 14 — 35, ranga 7 poz. 20 — 55.
+ */
+const kosztZlapania = (od: Oddzial) => Math.max(10, Math.round((5 * od.tier + od.poziom) / 5) * 5);
 /** Skład armii sprzed bitwy (slot → liczebność) — z niego Uzdrowiciel liczy straty. */
 /** Pole, z którego trener wszedł tam, gdzie zaczęła się walka — dokąd cofa się po porażce. */
 const KLUCZ_UCIECZKI = 'pole-ucieczki';
@@ -497,6 +518,13 @@ export class AdventureScene extends Phaser.Scene {
   private bohaterObj!: Phaser.GameObjects.Container;
   /** Rywal (bohater przeciwnika) na mapie — widać go tylko poza mgłą. */
   private rywalObj: Phaser.GameObjects.Container | null = null;
+  /** „Idź dalej" w panelu i jego ostatni stan — przełączany z `update`. */
+  private guzikRuchu: HudButton | null = null;
+  private guzikRuchuWlaczony: boolean | null = null;
+  /** Otwarte okno łapania — sonda (`probe-plecak.mjs`) wybiera nim stworka. */
+  lapanie: { kandydaci: Oddzial[]; zamknij: (od?: Oddzial) => void } | null = null;
+  /** Trwająca mini-gra łapania — sonda rzuca nią z wymuszonym wynikiem. */
+  minigra: { rzuc: (wymus?: boolean) => void } | null = null;
   private bohaterSprite!: Phaser.GameObjects.Sprite;
   private kierunek: Kierunek = 'dol';
 
@@ -773,6 +801,9 @@ export class AdventureScene extends Phaser.Scene {
     // Instancja sceny przeżywa `scene.start` — widok rywala z poprzedniego
     // wejścia jest już zniszczony razem z tamtą sceną.
     this.rywalObj = null;
+    this.guzikRuchu = null;
+    this.lapanie = null;
+    this.minigra = null;
     sledzScene(this);
     // Phaser używa TEJ SAMEJ instancji sceny przy każdym `scene.start`, więc
     // pola klasy przeżywają przejście do bitwy i z powrotem. `zajety` zostawało
@@ -1896,6 +1927,11 @@ export class AdventureScene extends Phaser.Scene {
    */
   update(czas: number, delta: number) {
     this.ozywBohatera(czas);
+    const ruchMozliwy = !this.zajety && !!this.trasaBiezaca?.length && this.stan.bohater.ruch > 0;
+    if (this.guzikRuchu && ruchMozliwy !== this.guzikRuchuWlaczony) {
+      this.guzikRuchuWlaczony = ruchMozliwy;
+      this.guzikRuchu.setEnabled(ruchMozliwy);
+    }
     // Marsz, bitwa czy okno: złota elipsa wejścia nie zostaje pod kursorem,
     // choćby mysz się nie ruszyła — wróci przy następnym jej ruchu.
     if (this.zajety && this.znakWejscia) this.podswietlWejscie(undefined);
@@ -2600,13 +2636,20 @@ export class AdventureScene extends Phaser.Scene {
       const skala = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaBudowli ?? 1;
       return { klucz: `m-${b?.plik ?? 'skrzynia'}`, wys: KAFEL * (b?.wys ?? 1) * skala };
     }
-    if (o.rodzaj === 'zamek')
+    if (o.rodzaj === 'zamek') {
+      const klucz = kluczZamku(o);
       return {
-        klucz: o.wlasciciel === 'gracz' ? 'm-zamek-las' : 'm-zamek-ogien',
+        klucz,
         // `USTAWIENIA.skalaZamku` (per plansza; Bagna, runda 9: „zamek
-        // wielkości chaty"). Brak = 1.
-        wys: KAFEL * (bryla ? 4.0 : 1.9) * (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaZamku ?? 1),
+        // wielkości chaty"). Brak = 1. `SKALA_RYSUNKU_ZAMKU` wyrównuje oba
+        // rysunki między sobą.
+        wys:
+          KAFEL *
+          (bryla ? 4.0 : 1.9) *
+          SKALA_RYSUNKU_ZAMKU[klucz] *
+          (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaZamku ?? 1),
       };
+    }
     if (o.rodzaj === 'kopalnia')
       return {
         // Kopalnia, kamieniołom i obóz łowców to jeden rysunek przemalowany
@@ -3136,6 +3179,12 @@ export class AdventureScene extends Phaser.Scene {
       return;
     }
     const r = this.stan.wrogBohater;
+    const { x, y } = this.naEkran(r.x, r.y);
+    this.obiektRywala().setPosition(x, y).setDepth(r.y + 0.75).setVisible(true);
+  }
+
+  /** Figura rywala — tworzona przy pierwszym pokazaniu, potem ta sama. */
+  private obiektRywala(): Phaser.GameObjects.Container {
     const s = this.sylwetkaBohatera();
     if (!this.rywalObj) {
       const g = this.add.graphics();
@@ -3150,8 +3199,72 @@ export class AdventureScene extends Phaser.Scene {
       this.rywalObj = this.add.container(0, 0, [g, postac]);
       this.swiat.add(this.rywalObj);
     }
-    const { x, y } = this.naEkran(r.x, r.y);
-    this.rywalObj.setPosition(x, y).setDepth(r.y + 0.75).setVisible(true);
+    return this.rywalObj;
+  }
+
+  /**
+   * Marsz rywala odegrany po jego turze — tylko tam, gdzie gracz widzi
+   * (odkryte pola), jak w Heroes 3: kamera podjeżdża, figura idzie krok po
+   * kroku, w mgle znika. Gdy cały marsz był w mgle, nic się nie dzieje.
+   * Stan gry jest już po turze; to wyłącznie animacja, potem `potem`.
+   */
+  private pokazRuchRywala(start: { x: number; y: number }, slad: KrokSladu[], potem: () => void) {
+    const widac = (p: { x: number; y: number }) => !!this.stan.odkryte[p.y]?.[p.x];
+    const widocznyOdcinek = (i: number) => widac(slad[i]) || (!slad[i].skok && widac(i > 0 ? slad[i - 1] : start));
+    if (!slad.some((_, i) => widocznyOdcinek(i))) {
+      potem();
+      return;
+    }
+    const obj = this.obiektRywala();
+    const ustaw = (p: { x: number; y: number }) => {
+      const { x, y } = this.naEkran(p.x, p.y);
+      obj.setPosition(x, y).setDepth(p.y + 0.75).setVisible(widac(p));
+    };
+    ustaw(start);
+    let wKadrze = false;
+    let i = 0;
+    const krok = () => {
+      // Odcinki w mgle przeskakujemy bez czekania.
+      while (i < slad.length && !widocznyOdcinek(i)) ustaw(slad[i++]);
+      if (i >= slad.length) {
+        this.time.delayedCall(350, () => {
+          this.wysrodkujNaBohaterze();
+          potem();
+        });
+        return;
+      }
+      const p = slad[i++];
+      if (!wKadrze) {
+        wKadrze = true;
+        this.wysrodkujNa(p.x, p.y);
+      } else {
+        const ex = p.x * KAFEL + this.przewX;
+        const ey = p.y * KAFEL + this.przewY;
+        const m = Math.min(this.widokW, this.widokH) / 4;
+        if (ex < m || ey < m || ex > this.widokW - m || ey > this.widokH - m) this.wysrodkujNa(p.x, p.y);
+      }
+      if (p.skok) {
+        ustaw(p);
+        this.time.delayedCall(200, krok);
+        return;
+      }
+      const { x, y } = this.naEkran(p.x, p.y);
+      obj.setVisible(true).setDepth(Math.max(obj.depth, p.y + 0.75));
+      sfx(this, 'krok');
+      this.tweens.add({
+        targets: obj,
+        x,
+        y,
+        duration: 180,
+        ease: 'Linear',
+        onComplete: () => {
+          ustaw(p);
+          krok();
+        },
+      });
+    };
+    // Chwila na dojazd kamery, zanim figura ruszy.
+    this.time.delayedCall(250, krok);
   }
 
   /** Klatka arkusza i falowanie proporca — co klatkę gry, z `update`. */
@@ -3655,11 +3768,19 @@ export class AdventureScene extends Phaser.Scene {
       return pp;
     }) as typeof pp.setText;
 
-    const polowaW = (wnetrzeW - 8) / 2;
-    const guzik = (x: number, y: number, w: number, h: number, tekst: string, akcja: () => void, kolor: KolorPigulki, rozmiar: number) =>
-      przyciskWalki(this, { x, y, w, h, kolor, rozmiar, depth: Z.hud + 2, onClick: akcja }).setLabel(tekst);
-    guzik(wnetrzeX + polowaW / 2, wierszAkcjiY, polowaW, 30, 'Zapisz', () => this.zapiszStanGry(), 'bialy', 13);
-    guzik(wnetrzeX + polowaW + 8 + polowaW / 2, wierszAkcjiY, polowaW, 30, 'Wczytaj', () => this.wczytajStanGry(), 'bialy', 13);
+    const trzeciaW = (wnetrzeW - 12) / 3;
+    const guzik = (x: number, y: number, w: number, h: number, tekst: string, akcja: () => void, kolor: KolorPigulki, rozmiar: number) => {
+      const b = przyciskWalki(this, { x, y, w, h, kolor, rozmiar, depth: Z.hud + 2, onClick: akcja });
+      b.setLabel(tekst);
+      return b;
+    };
+    // „Idź dalej" — przycisk ruchu bohatera z Heroes 3: trasa zaznaczona
+    // wczoraj (albo przed chwilą) rusza jednym klikiem, bez celowania od nowa.
+    // Ten sam skrót co klawisz G; szary, gdy nie ma czego kontynuować.
+    this.guzikRuchu = guzik(wnetrzeX + trzeciaW / 2, wierszAkcjiY, trzeciaW, 30, 'Idź dalej', () => this.kontynuujTrase(), 'niebieski', 13);
+    this.guzikRuchuWlaczony = null;
+    guzik(wnetrzeX + trzeciaW * 1.5 + 6, wierszAkcjiY, trzeciaW, 30, 'Zapisz', () => this.zapiszStanGry(), 'bialy', 13);
+    guzik(wnetrzeX + trzeciaW * 2.5 + 12, wierszAkcjiY, trzeciaW, 30, 'Wczytaj', () => this.wczytajStanGry(), 'bialy', 13);
     // „Zakończ turę" jest JEDYNĄ czerwoną pigułką na mapie — to jedyny krok,
     // który zawsze da się zrobić, kiedy dziecko nie wie, co dalej.
     guzik(px + PANEL_W / 2, turaY, wnetrzeW, 40, 'Zakończ turę', () => this.koniecTury(), 'czerwony', 18);
@@ -3724,7 +3845,7 @@ export class AdventureScene extends Phaser.Scene {
           }))
         : []),
       ...miasta.map((m) => ({
-        klucz: 'm-zamek-las',
+        klucz: kluczZamku(m),
         klik: () => this.pokazZamek(m),
         podpis: m.nazwa,
       })),
@@ -5950,7 +6071,17 @@ export class AdventureScene extends Phaser.Scene {
       // Okno otwiera `sprawdzAwans`, a nie to miejsce: doświadczenie wpada do
       // gry także ze skrzyń i z drzewa wiedzy, więc wykrywanie awansu musi
       // siedzieć w jednym miejscu dla wszystkich źródeł naraz.
-      if (poziomPo > poziomPrzed) {
+      // Pokonane dzikie stado: jednego z nich można zabrać do drużyny za
+      // pokeballe (`oknoLapania`). Okno idzie przed oknem awansu, a awans
+      // czeka, aż się zamknie — dwa okna naraz to jedno niewidoczne.
+      const doZlapania = o?.rodzaj === 'potwor' ? this.kandydaciDoZlapania(o) : [];
+      if (doZlapania.length) {
+        this.time.delayedCall(1500, () =>
+          this.oknoLapania(doZlapania, () => {
+            if (poziomPo > poziomPrzed) this.sprawdzAwans();
+          })
+        );
+      } else if (poziomPo > poziomPrzed) {
         this.time.delayedCall(2100, () => this.sprawdzAwans());
       }
       // Obiekt POD BOHATEREM po wygranej bitwie.
@@ -5991,6 +6122,287 @@ export class AdventureScene extends Phaser.Scene {
       this.uciekniPoPorazce();
       this.time.delayedCall(400, () => this.napisUlotny(this.napisPorazki()));
     }
+  }
+
+  /**
+   * Kogo z pokonanego dzikiego stada można złapać: po jednym z gatunku,
+   * którego trener jeszcze nie ma, i tylko gdy w drużynie jest wolne miejsce.
+   * Łapanie było kiedyś rzutem pokeballem w trakcie bitwy — za mocne (osłabić,
+   * złapać, a bitwa i tak wygrana). Teraz jest nagrodą PO wygranej.
+   */
+  private kandydaciDoZlapania(o: Obiekt): Oddzial[] {
+    if (!this.stan.bohater.armia.some((s) => !s)) return [];
+    const widziane = new Set<string>();
+    return (o.oddzialy ?? []).filter((od) => {
+      const g = gatunek(od.sprite);
+      if (od.ile <= 0 || widziane.has(g) || maGatunek(this.stan, od.sprite)) return false;
+      widziane.add(g);
+      return true;
+    });
+  }
+
+  /** Okno „Złap jednego!" po wygranej z dzikim stadem. `potem` — po zamknięciu. */
+  private oknoLapania(kandydaci: Oddzial[], potem: () => void) {
+    if (this.zajety) {
+      // Coś innego trzyma ekran (np. okno obiektu) — spróbujemy za chwilę.
+      this.time.delayedCall(500, () => this.oknoLapania(kandydaci, potem));
+      return;
+    }
+    this.zajety = true;
+    const kartaW = 150;
+    const kartaH = 196;
+    const szer = Math.max(400, kandydaci.length * (kartaW + 20) + 40);
+    const wys = 414;
+    const cx = this.mapaX + this.oknoW / 2;
+    const cy = this.mapaY + this.oknoH / 2;
+    const gora = cy - wys / 2;
+    const nowe = this.znacznik();
+    this.oknoPergaminu(cx, cy, szer, wys);
+    this.add
+      .text(cx, gora + 34, 'Złap jednego!', stylEtykiety(24))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    this.add
+      .text(cx, gora + 64, `Pokonane stworki można spróbować złapać. Masz ${this.stan.skarbiec.pokeball} pokeballi.`, {
+        ...stylAtramentu(14, 'zwykly', szer - 40),
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+
+    const zamknij = (od?: Oddzial) => {
+      this.zamknijOkno(nowe());
+      this.zajety = false;
+      this.lapanie = null;
+      if (od) {
+        // Pokeballe idą od razu — za próbę, nie za sukces.
+        this.stan.skarbiec.pokeball -= kosztZlapania(od);
+        this.odswiezWszystko();
+        this.minigraLapania(od, potem);
+        return;
+      }
+      this.odswiezWszystko();
+      potem();
+    };
+
+    const kartaY = gora + 92;
+    kandydaci.forEach((od, i) => {
+      const koszt = kosztZlapania(od);
+      const stac = this.stan.skarbiec.pokeball >= koszt;
+      const kx = cx + (i - (kandydaci.length - 1) / 2) * (kartaW + 20) - kartaW / 2;
+      const g = this.add.graphics().setDepth(Z.overlay + 2);
+      panelBialy(g, kx, kartaY, kartaW, kartaH, 14, { obrys: 3, cien: 3, wypelnienie: 0xf4f8fd });
+      const im = this.add.image(kx + kartaW / 2, kartaY + 58, `p-${od.sprite}`).setDepth(Z.overlay + 3);
+      im.setScale(Math.min(96 / im.width, 96 / im.height));
+      if (!stac) im.setAlpha(0.45);
+      this.add
+        .text(kx + kartaW / 2, kartaY + 122, od.nazwa, stylEtykiety(18))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      this.add
+        .text(kx + kartaW / 2, kartaY + 144, napisPoziomu(od.poziom), stylAtramentu(13, 'miekki'))
+        .setOrigin(0.5)
+        .setDepth(Z.overlay + 3);
+      const pb = this.add
+        .image(kx + kartaW / 2 - 22, kartaY + 172, `m-${SUROWIEC_INFO.pokeball.ikona}`)
+        .setDepth(Z.overlay + 3);
+      pb.setScale(22 / Math.max(pb.width, pb.height));
+      this.add
+        .text(kx + kartaW / 2 - 6, kartaY + 172, String(koszt), {
+          ...stylEtykiety(18),
+          ...(stac ? {} : { color: '#b03a2e' }),
+        })
+        .setOrigin(0, 0.5)
+        .setDepth(Z.overlay + 3);
+      if (stac) {
+        this.add
+          .zone(kx, kartaY, kartaW, kartaH)
+          .setOrigin(0)
+          .setDepth(Z.overlay + 4)
+          .setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => zamknij(od));
+        this.guzikOkna(kx + kartaW / 2, kartaY + kartaH + 28, kartaW, 'Łapię', () => zamknij(od), true, 40);
+      } else {
+        this.add
+          .text(kx + kartaW / 2, kartaY + kartaH + 28, 'za mało pokeballi', stylAtramentu(13, 'miekki'))
+          .setOrigin(0.5)
+          .setDepth(Z.overlay + 3);
+      }
+    });
+    this.guzikOkna(cx, gora + wys - 34, 180, 'Nie łapię', () => zamknij());
+    this.lapanie = { kandydaci, zamknij };
+    this.naWierzchu(...nowe());
+  }
+
+  /**
+   * Mini-gra łapania: znacznik jeździ po pasku, a w odpowiedniej chwili
+   * trzeba kliknąć (albo Spacja / „Rzuć!"), żeby trafić w zieloną strefę.
+   * Trzy rzuty; rzadszy (ranga) i silniejszy (poziom) stworek ma węższą
+   * strefę i szybszy znacznik. Pudło trzy razy — stworek ucieka.
+   */
+  private minigraLapania(od: Oddzial, potem: () => void) {
+    this.zajety = true;
+    const RZUTY = 3;
+    const szer = 460;
+    const wys = 360;
+    const cx = this.mapaX + this.oknoW / 2;
+    const cy = this.mapaY + this.oknoH / 2;
+    const gora = cy - wys / 2;
+    const nowe = this.znacznik();
+    this.oknoPergaminu(cx, cy, szer, wys);
+    this.add
+      .text(cx, gora + 30, `Łapiesz: ${od.nazwa}!`, stylEtykiety(22))
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    const stworek = this.add.image(cx, gora + 110, `p-${od.sprite}`).setDepth(Z.overlay + 2);
+    stworek.setScale(Math.min(110 / stworek.width, 110 / stworek.height));
+    const skalaStworka = stworek.scale;
+    this.tweens.add({ targets: stworek, y: stworek.y - 6, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+    // Pasek: szerokość strefy i czas przejazdu zależą od trudności stworka.
+    const trudnosc = Phaser.Math.Clamp((od.tier + od.poziom / 10) / 8, 0, 1);
+    const pasW = 340;
+    const pasH = 22;
+    const pasX = cx - pasW / 2;
+    const pasY = gora + 196;
+    const strefaW = pasW * (0.3 - 0.17 * trudnosc);
+    const przejazd = 1300 - 600 * trudnosc;
+    const pas = this.add.graphics().setDepth(Z.overlay + 2);
+    const strefa = this.add.graphics().setDepth(Z.overlay + 3);
+    let strefaX = 0;
+    const nowaStrefa = () => {
+      strefaX = pasX + Phaser.Math.Between(20, Math.round(pasW - strefaW - 20));
+      strefa.clear();
+      strefa.fillStyle(0x4caf50, 1);
+      strefa.fillRoundedRect(strefaX, pasY + 2, strefaW, pasH - 4, 6);
+      strefa.fillStyle(0xffffff, 0.35);
+      strefa.fillRoundedRect(strefaX + 3, pasY + 4, strefaW - 6, 5, 3);
+    };
+    pas.fillStyle(TUSZ, 1);
+    pas.fillRoundedRect(pasX - 3, pasY - 3, pasW + 6, pasH + 6, 10);
+    pas.fillStyle(0xe7ecf2, 1);
+    pas.fillRoundedRect(pasX, pasY, pasW, pasH, 8);
+    nowaStrefa();
+    const znak = this.add.rectangle(pasX, pasY + pasH / 2, 6, pasH + 14, 0xd62828).setDepth(Z.overlay + 4);
+    znak.setStrokeStyle(2, TUSZ);
+    const jazda = this.tweens.add({
+      targets: znak,
+      x: pasX + pasW,
+      duration: przejazd,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    const napis = this.add
+      .text(cx, pasY + 46, 'Kliknij, gdy czerwona kreska będzie na zielonym!', {
+        ...stylAtramentu(14, 'zwykly', szer - 40),
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(Z.overlay + 2);
+    const kule: Phaser.GameObjects.Image[] = [];
+    for (let i = 0; i < RZUTY; i++) {
+      const k = this.add
+        .image(cx + (i - (RZUTY - 1) / 2) * 30, pasY + 76, `m-${SUROWIEC_INFO.pokeball.ikona}`)
+        .setDepth(Z.overlay + 2);
+      k.setScale(24 / Math.max(k.width, k.height));
+      kule.push(k);
+    }
+
+    let zostalo = RZUTY;
+    let czeka = false;
+    const koniec = (zlapany: boolean) => {
+      this.input.keyboard?.off('keydown-SPACE', rzucKlawiszem);
+      this.minigra = null;
+      this.time.delayedCall(zlapany ? 1100 : 900, () => {
+        this.zamknijOkno(nowe());
+        this.zajety = false;
+        if (zlapany) {
+          this.dolaczZlapanego(od);
+          sfx(this, 'awans');
+          this.napisUlotny(`Złapany: ${od.nazwa}!\nDołącza do twojej drużyny.`);
+        } else {
+          this.napisUlotny(`${od.nazwa} uciekł w zarośla.`);
+        }
+        this.odswiezWszystko();
+        potem();
+      });
+    };
+    /** `wymus` — tylko dla sondy: rzut trafiony albo chybiony niezależnie od kreski. */
+    const rzuc = (wymus?: boolean) => {
+      if (czeka || zostalo <= 0) return;
+      czeka = true;
+      jazda.pause();
+      const trafiony = wymus ?? (znak.x >= strefaX && znak.x <= strefaX + strefaW);
+      zostalo--;
+      kule[zostalo]?.setAlpha(0.25);
+      // Pokeball leci łukiem w stworka.
+      const kula = this.add.image(cx, pasY + 76, `m-${SUROWIEC_INFO.pokeball.ikona}`).setDepth(Z.overlay + 5);
+      kula.setScale(30 / Math.max(kula.width, kula.height));
+      sfx(this, 'zbior');
+      this.tweens.add({
+        targets: kula,
+        x: stworek.x,
+        y: stworek.y,
+        angle: 540,
+        duration: 380,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          if (trafiony) {
+            this.tweens.add({ targets: stworek, scale: 0, alpha: 0, duration: 220 });
+            this.tweens.add({ targets: kula, angle: { from: -20, to: 20 }, duration: 160, yoyo: true, repeat: 2 });
+            napis.setText('Złapany!');
+            koniec(true);
+            return;
+          }
+          kula.destroy();
+          this.tweens.add({
+            targets: stworek,
+            scale: skalaStworka * 1.15,
+            duration: 120,
+            yoyo: true,
+          });
+          if (zostalo <= 0) {
+            napis.setText(`Pudło! ${od.nazwa} ucieka…`);
+            this.tweens.add({ targets: stworek, x: stworek.x + 260, alpha: 0, duration: 600, delay: 200 });
+            koniec(false);
+            return;
+          }
+          napis.setText(`Pudło! ${od.nazwa} się wyrwał. Jeszcze ${zostalo === 1 ? 'jeden rzut' : `${zostalo} rzuty`}.`);
+          nowaStrefa();
+          czeka = false;
+          jazda.resume();
+        },
+      });
+    };
+    const rzucKlawiszem = () => rzuc();
+    this.input.keyboard?.on('keydown-SPACE', rzucKlawiszem);
+    // Klik w całe okno też rzuca — dziecko nie musi celować w przycisk.
+    this.add
+      .zone(cx - szer / 2, gora, szer, wys - 70)
+      .setOrigin(0)
+      .setDepth(Z.overlay + 4)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => rzuc());
+    this.guzikOkna(cx, gora + wys - 34, 180, 'Rzuć!', () => rzuc(), true);
+    this.minigra = { rzuc };
+    this.naWierzchu(...nowe());
+  }
+
+  /** Złapany stworek dołącza do drużyny w pierwszym wolnym slocie. */
+  private dolaczZlapanego(od: Oddzial) {
+    const wolny = this.stan.bohater.armia.findIndex((s) => !s);
+    if (wolny < 0) return;
+    this.stan.bohater.armia[wolny] = {
+      ...od,
+      ile: 1,
+      omdlaly: undefined,
+      bezEwolucji: undefined,
+      dosw: doswDoPoziomu(od.poziom),
+      // Złapany silniejszy niż limit odznak słucha tylko do limitu.
+      slucha:
+        this.stan.limitPoziomu !== undefined && od.poziom > this.stan.limitPoziomu ? this.stan.limitPoziomu : undefined,
+    };
   }
 
   /** Cofnięcie o pole po przegranej (`polePoUcieczce`). */
@@ -6182,55 +6594,66 @@ export class AdventureScene extends Phaser.Scene {
       const zamkiPrzed = this.stan.obiekty
         .filter((z) => z.rodzaj === 'zamek' && z.wlasciciel === 'gracz')
         .map((z) => ({ z, obroncy: obroncyZamku(z).reduce((a, od) => a + od.ile, 0) }));
-      turaWroga(this.stan);
-      const oblezenia: string[] = [];
-      for (const { z, obroncy } of zamkiPrzed) {
-        if (z.wlasciciel !== 'gracz') oblezenia.push(`${this.stan.wrogBohater.imie} przejął: ${z.nazwa}!`);
-        else if (obroncyZamku(z).reduce((a, od) => a + od.ile, 0) < obroncy)
-          oblezenia.push(`${z.nazwa} odparła szturm!`);
-      }
-      // Rywal wyzwał nas w swojej turze — bitwa rozegrana bez sceny, gracz
-      // widzi wynik i, przy porażce, budzi się w Centrum.
-      for (const p of this.stan.pojedynki ?? []) {
-        const imie = this.stan.wrogBohater.imie;
-        if (p.zwyciezca === 'gracz')
-          oblezenia.push(`${imie} wyzwał cię na pojedynek i przegrał!${p.nagroda ? ` +${p.nagroda} pokeballi` : ''}`);
-        else if (p.zwyciezca === 'wrog')
-          oblezenia.push(
-            `${imie} wyzwał cię na pojedynek i wygrał.${p.nagroda ? ` Płacisz ${p.nagroda} pokeballi.` : ''} Wracasz do Centrum.`
-          );
-        else oblezenia.push(`Pojedynek z: ${imie} — remis.`);
-      }
-      if (this.stan.pojedynki?.length) {
-        this.stan.pojedynki = [];
-        // Przegrany gracz stoi już w swoim zamku — widok idzie za nim.
-        const { x, y } = this.naEkran(this.stan.bohater.x, this.stan.bohater.y);
-        this.bohaterObj.setPosition(x, y).setDepth(this.stan.bohater.y + 0.8);
-        this.dosunDoBohatera();
-      }
-      this.warstwaTrasy.clear();
-      // Trasa niedokończona wczoraj wraca od razu jako zaznaczona — jak
-      // w Heroes 3 — pod warunkiem, że cel wciąż da się osiągnąć (np. nie
-      // zajął go w międzyczasie inny obiekt).
-      const cel = this.stan.bohater.celDlugiejTrasy;
-      this.trasaBiezaca = cel ? trasa(this.stan, cel.x, cel.y) : null;
-      if (this.trasaBiezaca && this.trasaBiezaca.length === 0) {
-        this.trasaBiezaca = null;
-        this.stan.bohater.celDlugiejTrasy = undefined;
-      }
-      this.pokazTrase();
-      const wpisy = Object.entries(wplyw).map(
-        ([co, ile]) => `+${ile} ${SUROWIEC_INFO[co as keyof typeof SUROWIEC_INFO].dopelniacz}`
-      );
-      zapisz('mapa', 'koniec tury', { data: this.stan.dzien, dochod: wplyw });
+      const startRywala = { x: this.stan.wrogBohater.x, y: this.stan.wrogBohater.y };
+      const slad: KrokSladu[] = [];
+      turaWroga(this.stan, 0, slad);
+      // Zasłona schodzi, zanim rywal ruszy — jego marsz ma być widać.
       zaslona.destroy();
       napis.destroy();
-      this.zajety = false;
-      this.napisUlotny(['Nowy dzień', ...oblezenia, ...wpisy].join('\n'));
-      this.odswiezWszystko();
-      // Autozapis na początku dnia, jak w Heroes — ale nie gry, która
-      // właśnie się skończyła.
-      if (!this.rozstrzygnieta) autozapis(this.stan);
+      this.pokazRuchRywala(startRywala, slad, () => this.poTurzeWroga(wplyw, zamkiPrzed));
     }, 0);
+  }
+
+  /** Reszta końca tury, gdy marsz rywala już się odegrał. */
+  private poTurzeWroga(
+    wplyw: ReturnType<typeof nowaTura>,
+    zamkiPrzed: Array<{ z: Obiekt; obroncy: number }>
+  ) {
+    const oblezenia: string[] = [];
+    for (const { z, obroncy } of zamkiPrzed) {
+      if (z.wlasciciel !== 'gracz') oblezenia.push(`${this.stan.wrogBohater.imie} przejął: ${z.nazwa}!`);
+      else if (obroncyZamku(z).reduce((a, od) => a + od.ile, 0) < obroncy)
+        oblezenia.push(`${z.nazwa} odparła szturm!`);
+    }
+    // Rywal wyzwał nas w swojej turze — bitwa rozegrana bez sceny, gracz
+    // widzi wynik i, przy porażce, budzi się w Centrum.
+    for (const p of this.stan.pojedynki ?? []) {
+      const imie = this.stan.wrogBohater.imie;
+      if (p.zwyciezca === 'gracz')
+        oblezenia.push(`${imie} wyzwał cię na pojedynek i przegrał!${p.nagroda ? ` +${p.nagroda} pokeballi` : ''}`);
+      else if (p.zwyciezca === 'wrog')
+        oblezenia.push(
+          `${imie} wyzwał cię na pojedynek i wygrał.${p.nagroda ? ` Płacisz ${p.nagroda} pokeballi.` : ''} Wracasz do Centrum.`
+        );
+      else oblezenia.push(`Pojedynek z: ${imie} — remis.`);
+    }
+    if (this.stan.pojedynki?.length) {
+      this.stan.pojedynki = [];
+      // Przegrany gracz stoi już w swoim zamku — widok idzie za nim.
+      const { x, y } = this.naEkran(this.stan.bohater.x, this.stan.bohater.y);
+      this.bohaterObj.setPosition(x, y).setDepth(this.stan.bohater.y + 0.8);
+      this.dosunDoBohatera();
+    }
+    this.warstwaTrasy.clear();
+    // Trasa niedokończona wczoraj wraca od razu jako zaznaczona — jak
+    // w Heroes 3 — pod warunkiem, że cel wciąż da się osiągnąć (np. nie
+    // zajął go w międzyczasie inny obiekt).
+    const cel = this.stan.bohater.celDlugiejTrasy;
+    this.trasaBiezaca = cel ? trasa(this.stan, cel.x, cel.y) : null;
+    if (this.trasaBiezaca && this.trasaBiezaca.length === 0) {
+      this.trasaBiezaca = null;
+      this.stan.bohater.celDlugiejTrasy = undefined;
+    }
+    this.pokazTrase();
+    const wpisy = Object.entries(wplyw).map(
+      ([co, ile]) => `+${ile} ${SUROWIEC_INFO[co as keyof typeof SUROWIEC_INFO].dopelniacz}`
+    );
+    zapisz('mapa', 'koniec tury', { data: this.stan.dzien, dochod: wplyw });
+    this.zajety = false;
+    this.napisUlotny(['Nowy dzień', ...oblezenia, ...wpisy].join('\n'));
+    this.odswiezWszystko();
+    // Autozapis na początku dnia, jak w Heroes — ale nie gry, która
+    // właśnie się skończyła.
+    if (!this.rozstrzygnieta) autozapis(this.stan);
   }
 }
