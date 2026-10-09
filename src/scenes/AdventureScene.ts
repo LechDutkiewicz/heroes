@@ -6163,7 +6163,7 @@ export class AdventureScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(Z.overlay + 2);
     this.add
-      .text(cx, gora + 64, `Pokonane stworki można spróbować złapać. Masz ${this.stan.skarbiec.pokeball} pokeballi.`, {
+      .text(cx, gora + 64, `Spróbuj złapać jednego. Masz ${this.stan.skarbiec.pokeball} pokeballi.`, {
         ...stylAtramentu(14, 'zwykly', szer - 40),
         align: 'center',
       })
@@ -6175,9 +6175,7 @@ export class AdventureScene extends Phaser.Scene {
       this.zajety = false;
       this.lapanie = null;
       if (od) {
-        // Pokeballe idą od razu — za próbę, nie za sukces.
-        this.stan.skarbiec.pokeball -= kosztZlapania(od);
-        this.odswiezWszystko();
+        // Pokeballe schodzą w mini-grze, za każdy rzut osobno.
         this.minigraLapania(od, potem);
         return;
       }
@@ -6204,11 +6202,11 @@ export class AdventureScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setDepth(Z.overlay + 3);
       const pb = this.add
-        .image(kx + kartaW / 2 - 22, kartaY + 172, `m-${SUROWIEC_INFO.pokeball.ikona}`)
+        .image(kx + kartaW / 2 - 50, kartaY + 172, `m-${SUROWIEC_INFO.pokeball.ikona}`)
         .setDepth(Z.overlay + 3);
       pb.setScale(22 / Math.max(pb.width, pb.height));
       this.add
-        .text(kx + kartaW / 2 - 6, kartaY + 172, String(koszt), {
+        .text(kx + kartaW / 2 - 34, kartaY + 172, `${koszt} za rzut`, {
           ...stylEtykiety(18),
           ...(stac ? {} : { color: '#b03a2e' }),
         })
@@ -6237,12 +6235,15 @@ export class AdventureScene extends Phaser.Scene {
   /**
    * Mini-gra łapania: znacznik jeździ po pasku, a w odpowiedniej chwili
    * trzeba kliknąć (albo Spacja / „Rzuć!"), żeby trafić w zieloną strefę.
-   * Trzy rzuty; rzadszy (ranga) i silniejszy (poziom) stworek ma węższą
-   * strefę i szybszy znacznik. Pudło trzy razy — stworek ucieka.
+   * Każdy rzut kosztuje pokeballe (`kosztZlapania`), najwyżej dwa rzuty.
+   * Rzadszy (ranga) i silniejszy (poziom) stworek ma węższą strefę i szybszy
+   * znacznik, a po pudle znacznik przyspiesza. Trzy darmowe rzuty (pierwsza
+   * wersja) dawały pewny chwyt — z rozgrywki: „zawsze się trafi".
    */
   private minigraLapania(od: Oddzial, potem: () => void) {
     this.zajety = true;
-    const RZUTY = 3;
+    const RZUTY = 2;
+    const koszt = kosztZlapania(od);
     const szer = 460;
     const wys = 360;
     const cx = this.mapaX + this.oknoW / 2;
@@ -6265,8 +6266,8 @@ export class AdventureScene extends Phaser.Scene {
     const pasH = 22;
     const pasX = cx - pasW / 2;
     const pasY = gora + 196;
-    const strefaW = pasW * (0.3 - 0.17 * trudnosc);
-    const przejazd = 1300 - 600 * trudnosc;
+    const strefaW = pasW * (0.2 - 0.12 * trudnosc);
+    const przejazd = 1000 - 450 * trudnosc;
     const pas = this.add.graphics().setDepth(Z.overlay + 2);
     const strefa = this.add.graphics().setDepth(Z.overlay + 3);
     let strefaX = 0;
@@ -6294,7 +6295,7 @@ export class AdventureScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
     const napis = this.add
-      .text(cx, pasY + 46, 'Kliknij, gdy czerwona kreska będzie na zielonym!', {
+      .text(cx, pasY + 46, `Kliknij, gdy kreska jest na zielonym! Rzut: ${koszt} pokeballi.`, {
         ...stylAtramentu(14, 'zwykly', szer - 40),
         align: 'center',
       })
@@ -6330,10 +6331,12 @@ export class AdventureScene extends Phaser.Scene {
     };
     /** `wymus` — tylko dla sondy: rzut trafiony albo chybiony niezależnie od kreski. */
     const rzuc = (wymus?: boolean) => {
-      if (czeka || zostalo <= 0) return;
+      if (czeka || zostalo <= 0 || this.stan.skarbiec.pokeball < koszt) return;
       czeka = true;
       jazda.pause();
       const trafiony = wymus ?? (znak.x >= strefaX && znak.x <= strefaX + strefaW);
+      this.stan.skarbiec.pokeball -= koszt;
+      this.odswiezWszystko();
       zostalo--;
       kule[zostalo]?.setAlpha(0.25);
       // Pokeball leci łukiem w stworka.
@@ -6362,14 +6365,15 @@ export class AdventureScene extends Phaser.Scene {
             duration: 120,
             yoyo: true,
           });
-          if (zostalo <= 0) {
-            napis.setText(`Pudło! ${od.nazwa} ucieka…`);
+          if (zostalo <= 0 || this.stan.skarbiec.pokeball < koszt) {
+            napis.setText(zostalo <= 0 ? `Pudło! ${od.nazwa} ucieka…` : `Pudło! Brak pokeballi — ${od.nazwa} ucieka…`);
             this.tweens.add({ targets: stworek, x: stworek.x + 260, alpha: 0, duration: 600, delay: 200 });
             koniec(false);
             return;
           }
-          napis.setText(`Pudło! ${od.nazwa} się wyrwał. Jeszcze ${zostalo === 1 ? 'jeden rzut' : `${zostalo} rzuty`}.`);
+          napis.setText(`Pudło! ${od.nazwa} się wyrwał i jest czujniejszy. Ostatni rzut: ${koszt} pokeballi.`);
           nowaStrefa();
+          jazda.timeScale = 1.3;
           czeka = false;
           jazda.resume();
         },
@@ -6384,7 +6388,14 @@ export class AdventureScene extends Phaser.Scene {
       .setDepth(Z.overlay + 4)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => rzuc());
-    this.guzikOkna(cx, gora + wys - 34, 180, 'Rzuć!', () => rzuc(), true);
+    this.guzikOkna(cx - 95, gora + wys - 34, 170, `Rzuć! (${koszt})`, () => rzuc(), true);
+    this.guzikOkna(cx + 95, gora + wys - 34, 170, 'Odpuść', () => {
+      if (czeka) return;
+      czeka = true;
+      jazda.stop();
+      napis.setText(`${od.nazwa} odchodzi w zarośla.`);
+      koniec(false);
+    });
     this.minigra = { rzuc };
     this.naWierzchu(...nowe());
   }

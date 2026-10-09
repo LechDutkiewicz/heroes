@@ -36,6 +36,13 @@ zaznaczonej wczoraj; rzut pokeballem w bitwie za mocny.
   (ranga 1 poz. 2 — 10, ranga 7 poz. 20 — 55). Za drogi — karta wyszarzona.
   Okno awansu bohatera czeka, aż łapanie się zamknie. AI i autopilot nie
   łapią.
+- **Mini-gra trudniejsza i płatna za rzut** (2026-10-09, po #48; z rozgrywki:
+  „3 próby — zawsze się trafi", „czy to nic nie kosztuje?"). Wybór stworka
+  nic nie kosztuje; `kosztZlapania` schodzi za KAŻDY rzut (przycisk „Rzuć!
+  (10)", karta „10 za rzut"). Najwyżej 2 rzuty, strefa 20% → 8% paska,
+  przejazd 1,0 s → 0,55 s, po pudle kreska ×1,3 szybciej. „Odpuść" kończy
+  bez kosztów. Brak pokeballi na drugi rzut — stworek ucieka. Poniższy opis
+  pierwszej wersji jest nieaktualny w liczbach.
 - **Mini-gra łapania** (prośba użytkownika: „żeby nie zawsze się łapało").
   Po wyborze stworka pokeballe schodzą od razu (za próbę), potem
   `minigraLapania`: czerwona kreska jeździ po pasku, klik / Spacja /
