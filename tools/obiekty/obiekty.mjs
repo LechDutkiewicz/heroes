@@ -101,15 +101,28 @@ function masyw(cx, y, w, h, z = 1, opcje = {}) {
   return s;
 }
 
-/** Kamień ewolucji: barwny, oszlifowany owal z połyskiem (cztery żywioły). */
-function kamyk(cx, cy, r, barwa, { ziarno: z = 1 } = {}) {
-  const C = mix(barwa, '#000000', 0.45);
-  const J = mix(barwa, '#ffffff', 0.55);
-  return `<ellipse cx="${f(cx + 1)}" cy="${f(cy + 1.5)}" rx="${f(r)}" ry="${f(r * 0.85)}" fill="${C}"/>
-  <ellipse cx="${f(cx)}" cy="${f(cy)}" rx="${f(r)}" ry="${f(r * 0.85)}" fill="${barwa}"/>
-  <path d="M${f(cx - r * 0.6)} ${f(cy + r * 0.1)} Q${f(cx - r * 0.2)} ${f(cy - r * 0.8)} ${f(cx + r * 0.5)} ${f(cy - r * 0.45)}" stroke="${J}" stroke-width="${f(r * 0.28)}" fill="none" stroke-linecap="round" opacity="0.85"/>
-  <circle cx="${f(cx - r * 0.35)}" cy="${f(cy - r * 0.35)}" r="${f(r * 0.16)}" fill="#fff" opacity="0.9"/>
-  ${z ? '' : ''}`;
+/** Kamień ewolucji: szlifowany klejnot (ośmiokąt z fasetami), światło z lewej góry. */
+function kamyk(cx, cy, r, barwa) {
+  const C = mix(barwa, '#000000', 0.5);
+  const J = mix(barwa, '#ffffff', 0.5);
+  const o = [];
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    o.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.82]);
+  }
+  const t = (k) => [cx + (o[k][0] - cx) * 0.48 - r * 0.08, cy + (o[k][1] - cy) * 0.48 - r * 0.1];
+  let s = `<polygon points="${pts(o.map(([x, y]) => [x + 1, y + 1.5]))}" fill="${mix(barwa, '#000', 0.7)}"/>`;
+  s += `<polygon points="${pts(o)}" fill="${C}"/>`;
+  // fasety: górne-lewe jasne, dolne-prawe ciemne
+  for (let i = 0; i < 8; i++) {
+    const j = (i + 1) % 8;
+    const kol = [J, J, barwa, C, C, C, barwa, mix(barwa, J, 0.5)][i];
+    s += `<polygon points="${pts([o[i], o[j], t(j), t(i)])}" fill="${kol}"/>`;
+  }
+  s += `<polygon points="${pts([0, 1, 2, 3, 4, 5, 6, 7].map(t))}" fill="${barwa}"/>`;
+  s += `<polygon points="${pts([t(4), t(5), t(6)])}" fill="${J}" opacity="0.8"/>`;
+  s += `<circle cx="${f(cx - r * 0.3)}" cy="${f(cy - r * 0.32)}" r="${f(r * 0.13)}" fill="#fff" opacity="0.9"/>`;
+  return s;
 }
 
 const BARWY_KAMIENI = ['#d65a37', '#4483c4', '#5fa443', '#ddb23e'];

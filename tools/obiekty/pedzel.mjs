@@ -448,9 +448,9 @@ export function placek(cx, cy, rx, ry, { kolor = PAL.ziemia, krycie = 0.55 } = {
  * wszystkich obiektów, więc cienie z definicji są spójne. Płótno ma po bokach
  * zapas (`pad` pól), żeby cień nie był ucięty; obiekt zostaje na środku.
  */
-export const SKOS = 0.42;
-export const UNIES = 0.24;
-export function svgObiektu(szerPol, wysPol, tresc, { pad: padZadany, cien = 0.62 } = {}) {
+export const SKOS = 0.58;
+export const UNIES = 0.34;
+export function svgObiektu(szerPol, wysPol, tresc, { pad: padZadany, cien = 0.7 } = {}) {
   // Zapas na cień: tyle, ile wysoki obiekt rzuca w prawo (symetrycznie, żeby środek został środkiem).
   const pad = padZadany ?? Math.ceil((SKOS * wysPol + 0.1) * 10) / 10;
   // Grunt (placki ziemi) idzie pod spód i nie rzuca cienia.
@@ -464,6 +464,11 @@ export function svgObiektu(szerPol, wysPol, tresc, { pad: padZadany, cien = 0.62
   // Części stojące głębiej (`naZiemi`) rzucają cień od własnej linii gruntu.
   const ZIEMIA = /<!--z:([\d.]+)-->([\s\S]*?)<!--\/z-->/g;
   const glebiej = [...reszta.matchAll(ZIEMIA)].map(([, g, t]) => `<g transform="${mac(Number(g))}">${t}</g>`).join('');
+  // Okluzja: ta sama sylwetka zgnieciona do kilku pikseli przy ziemi — ciemny pas styku.
+  const plask = (g) => `matrix(1 0 0 0.06 0 ${f(g * 0.94)})`;
+  const okl =
+    [...reszta.matchAll(ZIEMIA)].map(([, g, t]) => `<g transform="${plask(Number(g))}">${t}</g>`).join('') +
+    `<g transform="${plask(H)}">${reszta.replace(ZIEMIA, '')}</g>`;
   const przod = reszta.replace(ZIEMIA, '');
   return {
     W,
@@ -472,8 +477,13 @@ export function svgObiektu(szerPol, wysPol, tresc, { pad: padZadany, cien = 0.62
   <filter id="cienBryly" x="-10%" y="-10%" width="120%" height="120%">
     <feFlood flood-color="#0d1806" flood-opacity="${cien}"/>
     <feComposite in2="SourceAlpha" operator="in"/>
-    <feGaussianBlur stdDeviation="1"/>
+    <feGaussianBlur stdDeviation="1.2"/>
+  </filter>
+  <filter id="okluzja" x="-20%" y="-50%" width="140%" height="200%">
+    <feFlood flood-color="#0d1806" flood-opacity="0.75"/>
+    <feComposite in2="SourceAlpha" operator="in"/>
+    <feGaussianBlur stdDeviation="3.5 2"/>
   </filter></defs>
-  <g transform="translate(${dx},0)">${grunt}<g filter="url(#cienBryly)">${glebiej}<g transform="${mac(y0)}">${przod}</g></g>${reszta}</g></svg>`,
+  <g transform="translate(${dx},0)">${grunt}<g filter="url(#okluzja)">${okl}</g><g filter="url(#cienBryly)">${glebiej}<g transform="${mac(y0)}">${przod}</g></g>${reszta}</g></svg>`,
   };
 }

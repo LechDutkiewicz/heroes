@@ -62,16 +62,15 @@ function sad() {
 /** Wiatrak — wieża z kamienia, strzecha, cztery skrzydła. 3 × 1 bryły. */
 function wiatrak() {
   const W = 3 * P;
-  const H = 3.2 * P;
+  const H = 2.8 * P;
   const y = H - 3;
   const cx = W / 2;
   let s = '';
-  s += cienRzucany(cx - 34, cx + 34, y, 150, { krycie: 0.3, skos: 0.6 });
   s += placek(cx, y - 8, 110, 24, { kolor: PAL.ziemia, krycie: 0.55 });
   // wieża — ścięty stożek z kamienia
-  const wb = 86;
-  const wt = 54;
-  const wh = 150;
+  const wb = 78;
+  const wt = 50;
+  const wh = 124;
   const korpus = sciezka([
     [cx - wb / 2, y - 6],
     [cx - wt / 2, y - 6 - wh],
@@ -85,7 +84,7 @@ function wiatrak() {
     <rect x="${f(cx + 4)}" y="${f(y - wh - 10)}" width="${wb}" height="${wh + 10}" fill="#2a1a08" opacity="0.32"/>
     <rect x="${f(cx - wb / 2)}" y="${f(y - wh - 10)}" width="12" height="${wh + 10}" fill="#fff" opacity="0.14"/></g>`;
   s += drzwi(cx - 12, y - 40, 24, 34);
-  s += okno(cx - 8, y - 100, 14, 16, { swieci: true });
+  s += okno(cx - 8, y - 84, 14, 16, { swieci: true });
   // czapa ze strzechy
   const cap = sciezka([
     [cx - wt / 2 - 10, y - 6 - wh + 4],
@@ -97,7 +96,7 @@ function wiatrak() {
   // skrzydła
   const hx = cx + 2;
   const hy = y - wh - 22;
-  const L = 112;
+  const L = 96;
   for (let i = 0; i < 4; i++) {
     const a = ((i * 90 + 22) * Math.PI) / 180;
     const ex = hx + Math.cos(a) * L;
@@ -136,7 +135,7 @@ function wiatrak() {
   s += paka(cx + 38, y - 4, 20, 13);
   s += krzaczek(cx - 110, y - 2, 1.1, { ziarno: 52 }) + krzaczek(cx + 112, y - 2, 1.0, { ziarno: 53 });
   s += plot(cx + 64, y - 2, cx + 136, y - 8, { slupki: 3 });
-  return svgObiektu(3, 3.2, s);
+  return svgObiektu(3, 2.8, s);
 }
 
 function strzechaFakt(x, y, w, h) {
@@ -211,14 +210,14 @@ function palisada(x0, y0, x1, y1, n) {
 /** Obóz treningowy — namioty, kukły, tarcza, palisada. 3 × 1 bryły. */
 function obozTreningowy() {
   const W = 3 * P;
-  const H = 2.0 * P;
+  const H = 2.3 * P;
   const y = H - 3;
   const cx = W / 2;
   let s = '';
   s += placek(cx, y - 34, 132, 40, { kolor: PAL.ziemiaJ, krycie: 0.7 });
-  s += naZiemi(y - 70, palisada(cx - 130, y - 70, cx + 130, y - 70, 26) + namiot(cx, y - 70, 60, 58, PAL.zloto, PAL.strzechaJ));
-  s += naZiemi(y - 48, namiot(cx - 76, y - 48, 76, 70, PAL.czerwien));
-  s += naZiemi(y - 46, namiot(cx + 74, y - 46, 72, 64, PAL.lupek, '#e8eef4'));
+  s += naZiemi(y - 70, palisada(cx - 130, y - 70, cx + 130, y - 70, 26) + namiot(cx, y - 74, 72, 70, PAL.zloto, PAL.strzechaJ));
+  s += naZiemi(y - 48, namiot(cx - 78, y - 48, 92, 86, PAL.czerwien));
+  s += naZiemi(y - 46, namiot(cx + 76, y - 46, 88, 80, PAL.lupek, '#e8eef4'));
   s += kukla(cx - 30, y - 22) + kukla(cx + 30, y - 24);
   s += tarcza(cx + 102, y - 16) + tarcza(cx - 106, y - 14);
   // ognisko pośrodku placu
@@ -227,7 +226,7 @@ function obozTreningowy() {
   s += `<rect x="${f(cx - 70)}" y="${f(y - 26)}" width="24" height="3" fill="${PAL.drewnoC}"/>`;
   for (let i = 0; i < 4; i++) s += `<line x1="${f(cx - 68 + i * 6)}" y1="${f(y - 8)}" x2="${f(cx - 66 + i * 6)}" y2="${f(y - 34)}" stroke="${PAL.drewnoJ}" stroke-width="2"/>`;
   s += proporzec(cx - 10, y - 66, 60, PAL.czerwien);
-  return svgObiektu(3, 2.0, s);
+  return svgObiektu(3, 2.3, s);
 }
 
 /** Ognisko w kamiennym kręgu. */
@@ -610,8 +609,8 @@ function gniazdo() {
 
 /** Źródełko z kramem z napojami (Automat z Napojami). */
 function zrodlo() {
-  const W = 1.6 * P;
-  const H = 1.6 * P;
+  const W = 2.1 * P;
+  const H = 2.0 * P;
   const y = H - 3;
   const cx = W / 2;
   let s = '';
@@ -646,13 +645,14 @@ function zrodlo() {
   // beczka i kubek
   s += `<ellipse cx="${f(cx - 46)}" cy="${f(y - 5)}" rx="8" ry="3" fill="#000" opacity="0.3"/><rect x="${f(cx - 54)}" y="${f(y - 22)}" width="16" height="18" rx="3" fill="${PAL.drewno}"/><path d="M${f(cx - 54)} ${f(y - 17)} h16 M${f(cx - 54)} ${f(y - 9)} h16" stroke="${PAL.kamienC}" stroke-width="2"/><ellipse cx="${f(cx - 46)}" cy="${f(y - 22)}" rx="8" ry="3" fill="${PAL.drewnoJ}"/>`;
   s += trawka(cx + 62, y) + trawka(cx - 62, y + 1, 0.8);
-  return svgObiektu(1.6, 1.6, s);
+  s = `<g transform="translate(${f(cx)},${f(y)}) scale(1.3) translate(${f(-cx)},${f(-y)})">${s}</g>`;
+  return svgObiektu(2.1, 2.0, s);
 }
 
 /** Obozowisko — ognisko, namiot, kociołek, tobołek. */
 function ognisko() {
-  const W = 1.6 * P;
-  const H = 1.2 * P;
+  const W = 2.1 * P;
+  const H = 1.5 * P;
   const y = H - 3;
   const cx = W / 2;
   let s = '';
@@ -667,7 +667,8 @@ function ognisko() {
   s += `<ellipse cx="${f(cx - 46)}" cy="${f(y - 10)}" rx="10" ry="7" fill="${PAL.czerwienC}"/><ellipse cx="${f(cx - 48)}" cy="${f(y - 12)}" rx="7" ry="4" fill="${PAL.czerwien}"/>`;
   s += `<rect x="${f(cx - 30)}" y="${f(y - 4)}" width="34" height="8" rx="4" fill="${PAL.drewno}"/><ellipse cx="${f(cx + 4)}" cy="${f(y)}" rx="3" ry="4" fill="${PAL.drewnoJ}"/>`;
   s += kula(cx + 8, y - 6, 5) + kula(cx + 16, y - 3, 4.5);
-  return svgObiektu(1.6, 1.2, s);
+  s = `<g transform="translate(${f(cx)},${f(y)}) scale(1.3) translate(${f(-cx)},${f(-y)})">${s}</g>`;
+  return svgObiektu(2.1, 1.5, s);
 }
 
 /** Domek na drzewie — dąb z chatką na platformie i drabiną. */
@@ -716,8 +717,8 @@ function chatka() {
 
 /** Wędrowny sklepik — kryty wóz z towarem. */
 function woz() {
-  const W = 1.8 * P;
-  const H = 1.4 * P;
+  const W = 2.2 * P;
+  const H = 1.7 * P;
   const y = H - 3;
   const cx = W / 2;
   let s = '';
@@ -762,7 +763,8 @@ function woz() {
   // szyld
   s += `<rect x="${f(cx - 28)}" y="${f(y - 36)}" width="34" height="12" rx="2" fill="${PAL.zloto}"/><rect x="${f(cx - 26)}" y="${f(y - 34)}" width="30" height="8" fill="${PAL.czerwien}"/><circle cx="${f(cx - 11)}" cy="${f(y - 30)}" r="2.5" fill="${PAL.zloto}"/>`;
   s += kosz(cx - 62, y - 2, 14, 9, jagoda(cx - 65, y - 12, 3, '#d8303c') + jagoda(cx - 59, y - 13, 3, '#3f5fd8'));
-  return svgObiektu(1.8, 1.4, s);
+  s = `<g transform="translate(${f(cx)},${f(y)}) scale(1.22) translate(${f(-cx)},${f(-y)})">${s}</g>`;
+  return svgObiektu(2.2, 1.7, s);
 }
 
 // ───────────────────────────── znajdźki ─────────────────────────────
@@ -828,7 +830,6 @@ function stosKamienie() {
     [cx + 12, y - 34, 10, 3],
   ];
   for (const [x, yy, r, i] of kam) {
-    s += `<ellipse cx="${f(x)}" cy="${f(yy)}" rx="${r + 6}" ry="${r + 4}" fill="${BARWY_KAMIENI[i]}" opacity="0.35" filter="url(#blask)"/>`;
     s += kamyk(x, yy, r, BARWY_KAMIENI[i]);
   }
   return svgObiektu(1, 0.8, s);
@@ -852,40 +853,46 @@ function skrzynia() {
   const H = 0.8 * P;
   const y = H - 4;
   const cx = W / 2;
-  const w = 56;
-  const h = 26;
-  const g = 16;
   let s = placek(cx, y - 6, 36, 9, { kolor: PAL.ziemia, krycie: 0.45 });
-  s += cienRzucany(cx - w / 2, cx + w / 2, y, 40, { krycie: 0.35 });
-  s += cienPod(cx, y - 2, 34, 6, 0.35);
-  const x = cx - w / 2 - 6;
+  // skrzynia z góry-przodu: front, prawy bok, wieko (półwalec widziany z góry)
+  const w = 52;
+  const h = 20;
+  const gx = 12;
+  const gy = 16;
+  const x = cx - w / 2 - 4;
+  const fy = y - 2;
   // front
   s += wypelnij(sciezka([
-    [x, y - 2],
-    [x, y - 2 - h],
-    [x + w, y - 2 - h],
-    [x + w, y - 2],
-  ]), PAL.drewno, deskiPion(x, y - 2 - h, w, h, { szer: 9, ziarno: 181 }));
+    [x, fy],
+    [x, fy - h],
+    [x + w, fy - h],
+    [x + w, fy],
+  ]), PAL.drewnoC, deskiPion(x, fy - h, w, h, { szer: 10, kolor: PAL.drewnoCC, ziarno: 181 }));
   // bok
   s += `<path d="${sciezka([
-    [x + w, y - 2],
-    [x + w, y - 2 - h],
-    [x + w + g * 0.6, y - 2 - h - g * 0.4],
-    [x + w + g * 0.6, y - 2 - g * 0.4],
-  ])}" fill="${PAL.drewnoC}"/>`;
-  // wieko (półwalec)
-  const wy = y - 2 - h;
-  s += `<path d="M${f(x - 1)} ${f(wy)} Q${f(x - 1)} ${f(wy - 20)} ${f(x + w / 2)} ${f(wy - 20)} Q${f(x + w + 1)} ${f(wy - 20)} ${f(x + w + 1)} ${f(wy)} Z" fill="${PAL.drewno}"/>`;
-  s += `<path d="M${f(x + w + 1)} ${f(wy)} Q${f(x + w + 1)} ${f(wy - 20)} ${f(x + w / 2)} ${f(wy - 20)} L${f(x + w / 2 + g * 0.6)} ${f(wy - 20 - g * 0.4)} Q${f(x + w + g * 0.6 + 1)} ${f(wy - 20 - g * 0.4)} ${f(x + w + g * 0.6 + 1)} ${f(wy - g * 0.4)} Z" fill="${PAL.drewnoC}"/>`;
-  s += `<path d="M${f(x + 3)} ${f(wy - 6)} Q${f(x + 10)} ${f(wy - 17)} ${f(x + w / 2)} ${f(wy - 18)}" stroke="${PAL.drewnoJ}" stroke-width="2.5" fill="none"/>`;
-  // okucia złote
-  for (const dx of [6, w - 10]) {
-    s += `<rect x="${f(x + dx)}" y="${f(wy - 18)}" width="4.5" height="${h + 18}" fill="${PAL.zlotoC}"/><rect x="${f(x + dx)}" y="${f(wy - 18)}" width="1.8" height="${h + 18}" fill="${PAL.zloto}"/>`;
+    [x + w, fy],
+    [x + w, fy - h],
+    [x + w + gx, fy - h - gy],
+    [x + w + gx, fy - gy],
+  ])}" fill="${PAL.drewnoCC}"/>`;
+  // wieko: wypukła połać od przedniej krawędzi do tylnej
+  const wy = fy - h;
+  const wieko = `M${f(x - 1)} ${f(wy)} C${f(x - 1)} ${f(wy - 14)} ${f(x + gx - 2)} ${f(wy - gy - 10)} ${f(x + gx)} ${f(wy - gy)} L${f(x + w + gx)} ${f(wy - gy)} C${f(x + w + gx - 2)} ${f(wy - gy - 10)} ${f(x + w + 1)} ${f(wy - 14)} ${f(x + w + 1)} ${f(wy)} Z`;
+  s += `<path d="M${f(x + w + 1)} ${f(wy)} C${f(x + w + 1)} ${f(wy - 14)} ${f(x + w + gx - 2)} ${f(wy - gy - 10)} ${f(x + w + gx)} ${f(wy - gy)} Z" fill="${PAL.drewnoC}"/>`;
+  s += `<path d="${wieko}" fill="${PAL.drewno}"/>`;
+  s += `<path d="M${f(x + 2)} ${f(wy - 6)} C${f(x + 4)} ${f(wy - 16)} ${f(x + gx)} ${f(wy - gy - 7)} ${f(x + gx + 6)} ${f(wy - gy - 4)} L${f(x + w * 0.7)} ${f(wy - gy - 4)} C${f(x + w * 0.6)} ${f(wy - 12)} ${f(x + w * 0.55)} ${f(wy - 8)} ${f(x + w * 0.5)} ${f(wy - 4)} Z" fill="${PAL.drewnoJ}" opacity="0.75"/>`;
+  for (let i = 1; i < 5; i++) {
+    const t = i / 5;
+    s += `<path d="M${f(x + w * t)} ${f(wy)} C${f(x + w * t)} ${f(wy - 14)} ${f(x + w * t + gx - 2)} ${f(wy - gy - 10)} ${f(x + w * t + gx)} ${f(wy - gy)}" stroke="${PAL.drewnoC}" stroke-width="1.4" fill="none" opacity="0.7"/>`;
   }
-  s += `<rect x="${f(x - 1)}" y="${f(wy - 2)}" width="${w + 2}" height="4" fill="${PAL.zlotoC}"/><rect x="${f(x - 1)}" y="${f(wy - 2)}" width="${w + 2}" height="1.5" fill="${PAL.zloto}"/>`;
-  s += `<rect x="${f(cx - 11)}" y="${f(wy - 4)}" width="10" height="12" rx="1.5" fill="${PAL.zloto}" stroke="${PAL.zlotoC}" stroke-width="1.2"/><circle cx="${f(cx - 6)}" cy="${f(wy + 2)}" r="1.6" fill="#2a1a08"/>`;
-  // złoto wystające spod wieka
-  s += `<circle cx="${f(x + 16)}" cy="${f(wy - 1)}" r="2.8" fill="${PAL.zloto}"/><circle cx="${f(x + 40)}" cy="${f(wy)}" r="2.6" fill="${PAL.zloto}"/>`;
+  // okucia złote na wieku i froncie
+  for (const t of [0.14, 0.82]) {
+    const ox = x + w * t;
+    s += `<path d="M${f(ox)} ${f(fy)} V${f(wy)} C${f(ox)} ${f(wy - 14)} ${f(ox + gx - 2)} ${f(wy - gy - 10)} ${f(ox + gx)} ${f(wy - gy)}" stroke="${PAL.zlotoC}" stroke-width="5" fill="none"/>`;
+    s += `<path d="M${f(ox - 1)} ${f(fy)} V${f(wy)} C${f(ox - 1)} ${f(wy - 14)} ${f(ox + gx - 3)} ${f(wy - gy - 10)} ${f(ox + gx - 1)} ${f(wy - gy)}" stroke="${PAL.zloto}" stroke-width="2" fill="none"/>`;
+  }
+  s += `<path d="M${f(x - 1)} ${f(wy)} H${f(x + w + 1)}" stroke="${PAL.zlotoC}" stroke-width="3.5"/>`;
+  s += `<rect x="${f(cx - 10)}" y="${f(wy - 3)}" width="10" height="11" rx="1.5" fill="${PAL.zloto}" stroke="${PAL.zlotoC}" stroke-width="1.4"/><circle cx="${f(cx - 5)}" cy="${f(wy + 2)}" r="1.6" fill="#2a1a08"/>`;
   return svgObiektu(1, 0.8, s);
 }
 

@@ -2,7 +2,7 @@
 // (przeciwnik). Ten sam pędzel co reszta obiektów; bryła 3 × 2 pola NAD
 // wejściem, brama pośrodku dolnej krawędzi płótna.
 
-import { P, PAL, f, pts, los, mix, sciezka, wypelnij, murKamienny, dachowka, okno, drzewo, krzaczek, placek, naZiemi, svgObiektu, uid } from './pedzel.mjs';
+import { P, PAL, f, pts, los, mix, sciezka, wypelnij, murKamienny, dachowka, okno, drzewo, krzaczek, placek, naZiemi, svgObiektu, uid, dom } from './pedzel.mjs';
 import { proporzec } from './obiekty.mjs';
 
 /** Barwy zamku: kamień murów, dach, akcenty. */
@@ -41,6 +41,38 @@ function sciana(st, x, y, w, h, z, { cien = 0 } = {}) {
   ]);
   let s = wypelnij(d, st.k, murKamienny(x, y - h, w, h, { blok: 14, ziarno: z, kolorC: st.kC, jasny: st.kJ }));
   if (cien) s += `<path d="${d}" fill="#120a04" opacity="${cien}"/>`;
+  return s;
+}
+
+/** Wierzch i prawy bok bryły muru w rzucie 3/4 (głębokość `g`). */
+function glab(st, x, y, w, h, g, { bok = true } = {}) {
+  const gx = g * 0.62;
+  const gy = g * 0.42;
+  let s = '';
+  if (bok)
+    s += wypelnij(
+      sciezka([
+        [x + w, y],
+        [x + w, y - h],
+        [x + w + gx, y - h - gy],
+        [x + w + gx, y - gy],
+      ]),
+      mix(st.k, '#120a04', 0.42),
+      murKamienny(x + w, y - h - gy, gx, h + gy, { blok: 10, ziarno: 7, kolorC: st.kCC, jasny: st.k }),
+      { swiatlo: null }
+    );
+  s += `<path d="${sciezka([
+    [x, y - h],
+    [x + w, y - h],
+    [x + w + gx, y - h - gy],
+    [x + gx, y - h - gy],
+  ])}" fill="${st.kJ}"/>`;
+  s += `<path d="${sciezka([
+    [x + 3, y - h - 2],
+    [x + w - 2, y - h - 2],
+    [x + w + gx - 4, y - h - gy + 2],
+    [x + gx + 3, y - h - gy + 2],
+  ])}" fill="${mix(st.k, st.kC, 0.3)}"/>`;
   return s;
 }
 
@@ -138,65 +170,57 @@ function zamek(rodzaj) {
   s += naZiemi(
     yb,
     sciana(st, cx - 140, yb, 280, 46, 21, { cien: 0.18 }) +
+      glab(st, cx - 140, yb, 280, 46, 18, { bok: false }) +
       blanki(st, cx - 140, yb - 46, 280) +
       baszta(st, cx - 140, yb + 4, 24, 74, { dachH: rodzaj === 'las' ? 46 : 54, z: 22 }) +
       baszta(st, cx + 140, yb + 4, 24, 74, { dachH: rodzaj === 'las' ? 46 : 54, z: 23 })
   );
-  // ── środek: donżon z wysoką wieżą i domy
+  // ── środek: donżon (dom z dachem w 3/4), wieża i domy
   const yk = y - 96;
   let srodek = '';
-  srodek += domMiasta(st, cx - 120, yk + 6, 50, 34, 26, 31);
-  srodek += domMiasta(st, cx + 72, yk + 8, 48, 32, 24, 32);
-  srodek += sciana(st, cx - 62, yk, 124, 92, 33);
-  srodek += `<rect x="${f(cx + 20)}" y="${f(yk - 92)}" width="42" height="92" fill="#120a04" opacity="0.28"/>`;
-  for (const ox of [-46, -14, 18]) srodek += okno(cx + ox, yk - 66, 10, 16, { swieci: true });
-  srodek += blanki(st, cx - 62, yk - 92, 124, { zab: 11 });
-  srodek += baszta(st, cx + 4, yk - 88, 30, 96, { dachH: rodzaj === 'las' ? 92 : 78, z: 34, okna: 2 });
-  if (rodzaj === 'ogien') {
-    // kolce na dachu wieży i żar w oknach
-    srodek += `<path d="M${f(cx - 6)} ${f(yk - 270)} l10 -24 l10 24 Z" fill="${st.kCC}"/>`;
-  }
-  srodek += proporzec(cx + 4, yk - 88 - 96 - (rodzaj === 'las' ? 92 : 78) + 2, 26, st.flaga);
+  srodek += domMiasta(st, cx - 124, yk + 6, 50, 34, 26, 31);
+  srodek += domMiasta(st, cx + 76, yk + 8, 48, 32, 24, 32);
+  const k = dom({ x: cx - 64, y: yk, w: 112, h: 74, g: 46, dachH: 44, okap: 7, sciana: 'kamien', dach: 'dachowka', kolorSciany: st.k, kolorDachu: st.dach, ziarno: 33 });
+  srodek += k.svg;
+  for (const ox of [-50, -20, 10]) srodek += okno(cx + ox, yk - 56, 11, 16, { swieci: true });
+  srodek += baszta(st, cx - 8, yk - 10, 26, 150, { dachH: rodzaj === 'las' ? 70 : 62, z: 34, okna: 3 });
+  if (rodzaj === 'ogien') srodek += `<path d="M${f(cx - 16)} ${f(yk - 230)} l8 -22 l8 22 Z" fill="${st.kCC}"/>`;
+  srodek += proporzec(cx - 8, yk - 10 - 150 - (rodzaj === 'las' ? 70 : 62) + 2, 26, st.flaga);
   s += naZiemi(yk, srodek);
 
-  // ── boki: mury z przodu do tyłu (prawy w cieniu)
-  s += naZiemi(
-    y - 74,
+  // ── boki: mury z przodu do tyłu (lewy w świetle, prawy w cieniu) z wierzchem
+  const bokMuru = (x0, kol) =>
     `<path d="${sciezka([
-      [cx + 150, y - 30],
-      [cx + 150, y - 82],
-      [cx + 140, yb - 46],
-      [cx + 140, yb],
-    ])}" fill="${mix(st.k, '#120a04', 0.4)}"/>`
-  );
-  s += naZiemi(
-    y - 74,
-    `<path d="${sciezka([
-      [cx - 150, y - 30],
-      [cx - 150, y - 82],
-      [cx - 140, yb - 46],
-      [cx - 140, yb],
-    ])}" fill="${st.k}"/>`
-  );
+      [x0, y - 30],
+      [x0, y - 82],
+      [x0 - Math.sign(x0 - cx) * 10, yb - 46],
+      [x0 - Math.sign(x0 - cx) * 10, yb],
+    ])}" fill="${kol}"/>`;
+  s += naZiemi(y - 74, bokMuru(cx + 150, mix(st.k, '#120a04', 0.42)) + bokMuru(cx - 150, st.k));
 
-  // ── przód: mur z bramą i dwie wielkie baszty narożne
+  // ── przód: mur z chodnikiem, wieża bramna jako bryła, dwie baszty narożne
   const fw = 290;
   const fh = 58;
+  s += glab(st, cx - fw / 2, y - 8, fw, fh, 20, { bok: false });
   s += sciana(st, cx - fw / 2, y - 8, fw, fh, 41);
   s += `<rect x="${f(cx + 40)}" y="${f(y - 8 - fh)}" width="${fw / 2 - 40}" height="${fh}" fill="#120a04" opacity="0.18"/>`;
   s += blanki(st, cx - fw / 2, y - 8 - fh, fw);
-  // brama w wieży bramnej
+  s += glab(st, cx - 40, y - 4, 80, 88, 26);
   s += sciana(st, cx - 40, y - 4, 80, 88, 42);
-  s += `<rect x="${f(cx + 14)}" y="${f(y - 92)}" width="26" height="88" fill="#120a04" opacity="0.22"/>`;
   s += blanki(st, cx - 40, y - 92, 80, { zab: 10 });
   s += brama(st, cx, y - 2, 40, 62);
-  // herb nad bramą
   s +=
     rodzaj === 'las'
       ? `<path d="M${f(cx - 9)} ${f(y - 82)} h18 v10 q0 9 -9 12 q-9 -3 -9 -12 Z" fill="${st.dach}" stroke="${PAL.zloto}" stroke-width="1.6"/><path d="M${f(cx)} ${f(y - 78)} l-5 8 h10 Z" fill="${PAL.zloto}"/>`
       : `<path d="M${f(cx - 9)} ${f(y - 82)} h18 v10 q0 9 -9 12 q-9 -3 -9 -12 Z" fill="${st.dach}" stroke="${PAL.zloto}" stroke-width="1.6"/><path d="M${f(cx)} ${f(y - 80)} q6 6 0 14 q-6 -8 0 -14" fill="#ffb03a"/>`;
   s += baszta(st, cx - 152, y - 2, 34, 104, { dachH: rodzaj === 'las' ? 62 : 70, z: 43, okna: 2 });
   s += baszta(st, cx + 152, y - 2, 34, 104, { dachH: rodzaj === 'las' ? 62 : 70, z: 44, okna: 2 });
+  // gruz i ziemia u stóp murów
+  for (let i = 0; i < 14; i++) {
+    const gx = cx - 170 + r() * 340;
+    if (Math.abs(gx - cx) < 30) continue;
+    s += `<ellipse cx="${f(gx)}" cy="${f(y - 2 + r() * 3)}" rx="${f(3 + r() * 4)}" ry="${f(2 + r() * 2)}" fill="${r() < 0.5 ? st.kC : st.k}"/>`;
+  }
   if (rodzaj === 'ogien') {
     // kosze z ogniem przy bramie
     for (const dx of [-56, 56]) {
