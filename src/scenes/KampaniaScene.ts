@@ -219,6 +219,18 @@ const IKONA = {
   pokeball: 'k-ikona-pokeball',
 } as const;
 
+/** Co robi artefakt — do dymka w oknie „Kogo zabierasz?". */
+function opisZabieranegoArtefaktu(id: string): string {
+  const a = artefaktPoId(id);
+  if (!a) return nazwaArtefaktu(id);
+  const co = [
+    a.atak ? `+${a.atak} do zapału (stworki mocniej biją)` : '',
+    a.obrona ? `+${a.obrona} do opieki (stworki dostają mniej)` : '',
+    a.ruch ? `+${a.ruch} punktów ruchu na dzień` : '',
+  ].filter(Boolean);
+  return `${a.nazwa}\n${co.join('\n') || 'bez premii'}`;
+}
+
 const IKONA_ARTEFAKTU: Record<string, string> = { buty: 'buty', rower: 'rower', tarcza: 'tarcza' };
 const IKONA_SUROWCA: Record<string, string> = { pokeball: 'pokeball', jagoda: 'jagody', kamien: 'kamien', odlamek: 'odlamki' };
 
@@ -2007,19 +2019,35 @@ export class KampaniaScene extends Phaser.Scene {
     const napis = (ty: number, t: string, styl: Phaser.Types.GameObjects.Text.TextStyle) =>
       n.add(this.add.text(EKRAN_W / 2, ty, t, styl).setOrigin(0.5));
     napis(y + 34, 'Kogo zabierasz?', { fontFamily: SERIF, fontStyle: '900', fontSize: '26px', color: ATRAMENT_CZERWONY });
-    napis(y + 70, 'Do nowej misji idzie tylko jeden stworek i jeden przedmiot.\nResztę drużyny dostaniesz na miejscu.', {
+    napis(y + 70, 'Do nowej misji idzie tylko jeden stworek i jeden przedmiot.\nResztę drużyny zwerbujesz w mieście.', {
       fontFamily: TEKST,
       fontSize: '16px',
       color: ATRAMENT,
       align: 'center',
     });
 
+    // Dymek po najechaniu: co robi przedmiot (nad kafelkiem, na wierzchu).
+    const dymekG = this.add.container(0, 0).setVisible(false);
+    const dymek = (cx: number, gora: number, tekst: string) => {
+      dymekG.removeAll(true);
+      const t = this.add
+        .text(0, 0, tekst, { fontFamily: TEKST, fontSize: '14px', color: ATRAMENT, align: 'center', wordWrap: { width: 260 } })
+        .setOrigin(0.5, 1);
+      const bw = t.width + 24;
+      const bh = t.height + 16;
+      const tx = Phaser.Math.Clamp(cx, x + bw / 2 + 8, x + w - bw / 2 - 8);
+      const g = this.add.graphics();
+      panelBialy(g, tx - bw / 2, gora - 10 - bh, bw, bh, 10, { obrys: 3, cien: 3 });
+      t.setPosition(tx, gora - 18);
+      dymekG.add([g, t]).setVisible(true);
+    };
+
     // Rząd kafelków: portret/ikona, podpis, złota ramka na wybranym.
     type Kafel = { ramka: Phaser.GameObjects.Graphics; klucz: number | string | undefined };
     const rzad = (
       ry: number,
       tytul: string,
-      pozycje: { klucz: number | string | undefined; tekstura?: string; podpis: string }[],
+      pozycje: { klucz: number | string | undefined; tekstura?: string; podpis: string; opis?: string }[],
       wybrany: () => number | string | undefined,
       ustaw: (k: number | string | undefined) => void
     ) => {
@@ -2062,6 +2090,10 @@ export class KampaniaScene extends Phaser.Scene {
             .setOrigin(0.5, 0)
         );
         const strefa = this.add.zone(kx, ky, kw, kw).setOrigin(0).setInteractive({ useHandCursor: true });
+        if (poz.opis) {
+          strefa.on('pointerover', () => dymek(kx + kw / 2, ky, poz.opis!));
+          strefa.on('pointerout', () => dymekG.setVisible(false));
+        }
         strefa.on('pointerdown', () => {
           ustaw(poz.klucz);
           sfx(this, 'zbior', 0.5);
@@ -2095,6 +2127,7 @@ export class KampaniaScene extends Phaser.Scene {
             klucz: id,
             tekstura: this.textures.exists(malowana) ? malowana : kluczArtefaktu(id, a?.klasa ?? 'drobny'),
             podpis: nazwaArtefaktu(id),
+            opis: opisZabieranegoArtefaktu(id),
           };
         }),
         { klucz: undefined, podpis: 'nic' },
@@ -2115,7 +2148,7 @@ export class KampaniaScene extends Phaser.Scene {
     });
     wstecz.ustaw(true);
     dalej.ustaw(true);
-    n.add([wstecz.kontener, dalej.kontener]);
+    n.add([wstecz.kontener, dalej.kontener, dymekG]);
   }
 
   /** Start misji — jedyne miejsce, które zamienia wybór na tym ekranie w grę. */

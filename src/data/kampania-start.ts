@@ -1,10 +1,10 @@
 import { planszaPrzygody } from './plansza';
-import { POZIOM_STARTERA, STARTERY } from './startery';
+import { POZIOM_STARTERA } from './startery';
 import { dolacz } from './armia';
-import { doswDoPoziomu, ewoluujOdPoziomu, gatunek, nowyStworek, przytnijPoziom, usunDuplikaty } from './stworki';
+import { doswDoPoziomu, ewoluujOdPoziomu, nowyStworek, przytnijPoziom, usunDuplikaty } from './stworki';
 import { FACTIONS, factionById } from './factions';
 import { maGatunek, odznakaSali, zalozone, type Artefakt, type Oddzial, type StanMapy } from './mapa';
-import { SLOTY_ARMII, znormalizuj } from './armia';
+import { znormalizuj } from './armia';
 import {
   type BohaterPrzenoszony,
   type Misja,
@@ -21,8 +21,8 @@ import {
  */
 export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): StanMapy {
   // Pierwsza misja (bez drużyny z poprzedniej) zaczyna się od startera, którego
-  // trener wybiera na mapie — `startery.ts`. Kolejne: nowa drużyna planszy
-  // na poziomie misji i najwyżej jeden stworek zabrany z poprzedniej.
+  // trener wybiera na mapie — `startery.ts`. Kolejne: tylko stworek zabrany
+  // z poprzedniej, reszta z rezerwatów na poziomie misji.
   const bezDruzyny = !p.druzyna?.length;
   const s = planszaPrzygody(m.mapa, bezDruzyny ? { starter: { poziom: POZIOM_STARTERA } } : {});
   s.misja = m.id;
@@ -37,25 +37,13 @@ export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): Sta
     s.bohater.artefakty = a ? [a] : [];
     s.bohater.zalozone = {};
   }
-  // Starter jest tylko w pierwszej misji: nowa drużyna planszy nie ma
-  // stworków z gatunków starterów (u Boru — najniższego), więc jedyny
-  // starter w dalszych misjach to ten zabrany z poprzedniej.
-  if (!bezDruzyny)
-    s.bohater.armia = znormalizuj(
-      s.bohater.armia.filter((o) => o && !STARTERY.some((st) => st.frakcja === o.frakcja && st.tier === o.tier))
-    );
-  if (m.poziomStartowy) for (const o of s.bohater.armia) if (o) podciagnij(o, m.poziomStartowy);
-  const zabrany = zabiera.stworek !== undefined ? p.druzyna?.[zabiera.stworek] : undefined;
-  if (zabrany) {
-    // Zabrany staje w pierwszym slocie, wyspany. Gdy plansza daje stworka
-    // z tej samej linii, zostaje ten z wyższym poziomem — bez dolewania
-    // doświadczenia, które robi `usunDuplikaty`.
-    const nowy: Oddzial = { ...structuredClone(zabrany), ile: 1, omdlaly: undefined };
-    const g = gatunek(nowy.sprite);
-    const dubel = s.bohater.armia.find((o) => o && gatunek(o.sprite) === g);
-    const reszta = s.bohater.armia.filter((o) => o && o !== dubel);
-    const lepszy = dubel && dubel.poziom > nowy.poziom ? dubel : nowy;
-    s.bohater.armia = znormalizuj([lepszy, ...reszta].slice(0, SLOTY_ARMII));
+  // Od misji 2 drużyna to TYLKO stworek zabrany z poprzedniej (albo nikt) —
+  // resztę trener werbuje w rezerwatach, na poziomie misji (`poziomRekruta`).
+  // Starter jest tylko w pierwszej misji (uwagi z rozgrywki).
+  if (!bezDruzyny) {
+    const zabrany = zabiera.stworek !== undefined ? p.druzyna?.[zabiera.stworek] : undefined;
+    s.bohater.armia = znormalizuj(zabrany ? [{ ...structuredClone(zabrany), ile: 1, omdlaly: undefined }] : []);
+    s.poziomRekruta = m.poziomStartowy;
   }
 
   const b = m.bonusy[bonus] ?? m.bonusy[0];

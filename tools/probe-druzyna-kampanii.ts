@@ -1,7 +1,7 @@
 /**
  * Z misji do misji przechodzi najwyżej jeden wybrany stworek (bez
- * podciągania) i jeden artefakt; resztę drużyny daje plansza na poziomie
- * misji. Odznaki zbierają się przez całą kampanię, obrońcy rosną.
+ * podciągania) i jeden artefakt; resztę drużyny trener werbuje w rezerwatach
+ * na poziomie misji. Odznaki zbierają się przez całą kampanię, obrońcy rosną.
  *
  *   npx tsx tools/probe-druzyna-kampanii.ts
  */
@@ -38,27 +38,19 @@ sprawdz(
   !druzyna2.some((o) => o!.poziom === 9 && o!.nazwa === zemdlony.nazwa),
   druzyna2.map((o) => `${o!.nazwa} ${o!.poziom}`).join(', ')
 );
-sprawdz(
-  `nowa drużyna planszy na poziomie ${m2.poziomStartowy}`,
-  druzyna2.filter((o) => o!.poziom !== 20).every((o) => o!.poziom === m2.poziomStartowy),
-  druzyna2.map((o) => o!.poziom).join(', ')
-);
-sprawdz(
-  'starter tylko z pierwszej misji — plansza nie daje gatunku startera',
-  !druzyna2.some((o) => o!.frakcja === 'bor' && o!.tier === 0),
-  druzyna2.map((o) => o!.nazwa).join(', ')
-);
+sprawdz('drużyna to tylko zabrany stworek', druzyna2.length === 1, druzyna2.map((o) => `${o!.nazwa} ${o!.poziom}`).join(', '));
+sprawdz(`rezerwat werbuje na poziomie misji (${m2.poziomStartowy})`, s2.poziomRekruta === m2.poziomStartowy, `${s2.poziomRekruta}`);
 sprawdz('przechodzi jeden artefakt', JSON.stringify(s2.bohater.artefakty) === '["buty"]', JSON.stringify(s2.bohater.artefakty));
 const s2nikt = rozpocznijMisje({ ...p1, zabiera: {} }, m2, 0);
 sprawdz(
-  'bez wyboru „nikogo / nic" — sama drużyna planszy, bez artefaktów',
-  s2nikt.bohater.armia.filter(Boolean).every((o) => o!.poziom === m2.poziomStartowy) && s2nikt.bohater.artefakty.length === 0
+  '„nikogo / nic" — pusta drużyna, bez artefaktów',
+  s2nikt.bohater.armia.filter(Boolean).length === 0 && s2nikt.bohater.artefakty.length === 0 && !s2nikt.starter
 );
 const slaby = { ...p1, druzyna: [nowyStworek('bor', 5, 3)!], zabiera: { stworek: 0 } };
 const s2slaby = rozpocznijMisje(slaby, m2, 0);
 sprawdz(
   'słaby zabrany stworek nie jest podciągany',
-  s2slaby.bohater.armia.some((o) => o?.tier === 5 && o.poziom === 3),
+  s2slaby.bohater.armia.filter(Boolean).length === 1 && s2slaby.bohater.armia.some((o) => o?.tier === 5 && o.poziom === 3),
   s2slaby.bohater.armia.filter(Boolean).map((o) => `${o!.nazwa} ${o!.poziom}`).join(', ')
 );
 s2.odznaki = ['Grota Księżycowa'];

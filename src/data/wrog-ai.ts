@@ -716,7 +716,7 @@ function rozbudujIWerbuj(s: StanMapy, kto: Wlasciciel) {
   for (let tier = zamek.dostepne.length - 1; tier >= 0; tier--) {
     const koszt = KOSZT_ODDZIALU[tier];
     while (zamek.dostepne[tier] >= 1 && skarbiec.pokeball >= koszt) {
-      const nowy = nowyStworek(f.id, tier);
+      const nowy = nowyStworek(f.id, tier, kto === 'gracz' ? s.poziomRekruta : undefined);
       if (!nowy) break;
       // Autopilot gracza (symulacje) gra jak gracz: jeden stworek danego gatunku.
       if (kto === 'gracz' && maGatunek(s, nowy.sprite)) break;
