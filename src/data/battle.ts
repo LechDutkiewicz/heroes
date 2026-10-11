@@ -15,10 +15,12 @@
 
 import {
   HALF_DAMAGE,
+  SILA_ZRYWU,
   applyDamage,
   stackAtk,
   totalHp,
   typeMultiplier,
+  wZrywie,
   type UnitDef,
 } from './units';
 import { hexDistance, hexNeighbours, type Cell } from './hex';
@@ -306,6 +308,15 @@ export const OBRONA_BOHATERA_ZA_PUNKT = 0.025;
 export const OBRONA_BOHATERA_MAKS = 0.7;
 
 /**
+ * Sufit WSZYSTKICH premii trenera razem: atak bohatera × Napastnik/Celne oko
+ * najwyżej +60% obrażeń, obrona × Pancerz najwyżej −40% otrzymywanych.
+ * Bez niego trzy mistrzowskie umiejętności i wysokie statystyki robiły
+ * z walk od misji 3 formalność (uwagi z rozgrywki).
+ */
+export const SUFIT_ATAKU_TRENERA = 1.6;
+export const SUFIT_OBRONY_TRENERA = 0.6;
+
+/**
  * Strzał jest słabszy od ciosu wręcz. Strzelec bije bez odwetu i nie musi
  * podchodzić, więc przy pełnej sile był po prostu lepszym stworkiem (uwagi
  * z rozgrywki misji 2–3). Do tego za `shootRange` siła spada o połowę —
@@ -335,7 +346,10 @@ export function damageOf(b: Battle, attacker: SimUnit, target: SimUnit, atak = 0
   const guard =
     (target.defending ? GUARD_REDUCTION : 1) * (target.tarcza ? SILA_TARCZY : 1) * (target.mega ? 1 / SILA_MEGA : 1);
   const base =
-    stackAtk(attacker.def, attacker) * (attacker.eliksir ? SILA_ELIKSIRU : 1) * (attacker.mega ? SILA_MEGA : 1);
+    stackAtk(attacker.def, attacker) *
+    (attacker.eliksir ? SILA_ELIKSIRU : 1) *
+    (attacker.mega ? SILA_MEGA : 1) *
+    (wZrywie(attacker.def, attacker) ? SILA_ZRYWU : 1);
   const bonus = bonusUmiejetnosci(b, attacker, target);
   const value = Math.max(1, Math.round(base * moc * typeMult * penalty * guard * bonus));
   return {
@@ -382,10 +396,15 @@ export function premieTrenera(b: Battle, u: SimUnit): { atak: number; obrona: nu
   if (!m || u.side !== 'player') return { atak: 1, obrona: 1 };
   const strzela = u.def.shooter && !hasAdjacentEnemy(b, u);
   return {
-    atak:
+    atak: Math.min(
+      SUFIT_ATAKU_TRENERA,
       (1 + (strzela ? m.strzal : m.wrecz)) *
-      (1 + Math.min(ATAK_BOHATERA_MAKS, ATAK_BOHATERA_ZA_PUNKT * Math.max(0, m.atak))),
-    obrona: (1 - m.pancerz) * (1 - Math.min(OBRONA_BOHATERA_MAKS, OBRONA_BOHATERA_ZA_PUNKT * Math.max(0, m.obrona))),
+        (1 + Math.min(ATAK_BOHATERA_MAKS, ATAK_BOHATERA_ZA_PUNKT * Math.max(0, m.atak)))
+    ),
+    obrona: Math.max(
+      SUFIT_OBRONY_TRENERA,
+      (1 - m.pancerz) * (1 - Math.min(OBRONA_BOHATERA_MAKS, OBRONA_BOHATERA_ZA_PUNKT * Math.max(0, m.obrona)))
+    ),
   };
 }
 

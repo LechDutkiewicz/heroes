@@ -103,6 +103,7 @@ export function defStworka(
     poziom,
     etap,
     tm: o.tm || undefined,
+    zryw: wzor ? true : undefined,
   };
 }
 

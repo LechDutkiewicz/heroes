@@ -57,7 +57,21 @@ export interface UnitDef {
   etap?: number;
   /** zna atak ostateczny z Dysku TM, choć nie ewoluował (`ataki.ts`) */
   tm?: boolean;
+  /**
+   * Zryw jak Blaze/Torrent/Overgrow starterów z gier Pokémon: przy HP
+   * poniżej `PROG_ZRYWU` bije mocniej (`SILA_ZRYWU`). Mają go tylko startery.
+   */
+  zryw?: boolean;
 }
+
+/** Od jakiej części HP zaczyna się zryw — jak 1/3 w grach Pokémon. */
+export const PROG_ZRYWU = 1 / 3;
+/** Mnożnik ciosu w zrywie — jak ×1,5 w grach Pokémon. */
+export const SILA_ZRYWU = 1.5;
+
+/** Czy stworek jest teraz w zrywie (ranny poniżej progu, ale przytomny). */
+export const wZrywie = (def: UnitDef, s: StackState) =>
+  !!def.zryw && s.count > 0 && totalHp(def, s) <= fullHp(def) * PROG_ZRYWU;
 
 // Odmiana przez przypadki, bo teksty w panelu wymagają różnych form:
 // „mocny przeciw Ogniowi", ale „słaby wobec Ognia".

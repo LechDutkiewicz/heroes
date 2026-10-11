@@ -2,6 +2,47 @@
 
 Ostatnia aktualizacja: 2026-09-27 (trener zamiast armii: stworek = postać z poziomem, 4 na polu bitwy, trening i Centrum Pokemon).
 
+## Mniej przenoszenia, sufit premii, zryw starterów (2026-10-11)
+
+**Uwagi użytkownika.** Dobrze rozwinięty bohater szedł od razu na wroga
+i wygrywał — cała drużyna i wszystkie artefakty przechodziły dalej, a misja
+jeszcze podciągała drużynę do progu (`poziomDruzyny`). Bonus „stworek
+poziom 12" w misji 4 był bez sensu. Trzy mistrzowskie umiejętności
+(napastnik, pancerz, celne oko) robiły walki trywialnymi od misji 3.
+Decyzje użytkownika: bez podciągania („jak skończyłem za nisko — moja
+strata"), z poprzedniej misji najwyżej 1 stworek i 1 artefakt, sufit
+łącznych premii koniecznie, osłabienia rannych nie ma (w lore Pokémon
+ranny walczy pełną siłą), ale część stworków ma zryw przy małym HP.
+
+**Przenoszenie** (`kampania-start.ts`). `zaliczMisje` dalej zapisuje całą
+drużynę i bohatera ze wszystkimi artefaktami; wybór pada przy starcie:
+„Graj" przed misją 2+ otwiera okno „Kogo zabierasz?" (`wyborZabranych`
+w `KampaniaScene`): jeden stworek albo „nikogo", jeden przedmiot albo
+„nic" (bez fabularnych). Wybór siedzi w `PostepKampanii.zabiera`
+(`ZabranyZMisji`) i powtarza się przy „spróbuj jeszcze raz"; bez wyboru
+(symulacja, stary zapis) `domyslneZabranie` — najsilniejszy stworek
+i najsilniejszy noszony artefakt. Reszta drużyny to nowa czwórka Boru
+z planszy na poziomie `Misja.poziomStartowy` (12/16/30, zamiast dawnego
+`poziomDruzyny` 14/24/35, który podciągał wszystkich). Zabrany NIE jest
+podciągany; gdy plansza daje stworka z jego linii, zostaje wyższy poziom,
+bez dolewania doświadczenia. Bohater zachowuje statystyki, doświadczenie,
+umiejętności i plecak (przedmioty z Pokémartu). Bonusy „oddział" mają
+teraz prawdziwe poziomy: Aquino 14, Torrenar 32.
+
+**Sufit premii** (`battle.ts`): `SUFIT_ATAKU_TRENERA` 1,6 (atak bohatera ×
+Napastnik/Celne oko najwyżej +60%), `SUFIT_OBRONY_TRENERA` 0,6 (obrona ×
+Pancerz najwyżej −40% otrzymywanych). Wartości umiejętności bez zmian.
+
+**Zryw** (`units.ts`): `UnitDef.zryw` mają startery (Blaze/Torrent/Overgrow
+z gier) — poniżej 1/3 HP bije ×1,5 (`wZrywie`, w `damageOf`). Karta stworka
+w bitwie: „zryw przy 1/3 HP", w zrywie „ZRYW ×1,5". Po zrywie Pyroko
+odstawał w parze (74% przy 89% Glacyna) — HP 46 → 52 (`probe-startery`).
+
+**Sondy.** `probe-druzyna-kampanii` przepisana pod nowe zasady,
+`zrzut-kampania.mjs` klika okno wyboru (`kampania-zabiera.png`) i sprawdza
+start misji 3. `probe-sklad-walki` („miasto / sala: do trzech obrońców")
+pada też na kodzie sprzed zmian.
+
 ## Obiekty mapy rysowane kodem (2026-10-11, PR #50)
 
 **Prośba:** przerysować obiekty planszy bez OpenAI, spójnie, z bryłami jak

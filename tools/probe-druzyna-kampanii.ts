@@ -1,6 +1,7 @@
 /**
- * Etap 6: drużyna przechodzi z misji do misji, odznaki zbierają się przez
- * całą kampanię, a misja podciąga za słabą drużynę i wzmacnia obrońców.
+ * Z misji do misji przechodzi najwyżej jeden wybrany stworek (bez
+ * podciągania) i jeden artefakt; resztę drużyny daje plansza na poziomie
+ * misji. Odznaki zbierają się przez całą kampanię, obrońcy rosną.
  *
  *   npx tsx tools/probe-druzyna-kampanii.ts
  */
@@ -27,25 +28,44 @@ sprawdz('drużyna zapisana w postępie', p1.druzyna?.length === 2, JSON.stringif
 sprawdz('zemdlony wstaje przed następną misją', !p1.druzyna?.some((o) => o.omdlaly));
 sprawdz('odznaka Starego Fortu w postępie', p1.odznaki?.includes('fort') === true, JSON.stringify(p1.odznaki));
 
-const s2 = rozpocznijMisje(p1, m2, 0);
+// Weteran na 20 (Aquino-linia) i artefakty z misji 1 — zabiera weterana i buty.
+p1.bohater = { ...p1.bohater!, artefakty: ['buty', 'tarcza', 'opaska'] };
+const s2 = rozpocznijMisje({ ...p1, zabiera: { stworek: 0, artefakt: 'buty' } }, m2, 0);
 const druzyna2 = s2.bohater.armia.filter(Boolean);
-sprawdz('misja 2 zaczyna się tą samą drużyną', druzyna2.some((o) => o!.poziom === 20 && o!.nazwa === weteran.nazwa));
+sprawdz('zabrany weteran jest w drużynie z poziomem 20', druzyna2.some((o) => o!.poziom === 20 && o!.nazwa === weteran.nazwa));
 sprawdz(
-  `słabszy stworek podciągnięty do poziomu ${m2.poziomDruzyny}`,
-  druzyna2.every((o) => o!.poziom >= (m2.poziomDruzyny ?? 0)),
+  'zemdlony z misji 1 nie przechodzi (tylko jeden stworek)',
+  !druzyna2.some((o) => o!.poziom === 9 && o!.nazwa === zemdlony.nazwa),
+  druzyna2.map((o) => `${o!.nazwa} ${o!.poziom}`).join(', ')
+);
+sprawdz(
+  `nowa drużyna planszy na poziomie ${m2.poziomStartowy}`,
+  druzyna2.filter((o) => o!.poziom !== 20).every((o) => o!.poziom === m2.poziomStartowy),
   druzyna2.map((o) => o!.poziom).join(', ')
+);
+sprawdz('przechodzi jeden artefakt', JSON.stringify(s2.bohater.artefakty) === '["buty"]', JSON.stringify(s2.bohater.artefakty));
+const s2nikt = rozpocznijMisje({ ...p1, zabiera: {} }, m2, 0);
+sprawdz(
+  'bez wyboru „nikogo / nic" — sama drużyna planszy, bez artefaktów',
+  s2nikt.bohater.armia.filter(Boolean).every((o) => o!.poziom === m2.poziomStartowy) && s2nikt.bohater.artefakty.length === 0
+);
+const slaby = { ...p1, druzyna: [nowyStworek('bor', 5, 3)!], zabiera: { stworek: 0 } };
+const s2slaby = rozpocznijMisje(slaby, m2, 0);
+sprawdz(
+  'słaby zabrany stworek nie jest podciągany',
+  s2slaby.bohater.armia.some((o) => o?.tier === 5 && o.poziom === 3),
+  s2slaby.bohater.armia.filter(Boolean).map((o) => `${o!.nazwa} ${o!.poziom}`).join(', ')
 );
 s2.odznaki = ['Grota Księżycowa'];
 const p2 = zaliczMisje(p1, s2);
 sprawdz('odznaki się sumują', p2.odznaki?.length === 2, JSON.stringify(p2.odznaki));
 
-// Stary zapis bez drużyny: misja 4 startuje drużyną startową podciągniętą do progu.
+// Stary zapis bez drużyny: misja 4 daje startera na poziomie misji.
 const s4 = rozpocznijMisje(p0, m4, 0);
-const d4 = s4.bohater.armia.filter(Boolean);
 sprawdz(
-  `bez drużyny z poprzedniej misji — startowa na poziomie ${m4.poziomDruzyny}`,
-  d4.length > 0 && d4.every((o) => o!.poziom >= (m4.poziomDruzyny ?? 0)),
-  d4.map((o) => `${o!.nazwa} ${o!.poziom}`).join(', ')
+  `bez drużyny z poprzedniej misji — starter na poziomie ${m4.poziomStartowy}`,
+  s4.starter?.poziom === m4.poziomStartowy,
+  JSON.stringify(s4.starter)
 );
 const s4bez = rozpocznijMisje(p0, { ...m4, wrogPoziomy: undefined }, 0);
 const poziomyWroga = (s: typeof s4) =>

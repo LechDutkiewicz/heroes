@@ -52,7 +52,9 @@ const k1b = rozpocznijMisje(nowyPostep('Ela'), m1, iStarter === 0 ? 1 : 0);
 sprawdz('bez bonusu — poziom 5', k1b.starter?.poziom === 5);
 const druzyna = [nowyStarter(0, 12)!, nowyStworek('bor', 1, 12)!];
 const k2 = rozpocznijMisje({ ...nowyPostep('Ela'), druzyna }, m2, 0);
-sprawdz('misja 2 z drużyną — bez wyboru startera', !k2.starter && zywe(k2.bohater.armia).length === 2);
+// Z misji 1 przechodzi jeden stworek (najsilniejszy, przy remisie pierwszy
+// — starter); resztę daje plansza, bez dubla linii startera.
+sprawdz('misja 2 z drużyną — bez wyboru startera', !k2.starter && zywe(k2.bohater.armia).length === 4);
 sprawdz('starter przechodzi do misji 2 jako starter', k2.bohater.armia.some((x) => x?.starter));
 
 console.log('\n=== wyrównanie starterów ===');

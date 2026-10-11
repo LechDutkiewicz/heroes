@@ -6,6 +6,7 @@ import {
   type Bonus,
   type Misja,
   type PostepKampanii,
+  type ZabranyZMisji,
   biezacaMisja,
   kampaniaUkonczona,
   nowyPostep,
@@ -13,7 +14,7 @@ import {
   wczytajPostep,
   zapiszPostep,
 } from '../data/kampania';
-import { rozpocznijMisje } from '../data/kampania-start';
+import { domyslneZabranie, rozpocznijMisje } from '../data/kampania-start';
 import { aktywnyProfil } from '../data/profile';
 import { autozapis, listaZapisow, usunZapis } from '../data/zapis';
 import { ODZNAKI_PLIKI, SUROWIEC_INFO, artefaktPoId } from '../data/mapa';
@@ -348,7 +349,9 @@ export class KampaniaScene extends Phaser.Scene {
     for (const s of Object.values(SUROWIEC_INFO)) this.load.image(`m-${s.ikona}`, `${b}mapa/${s.ikona}.png`);
     const bor = factionById('bor') ?? FACTIONS[0];
     // Nagroda „oddział" pokazuje okrągły portret stwora w medalionie karty.
-    wczytajPortrety(this, { okragle: true }, bor.units.map((u) => u.sprite));
+    // Okno „Kogo zabierasz?" pokazuje drużynę z poprzedniej misji.
+    const druzyna = wczytajPostep()?.druzyna ?? [];
+    wczytajPortrety(this, { okragle: true }, new Set([...bor.units.map((u) => u.sprite), ...druzyna.map((o) => o.sprite)]));
   }
 
   create() {
@@ -1544,17 +1547,17 @@ export class KampaniaScene extends Phaser.Scene {
     kreska();
     wiersz(IKONA.gwiazda, 'Cel misji', celMisji(m));
     for (const w of porazkiMisji(m)) wiersz(w.ikona, w.ikona === IKONA.uwaga ? 'Uważaj' : 'Czas', w.tekst);
-    const plecak = p.bohater?.artefakty ?? [];
-    // Drużyna idzie z trenerem dalej — te same stworki (etap 6). Jednym
-    // zdaniem przy plecaku: osobny wiersz nie mieścił się na zwoju.
-    const druzyna = p.druzyna?.length
-      ? `drużyna: ${p.druzyna.length} ${p.druzyna.length === 1 ? 'stworek' : p.druzyna.length < 5 ? 'stworki' : 'stworków'} ` +
-        `(do poz. ${Math.max(...p.druzyna.map((o) => o.poziom))}` +
-        (m.limitPoziomu !== undefined ? `; limit misji: stworki ${m.limitPoziomu}, trener ${m.limitBohatera ?? '—'}` : '') +
-        ')'
-      : '';
-    const zabiera = [plecak.map(nazwaArtefaktu).join(', '), druzyna].filter(Boolean).join(' · ');
-    if (zabiera) wiersz(plecak.length ? IKONA.sakwa : IKONA.pokeball, `${p.trener} zabiera ze sobą`, zabiera + '.');
+    // Z poprzedniej misji przechodzi jeden stworek i jeden przedmiot — wybór
+    // w oknie „Kogo zabierasz?" po „Graj". Jednym zdaniem: osobny wiersz
+    // nie mieścił się na zwoju.
+    if (p.druzyna?.length || p.bohater?.artefakty.length)
+      wiersz(
+        IKONA.pokeball,
+        `${p.trener} zabiera ze sobą`,
+        'jednego stworka i jeden przedmiot z poprzedniej misji' +
+          (m.limitPoziomu !== undefined ? ` (limit misji: stworki ${m.limitPoziomu}, trener ${m.limitBohatera ?? '—'})` : '') +
+          '.'
+      );
     return y;
   }
 
@@ -1965,8 +1968,158 @@ export class KampaniaScene extends Phaser.Scene {
     });
   }
 
-  /** Start misji — jedyne miejsce, które zamienia wybór na tym ekranie w grę. */
+  /**
+   * „Graj": przed misją 2+ najpierw okno „Kogo zabierasz?" — z poprzedniej
+   * misji przechodzi najwyżej jeden stworek i jeden artefakt.
+   */
   private start() {
+    const p = this.postep;
+    const m = p && biezacaMisja(p);
+    if (!p || !m || this.bonus === undefined || this.nakladka) return;
+    const artefakty = this.artefaktyDoZabrania();
+    if (p.druzyna?.length || artefakty.length) this.wyborZabranych(p, artefakty);
+    else this.ruszaj();
+  }
+
+  /** Artefakty z poprzedniej misji, które da się zabrać (bez fabularnych, bez powtórek). */
+  private artefaktyDoZabrania(): string[] {
+    const lista = this.postep?.bohater?.artefakty ?? [];
+    return [...new Set(lista)].filter((id) => {
+      const a = artefaktPoId(id);
+      return a && a.klasa !== 'misja';
+    });
+  }
+
+  private wyborZabranych(p: PostepKampanii, artefakty: string[]) {
+    sfx(this, 'wejscie', 0.5);
+    const wybor: ZabranyZMisji = { ...(p.zabiera ?? domyslneZabranie(p)) };
+    const n = this.add.container(0, 0).setDepth(700);
+    this.nakladka = n;
+    const tlo = this.add.graphics();
+    tlo.fillStyle(0x0a0602, 0.6);
+    tlo.fillRect(0, 0, EKRAN_W, EKRAN_H);
+    const blok = this.add.zone(0, 0, EKRAN_W, EKRAN_H).setOrigin(0).setInteractive();
+    const w = 720;
+    const h = 470;
+    const x = (EKRAN_W - w) / 2;
+    const y = (EKRAN_H - h) / 2;
+    n.add([tlo, blok, ...this.panelPergaminu(x, y, w, h)]);
+    const napis = (ty: number, t: string, styl: Phaser.Types.GameObjects.Text.TextStyle) =>
+      n.add(this.add.text(EKRAN_W / 2, ty, t, styl).setOrigin(0.5));
+    napis(y + 34, 'Kogo zabierasz?', { fontFamily: SERIF, fontStyle: '900', fontSize: '26px', color: ATRAMENT_CZERWONY });
+    napis(y + 70, 'Do nowej misji idzie tylko jeden stworek i jeden przedmiot.\nResztę drużyny dostaniesz na miejscu.', {
+      fontFamily: TEKST,
+      fontSize: '16px',
+      color: ATRAMENT,
+      align: 'center',
+    });
+
+    // Rząd kafelków: portret/ikona, podpis, złota ramka na wybranym.
+    type Kafel = { ramka: Phaser.GameObjects.Graphics; klucz: number | string | undefined };
+    const rzad = (
+      ry: number,
+      tytul: string,
+      pozycje: { klucz: number | string | undefined; tekstura?: string; podpis: string }[],
+      wybrany: () => number | string | undefined,
+      ustaw: (k: number | string | undefined) => void
+    ) => {
+      n.add(this.add.text(x + 30, ry, tytul, { fontFamily: SERIF, fontStyle: '900', fontSize: '17px', color: ATRAMENT }));
+      const kw = 76;
+      const odstep = Math.min(14, (w - 60 - kw * pozycje.length) / Math.max(1, pozycje.length - 1));
+      const kafle: Kafel[] = [];
+      const odswiez = () => {
+        for (const k of kafle) {
+          k.ramka.clear();
+          const tak = k.klucz === wybrany();
+          if (tak) {
+            k.ramka.fillStyle(0xffd43b, 1);
+            k.ramka.fillRoundedRect(-4, -4, kw + 8, kw + 8, 12);
+          }
+          panelBialy(k.ramka, 0, 0, kw, kw, 10, { obrys: 3, cien: tak ? 0 : 3, wypelnienie: tak ? 0xeaf4ff : undefined });
+        }
+      };
+      pozycje.forEach((poz, i) => {
+        const kx = x + 30 + i * (kw + odstep);
+        const ky = ry + 28;
+        const ramka = this.add.graphics({ x: kx, y: ky });
+        n.add(ramka);
+        if (poz.tekstura && this.textures.exists(poz.tekstura)) {
+          const img = this.add.image(kx + kw / 2, ky + kw / 2, poz.tekstura);
+          img.setScale(Math.min((kw - 14) / img.width, (kw - 14) / img.height));
+          n.add(img);
+        } else {
+          n.add(this.add.text(kx + kw / 2, ky + kw / 2, '—', { fontFamily: SERIF, fontSize: '30px', color: ATRAMENT }).setOrigin(0.5));
+        }
+        n.add(
+          this.add
+            .text(kx + kw / 2, ky + kw + 6, poz.podpis, {
+              fontFamily: TEKST,
+              fontSize: '12px',
+              color: ATRAMENT,
+              align: 'center',
+              wordWrap: { width: kw + odstep },
+            })
+            .setOrigin(0.5, 0)
+        );
+        const strefa = this.add.zone(kx, ky, kw, kw).setOrigin(0).setInteractive({ useHandCursor: true });
+        strefa.on('pointerdown', () => {
+          ustaw(poz.klucz);
+          sfx(this, 'zbior', 0.5);
+          odswiez();
+        });
+        n.add(strefa);
+        kafle.push({ ramka, klucz: poz.klucz });
+      });
+      odswiez();
+    };
+
+    const druzyna = p.druzyna ?? [];
+    rzad(
+      y + 112,
+      'Stworek',
+      [
+        ...druzyna.map((o, i) => ({ klucz: i, tekstura: kluczPortretuOkraglego(o.sprite), podpis: `${o.nazwa}\npoz. ${o.poziom}` })),
+        { klucz: undefined, podpis: 'nikogo' },
+      ],
+      () => wybor.stworek,
+      (k) => (wybor.stworek = k as number | undefined)
+    );
+    rzad(
+      y + 262,
+      'Przedmiot',
+      [
+        ...artefakty.map((id) => {
+          const a = artefaktPoId(id);
+          const malowana = `k-ikona-${IKONA_ARTEFAKTU[id] ?? ''}`;
+          return {
+            klucz: id,
+            tekstura: this.textures.exists(malowana) ? malowana : kluczArtefaktu(id, a?.klasa ?? 'drobny'),
+            podpis: nazwaArtefaktu(id),
+          };
+        }),
+        { klucz: undefined, podpis: 'nic' },
+      ],
+      () => wybor.artefakt,
+      (k) => (wybor.artefakt = k as string | undefined)
+    );
+
+    const wstecz = tabliczka(this, EKRAN_W / 2 - 110, y + h - 36, 150, 44, 'Wróć', false, 18, () => {
+      n.destroy();
+      this.nakladka = undefined;
+    });
+    const dalej = tabliczka(this, EKRAN_W / 2 + 100, y + h - 36, 190, 44, 'Ruszaj!', true, 20, () => {
+      p.zabiera = wybor;
+      n.destroy();
+      this.nakladka = undefined;
+      this.ruszaj();
+    });
+    wstecz.ustaw(true);
+    dalej.ustaw(true);
+    n.add([wstecz.kontener, dalej.kontener]);
+  }
+
+  /** Start misji — jedyne miejsce, które zamienia wybór na tym ekranie w grę. */
+  private ruszaj() {
     const p = this.postep;
     const m = p && biezacaMisja(p);
     if (!p || !m || this.bonus === undefined) return;
