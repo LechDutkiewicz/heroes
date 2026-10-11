@@ -694,5 +694,5 @@ NAKLEJKI = [
 #: przycięty do sylwetki w `public/mapa/polana/most.png`. Pomost biegnie lekko
 #: pod górę w prawo — w poprzek rzeki, która w tym miejscu płynie skosem.
 MOSTY = [
-    {'plik': 'polana/most.png', 'pola': [(MOST[0], MOST[1]), (MOST[2], MOST[3])], 'srodek': (15.1, 25.72), 'szer': 3.2},
+    {'plik': 'polana/most.png', 'pola': [(MOST[0], MOST[1]), (MOST[2], MOST[3])], 'srodek': (15.1, 25.6), 'szer': 3.2},
 ]

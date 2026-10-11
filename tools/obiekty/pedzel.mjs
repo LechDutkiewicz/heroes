@@ -27,6 +27,11 @@ export const PAL = {
   tynkJ: '#f4ead2',
   tynk: '#dfcfa8',
   tynkC: '#b39f78',
+  // bazalt (skały wulkaniczne przy ognistym Gymie)
+  bazaltJ: '#8c827c',
+  bazalt: '#5e5652',
+  bazaltC: '#3e3835',
+  bazaltCC: '#26211f',
   // dachówka
   dachJ: '#e0703f',
   dach: '#b9482a',
@@ -239,6 +244,16 @@ export function dachowka(x, y, w, h, { rzad = 7, luska = 8, kolorC = PAL.dachC, 
   return s;
 }
 
+/** Dach w pasy (blacha/dachówka w stylu Pokémon): poziome rzędy z jasną krawędzią. */
+export function pasyDachu(x, y, w, h, kolorC, jasny, rzad = 9) {
+  let s = '';
+  for (let yy = y + rzad; yy < y + h + rzad; yy += rzad) {
+    s += `<rect x="${f(x)}" y="${f(yy - 2.2)}" width="${f(w)}" height="2.2" fill="${kolorC}" opacity="0.55"/>`;
+    s += `<rect x="${f(x)}" y="${f(yy)}" width="${f(w)}" height="1.4" fill="${jasny}" opacity="0.5"/>`;
+  }
+  return s;
+}
+
 /** Strzecha: gęste krótkie pociągnięcia. */
 export function strzecha(x, y, w, h, { ziarno: z = 9, kolorC = PAL.strzechaC, jasny = PAL.strzechaJ } = {}) {
   const r = los(z);
@@ -327,6 +342,10 @@ export function dom({
   } else if (sciana === 'bale') {
     fakt = balePoziom(x, top, w, h);
     faktB = balePoziom(x + w, top - gy, gx, h + gy);
+  } else if (sciana === 'gladka') {
+    // Gładki tynk w stylu miasteczek Pokémon: tylko listwa u dołu i miękki cień okapu.
+    fakt = `<rect x="${f(x)}" y="${f(y - 10)}" width="${f(w)}" height="5" fill="#000" opacity="0.08"/>`;
+    faktB = '';
   } else if (sciana === 'tynk') {
     fakt = `<path d="M${f(x)} ${f(top + 3)} H${f(x + w)}" stroke="${PAL.drewnoC}" stroke-width="3"/><path d="M${f(x + 2)} ${f(top)} V${f(y)} M${f(x + w - 2)} ${f(top)} V${f(y)}" stroke="${PAL.drewnoC}" stroke-width="3.2"/>`;
     faktB = '';
@@ -377,7 +396,11 @@ export function dom({
       [x + w + gx, top - gy],
     ]),
     kolSC,
-    sciana === 'kamien' ? murKamienny(x + w, top - dachH - gy, gx, dachH + gy, { blok: 8, ziarno: z + 7 }) : deskiPion(x + w, top - dachH - gy, gx, dachH + gy, { szer: 6 }),
+    sciana === 'kamien'
+      ? murKamienny(x + w, top - dachH - gy, gx, dachH + gy, { blok: 8, ziarno: z + 7 })
+      : sciana === 'gladka'
+        ? ''
+        : deskiPion(x + w, top - dachH - gy, gx, dachH + gy, { szer: 6 }),
     { swiatlo: null }
   );
   let faktD = '';
@@ -387,6 +410,7 @@ export function dom({
   const bh = e1[1] - r1[1];
   if (dach === 'strzecha') faktD = strzecha(bx, by, bw, bh, { ziarno: z + 2 });
   else if (dach === 'deski') faktD = deskiPion(bx, by, bw, bh, { szer: 7 });
+  else if (dach === 'pasy') faktD = pasyDachu(bx, by, bw, bh, kolDC, kolDJ);
   else faktD = dachowka(bx, by, bw, bh, { kolorC: kolDC, jasny: kolDJ });
   svg += wypelnij(dachF, kolD, faktD, { swiatlo: 'swiatloG' });
   // brzeg szczytu (deska wiatrowa) na boku
