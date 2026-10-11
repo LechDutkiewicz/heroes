@@ -215,7 +215,7 @@ function turbina() {
   const hx = cx - 12;
   const hy = top - 2;
   for (let i = 0; i < 3; i++) {
-    const a = ((i * 120 - 75) * Math.PI) / 180;
+    const a = ((i * 120 - 108) * Math.PI) / 180; // górna łopata w lewo — od miasteczka obok
     const L = 104;
     const ex = hx + Math.cos(a) * L;
     const ey = hy + Math.sin(a) * L;
@@ -335,40 +335,65 @@ function laboratorium() {
   return svgObiektu(3, 2.5, s);
 }
 
-/** Boisko treningowe: pole walki z liniami i pokeballem, opony, pachołki, ławka. 3 × 1. */
+/**
+ * Boisko treningowe: pole walki z liniami i pokeballem, trybunka, siatka,
+ * opony, pachołki, pal. 3 × 1 bryły — ale rysunek trzyma się lewych dwóch
+ * i pół pola: na Polanie obóz stoi przy rzece i prawe pole bryły to woda.
+ */
 function boisko() {
   const W = 3 * P;
-  const H = 2.0 * P;
+  const H = 2.2 * P;
   const y = H - 3;
-  const cx = W / 2;
+  const cx = W / 2 - 30;
   let s = '';
   // pole (równoległobok w rzucie 3/4)
   const pole = [
-    [cx - 124, y - 8],
-    [cx + 104, y - 8],
-    [cx + 128, y - 92],
-    [cx - 100, y - 92],
+    [cx - 104, y - 8],
+    [cx + 84, y - 8],
+    [cx + 104, y - 76],
+    [cx - 84, y - 76],
   ];
-  s += `<!--grunt--><path d="${sciezka(pole.map(([x, yy], i) => [x + (i < 2 ? 0 : 0), yy + 4]))}" fill="#7a5a32" opacity="0.5" filter="url(#cienMaly)"/><path d="${sciezka(pole)}" fill="#d9b47a"/><!--/grunt-->`;
+  s += `<!--grunt--><path d="${sciezka(pole)}" fill="#d9b47a"/><path d="${sciezka([
+    [cx - 104, y - 8],
+    [cx + 84, y - 8],
+    [cx + 84, y - 4],
+    [cx - 104, y - 4],
+  ])}" fill="#a8844e"/><!--/grunt-->`;
   s += `<!--grunt--><path d="${sciezka([
-    [cx - 114, y - 14],
-    [cx + 96, y - 14],
-    [cx + 118, y - 86],
-    [cx - 92, y - 86],
-  ])}" fill="none" stroke="#fff" stroke-width="3" opacity="0.9"/><line x1="${f(cx - 9)}" y1="${f(y - 14)}" x2="${f(cx + 13)}" y2="${f(y - 86)}" stroke="#fff" stroke-width="3" opacity="0.9"/><ellipse cx="${f(cx + 2)}" cy="${f(y - 50)}" rx="24" ry="13" fill="none" stroke="#fff" stroke-width="3" opacity="0.9"/><!--/grunt-->`;
-  s += `<!--grunt--><ellipse cx="${f(cx + 2)}" cy="${f(y - 50)}" rx="12" ry="6.5" fill="#d63c30"/><path d="M${f(cx - 10)} ${f(y - 50)} a12 6.5 0 0 0 24 0 Z" fill="#fff"/><circle cx="${f(cx + 2)}" cy="${f(y - 50)}" r="2.6" fill="#333"/><!--/grunt-->`;
-  // ławka z tyłu po lewej i proporczyk
-  s += naZiemi(y - 96, `<rect x="${f(cx - 96)}" y="${f(y - 112)}" width="60" height="7" rx="2" fill="${PAL.drewno}"/><rect x="${f(cx - 96)}" y="${f(y - 112)}" width="60" height="2.5" fill="${PAL.drewnoJ}"/><rect x="${f(cx - 92)}" y="${f(y - 105)}" width="4" height="9" fill="#4a5560"/><rect x="${f(cx - 44)}" y="${f(y - 105)}" width="4" height="9" fill="#4a5560"/>`);
+    [cx - 94, y - 13],
+    [cx + 76, y - 13],
+    [cx + 94, y - 71],
+    [cx - 76, y - 71],
+  ])}" fill="none" stroke="#fff" stroke-width="3" opacity="0.9"/><line x1="${f(cx - 9)}" y1="${f(y - 13)}" x2="${f(cx + 9)}" y2="${f(y - 71)}" stroke="#fff" stroke-width="3" opacity="0.9"/><ellipse cx="${f(cx)}" cy="${f(y - 42)}" rx="22" ry="11" fill="none" stroke="#fff" stroke-width="3" opacity="0.9"/><!--/grunt-->`;
+  s += `<!--grunt--><ellipse cx="${f(cx)}" cy="${f(y - 42)}" rx="11" ry="5.5" fill="#d63c30"/><path d="M${f(cx - 11)} ${f(y - 42)} a11 5.5 0 0 0 22 0 Z" fill="#fff"/><circle cx="${f(cx)}" cy="${f(y - 42)}" r="2.4" fill="#333"/><!--/grunt-->`;
+  // tył: trybunka (trzy stopnie z niebieskimi ławkami) i siatka za polem
+  let tyl = '';
+  const ty = y - 80;
+  for (let i = 0; i < 3; i++) {
+    const sy = ty - i * 11;
+    const sx0 = cx - 92 + i * 6;
+    const sx1 = cx + 30 - i * 6;
+    tyl += `<rect x="${f(sx0)}" y="${f(sy - 11)}" width="${f(sx1 - sx0)}" height="11" fill="#c3cad2"/><rect x="${f(sx0)}" y="${f(sy - 11)}" width="${f(sx1 - sx0)}" height="4" fill="${i % 2 ? '#3f78c8' : '#5a96e0'}"/><rect x="${f(sx1 - 14)}" y="${f(sy - 11)}" width="14" height="11" fill="#000" opacity="0.18"/>`;
+  }
+  // siatka za bramką po prawej
+  tyl += `<rect x="${f(cx + 44)}" y="${f(ty - 34)}" width="62" height="34" fill="none" stroke="#e8eef4" stroke-width="2"/>`;
+  for (let i = 1; i < 6; i++) tyl += `<line x1="${f(cx + 44 + i * 10.3)}" y1="${f(ty - 34)}" x2="${f(cx + 44 + i * 10.3)}" y2="${f(ty)}" stroke="#e8eef4" stroke-width="1" opacity="0.7"/>`;
+  for (let i = 1; i < 4; i++) tyl += `<line x1="${f(cx + 44)}" y1="${f(ty - i * 8.5)}" x2="${f(cx + 106)}" y2="${f(ty - i * 8.5)}" stroke="#e8eef4" stroke-width="1" opacity="0.7"/>`;
+  tyl += `<rect x="${f(cx + 42)}" y="${f(ty - 36)}" width="4" height="36" fill="#6a7682"/><rect x="${f(cx + 104)}" y="${f(ty - 36)}" width="4" height="36" fill="#4a5560"/>`;
+  tyl += `<rect x="${f(cx - 4)}" y="${f(ty - 70)}" width="2.6" height="38" fill="#4a5560"/><path d="M${f(cx - 2)} ${f(ty - 70)} l18 5 l-18 5 Z" fill="#d63c30"/>`;
+  s += naZiemi(ty, tyl);
   // opony (stos) i pachołki
   const opona = (x, yy) => `<ellipse cx="${f(x)}" cy="${f(yy)}" rx="12" ry="6" fill="#2a2a2e"/><ellipse cx="${f(x)}" cy="${f(yy - 3)}" rx="12" ry="6" fill="#3a3a40"/><ellipse cx="${f(x)}" cy="${f(yy - 3)}" rx="5.5" ry="2.6" fill="#1a1a1c"/>`;
-  s += opona(cx + 112, y - 4) + opona(cx + 112, y - 10) + opona(cx + 112, y - 16);
-  s += opona(cx + 136, y - 22);
+  s += opona(cx - 122, y - 4) + opona(cx - 122, y - 10) + opona(cx - 122, y - 16) + opona(cx - 100, y + 0);
   const pacholek = (x, yy) => `<path d="M${f(x - 6)} ${f(yy)} L${f(x)} ${f(yy - 16)} L${f(x + 6)} ${f(yy)} Z" fill="#f07a2a"/><path d="M${f(x - 3.6)} ${f(yy - 6)} h7.2 l-1 -3 h-5.2 Z" fill="#fff"/><rect x="${f(x - 8)}" y="${f(yy - 2)}" width="16" height="3" rx="1" fill="#d0601a"/>`;
-  for (let i = 0; i < 4; i++) s += pacholek(cx - 70 + i * 26, y - 22 - i * 4);
-  // pal treningowy (kłoda) po lewej
-  s += `<rect x="${f(cx - 138)}" y="${f(y - 40)}" width="14" height="36" rx="3" fill="${PAL.drewno}"/><ellipse cx="${f(cx - 131)}" cy="${f(y - 40)}" rx="7" ry="3" fill="${PAL.drewnoJ}"/><rect x="${f(cx - 138)}" y="${f(y - 30)}" width="14" height="4" fill="#d63c30"/>`;
-  s += `<rect x="${f(cx + 128)}" y="${f(y - 104)}" width="2.6" height="46" fill="#4a5560"/><path d="M${f(cx + 130)} ${f(y - 104)} l18 5 l-18 5 Z" fill="#d63c30"/>`;
-  return svgObiektu(3, 2.0, s);
+  for (let i = 0; i < 4; i++) s += pacholek(cx - 58 + i * 24, y - 20 - i * 3);
+  // pale treningowe (kłody) z przodu po prawej
+  for (const [px, ph] of [
+    [cx + 96, 36],
+    [cx + 112, 28],
+  ])
+    s += `<rect x="${f(px - 7)}" y="${f(y - 4 - ph)}" width="14" height="${ph}" rx="3" fill="${PAL.drewno}"/><rect x="${f(px - 7)}" y="${f(y - 4 - ph)}" width="5" height="${ph}" fill="${PAL.drewnoJ}" opacity="0.6"/><ellipse cx="${f(px)}" cy="${f(y - 4 - ph)}" rx="7" ry="3" fill="${PAL.drewnoJ}"/><rect x="${f(px - 7)}" y="${f(y - 4 - ph * 0.6)}" width="14" height="4" fill="#d63c30"/>`;
+  return svgObiektu(3, 2.2, s);
 }
 
 /** Stadion: trybuny z niebieskimi rzędami wokół boiska, jupitery, logo. 3 × 1. */

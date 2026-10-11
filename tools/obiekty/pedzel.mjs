@@ -139,13 +139,10 @@ export function defsWspolne() {
 export const ziarno = (ksztalt) => `<g filter="url(#ziarno)" opacity="0.6">${ksztalt}</g>`;
 
 /**
- * Cień rzucany: sylwetka (wielokąt podstawy + wysokość) rzucona w prawo
- * w dół. `podstawa` — punkty na ziemi, `wys` — wysokość bryły, z której
- * robi się „ogon" cienia. Światło z lewej góry, więc cień leci w prawo.
+ * Ciemniejszy kontakt u podstawy bryły od `x0` do `x1` na linii `y` (cień
+ * właściwy robi `svgObiektu` z sylwetki). `wys` decyduje tylko o grubości.
  */
-export function cienRzucany(x0, x1, y, wys, { krycie = 0.32, skos = 0.55, splaszcz = 0.35 } = {}) {
-  // Cień rzucany robi teraz `svgObiektu` z sylwetki — ta funkcja zostaje
-  // tylko jako ciemniejszy kontakt u podstawy.
+export function cienRzucany(x0, x1, y, wys, { krycie = 0.32 } = {}) {
   return `<ellipse cx="${f((x0 + x1) / 2 + 4)}" cy="${f(y - 1)}" rx="${f((x1 - x0) / 2 + 4)}" ry="${f(Math.min(10, wys * 0.08))}" fill="#0b1a05" opacity="${krycie * 0.9}" filter="url(#cienMaly)"/>`;
 }
 
@@ -466,20 +463,18 @@ export function placek(cx, cy, rx, ry, { kolor = PAL.ziemia, krycie = 0.55 } = {
 /**
  * Składa pełny dokument SVG obiektu o wymiarach w polach.
  *
- * Cień rzucany liczy się SAM z sylwetki: cała treść jeszcze raz, zaczerniona
- * i położona na ziemi transformacją — punkt na wysokości h nad ziemią ląduje
- * o `SKOS`·h w prawo i `UNIES`·h w górę. Jedno światło (z lewej góry) dla
- * wszystkich obiektów, więc cienie z definicji są spójne. Płótno ma po bokach
- * zapas (`pad` pól), żeby cień nie był ucięty; obiekt zostaje na środku.
+ * Cień liczy się SAM z sylwetki: cała treść jeszcze raz, zaczerniona,
+ * zgnieciona do paska przy ziemi i rozmyta — miękki cień kontaktowy tej samej
+ * długości pod każdym obiektem, taki jak pod drzewami i skałami planszy.
+ * Długich cieni rzucanych (zależnych od wysokości) nie ma: drzewa i góry ich
+ * nie mają, więc wysoka turbina z długim cieniem obok lasu bez cieni
+ * rozbijała spójność. Pod cieniem leży wydeptana ziemia z tej samej sylwetki.
  */
-export const SKOS = 0.5;
-export const UNIES = -0.14;
-export function svgObiektu(szerPol, wysPol, tresc, { pad: padZadany, cien = 0.62, dol: dolZadany } = {}) {
-  // Zapas na cień: tyle, ile wysoki obiekt rzuca w prawo (symetrycznie, żeby środek został środkiem).
-  const pad = padZadany ?? Math.ceil((SKOS * wysPol + 0.1) * 10) / 10;
-  // Zapas POD linią gruntu: cień pada w prawo i ku patrzącemu, a wydeptana
-  // ziemia wychodzi przed obiekt. Scena stawia płótno o tyle niżej.
-  const dol = dolZadany ?? Math.ceil((Math.max(0.22, -UNIES * wysPol + 0.12)) * 10) / 10;
+export function svgObiektu(szerPol, wysPol, tresc, { pad: padZadany, cien = 0.7, dol: dolZadany } = {}) {
+  // Zapas po bokach i POD linią gruntu na cień kontaktowy i wydeptaną ziemię
+  // (wychodzą trochę przed obiekt). Scena stawia płótno o `dol` niżej.
+  const pad = padZadany ?? 0.2;
+  const dol = dolZadany ?? 0.22;
   // Grunt (placki ziemi) idzie pod spód i nie rzuca cienia.
   const grunt = (tresc.match(/<!--grunt-->[\s\S]*?<!--\/grunt-->/g) ?? []).join('');
   const reszta = tresc.replace(/<!--grunt-->[\s\S]*?<!--\/grunt-->/g, '');
@@ -487,15 +482,14 @@ export function svgObiektu(szerPol, wysPol, tresc, { pad: padZadany, cien = 0.62
   const H0 = Math.round(wysPol * P);
   const H = Math.round((wysPol + dol) * P);
   const dx = Math.round(pad * P);
-  const mac = (g) => `matrix(1 0 ${-SKOS} ${UNIES} ${f(SKOS * g)} ${f(g * (1 - UNIES))})`;
-  // Części stojące głębiej (`naZiemi`) rzucają cień od własnej linii gruntu.
+  // Części stojące głębiej (`naZiemi`) kładą cień na własnej linii gruntu.
   const ZIEMIA = /<!--z:([\d.]+)-->([\s\S]*?)<!--\/z-->/g;
   const czesci = [...reszta.matchAll(ZIEMIA)].map(([, g, t]) => [Number(g), t]);
   const przod = reszta.replace(ZIEMIA, '');
   const wszystkie = [...czesci, [H0, przod]];
   const zLinia = (m) => wszystkie.map(([g, t]) => `<g transform="${m(g)}">${t}</g>`).join('');
-  // Okluzja: sylwetka zgnieciona do kilku pikseli przy ziemi — ciemny pas styku.
-  const plask = (g) => `matrix(1 0 0 0.08 4 ${f(g * 0.92 + 1)})`;
+  // Cień kontaktowy: sylwetka zgnieciona do paska przy ziemi, lekko w prawo-dół.
+  const plask = (g) => `matrix(1.03 0 0 0.12 ${f(3 - szerPol * P * 0.015)} ${f(g * 0.88 + 5)})`;
   // Wydeptana ziemia: sylwetka zgnieciona i rozmyta, wychodzi przed obiekt.
   const slad = (g) => `matrix(1.04 0 0 0.12 ${f(-szerPol * P * 0.02)} ${f(g * 0.88 + 9)})`;
   return {
@@ -503,21 +497,16 @@ export function svgObiektu(szerPol, wysPol, tresc, { pad: padZadany, cien = 0.62
     H,
     dol,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs>${defsWspolne()}
-  <filter id="cienBryly" x="-10%" y="-10%" width="120%" height="120%">
+  <filter id="okluzja" x="-20%" y="-50%" width="140%" height="200%">
     <feFlood flood-color="#0d1806" flood-opacity="${cien}"/>
     <feComposite in2="SourceAlpha" operator="in"/>
-    <feGaussianBlur stdDeviation="1.4"/>
-  </filter>
-  <filter id="okluzja" x="-20%" y="-50%" width="140%" height="200%">
-    <feFlood flood-color="#0d1806" flood-opacity="0.85"/>
-    <feComposite in2="SourceAlpha" operator="in"/>
-    <feGaussianBlur stdDeviation="3 1.6"/>
+    <feGaussianBlur stdDeviation="4 2.4"/>
   </filter>
   <filter id="slad" x="-20%" y="-80%" width="140%" height="260%">
     <feFlood flood-color="#7a5a32" flood-opacity="0.55"/>
     <feComposite in2="SourceAlpha" operator="in"/>
     <feGaussianBlur stdDeviation="7 4"/>
   </filter></defs>
-  <g transform="translate(${dx},0)">${cien ? `<g filter="url(#slad)">${zLinia(slad)}</g>` : ''}${grunt}${cien ? `<g filter="url(#okluzja)">${zLinia(plask)}</g><g filter="url(#cienBryly)">${zLinia(mac)}</g>` : ''}${reszta}</g></svg>`,
+  <g transform="translate(${dx},0)">${cien ? `<g filter="url(#slad)">${zLinia(slad)}</g>` : ''}${grunt}${cien ? `<g filter="url(#okluzja)">${zLinia(plask)}</g>` : ''}${reszta}</g></svg>`,
   };
 }

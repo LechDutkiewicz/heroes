@@ -2127,6 +2127,7 @@ export class AdventureScene extends Phaser.Scene {
     this.rysujBohatera();
     this.odswiezRywala();
     this.rysujMgle();
+    this.ulozPoGlebi();
 
     // Kamera oddalona do 32 px na pole, z originem (0, 0): wtedy `scrollX/Y`
     // to wprost lewy górny róg widocznego wycinka świata, a zoom skaluje
@@ -2953,7 +2954,7 @@ export class AdventureScene extends Phaser.Scene {
         const szerRys = wys * (im.width / Math.max(1, im.height));
         // Rysunek kodem ma zapas na cień po bokach i pod spodem — flaga idzie
         // od rzeczywistej bryły: pole na prawo od środka, ¾ wysokości.
-        if (rysowany) f.setPosition(KAFEL * 0.9, podstawa - (wys - zapasPod) * 0.72);
+        if (rysowany) f.setPosition(KAFEL * 0.9, podstawa - (wys - zapasPod) * 0.55);
         else f.setPosition(szerRys * 0.16, podstawa - wys * 0.6);
         f.setData('faza', (o.x * 3 + o.y) % KLATKI_PROPORCA);
         this.flagiBudowli.push(f);
@@ -3226,6 +3227,35 @@ export class AdventureScene extends Phaser.Scene {
     const r = this.stan.wrogBohater;
     const { x, y } = this.naEkran(r.x, r.y);
     this.obiektRywala().setPosition(x, y).setDepth(r.y + 0.75).setVisible(true);
+    this.ulozPoGlebi();
+  }
+
+  /**
+   * Kontener świata rysuje w kolejności dodania, nie po głębi. Na planszy
+   * z klockami las i skały są już ułożone po głębi, ale obiekty, bohater
+   * i rywal dochodzą później — i leżały NA koronie drzewa z niższego rzędu,
+   * choć stoją za nim. Tu układamy wszystko, co stoi na planszy, jednym
+   * stabilnym sortowaniem po głębi. Tło, woda i trasa zostają pod spodem,
+   * mgła i napisy nad nią na wierzchu.
+   */
+  private ulozPoGlebi() {
+    if (!this.swiat || !planszaPoId(this.stan.mapa).modul.USTAWIENIA?.klocki) return;
+    const lista = this.swiat.list as Phaser.GameObjects.GameObject[];
+    const glebia = (e: Phaser.GameObjects.GameObject) => (e as unknown as { depth: number }).depth ?? 0;
+    const stale = [this.plansza, this.woda, this.warstwaTrasy, this.mgla].filter((e) => !!e) as Phaser.GameObjects.GameObject[];
+    const sufit = this.stan.wys + 1;
+    const reszta = lista.filter((e) => !stale.includes(e));
+    const nisko = reszta.filter((e) => glebia(e) < sufit).sort((a, b) => glebia(a) - glebia(b));
+    const wysoko = reszta.filter((e) => glebia(e) >= sufit).sort((a, b) => glebia(a) - glebia(b));
+    const nowa = [
+      // Trasa zaraz nad gruntem: pod obiektami i bohaterem, jak dotąd.
+      ...stale.filter((e) => e !== this.mgla && lista.includes(e)),
+      ...nisko,
+      ...stale.filter((e) => e === this.mgla && lista.includes(e)),
+      ...wysoko,
+    ] as Phaser.GameObjects.GameObject[];
+    lista.length = 0;
+    lista.push(...nowa);
   }
 
   /** Figura rywala — tworzona przy pierwszym pokazaniu, potem ta sama. */
@@ -4799,6 +4829,7 @@ export class AdventureScene extends Phaser.Scene {
       if (odslon(this.stan) > 0) this.malujMgle();
       const { x, y } = this.naEkran(k.x, k.y);
       this.bohaterObj.setDepth(k.y + 0.8);
+      this.ulozPoGlebi();
       this.dosunDoBohatera();
       sfx(this, 'krok');
       this.tweens.add({
@@ -6677,6 +6708,7 @@ export class AdventureScene extends Phaser.Scene {
       // Przegrany gracz stoi już w swoim zamku — widok idzie za nim.
       const { x, y } = this.naEkran(this.stan.bohater.x, this.stan.bohater.y);
       this.bohaterObj.setPosition(x, y).setDepth(this.stan.bohater.y + 0.8);
+      this.ulozPoGlebi();
       this.dosunDoBohatera();
     }
     this.warstwaTrasy.clear();
