@@ -650,28 +650,35 @@ export class AdventureScene extends Phaser.Scene {
     // więc przy zmianie planszy trzeba zdjąć te z poprzedniego zestawu —
     // inaczej Phaser zostawi zaśnieżone sosny na następnej misji.
     const zestaw = planszaPoId(this.wczytajStan().mapa).modul.USTAWIENIA?.zestaw ?? '';
-    const zestawDotad = (this.registry.get(KLUCZ_ZESTAWU) as string | undefined) ?? '';
-    if (zestawDotad !== zestaw) {
+    // Komplet obiektów rysowanych kodem może pochodzić z innego zestawu
+    // (`USTAWIENIA.obiekty`, np. Bagna biorą komplet Polany) — w rejestrze
+    // trzymamy oba, bo zmiana któregokolwiek wymienia tekstury.
+    const zestawObiektow = planszaPoId(this.wczytajStan().mapa).modul.USTAWIENIA?.obiekty ?? zestaw;
+    const kluczZestawu = `${zestaw}|${zestawObiektow}`;
+    const [zestawDotad = '', obiektyDotad = ''] = ((this.registry.get(KLUCZ_ZESTAWU) as string | undefined) ?? '').split('|');
+    if (`${zestawDotad}|${obiektyDotad}` !== kluczZestawu) {
       for (const n of new Set([
         ...(ZESTAWY_KLIMATU[zestawDotad] ?? []),
         ...(ZESTAWY_KLIMATU[zestaw] ?? []),
-        ...Object.keys(OBIEKTY_RYSOWANE[zestawDotad] ?? {}),
-        ...Object.keys(OBIEKTY_RYSOWANE[zestaw] ?? {}),
+        ...Object.keys(OBIEKTY_RYSOWANE[obiektyDotad] ?? {}),
+        ...Object.keys(OBIEKTY_RYSOWANE[zestawObiektow] ?? {}),
       ])) {
         this.textures.remove(`m-${n}`);
       }
-      this.registry.set(KLUCZ_ZESTAWU, zestaw);
+      this.registry.set(KLUCZ_ZESTAWU, kluczZestawu);
     }
     // Plansza z klockami (`USTAWIENIA.klocki`) bierze z zestawu klimatu tylko
     // krzaki i stosy znajdźek — obiekty są wszędzie te same, nowe (rzut od
     // frontu), a stare zimowe i bagienne wersje były w baśniowym stylu.
     const zKlockami = !!planszaPoId(this.wczytajStan().mapa).modul.USTAWIENIA?.klocki;
-    // Obiekty rysowane kodem (`tools/obiekty/`, `OBIEKTY_RYSOWANE`) też idą
-    // z katalogu zestawu, także na planszy z klockami.
+    // Obiekty rysowane kodem (`tools/obiekty/`, `OBIEKTY_RYSOWANE`) idą
+    // z katalogu swojego kompletu, także na planszy z klockami.
+    const rysowane = new Set(Object.keys(OBIEKTY_RYSOWANE[zestawObiektow] ?? {}));
     const zKlimatu = new Set([
       ...(ZESTAWY_KLIMATU[zestaw] ?? []).filter((n) => !zKlockami || n.startsWith('stos-') || n.startsWith('krzak')),
-      ...Object.keys(OBIEKTY_RYSOWANE[zestaw] ?? {}),
+      ...rysowane,
     ]);
+    const katalog = (n: string) => (rysowane.has(n) ? `${zestawObiektow}/` : zKlimatu.has(n) ? `${zestaw}/` : '');
     this.load.image('plansza-0', `${tlo}plansza-0.jpg`);
     this.load.image('woda-maska', `${tlo}woda-maska.png`);
     this.load.image('woda-zmarszczki', `${b}mapa/woda-zmarszczki.png`);
@@ -737,14 +744,13 @@ export class AdventureScene extends Phaser.Scene {
       'namiot-klucznika-niebieski',
       'chata-jasnowidza',
     ]) {
-      this.load.image(`m-${n}`, `${b}mapa/${zKlimatu.has(n) ? `${zestaw}/` : ''}${n}.png`);
+      this.load.image(`m-${n}`, `${b}mapa/${katalog(n)}${n}.png`);
     }
     // Stosy surowców na mapie (`m-stos-<ikona>`) są tylko w zestawie klimatu,
     // który je ma — ikona `m-<ikona>` zostaje ikoną paska surowców.
     for (const n of zKlimatu) {
       // Góry ręczne (`USTAWIENIA.masywy`) — też tylko z zestawu klimatu.
-      if (n.startsWith('stos-') || n.startsWith('gora-'))
-        this.load.image(`m-${n}`, `${b}mapa/${zestaw}/${n}.png`);
+      if (n.startsWith('stos-') || n.startsWith('gora-')) this.load.image(`m-${n}`, `${b}mapa/${katalog(n)}${n}.png`);
     }
     // Klocki terenu (`src/data/klocki.ts`): las i skały z bloków o stałym obrysie.
     const klocki = planszaPoId(this.wczytajStan().mapa).modul.USTAWIENIA?.klocki;
@@ -2773,8 +2779,8 @@ export class AdventureScene extends Phaser.Scene {
 
   /** [wysokość płótna, zapas pod linią gruntu] rysunku kodem albo nic. */
   private rysowany(plik: string | undefined): readonly [number, number] | undefined {
-    const zestaw = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.zestaw ?? '';
-    return plik ? OBIEKTY_RYSOWANE[zestaw]?.[plik] : undefined;
+    const u = planszaPoId(this.stan.mapa).modul.USTAWIENIA;
+    return plik ? OBIEKTY_RYSOWANE[u?.obiekty ?? u?.zestaw ?? '']?.[plik] : undefined;
   }
 
   /** `USTAWIENIA.znajdzki` bieżącej planszy (patrz `UstawieniaPlanszy`). */

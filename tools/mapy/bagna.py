@@ -646,6 +646,16 @@ USTAWIENIA = {
     'nazwyZamkowWroga': ['Warownia na Grobli'],
     # Zestaw sprite'ów klimatu dla sceny (`public/mapa/bagno/`) — patrz STAN.md.
     'zestaw': 'bagno',
+    # Obiekty rysowane kodem z kompletu Polany (`tools/obiekty/`) — jeden styl
+    # obiektów w całej kampanii — i ich bryły jak w HoMM3.
+    'obiekty': 'polana',
+    'bryly': {
+        'wiatrak': [3, 1],
+        'oboz-treningowy': [3, 1],
+        'drzewo-wiedzy': [3, 1],
+        'kamienna-wieza': [3, 1],
+        'wieza-obserwacyjna': [1, 1],
+    },
     # Wyspa Księżyca odsłonięta od pierwszego dnia: gracz ma wiedzieć, DOKĄD
     # jedzie — zagadką jest droga i wódz, a nie szukanie igły w trzęsawisku.
     # Runda 11 (gracz): tylko sam cel, mały (Kamień i wódz), jak w Heroes.
@@ -766,6 +776,11 @@ BRZEG_WODY = {'szerokosc': 0.62, 'barwa': (186, 160, 112), 'linia': (52, 42, 28)
 #: Plac wokół zamków wolny od innych budowli (patrz silnik).
 ODSTEP_OD_ZAMKOW = 2
 
+#: Obiekty rysowane kodem (2026-10-11): pole nad murem wolne, budowle co
+#: najmniej 2 pola od innych obiektów — rysunki na trzy pola nachodziły na siebie.
+ODSTEP_NAD_BRYLA = True
+ODSTEP_BUDOWLI = 2
+
 #: Las w zwarte masy z polanami, pusty pas przy ramie pierwszego ekranu.
 SKUP_LAS = True
 RAMKA_STARTU = True
@@ -816,8 +831,9 @@ RZEZBA = {'pagorki': 0.9, 'czolo': 0.7}
 #: Runda 7: most nad Czarną Strugą w kadrze startu (`teren_efekty.mosty`).
 #: Pola mostu są w grze drogą, w tle maluje się pod nimi woda.
 MOSTY = [
-    {'plik': 'bagno/most.png', 'pola': [(MOST_WSCH[0], MOST_WSCH[1]), (MOST_WSCH[2], MOST_WSCH[3])],
-     'srodek': (MOST_WSCH[0] + 1.0, MOST_WSCH[1] + 0.62), 'szer': 3.3},
+    # Most rysowany kodem z kompletu Polany (`tools/obiekty/`), prosto od lewej do prawej.
+    {'plik': 'polana/most.png', 'pola': [(MOST_WSCH[0], MOST_WSCH[1]), (MOST_WSCH[2], MOST_WSCH[3])],
+     'srodek': (MOST_WSCH[0] + 1.0, MOST_WSCH[1] + 0.5), 'szer': 3.3},
 ]
 
 
