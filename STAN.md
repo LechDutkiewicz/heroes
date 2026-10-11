@@ -42,6 +42,12 @@ w HoMM3. HotA jest wzorcem PROPORCJI, osadzenia i czytelności — NIE stylu
   (sonda `ŹLE`, wcześniejszy problem balansu, nie z tej zmiany).
 - `probe-przygoda.mjs`: „po bitwie da się sterować" — `ŹLE` także przed tą
   zmianą. Do zbadania osobno.
+- **Góry z klocków scalane** (`src/data/klocki.ts`, `scalDrobneSkaly`,
+  `scalDrobneKlocki`; gracz: „kupka śnieżnych bloczków jak wypełniacz"):
+  skupisko skał do 12 pól i sąsiadujące klocki 1 × 1 / 2 × 1 na brzegach
+  pasm dostają jeden klocek góry na swój prostokąt (do 5 pól szerokości).
+  Przejezdność bez zmian — to tylko rysunek. Działa na wszystkich planszach
+  z klockami.
 - Narzędzia: zrzuty `node tools/zrzut-mapa.mjs --mapa <id> --caly --bok 2880`;
   serwer na 5200–5229 NIE przeładowuje plików — po regeneracji planszy
   restart. Wzorce HotA: `raw.githubusercontent.com/vcmi-mods/horn-of-the-abyss/vcmi-1.4/screenshots/0N.png`

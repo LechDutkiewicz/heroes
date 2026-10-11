@@ -104,5 +104,107 @@ export function ulozKlocki(teren: readonly (readonly Teren[])[], ziarno = 0): Kl
       wynik.push({ ...k, teren: t, x, y });
     }
   }
+  return scalDrobneSkaly(teren, wynik);
+}
+
+/**
+ * Małe skupisko skał (najwyżej `SKUPISKO_MAX` pól) ułożone z kilku drobnych
+ * klocków czytało się jak „kupka śnieżnych bloczków" — wypełniacz, nie
+ * kompozycja (zgłoszenie gracza, Twierdza). Takie skupisko dostaje JEDEN klocek
+ * góry na cały swój prostokąt: rysunek jest szerokości skupiska, a pola pod nim
+ * zostają tymi samymi polami skał, więc przejezdność się nie zmienia.
+ */
+const SKUPISKO_MAX = 12;
+function scalDrobneSkaly(teren: readonly (readonly Teren[])[], klocki: Klocek[]): Klocek[] {
+  const wys = teren.length;
+  const szer = teren[0]?.length ?? 0;
+  const skupisko = new Int32Array(wys * szer).fill(-1);
+  const pola: Array<Array<[number, number]>> = [];
+  for (let y = 0; y < wys; y++)
+    for (let x = 0; x < szer; x++) {
+      if (teren[y][x] !== 'skaly' || skupisko[y * szer + x] >= 0) continue;
+      const nr = pola.length;
+      const lista: Array<[number, number]> = [];
+      const stos: Array<[number, number]> = [[x, y]];
+      skupisko[y * szer + x] = nr;
+      while (stos.length) {
+        const [cx, cy] = stos.pop()!;
+        lista.push([cx, cy]);
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = cx + dx;
+            const ny = cy + dy;
+            if (nx < 0 || ny < 0 || nx >= szer || ny >= wys) continue;
+            if (teren[ny][nx] !== 'skaly' || skupisko[ny * szer + nx] >= 0) continue;
+            skupisko[ny * szer + nx] = nr;
+            stos.push([nx, ny]);
+          }
+      }
+      pola.push(lista);
+    }
+  const scalone = new Set<number>();
+  const nowe: Klocek[] = [];
+  pola.forEach((lista, nr) => {
+    if (lista.length > SKUPISKO_MAX) return;
+    const wSkupisku = klocki.filter((k) => k.teren === 'skaly' && skupisko[k.y * szer + k.x] === nr);
+    if (wSkupisku.length < 2) return;
+    const xs = lista.map(([x]) => x);
+    const ys = lista.map(([, y]) => y);
+    const x0 = Math.min(...xs);
+    const y0 = Math.min(...ys);
+    const sz = Math.max(...xs) - x0 + 1;
+    const gl = Math.max(...ys) - y0 + 1;
+    const rodzaj = sz >= 4 ? KLOCKI.skaly[0] : sz >= 2 ? KLOCKI.skaly[(x0 + y0) % 2 ? 2 : 1] : KLOCKI.skaly[3];
+    scalone.add(nr);
+    nowe.push({ ...rodzaj, szer: sz, glab: gl, teren: 'skaly', x: x0, y: y0 });
+  });
+  const zostale = [...klocki.filter((k) => !(k.teren === 'skaly' && scalone.has(skupisko[k.y * szer + k.x]))), ...nowe];
+  return scalDrobneKlocki(zostale);
+}
+
+/**
+ * To samo na brzegach dużych pasm: sąsiadujące drobne klocki skał (1 × 1,
+ * 2 × 1) łączą się w jeden klocek góry na swój prostokąt — inaczej skraj pasma
+ * to rządek osobnych kopczyków. Grupa szersza niż 5 pól dzieli się na kawałki.
+ */
+function scalDrobneKlocki(klocki: Klocek[]): Klocek[] {
+  const drobne = klocki.filter((k) => k.teren === 'skaly' && k.szer * k.glab <= 2);
+  const reszta = klocki.filter((k) => !drobne.includes(k));
+  const obok = (a: Klocek, b: Klocek) =>
+    a.x <= b.x + b.szer && b.x <= a.x + a.szer && a.y <= b.y + b.glab && b.y <= a.y + a.glab;
+  const odwiedzone = new Set<Klocek>();
+  const wynik: Klocek[] = [...reszta];
+  for (const k of drobne) {
+    if (odwiedzone.has(k)) continue;
+    const grupa: Klocek[] = [];
+    const stos = [k];
+    odwiedzone.add(k);
+    while (stos.length) {
+      const a = stos.pop()!;
+      grupa.push(a);
+      for (const b of drobne) if (!odwiedzone.has(b) && obok(a, b)) (odwiedzone.add(b), stos.push(b));
+    }
+    if (grupa.length < 2) {
+      wynik.push(...grupa);
+      continue;
+    }
+    // Kawałki po najwyżej 5 pól szerokości, od lewej.
+    grupa.sort((a, b) => a.x - b.x);
+    for (let i = 0; i < grupa.length; ) {
+      const x0 = grupa[i].x;
+      const kawalek: Klocek[] = [];
+      while (i < grupa.length && grupa[i].x + grupa[i].szer - x0 <= 5) kawalek.push(grupa[i++]);
+      if (kawalek.length === 0) kawalek.push(grupa[i++]);
+      if (kawalek.length === 1) {
+        wynik.push(kawalek[0]);
+        continue;
+      }
+      const y0 = Math.min(...kawalek.map((q) => q.y));
+      const sz = Math.max(...kawalek.map((q) => q.x + q.szer)) - x0;
+      const gl = Math.max(...kawalek.map((q) => q.y + q.glab)) - y0;
+      const rodzaj = sz >= 4 ? KLOCKI.skaly[0] : KLOCKI.skaly[(x0 + y0) % 2 ? 2 : 1];
+      wynik.push({ ...rodzaj, szer: sz, glab: gl, teren: 'skaly', x: x0, y: y0 });
+    }
+  }
   return wynik;
 }
