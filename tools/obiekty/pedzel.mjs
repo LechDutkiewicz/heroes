@@ -474,7 +474,7 @@ export function svgObiektu(szerPol, wysPol, tresc, { pad: padZadany, cien = 0.7,
   // Zapas po bokach i POD linią gruntu na cień kontaktowy i wydeptaną ziemię
   // (wychodzą trochę przed obiekt). Scena stawia płótno o `dol` niżej.
   const pad = padZadany ?? 0.2;
-  const dol = dolZadany ?? 0.22;
+  const dol = dolZadany ?? 0.12;
   // Grunt (placki ziemi) idzie pod spód i nie rzuca cienia.
   const grunt = (tresc.match(/<!--grunt-->[\s\S]*?<!--\/grunt-->/g) ?? []).join('');
   const reszta = tresc.replace(/<!--grunt-->[\s\S]*?<!--\/grunt-->/g, '');
@@ -489,9 +489,9 @@ export function svgObiektu(szerPol, wysPol, tresc, { pad: padZadany, cien = 0.7,
   const wszystkie = [...czesci, [H0, przod]];
   const zLinia = (m) => wszystkie.map(([g, t]) => `<g transform="${m(g)}">${t}</g>`).join('');
   // Cień kontaktowy: sylwetka zgnieciona do paska przy ziemi, lekko w prawo-dół.
-  const plask = (g) => `matrix(1.03 0 0 0.12 ${f(3 - szerPol * P * 0.015)} ${f(g * 0.88 + 5)})`;
+  const plask = (g) => `matrix(1.02 0 0 0.1 ${f(2 - szerPol * P * 0.01)} ${f(g * 0.9 - 1)})`;
   // Wydeptana ziemia: sylwetka zgnieciona i rozmyta, wychodzi przed obiekt.
-  const slad = (g) => `matrix(1.04 0 0 0.12 ${f(-szerPol * P * 0.02)} ${f(g * 0.88 + 9)})`;
+  const slad = (g) => `matrix(1.06 0 0 0.1 ${f(-szerPol * P * 0.03)} ${f(g * 0.9 + 2)})`;
   return {
     W,
     H,
@@ -500,12 +500,12 @@ export function svgObiektu(szerPol, wysPol, tresc, { pad: padZadany, cien = 0.7,
   <filter id="okluzja" x="-20%" y="-50%" width="140%" height="200%">
     <feFlood flood-color="#0d1806" flood-opacity="${cien}"/>
     <feComposite in2="SourceAlpha" operator="in"/>
-    <feGaussianBlur stdDeviation="4 2.4"/>
+    <feGaussianBlur stdDeviation="4 1.4"/>
   </filter>
   <filter id="slad" x="-20%" y="-80%" width="140%" height="260%">
-    <feFlood flood-color="#7a5a32" flood-opacity="0.55"/>
+    <feFlood flood-color="#7a5a32" flood-opacity="0.4"/>
     <feComposite in2="SourceAlpha" operator="in"/>
-    <feGaussianBlur stdDeviation="7 4"/>
+    <feGaussianBlur stdDeviation="7 2.5"/>
   </filter></defs>
   <g transform="translate(${dx},0)">${cien ? `<g filter="url(#slad)">${zLinia(slad)}</g>` : ''}${grunt}${cien ? `<g filter="url(#okluzja)">${zLinia(plask)}</g>` : ''}${reszta}</g></svg>`,
   };

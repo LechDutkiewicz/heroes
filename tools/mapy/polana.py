@@ -390,7 +390,9 @@ KADR = (3, 18, 24, 35)
 PIERWSZY_EKRAN_DOM = [
     ([(9, 27), (8, 27), (10, 27)], ('kopalnia', 'odlamek')),
     ([(12, 33), (11, 33), (13, 33)], ('kopalnia', 'jagoda')),
-    ([(7, 33), (8, 33), (7, 32)], ('budynek', 'wiatrak')),
+    # Turbina rząd niżej: rysunek miasteczka urósł (wyróżnia się jak zamek w H3)
+    # i łopaty zachodziły na jego mury.
+    ([(7, 34), (6, 34), (7, 33)], ('budynek', 'wiatrak')),
     ([(15, 33), (14, 34), (15, 32)], ('budynek', 'oboz-treningowy')),
     # Mapa świata w stylu Pokémon: automat i stos pokeballi odsunięte od farmy
     # — rysunek farmy od frontu sięga pole nad mur (zgłoszenie: „bardzo dużo

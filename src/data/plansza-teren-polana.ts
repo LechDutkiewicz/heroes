@@ -75,7 +75,7 @@ export const ROZSTAWIENIE: Array<{
 }> = [
   { x: 9, y: 27, rodzaj: 'kopalnia', strefa: 'dom', surowiec: 'odlamek' },
   { x: 12, y: 33, rodzaj: 'kopalnia', strefa: 'dom', surowiec: 'jagoda' },
-  { x: 7, y: 33, rodzaj: 'budynek', strefa: 'dom', budynek: 'wiatrak' },
+  { x: 7, y: 34, rodzaj: 'budynek', strefa: 'dom', budynek: 'wiatrak' },
   { x: 15, y: 33, rodzaj: 'budynek', strefa: 'dom', budynek: 'oboz-treningowy' },
   { x: 4, y: 29, rodzaj: 'budynek', strefa: 'dom', budynek: 'zrodlo' },
   { x: 5, y: 28, rodzaj: 'budynek', strefa: 'dom', budynek: 'ognisko' },

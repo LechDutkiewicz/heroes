@@ -90,91 +90,153 @@ function emblemat(cx, cy, r, rodzaj) {
 
 // ───────────────────────── miasteczka ─────────────────────────
 
-/** Miasteczko gracza: Centrum Pokémon pośrodku, domek i Poké Mart z tyłu. 3 × 2 bryły. */
-function miasteczko() {
-  const W = 4.2 * P;
-  const H = 3.4 * P;
-  const y = H - 3;
-  const cx = W / 2;
-  let s = '';
-  s += plac(cx, y - 4, 120, 22);
-  s += placek(cx, y - 50, 190, 56, { kolor: PAL.ziemia, krycie: 0.35 });
-  // tył: domek (zielony dach) i Poké Mart (niebieski dach)
-  const yb = y - 112;
-  s += naZiemi(yb, domek(cx - 176, yb, 70, 44, '#4f9a4a', 3));
-  let mart = domek(cx + 104, yb, 76, 46, '#3f78c8', 4);
-  mart += `<rect x="${f(cx + 120)}" y="${f(yb - 56)}" width="44" height="12" rx="3" fill="#3f78c8"/><rect x="${f(cx + 122)}" y="${f(yb - 54)}" width="40" height="8" rx="2" fill="#5a96e0"/><path d="M${f(cx + 134)} ${f(yb - 47)} v-6 l4 4 l4 -4 v6" stroke="#fff" stroke-width="1.8" fill="none"/>`;
-  s += naZiemi(yb, mart);
-  s += naZiemi(yb + 6, drzewo(cx - 96, yb + 6, 1.5, { ziarno: 7 }) + drzewo(cx + 74, yb + 4, 1.3, { ziarno: 8 }));
-  // Centrum Pokémon
-  const cw = 196;
-  const ch = 70;
-  const d = dom({ x: cx - cw / 2 - 12, y: y - 8, w: cw, h: ch, g: 50, dachH: 50, okap: 8, sciana: 'gladka', dach: 'pasy', kolorSciany: MUR, kolorDachu: '#d63c30', ziarno: 9 });
-  s += d.svg;
-  // czerwony pas pod oknami i szyld nad wejściem
-  const x0 = cx - cw / 2 - 12;
-  s += `<rect x="${f(x0)}" y="${f(y - 24)}" width="${cw}" height="9" fill="#d63c30"/><rect x="${f(x0)}" y="${f(y - 24)}" width="${cw}" height="2.5" fill="#f0786a"/>`;
-  for (const ox of [x0 + 10, x0 + 46, cx + 30, cx + 66]) s += szyba(ox, y - 68, 24, 30, { swiatlo: ox > cx });
-  s += drzwiSzklane(cx - 12, y - 8, 40, 42);
-  s += `<rect x="${f(cx - 46)}" y="${f(y - 68)}" width="68" height="14" rx="3" fill="#d63c30"/><rect x="${f(cx - 44)}" y="${f(y - 66)}" width="64" height="4" rx="2" fill="#f0786a"/>`;
-  s += `<circle cx="${f(cx - 12)}" cy="${f(y - 61)}" r="5" fill="#fff"/><path d="M${f(cx - 17)} ${f(y - 61)} h10" stroke="#d63c30" stroke-width="1.6"/><circle cx="${f(cx - 12)}" cy="${f(y - 61)}" r="1.8" fill="#d63c30"/>`;
-  // wielki pokeball na połaci dachu
-  s += kula(cx - 4, d.top - 24, 19);
-  s += lampa(cx - 72, y - 2) + lampa(cx + 52, y - 2);
-  s += klomb(cx - 112, y - 2, 34, 11) + klomb(cx + 104, y - 2, 34, 12);
-  s += krzaczek(cx - 178, y - 6, 1.3, { ziarno: 13 }) + krzaczek(cx + 176, y - 6, 1.3, { ziarno: 14 });
-  return svgObiektu(4.2, 3.4, s);
+/** Powiększa fragment rysunku wokół punktu podstawy (cx, y). */
+const skaluj = (svg, cx, y, k) => `<g transform="translate(${f(cx)},${f(y)}) scale(${k}) translate(${f(-cx)},${f(-y)})">${svg}</g>`;
+
+/** Żywopłot (niski, przycięty) od x0 do x1 na linii y. */
+function zywoplot(x0, x1, y, h = 14) {
+  let s = `<rect x="${f(x0)}" y="${f(y - h)}" width="${f(x1 - x0)}" height="${h}" rx="6" fill="${PAL.lisC}"/>`;
+  s += `<rect x="${f(x0 + 2)}" y="${f(y - h)}" width="${f(x1 - x0 - 4)}" height="${f(h * 0.5)}" rx="5" fill="${PAL.lis}"/>`;
+  for (let x = x0 + 6; x < x1 - 4; x += 11) s += `<circle cx="${f(x)}" cy="${f(y - h + 3)}" r="3.4" fill="${PAL.lisJ}" opacity="0.8"/>`;
+  return s;
 }
 
-/** Fort wroga: ognisty Gym — wielka sala z emblematem płomienia, kosze z ogniem. 3 × 2. */
-function gym() {
-  const W = 4.2 * P;
-  const H = 3.6 * P;
+/** Maszt z proporcem w barwie miasta. */
+function maszt(x, y, h, barwa) {
+  return `<rect x="${f(x - 1.6)}" y="${f(y - h)}" width="3.2" height="${h}" fill="#e8e8ec"/><rect x="${f(x)}" y="${f(y - h)}" width="1.6" height="${h}" fill="#9aa4ae"/>
+  <path d="M${f(x + 1.6)} ${f(y - h + 2)} q12 3 24 0 v13 q-12 3 -24 0 Z" fill="${barwa}"/><path d="M${f(x + 1.6)} ${f(y - h + 2)} q12 3 24 0" stroke="#fff" stroke-width="1.4" opacity="0.5" fill="none"/>
+  <circle cx="${f(x)}" cy="${f(y - h - 2)}" r="2.6" fill="${PAL.zloto}"/>`;
+}
+
+/** Wieża-punkt orientacyjny miasta: smukła, z daszkiem i znakiem na szczycie. */
+function wiezaMiasta(cx, y, w, h, { mur = MUR, dach = '#d63c30', znak = 'pokeball', z = 1 } = {}) {
+  const d = dom({ x: cx - w / 2, y, w, h, g: w * 0.7, dachH: w * 0.9, okap: 5, sciana: 'gladka', dach: 'pasy', kolorSciany: mur, kolorDachu: dach, ziarno: z });
+  let s = d.svg;
+  for (let i = 0; i < 3; i++) s += szyba(cx - 6, y - h + 16 + i * 30, 12, 16, { swiatlo: i === 2 });
+  // tarcza zegara / znak pod okapem
+  s += `<circle cx="${f(cx)}" cy="${f(y - h - 2)}" r="${f(w * 0.3)}" fill="#fff"/>`;
+  if (znak === 'pokeball') s += kula(cx, y - h - 2, w * 0.26);
+  else s += emblemat(cx, y - h - 2, w * 0.28, znak);
+  return s;
+}
+
+/**
+ * Miasteczko gracza: Centrum Pokémon pośrodku, za nim wieża z zegarem,
+ * Poké Mart i domy, żywopłot z bramą, plac z fontanną. Bryła 3 × 2 jak
+ * zamek w H3, ale rysunek jest wyraźnie większy od reszty obiektów
+ * (5 pól wszerz) — miasto ma górować nad mapą.
+ */
+function miasteczko() {
+  const W = 5.2 * P;
+  const H = 4.6 * P;
   const y = H - 3;
   const cx = W / 2;
   let s = '';
-  s += plac(cx, y - 4, 128, 22);
-  s += placek(cx, y - 50, 196, 58, { kolor: '#8a5a3a', krycie: 0.4 });
-  // za salą: kopuła areny (pomarańczowa, z pasami) — znak rozpoznawczy Gymu
-  const ky = y - 96;
+  s += plac(cx, y - 2, 140, 24);
+  s += placek(cx, y - 70, 250, 80, { kolor: PAL.ziemia, krycie: 0.32 });
+  // ── najdalej: wieża z zegarem i dwa wysokie domy — zwarta zabudowa
+  const y3 = y - 168;
+  let tyl = '';
+  tyl += skaluj(domek(cx - 190, y3 + 20, 70, 42, '#c2452a', 31), cx - 155, y3 + 20, 1.3);
+  tyl += skaluj(domek(cx + 118, y3 + 20, 70, 42, '#4f9a4a', 32), cx + 153, y3 + 20, 1.3);
+  tyl += wiezaMiasta(cx - 40, y3 + 10, 56, 200, { z: 33 });
+  s += naZiemi(y3 + 20, tyl);
+  // ── środek: Poké Mart i dom, drzewa po bokach
+  const y2 = y - 104;
+  s += naZiemi(y2, drzewo(cx - 240, y2 + 4, 1.8, { ziarno: 7 }) + drzewo(cx + 238, y2 + 2, 1.7, { ziarno: 8 }));
+  let mart = domek(cx - 190, y2, 90, 52, '#3f78c8', 4);
+  mart += `<rect x="${f(cx - 172)}" y="${f(y2 - 66)}" width="54" height="14" rx="3" fill="#3f78c8"/><rect x="${f(cx - 170)}" y="${f(y2 - 64)}" width="50" height="10" rx="2" fill="#5a96e0"/><path d="M${f(cx - 155)} ${f(y2 - 56)} v-7 l5 4 l5 -4 v7" stroke="#fff" stroke-width="2" fill="none"/>`;
+  s += naZiemi(y2, skaluj(mart, cx - 145, y2, 1.25));
+  s += naZiemi(y2, skaluj(domek(cx + 104, y2, 84, 48, '#e0a030', 5), cx + 146, y2, 1.25));
+  // ── przód: Centrum Pokémon
+  const cw = 236;
+  const ch = 84;
+  const x0 = cx - cw / 2 - 14;
+  const d = dom({ x: x0, y: y - 30, w: cw, h: ch, g: 56, dachH: 62, okap: 9, sciana: 'gladka', dach: 'pasy', kolorSciany: MUR, kolorDachu: '#d63c30', ziarno: 9 });
+  s += d.svg;
+  s += `<rect x="${f(x0)}" y="${f(y - 48)}" width="${cw}" height="10" fill="#d63c30"/><rect x="${f(x0)}" y="${f(y - 48)}" width="${cw}" height="3" fill="#f0786a"/>`;
+  for (const ox of [x0 + 10, x0 + 50, cx + 34, cx + 74]) s += szyba(ox, y - 104, 28, 36, { swiatlo: ox > cx });
+  s += drzwiSzklane(cx - 14, y - 30, 48, 50);
+  s += `<rect x="${f(cx - 54)}" y="${f(y - 108)}" width="80" height="16" rx="3" fill="#d63c30"/><rect x="${f(cx - 52)}" y="${f(y - 106)}" width="76" height="4" rx="2" fill="#f0786a"/><circle cx="${f(cx - 14)}" cy="${f(y - 100)}" r="5.5" fill="#fff"/><path d="M${f(cx - 19.5)} ${f(y - 100)} h11" stroke="#d63c30" stroke-width="1.6"/><circle cx="${f(cx - 14)}" cy="${f(y - 100)}" r="2" fill="#d63c30"/>`;
+  s += kula(cx - 6, d.top - 30, 25);
+  // schody i plac przed wejściem
+  s += `<rect x="${f(cx - 44)}" y="${f(y - 30)}" width="60" height="7" fill="#e4dac4"/><rect x="${f(cx - 50)}" y="${f(y - 23)}" width="72" height="7" fill="#d4c8ae"/>`;
+  // fontanna po lewej
+  const fx = cx - 118;
+  s += `<ellipse cx="${f(fx)}" cy="${f(y - 14)}" rx="30" ry="11" fill="#b8ad96"/><ellipse cx="${f(fx)}" cy="${f(y - 17)}" rx="26" ry="8.5" fill="#5aa9d6"/><ellipse cx="${f(fx - 6)}" cy="${f(y - 19)}" rx="12" ry="3" fill="#bdf0ff" opacity="0.7"/><rect x="${f(fx - 3)}" y="${f(y - 40)}" width="6" height="22" fill="#d8d0bd"/><path d="M${f(fx)} ${f(y - 40)} q-12 -2 -16 16 M${f(fx)} ${f(y - 40)} q12 -2 16 16" stroke="#bdf0ff" stroke-width="2.4" fill="none" opacity="0.85"/><circle cx="${f(fx)}" cy="${f(y - 42)}" r="5" fill="#bdf0ff" opacity="0.9"/>`;
+  // żywopłot z bramą (przerwa pośrodku), maszty z proporcami
+  s += zywoplot(cx - 250, cx - 60, y + 2) + zywoplot(cx + 46, cx + 250, y + 2);
+  s += maszt(cx - 70, y - 2, 70, '#3f78c8') + maszt(cx + 54, y - 2, 70, '#3f78c8');
+  s += lampa(cx + 100, y - 6) + lampa(cx - 160, y - 4);
+  s += klomb(cx + 150, y - 8, 40, 12);
+  return svgObiektu(5.2, 4.6, s);
+}
+
+/**
+ * Fort wroga: ognisty Gym — wielka sala z kopułą areny i emblematem płomienia,
+ * z tyłu dymiący wulkan, wokół domy z czerwonymi dachami, kosze z ogniem,
+ * murek z lawowego kamienia. Tej samej wielkości co miasteczko gracza.
+ */
+function gym() {
+  const W = 5.2 * P;
+  const H = 4.8 * P;
+  const y = H - 3;
+  const cx = W / 2;
+  let s = '';
+  s += plac(cx, y - 2, 140, 24);
+  s += placek(cx, y - 70, 250, 80, { kolor: '#8a5a3a', krycie: 0.4 });
+  // ── wulkan na horyzoncie
+  const vy = y - 200;
+  let wul = `<path d="M${f(cx - 200)} ${f(vy)} L${f(cx - 46)} ${f(vy - 200)} L${f(cx + 46)} ${f(vy - 200)} L${f(cx + 200)} ${f(vy)} Z" fill="#6e5a52"/>`;
+  wul += `<path d="M${f(cx + 10)} ${f(vy - 200)} L${f(cx + 46)} ${f(vy - 200)} L${f(cx + 200)} ${f(vy)} L${f(cx + 40)} ${f(vy)} Z" fill="#4a3c37"/>`;
+  wul += `<path d="M${f(cx - 46)} ${f(vy - 200)} L${f(cx - 120)} ${f(vy - 80)} L${f(cx - 90)} ${f(vy - 80)} Z" fill="#8c7a70" opacity="0.7"/>`;
+  wul += `<path d="M${f(cx - 46)} ${f(vy - 200)} Q${f(cx - 30)} ${f(vy - 150)} ${f(cx - 44)} ${f(vy - 110)} Q${f(cx - 20)} ${f(vy - 140)} ${f(cx - 6)} ${f(vy - 200)} Z" fill="#ff8a2a"/>`;
+  wul += `<ellipse cx="${f(cx)}" cy="${f(vy - 200)}" rx="46" ry="9" fill="#ff8a2a"/><ellipse cx="${f(cx)}" cy="${f(vy - 202)}" rx="36" ry="5" fill="#ffd34a"/>`;
+  wul += `<g opacity="0.7" filter="url(#cienMaly)"><circle cx="${f(cx - 8)}" cy="${f(vy - 222)}" r="16" fill="#8a8a90"/><circle cx="${f(cx + 16)}" cy="${f(vy - 240)}" r="20" fill="#9a9aa0"/><circle cx="${f(cx + 40)}" cy="${f(vy - 262)}" r="22" fill="#aaaab0"/></g>`;
+  s += naZiemi(vy, wul);
+  // ── domy z czerwonymi dachami
+  const y2 = y - 116;
+  s += naZiemi(y2, domek(cx - 230, y2, 78, 46, '#c2452a', 5) + domek(cx + 154, y2, 78, 46, '#c2452a', 6));
+  // ── kopuła areny za salą
+  const ky = y - 118;
   s += naZiemi(
     ky,
-    `<path d="M${f(cx - 96)} ${f(ky)} A96 92 0 0 1 ${f(cx + 96)} ${f(ky)} Z" fill="#e0703f"/>` +
-      `<path d="M${f(cx)} ${f(ky - 92)} A96 92 0 0 1 ${f(cx + 96)} ${f(ky)} L${f(cx + 30)} ${f(ky)} Z" fill="#b84a26"/>` +
-      [0.25, 0.5, 0.75].map((t) => `<path d="M${f(cx - 96 * Math.cos(t * Math.PI))} ${f(ky - 0)} Q${f(cx - 96 * Math.cos(t * Math.PI) * 0.7)} ${f(ky - 92 * 0.9)} ${f(cx)} ${f(ky - 92)}" stroke="#ffd34a" stroke-width="3" fill="none" opacity="0.8"/>`).join('') +
-      `<path d="M${f(cx - 70)} ${f(ky - 50)} Q${f(cx - 50)} ${f(ky - 80)} ${f(cx - 10)} ${f(ky - 88)}" stroke="#ffb88a" stroke-width="6" fill="none" opacity="0.6" stroke-linecap="round"/>` +
-      `<rect x="${f(cx - 5)}" y="${f(ky - 112)}" width="10" height="22" fill="#5a2a1c"/>` +
-      emblemat(cx, ky - 118, 12, 'plomien')
+    `<path d="M${f(cx - 118)} ${f(ky)} A118 108 0 0 1 ${f(cx + 118)} ${f(ky)} Z" fill="#e0703f"/>` +
+      `<path d="M${f(cx)} ${f(ky - 108)} A118 108 0 0 1 ${f(cx + 118)} ${f(ky)} L${f(cx + 36)} ${f(ky)} Z" fill="#b84a26"/>` +
+      [0.25, 0.5, 0.75].map((t) => `<path d="M${f(cx - 118 * Math.cos(t * Math.PI))} ${f(ky)} Q${f(cx - 118 * Math.cos(t * Math.PI) * 0.7)} ${f(ky - 108 * 0.9)} ${f(cx)} ${f(ky - 108)}" stroke="#ffd34a" stroke-width="3.4" fill="none" opacity="0.8"/>`).join('') +
+      `<path d="M${f(cx - 86)} ${f(ky - 58)} Q${f(cx - 62)} ${f(ky - 94)} ${f(cx - 14)} ${f(ky - 104)}" stroke="#ffb88a" stroke-width="7" fill="none" opacity="0.6" stroke-linecap="round"/>` +
+      `<rect x="${f(cx - 6)}" y="${f(ky - 134)}" width="12" height="28" fill="#5a2a1c"/>` +
+      emblemat(cx, ky - 142, 15, 'plomien')
   );
-  // dwa domki z czerwonymi dachami
-  const yb = y - 100;
-  s += naZiemi(yb, domek(cx - 184, yb, 66, 40, '#c2452a', 5, { okna: 1 }));
-  s += naZiemi(yb, domek(cx + 118, yb, 66, 40, '#c2452a', 6, { okna: 1 }));
-  // sala Gymu
-  const gw = 220;
-  const gh = 78;
-  const x0 = cx - gw / 2 - 12;
-  const d = dom({ x: x0, y: y - 8, w: gw, h: gh, g: 54, dachH: 46, okap: 9, sciana: 'gladka', dach: 'pasy', kolorSciany: '#efd9b6', kolorDachu: '#b8402a', ziarno: 21 });
+  // ── sala Gymu
+  const gw = 250;
+  const gh = 86;
+  const x0 = cx - gw / 2 - 14;
+  const d = dom({ x: x0, y: y - 30, w: gw, h: gh, g: 56, dachH: 50, okap: 9, sciana: 'gladka', dach: 'pasy', kolorSciany: '#efd9b6', kolorDachu: '#b8402a', ziarno: 21 });
   s += d.svg;
-  // ceglany cokół i pas
-  s += `<rect x="${f(x0)}" y="${f(y - 26)}" width="${gw}" height="18" fill="#9a4a32"/>`;
-  for (let i = 0; i < gw; i += 12) s += `<line x1="${f(x0 + i)}" y1="${f(y - 26)}" x2="${f(x0 + i)}" y2="${f(y - 8)}" stroke="#7a3422" stroke-width="1.2"/>`;
-  s += `<rect x="${f(x0)}" y="${f(y - 17)}" width="${gw}" height="1.4" fill="#7a3422"/>`;
-  // kolumny i brama
-  s += drzwiSzklane(cx - 12, y - 8, 46, 48, '#5a2a1c');
-  for (const ox of [cx - 48, cx + 22]) s += `<rect x="${f(ox)}" y="${f(y - 74)}" width="13" height="66" fill="#fff6e6"/><rect x="${f(ox + 8)}" y="${f(y - 74)}" width="5" height="66" fill="#000" opacity="0.15"/><rect x="${f(ox - 3)}" y="${f(y - 78)}" width="19" height="6" fill="#e6d4b4"/>`;
-  for (const ox of [x0 + 12, x0 + 44, cx + 50, cx + 82]) s += szyba(ox, y - 70, 20, 26, { swiatlo: true });
-  // emblemat płomienia nad wejściem (wysunięty szczyt)
-  s += emblemat(cx - 12, y - 92, 20, 'plomien');
-  s += `<rect x="${f(cx - 56)}" y="${f(y - 82)}" width="88" height="5" fill="#b8402a"/>`;
-  // kosze z ogniem
-  for (const dx of [-84, 64]) {
+  s += `<rect x="${f(x0)}" y="${f(y - 50)}" width="${gw}" height="20" fill="#9a4a32"/>`;
+  for (let i = 0; i < gw; i += 12) s += `<line x1="${f(x0 + i)}" y1="${f(y - 50)}" x2="${f(x0 + i)}" y2="${f(y - 30)}" stroke="#7a3422" stroke-width="1.2"/>`;
+  s += drzwiSzklane(cx - 14, y - 30, 52, 54, '#5a2a1c');
+  for (const ox of [cx - 54, cx + 26]) s += `<rect x="${f(ox)}" y="${f(y - 106)}" width="14" height="76" fill="#fff6e6"/><rect x="${f(ox + 9)}" y="${f(y - 106)}" width="5" height="76" fill="#000" opacity="0.15"/><rect x="${f(ox - 3)}" y="${f(y - 110)}" width="20" height="6" fill="#e6d4b4"/>`;
+  for (const ox of [x0 + 12, x0 + 48, cx + 56, cx + 92]) s += szyba(ox, y - 104, 22, 30, { swiatlo: true });
+  s += emblemat(cx - 14, y - 128, 22, 'plomien');
+  s += `<rect x="${f(cx - 66)}" y="${f(y - 116)}" width="104" height="6" fill="#b8402a"/>`;
+  // schody, murek z lawowego kamienia z bramą, kosze z ogniem
+  s += `<rect x="${f(cx - 46)}" y="${f(y - 30)}" width="64" height="7" fill="#e4d0b0"/><rect x="${f(cx - 52)}" y="${f(y - 23)}" width="76" height="7" fill="#d4bc98"/>`;
+  const murek = (a, b) => {
+    let o = `<rect x="${f(a)}" y="${f(y - 14)}" width="${f(b - a)}" height="16" fill="#5e5652"/><rect x="${f(a)}" y="${f(y - 14)}" width="${f(b - a)}" height="4" fill="#8c827c"/>`;
+    for (let x = a + 8; x < b; x += 16) o += `<line x1="${f(x)}" y1="${f(y - 10)}" x2="${f(x)}" y2="${f(y + 2)}" stroke="#3e3835" stroke-width="1.4"/>`;
+    return o;
+  };
+  s += murek(cx - 250, cx - 62) + murek(cx + 46, cx + 250);
+  for (const dx of [-96, 76, -210, 196]) {
     const fx = cx + dx;
-    s += `<circle cx="${f(fx)}" cy="${f(y - 34)}" r="14" fill="#ff8a2a" opacity="0.45" filter="url(#blask)"/>`;
-    s += `<rect x="${f(fx - 2)}" y="${f(y - 26)}" width="4" height="22" fill="#3a3230"/><path d="M${f(fx - 9)} ${f(y - 28)} h18 l-3 6 h-12 Z" fill="#4a4240"/><path d="M${f(fx - 7)} ${f(y - 28)} q0 -13 7 -17 q1 9 7 6 q0 7 -2 11 Z" fill="#ff8a2a"/><path d="M${f(fx - 3)} ${f(y - 28)} q1 -8 3 -11 q2 7 3 11 Z" fill="#ffd34a"/>`;
+    const fy = Math.abs(dx) > 150 ? y - 14 : y - 2;
+    s += `<circle cx="${f(fx)}" cy="${f(fy - 34)}" r="15" fill="#ff8a2a" opacity="0.45" filter="url(#blask)"/>`;
+    s += `<rect x="${f(fx - 2.5)}" y="${f(fy - 26)}" width="5" height="26" fill="#3a3230"/><path d="M${f(fx - 10)} ${f(fy - 28)} h20 l-3 6 h-14 Z" fill="#4a4240"/><path d="M${f(fx - 8)} ${f(fy - 28)} q0 -15 8 -19 q1 10 8 7 q0 8 -2 12 Z" fill="#ff8a2a"/><path d="M${f(fx - 3)} ${f(fy - 28)} q1 -9 3 -12 q2 8 3 12 Z" fill="#ffd34a"/>`;
   }
-  s += krzaczek(cx - 176, y - 6, 1.2, { ziarno: 22 }) + krzaczek(cx + 176, y - 6, 1.2, { ziarno: 23 });
-  return svgObiektu(4.2, 3.6, s);
+  s += maszt(cx - 74, y - 2, 74, '#d63c30') + maszt(cx + 56, y - 2, 74, '#d63c30');
+  return svgObiektu(5.2, 4.8, s);
 }
 
 // ───────────────────────── budowle ─────────────────────────
