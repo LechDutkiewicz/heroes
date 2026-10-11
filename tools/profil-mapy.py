@@ -27,8 +27,15 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 KORZEN = Path(__file__).resolve().parent.parent
-ZRODLO = KORZEN / 'src' / 'data' / 'plansza-teren.ts'
 WYJSCIE = KORZEN / 'tools' / 'wzorzec'
+
+#: Plansza z rejestru (`dwie-doliny`, `polana`, `bagna`, `twierdza`); bez
+#: argumentu — „Dwie Doliny", jak dawniej. Wynik ląduje w `nasza-<id>-…`
+#: (dla Dwóch Dolin bez przyrostka, żeby stare odwołania dalej działały).
+import sys
+MAPA = sys.argv[1] if len(sys.argv) > 1 else 'dwie-doliny'
+ZRODLO = KORZEN / 'src' / 'data' / ('plansza-teren.ts' if MAPA == 'dwie-doliny' else f'plansza-teren-{MAPA}.ts')
+PRZYROSTEK = '' if MAPA == 'dwie-doliny' else f'-{MAPA}'
 
 BARWY = {
     '.': (104, 152, 72),
@@ -198,8 +205,11 @@ def minimapa():
         cx, cy = x * SKALA + SKALA / 2, y * SKALA + SKALA / 2
         r = SKALA * 0.42
         d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=c, outline=(20, 20, 20))
-    for nazwa in ('zamek gracza', 'zamek wroga'):
-        x, y = punkty[nazwa]
+    # Białe kwadraty na WSZYSTKICH zamkach — Twierdza ma dwie twierdze wroga,
+    # a PUNKTY znają tylko jedną; krytyk nie widział drugiej na schemacie.
+    zamki = {tuple(punkty[n]) for n in ('zamek gracza', 'zamek wroga')}
+    zamki |= {(int(o['x']), int(o['y'])) for o in obiekty if o['rodzaj'] == 'zamek'}
+    for x, y in zamki:
         cx, cy = x * SKALA + SKALA / 2, y * SKALA + SKALA / 2
         r = SKALA * 1.1
         d.rectangle([cx - r, cy - r, cx + r, cy + r], fill=(255, 255, 255), outline=(0, 0, 0))
@@ -209,9 +219,9 @@ def minimapa():
 if __name__ == '__main__':
     WYJSCIE.mkdir(parents=True, exist_ok=True)
     p = profil()
-    (WYJSCIE / 'nasza-profil.json').write_text(
+    (WYJSCIE / f'nasza{PRZYROSTEK}-profil.json').write_text(
         json.dumps(p, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
     )
-    minimapa().save(WYJSCIE / 'nasza-minimapa.png')
+    minimapa().save(WYJSCIE / f'nasza{PRZYROSTEK}-minimapa.png')
     for k, v in p.items():
         print(f'{k}: {v}')
