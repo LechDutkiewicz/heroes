@@ -138,6 +138,12 @@ export interface UstawieniaPlanszy {
    */
   skalaBudowli?: number;
   /**
+   * Bryły budowli odwiedzanych na tej planszy (id z `BUDOWLE` → [szer, wys]
+   * w polach), zamiast tych z `BUDOWLE`. Polana: obiekty rysowane kodem
+   * (`tools/obiekty/`) zajmują tyle pól co ich odpowiedniki w HoMM3.
+   */
+  bryly?: Record<string, [number, number]>;
+  /**
    * Mnożnik wysokości rysunku zamków na tej planszy (bryła i przejezdność
    * bez zmian). Bagna, runda 9: „zamek wielkości chaty". Brak = 1.
    */

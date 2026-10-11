@@ -573,7 +573,14 @@ class Generator:
     PODSTAWOWE = ('jagoda', 'odlamek')
 
     def pola_bryly(self, rodzaj, co, pole):
-        rozmiar = self.BRYLY.get((rodzaj, co)) or self.BRYLY.get((rodzaj, None))
+        # Plansza może nadać budowlom własne bryły (`USTAWIENIA['bryly']`,
+        # w grze `UstawieniaPlanszy.bryly`) — muszą się zgadzać tu i tam.
+        wlasne = (getattr(self.k, 'USTAWIENIA', None) or {}).get('bryly', {})
+        rozmiar = (
+            (tuple(wlasne[co]) if rodzaj == 'budynek' and co in wlasne else None)
+            or self.BRYLY.get((rodzaj, co))
+            or self.BRYLY.get((rodzaj, None))
+        )
         if not rozmiar:
             return []
         szer, wys = rozmiar

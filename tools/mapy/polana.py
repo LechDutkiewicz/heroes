@@ -539,6 +539,16 @@ NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 USTAWIENIA = {
     # Mapa świata w stylu Pokémon: las i skały z klocków (`src/data/klocki.ts`).
     'klocki': 'trawa',
+    # Obiekty rysowane kodem (`tools/obiekty/`) zajmują tyle pól co ich
+    # odpowiedniki w HoMM3: wiatrak, obóz najemników, drzewo wiedzy i wieża
+    # Marletta po trzy pola nad wejściem, obserwatorium jedno.
+    'bryly': {
+        'wiatrak': [3, 1],
+        'oboz-treningowy': [3, 1],
+        'drzewo-wiedzy': [3, 1],
+        'kamienna-wieza': [3, 1],
+        'wieza-obserwacyjna': [1, 1],
+    },
     'wrog': 'obronca',
     'nazwyZamkowWroga': ['Stary Fort'],
     'budynkiWroga': ['ratusz1', 'siedlisko1'],

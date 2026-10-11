@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { pelnyPlecak, plecakBohatera, type Plecak } from '../data/przedmioty';
 import { kluczPortretuPanelu, spriteDoPortretow, wczytajPortrety } from '../visual/portrety';
 import { ZESTAWY_KLIMATU } from '../data/zestawy-klimatu';
+import { OBIEKTY_RYSOWANE } from '../data/obiekty-rysowane';
 import { NAZWY_KLOCKOW, ulozKlocki } from '../data/klocki';
 import { terenBitwy } from '../data/terenBitwy';
 import {
@@ -651,7 +652,12 @@ export class AdventureScene extends Phaser.Scene {
     const zestaw = planszaPoId(this.wczytajStan().mapa).modul.USTAWIENIA?.zestaw ?? '';
     const zestawDotad = (this.registry.get(KLUCZ_ZESTAWU) as string | undefined) ?? '';
     if (zestawDotad !== zestaw) {
-      for (const n of new Set([...(ZESTAWY_KLIMATU[zestawDotad] ?? []), ...(ZESTAWY_KLIMATU[zestaw] ?? [])])) {
+      for (const n of new Set([
+        ...(ZESTAWY_KLIMATU[zestawDotad] ?? []),
+        ...(ZESTAWY_KLIMATU[zestaw] ?? []),
+        ...Object.keys(OBIEKTY_RYSOWANE[zestawDotad] ?? {}),
+        ...Object.keys(OBIEKTY_RYSOWANE[zestaw] ?? {}),
+      ])) {
         this.textures.remove(`m-${n}`);
       }
       this.registry.set(KLUCZ_ZESTAWU, zestaw);
@@ -660,9 +666,12 @@ export class AdventureScene extends Phaser.Scene {
     // krzaki i stosy znajdźek — obiekty są wszędzie te same, nowe (rzut od
     // frontu), a stare zimowe i bagienne wersje były w baśniowym stylu.
     const zKlockami = !!planszaPoId(this.wczytajStan().mapa).modul.USTAWIENIA?.klocki;
-    const zKlimatu = new Set(
-      (ZESTAWY_KLIMATU[zestaw] ?? []).filter((n) => !zKlockami || n.startsWith('stos-') || n.startsWith('krzak'))
-    );
+    // Obiekty rysowane kodem (`tools/obiekty/`, `OBIEKTY_RYSOWANE`) też idą
+    // z katalogu zestawu, także na planszy z klockami.
+    const zKlimatu = new Set([
+      ...(ZESTAWY_KLIMATU[zestaw] ?? []).filter((n) => !zKlockami || n.startsWith('stos-') || n.startsWith('krzak')),
+      ...Object.keys(OBIEKTY_RYSOWANE[zestaw] ?? {}),
+    ]);
     this.load.image('plansza-0', `${tlo}plansza-0.jpg`);
     this.load.image('woda-maska', `${tlo}woda-maska.png`);
     this.load.image('woda-zmarszczki', `${b}mapa/woda-zmarszczki.png`);
@@ -2631,6 +2640,9 @@ export class AdventureScene extends Phaser.Scene {
     const bryla = brylaObiektu(o);
     if (o.rodzaj === 'budynek') {
       const b = budowlaPoId(o.budynek);
+      // Rysunek kodem ma płótno dokładnie tyle pól, ile zajmuje obiekt.
+      const rys = this.wysRysowanego(b?.plik);
+      if (rys) return { klucz: `m-${b?.plik}`, wys: KAFEL * rys };
       // `USTAWIENIA.skalaBudowli` (per plansza): Polana, runda 6 — „wiatrak
       // i wieża zajmują po kilka kafli". Brak ustawienia = dawne rozmiary.
       const skala = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaBudowli ?? 1;
@@ -2638,6 +2650,8 @@ export class AdventureScene extends Phaser.Scene {
     }
     if (o.rodzaj === 'zamek') {
       const klucz = kluczZamku(o);
+      const rys = this.wysRysowanego(klucz.slice(2));
+      if (rys) return { klucz, wys: KAFEL * rys };
       return {
         klucz,
         // `USTAWIENIA.skalaZamku` (per plansza; Bagna, runda 9: „zamek
@@ -2649,6 +2663,11 @@ export class AdventureScene extends Phaser.Scene {
           SKALA_RYSUNKU_ZAMKU[klucz] *
           (planszaPoId(this.stan.mapa).modul.USTAWIENIA?.skalaZamku ?? 1),
       };
+    }
+    if (o.rodzaj === 'kopalnia') {
+      const plik = o.surowiec === 'jagoda' ? 'sad' : `kopalnia-${o.surowiec ?? 'pokeball'}`;
+      const rys = this.wysRysowanego(plik);
+      if (rys) return { klucz: `m-${plik}`, wys: KAFEL * rys };
     }
     if (o.rodzaj === 'kopalnia')
       return {
@@ -2727,6 +2746,12 @@ export class AdventureScene extends Phaser.Scene {
       KAFEL *
       Math.min((zn.wys * mnoznik) / (p.widocznaWys ?? 1), (zn.szerMax * mnoznik) / ((p.widocznaSzer ?? 1) * proporcja))
     );
+  }
+
+  /** Wysokość (w polach) rysunku kodem z zestawu planszy — patrz `OBIEKTY_RYSOWANE`. */
+  private wysRysowanego(plik: string | undefined): number | undefined {
+    const zestaw = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.zestaw ?? '';
+    return plik ? OBIEKTY_RYSOWANE[zestaw]?.[plik] : undefined;
   }
 
   /** `USTAWIENIA.znajdzki` bieżącej planszy (patrz `UstawieniaPlanszy`). */
@@ -2918,7 +2943,9 @@ export class AdventureScene extends Phaser.Scene {
         kont.setData('flaga', f);
       }
 
-      if (bryla) this.zaroslaPrzyPodstawie(o, im, kont, spod);
+      // Rysunek kodem (`OBIEKTY_RYSOWANE`) ma własny grunt i cień rzucany od
+      // podstawy — pas tła położony na spód zakryłby jedno i drugie.
+      if (bryla && !this.wysRysowanego(klucz.slice(2))) this.zaroslaPrzyPodstawie(o, im, kont, spod);
       // `USTAWIENIA.osadzZnajdzki` (per plansza; Twierdza, runda 10: „zasoby
       // i stwory to płaskie naklejki bez osadzenia w podłożu"): stosy,
       // skrzynie i artefakty dostają tę samą nierówną krawędź gruntu
