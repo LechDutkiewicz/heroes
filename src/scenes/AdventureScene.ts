@@ -2697,6 +2697,10 @@ export class AdventureScene extends Phaser.Scene {
     // (`ZNAJDZKI_NA_MAPIE.wys`), przycięta szerokością — obok strażnika ma
     // być drobiazgiem przy gruncie, nie drugą figurą.
     const znajdzki = this.znajdzki();
+    if (o.rodzaj === 'skrzynia' || o.rodzaj === 'artefakt') {
+      const rys = this.wysRysowanego(o.rodzaj);
+      if (rys) return { klucz: `m-${o.rodzaj}`, wys: KAFEL * rys };
+    }
     if (o.rodzaj === 'skrzynia') return { klucz: 'm-skrzynia', wys: this.wysZnajdzki('m-skrzynia', 1.05) };
     if (o.rodzaj === 'artefakt') return { klucz: 'm-artefakt', wys: this.wysZnajdzki('m-artefakt') };
     if (o.rodzaj === 'potwor') {
@@ -2730,6 +2734,8 @@ export class AdventureScene extends Phaser.Scene {
     }
     const ikona = SUROWIEC_INFO[o.surowiec ?? 'pokeball'].ikona;
     const klucz = znajdzki && this.textures.exists(`m-stos-${ikona}`) ? `m-stos-${ikona}` : `m-${ikona}`;
+    const rys = this.wysRysowanego(klucz.slice(2));
+    if (rys) return { klucz, wys: KAFEL * rys };
     return { klucz, wys: this.wysZnajdzki(klucz) };
   }
 
@@ -2748,8 +2754,13 @@ export class AdventureScene extends Phaser.Scene {
     );
   }
 
-  /** Wysokość (w polach) rysunku kodem z zestawu planszy — patrz `OBIEKTY_RYSOWANE`. */
+  /** Wysokość płótna (w polach) rysunku kodem z zestawu planszy — patrz `OBIEKTY_RYSOWANE`. */
   private wysRysowanego(plik: string | undefined): number | undefined {
+    return this.rysowany(plik)?.[0];
+  }
+
+  /** [wysokość płótna, zapas pod linią gruntu] rysunku kodem albo nic. */
+  private rysowany(plik: string | undefined): readonly [number, number] | undefined {
     const zestaw = planszaPoId(this.stan.mapa).modul.USTAWIENIA?.zestaw ?? '';
     return plik ? OBIEKTY_RYSOWANE[zestaw]?.[plik] : undefined;
   }
@@ -2825,7 +2836,11 @@ export class AdventureScene extends Phaser.Scene {
             : planszaPoId(this.stan.mapa).modul.USTAWIENIA?.cienZnajdzek;
       // Stworek ma własny cień rzucony (`obrazyStworka`), dodawany niżej.
       const stworek = o.rodzaj === 'potwor' ? this.obrazyStworka(klucz, wys, this.barwaOkolicy(o.x, o.y)) : null;
-      if (!stworek)
+      // Rysunek kodem niesie własny cień i grunt, a płótno sięga `dol` pól
+      // poniżej linii gruntu — stawiamy je o tyle niżej i bez cienia sceny.
+      const rysowany = this.rysowany(klucz.slice(2));
+      const zapasPod = rysowany ? rysowany[1] * KAFEL : 0;
+      if (!stworek && !rysowany)
         kont.add(
           this.cienKontaktowy(
             klucz,
@@ -2880,7 +2895,7 @@ export class AdventureScene extends Phaser.Scene {
         // dalej z pliku (`klucz`) — wymiary są te same.
         const znajdzka = o.rodzaj === 'surowiec' || o.rodzaj === 'skrzynia' || o.rodzaj === 'artefakt';
         const kluczRys = znajdzka ? this.teksturaZnajdzkiNaMape(klucz, przyStrazniku(o, klucz)) : klucz;
-        im = this.add.image(0, bryla ? -KAFEL * 0.5 : KAFEL * 0.46, kluczRys).setOrigin(0.5, 1);
+        im = this.add.image(0, (bryla ? -KAFEL * 0.5 : KAFEL * 0.46) + zapasPod, kluczRys).setOrigin(0.5, 1);
         im.setScale(wys / im.height);
         // Obrys obiektów gry (`USTAWIENIA.obrysObiektow`, per plansza) — Bagna,
         // runda 6: „obiekty interaktywne zlewają się z dekoracją". Łup ma obrys
@@ -2936,7 +2951,10 @@ export class AdventureScene extends Phaser.Scene {
         f.setVisible(!!o.wlasciciel || o.rodzaj === 'zamek');
         const podstawa = bryla ? -KAFEL * 0.5 : KAFEL * 0.46;
         const szerRys = wys * (im.width / Math.max(1, im.height));
-        f.setPosition(szerRys * 0.16, podstawa - wys * 0.6);
+        // Rysunek kodem ma zapas na cień po bokach i pod spodem — flaga idzie
+        // od rzeczywistej bryły: pole na prawo od środka, ¾ wysokości.
+        if (rysowany) f.setPosition(KAFEL * 0.9, podstawa - (wys - zapasPod) * 0.72);
+        else f.setPosition(szerRys * 0.16, podstawa - wys * 0.6);
         f.setData('faza', (o.x * 3 + o.y) % KLATKI_PROPORCA);
         this.flagiBudowli.push(f);
         kont.add(f);
@@ -2945,7 +2963,7 @@ export class AdventureScene extends Phaser.Scene {
 
       // Rysunek kodem (`OBIEKTY_RYSOWANE`) ma własny grunt i cień rzucany od
       // podstawy — pas tła położony na spód zakryłby jedno i drugie.
-      if (bryla && !this.wysRysowanego(klucz.slice(2))) this.zaroslaPrzyPodstawie(o, im, kont, spod);
+      if (bryla && !rysowany) this.zaroslaPrzyPodstawie(o, im, kont, spod);
       // `USTAWIENIA.osadzZnajdzki` (per plansza; Twierdza, runda 10: „zasoby
       // i stwory to płaskie naklejki bez osadzenia w podłożu"): stosy,
       // skrzynie i artefakty dostają tę samą nierówną krawędź gruntu

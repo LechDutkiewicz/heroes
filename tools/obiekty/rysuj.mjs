@@ -37,18 +37,19 @@ for (const nazwa of wybrane) {
 const wpisy = Object.entries(OBIEKTY)
   .filter(([, d]) => !d.tlo)
   .map(([n, d]) => {
-    const { H } = d.rysuj();
-    return `  '${n}': ${Math.round((H / P) * 1000) / 1000},`;
+    const { H, dol } = d.rysuj();
+    return `  '${n}': [${Math.round((H / P) * 1000) / 1000}, ${dol}],`;
   })
   .join('\n');
 await writeFile(
   'src/data/obiekty-rysowane.ts',
   `// Generowany przez tools/obiekty/rysuj.mjs — nie edytować ręcznie.
 // Obiekty mapy rysowane kodem (bez OpenAI): zestaw klimatu → nazwa sprite'u
-// \`m-<nazwa>\` → wysokość rysunku w polach. Plansza z tym zestawem wczytuje
-// \`public/mapa/<zestaw>/<nazwa>.png\` zamiast starego rysunku i stawia go
-// w tej wysokości (płótno ma dokładnie tyle pól, ile zajmuje obiekt).
-export const OBIEKTY_RYSOWANE: Record<string, Record<string, number>> = {
+// \`m-<nazwa>\` → [wysokość płótna, zapas pod linią gruntu] w polach. Plansza
+// z tym zestawem wczytuje \`public/mapa/<zestaw>/<nazwa>.png\` zamiast starego
+// rysunku, stawia go w tej wysokości i o zapas niżej (cień i wydeptana ziemia
+// wychodzą przed obiekt).
+export const OBIEKTY_RYSOWANE: Record<string, Record<string, [number, number]>> = {
   '${ZESTAW}': {
 ${wpisy}
   },

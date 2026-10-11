@@ -770,8 +770,8 @@ function woz() {
 // ───────────────────────────── znajdźki ─────────────────────────────
 
 function stosPokeball() {
-  const W = 1 * P;
-  const H = 0.8 * P;
+  const W = 1.35 * P;
+  const H = 1.08 * P;
   const y = H - 4;
   const cx = W / 2;
   let s = placek(cx, y - 6, 36, 9, { kolor: PAL.ziemia, krycie: 0.45 });
@@ -788,12 +788,13 @@ function stosPokeball() {
   ];
   for (const [dx, dy, r] of kule) s += kula(cx + dx, y + dy, r);
   s += trawka(cx - 36, y) + trawka(cx + 38, y, 0.8);
-  return svgObiektu(1, 0.8, s);
+  s = `<g transform="translate(${f(cx)},${f(y)}) scale(1.35) translate(${f(-cx)},${f(-y)})">${s}</g>`;
+  return svgObiektu(1.35, 1.08, s);
 }
 
 function stosJagody() {
-  const W = 1 * P;
-  const H = 0.8 * P;
+  const W = 1.35 * P;
+  const H = 1.08 * P;
   const y = H - 4;
   const cx = W / 2;
   let s = placek(cx, y - 6, 36, 9, { kolor: PAL.ziemia, krycie: 0.45 });
@@ -812,12 +813,13 @@ function stosJagody() {
   s += `<ellipse cx="${f(cx)}" cy="${f(y - 34)}" rx="28" ry="5" fill="none" stroke="${PAL.strzechaJ}" stroke-width="3"/>`;
   s += jagoda(cx + 34, y - 6, 5.2, BARWY_JAGOD[1]) + jagoda(cx - 33, y - 5, 5.2, BARWY_JAGOD[0]) + jagoda(cx - 26, y - 3, 4.8, BARWY_JAGOD[2]);
   s += `<path d="M${f(cx + 8)} ${f(y - 46)} q8 -8 14 -2 q-7 4 -14 2" fill="${PAL.lis}"/>`;
-  return svgObiektu(1, 0.8, s);
+  s = `<g transform="translate(${f(cx)},${f(y)}) scale(1.35) translate(${f(-cx)},${f(-y)})">${s}</g>`;
+  return svgObiektu(1.35, 1.08, s);
 }
 
 function stosKamienie() {
-  const W = 1 * P;
-  const H = 0.8 * P;
+  const W = 1.35 * P;
+  const H = 1.08 * P;
   const y = H - 4;
   const cx = W / 2;
   let s = placek(cx, y - 6, 36, 9, { kolor: PAL.ziemia, krycie: 0.45 });
@@ -832,12 +834,13 @@ function stosKamienie() {
   for (const [x, yy, r, i] of kam) {
     s += kamyk(x, yy, r, BARWY_KAMIENI[i]);
   }
-  return svgObiektu(1, 0.8, s);
+  s = `<g transform="translate(${f(cx)},${f(y)}) scale(1.35) translate(${f(-cx)},${f(-y)})">${s}</g>`;
+  return svgObiektu(1.35, 1.08, s);
 }
 
 function stosOdlamki() {
-  const W = 1 * P;
-  const H = 0.9 * P;
+  const W = 1.35 * P;
+  const H = 1.22 * P;
   const y = H - 4;
   const cx = W / 2;
   let s = placek(cx, y - 6, 36, 9, { kolor: PAL.ziemia, krycie: 0.45 });
@@ -845,12 +848,13 @@ function stosOdlamki() {
   s += `<ellipse cx="${f(cx)}" cy="${f(y - 26)}" rx="30" ry="26" fill="${PAL.fiolet}" opacity="0.35" filter="url(#blask)"/>`;
   s += glaz(cx, y - 1, 56, 20, { ziarno: 171 });
   s += krysztaly(cx, y - 10, 1.35, { ziarno: 172 });
-  return svgObiektu(1, 0.9, s);
+  s = `<g transform="translate(${f(cx)},${f(y)}) scale(1.35) translate(${f(-cx)},${f(-y)})">${s}</g>`;
+  return svgObiektu(1.35, 1.22, s);
 }
 
 function skrzynia() {
-  const W = 1 * P;
-  const H = 0.8 * P;
+  const W = 1.35 * P;
+  const H = 1.08 * P;
   const y = H - 4;
   const cx = W / 2;
   let s = placek(cx, y - 6, 36, 9, { kolor: PAL.ziemia, krycie: 0.45 });
@@ -893,12 +897,13 @@ function skrzynia() {
   }
   s += `<path d="M${f(x - 1)} ${f(wy)} H${f(x + w + 1)}" stroke="${PAL.zlotoC}" stroke-width="3.5"/>`;
   s += `<rect x="${f(cx - 10)}" y="${f(wy - 3)}" width="10" height="11" rx="1.5" fill="${PAL.zloto}" stroke="${PAL.zlotoC}" stroke-width="1.4"/><circle cx="${f(cx - 5)}" cy="${f(wy + 2)}" r="1.6" fill="#2a1a08"/>`;
-  return svgObiektu(1, 0.8, s);
+  s = `<g transform="translate(${f(cx)},${f(y)}) scale(1.35) translate(${f(-cx)},${f(-y)})">${s}</g>`;
+  return svgObiektu(1.35, 1.08, s);
 }
 
 function artefakt() {
-  const W = 1 * P;
-  const H = 1.0 * P;
+  const W = 1.35 * P;
+  const H = 1.35 * P;
   const y = H - 4;
   const cx = W / 2;
   let s = placek(cx, y - 6, 36, 9, { kolor: PAL.ziemia, krycie: 0.45 });
@@ -921,7 +926,8 @@ function artefakt() {
   s += `<polygon points="${pts([g[0], g[1], [cx, y - 44], g[9]])}" fill="#fff3b0"/>`;
   s += `<polygon points="${pts([g[4], g[5], g[6], [cx, y - 44]])}" fill="${PAL.zlotoC}" opacity="0.6"/>`;
   s += `<circle cx="${f(cx)}" cy="${f(y - 44)}" r="4.5" fill="${PAL.czerwien}"/><circle cx="${f(cx - 1.4)}" cy="${f(y - 45.4)}" r="1.5" fill="#fff"/>`;
-  return svgObiektu(1, 1.0, s);
+  s = `<g transform="translate(${f(cx)},${f(y)}) scale(1.35) translate(${f(-cx)},${f(-y)})">${s}</g>`;
+  return svgObiektu(1.35, 1.35, s);
 }
 
 export const OBIEKTY2 = {
@@ -1010,7 +1016,7 @@ function most() {
   const tyl = porecz(0.96, PAL.drewnoC, PAL.drewno);
   const przod = porecz(0.04, PAL.drewno, PAL.drewnoJ);
   // tylna poręcz musi być pod deskami? nie — stoi na tylnej krawędzi, więc nad nimi, ale przed przednią
-  return svgObiektu(W / P, H / P, s + tyl + przod, { pad: 0, cien: 0 });
+  return svgObiektu(W / P, H / P, s + tyl + przod, { pad: 0, cien: 0, dol: 0 });
 }
 
 OBIEKTY2.most = { rysuj: most, tlo: true };
