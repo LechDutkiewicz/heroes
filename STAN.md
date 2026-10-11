@@ -23,7 +23,7 @@ w `KampaniaScene`): jeden stworek albo „nikogo", jeden przedmiot albo
 (symulacja, stary zapis) `domyslneZabranie` — najsilniejszy stworek
 i najsilniejszy noszony artefakt. Reszta drużyny to nowa trójka Boru
 z planszy — bez gatunku startera (Pyroko), bo starter jest tylko
-w pierwszej misji (uwaga użytkownika); jedyny starter dalej to zabrany — na poziomie `Misja.poziomStartowy` (12/16/30, zamiast dawnego
+w pierwszej misji (uwaga użytkownika); jedyny starter dalej to zabrany. Trójka jest na poziomie `Misja.poziomStartowy` (12/16/30, zamiast dawnego
 `poziomDruzyny` 14/24/35, który podciągał wszystkich). Zabrany NIE jest
 podciągany; gdy plansza daje stworka z jego linii, zostaje wyższy poziom,
 bez dolewania doświadczenia. Bohater zachowuje statystyki, doświadczenie,
