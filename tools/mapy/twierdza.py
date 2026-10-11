@@ -121,6 +121,11 @@ POD_OBIEKTY = '.,sj'
 ZASYP_ODCIETE = True
 ODSTEP_OD_ZAMKOW = 2
 
+#: Obiekty rysowane kodem (2026-10-11): pole nad murem wolne, budowle co
+#: najmniej 2 pola od innych obiektów — rysunki na trzy pola nachodziły na siebie.
+ODSTEP_NAD_BRYLA = True
+ODSTEP_BUDOWLI = 2
+
 
 #: Przesunięcia ziaren tundry i dolin twierdz (patrz `rozstaw`).
 TUNDRA_ZIARNO = 60
@@ -537,6 +542,16 @@ USTAWIENIA = {
     'nazwyZamkowWroga': ['Lodowa Twierdza', 'Srebrna Strażnica'],
     # Zestaw sprite'ów klimatu dla sceny (`public/mapa/zima/`) — patrz STAN.md.
     'zestaw': 'zima',
+    # Obiekty rysowane kodem z kompletu Polany (`tools/obiekty/`) — jeden styl
+    # obiektów w całej kampanii — i ich bryły jak w HoMM3.
+    'obiekty': 'polana',
+    'bryly': {
+        'wiatrak': [3, 1],
+        'oboz-treningowy': [3, 1],
+        'drzewo-wiedzy': [3, 1],
+        'kamienna-wieza': [3, 1],
+        'wieza-obserwacyjna': [1, 1],
+    },
     'garnizonWroga': {'poziomy': [0, 1, 2, 3], 'tygodnie': 1},
     # Twierdze bez fortu: przyrost bez premii o połowę. Z fortem armia wroga
     # rosła szybciej, niż jakikolwiek gracz zdążyłby dojść do pierwszej z nich.
