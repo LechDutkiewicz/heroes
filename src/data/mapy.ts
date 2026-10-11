@@ -138,6 +138,24 @@ export interface UstawieniaPlanszy {
    */
   skalaBudowli?: number;
   /**
+   * Bryły budowli odwiedzanych na tej planszy (id z `BUDOWLE` → [szer, wys]
+   * w polach), zamiast tych z `BUDOWLE`. Polana: obiekty rysowane kodem
+   * (`tools/obiekty/`) zajmują tyle pól co ich odpowiedniki w HoMM3.
+   */
+  /**
+   * Z którego zestawu brać obiekty rysowane kodem (`OBIEKTY_RYSOWANE`,
+   * `public/mapa/<obiekty>/`). Brak = `zestaw`. Bagna i Twierdza biorą
+   * komplet Polany — jeden styl obiektów w całej kampanii.
+   */
+  obiekty?: string;
+  bryly?: Record<string, [number, number]>;
+  /**
+   * Bryły konkretnych budowli („x,y" wejścia → [szer, wys]) — dla planszy
+   * z zamrożonym rozstawieniem (Dwie Doliny) generator daje bryłę tylko tym,
+   * którym nie odetnie dojścia do innych obiektów. Ma pierwszeństwo przed `bryly`.
+   */
+  brylyPol?: Record<string, [number, number]>;
+  /**
    * Mnożnik wysokości rysunku zamków na tej planszy (bryła i przejezdność
    * bez zmian). Bagna, runda 9: „zamek wielkości chaty". Brak = 1.
    */

@@ -331,6 +331,9 @@ export function planszaPrzygody(mapaId?: string, opcje: OpcjeStartu = {}): StanM
           rodzaj: 'budynek',
           budynek: wpis.budynek,
           nazwa: b.nazwa,
+          // Bryła z ustawień planszy (`USTAWIENIA.bryly`) — rysunek tej planszy
+          // zajmuje tyle pól co obiekt w HoMM3.
+          ...((b2) => (b2 ? { bryla: b2 } : {}))(ust.brylyPol?.[`${wpis.x},${wpis.y}`] ?? ust.bryly?.[wpis.budynek ?? '']),
           ...zawartoscBudowli(wpis.budynek ?? '', wpis.strefa, losuj),
         });
       }

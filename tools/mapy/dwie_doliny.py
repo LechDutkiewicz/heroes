@@ -203,12 +203,53 @@ USTAWIENIA = {
     # Krzaki i stosy znajdźek z zestawu Polany (ta sama łąka).
     'zestaw': 'polana',
     'znajdzki': 0.68,
+    # Obiekty rysowane kodem (`tools/obiekty/`) zajmują tyle pól co ich
+    # odpowiedniki w HoMM3 — jak na Polanie.
+    'bryly': {
+        'wiatrak': [3, 1],
+        'oboz-treningowy': [3, 1],
+        'drzewo-wiedzy': [3, 1],
+        'kamienna-wieza': [3, 1],
+        'wieza-obserwacyjna': [1, 1],
+    },
     'dzienNatarcia': 40,
     'garnizonGracza': {'poziomy': [0, 1, 2], 'tygodnie': 5},
 }
 
+#: Rozstawienie z bryłami (2026-10-11, prośba gracza: „budynki na siebie
+#: nachodzą, a pustynia na wschodzie jest pusta"). Plansza przestała być
+#: zamrożona — bryły liczy generator (`USTAWIENIA['bryly']`), pole nad murem
+#: zostaje wolne jak na Polanie, budowle stoją co najmniej 2 pola od innych
+#: obiektów, a obiekty stają też na ziemi jałowej (pustynia na wschodzie)
+#: i śniegu (północ) — wcześniej tylko na trawie i piasku.
+ODSTEP_NAD_BRYLA = True
+ODSTEP_BUDOWLI = 2
+POD_OBIEKTY = '.,jsb'
+
 GRANICA_POLUDNIOWA = GRZBIETY[1][1][1]   # 46 — ostatni wiersz rdzenia południowego
 GRANICA_POLNOCNA = GRZBIETY[0][1][0]     # 21 — pierwszy wiersz rdzenia północnego
+
+
+def popraw_teren(g, mapa):
+    """Wjazdy do zamkniętych kieszeni: wschodnia pustynia i zachodnie łąki.
+
+    Pas lasu i skał odcinał ją od reszty planszy — wyglądała na ziemię do
+    zagospodarowania, a była zamkniętą kieszenią bez jednego obiektu
+    (zgłoszenie gracza, 2026-10-11). Przecinka w lesie przy grzbiecie
+    północnym i druga niżej robią z niej kawałek pasa spornego.
+    """
+    # Druga runda (2026-10-11): dwie zamknięte kieszenie łąki przy zachodniej
+    # krawędzi — w pasie spornym i w dolinie gracza — też dostają przecinki.
+    for x0, x1, y0, y1, na in (
+        (58, 63, 25, 27, 'j'),
+        (59, 63, 39, 41, '.'),
+        (7, 11, 28, 30, '.'),
+        (7, 10, 49, 50, '.'),
+    ):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                if mapa[y][x] == 'T':
+                    mapa[y][x] = na
 
 
 def strefa(x, y):
@@ -278,7 +319,7 @@ def rozstaw(g):
     # wzorcowe mają wyraźny garb obiektów w trzecim i czwartym pasie odległości
     # od startu (Hatchet Axe and Saw: 28/60/49/108/81), a nasza pierwsza wersja
     # miała rozkład płaski: 30/82/47/43/33.
-    g.dodaj(22, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
+    g.dodaj(16, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
     kopalnie_srodek = []
     for co in ['odlamek', 'kamien', 'pokeball', 'odlamek', 'kamien', 'jagoda', 'pokeball', 'odlamek']:
         kopalnie_srodek += g.dodaj(1, 'pogranicze', (0, 999), lambda p, co=co: ('kopalnia', co))
@@ -287,7 +328,7 @@ def rozstaw(g):
         [p for p, co in zip(kopalnie_srodek, ['odlamek', 'kamien', 'pokeball', 'odlamek', 'kamien', 'jagoda', 'pokeball', 'odlamek']) if co in ('kamien', 'pokeball')],
         'sredni',
     )
-    g.dodaj(12, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
+    g.dodaj(9, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
     g.dodaj(5, 'pogranicze', (0, 999), lambda p: ('artefakt', None))
     g.dodaj(4, 'pogranicze', (0, 999), lambda p: ('potwor', 'sredni'))
 
@@ -295,7 +336,7 @@ def rozstaw(g):
     g.skarb_w_kieszeni('pogranicze', 'sredni', 4, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'kamien'), ('artefakt', None)]))
     g.skarb_w_kieszeni('pogranicze', 'silny', 4, lambda p: rng.choice([('artefakt', None), ('skrzynia', None)]))
     g.skarb_w_kieszeni('pogranicze', 'silny', 4, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'pokeball')]))
-    g.budowle(26, 'pogranicze', [
+    g.budowle(16, 'pogranicze', [
         'arena', 'wieza-obserwacyjna', 'kamienna-wieza', 'ranczo', 'gniazdo',
         'wiatrak', 'ognisko', 'chatka', 'woz', 'drzewo-wiedzy', 'zrodlo',
         'oboz-treningowy',
@@ -353,6 +394,35 @@ def rozstaw(g):
     g.strzez(kraniec_kopalnie, 'wodz')
     g.dodaj(3, 'wroga', daleko, lambda p: ('surowiec', rng.choice(['kamien', 'pokeball'])))
     g.budowle(6, 'wroga', ['osrodek-ewolucji', 'arena', 'kamienna-wieza', 'drzewo-wiedzy', 'zrodlo', 'gniazdo'], daleko)
+
+    # --- PUSTE KRAŃCE (zgłoszenie gracza, 2026-10-11) ----------------------
+    # Zachodnie łąki (po otwarciu kieszeni) i południowo-wschodni piasek doliny
+    # stały puste: pierwsze były odcięte, drugi leży dalej niż 40 kroków od
+    # startu, a tyle wynosi zasięg większości obiektów doliny. Dokładamy
+    # rzeczy NA KOŃCU, żeby nie przestawiać kolejności losowań wyżej.
+    def w_obszarze(ktora, x0, x1, y0, y1):
+        return [p for p in g.wolne_pola(ktora, (0, 999), 2) if x0 <= p[0] <= x1 and y0 <= p[1] <= y1]
+
+    def obsadz(ktora, obszar, wpisy):
+        for wpis in wpisy:
+            kandydaci = w_obszarze(ktora, *obszar)
+            if kandydaci:
+                g.dodaj(1, ktora, (0, 999), lambda p, wpis=wpis: wpis, kandydaci=kandydaci)
+
+    obsadz('pogranicze', (0, 9, 23, 40), [
+        ('budynek', 'ranczo'), ('surowiec', 'jagoda'), ('skrzynia', None), ('kopalnia', 'odlamek'),
+        ('budynek', 'gniazdo'), ('surowiec', 'kamien'), ('artefakt', None), ('budynek', 'zrodlo'),
+    ])
+    obsadz('dom', (0, 9, 47, 57), [
+        ('budynek', 'chatka'), ('surowiec', 'pokeball'), ('skrzynia', None), ('budynek', 'ognisko'),
+        ('surowiec', 'jagoda'),
+    ])
+    obsadz('dom', (54, 71, 47, 71), [
+        ('budynek', 'arena'), ('kopalnia', 'kamien'), ('surowiec', 'odlamek'), ('skrzynia', None),
+        ('budynek', 'wieza-obserwacyjna'), ('surowiec', 'pokeball'), ('budynek', 'kamienna-wieza'),
+        ('skrzynia', None), ('artefakt', None), ('budynek', 'gniazdo'), ('surowiec', 'kamien'),
+        ('budynek', 'woz'),
+    ])
 
 
 def sprawdzenia(g):

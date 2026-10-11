@@ -75,7 +75,7 @@ export const ROZSTAWIENIE: Array<{
 }> = [
   { x: 9, y: 27, rodzaj: 'kopalnia', strefa: 'dom', surowiec: 'odlamek' },
   { x: 12, y: 33, rodzaj: 'kopalnia', strefa: 'dom', surowiec: 'jagoda' },
-  { x: 7, y: 33, rodzaj: 'budynek', strefa: 'dom', budynek: 'wiatrak' },
+  { x: 7, y: 34, rodzaj: 'budynek', strefa: 'dom', budynek: 'wiatrak' },
   { x: 15, y: 33, rodzaj: 'budynek', strefa: 'dom', budynek: 'oboz-treningowy' },
   { x: 4, y: 29, rodzaj: 'budynek', strefa: 'dom', budynek: 'zrodlo' },
   { x: 5, y: 28, rodzaj: 'budynek', strefa: 'dom', budynek: 'ognisko' },
@@ -96,19 +96,19 @@ export const ROZSTAWIENIE: Array<{
   { x: 10, y: 14, rodzaj: 'budynek', strefa: 'dom', budynek: 'ognisko' },
   { x: 5, y: 11, rodzaj: 'budynek', strefa: 'dom', budynek: 'drzewo-wiedzy' },
   { x: 13, y: 5, rodzaj: 'budynek', strefa: 'dom', budynek: 'zrodlo' },
-  { x: 7, y: 10, rodzaj: 'budynek', strefa: 'dom', budynek: 'chatka' },
-  { x: 6, y: 12, rodzaj: 'budynek', strefa: 'dom', budynek: 'gniazdo' },
-  { x: 11, y: 14, rodzaj: 'budynek', strefa: 'dom', budynek: 'woz' },
-  { x: 6, y: 15, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'pokeball' },
-  { x: 17, y: 12, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'jagoda' },
-  { x: 7, y: 12, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'odlamek' },
-  { x: 17, y: 9, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'jagoda' },
-  { x: 15, y: 11, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'odlamek' },
+  { x: 14, y: 11, rodzaj: 'budynek', strefa: 'dom', budynek: 'chatka' },
+  { x: 11, y: 13, rodzaj: 'budynek', strefa: 'dom', budynek: 'gniazdo' },
+  { x: 11, y: 15, rodzaj: 'budynek', strefa: 'dom', budynek: 'woz' },
+  { x: 13, y: 14, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'pokeball' },
+  { x: 14, y: 7, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'pokeball' },
+  { x: 13, y: 12, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'odlamek' },
+  { x: 14, y: 4, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'pokeball' },
+  { x: 8, y: 8, rodzaj: 'surowiec', strefa: 'dom', surowiec: 'jagoda' },
+  { x: 16, y: 8, rodzaj: 'skrzynia', strefa: 'dom' },
   { x: 10, y: 3, rodzaj: 'skrzynia', strefa: 'dom' },
-  { x: 11, y: 8, rodzaj: 'skrzynia', strefa: 'dom' },
-  { x: 11, y: 3, rodzaj: 'artefakt', strefa: 'dom' },
-  { x: 11, y: 4, rodzaj: 'potwor', strefa: 'dom', sila: 'slaby' },
-  { x: 17, y: 7, rodzaj: 'potwor', strefa: 'dom', sila: 'slaby' },
+  { x: 16, y: 10, rodzaj: 'artefakt', strefa: 'dom' },
+  { x: 15, y: 9, rodzaj: 'potwor', strefa: 'dom', sila: 'slaby' },
+  { x: 16, y: 14, rodzaj: 'potwor', strefa: 'dom', sila: 'slaby' },
   { x: 16, y: 25, rodzaj: 'potwor', strefa: 'pogranicze', sila: 'slaby' },
   { x: 21, y: 8, rodzaj: 'potwor', strefa: 'pogranicze', sila: 'sredni' },
   { x: 19, y: 30, rodzaj: 'kopalnia', strefa: 'pogranicze', surowiec: 'kamien' },
@@ -136,28 +136,48 @@ export const ROZSTAWIENIE: Array<{
   { x: 33, y: 4, rodzaj: 'potwor', strefa: 'pogranicze', sila: 'sredni' },
   { x: 27, y: 27, rodzaj: 'potwor', strefa: 'pogranicze', sila: 'slaby' },
   { x: 20, y: 15, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'wieza-obserwacyjna' },
-  { x: 29, y: 23, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'gniazdo' },
+  { x: 25, y: 24, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'gniazdo' },
   { x: 30, y: 4, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'chatka' },
   { x: 34, y: 4, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'woz' },
-  { x: 25, y: 24, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'arena' },
-  { x: 28, y: 24, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'ognisko' },
-  { x: 32, y: 22, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'ranczo' },
-  { x: 35, y: 3, rodzaj: 'surowiec', strefa: 'pogranicze', surowiec: 'kamien' },
-  { x: 29, y: 1, rodzaj: 'skrzynia', strefa: 'pogranicze' },
-  { x: 22, y: 14, rodzaj: 'kopalnia', strefa: 'wroga', surowiec: 'pokeball' },
-  { x: 21, y: 15, rodzaj: 'potwor', strefa: 'pogranicze', sila: 'sredni' },
-  { x: 33, y: 9, rodzaj: 'skrzynia', strefa: 'wroga' },
-  { x: 26, y: 6, rodzaj: 'skrzynia', strefa: 'wroga' },
-  { x: 32, y: 9, rodzaj: 'potwor', strefa: 'wroga', sila: 'sredni' },
-  { x: 25, y: 7, rodzaj: 'potwor', strefa: 'wroga', sila: 'sredni' },
-  { x: 25, y: 15, rodzaj: 'surowiec', strefa: 'wroga', surowiec: 'pokeball' },
-  { x: 31, y: 18, rodzaj: 'surowiec', strefa: 'wroga', surowiec: 'kamien' },
-  { x: 34, y: 11, rodzaj: 'budynek', strefa: 'wroga', budynek: 'kamienna-wieza' },
+  { x: 33, y: 3, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'arena' },
+  { x: 32, y: 3, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'ognisko' },
+  { x: 28, y: 26, rodzaj: 'budynek', strefa: 'pogranicze', budynek: 'ranczo' },
+  { x: 25, y: 7, rodzaj: 'kopalnia', strefa: 'wroga', surowiec: 'pokeball' },
+  { x: 26, y: 8, rodzaj: 'potwor', strefa: 'wroga', sila: 'sredni' },
+  { x: 24, y: 12, rodzaj: 'skrzynia', strefa: 'wroga' },
+  { x: 26, y: 11, rodzaj: 'skrzynia', strefa: 'wroga' },
+  { x: 23, y: 13, rodzaj: 'potwor', strefa: 'wroga', sila: 'sredni' },
+  { x: 26, y: 12, rodzaj: 'potwor', strefa: 'wroga', sila: 'sredni' },
+  { x: 23, y: 11, rodzaj: 'surowiec', strefa: 'wroga', surowiec: 'pokeball' },
+  { x: 25, y: 11, rodzaj: 'surowiec', strefa: 'wroga', surowiec: 'pokeball' },
+  { x: 33, y: 15, rodzaj: 'budynek', strefa: 'wroga', budynek: 'kamienna-wieza' },
 ];
 
 /** Ustawienia misji na tej planszy — patrz `UstawieniaPlanszy` w `src/data/mapy.ts`. */
 export const USTAWIENIA = {
   "klocki": "trawa",
+  "bryly": {
+    "wiatrak": [
+      3,
+      1
+    ],
+    "oboz-treningowy": [
+      3,
+      1
+    ],
+    "drzewo-wiedzy": [
+      3,
+      1
+    ],
+    "kamienna-wieza": [
+      3,
+      1
+    ],
+    "wieza-obserwacyjna": [
+      1,
+      1
+    ]
+  },
   "wrog": "obronca",
   "nazwyZamkowWroga": [
     "Stary Fort"

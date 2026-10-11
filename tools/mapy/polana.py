@@ -390,7 +390,9 @@ KADR = (3, 18, 24, 35)
 PIERWSZY_EKRAN_DOM = [
     ([(9, 27), (8, 27), (10, 27)], ('kopalnia', 'odlamek')),
     ([(12, 33), (11, 33), (13, 33)], ('kopalnia', 'jagoda')),
-    ([(7, 33), (8, 33), (7, 32)], ('budynek', 'wiatrak')),
+    # Turbina rząd niżej: rysunek miasteczka urósł (wyróżnia się jak zamek w H3)
+    # i łopaty zachodziły na jego mury.
+    ([(7, 34), (6, 34), (7, 33)], ('budynek', 'wiatrak')),
     ([(15, 33), (14, 34), (15, 32)], ('budynek', 'oboz-treningowy')),
     # Mapa świata w stylu Pokémon: automat i stos pokeballi odsunięte od farmy
     # — rysunek farmy od frontu sięga pole nad mur (zgłoszenie: „bardzo dużo
@@ -539,6 +541,16 @@ NAGLOWEK = '''// PLIK GENEROWANY — nie poprawiaj ręcznie.
 USTAWIENIA = {
     # Mapa świata w stylu Pokémon: las i skały z klocków (`src/data/klocki.ts`).
     'klocki': 'trawa',
+    # Obiekty rysowane kodem (`tools/obiekty/`) zajmują tyle pól co ich
+    # odpowiedniki w HoMM3: wiatrak, obóz najemników, drzewo wiedzy i wieża
+    # Marletta po trzy pola nad wejściem, obserwatorium jedno.
+    'bryly': {
+        'wiatrak': [3, 1],
+        'oboz-treningowy': [3, 1],
+        'drzewo-wiedzy': [3, 1],
+        'kamienna-wieza': [3, 1],
+        'wieza-obserwacyjna': [1, 1],
+    },
     'wrog': 'obronca',
     'nazwyZamkowWroga': ['Stary Fort'],
     'budynkiWroga': ['ratusz1', 'siedlisko1'],
@@ -684,5 +696,5 @@ NAKLEJKI = [
 #: przycięty do sylwetki w `public/mapa/polana/most.png`. Pomost biegnie lekko
 #: pod górę w prawo — w poprzek rzeki, która w tym miejscu płynie skosem.
 MOSTY = [
-    {'plik': 'polana/most.png', 'pola': [(MOST[0], MOST[1]), (MOST[2], MOST[3])], 'srodek': (15.1, 25.72), 'szer': 3.2},
+    {'plik': 'polana/most.png', 'pola': [(MOST[0], MOST[1]), (MOST[2], MOST[3])], 'srodek': (15.1, 25.6), 'szer': 3.2},
 ]

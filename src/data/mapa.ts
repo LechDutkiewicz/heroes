@@ -515,6 +515,12 @@ export interface Obiekt {
    */
   treningi?: number;
   /**
+   * Bryła tego konkretnego obiektu (szerokość × wysokość w polach), gdy
+   * plansza nadaje inną niż `BUDOWLE` (`USTAWIENIA.bryly`). Ma pierwszeństwo
+   * w `brylaObiektu`.
+   */
+  bryla?: [number, number];
+  /**
    * Budowla odwiedzana: identyfikator z `BUDOWLE`. Wszystkie czternaście
    * siedzi pod jednym rodzajem obiektu i różni się właśnie tym polem.
    */
@@ -993,6 +999,7 @@ export const BRYLA: Partial<Record<RodzajObiektu, [number, number]>> = {
  * Wielkość siedzi więc przy budowli, a nie przy rodzaju.
  */
 export function brylaObiektu(o: Obiekt): [number, number] | undefined {
+  if (o.bryla) return o.bryla;
   if (o.rodzaj === 'budynek') return budowlaPoId(o.budynek)?.bryla;
   return BRYLA[o.rodzaj];
 }

@@ -2,6 +2,58 @@
 
 Ostatnia aktualizacja: 2026-09-27 (trener zamiast armii: stworek = postać z poziomem, 4 na polu bitwy, trening i Centrum Pokemon).
 
+## Obiekty mapy rysowane kodem (2026-10-11, PR #50)
+
+**Prośba:** przerysować obiekty planszy bez OpenAI, spójnie, z bryłami jak
+w HoMM3. HotA jest wzorcem PROPORCJI, osadzenia i czytelności — NIE stylu
+(gracz: „wyszło średniowieczne fantasy, a ma być świat Pokémon").
+
+- `tools/obiekty/` — jeden pędzel (`pedzel.mjs`: paleta, światło z lewej góry,
+  faktury, `dom()` w rzucie 3/4, cień kontaktowy liczony z sylwetki i placek
+  wydeptanej ziemi), obiekty w `pokemon.mjs` (miasteczko z Centrum Pokémon,
+  ognisty Gym z wulkanem, turbina, fabryka pokeballi, laboratorium, automat,
+  kemping, boisko, stadion, kamper, stodoła, plecak, prosty most),
+  `doliny.mjs` (stacja kolejki, ośrodek ewolucji, strażnice-bramki,
+  kioski klucznika, namiot jasnowidza), `obiekty.mjs`/`obiekty2.mjs`
+  (kopalnie, sad, gniazdo, domek na drzewie, wieża, dojo, stosy, artefakt).
+  `zamki.mjs` to stara średniowieczna wersja — nadpisana, zostaje w historii.
+- `node tools/obiekty/rysuj.mjs [nazwa…]` → `public/mapa/polana/<nazwa>.png`
+  i `src/data/obiekty-rysowane.ts` ([wysokość płótna, zapas pod gruntem]
+  w polach). Płótno = tyle pól, ile obiekt zajmuje; scena stawia je o zapas niżej.
+- Scena: `USTAWIENIA.obiekty` (brak = `zestaw`) mówi, z którego kompletu brać
+  rysunki — Bagna i Twierdza biorą komplet `polana`. Rysunek kodem nie dostaje
+  cienia sceny ani pasa tła na spód (zakrywały cień).
+- **Długie cienie rzucane usunięte** — drzewa i góry ich nie mają; każdy
+  obiekt ma ten sam krótki cień kontaktowy przyklejony do podstawy.
+- **Warstwy:** `ulozPoGlebi()` sortuje cały świat po głębi (też po każdym
+  kroku bohatera i ruchu rywala) — obiekty leżały na koronach drzew z niższego rzędu.
+- **Bryły jak w H3:** `USTAWIENIA.bryly` (wiatrak, obóz, laboratorium, dojo
+  3 × 1 nad wejściem, wieża 1 × 1), czytane też przez generator; plansze
+  mają `ODSTEP_NAD_BRYLA` i `ODSTEP_BUDOWLI = 2` (`budowle()` w silniku).
+  `brylyPol` + `BRYLY_W_ROZSTAWIENIU = False` — wariant dla planszy
+  zamrożonej (nieużywany po przestawieniu Dwóch Dolin).
+- **Dwie Doliny przestawione** (gracz: tłok i puste krańce): obiekty też na
+  `j s b`, mniej rzeczy w pasie spornym, przecinki do zamkniętych kieszeni
+  (`popraw_teren`: pustynia na wschodzie, łąki na zachodzie), dobudowane
+  krańce na końcu `rozstaw` (nie przestawia losowań wyżej). Zamkniętych pól
+  44 zamiast 325. Bagna i Twierdza przestawione z bryłami i odstępami.
+- Symulacje (`tools/symulacja-misji.ts`) dają ten sam wynik przed i po:
+  misja 2 — autopilot nie wygrywa w 60 dni; misja 3 — przegrana dnia 57
+  (sonda `ŹLE`, wcześniejszy problem balansu, nie z tej zmiany).
+- `probe-przygoda.mjs`: „po bitwie da się sterować" — `ŹLE` także przed tą
+  zmianą. Do zbadania osobno.
+- **Góry z klocków scalane** (`src/data/klocki.ts`, `scalDrobneSkaly`,
+  `scalDrobneKlocki`; gracz: „kupka śnieżnych bloczków jak wypełniacz"):
+  skupisko skał do 12 pól i sąsiadujące klocki 1 × 1 / 2 × 1 na brzegach
+  pasm dostają jeden klocek góry na swój prostokąt (do 5 pól szerokości).
+  Przejezdność bez zmian — to tylko rysunek. Działa na wszystkich planszach
+  z klockami.
+- Narzędzia: zrzuty `node tools/zrzut-mapa.mjs --mapa <id> --caly --bok 2880`;
+  serwer na 5200–5229 NIE przeładowuje plików — po regeneracji planszy
+  restart. Wzorce HotA: `raw.githubusercontent.com/vcmi-mods/horn-of-the-abyss/vcmi-1.4/screenshots/0N.png`
+  (lista w `vcmi/vcmi-mods-repository/develop/vcmi-1.6.json`); acidcave.net
+  i fandom są za proxy.
+
 ## Mapa przygody jak w HotA + bez łapania w bitwie (2026-10-09)
 
 **Uwagi użytkownika.** Osada gracza dużo mniejsza od sali wroga; zdobyte
