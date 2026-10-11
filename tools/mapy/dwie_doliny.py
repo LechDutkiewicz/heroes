@@ -231,14 +231,21 @@ GRANICA_POLNOCNA = GRZBIETY[0][1][0]     # 21 — pierwszy wiersz rdzenia półn
 
 
 def popraw_teren(g, mapa):
-    """Dwa wjazdy na wschodnią pustynię pasa spornego.
+    """Wjazdy do zamkniętych kieszeni: wschodnia pustynia i zachodnie łąki.
 
     Pas lasu i skał odcinał ją od reszty planszy — wyglądała na ziemię do
     zagospodarowania, a była zamkniętą kieszenią bez jednego obiektu
     (zgłoszenie gracza, 2026-10-11). Przecinka w lesie przy grzbiecie
     północnym i druga niżej robią z niej kawałek pasa spornego.
     """
-    for x0, x1, y0, y1, na in ((58, 63, 25, 27, 'j'), (59, 63, 39, 41, '.')):
+    # Druga runda (2026-10-11): dwie zamknięte kieszenie łąki przy zachodniej
+    # krawędzi — w pasie spornym i w dolinie gracza — też dostają przecinki.
+    for x0, x1, y0, y1, na in (
+        (58, 63, 25, 27, 'j'),
+        (59, 63, 39, 41, '.'),
+        (7, 11, 28, 30, '.'),
+        (7, 10, 49, 50, '.'),
+    ):
         for y in range(y0, y1 + 1):
             for x in range(x0, x1 + 1):
                 if mapa[y][x] == 'T':
@@ -387,6 +394,35 @@ def rozstaw(g):
     g.strzez(kraniec_kopalnie, 'wodz')
     g.dodaj(3, 'wroga', daleko, lambda p: ('surowiec', rng.choice(['kamien', 'pokeball'])))
     g.budowle(6, 'wroga', ['osrodek-ewolucji', 'arena', 'kamienna-wieza', 'drzewo-wiedzy', 'zrodlo', 'gniazdo'], daleko)
+
+    # --- PUSTE KRAŃCE (zgłoszenie gracza, 2026-10-11) ----------------------
+    # Zachodnie łąki (po otwarciu kieszeni) i południowo-wschodni piasek doliny
+    # stały puste: pierwsze były odcięte, drugi leży dalej niż 40 kroków od
+    # startu, a tyle wynosi zasięg większości obiektów doliny. Dokładamy
+    # rzeczy NA KOŃCU, żeby nie przestawiać kolejności losowań wyżej.
+    def w_obszarze(ktora, x0, x1, y0, y1):
+        return [p for p in g.wolne_pola(ktora, (0, 999), 2) if x0 <= p[0] <= x1 and y0 <= p[1] <= y1]
+
+    def obsadz(ktora, obszar, wpisy):
+        for wpis in wpisy:
+            kandydaci = w_obszarze(ktora, *obszar)
+            if kandydaci:
+                g.dodaj(1, ktora, (0, 999), lambda p, wpis=wpis: wpis, kandydaci=kandydaci)
+
+    obsadz('pogranicze', (0, 9, 23, 40), [
+        ('budynek', 'ranczo'), ('surowiec', 'jagoda'), ('skrzynia', None), ('kopalnia', 'odlamek'),
+        ('budynek', 'gniazdo'), ('surowiec', 'kamien'), ('artefakt', None), ('budynek', 'zrodlo'),
+    ])
+    obsadz('dom', (0, 9, 47, 57), [
+        ('budynek', 'chatka'), ('surowiec', 'pokeball'), ('skrzynia', None), ('budynek', 'ognisko'),
+        ('surowiec', 'jagoda'),
+    ])
+    obsadz('dom', (54, 71, 47, 71), [
+        ('budynek', 'arena'), ('kopalnia', 'kamien'), ('surowiec', 'odlamek'), ('skrzynia', None),
+        ('budynek', 'wieza-obserwacyjna'), ('surowiec', 'pokeball'), ('budynek', 'kamienna-wieza'),
+        ('skrzynia', None), ('artefakt', None), ('budynek', 'gniazdo'), ('surowiec', 'kamien'),
+        ('budynek', 'woz'),
+    ])
 
 
 def sprawdzenia(g):
