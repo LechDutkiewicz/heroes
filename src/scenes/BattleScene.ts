@@ -5,6 +5,7 @@ import {
   fullHp,
   stackAtk,
   typeMatchup,
+  wZrywie,
   type UnitDef,
 } from '../data/units';
 import { ALL_SPRITES, FACTIONS, factionById, type Faction } from '../data/factions';
@@ -1414,7 +1415,8 @@ export class BattleScene extends Phaser.Scene {
     // to samo mówi barwa pasa z nazwą, ta sama co plakietka pod stworkiem.
     this.headMeta.setText(
       (unit.def.poziom !== undefined ? napisPoziomu(unit.def.poziom) : `ranga ${unit.def.tier}`) +
-        (unit.defending ? ' · w obronie' : '')
+        (unit.defending ? ' · w obronie' : '') +
+        (wZrywie(unit.def, unit) ? ' · ZRYW ×1,5' : unit.def.zryw ? ' · zryw przy 1/3 HP' : '')
     );
 
     // Każdy wiersz ma WŁASNY znak. Wcześniej miecz obsługiwał „Atak", „Zasięg"

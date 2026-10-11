@@ -63,11 +63,13 @@ export interface Misja {
   /** Zdanie pokazywane po wygranej, przed przejściem dalej. */
   epilog: string;
   /**
-   * Najniższy poziom stworka w drużynie na starcie misji (etap 6). Drużyna
-   * przechodzi z misji do misji, a strojenie zakłada drużynę o mniej więcej
-   * tym poziomie — słabsza (stary zapis, drużyna startowa) jest podciągana.
+   * Poziom NOWEJ drużyny, którą trener dostaje na tej planszy (cztery
+   * najniższe stworki Boru). Z poprzedniej misji przechodzi najwyżej jeden
+   * wybrany stworek (`ZabranyZMisji`) — z takim poziomem, z jakim skończył;
+   * misja już go nie podciąga (uwagi z rozgrywki: „jak skończyłem na zbyt
+   * niskim poziomie, to trudno — moja strata").
    */
-  poziomDruzyny?: number;
+  poziomStartowy?: number;
   /** O tyle poziomów silniejsi są obrońcy zamków i drużyna rywala (etap 6). */
   wrogPoziomy?: number;
   /**
@@ -84,7 +86,7 @@ export interface Misja {
   /**
    * Mnożnik SIŁY przeciwników na planszy (poziom p → (p + 10) · k − 10):
    * dzikich stad, załóg i garnizonów zamków wroga i drużyny rywala. Plansze
-   * strojono pod drużynę na progu `poziomDruzyny` 6 / 11 / 16; k to stosunek
+   * strojono pod drużynę na progu 6 / 11 / 16; k to stosunek
    * siły nowego progu do starego, więc trudność względem drużyny zostaje
    * (uwagi z rozgrywki: drużyna 30+ na stada z poziomu 2–14).
    */
@@ -155,7 +157,7 @@ export const KAMPANIA: Kampania = {
       bonusy: [
         { typ: 'surowiec', surowiec: 'jagoda', ile: 10, opis: '10 jagód' },
         { typ: 'statystyka', atak: 1, opis: '+1 do zapału' },
-        { typ: 'oddzial', tier: 2, poziom: 10, opis: 'Nowy stworek: Aquino, poziom 10' },
+        { typ: 'oddzial', tier: 2, poziom: 14, opis: 'Nowy stworek: Aquino, poziom 14' },
       ],
       naMapie: { x: 0.348, y: 0.459 },
       limitPoziomu: 24,
@@ -163,7 +165,7 @@ export const KAMPANIA: Kampania = {
       limitBohatera: 12,
       poziomDzikich: 8,
       epilog: 'Grota Księżycowa padła. W jej skarbcu była tylko mapa bagien i jedno słowo: Kamień.',
-      poziomDruzyny: 14,
+      poziomStartowy: 12,
     },
     {
       id: 'bagienny-szlak',
@@ -187,7 +189,7 @@ export const KAMPANIA: Kampania = {
       limitBohatera: 16,
       poziomDzikich: 14,
       epilog: 'Księżycowy Kamień świeci w twojej dłoni. Bez niego twierdze Groty są słabsze niż kiedykolwiek.',
-      poziomDruzyny: 24,
+      poziomStartowy: 16,
     },
     {
       id: 'oblezenie-groty',
@@ -201,7 +203,7 @@ export const KAMPANIA: Kampania = {
       zwyciestwo: { typ: 'zamki' },
       porazka: [{ typ: 'utrata' }],
       bonusy: [
-        { typ: 'oddzial', tier: 3, poziom: 12, opis: 'Nowy stworek: Torrenar, poziom 12' },
+        { typ: 'oddzial', tier: 3, poziom: 32, opis: 'Nowy stworek: Torrenar, poziom 32' },
         { typ: 'artefakt', artefakt: 'tarcza', opis: 'Ochraniacze' },
         { typ: 'surowiec', surowiec: 'pokeball', ile: 60, opis: '60 pokeballi' },
       ],
@@ -211,7 +213,7 @@ export const KAMPANIA: Kampania = {
       limitBohatera: 20,
       poziomDzikich: 20,
       epilog: 'Ostatnia twierdza Groty otwiera bramy. Srebrne płaszcze składają broń.',
-      poziomDruzyny: 35,
+      poziomStartowy: 30,
       wrogPoziomy: 2,
     },
   ],
@@ -241,8 +243,10 @@ export interface PostepKampanii {
   wyniki: Record<string, WynikMisji>;
   /** Wybrany bonus (indeks 0–2) dla misji, która się teraz toczy. */
   bonus?: number;
-  /** Bohater zabrany z ostatniej wygranej misji. */
+  /** Bohater zabrany z ostatniej wygranej misji (wszystkie artefakty — wybór przy starcie). */
   bohater?: BohaterPrzenoszony;
+  /** Co trener zabrał do toczącej się misji — wybór sprzed startu, powtarzany przy „spróbuj jeszcze raz". */
+  zabiera?: ZabranyZMisji;
   /**
    * Drużyna z ostatniej wygranej misji — te same stworki, z poziomem,
    * doświadczeniem i ewolucją. Brak (stary zapis, pierwsza misja) = drużyna
@@ -251,6 +255,17 @@ export interface PostepKampanii {
   druzyna?: Oddzial[];
   /** Odznaki sal zdobyte w całej kampanii (identyfikatory z `ODZNAKI_PLIKI`) — kampania to droga po odznaki. */
   odznaki?: string[];
+}
+
+/**
+ * Z poprzedniej misji przechodzi najwyżej JEDEN stworek i JEDEN artefakt —
+ * jak w kampaniach Heroes 3, gdzie scenariusz decyduje, co idzie dalej.
+ * Cała drużyna i wszystkie artefakty robiły z kolejnych misji spacer
+ * (uwagi z rozgrywki). `stworek` to indeks w `PostepKampanii.druzyna`.
+ */
+export interface ZabranyZMisji {
+  stworek?: number;
+  artefakt?: string;
 }
 
 /** To, co z bohatera przechodzi dalej. Pozycja i ruch — nie; drużyna osobno (`druzyna`). */

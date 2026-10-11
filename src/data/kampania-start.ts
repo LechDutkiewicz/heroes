@@ -1,14 +1,15 @@
 import { planszaPrzygody } from './plansza';
 import { POZIOM_STARTERA } from './startery';
 import { dolacz } from './armia';
-import { doswDoPoziomu, ewoluujOdPoziomu, nowyStworek, przytnijPoziom, usunDuplikaty } from './stworki';
+import { doswDoPoziomu, ewoluujOdPoziomu, gatunek, nowyStworek, przytnijPoziom, usunDuplikaty } from './stworki';
 import { FACTIONS, factionById } from './factions';
-import { maGatunek, odznakaSali, type Oddzial, type StanMapy } from './mapa';
+import { maGatunek, odznakaSali, zalozone, type Artefakt, type Oddzial, type StanMapy } from './mapa';
 import { SLOTY_ARMII, znormalizuj } from './armia';
 import {
   type BohaterPrzenoszony,
   type Misja,
   type PostepKampanii,
+  type ZabranyZMisji,
   misjaPoId,
   punkty,
 } from './kampania';
@@ -19,18 +20,36 @@ import {
  * (pierwsze wejście) i ekran porażki („spróbuj jeszcze raz").
  */
 export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): StanMapy {
-  // Bez drużyny z poprzedniej misji (pierwsza misja) trener zaczyna od
-  // startera, którego wybiera na mapie — `startery.ts`.
+  // Pierwsza misja (bez drużyny z poprzedniej) zaczyna się od startera, którego
+  // trener wybiera na mapie — `startery.ts`. Kolejne: nowa drużyna planszy
+  // na poziomie misji i najwyżej jeden stworek zabrany z poprzedniej.
   const bezDruzyny = !p.druzyna?.length;
   const s = planszaPrzygody(m.mapa, bezDruzyny ? { starter: { poziom: POZIOM_STARTERA } } : {});
   s.misja = m.id;
   s.bohater.imie = p.trener;
+  const zabiera = p.zabiera ?? domyslneZabranie(p);
 
-  // Bohater z poprzedniej misji: wszystko, co zdobył, oprócz miejsca.
-  if (p.bohater) Object.assign(s.bohater, structuredClone(p.bohater), { imie: p.trener });
-  // Drużyna z poprzedniej misji zastępuje startową planszy — ci sami
-  // stworki, wyspani (nowa misja to nowy dzień w Centrum Pokemon).
-  if (p.druzyna?.length) s.bohater.armia = znormalizuj(structuredClone(p.druzyna).slice(0, SLOTY_ARMII));
+  // Bohater z poprzedniej misji: statystyki, doświadczenie i umiejętności
+  // (jak w Heroes 3), ale z artefaktów tylko jeden wybrany.
+  if (p.bohater) {
+    Object.assign(s.bohater, structuredClone(p.bohater), { imie: p.trener });
+    const a = zabiera.artefakt && p.bohater.artefakty.includes(zabiera.artefakt) ? zabiera.artefakt : undefined;
+    s.bohater.artefakty = a ? [a] : [];
+    s.bohater.zalozone = {};
+  }
+  if (m.poziomStartowy) for (const o of s.bohater.armia) if (o) podciagnij(o, m.poziomStartowy);
+  const zabrany = zabiera.stworek !== undefined ? p.druzyna?.[zabiera.stworek] : undefined;
+  if (zabrany) {
+    // Zabrany staje w pierwszym slocie, wyspany. Gdy plansza daje stworka
+    // z tej samej linii, zostaje ten z wyższym poziomem — bez dolewania
+    // doświadczenia, które robi `usunDuplikaty`.
+    const nowy: Oddzial = { ...structuredClone(zabrany), ile: 1, omdlaly: undefined };
+    const g = gatunek(nowy.sprite);
+    const dubel = s.bohater.armia.find((o) => o && gatunek(o.sprite) === g);
+    const reszta = s.bohater.armia.filter((o) => o && o !== dubel);
+    const lepszy = dubel && dubel.poziom > nowy.poziom ? dubel : nowy;
+    s.bohater.armia = znormalizuj([lepszy, ...reszta].slice(0, SLOTY_ARMII));
+  }
 
   const b = m.bonusy[bonus] ?? m.bonusy[0];
   if (b.typ === 'surowiec') s.skarbiec[b.surowiec] += b.ile;
@@ -57,9 +76,7 @@ export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): Sta
   }
   usunDuplikaty([s.bohater.armia]);
 
-  // Strojenie misji pod drużynę, która przychodzi z poprzedniej (etap 6).
-  if (m.poziomDruzyny) for (const o of s.bohater.armia) if (o) podciagnij(o, m.poziomDruzyny);
-  if (m.poziomDruzyny && s.starter) s.starter.poziom = Math.max(s.starter.poziom, m.poziomDruzyny);
+  if (m.poziomStartowy && s.starter) s.starter.poziom = Math.max(s.starter.poziom, m.poziomStartowy);
   // Siła przeciwników pod limit misji: dzikie stada, zamki wroga i rywal.
   if (m.skalaWroga && m.skalaWroga !== 1) {
     const k = m.skalaWroga;
@@ -97,6 +114,23 @@ export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): Sta
   s.limitBohatera = m.limitBohatera;
   for (const o of s.bohater.armia) if (o) ustawPosluszenstwo(o, m.limitPoziomu);
   return s;
+}
+
+/**
+ * Co trener zabiera, gdy nie wybrał (symulacja, stary zapis): najsilniejszego
+ * stworka i najsilniejszy noszony artefakt.
+ */
+export function domyslneZabranie(p: Pick<PostepKampanii, 'druzyna' | 'bohater'>): ZabranyZMisji {
+  const d = p.druzyna ?? [];
+  let stworek: number | undefined;
+  d.forEach((o, i) => {
+    if (stworek === undefined || o.poziom > d[stworek].poziom) stworek = i;
+  });
+  const b = p.bohater;
+  const noszone = b ? Object.values(zalozone(b)).filter((a) => !!a) : [];
+  const sila = (a: Artefakt) => (a.atak ?? 0) + (a.obrona ?? 0) + (a.ruch ?? 0) / 100;
+  const artefakt = noszone.sort((x, y) => sila(y!) - sila(x!))[0]?.id;
+  return { stworek, artefakt };
 }
 
 /** `slucha` = limit, gdy stworek go przekracza; inaczej bez ograniczenia. */
@@ -158,5 +192,6 @@ export function zaliczMisje(p: PostepKampanii, s: StanMapy): PostepKampanii {
     druzyna: druzynaDoPrzeniesienia(s),
     odznaki: [...new Set([...(p.odznaki ?? []), ...(s.odznaki ?? []).map(odznakaSali)])],
     bonus: undefined,
+    zabiera: undefined,
   };
 }
