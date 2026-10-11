@@ -30,5 +30,12 @@ export const OBIEKTY_RYSOWANE: Record<string, Record<string, [number, number]>> 
   'artefakt': [1.469, 0.12],
   'zamek-las': [4.719, 0.12],
   'zamek-ogien': [4.917, 0.12],
+  'portal': [2.417, 0.12],
+  'osrodek-ewolucji': [2.719, 0.12],
+  'straznica-zielony': [2.646, 0.9],
+  'straznica-niebieski': [2.646, 0.9],
+  'namiot-klucznika-zielony': [1.625, 0.12],
+  'namiot-klucznika-niebieski': [1.625, 0.12],
+  'chata-jasnowidza': [1.917, 0.12],
   },
 };

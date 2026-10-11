@@ -203,9 +203,22 @@ USTAWIENIA = {
     # Krzaki i stosy znajdźek z zestawu Polany (ta sama łąka).
     'zestaw': 'polana',
     'znajdzki': 0.68,
+    # Obiekty rysowane kodem (`tools/obiekty/`) zajmują tyle pól co ich
+    # odpowiedniki w HoMM3 — jak na Polanie.
+    'bryly': {
+        'wiatrak': [3, 1],
+        'oboz-treningowy': [3, 1],
+        'drzewo-wiedzy': [3, 1],
+        'kamienna-wieza': [3, 1],
+        'wieza-obserwacyjna': [1, 1],
+    },
     'dzienNatarcia': 40,
     'garnizonGracza': {'poziomy': [0, 1, 2], 'tygodnie': 5},
 }
+
+#: Bryły z `USTAWIENIA['bryly']` tylko w grze — rozstawienie tej planszy jest
+#: zamrożone (patrz STAN.md), a liczenie ich w generatorze przetasowałoby je.
+BRYLY_W_ROZSTAWIENIU = False
 
 GRANICA_POLUDNIOWA = GRZBIETY[1][1][1]   # 46 — ostatni wiersz rdzenia południowego
 GRANICA_POLNOCNA = GRZBIETY[0][1][0]     # 21 — pierwszy wiersz rdzenia północnego

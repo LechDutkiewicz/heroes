@@ -575,7 +575,14 @@ class Generator:
     def pola_bryly(self, rodzaj, co, pole):
         # Plansza może nadać budowlom własne bryły (`USTAWIENIA['bryly']`,
         # w grze `UstawieniaPlanszy.bryly`) — muszą się zgadzać tu i tam.
-        wlasne = (getattr(self.k, 'USTAWIENIA', None) or {}).get('bryly', {})
+        # Plansza z zamrożonym rozstawieniem (Dwie Doliny) dostaje bryły tylko
+        # w grze: `BRYLY_W_ROZSTAWIENIU = False` — inaczej każde postawienie
+        # przesuwa następne losowania i cała plansza się przetasowuje.
+        wlasne = (
+            (getattr(self.k, 'USTAWIENIA', None) or {}).get('bryly', {})
+            if getattr(self.k, 'BRYLY_W_ROZSTAWIENIU', True)
+            else {}
+        )
         rozmiar = (
             (tuple(wlasne[co]) if rodzaj == 'budynek' and co in wlasne else None)
             or self.BRYLY.get((rodzaj, co))
@@ -985,6 +992,45 @@ class Generator:
             blok.add(p)
         return self.osiagalne(self.mapa, skad, blok)
 
+    def bryly_bezpieczne(self, bryly):
+        """Bryły z `bryly` (budowla → [szer, wys]) dla budowli zamrożonej planszy,
+        które nie odcinają dojścia do żadnego obiektu: „x,y" → [szer, wys].
+
+        Bierzemy je po kolei i każdą zostawiamy tylko wtedy, gdy po dołożeniu
+        jej pól (razem z już przyjętymi) do każdego obiektu da się podejść
+        ze startu, przy otwartych wszystkich bramach.
+        """
+        start = self.k.PUNKTY['start']
+        klucze = {co[1] for _, co in self.obiekty if co[0] == 'straznica'}
+        punkty = set()
+        for p, co in self.obiekty:
+            if co[0] == 'potwor' or (co[0] == 'straznica' and co[1] in klucze):
+                continue
+            punkty.add(p)
+        blok = set(self.blokada) | punkty
+
+        def wszystkie_dostepne(b):
+            widziane = self.osiagalne(self.mapa, start, b)
+            return all(self.blisko(widziane, p) for p, _ in self.obiekty)
+
+        przyjete = {}
+        if not wszystkie_dostepne(blok):
+            return przyjete
+        for (x, y), co in self.obiekty:
+            if co[0] != 'budynek' or co[1] not in bryly:
+                continue
+            szer, wys = bryly[co[1]]
+            pola = [
+                (x + dx, y + dy)
+                for dy in range(-wys, 0)
+                for dx in range(-(szer // 2), szer // 2 + 1)
+                if self.w(x + dx, y + dy) and self.mapa[y + dy][x + dx] in PRZEJEZDNE
+            ]
+            if wszystkie_dostepne(blok | set(pola)):
+                blok |= set(pola)
+                przyjete[f'{x},{y}'] = [szer, wys]
+        return przyjete
+
     def blisko(self, widziane, cel):
         return any((cel[0] + dx, cel[1] + dy) in widziane for dy in (-1, 0, 1) for dx in (-1, 0, 1))
 
@@ -1101,6 +1147,11 @@ export const ROZSTAWIENIE: Array<{
             tresc += '  { ' + ', '.join(pola) + ' },\n'
         tresc += '];\n'
         ustawienia = getattr(k, 'USTAWIENIA', None)
+        if ustawienia and ustawienia.get('bryly') and not getattr(k, 'BRYLY_W_ROZSTAWIENIU', True):
+            # Rozstawienie zamrożone: bryły tylko tym budowlom, którym nie
+            # odetną dojścia do żadnego obiektu (`bryly_bezpieczne`).
+            ustawienia = {**ustawienia, 'brylyPol': self.bryly_bezpieczne(ustawienia['bryly'])}
+            del ustawienia['bryly']
         if ustawienia:
             tresc += '\n/** Ustawienia misji na tej planszy — patrz `UstawieniaPlanszy` w `src/data/mapy.ts`. */\n'
             tresc += 'export const USTAWIENIA = ' + json.dumps(ustawienia, ensure_ascii=False, indent=2) + ';\n'

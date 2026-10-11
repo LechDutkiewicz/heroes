@@ -2687,6 +2687,17 @@ export class AdventureScene extends Phaser.Scene {
     // wysokości. Skalowanie po wysokości dawało bramę na dwa pola — wąską
     // jak furtka i wyraźnie nie zamykającą drogi, choć w zasadach gry
     // zamykała ją w całości.
+    // Rysunki kodem (`OBIEKTY_RYSOWANE`) mają płótno w polach — wysokość wprost.
+    if (o.rodzaj === 'straznica' || o.rodzaj === 'namiot' || o.rodzaj === 'jasnowidz') {
+      const plik =
+        o.rodzaj === 'straznica'
+          ? `straznica-${o.klucz ?? 'zielony'}`
+          : o.rodzaj === 'namiot'
+            ? `namiot-klucznika-${o.klucz ?? 'zielony'}`
+            : 'chata-jasnowidza';
+      const rys = this.wysRysowanego(plik);
+      if (rys) return { klucz: `m-${plik}`, wys: KAFEL * rys };
+    }
     if (o.rodzaj === 'straznica')
       return { klucz: `m-straznica-${o.klucz ?? 'zielony'}`, wys: KAFEL * 2.57 };
     if (o.rodzaj === 'namiot')

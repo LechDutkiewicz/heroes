@@ -4,4 +4,5 @@ import { OBIEKTY as K } from './obiekty.mjs';
 import { OBIEKTY2 } from './obiekty2.mjs';
 import { ZAMKI } from './zamki.mjs';
 import { POKEMON } from './pokemon.mjs';
-export const OBIEKTY = { ...K, ...OBIEKTY2, ...ZAMKI, ...POKEMON };
+import { DOLINY } from './doliny.mjs';
+export const OBIEKTY = { ...K, ...OBIEKTY2, ...ZAMKI, ...POKEMON, ...DOLINY };

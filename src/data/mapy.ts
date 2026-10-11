@@ -144,6 +144,12 @@ export interface UstawieniaPlanszy {
    */
   bryly?: Record<string, [number, number]>;
   /**
+   * Bryły konkretnych budowli („x,y" wejścia → [szer, wys]) — dla planszy
+   * z zamrożonym rozstawieniem (Dwie Doliny) generator daje bryłę tylko tym,
+   * którym nie odetnie dojścia do innych obiektów. Ma pierwszeństwo przed `bryly`.
+   */
+  brylyPol?: Record<string, [number, number]>;
+  /**
    * Mnożnik wysokości rysunku zamków na tej planszy (bryła i przejezdność
    * bez zmian). Bagna, runda 9: „zamek wielkości chaty". Brak = 1.
    */
