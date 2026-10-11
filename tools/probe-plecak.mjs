@@ -91,9 +91,11 @@ const zlapany = await page.evaluate(() => {
   const pbPrzed = s.stan.skarbiec.pokeball;
   const od = s.lapanie.kandydaci[0];
   s.lapanie.zamknij(od);
-  return { nazwa: od.nazwa, koszt: pbPrzed - s.stan.skarbiec.pokeball };
+  // Cena za JEDEN rzut — ta sama reguła co `kosztZlapania` w scenie.
+  const zaRzut = Math.max(10, Math.round((5 * od.tier + od.poziom) / 5) * 5);
+  return { nazwa: od.nazwa, zaRzut, przedRzutami: pbPrzed, poWyborze: s.stan.skarbiec.pokeball };
 });
-// Mini-gra: pierwszy rzut chybiony, drugi trafiony (wynik wymuszony).
+// Mini-gra: pierwszy rzut chybiony, drugi (ostatni) trafiony — wynik wymuszony.
 const minigra = await page
   .waitForFunction(() => window.__game.scene.getScene('adventure').minigra, null, { timeout: 10000 })
   .then(() => true)
@@ -138,8 +140,10 @@ if (!lapanie || !zlapany) zle.push('po wygranej z dzikim stadem nie było okna �
 if (!minigra) zle.push('po wyborze stworka nie ruszyła mini-gra');
 if (poPudle !== 6) zle.push(`po pudle drużyna ma ${poPudle} (pudło nie może łapać)`);
 if (po.druzyna !== 7) zle.push(`drużyna po łapaniu: ${po.druzyna} (oczekiwane 7)`);
-if (zlapany && (zlapany.koszt < 10 || po.pb !== przed.pb - zlapany.koszt))
-  zle.push(`pokeballe ${przed.pb} → ${po.pb}, koszt łapania ${zlapany?.koszt}`);
+// Wybór stworka nic nie kosztuje; płaci się za każdy rzut (pudło + trafienie = 2).
+if (zlapany && zlapany.poWyborze !== zlapany.przedRzutami) zle.push(`sam wybór stworka zabrał pokeballe: ${JSON.stringify(zlapany)}`);
+if (zlapany && po.pb !== przed.pb - 2 * zlapany.zaRzut)
+  zle.push(`pokeballe ${przed.pb} → ${po.pb}, oczekiwane −${2 * zlapany.zaRzut} (dwa rzuty po ${zlapany.zaRzut})`);
 if (po.zemdleni !== 0) zle.push(`zemdlonych po wygranej bez strat: ${po.zemdleni} (stworki spoza dwójki mdlały)`);
 if (bledy.length) zle.push('błędy strony: ' + bledy.join(' | '));
 console.log({ przed, naPolu, leczenie, zlapanych, zlapany, po });
