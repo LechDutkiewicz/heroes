@@ -1,5 +1,5 @@
 import { planszaPrzygody } from './plansza';
-import { POZIOM_STARTERA } from './startery';
+import { POZIOM_STARTERA, STARTERY } from './startery';
 import { dolacz } from './armia';
 import { doswDoPoziomu, ewoluujOdPoziomu, gatunek, nowyStworek, przytnijPoziom, usunDuplikaty } from './stworki';
 import { FACTIONS, factionById } from './factions';
@@ -37,6 +37,13 @@ export function rozpocznijMisje(p: PostepKampanii, m: Misja, bonus: number): Sta
     s.bohater.artefakty = a ? [a] : [];
     s.bohater.zalozone = {};
   }
+  // Starter jest tylko w pierwszej misji: nowa drużyna planszy nie ma
+  // stworków z gatunków starterów (u Boru — najniższego), więc jedyny
+  // starter w dalszych misjach to ten zabrany z poprzedniej.
+  if (!bezDruzyny)
+    s.bohater.armia = znormalizuj(
+      s.bohater.armia.filter((o) => o && !STARTERY.some((st) => st.frakcja === o.frakcja && st.tier === o.tier))
+    );
   if (m.poziomStartowy) for (const o of s.bohater.armia) if (o) podciagnij(o, m.poziomStartowy);
   const zabrany = zabiera.stworek !== undefined ? p.druzyna?.[zabiera.stworek] : undefined;
   if (zabrany) {

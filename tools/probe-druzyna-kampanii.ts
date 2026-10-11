@@ -43,6 +43,11 @@ sprawdz(
   druzyna2.filter((o) => o!.poziom !== 20).every((o) => o!.poziom === m2.poziomStartowy),
   druzyna2.map((o) => o!.poziom).join(', ')
 );
+sprawdz(
+  'starter tylko z pierwszej misji — plansza nie daje gatunku startera',
+  !druzyna2.some((o) => o!.frakcja === 'bor' && o!.tier === 0),
+  druzyna2.map((o) => o!.nazwa).join(', ')
+);
 sprawdz('przechodzi jeden artefakt', JSON.stringify(s2.bohater.artefakty) === '["buty"]', JSON.stringify(s2.bohater.artefakty));
 const s2nikt = rozpocznijMisje({ ...p1, zabiera: {} }, m2, 0);
 sprawdz(
