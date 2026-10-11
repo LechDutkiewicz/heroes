@@ -642,7 +642,7 @@ class Generator:
                 else self.wolne_pola(ktora, zakres, odstep)
             )
             if not wolne:
-                raise SystemExit(f'[{self.k.ID}] Brak miejsca na obiekt: {ktora} {zakres}. Popraw SZKIC.')
+                raise SystemExit(f'[{self.k.ID}] Brak miejsca na obiekt: {ktora} {zakres} (postawionych {len(obiekty)}). Popraw SZKIC.')
             pole = None
             wpis = None
             # Dwa podejścia. W pierwszym budowla z bryłą musi dostać miejsce na
@@ -703,7 +703,7 @@ class Generator:
                 if pole is not None:
                     break
             if pole is None:
-                raise SystemExit(f'[{self.k.ID}] Każde miejsce w strefie {ktora} zatyka drogę. Popraw SZKIC.')
+                raise SystemExit(f'[{self.k.ID}] Każde miejsce w strefie {ktora} zatyka drogę ({buduj(None)[:2] if kandydaci is None else "kieszeń"}, postawionych {len(obiekty)}, wolnych {len(wolne)}). Popraw SZKIC.')
             zajete.append(pole)
             # Pola muru i ich sąsiedztwo są odtąd zajęte: postawienie tam
             # czegokolwiek skasowałoby ten mur.
@@ -884,10 +884,15 @@ class Generator:
 
     def budowle(self, ile, ktora, pula, zakres=(0, 999)):
         """Budowle odwiedzane — w Heroes 3 to one wypełniają mapę. Powtórzenia
-        są w porządku: wiatrak czy ognisko stoi tam po kilka razy."""
+        są w porządku: wiatrak czy ognisko stoi tam po kilka razy.
+
+        `ODSTEP_BUDOWLI` (per plansza): najmniejsza odległość budowli od innych
+        obiektów — przy rysunkach na trzy pola budowle stojące co pole nachodziły
+        na siebie (Dwie Doliny). Brak = 1, jak dotąd."""
+        odstep = getattr(self.k, 'ODSTEP_BUDOWLI', 1)
         for i in range(ile):
             b = pula[i % len(pula)]
-            self.dodaj(1, ktora, zakres, lambda p, b=b: ('budynek', b))
+            self.dodaj(1, ktora, zakres, lambda p, b=b: ('budynek', b), odstep=odstep)
 
     def rozstaw(self):
         k = self.k

@@ -216,12 +216,33 @@ USTAWIENIA = {
     'garnizonGracza': {'poziomy': [0, 1, 2], 'tygodnie': 5},
 }
 
-#: Bryły z `USTAWIENIA['bryly']` tylko w grze — rozstawienie tej planszy jest
-#: zamrożone (patrz STAN.md), a liczenie ich w generatorze przetasowałoby je.
-BRYLY_W_ROZSTAWIENIU = False
+#: Rozstawienie z bryłami (2026-10-11, prośba gracza: „budynki na siebie
+#: nachodzą, a pustynia na wschodzie jest pusta"). Plansza przestała być
+#: zamrożona — bryły liczy generator (`USTAWIENIA['bryly']`), pole nad murem
+#: zostaje wolne jak na Polanie, budowle stoją co najmniej 2 pola od innych
+#: obiektów, a obiekty stają też na ziemi jałowej (pustynia na wschodzie)
+#: i śniegu (północ) — wcześniej tylko na trawie i piasku.
+ODSTEP_NAD_BRYLA = True
+ODSTEP_BUDOWLI = 2
+POD_OBIEKTY = '.,jsb'
 
 GRANICA_POLUDNIOWA = GRZBIETY[1][1][1]   # 46 — ostatni wiersz rdzenia południowego
 GRANICA_POLNOCNA = GRZBIETY[0][1][0]     # 21 — pierwszy wiersz rdzenia północnego
+
+
+def popraw_teren(g, mapa):
+    """Dwa wjazdy na wschodnią pustynię pasa spornego.
+
+    Pas lasu i skał odcinał ją od reszty planszy — wyglądała na ziemię do
+    zagospodarowania, a była zamkniętą kieszenią bez jednego obiektu
+    (zgłoszenie gracza, 2026-10-11). Przecinka w lesie przy grzbiecie
+    północnym i druga niżej robią z niej kawałek pasa spornego.
+    """
+    for x0, x1, y0, y1, na in ((58, 63, 25, 27, 'j'), (59, 63, 39, 41, '.')):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                if mapa[y][x] == 'T':
+                    mapa[y][x] = na
 
 
 def strefa(x, y):
@@ -291,7 +312,7 @@ def rozstaw(g):
     # wzorcowe mają wyraźny garb obiektów w trzecim i czwartym pasie odległości
     # od startu (Hatchet Axe and Saw: 28/60/49/108/81), a nasza pierwsza wersja
     # miała rozkład płaski: 30/82/47/43/33.
-    g.dodaj(22, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
+    g.dodaj(16, 'pogranicze', (0, 999), lambda p: ('surowiec', rng.choice(['jagoda', 'odlamek', 'kamien', 'pokeball'])))
     kopalnie_srodek = []
     for co in ['odlamek', 'kamien', 'pokeball', 'odlamek', 'kamien', 'jagoda', 'pokeball', 'odlamek']:
         kopalnie_srodek += g.dodaj(1, 'pogranicze', (0, 999), lambda p, co=co: ('kopalnia', co))
@@ -300,7 +321,7 @@ def rozstaw(g):
         [p for p, co in zip(kopalnie_srodek, ['odlamek', 'kamien', 'pokeball', 'odlamek', 'kamien', 'jagoda', 'pokeball', 'odlamek']) if co in ('kamien', 'pokeball')],
         'sredni',
     )
-    g.dodaj(12, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
+    g.dodaj(9, 'pogranicze', (0, 999), lambda p: ('skrzynia', None))
     g.dodaj(5, 'pogranicze', (0, 999), lambda p: ('artefakt', None))
     g.dodaj(4, 'pogranicze', (0, 999), lambda p: ('potwor', 'sredni'))
 
@@ -308,7 +329,7 @@ def rozstaw(g):
     g.skarb_w_kieszeni('pogranicze', 'sredni', 4, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'kamien'), ('artefakt', None)]))
     g.skarb_w_kieszeni('pogranicze', 'silny', 4, lambda p: rng.choice([('artefakt', None), ('skrzynia', None)]))
     g.skarb_w_kieszeni('pogranicze', 'silny', 4, lambda p: rng.choice([('skrzynia', None), ('surowiec', 'pokeball')]))
-    g.budowle(26, 'pogranicze', [
+    g.budowle(16, 'pogranicze', [
         'arena', 'wieza-obserwacyjna', 'kamienna-wieza', 'ranczo', 'gniazdo',
         'wiatrak', 'ognisko', 'chatka', 'woz', 'drzewo-wiedzy', 'zrodlo',
         'oboz-treningowy',
