@@ -63,11 +63,12 @@ export interface Misja {
   /** Zdanie pokazywane po wygranej, przed przejściem dalej. */
   epilog: string;
   /**
-   * Poziom NOWEJ drużyny, którą trener dostaje na tej planszy (cztery
-   * najniższe stworki Boru). Z poprzedniej misji przechodzi najwyżej jeden
-   * wybrany stworek (`ZabranyZMisji`) — z takim poziomem, z jakim skończył;
-   * misja już go nie podciąga (uwagi z rozgrywki: „jak skończyłem na zbyt
-   * niskim poziomie, to trudno — moja strata").
+   * Poziom stworków werbowanych w rezerwatach na tej planszy
+   * (`StanMapy.poziomRekruta`). Drużyna na start to tylko stworek wybrany
+   * z poprzedniej misji (`ZabranyZMisji`) — z takim poziomem, z jakim
+   * skończył; misja go nie podciąga (uwagi z rozgrywki: „jak skończyłem na
+   * zbyt niskim poziomie, to trudno — moja strata"). Bez nowej drużyny
+   * z planszy: „zamysł był taki, żeby mieć tylko tego, którego wybrałem".
    */
   poziomStartowy?: number;
   /** O tyle poziomów silniejsi są obrońcy zamków i drużyna rywala (etap 6). */

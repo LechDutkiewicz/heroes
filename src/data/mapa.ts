@@ -822,6 +822,12 @@ export interface StanMapy {
   limitPoziomu?: number;
   /** Limit poziomu trenera w tej misji (jak w kampaniach Heroes 3). Brak = bez limitu. */
   limitBohatera?: number;
+  /**
+   * Poziom stworka werbowanego w rezerwacie gracza (`Misja.poziomStartowy`):
+   * od misji 2 trener zaczyna tylko ze stworkiem zabranym z poprzedniej,
+   * a resztę drużyny werbuje — na poziomie misji. Brak = młody (5).
+   */
+  poziomRekruta?: number;
   /** Misja kampanii, która się na tej planszy toczy. Brak = gra pojedyncza. */
   misja?: string;
   /**

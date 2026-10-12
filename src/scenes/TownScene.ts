@@ -2054,7 +2054,8 @@ export class TownScene extends Phaser.Scene {
       this.komunikat.setText(`Za mało pokeballi — potrzeba ${koszt}.`);
       return;
     }
-    const nowy = nowyStworek(this.frakcja.id, tier);
+    // W kampanii od misji 2 rezerwat daje stworka na poziomie misji.
+    const nowy = nowyStworek(this.frakcja.id, tier, this.stan.poziomRekruta);
     if (!nowy) return;
     // Jeden stworek danego gatunku — jak w bajce.
     const ma = maGatunek(this.stan, nowy.sprite);

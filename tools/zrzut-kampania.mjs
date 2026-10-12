@@ -196,6 +196,17 @@ async function zrzut(page, nazwa) {
   await klik(page, { x: 120 + 30 + 1 * 90 + 38, y: 112 + 112 + 28 + 38 });
   await page.waitForTimeout(300);
   await zrzut(page, 'kampania-zabiera.png');
+  // Dymek z opisem przedmiotu po najechaniu (Ochraniacze — drugi kafelek).
+  {
+    const r = await page.$eval('canvas', (c) => {
+      const b = c.getBoundingClientRect();
+      return { x: b.left, y: b.top, s: b.width / 960 };
+    });
+    await page.mouse.move(r.x + (120 + 30 + 90 + 38) * r.s, r.y + (112 + 262 + 28 + 38) * r.s);
+    await page.waitForTimeout(300);
+    await (await page.$('canvas')).screenshot({ path: `${KATALOG}/kampania-dymek.png` });
+    console.log(`zrzut: ${KATALOG}/kampania-dymek.png`);
+  }
   await klik(page, { x: 480 + 100, y: 112 + 470 - 36 });
   try {
     await page.waitForFunction(() => window.__game.scene.getScene('adventure')?.sys.settings.status === 5, null, {
@@ -206,9 +217,8 @@ async function zrzut(page, nazwa) {
       return { armia: st.bohater.armia.filter(Boolean).map((o) => `${o.nazwa} ${o.poziom}`), artefakty: st.bohater.artefakty };
     });
     console.log(`misja 3: ${JSON.stringify(s)}`);
-    // Aquino z misji 2 jest z tej samej linii co stworek nowej drużyny:
-    // zostaje jeden (bez dubla), artefakt najwyżej jeden.
-    if (s.armia.length !== 4 || s.artefakty.length > 1)
+    // Drużyna to tylko zabrany Aquino, artefakt najwyżej jeden.
+    if (s.armia.length !== 1 || !s.armia[0].startsWith('Aquino') || s.artefakty.length > 1)
       bledy.push(`zabranie niespójne: ${JSON.stringify(s)}`);
   } catch {
     bledy.push('„Ruszaj!" nie uruchomił sceny adventure');
